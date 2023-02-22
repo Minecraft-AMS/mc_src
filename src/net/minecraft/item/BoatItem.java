@@ -12,7 +12,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.HitResult;
@@ -36,7 +35,7 @@ extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         HitResult hitResult = BoatItem.rayTrace(world, user, RayTraceContext.FluidHandling.ANY);
         if (hitResult.getType() == HitResult.Type.MISS) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
         }
         Vec3d vec3d = user.getRotationVec(1.0f);
         double d = 5.0;
@@ -46,7 +45,7 @@ extends Item {
             for (Entity entity : list) {
                 Box box = entity.getBoundingBox().expand(entity.getTargetingMargin());
                 if (!box.contains(vec3d2)) continue;
-                return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+                return TypedActionResult.pass(itemStack);
             }
         }
         if (hitResult.getType() == HitResult.Type.BLOCK) {
@@ -54,18 +53,18 @@ extends Item {
             boatEntity.setBoatType(this.type);
             boatEntity.yaw = user.yaw;
             if (!world.doesNotCollide(boatEntity, boatEntity.getBoundingBox().expand(-0.1))) {
-                return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+                return TypedActionResult.fail(itemStack);
             }
             if (!world.isClient) {
                 world.spawnEntity(boatEntity);
-            }
-            if (!user.abilities.creativeMode) {
-                itemStack.decrement(1);
+                if (!user.abilities.creativeMode) {
+                    itemStack.decrement(1);
+                }
             }
             user.incrementStat(Stats.USED.getOrCreateStat(this));
-            return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+            return TypedActionResult.success(itemStack);
         }
-        return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+        return TypedActionResult.pass(itemStack);
     }
 }
 

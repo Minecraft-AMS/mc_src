@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 public class Tag<T> {
@@ -88,8 +89,8 @@ public class Tag<T> {
         @Nullable
         private Tag<T> tag;
 
-        public TagEntry(Identifier identifier) {
-            this.id = identifier;
+        public TagEntry(Identifier id) {
+            this.id = id;
         }
 
         public TagEntry(Tag<T> tag) {
@@ -98,19 +99,19 @@ public class Tag<T> {
         }
 
         @Override
-        public boolean applyTagGetter(Function<Identifier, Tag<T>> function) {
+        public boolean applyTagGetter(Function<Identifier, Tag<T>> tagGetter) {
             if (this.tag == null) {
-                this.tag = function.apply(this.id);
+                this.tag = tagGetter.apply(this.id);
             }
             return this.tag != null;
         }
 
         @Override
-        public void build(Collection<T> collection) {
+        public void build(Collection<T> targetCollection) {
             if (this.tag == null) {
-                throw new IllegalStateException("Cannot build unresolved tag entry");
+                throw Util.throwOrPause(new IllegalStateException("Cannot build unresolved tag entry"));
             }
-            collection.addAll(this.tag.values());
+            targetCollection.addAll(this.tag.values());
         }
 
         public Identifier getId() {
@@ -124,8 +125,8 @@ public class Tag<T> {
         }
 
         @Override
-        public void toJson(JsonArray jsonArray, Function<T, Identifier> function) {
-            jsonArray.add("#" + this.getId());
+        public void toJson(JsonArray targetArray, Function<T, Identifier> idGetter) {
+            targetArray.add("#" + this.getId());
         }
     }
 
@@ -138,18 +139,18 @@ public class Tag<T> {
         }
 
         @Override
-        public void build(Collection<T> collection) {
-            collection.addAll(this.values);
+        public void build(Collection<T> targetCollection) {
+            targetCollection.addAll(this.values);
         }
 
         @Override
-        public void toJson(JsonArray jsonArray, Function<T, Identifier> function) {
+        public void toJson(JsonArray targetArray, Function<T, Identifier> idGetter) {
             for (T object : this.values) {
-                Identifier identifier = function.apply(object);
+                Identifier identifier = idGetter.apply(object);
                 if (identifier == null) {
                     throw new IllegalStateException("Unable to serialize an anonymous value to json!");
                 }
-                jsonArray.add(identifier.toString());
+                targetArray.add(identifier.toString());
             }
         }
 
@@ -159,7 +160,7 @@ public class Tag<T> {
     }
 
     public static interface Entry<T> {
-        default public boolean applyTagGetter(Function<Identifier, Tag<T>> function) {
+        default public boolean applyTagGetter(Function<Identifier, Tag<T>> tagGetter) {
             return true;
         }
 
@@ -181,14 +182,14 @@ public class Tag<T> {
             return this;
         }
 
-        public Builder<T> add(T object) {
-            this.entries.add(new CollectionEntry<T>(Collections.singleton(object)));
+        public Builder<T> add(T entry) {
+            this.entries.add(new CollectionEntry<T>(Collections.singleton(entry)));
             return this;
         }
 
         @SafeVarargs
-        public final Builder<T> add(T ... objects) {
-            this.entries.add(new CollectionEntry(Lists.newArrayList((Object[])objects)));
+        public final Builder<T> add(T ... entries) {
+            this.entries.add(new CollectionEntry(Lists.newArrayList((Object[])entries)));
             return this;
         }
 
@@ -197,25 +198,25 @@ public class Tag<T> {
             return this;
         }
 
-        public Builder<T> ordered(boolean bl) {
-            this.ordered = bl;
+        public Builder<T> ordered(boolean ordered) {
+            this.ordered = ordered;
             return this;
         }
 
-        public boolean applyTagGetter(Function<Identifier, Tag<T>> function) {
+        public boolean applyTagGetter(Function<Identifier, Tag<T>> tagGetter) {
             for (Entry<T> entry : this.entries) {
-                if (entry.applyTagGetter(function)) continue;
+                if (entry.applyTagGetter(tagGetter)) continue;
                 return false;
             }
             return true;
         }
 
-        public Tag<T> build(Identifier identifier) {
-            return new Tag<T>(identifier, this.entries, this.ordered);
+        public Tag<T> build(Identifier id) {
+            return new Tag<T>(id, this.entries, this.ordered);
         }
 
-        public Builder<T> fromJson(Function<Identifier, Optional<T>> function, JsonObject jsonObject) {
-            JsonArray jsonArray = JsonHelper.getArray(jsonObject, "values");
+        public Builder<T> fromJson(Function<Identifier, Optional<T>> entryGetter, JsonObject json) {
+            JsonArray jsonArray = JsonHelper.getArray(json, "values");
             ArrayList list = Lists.newArrayList();
             for (JsonElement jsonElement : jsonArray) {
                 String string = JsonHelper.asString(jsonElement, "value");
@@ -224,9 +225,9 @@ public class Tag<T> {
                     continue;
                 }
                 Identifier identifier = new Identifier(string);
-                list.add(new CollectionEntry<T>(Collections.singleton(function.apply(identifier).orElseThrow(() -> new JsonParseException("Unknown value '" + identifier + "'")))));
+                list.add(new CollectionEntry<T>(Collections.singleton(entryGetter.apply(identifier).orElseThrow(() -> new JsonParseException("Unknown value '" + identifier + "'")))));
             }
-            if (JsonHelper.getBoolean(jsonObject, "replace", false)) {
+            if (JsonHelper.getBoolean(json, "replace", false)) {
                 this.entries.clear();
             }
             this.entries.addAll(list);

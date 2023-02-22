@@ -28,14 +28,14 @@ public final class EndBiome
 extends Biome {
     public EndBiome() {
         super(new Biome.Settings().configureSurfaceBuilder(SurfaceBuilder.DEFAULT, SurfaceBuilder.END_CONFIG).precipitation(Biome.Precipitation.NONE).category(Biome.Category.THEEND).depth(0.1f).scale(0.2f).temperature(0.5f).downfall(0.5f).waterColor(4159204).waterFogColor(329011).parent(null));
-        this.addFeature(GenerationStep.Feature.SURFACE_STRUCTURES, EndBiome.configureFeature(Feature.END_SPIKE, new EndSpikeFeatureConfig(false, (List<EndSpikeFeature.Spike>)ImmutableList.of(), null), Decorator.NOPE, DecoratorConfig.DEFAULT));
-        DefaultBiomeFeatures.method_20826(this);
+        this.addFeature(GenerationStep.Feature.SURFACE_STRUCTURES, Feature.END_SPIKE.configure(new EndSpikeFeatureConfig(false, (List<EndSpikeFeature.Spike>)ImmutableList.of(), null)).createDecoratedFeature(Decorator.NOPE.configure(DecoratorConfig.DEFAULT)));
+        DefaultBiomeFeatures.addEndCities(this);
         this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.ENDERMAN, 10, 4, 4));
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getSkyColor(float temperature) {
+    public int getSkyColor() {
         return 0;
     }
 }

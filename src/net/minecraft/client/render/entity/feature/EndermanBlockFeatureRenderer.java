@@ -7,16 +7,17 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EndermanEntityModel;
-import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.mob.EndermanEntity;
 
 @Environment(value=EnvType.CLIENT)
@@ -27,33 +28,21 @@ extends FeatureRenderer<EndermanEntity, EndermanEntityModel<EndermanEntity>> {
     }
 
     @Override
-    public void render(EndermanEntity endermanEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, EndermanEntity endermanEntity, float f, float g, float h, float j, float k, float l) {
         BlockState blockState = endermanEntity.getCarriedBlock();
         if (blockState == null) {
             return;
         }
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(0.0f, 0.6875f, -0.75f);
-        GlStateManager.rotatef(20.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(45.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.translatef(0.25f, 0.1875f, 0.25f);
+        matrixStack.push();
+        matrixStack.translate(0.0, 0.6875, -0.75);
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(20.0f));
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(45.0f));
+        matrixStack.translate(0.25, 0.1875, 0.25);
         float m = 0.5f;
-        GlStateManager.scalef(-0.5f, -0.5f, 0.5f);
-        int n = endermanEntity.getLightmapCoordinates();
-        int o = n % 65536;
-        int p = n / 65536;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, o, p);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
-        MinecraftClient.getInstance().getBlockRenderManager().renderDynamic(blockState, 1.0f);
-        GlStateManager.popMatrix();
-        GlStateManager.disableRescaleNormal();
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        matrixStack.scale(-0.5f, -0.5f, 0.5f);
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f));
+        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(blockState, matrixStack, vertexConsumerProvider, i, OverlayTexture.DEFAULT_UV);
+        matrixStack.pop();
     }
 }
 

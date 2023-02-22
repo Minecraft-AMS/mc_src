@@ -4,29 +4,28 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.LargePufferfishEntityModel;
 import net.minecraft.client.render.entity.model.MediumPufferfishEntityModel;
 import net.minecraft.client.render.entity.model.SmallPufferfishEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.PufferfishEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class PufferfishEntityRenderer
 extends MobEntityRenderer<PufferfishEntity, EntityModel<PufferfishEntity>> {
     private static final Identifier SKIN = new Identifier("textures/entity/fish/pufferfish.png");
-    private int field_4765 = 3;
+    private int modelSize = 3;
     private final SmallPufferfishEntityModel<PufferfishEntity> smallModel = new SmallPufferfishEntityModel();
     private final MediumPufferfishEntityModel<PufferfishEntity> mediumModel = new MediumPufferfishEntityModel();
     private final LargePufferfishEntityModel<PufferfishEntity> largeModel = new LargePufferfishEntityModel();
@@ -36,26 +35,25 @@ extends MobEntityRenderer<PufferfishEntity, EntityModel<PufferfishEntity>> {
     }
 
     @Override
-    @Nullable
-    protected Identifier getTexture(PufferfishEntity pufferfishEntity) {
+    public Identifier getTexture(PufferfishEntity pufferfishEntity) {
         return SKIN;
     }
 
     @Override
-    public void render(PufferfishEntity pufferfishEntity, double d, double e, double f, float g, float h) {
-        int i = pufferfishEntity.getPuffState();
-        if (i != this.field_4765) {
-            this.model = i == 0 ? this.smallModel : (i == 1 ? this.mediumModel : this.largeModel);
+    public void render(PufferfishEntity pufferfishEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        int j = pufferfishEntity.getPuffState();
+        if (j != this.modelSize) {
+            this.model = j == 0 ? this.smallModel : (j == 1 ? this.mediumModel : this.largeModel);
         }
-        this.field_4765 = i;
-        this.field_4673 = 0.1f + 0.1f * (float)i;
-        super.render(pufferfishEntity, d, e, f, g, h);
+        this.modelSize = j;
+        this.shadowSize = 0.1f + 0.1f * (float)j;
+        super.render(pufferfishEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
-    protected void setupTransforms(PufferfishEntity pufferfishEntity, float f, float g, float h) {
-        GlStateManager.translatef(0.0f, MathHelper.cos(f * 0.05f) * 0.08f, 0.0f);
-        super.setupTransforms(pufferfishEntity, f, g, h);
+    protected void setupTransforms(PufferfishEntity pufferfishEntity, MatrixStack matrixStack, float f, float g, float h) {
+        matrixStack.translate(0.0, MathHelper.cos(f * 0.05f) * 0.08f, 0.0);
+        super.setupTransforms(pufferfishEntity, matrixStack, f, g, h);
     }
 }
 

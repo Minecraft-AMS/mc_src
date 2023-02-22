@@ -56,21 +56,23 @@ extends AbstractMinecartEntity {
     @Override
     public void tick() {
         super.tick();
-        if (this.fuel > 0) {
-            --this.fuel;
+        if (!this.world.isClient()) {
+            if (this.fuel > 0) {
+                --this.fuel;
+            }
+            if (this.fuel <= 0) {
+                this.pushX = 0.0;
+                this.pushZ = 0.0;
+            }
+            this.setLit(this.fuel > 0);
         }
-        if (this.fuel <= 0) {
-            this.pushX = 0.0;
-            this.pushZ = 0.0;
-        }
-        this.setLit(this.fuel > 0);
         if (this.isLit() && this.random.nextInt(4) == 0) {
-            this.world.addParticle(ParticleTypes.LARGE_SMOKE, this.x, this.y + 0.8, this.z, 0.0, 0.0, 0.0);
+            this.world.addParticle(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY() + 0.8, this.getZ(), 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected double method_7504() {
+    protected double getMaxOffRailSpeed() {
         return 0.2;
     }
 
@@ -83,27 +85,23 @@ extends AbstractMinecartEntity {
     }
 
     @Override
-    protected void method_7513(BlockPos blockPos, BlockState blockState) {
-        super.method_7513(blockPos, blockState);
-        double d = this.pushX * this.pushX + this.pushZ * this.pushZ;
+    protected void moveOnRail(BlockPos pos, BlockState state) {
+        double d = 1.0E-4;
+        double e = 0.001;
+        super.moveOnRail(pos, state);
         Vec3d vec3d = this.getVelocity();
-        if (d > 1.0E-4 && FurnaceMinecartEntity.squaredHorizontalLength(vec3d) > 0.001) {
-            d = MathHelper.sqrt(d);
-            this.pushX /= d;
-            this.pushZ /= d;
-            if (this.pushX * vec3d.x + this.pushZ * vec3d.z < 0.0) {
-                this.pushX = 0.0;
-                this.pushZ = 0.0;
-            } else {
-                double e = d / this.method_7504();
-                this.pushX *= e;
-                this.pushZ *= e;
-            }
+        double f = FurnaceMinecartEntity.squaredHorizontalLength(vec3d);
+        double g = this.pushX * this.pushX + this.pushZ * this.pushZ;
+        if (g > 1.0E-4 && f > 0.001) {
+            double h = MathHelper.sqrt(f);
+            double i = MathHelper.sqrt(g);
+            this.pushX = vec3d.x / h * i;
+            this.pushZ = vec3d.z / h * i;
         }
     }
 
     @Override
-    protected void method_7525() {
+    protected void applySlowdown() {
         double d = this.pushX * this.pushX + this.pushZ * this.pushZ;
         if (d > 1.0E-7) {
             d = MathHelper.sqrt(d);
@@ -113,7 +111,7 @@ extends AbstractMinecartEntity {
         } else {
             this.setVelocity(this.getVelocity().multiply(0.98, 0.0, 0.98));
         }
-        super.method_7525();
+        super.applySlowdown();
     }
 
     @Override
@@ -125,8 +123,10 @@ extends AbstractMinecartEntity {
             }
             this.fuel += 3600;
         }
-        this.pushX = this.x - player.x;
-        this.pushZ = this.z - player.z;
+        if (this.fuel > 0) {
+            this.pushX = this.getX() - player.getX();
+            this.pushZ = this.getZ() - player.getZ();
+        }
         return true;
     }
 

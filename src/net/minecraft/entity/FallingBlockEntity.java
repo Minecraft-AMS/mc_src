@@ -113,9 +113,6 @@ extends Entity {
             this.remove();
             return;
         }
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
         Block block = this.block.getBlock();
         if (this.timeFalling++ == 0) {
             blockPos = new BlockPos(this);
@@ -136,7 +133,7 @@ extends Entity {
             boolean bl = this.block.getBlock() instanceof ConcretePowderBlock;
             boolean bl2 = bl && this.world.getFluidState(blockPos).matches(FluidTags.WATER);
             double d = this.getVelocity().lengthSquared();
-            if (bl && d > 1.0 && (blockHitResult = this.world.rayTrace(new RayTraceContext(new Vec3d(this.prevX, this.prevY, this.prevZ), new Vec3d(this.x, this.y, this.z), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.SOURCE_ONLY, this))).getType() != HitResult.Type.MISS && this.world.getFluidState(blockHitResult.getBlockPos()).matches(FluidTags.WATER)) {
+            if (bl && d > 1.0 && (blockHitResult = this.world.rayTrace(new RayTraceContext(new Vec3d(this.prevX, this.prevY, this.prevZ), this.getPos(), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.SOURCE_ONLY, this))).getType() != HitResult.Type.MISS && this.world.getFluidState(blockHitResult.getBlockPos()).matches(FluidTags.WATER)) {
                 blockPos = blockHitResult.getBlockPos();
                 bl2 = true;
             }
@@ -146,9 +143,11 @@ extends Entity {
                 if (blockState.getBlock() != Blocks.MOVING_PISTON) {
                     this.remove();
                     if (!this.destroyedOnLanding) {
+                        boolean bl5;
                         boolean bl3 = blockState.canReplace(new AutomaticItemPlacementContext(this.world, blockPos, Direction.DOWN, ItemStack.EMPTY, Direction.UP));
-                        boolean bl4 = this.block.canPlaceAt(this.world, blockPos);
-                        if (bl3 && bl4) {
+                        boolean bl4 = FallingBlock.canFallThrough(this.world.getBlockState(blockPos.down())) && (!bl || !bl2);
+                        boolean bl6 = bl5 = this.block.canPlaceAt(this.world, blockPos) && !bl4;
+                        if (bl3 && bl5) {
                             if (this.block.contains(Properties.WATERLOGGED) && this.world.getFluidState(blockPos).getFluid() == Fluids.WATER) {
                                 this.block = (BlockState)this.block.with(Properties.WATERLOGGED, true);
                             }
@@ -188,7 +187,7 @@ extends Entity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
         int i;
         if (this.hurtEntities && (i = MathHelper.ceil(fallDistance - 1.0f)) > 0) {
             ArrayList list = Lists.newArrayList(this.world.getEntities(this, this.getBoundingBox()));
@@ -206,6 +205,7 @@ extends Entity {
                 }
             }
         }
+        return false;
     }
 
     @Override

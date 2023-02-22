@@ -240,7 +240,7 @@ extends PatrolEntity {
             EquipmentSlot equipmentSlot = EquipmentSlot.HEAD;
             ItemStack itemStack2 = this.getEquippedStack(equipmentSlot);
             double d = this.getDropChance(equipmentSlot);
-            if (!itemStack2.isEmpty() && (double)(this.random.nextFloat() - 0.1f) < d) {
+            if (!itemStack2.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1f, 0.0f) < d) {
                 this.dropStack(itemStack2);
             }
             this.equipStack(equipmentSlot, itemStack);
@@ -354,18 +354,16 @@ extends PatrolEntity {
         @Override
         public void tick() {
             if (this.raider.getNavigation().isIdle()) {
-                int k;
-                int j;
-                int i = this.home.getX();
-                Vec3d vec3d = TargetFinder.method_6377(this.raider, 16, 7, new Vec3d(i, j = this.home.getY(), k = this.home.getZ()), 0.3141592741012573);
-                if (vec3d == null) {
-                    vec3d = TargetFinder.method_6373(this.raider, 8, 7, new Vec3d(i, j, k));
+                Vec3d vec3d = new Vec3d(this.home);
+                Vec3d vec3d2 = TargetFinder.findTargetTowards(this.raider, 16, 7, vec3d, 0.3141592741012573);
+                if (vec3d2 == null) {
+                    vec3d2 = TargetFinder.findTargetTowards(this.raider, 8, 7, vec3d);
                 }
-                if (vec3d == null) {
+                if (vec3d2 == null) {
                     this.finished = true;
                     return;
                 }
-                this.raider.getNavigation().startMovingTo(vec3d.x, vec3d.y, vec3d.z, this.speed);
+                this.raider.getNavigation().startMovingTo(vec3d2.x, vec3d2.y, vec3d2.z, this.speed);
             }
         }
 

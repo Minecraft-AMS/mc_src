@@ -9,6 +9,7 @@
  *  com.google.gson.JsonDeserializer
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParseException
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -22,6 +23,7 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.mojang.datafixers.util.Pair;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,6 +46,7 @@ import net.minecraft.client.render.model.json.ModelVariantMap;
 import net.minecraft.client.render.model.json.MultipartModelComponent;
 import net.minecraft.client.render.model.json.WeightedUnbakedModel;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.state.StateManager;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -92,16 +95,16 @@ implements UnbakedModel {
     }
 
     @Override
-    public Collection<Identifier> getTextureDependencies(Function<Identifier, UnbakedModel> unbakedModelGetter, Set<String> unresolvedTextureReferences) {
+    public Collection<SpriteIdentifier> getTextureDependencies(Function<Identifier, UnbakedModel> unbakedModelGetter, Set<Pair<String, String>> unresolvedTextureReferences) {
         return this.getComponents().stream().flatMap(multipartModelComponent -> multipartModelComponent.getModel().getTextureDependencies(unbakedModelGetter, unresolvedTextureReferences).stream()).collect(Collectors.toSet());
     }
 
     @Override
     @Nullable
-    public BakedModel bake(ModelLoader loader, Function<Identifier, Sprite> textureGetter, ModelBakeSettings rotationContainer) {
+    public BakedModel bake(ModelLoader loader, Function<SpriteIdentifier, Sprite> textureGetter, ModelBakeSettings rotationContainer, Identifier modelId) {
         MultipartBakedModel.Builder builder = new MultipartBakedModel.Builder();
         for (MultipartModelComponent multipartModelComponent : this.getComponents()) {
-            BakedModel bakedModel = multipartModelComponent.getModel().bake(loader, textureGetter, rotationContainer);
+            BakedModel bakedModel = multipartModelComponent.getModel().bake(loader, textureGetter, rotationContainer, modelId);
             if (bakedModel == null) continue;
             builder.addComponent(multipartModelComponent.getPredicate(this.stateFactory), bakedModel);
         }
@@ -129,8 +132,8 @@ implements UnbakedModel {
             return list;
         }
 
-        public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
-            return this.deserialize(functionJson, unused, context);
+        public /* synthetic */ Object deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+            return this.deserialize(json, type, context);
         }
     }
 }

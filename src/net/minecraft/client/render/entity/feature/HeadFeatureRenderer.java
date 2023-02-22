@@ -10,19 +10,20 @@
 package net.minecraft.client.render.entity.feature;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractSkullBlock;
 import net.minecraft.block.entity.SkullBlockEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.SkullBlockEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.ModelWithHead;
 import net.minecraft.client.render.model.json.ModelTransformation;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.ZombieVillagerEntity;
@@ -43,7 +44,7 @@ extends FeatureRenderer<T, M> {
     }
 
     @Override
-    public void render(T livingEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T livingEntity, float f, float g, float h, float j, float k, float l) {
         float m;
         boolean bl;
         ItemStack itemStack = ((LivingEntity)livingEntity).getEquippedStack(EquipmentSlot.HEAD);
@@ -51,25 +52,21 @@ extends FeatureRenderer<T, M> {
             return;
         }
         Item item = itemStack.getItem();
-        GlStateManager.pushMatrix();
-        if (((Entity)livingEntity).isInSneakingPose()) {
-            GlStateManager.translatef(0.0f, 0.2f, 0.0f);
-        }
+        matrixStack.push();
         boolean bl2 = bl = livingEntity instanceof VillagerEntity || livingEntity instanceof ZombieVillagerEntity;
         if (((LivingEntity)livingEntity).isBaby() && !(livingEntity instanceof VillagerEntity)) {
             m = 2.0f;
             float n = 1.4f;
-            GlStateManager.translatef(0.0f, 0.5f * l, 0.0f);
-            GlStateManager.scalef(0.7f, 0.7f, 0.7f);
-            GlStateManager.translatef(0.0f, 16.0f * l, 0.0f);
+            matrixStack.translate(0.0, 0.03125, 0.0);
+            matrixStack.scale(0.7f, 0.7f, 0.7f);
+            matrixStack.translate(0.0, 1.0, 0.0);
         }
-        ((ModelWithHead)this.getContextModel()).setHeadAngle(0.0625f);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        ((ModelWithHead)this.getContextModel()).getHead().rotate(matrixStack);
         if (item instanceof BlockItem && ((BlockItem)item).getBlock() instanceof AbstractSkullBlock) {
             m = 1.1875f;
-            GlStateManager.scalef(1.1875f, -1.1875f, -1.1875f);
+            matrixStack.scale(1.1875f, -1.1875f, -1.1875f);
             if (bl) {
-                GlStateManager.translatef(0.0f, 0.0625f, 0.0f);
+                matrixStack.translate(0.0, 0.0625, 0.0);
             }
             GameProfile gameProfile = null;
             if (itemStack.hasTag()) {
@@ -82,23 +79,19 @@ extends FeatureRenderer<T, M> {
                     compoundTag.put("SkullOwner", NbtHelper.fromGameProfile(new CompoundTag(), gameProfile));
                 }
             }
-            SkullBlockEntityRenderer.INSTANCE.render(-0.5f, 0.0f, -0.5f, null, 180.0f, ((AbstractSkullBlock)((BlockItem)item).getBlock()).getSkullType(), gameProfile, -1, f);
+            matrixStack.translate(-0.5, 0.0, -0.5);
+            SkullBlockEntityRenderer.render(null, 180.0f, ((AbstractSkullBlock)((BlockItem)item).getBlock()).getSkullType(), gameProfile, f, matrixStack, vertexConsumerProvider, i);
         } else if (!(item instanceof ArmorItem) || ((ArmorItem)item).getSlotType() != EquipmentSlot.HEAD) {
             m = 0.625f;
-            GlStateManager.translatef(0.0f, -0.25f, 0.0f);
-            GlStateManager.rotatef(180.0f, 0.0f, 1.0f, 0.0f);
-            GlStateManager.scalef(0.625f, -0.625f, -0.625f);
+            matrixStack.translate(0.0, -0.25, 0.0);
+            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
+            matrixStack.scale(0.625f, -0.625f, -0.625f);
             if (bl) {
-                GlStateManager.translatef(0.0f, 0.1875f, 0.0f);
+                matrixStack.translate(0.0, 0.1875, 0.0);
             }
-            MinecraftClient.getInstance().getHeldItemRenderer().renderItem((LivingEntity)livingEntity, itemStack, ModelTransformation.Type.HEAD);
+            MinecraftClient.getInstance().getHeldItemRenderer().renderItem((LivingEntity)livingEntity, itemStack, ModelTransformation.Mode.HEAD, false, matrixStack, vertexConsumerProvider, i);
         }
-        GlStateManager.popMatrix();
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        matrixStack.pop();
     }
 }
 

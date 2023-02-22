@@ -8,6 +8,7 @@
 package net.minecraft.client.gui.widget;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collections;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -31,14 +32,14 @@ implements Drawable {
     protected final MinecraftClient minecraft;
     protected int width;
     protected int height;
-    protected int field_2166;
-    protected int field_2165;
-    protected int field_2181;
-    protected int field_2180;
+    protected int top;
+    protected int bottom;
+    protected int right;
+    protected int left;
     protected final int itemHeight;
     protected boolean centerListVertically = true;
     protected int yDrag = -2;
-    protected double field_2175;
+    protected double scroll;
     protected boolean visible = true;
     protected boolean renderSelection = true;
     protected boolean renderHeader;
@@ -49,20 +50,20 @@ implements Drawable {
         this.minecraft = client;
         this.width = width;
         this.height = height;
-        this.field_2166 = top;
-        this.field_2165 = bottom;
+        this.top = top;
+        this.bottom = bottom;
         this.itemHeight = itemHeight;
-        this.field_2180 = 0;
-        this.field_2181 = width;
+        this.left = 0;
+        this.right = width;
     }
 
     public void updateSize(int width, int height, int y, int bottom) {
         this.width = width;
         this.height = height;
-        this.field_2166 = y;
-        this.field_2165 = bottom;
-        this.field_2180 = 0;
-        this.field_2181 = width;
+        this.top = y;
+        this.bottom = bottom;
+        this.left = 0;
+        this.right = width;
     }
 
     public void setRenderSelection(boolean bl) {
@@ -119,9 +120,9 @@ implements Drawable {
     }
 
     public int getItemAtPosition(double d, double e) {
-        int i = this.field_2180 + this.width / 2 - this.getRowWidth() / 2;
-        int j = this.field_2180 + this.width / 2 + this.getRowWidth() / 2;
-        int k = MathHelper.floor(e - (double)this.field_2166) - this.headerHeight + (int)this.field_2175 - 4;
+        int i = this.left + this.width / 2 - this.getRowWidth() / 2;
+        int j = this.left + this.width / 2 + this.getRowWidth() / 2;
+        int k = MathHelper.floor(e - (double)this.top) - this.headerHeight + (int)this.scroll - 4;
         int l = k / this.itemHeight;
         if (d < (double)this.getScrollbarPosition() && d >= (double)i && d <= (double)j && l >= 0 && k >= 0 && l < this.getItemCount()) {
             return l;
@@ -130,32 +131,32 @@ implements Drawable {
     }
 
     protected void capYPosition() {
-        this.field_2175 = MathHelper.clamp(this.field_2175, 0.0, (double)this.getMaxScroll());
+        this.scroll = MathHelper.clamp(this.scroll, 0.0, (double)this.getMaxScroll());
     }
 
     public int getMaxScroll() {
-        return Math.max(0, this.getMaxPosition() - (this.field_2165 - this.field_2166 - 4));
+        return Math.max(0, this.getMaxPosition() - (this.bottom - this.top - 4));
     }
 
     public void centerScrollOn(int i) {
-        this.field_2175 = i * this.itemHeight + this.itemHeight / 2 - (this.field_2165 - this.field_2166) / 2;
+        this.scroll = i * this.itemHeight + this.itemHeight / 2 - (this.bottom - this.top) / 2;
         this.capYPosition();
     }
 
     public int getScroll() {
-        return (int)this.field_2175;
+        return (int)this.scroll;
     }
 
     public boolean isMouseInList(double mouseX, double mouseY) {
-        return mouseY >= (double)this.field_2166 && mouseY <= (double)this.field_2165 && mouseX >= (double)this.field_2180 && mouseX <= (double)this.field_2181;
+        return mouseY >= (double)this.top && mouseY <= (double)this.bottom && mouseX >= (double)this.left && mouseX <= (double)this.right;
     }
 
     public int getScrollBottom() {
-        return (int)this.field_2175 - this.height - this.headerHeight;
+        return (int)this.scroll - this.height - this.headerHeight;
     }
 
     public void scroll(int amount) {
-        this.field_2175 += (double)amount;
+        this.scroll += (double)amount;
         this.capYPosition();
         this.yDrag = -2;
     }
@@ -169,77 +170,75 @@ implements Drawable {
         int i = this.getScrollbarPosition();
         int j = i + 6;
         this.capYPosition();
-        GlStateManager.disableLighting();
-        GlStateManager.disableFog();
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         this.minecraft.getTextureManager().bindTexture(DrawableHelper.BACKGROUND_LOCATION);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         float f = 32.0f;
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(this.field_2180, this.field_2165, 0.0).texture((float)this.field_2180 / 32.0f, (float)(this.field_2165 + (int)this.field_2175) / 32.0f).color(32, 32, 32, 255).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2165, 0.0).texture((float)this.field_2181 / 32.0f, (float)(this.field_2165 + (int)this.field_2175) / 32.0f).color(32, 32, 32, 255).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2166, 0.0).texture((float)this.field_2181 / 32.0f, (float)(this.field_2166 + (int)this.field_2175) / 32.0f).color(32, 32, 32, 255).next();
-        bufferBuilder.vertex(this.field_2180, this.field_2166, 0.0).texture((float)this.field_2180 / 32.0f, (float)(this.field_2166 + (int)this.field_2175) / 32.0f).color(32, 32, 32, 255).next();
+        bufferBuilder.vertex(this.left, this.bottom, 0.0).texture((float)this.left / 32.0f, (float)(this.bottom + (int)this.scroll) / 32.0f).color(32, 32, 32, 255).next();
+        bufferBuilder.vertex(this.right, this.bottom, 0.0).texture((float)this.right / 32.0f, (float)(this.bottom + (int)this.scroll) / 32.0f).color(32, 32, 32, 255).next();
+        bufferBuilder.vertex(this.right, this.top, 0.0).texture((float)this.right / 32.0f, (float)(this.top + (int)this.scroll) / 32.0f).color(32, 32, 32, 255).next();
+        bufferBuilder.vertex(this.left, this.top, 0.0).texture((float)this.left / 32.0f, (float)(this.top + (int)this.scroll) / 32.0f).color(32, 32, 32, 255).next();
         tessellator.draw();
-        int k = this.field_2180 + this.width / 2 - this.getRowWidth() / 2 + 2;
-        int l = this.field_2166 + 4 - (int)this.field_2175;
+        int k = this.left + this.width / 2 - this.getRowWidth() / 2 + 2;
+        int l = this.top + 4 - (int)this.scroll;
         if (this.renderHeader) {
             this.renderHeader(k, l, tessellator);
         }
         this.renderList(k, l, mouseX, mouseY, delta);
-        GlStateManager.disableDepthTest();
-        this.renderHoleBackground(0, this.field_2166, 255, 255);
-        this.renderHoleBackground(this.field_2165, this.height, 255, 255);
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
-        GlStateManager.disableAlphaTest();
-        GlStateManager.shadeModel(7425);
-        GlStateManager.disableTexture();
+        RenderSystem.disableDepthTest();
+        this.renderHoleBackground(0, this.top, 255, 255);
+        this.renderHoleBackground(this.bottom, this.height, 255, 255);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE);
+        RenderSystem.disableAlphaTest();
+        RenderSystem.shadeModel(7425);
+        RenderSystem.disableTexture();
         int m = 4;
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(this.field_2180, this.field_2166 + 4, 0.0).texture(0.0, 1.0).color(0, 0, 0, 0).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2166 + 4, 0.0).texture(1.0, 1.0).color(0, 0, 0, 0).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2166, 0.0).texture(1.0, 0.0).color(0, 0, 0, 255).next();
-        bufferBuilder.vertex(this.field_2180, this.field_2166, 0.0).texture(0.0, 0.0).color(0, 0, 0, 255).next();
+        bufferBuilder.vertex(this.left, this.top + 4, 0.0).texture(0.0f, 1.0f).color(0, 0, 0, 0).next();
+        bufferBuilder.vertex(this.right, this.top + 4, 0.0).texture(1.0f, 1.0f).color(0, 0, 0, 0).next();
+        bufferBuilder.vertex(this.right, this.top, 0.0).texture(1.0f, 0.0f).color(0, 0, 0, 255).next();
+        bufferBuilder.vertex(this.left, this.top, 0.0).texture(0.0f, 0.0f).color(0, 0, 0, 255).next();
         tessellator.draw();
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(this.field_2180, this.field_2165, 0.0).texture(0.0, 1.0).color(0, 0, 0, 255).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2165, 0.0).texture(1.0, 1.0).color(0, 0, 0, 255).next();
-        bufferBuilder.vertex(this.field_2181, this.field_2165 - 4, 0.0).texture(1.0, 0.0).color(0, 0, 0, 0).next();
-        bufferBuilder.vertex(this.field_2180, this.field_2165 - 4, 0.0).texture(0.0, 0.0).color(0, 0, 0, 0).next();
+        bufferBuilder.vertex(this.left, this.bottom, 0.0).texture(0.0f, 1.0f).color(0, 0, 0, 255).next();
+        bufferBuilder.vertex(this.right, this.bottom, 0.0).texture(1.0f, 1.0f).color(0, 0, 0, 255).next();
+        bufferBuilder.vertex(this.right, this.bottom - 4, 0.0).texture(1.0f, 0.0f).color(0, 0, 0, 0).next();
+        bufferBuilder.vertex(this.left, this.bottom - 4, 0.0).texture(0.0f, 0.0f).color(0, 0, 0, 0).next();
         tessellator.draw();
         int n = this.getMaxScroll();
         if (n > 0) {
-            int o = (int)((float)((this.field_2165 - this.field_2166) * (this.field_2165 - this.field_2166)) / (float)this.getMaxPosition());
-            int p = (int)this.field_2175 * (this.field_2165 - this.field_2166 - (o = MathHelper.clamp(o, 32, this.field_2165 - this.field_2166 - 8))) / n + this.field_2166;
-            if (p < this.field_2166) {
-                p = this.field_2166;
+            int o = (int)((float)((this.bottom - this.top) * (this.bottom - this.top)) / (float)this.getMaxPosition());
+            int p = (int)this.scroll * (this.bottom - this.top - (o = MathHelper.clamp(o, 32, this.bottom - this.top - 8))) / n + this.top;
+            if (p < this.top) {
+                p = this.top;
             }
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, this.field_2165, 0.0).texture(0.0, 1.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(j, this.field_2165, 0.0).texture(1.0, 1.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(j, this.field_2166, 0.0).texture(1.0, 0.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(i, this.field_2166, 0.0).texture(0.0, 0.0).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(i, this.bottom, 0.0).texture(0.0f, 1.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(j, this.bottom, 0.0).texture(1.0f, 1.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(j, this.top, 0.0).texture(1.0f, 0.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(i, this.top, 0.0).texture(0.0f, 0.0f).color(0, 0, 0, 255).next();
             tessellator.draw();
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, p + o, 0.0).texture(0.0, 1.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(j, p + o, 0.0).texture(1.0, 1.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(j, p, 0.0).texture(1.0, 0.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(i, p, 0.0).texture(0.0, 0.0).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(i, p + o, 0.0).texture(0.0f, 1.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(j, p + o, 0.0).texture(1.0f, 1.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(j, p, 0.0).texture(1.0f, 0.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(i, p, 0.0).texture(0.0f, 0.0f).color(128, 128, 128, 255).next();
             tessellator.draw();
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, p + o - 1, 0.0).texture(0.0, 1.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(j - 1, p + o - 1, 0.0).texture(1.0, 1.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(j - 1, p, 0.0).texture(1.0, 0.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(i, p, 0.0).texture(0.0, 0.0).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(i, p + o - 1, 0.0).texture(0.0f, 1.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(j - 1, p + o - 1, 0.0).texture(1.0f, 1.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(j - 1, p, 0.0).texture(1.0f, 0.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(i, p, 0.0).texture(0.0f, 0.0f).color(192, 192, 192, 255).next();
             tessellator.draw();
         }
         this.renderDecorations(mouseX, mouseY);
-        GlStateManager.enableTexture();
-        GlStateManager.shadeModel(7424);
-        GlStateManager.enableAlphaTest();
-        GlStateManager.disableBlend();
+        RenderSystem.enableTexture();
+        RenderSystem.shadeModel(7424);
+        RenderSystem.enableAlphaTest();
+        RenderSystem.disableBlend();
     }
 
     protected void updateScrollingState(double d, double e, int i) {
@@ -254,7 +253,7 @@ implements Drawable {
         }
         int i = this.getItemAtPosition(mouseX, mouseY);
         if (i == -1 && button == 0) {
-            this.clickedHeader((int)(mouseX - (double)(this.field_2180 + this.width / 2 - this.getRowWidth() / 2)), (int)(mouseY - (double)this.field_2166) + (int)this.field_2175 - 4);
+            this.clickedHeader((int)(mouseX - (double)(this.left + this.width / 2 - this.getRowWidth() / 2)), (int)(mouseY - (double)this.top) + (int)this.scroll - 4);
             return true;
         }
         if (i != -1 && this.selectItem(i, button, mouseX, mouseY)) {
@@ -283,21 +282,21 @@ implements Drawable {
         if (!this.isVisible() || button != 0 || !this.scrolling) {
             return false;
         }
-        if (mouseY < (double)this.field_2166) {
-            this.field_2175 = 0.0;
-        } else if (mouseY > (double)this.field_2165) {
-            this.field_2175 = this.getMaxScroll();
+        if (mouseY < (double)this.top) {
+            this.scroll = 0.0;
+        } else if (mouseY > (double)this.bottom) {
+            this.scroll = this.getMaxScroll();
         } else {
             double d = this.getMaxScroll();
             if (d < 1.0) {
                 d = 1.0;
             }
-            int i = (int)((float)((this.field_2165 - this.field_2166) * (this.field_2165 - this.field_2166)) / (float)this.getMaxPosition());
-            double e = d / (double)(this.field_2165 - this.field_2166 - (i = MathHelper.clamp(i, 32, this.field_2165 - this.field_2166 - 8)));
+            int i = (int)((float)((this.bottom - this.top) * (this.bottom - this.top)) / (float)this.getMaxPosition());
+            double e = d / (double)(this.bottom - this.top - (i = MathHelper.clamp(i, 32, this.bottom - this.top - 8)));
             if (e < 1.0) {
                 e = 1.0;
             }
-            this.field_2175 += deltaY * e;
+            this.scroll += deltaY * e;
             this.capYPosition();
         }
         return true;
@@ -308,7 +307,7 @@ implements Drawable {
         if (!this.isVisible()) {
             return false;
         }
-        this.field_2175 -= amount * (double)this.itemHeight / 2.0;
+        this.scroll -= amount * (double)this.itemHeight / 2.0;
         return true;
     }
 
@@ -358,29 +357,29 @@ implements Drawable {
         for (int j = 0; j < i; ++j) {
             int k = y + j * this.itemHeight + this.headerHeight;
             int l = this.itemHeight - 4;
-            if (k > this.field_2165 || k + l < this.field_2166) {
+            if (k > this.bottom || k + l < this.top) {
                 this.updateItemPosition(j, x, k, f);
             }
             if (this.renderSelection && this.isSelectedItem(j)) {
-                int m = this.field_2180 + this.width / 2 - this.getRowWidth() / 2;
-                int n = this.field_2180 + this.width / 2 + this.getRowWidth() / 2;
-                GlStateManager.disableTexture();
+                int m = this.left + this.width / 2 - this.getRowWidth() / 2;
+                int n = this.left + this.width / 2 + this.getRowWidth() / 2;
+                RenderSystem.disableTexture();
                 float g = this.isFocused() ? 1.0f : 0.5f;
-                GlStateManager.color4f(g, g, g, 1.0f);
+                RenderSystem.color4f(g, g, g, 1.0f);
                 bufferBuilder.begin(7, VertexFormats.POSITION);
                 bufferBuilder.vertex(m, k + l + 2, 0.0).next();
                 bufferBuilder.vertex(n, k + l + 2, 0.0).next();
                 bufferBuilder.vertex(n, k - 2, 0.0).next();
                 bufferBuilder.vertex(m, k - 2, 0.0).next();
                 tessellator.draw();
-                GlStateManager.color4f(0.0f, 0.0f, 0.0f, 1.0f);
+                RenderSystem.color4f(0.0f, 0.0f, 0.0f, 1.0f);
                 bufferBuilder.begin(7, VertexFormats.POSITION);
                 bufferBuilder.vertex(m + 1, k + l + 1, 0.0).next();
                 bufferBuilder.vertex(n - 1, k + l + 1, 0.0).next();
                 bufferBuilder.vertex(n - 1, k - 1, 0.0).next();
                 bufferBuilder.vertex(m + 1, k - 1, 0.0).next();
                 tessellator.draw();
-                GlStateManager.enableTexture();
+                RenderSystem.enableTexture();
             }
             this.renderItem(j, x, k, l, mouseX, mouseY, f);
         }
@@ -398,19 +397,19 @@ implements Drawable {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         this.minecraft.getTextureManager().bindTexture(DrawableHelper.BACKGROUND_LOCATION);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         float f = 32.0f;
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(this.field_2180, j, 0.0).texture(0.0, (float)j / 32.0f).color(64, 64, 64, l).next();
-        bufferBuilder.vertex(this.field_2180 + this.width, j, 0.0).texture((float)this.width / 32.0f, (float)j / 32.0f).color(64, 64, 64, l).next();
-        bufferBuilder.vertex(this.field_2180 + this.width, i, 0.0).texture((float)this.width / 32.0f, (float)i / 32.0f).color(64, 64, 64, k).next();
-        bufferBuilder.vertex(this.field_2180, i, 0.0).texture(0.0, (float)i / 32.0f).color(64, 64, 64, k).next();
+        bufferBuilder.vertex(this.left, j, 0.0).texture(0.0f, (float)j / 32.0f).color(64, 64, 64, l).next();
+        bufferBuilder.vertex(this.left + this.width, j, 0.0).texture((float)this.width / 32.0f, (float)j / 32.0f).color(64, 64, 64, l).next();
+        bufferBuilder.vertex(this.left + this.width, i, 0.0).texture((float)this.width / 32.0f, (float)i / 32.0f).color(64, 64, 64, k).next();
+        bufferBuilder.vertex(this.left, i, 0.0).texture(0.0f, (float)i / 32.0f).color(64, 64, 64, k).next();
         tessellator.draw();
     }
 
     public void setLeftPos(int x) {
-        this.field_2180 = x;
-        this.field_2181 = x + this.width;
+        this.left = x;
+        this.right = x + this.width;
     }
 
     public int getItemHeight() {

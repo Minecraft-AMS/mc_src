@@ -1,12 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  */
 package net.minecraft.world.biome.layer;
 
-import com.google.common.collect.ImmutableList;
 import java.util.function.LongFunction;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.Biome;
@@ -22,7 +18,6 @@ import net.minecraft.world.biome.layer.AddMushroomIslandLayer;
 import net.minecraft.world.biome.layer.AddRiversLayer;
 import net.minecraft.world.biome.layer.AddSunflowerPlainsLayer;
 import net.minecraft.world.biome.layer.ApplyOceanTemperatureLayer;
-import net.minecraft.world.biome.layer.CellScaleLayer;
 import net.minecraft.world.biome.layer.ContinentLayer;
 import net.minecraft.world.biome.layer.EaseBiomeEdgeLayer;
 import net.minecraft.world.biome.layer.IncreaseEdgeCurvatureLayer;
@@ -34,6 +29,7 @@ import net.minecraft.world.biome.layer.SimpleLandNoiseLayer;
 import net.minecraft.world.biome.layer.SmoothenShorelineLayer;
 import net.minecraft.world.biome.layer.type.ParentedLayer;
 import net.minecraft.world.biome.layer.util.CachingLayerContext;
+import net.minecraft.world.biome.layer.util.CachingLayerSampler;
 import net.minecraft.world.biome.layer.util.LayerFactory;
 import net.minecraft.world.biome.layer.util.LayerSampleContext;
 import net.minecraft.world.biome.layer.util.LayerSampler;
@@ -61,8 +57,7 @@ public class BiomeLayers {
         return layerFactory;
     }
 
-    public static <T extends LayerSampler, C extends LayerSampleContext<T>> ImmutableList<LayerFactory<T>> build(LevelGeneratorType generatorType, OverworldChunkGeneratorConfig settings, LongFunction<C> contextProvider) {
-        int i;
+    public static <T extends LayerSampler, C extends LayerSampleContext<T>> LayerFactory<T> build(LevelGeneratorType generatorType, OverworldChunkGeneratorConfig settings, LongFunction<C> contextProvider) {
         LayerFactory layerFactory = ContinentLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(1L));
         layerFactory = ScaleLayer.FUZZY.create((LayerSampleContext)contextProvider.apply(2000L), layerFactory);
         layerFactory = IncreaseEdgeCurvatureLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(1L), layerFactory);
@@ -84,19 +79,13 @@ public class BiomeLayers {
         layerFactory = AddMushroomIslandLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(5L), layerFactory);
         layerFactory = AddDeepOceanLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(4L), layerFactory);
         layerFactory = BiomeLayers.stack(1000L, ScaleLayer.NORMAL, layerFactory, 0, contextProvider);
-        int j = i = 4;
-        if (settings != null) {
-            i = settings.getBiomeSize();
-            j = settings.getRiverSize();
-        }
-        if (generatorType == LevelGeneratorType.LARGE_BIOMES) {
-            i = 6;
-        }
+        int i = generatorType == LevelGeneratorType.LARGE_BIOMES ? 6 : settings.getBiomeSize();
+        int j = settings.getRiverSize();
         LayerFactory layerFactory3 = layerFactory;
         layerFactory3 = BiomeLayers.stack(1000L, ScaleLayer.NORMAL, layerFactory3, 0, contextProvider);
         layerFactory3 = SimpleLandNoiseLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(100L), layerFactory3);
         LayerFactory layerFactory4 = layerFactory;
-        layerFactory4 = new SetBaseBiomesLayer(generatorType, settings).create((LayerSampleContext)contextProvider.apply(200L), layerFactory4);
+        layerFactory4 = new SetBaseBiomesLayer(generatorType, settings.getForcedBiome()).create((LayerSampleContext)contextProvider.apply(200L), layerFactory4);
         layerFactory4 = AddBambooJungleLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(1001L), layerFactory4);
         layerFactory4 = BiomeLayers.stack(1000L, ScaleLayer.NORMAL, layerFactory4, 2, contextProvider);
         layerFactory4 = EaseBiomeEdgeLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(1000L), layerFactory4);
@@ -118,18 +107,14 @@ public class BiomeLayers {
         }
         layerFactory4 = SmoothenShorelineLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(1000L), layerFactory4);
         layerFactory4 = AddRiversLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(100L), layerFactory4, layerFactory3);
-        LayerFactory layerFactory6 = layerFactory4 = ApplyOceanTemperatureLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(100L), layerFactory4, layerFactory2);
-        LayerFactory layerFactory7 = CellScaleLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(10L), layerFactory4);
-        return ImmutableList.of(layerFactory4, layerFactory7, layerFactory6);
+        layerFactory4 = ApplyOceanTemperatureLayer.INSTANCE.create((LayerSampleContext)contextProvider.apply(100L), layerFactory4, layerFactory2);
+        return layerFactory4;
     }
 
-    public static BiomeLayerSampler[] build(long seed, LevelGeneratorType generatorType, OverworldChunkGeneratorConfig settings) {
+    public static BiomeLayerSampler build(long seed, LevelGeneratorType generatorType, OverworldChunkGeneratorConfig settings) {
         int i = 25;
-        ImmutableList immutableList = BiomeLayers.build(generatorType, settings, (long m) -> new CachingLayerContext(25, seed, m));
-        BiomeLayerSampler biomeLayerSampler = new BiomeLayerSampler((LayerFactory)immutableList.get(0));
-        BiomeLayerSampler biomeLayerSampler2 = new BiomeLayerSampler((LayerFactory)immutableList.get(1));
-        BiomeLayerSampler biomeLayerSampler3 = new BiomeLayerSampler((LayerFactory)immutableList.get(2));
-        return new BiomeLayerSampler[]{biomeLayerSampler, biomeLayerSampler2, biomeLayerSampler3};
+        LayerFactory<CachingLayerSampler> layerFactory = BiomeLayers.build(generatorType, settings, (long salt) -> new CachingLayerContext(25, seed, salt));
+        return new BiomeLayerSampler(layerFactory);
     }
 
     public static boolean areSimilar(int id1, int id2) {

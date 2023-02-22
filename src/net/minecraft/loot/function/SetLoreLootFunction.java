@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.function.ConditionalLootFunction;
@@ -36,7 +37,6 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.jetbrains.annotations.Nullable;
 
 public class SetLoreLootFunction
@@ -55,7 +55,7 @@ extends ConditionalLootFunction {
 
     @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
-        return this.entity != null ? ImmutableSet.of(this.entity.getIdentifier()) : ImmutableSet.of();
+        return this.entity != null ? ImmutableSet.of(this.entity.getParameter()) : ImmutableSet.of();
     }
 
     @Override
@@ -66,7 +66,7 @@ extends ConditionalLootFunction {
                 listTag.clear();
             }
             UnaryOperator<Text> unaryOperator = SetNameLootFunction.applySourceEntity(context, this.entity);
-            this.lore.stream().map(unaryOperator).map(Text.Serializer::toJson).map(StringTag::new).forEach(listTag::add);
+            this.lore.stream().map(unaryOperator).map(Text.Serializer::toJson).map(StringTag::of).forEach(listTag::add);
         }
         return stack;
     }

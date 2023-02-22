@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
@@ -22,7 +23,6 @@ import net.minecraft.predicate.entity.DamageSourcePredicate;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class DamageSourcePropertiesLootCondition
 implements LootCondition {

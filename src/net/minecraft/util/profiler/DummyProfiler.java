@@ -51,6 +51,14 @@ implements ReadableProfiler {
     }
 
     @Override
+    public void visit(String marker) {
+    }
+
+    @Override
+    public void visit(Supplier<String> markerGetter) {
+    }
+
+    @Override
     public ProfileResult getResult() {
         return EmptyProfileResult.INSTANCE;
     }

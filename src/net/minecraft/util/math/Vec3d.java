@@ -10,6 +10,7 @@ package net.minecraft.util.math;
 import java.util.EnumSet;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
@@ -27,6 +28,10 @@ implements Position {
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+
+    public Vec3d(Vector3f vector3f) {
+        this(vector3f.getX(), vector3f.getY(), vector3f.getZ());
     }
 
     public Vec3d(Vec3i vec3i) {

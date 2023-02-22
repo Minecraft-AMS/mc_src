@@ -57,7 +57,7 @@ implements DynamicOps<Tag> {
     }
 
     public Tag empty() {
-        return new EndTag();
+        return EndTag.INSTANCE;
     }
 
     public Type<?> getType(Tag tag) {
@@ -113,31 +113,35 @@ implements DynamicOps<Tag> {
     }
 
     public Tag createNumeric(Number number) {
-        return new DoubleTag(number.doubleValue());
+        return DoubleTag.of(number.doubleValue());
     }
 
     public Tag createByte(byte b) {
-        return new ByteTag(b);
+        return ByteTag.of(b);
     }
 
     public Tag createShort(short s) {
-        return new ShortTag(s);
+        return ShortTag.of(s);
     }
 
     public Tag createInt(int i) {
-        return new IntTag(i);
+        return IntTag.of(i);
     }
 
     public Tag createLong(long l) {
-        return new LongTag(l);
+        return LongTag.of(l);
     }
 
     public Tag createFloat(float f) {
-        return new FloatTag(f);
+        return FloatTag.of(f);
     }
 
     public Tag createDouble(double d) {
-        return new DoubleTag(d);
+        return DoubleTag.of(d);
+    }
+
+    public Tag createBoolean(boolean bl) {
+        return ByteTag.of(bl);
     }
 
     public Optional<String> getStringValue(Tag tag) {
@@ -148,7 +152,7 @@ implements DynamicOps<Tag> {
     }
 
     public Tag createString(String string) {
-        return new StringTag(string);
+        return StringTag.of(string);
     }
 
     public Tag mergeInto(Tag tag, Tag tag2) {
@@ -380,6 +384,10 @@ implements DynamicOps<Tag> {
 
     public /* synthetic */ Optional getStringValue(Object object) {
         return this.getStringValue((Tag)object);
+    }
+
+    public /* synthetic */ Object createBoolean(boolean bl) {
+        return this.createBoolean(bl);
     }
 
     public /* synthetic */ Object createDouble(double d) {

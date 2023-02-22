@@ -43,16 +43,16 @@ extends Goal {
         if (!this.mob.isOnFire()) {
             return false;
         }
-        if (!this.world.isSkyVisible(new BlockPos(this.mob.x, this.mob.getBoundingBox().y1, this.mob.z))) {
+        if (!this.world.isSkyVisible(new BlockPos(this.mob))) {
             return false;
         }
         if (!this.mob.getEquippedStack(EquipmentSlot.HEAD).isEmpty()) {
             return false;
         }
-        return this.method_18250();
+        return this.targetShadedPos();
     }
 
-    protected boolean method_18250() {
+    protected boolean targetShadedPos() {
         Vec3d vec3d = this.locateShadedPos();
         if (vec3d == null) {
             return false;
@@ -76,11 +76,11 @@ extends Goal {
     @Nullable
     protected Vec3d locateShadedPos() {
         Random random = this.mob.getRandom();
-        BlockPos blockPos = new BlockPos(this.mob.x, this.mob.getBoundingBox().y1, this.mob.z);
+        BlockPos blockPos = new BlockPos(this.mob);
         for (int i = 0; i < 10; ++i) {
             BlockPos blockPos2 = blockPos.add(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
             if (this.world.isSkyVisible(blockPos2) || !(this.mob.getPathfindingFavor(blockPos2) < 0.0f)) continue;
-            return new Vec3d(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
+            return new Vec3d(blockPos2);
         }
         return null;
     }

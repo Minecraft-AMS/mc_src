@@ -20,6 +20,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.BooleanBiFunction;
 import net.minecraft.util.OffsetDoubleList;
+import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.AxisCycleDirection;
 import net.minecraft.util.math.BlockPos;
@@ -60,7 +61,7 @@ public abstract class VoxelShape {
 
     public Box getBoundingBox() {
         if (this.isEmpty()) {
-            throw new UnsupportedOperationException("No bounds for empty shape.");
+            throw Util.throwOrPause(new UnsupportedOperationException("No bounds for empty shape."));
         }
         return new Box(this.getMinimum(Direction.Axis.X), this.getMinimum(Direction.Axis.Y), this.getMinimum(Direction.Axis.Z), this.getMaximum(Direction.Axis.X), this.getMaximum(Direction.Axis.Y), this.getMaximum(Direction.Axis.Z));
     }
@@ -109,12 +110,12 @@ public abstract class VoxelShape {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public double method_1093(Direction.Axis axis, double d, double e) {
+    public double getBeginningCoord(Direction.Axis axis, double from, double to) {
         int j;
         Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
         Direction.Axis axis3 = AxisCycleDirection.BACKWARD.cycle(axis);
-        int i = this.getCoordIndex(axis2, d);
-        int k = this.voxels.method_1043(axis, i, j = this.getCoordIndex(axis3, e));
+        int i = this.getCoordIndex(axis2, from);
+        int k = this.voxels.getBeginningAxisCoord(axis, i, j = this.getCoordIndex(axis3, to));
         if (k >= this.voxels.getSize(axis)) {
             return Double.POSITIVE_INFINITY;
         }
@@ -122,12 +123,12 @@ public abstract class VoxelShape {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public double method_1102(Direction.Axis axis, double d, double e) {
+    public double getEndingCoord(Direction.Axis axis, double from, double to) {
         int j;
         Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
         Direction.Axis axis3 = AxisCycleDirection.BACKWARD.cycle(axis);
-        int i = this.getCoordIndex(axis2, d);
-        int k = this.voxels.method_1058(axis, i, j = this.getCoordIndex(axis3, e));
+        int i = this.getCoordIndex(axis2, from);
+        int k = this.voxels.getEndingAxisCoord(axis, i, j = this.getCoordIndex(axis3, to));
         if (k <= 0) {
             return Double.NEGATIVE_INFINITY;
         }

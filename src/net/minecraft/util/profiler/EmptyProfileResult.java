@@ -52,10 +52,5 @@ implements ProfileResult {
     public int getEndTick() {
         return 0;
     }
-
-    @Override
-    public String getTimingTreeString() {
-        return "";
-    }
 }
 

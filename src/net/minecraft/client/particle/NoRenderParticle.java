@@ -11,8 +11,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
@@ -27,7 +27,7 @@ extends Particle {
     }
 
     @Override
-    public final void buildGeometry(BufferBuilder bufferBuilder, Camera camera, float tickDelta, float f, float g, float h, float i, float j) {
+    public final void buildGeometry(VertexConsumer vertexConsumer, Camera camera, float tickDelta) {
     }
 
     @Override

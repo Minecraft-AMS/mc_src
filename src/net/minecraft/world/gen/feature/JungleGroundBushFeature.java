@@ -10,40 +10,30 @@ import com.mojang.datafixers.Dynamic;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
-import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.ModifiableTestableWorld;
 import net.minecraft.world.gen.feature.AbstractTreeFeature;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
+import net.minecraft.world.gen.feature.TreeFeatureConfig;
 
 public class JungleGroundBushFeature
-extends AbstractTreeFeature<DefaultFeatureConfig> {
-    private final BlockState leaves;
-    private final BlockState log;
-
-    public JungleGroundBushFeature(Function<Dynamic<?>, ? extends DefaultFeatureConfig> configFactory, BlockState log, BlockState leaves) {
-        super(configFactory, false);
-        this.log = log;
-        this.leaves = leaves;
+extends AbstractTreeFeature<TreeFeatureConfig> {
+    public JungleGroundBushFeature(Function<Dynamic<?>, ? extends TreeFeatureConfig> configFactory) {
+        super(configFactory);
     }
 
     @Override
-    public boolean generate(Set<BlockPos> logPositions, ModifiableTestableWorld world, Random random, BlockPos pos, BlockBox blockBox) {
+    public boolean generate(ModifiableTestableWorld world, Random random, BlockPos pos, Set<BlockPos> logPositions, Set<BlockPos> leavesPositions, BlockBox blockBox, TreeFeatureConfig config) {
         if (JungleGroundBushFeature.isNaturalDirtOrGrass(world, pos = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, pos).down())) {
             pos = pos.up();
-            this.setBlockState(logPositions, world, pos, this.log, blockBox);
-            for (int i = pos.getY(); i <= pos.getY() + 2; ++i) {
-                int j = i - pos.getY();
-                int k = 2 - j;
-                for (int l = pos.getX() - k; l <= pos.getX() + k; ++l) {
-                    int m = l - pos.getX();
-                    for (int n = pos.getZ() - k; n <= pos.getZ() + k; ++n) {
-                        BlockPos blockPos;
-                        int o = n - pos.getZ();
-                        if (Math.abs(m) == k && Math.abs(o) == k && random.nextInt(2) == 0 || !JungleGroundBushFeature.isAirOrLeaves(world, blockPos = new BlockPos(l, i, n))) continue;
-                        this.setBlockState(logPositions, world, blockPos, this.leaves, blockBox);
+            this.setLogBlockState(world, random, pos, logPositions, blockBox, config);
+            for (int i = 0; i <= 2; ++i) {
+                int j = 2 - i;
+                for (int k = -j; k <= j; ++k) {
+                    for (int l = -j; l <= j; ++l) {
+                        if (Math.abs(k) == j && Math.abs(l) == j && random.nextInt(2) == 0) continue;
+                        this.setLeavesBlockState(world, random, new BlockPos(k + pos.getX(), i + pos.getY(), l + pos.getZ()), leavesPositions, blockBox, config);
                     }
                 }
             }

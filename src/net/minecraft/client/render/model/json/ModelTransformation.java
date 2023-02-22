@@ -17,25 +17,14 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.mojang.blaze3d.platform.GlStateManager;
+import java.lang.reflect.Type;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.model.json.Transformation;
-import net.minecraft.client.util.math.Matrix4f;
-import net.minecraft.util.math.Quaternion;
 
 @Environment(value=EnvType.CLIENT)
 public class ModelTransformation {
     public static final ModelTransformation NONE = new ModelTransformation();
-    public static float globalTranslationX;
-    public static float globalTranslationY;
-    public static float globalTranslationZ;
-    public static float globalRotationX;
-    public static float globalRotationY;
-    public static float globalRotationZ;
-    public static float globalScaleOffsetX;
-    public static float globalScaleOffsetY;
-    public static float globalScaleOffsetZ;
     public final Transformation thirdPersonLeftHand;
     public final Transformation thirdPersonRightHand;
     public final Transformation firstPersonLeftHand;
@@ -71,28 +60,7 @@ public class ModelTransformation {
         this.fixed = fixed;
     }
 
-    public void applyGl(Type type) {
-        ModelTransformation.applyGl(this.getTransformation(type), false);
-    }
-
-    public static void applyGl(Transformation transform, boolean leftyFlip) {
-        if (transform == Transformation.IDENTITY) {
-            return;
-        }
-        int i = leftyFlip ? -1 : 1;
-        GlStateManager.translatef((float)i * (globalTranslationX + transform.translation.getX()), globalTranslationY + transform.translation.getY(), globalTranslationZ + transform.translation.getZ());
-        float f = globalRotationX + transform.rotation.getX();
-        float g = globalRotationY + transform.rotation.getY();
-        float h = globalRotationZ + transform.rotation.getZ();
-        if (leftyFlip) {
-            g = -g;
-            h = -h;
-        }
-        GlStateManager.multMatrix(new Matrix4f(new Quaternion(f, g, h, true)));
-        GlStateManager.scalef(globalScaleOffsetX + transform.scale.getX(), globalScaleOffsetY + transform.scale.getY(), globalScaleOffsetZ + transform.scale.getZ());
-    }
-
-    public Transformation getTransformation(Type renderMode) {
+    public Transformation getTransformation(Mode renderMode) {
         switch (renderMode) {
             case THIRD_PERSON_LEFT_HAND: {
                 return this.thirdPersonLeftHand;
@@ -122,7 +90,7 @@ public class ModelTransformation {
         return Transformation.IDENTITY;
     }
 
-    public boolean isTransformationDefined(Type renderMode) {
+    public boolean isTransformationDefined(Mode renderMode) {
         return this.getTransformation(renderMode) != Transformation.IDENTITY;
     }
 
@@ -132,7 +100,7 @@ public class ModelTransformation {
         protected Deserializer() {
         }
 
-        public ModelTransformation deserialize(JsonElement element, java.lang.reflect.Type type, JsonDeserializationContext context) throws JsonParseException {
+        public ModelTransformation deserialize(JsonElement element, Type type, JsonDeserializationContext context) throws JsonParseException {
             JsonObject jsonObject = element.getAsJsonObject();
             Transformation transformation = this.parseModelTransformation(context, jsonObject, "thirdperson_righthand");
             Transformation transformation2 = this.parseModelTransformation(context, jsonObject, "thirdperson_lefthand");
@@ -158,13 +126,13 @@ public class ModelTransformation {
             return Transformation.IDENTITY;
         }
 
-        public /* synthetic */ Object deserialize(JsonElement functionJson, java.lang.reflect.Type unused, JsonDeserializationContext context) throws JsonParseException {
+        public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
             return this.deserialize(functionJson, unused, context);
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Type {
+    public static enum Mode {
         NONE,
         THIRD_PERSON_LEFT_HAND,
         THIRD_PERSON_RIGHT_HAND,

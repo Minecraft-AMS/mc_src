@@ -156,7 +156,7 @@ extends Entity {
             blockPos = new BlockPos(this).down();
         } else {
             d = (double)this.target.getHeight() * 0.5;
-            blockPos = new BlockPos(this.target.x, this.target.y + d, this.target.z);
+            blockPos = new BlockPos(this.target.getX(), this.target.getY() + d, this.target.getZ());
         }
         double e = (double)blockPos.getX() + 0.5;
         double f = (double)blockPos.getY() + d;
@@ -194,14 +194,14 @@ extends Entity {
             } else {
                 direction = (Direction)list.get(this.random.nextInt(list.size()));
             }
-            e = this.x + (double)direction.getOffsetX();
-            f = this.y + (double)direction.getOffsetY();
-            g = this.z + (double)direction.getOffsetZ();
+            e = this.getX() + (double)direction.getOffsetX();
+            f = this.getY() + (double)direction.getOffsetY();
+            g = this.getZ() + (double)direction.getOffsetZ();
         }
         this.setDirection(direction);
-        double h = e - this.x;
-        double j = f - this.y;
-        double k = g - this.z;
+        double h = e - this.getX();
+        double j = f - this.getY();
+        double k = g - this.getZ();
         double l = MathHelper.sqrt(h * h + j * j + k * k);
         if (l == 0.0) {
             this.field_7635 = 0.0;
@@ -217,12 +217,15 @@ extends Entity {
     }
 
     @Override
+    public void checkDespawn() {
+        if (this.world.getDifficulty() == Difficulty.PEACEFUL) {
+            this.remove();
+        }
+    }
+
+    @Override
     public void tick() {
         Vec3d vec3d;
-        if (!this.world.isClient && this.world.getDifficulty() == Difficulty.PEACEFUL) {
-            this.remove();
-            return;
-        }
         super.tick();
         if (!this.world.isClient) {
             List<LivingEntity> list;
@@ -259,10 +262,10 @@ extends Entity {
             }
         }
         vec3d = this.getVelocity();
-        this.updatePosition(this.x + vec3d.x, this.y + vec3d.y, this.z + vec3d.z);
+        this.updatePosition(this.getX() + vec3d.x, this.getY() + vec3d.y, this.getZ() + vec3d.z);
         ProjectileUtil.method_7484(this, 0.5f);
         if (this.world.isClient) {
-            this.world.addParticle(ParticleTypes.END_ROD, this.x - vec3d.x, this.y - vec3d.y + 0.15, this.z - vec3d.z, 0.0, 0.0, 0.0);
+            this.world.addParticle(ParticleTypes.END_ROD, this.getX() - vec3d.x, this.getY() - vec3d.y + 0.15, this.getZ() - vec3d.z, 0.0, 0.0, 0.0);
         } else if (this.target != null && !this.target.removed) {
             if (this.field_7627 > 0) {
                 --this.field_7627;
@@ -301,12 +304,6 @@ extends Entity {
         return 1.0f;
     }
 
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public int getLightmapCoordinates() {
-        return 0xF000F0;
-    }
-
     protected void onHit(HitResult hitResult) {
         if (hitResult.getType() == HitResult.Type.ENTITY) {
             Entity entity = ((EntityHitResult)hitResult).getEntity();
@@ -318,7 +315,7 @@ extends Entity {
                 }
             }
         } else {
-            ((ServerWorld)this.world).spawnParticles(ParticleTypes.EXPLOSION, this.x, this.y, this.z, 2, 0.2, 0.2, 0.2, 0.0);
+            ((ServerWorld)this.world).spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY(), this.getZ(), 2, 0.2, 0.2, 0.2, 0.0);
             this.playSound(SoundEvents.ENTITY_SHULKER_BULLET_HIT, 1.0f, 1.0f);
         }
         this.remove();
@@ -333,7 +330,7 @@ extends Entity {
     public boolean damage(DamageSource source, float amount) {
         if (!this.world.isClient) {
             this.playSound(SoundEvents.ENTITY_SHULKER_BULLET_HURT, 1.0f, 1.0f);
-            ((ServerWorld)this.world).spawnParticles(ParticleTypes.CRIT, this.x, this.y, this.z, 15, 0.2, 0.2, 0.2, 0.0);
+            ((ServerWorld)this.world).spawnParticles(ParticleTypes.CRIT, this.getX(), this.getY(), this.getZ(), 15, 0.2, 0.2, 0.2, 0.0);
             this.remove();
         }
         return true;

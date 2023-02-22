@@ -12,8 +12,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldView;
 
 public class CarpetBlock
 extends Block {
@@ -43,7 +43,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return !world.isAir(pos.down());
     }
 }

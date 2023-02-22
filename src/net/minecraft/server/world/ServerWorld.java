@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Queues
@@ -24,6 +25,7 @@
  */
 package net.minecraft.server.world;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
@@ -54,6 +56,7 @@ import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
@@ -119,7 +122,9 @@ import net.minecraft.util.CsvWriter;
 import net.minecraft.util.ProgressListener;
 import net.minecraft.util.TypeFilterableList;
 import net.minecraft.util.Unit;
+import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashReport;
+import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
@@ -134,7 +139,6 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.ForcedChunkState;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.IdCountsState;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.PersistentStateManager;
@@ -154,7 +158,8 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.explosion.Explosion;
-import net.minecraft.world.gen.feature.BonusChestFeature;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.level.LevelGeneratorType;
@@ -204,6 +209,11 @@ extends World {
             this.getLevelProperties().setGameMode(server.getDefaultGameMode());
         }
         this.wanderingTraderManager = this.dimension.getType() == DimensionType.OVERWORLD ? new WanderingTraderManager(this) : null;
+    }
+
+    @Override
+    public Biome getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
+        return this.getChunkManager().getChunkGenerator().getBiomeSource().getBiomeForNoiseGen(biomeX, biomeY, biomeZ);
     }
 
     public void tick(BooleanSupplier shouldKeepTicking) {
@@ -281,7 +291,7 @@ extends World {
                 long l = this.properties.getTimeOfDay() + 24000L;
                 this.setTimeOfDay(l - l % 24000L);
             }
-            this.players.stream().filter(LivingEntity::isSleeping).forEach(serverPlayerEntity -> serverPlayerEntity.wakeUp(false, false, true));
+            this.method_23660();
             if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE)) {
                 this.resetWeather();
             }
@@ -295,8 +305,6 @@ extends World {
             this.blockTickScheduler.tick();
             this.fluidTickScheduler.tick();
         }
-        profiler.swap("portalForcer");
-        this.portalForcer.tick(this.getTime());
         profiler.swap("raid");
         this.raidManager.tick();
         if (this.wanderingTraderManager != null) {
@@ -336,6 +344,11 @@ extends World {
                 if (!this.server.shouldSpawnNpcs() && entity22 instanceof Npc) {
                     entity22.remove();
                 }
+                profiler.push("checkDespawn");
+                if (!entity22.removed) {
+                    entity22.checkDespawn();
+                }
+                profiler.pop();
                 if (entity3 != null) {
                     if (!entity3.removed && entity3.hasPassenger(entity22)) continue;
                     entity22.stopRiding();
@@ -361,6 +374,10 @@ extends World {
             this.tickBlockEntities();
         }
         profiler.pop();
+    }
+
+    private void method_23660() {
+        this.players.stream().filter(LivingEntity::isSleeping).collect(Collectors.toList()).forEach(serverPlayerEntity -> serverPlayerEntity.wakeUp(false, false));
     }
 
     public void tickChunk(WorldChunk chunk, int randomTickSpeed) {
@@ -389,10 +406,10 @@ extends World {
             blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, this.getRandomPosInChunk(i, 0, j, 15));
             BlockPos blockPos2 = blockPos.down();
             Biome biome = this.getBiome(blockPos);
-            if (biome.canSetSnow(this, blockPos2)) {
+            if (biome.canSetIce(this, blockPos2)) {
                 this.setBlockState(blockPos2, Blocks.ICE.getDefaultState());
             }
-            if (bl && biome.canSetIce(this, blockPos)) {
+            if (bl && biome.canSetSnow(this, blockPos)) {
                 this.setBlockState(blockPos, Blocks.SNOW.getDefaultState());
             }
             if (bl && this.getBiome(blockPos2).getPrecipitation() == Biome.Precipitation.RAIN) {
@@ -410,7 +427,7 @@ extends World {
                     profiler.push("randomTick");
                     BlockState blockState = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - k, blockPos3.getZ() - j);
                     if (blockState.hasRandomTicks()) {
-                        blockState.onRandomTick(this, blockPos3, this.random);
+                        blockState.randomTick(this, blockPos3, this.random);
                     }
                     if ((fluidState = blockState.getFluidState()).hasRandomTicks()) {
                         fluidState.onRandomTick(this, blockPos3, this.random);
@@ -508,16 +525,16 @@ extends World {
         if (!(entity instanceof PlayerEntity) && !this.getChunkManager().shouldTickEntity(entity)) {
             return;
         }
-        entity.lastRenderX = entity.x;
-        entity.lastRenderY = entity.y;
-        entity.lastRenderZ = entity.z;
+        entity.resetPosition(entity.getX(), entity.getY(), entity.getZ());
         entity.prevYaw = entity.yaw;
         entity.prevPitch = entity.pitch;
         if (entity.updateNeeded) {
             ++entity.age;
-            this.getProfiler().push(() -> Registry.ENTITY_TYPE.getId(entity.getType()).toString());
+            Profiler profiler = this.getProfiler();
+            profiler.push(() -> Registry.ENTITY_TYPE.getId(entity.getType()).toString());
+            profiler.visit("tickNonPassenger");
             entity.tick();
-            this.getProfiler().pop();
+            profiler.pop();
         }
         this.checkChunk(entity);
         if (entity.updateNeeded) {
@@ -535,14 +552,16 @@ extends World {
         if (!(entity2 instanceof PlayerEntity) && !this.getChunkManager().shouldTickEntity(entity2)) {
             return;
         }
-        entity2.lastRenderX = entity2.x;
-        entity2.lastRenderY = entity2.y;
-        entity2.lastRenderZ = entity2.z;
+        entity2.resetPosition(entity2.getX(), entity2.getY(), entity2.getZ());
         entity2.prevYaw = entity2.yaw;
         entity2.prevPitch = entity2.pitch;
         if (entity2.updateNeeded) {
             ++entity2.age;
+            Profiler profiler = this.getProfiler();
+            profiler.push(() -> Registry.ENTITY_TYPE.getId(entity2.getType()).toString());
+            profiler.visit("tickPassenger");
             entity2.tickRiding();
+            profiler.pop();
         }
         this.checkChunk(entity2);
         if (entity2.updateNeeded) {
@@ -554,9 +573,9 @@ extends World {
 
     public void checkChunk(Entity entity) {
         this.getProfiler().push("chunkCheck");
-        int i = MathHelper.floor(entity.x / 16.0);
-        int j = MathHelper.floor(entity.y / 16.0);
-        int k = MathHelper.floor(entity.z / 16.0);
+        int i = MathHelper.floor(entity.getX() / 16.0);
+        int j = MathHelper.floor(entity.getY() / 16.0);
+        int k = MathHelper.floor(entity.getZ() / 16.0);
         if (!entity.updateNeeded || entity.chunkX != i || entity.chunkY != j || entity.chunkZ != k) {
             if (entity.updateNeeded && this.isChunkLoaded(entity.chunkX, entity.chunkZ)) {
                 this.getChunk(entity.chunkX, entity.chunkZ).remove(entity, entity.chunkY);
@@ -577,18 +596,18 @@ extends World {
 
     public void init(LevelInfo levelInfo) {
         ChunkPos chunkPos;
-        Random random;
-        List<Biome> list;
         if (!this.dimension.canPlayersSleep()) {
-            this.properties.setSpawnPos(BlockPos.ORIGIN.up(this.chunkManager.getChunkGenerator().getSpawnHeight()));
+            this.properties.setSpawnPos(BlockPos.ORIGIN.up(this.getChunkManager().getChunkGenerator().getSpawnHeight()));
             return;
         }
         if (this.properties.getGeneratorType() == LevelGeneratorType.DEBUG_ALL_BLOCK_STATES) {
             this.properties.setSpawnPos(BlockPos.ORIGIN.up());
             return;
         }
-        BiomeSource biomeSource = this.chunkManager.getChunkGenerator().getBiomeSource();
-        BlockPos blockPos = biomeSource.locateBiome(0, 0, 256, list = biomeSource.getSpawnBiomes(), random = new Random(this.getSeed()));
+        BiomeSource biomeSource = this.getChunkManager().getChunkGenerator().getBiomeSource();
+        List<Biome> list = biomeSource.getSpawnBiomes();
+        Random random = new Random(this.getSeed());
+        BlockPos blockPos = biomeSource.locateBiome(0, this.getSeaLevel(), 0, 256, list, random);
         ChunkPos chunkPos2 = chunkPos = blockPos == null ? new ChunkPos(0, 0) : new ChunkPos(blockPos);
         if (blockPos == null) {
             LOGGER.warn("Unable to find spawn biome");
@@ -599,7 +618,7 @@ extends World {
             bl = true;
             break;
         }
-        this.properties.setSpawnPos(chunkPos.getCenterBlockPos().add(8, this.chunkManager.getChunkGenerator().getSpawnHeight(), 8));
+        this.properties.setSpawnPos(chunkPos.getCenterBlockPos().add(8, this.getChunkManager().getChunkGenerator().getSpawnHeight(), 8));
         int i = 0;
         int j = 0;
         int k = 0;
@@ -625,13 +644,8 @@ extends World {
     }
 
     protected void placeBonusChest() {
-        BonusChestFeature bonusChestFeature = Feature.BONUS_CHEST;
-        for (int i = 0; i < 10; ++i) {
-            int j = this.properties.getSpawnX() + this.random.nextInt(6) - this.random.nextInt(6);
-            int k = this.properties.getSpawnZ() + this.random.nextInt(6) - this.random.nextInt(6);
-            BlockPos blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos(j, 0, k)).up();
-            if (bonusChestFeature.generate((IWorld)this, this.chunkManager.getChunkGenerator(), this.random, blockPos, FeatureConfig.DEFAULT)) break;
-        }
+        ConfiguredFeature<DefaultFeatureConfig, ?> configuredFeature = Feature.BONUS_CHEST.configure(FeatureConfig.DEFAULT);
+        configuredFeature.generate(this, this.getChunkManager().getChunkGenerator(), this.random, new BlockPos(this.properties.getSpawnX(), this.properties.getSpawnY(), this.properties.getSpawnZ()));
     }
 
     @Nullable
@@ -664,7 +678,7 @@ extends World {
         ArrayList list = Lists.newArrayList();
         ServerChunkManager serverChunkManager = this.getChunkManager();
         for (Entity entity : this.entitiesById.values()) {
-            if (entityType != null && entity.getType() != entityType || !serverChunkManager.isChunkLoaded(MathHelper.floor(entity.x) >> 4, MathHelper.floor(entity.z) >> 4) || !predicate.test(entity)) continue;
+            if (entityType != null && entity.getType() != entityType || !serverChunkManager.isChunkLoaded(MathHelper.floor(entity.getX()) >> 4, MathHelper.floor(entity.getZ()) >> 4) || !predicate.test(entity)) continue;
             list.add(entity);
         }
         return list;
@@ -713,30 +727,30 @@ extends World {
         return this.addEntity(entity);
     }
 
-    public boolean method_18768(Entity entity) {
+    public boolean tryLoadEntity(Entity entity) {
         return this.addEntity(entity);
     }
 
-    public void method_18769(Entity entity) {
+    public void onDimensionChanged(Entity entity) {
         boolean bl = entity.teleporting;
         entity.teleporting = true;
-        this.method_18768(entity);
+        this.tryLoadEntity(entity);
         entity.teleporting = bl;
         this.checkChunk(entity);
     }
 
-    public void method_18207(ServerPlayerEntity serverPlayerEntity) {
-        this.addPlayer(serverPlayerEntity);
-        this.checkChunk(serverPlayerEntity);
+    public void onPlayerTeleport(ServerPlayerEntity player) {
+        this.addPlayer(player);
+        this.checkChunk(player);
     }
 
-    public void method_18211(ServerPlayerEntity serverPlayerEntity) {
-        this.addPlayer(serverPlayerEntity);
-        this.checkChunk(serverPlayerEntity);
+    public void onPlayerChangeDimension(ServerPlayerEntity player) {
+        this.addPlayer(player);
+        this.checkChunk(player);
     }
 
-    public void method_18213(ServerPlayerEntity serverPlayerEntity) {
-        this.addPlayer(serverPlayerEntity);
+    public void onPlayerConnected(ServerPlayerEntity player) {
+        this.addPlayer(player);
     }
 
     public void onPlayerRespawned(ServerPlayerEntity player) {
@@ -752,7 +766,7 @@ extends World {
         }
         this.players.add(player);
         this.updatePlayersSleeping();
-        Chunk chunk = this.getChunk(MathHelper.floor(player.x / 16.0), MathHelper.floor(player.z / 16.0), ChunkStatus.FULL, true);
+        Chunk chunk = this.getChunk(MathHelper.floor(player.getX() / 16.0), MathHelper.floor(player.getZ() / 16.0), ChunkStatus.FULL, true);
         if (chunk instanceof WorldChunk) {
             chunk.addEntity(player);
         }
@@ -767,7 +781,7 @@ extends World {
         if (this.checkUuid(entity)) {
             return false;
         }
-        Chunk chunk = this.getChunk(MathHelper.floor(entity.x / 16.0), MathHelper.floor(entity.z / 16.0), ChunkStatus.FULL, entity.teleporting);
+        Chunk chunk = this.getChunk(MathHelper.floor(entity.getX() / 16.0), MathHelper.floor(entity.getZ() / 16.0), ChunkStatus.FULL, entity.teleporting);
         if (!(chunk instanceof WorldChunk)) {
             return false;
         }
@@ -799,7 +813,7 @@ extends World {
             for (Entity entity : typeFilterableList) {
                 if (entity instanceof ServerPlayerEntity) continue;
                 if (this.ticking) {
-                    throw new IllegalStateException("Removing entity while ticking!");
+                    throw Util.throwOrPause(new IllegalStateException("Removing entity while ticking!"));
                 }
                 this.entitiesById.remove(entity.getEntityId());
                 this.unloadEntity(entity);
@@ -809,7 +823,7 @@ extends World {
 
     public void unloadEntity(Entity entity) {
         if (entity instanceof EnderDragonEntity) {
-            for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).method_5690()) {
+            for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).getBodyParts()) {
                 enderDragonPart.remove();
             }
         }
@@ -831,7 +845,7 @@ extends World {
         } else {
             this.entitiesById.put(entity.getEntityId(), (Object)entity);
             if (entity instanceof EnderDragonEntity) {
-                for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).method_5690()) {
+                for (EnderDragonPart enderDragonPart : ((EnderDragonEntity)entity).getBodyParts()) {
                     this.entitiesById.put(enderDragonPart.getEntityId(), (Object)enderDragonPart);
                 }
             }
@@ -845,7 +859,7 @@ extends World {
 
     public void removeEntity(Entity entity) {
         if (this.ticking) {
-            throw new IllegalStateException("Removing entity while ticking!");
+            throw Util.throwOrPause(new IllegalStateException("Removing entity while ticking!"));
         }
         this.removeEntityFromChunk(entity);
         this.entitiesById.remove(entity.getEntityId());
@@ -867,7 +881,7 @@ extends World {
 
     public void addLightning(LightningEntity lightningEntity) {
         this.globalEntities.add(lightningEntity);
-        this.server.getPlayerManager().sendToAround(null, lightningEntity.x, lightningEntity.y, lightningEntity.z, 512.0, this.dimension.getType(), new EntitySpawnGlobalS2CPacket(lightningEntity));
+        this.server.getPlayerManager().sendToAround(null, lightningEntity.getX(), lightningEntity.getY(), lightningEntity.getZ(), 512.0, this.dimension.getType(), new EntitySpawnGlobalS2CPacket(lightningEntity));
     }
 
     @Override
@@ -876,7 +890,7 @@ extends World {
             double f;
             double e;
             double d;
-            if (serverPlayerEntity == null || serverPlayerEntity.world != this || serverPlayerEntity.getEntityId() == entityId || !((d = (double)pos.getX() - serverPlayerEntity.x) * d + (e = (double)pos.getY() - serverPlayerEntity.y) * e + (f = (double)pos.getZ() - serverPlayerEntity.z) * f < 1024.0)) continue;
+            if (serverPlayerEntity == null || serverPlayerEntity.world != this || serverPlayerEntity.getEntityId() == entityId || !((d = (double)pos.getX() - serverPlayerEntity.getX()) * d + (e = (double)pos.getY() - serverPlayerEntity.getY()) * e + (f = (double)pos.getZ() - serverPlayerEntity.getZ()) * f < 1024.0)) continue;
             serverPlayerEntity.networkHandler.sendPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress));
         }
     }
@@ -888,7 +902,7 @@ extends World {
 
     @Override
     public void playSoundFromEntity(@Nullable PlayerEntity playerEntity, Entity entity, SoundEvent soundEvent, SoundCategory soundCategory, float volume, float pitch) {
-        this.server.getPlayerManager().sendToAround(playerEntity, entity.x, entity.y, entity.z, volume > 1.0f ? (double)(16.0f * volume) : 16.0, this.dimension.getType(), new PlaySoundFromEntityS2CPacket(soundEvent, soundCategory, entity, volume, pitch));
+        this.server.getPlayerManager().sendToAround(playerEntity, entity.getX(), entity.getY(), entity.getZ(), volume > 1.0f ? (double)(16.0f * volume) : 16.0, this.dimension.getType(), new PlaySoundFromEntityS2CPacket(soundEvent, soundCategory, entity, volume, pitch));
     }
 
     @Override
@@ -926,7 +940,7 @@ extends World {
     }
 
     @Override
-    public Explosion createExplosion(@Nullable Entity entity, DamageSource damageSource, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType) {
+    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType) {
         Explosion explosion = new Explosion(this, entity, x, y, z, power, createFire, destructionType);
         if (damageSource != null) {
             explosion.setDamageSource(damageSource);
@@ -987,7 +1001,7 @@ extends World {
     }
 
     public <T extends ParticleEffect> int spawnParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed) {
-        ParticleS2CPacket particleS2CPacket = new ParticleS2CPacket(particle, false, (float)x, (float)y, (float)z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count);
+        ParticleS2CPacket particleS2CPacket = new ParticleS2CPacket(particle, false, x, y, z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count);
         int i = 0;
         for (int j = 0; j < this.players.size(); ++j) {
             ServerPlayerEntity serverPlayerEntity = this.players.get(j);
@@ -998,7 +1012,7 @@ extends World {
     }
 
     public <T extends ParticleEffect> boolean spawnParticles(ServerPlayerEntity viewer, T particle, boolean force, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed) {
-        ParticleS2CPacket packet = new ParticleS2CPacket(particle, force, (float)x, (float)y, (float)z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count);
+        ParticleS2CPacket packet = new ParticleS2CPacket(particle, force, x, y, z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count);
         return this.sendToPlayerIfNearby(viewer, force, x, y, z, packet);
     }
 
@@ -1025,10 +1039,9 @@ extends World {
         return this.entitiesByUuid.get(uUID);
     }
 
-    @Override
     @Nullable
-    public BlockPos locateStructure(String id, BlockPos center, int radius, boolean skipExistingChunks) {
-        return this.getChunkManager().getChunkGenerator().locateStructure(this, id, center, radius, skipExistingChunks);
+    public BlockPos locateStructure(String string, BlockPos blockPos, int i, boolean bl) {
+        return this.getChunkManager().getChunkGenerator().locateStructure(this, string, blockPos, i, bl);
     }
 
     @Override
@@ -1067,7 +1080,7 @@ extends World {
     @Override
     @Nullable
     public MapState getMapState(String id) {
-        return this.getServer().getWorld(DimensionType.OVERWORLD).getPersistentStateManager().method_20786(() -> new MapState(id), id);
+        return this.getServer().getWorld(DimensionType.OVERWORLD).getPersistentStateManager().get(() -> new MapState(id), id);
     }
 
     @Override
@@ -1089,7 +1102,7 @@ extends World {
     }
 
     public LongSet getForcedChunks() {
-        ForcedChunkState forcedChunkState = this.getPersistentStateManager().method_20786(ForcedChunkState::new, "chunks");
+        ForcedChunkState forcedChunkState = this.getPersistentStateManager().get(ForcedChunkState::new, "chunks");
         return forcedChunkState != null ? LongSets.unmodifiable((LongSet)forcedChunkState.getChunks()) : LongSets.EMPTY_SET;
     }
 
@@ -1127,11 +1140,11 @@ extends World {
         BlockPos blockPos = pos.toImmutable();
         optional.ifPresent(pointOfInterestType -> this.getServer().execute(() -> {
             this.getPointOfInterestStorage().remove(blockPos);
-            DebugInfoSender.method_19777(this, blockPos);
+            DebugInfoSender.sendPoiRemoval(this, blockPos);
         }));
         optional2.ifPresent(pointOfInterestType -> this.getServer().execute(() -> {
             this.getPointOfInterestStorage().add(blockPos, (PointOfInterestType)pointOfInterestType);
-            DebugInfoSender.method_19776(this, blockPos);
+            DebugInfoSender.sendPoiAddition(this, blockPos);
         }));
     }
 
@@ -1258,7 +1271,7 @@ extends World {
         for (Entity entity : iterable) {
             Text text = entity.getCustomName();
             Text text2 = entity.getDisplayName();
-            csvWriter.printRow(entity.x, entity.y, entity.z, entity.getUuid(), Registry.ENTITY_TYPE.getId(entity.getType()), entity.isAlive(), text2.getString(), text != null ? text.getString() : null);
+            csvWriter.printRow(entity.getX(), entity.getY(), entity.getZ(), entity.getUuid(), Registry.ENTITY_TYPE.getId(entity.getType()), entity.isAlive(), text2.getString(), text != null ? text.getString() : null);
         }
     }
 
@@ -1266,8 +1279,13 @@ extends World {
         CsvWriter csvWriter = CsvWriter.makeHeader().addColumn("x").addColumn("y").addColumn("z").addColumn("type").startBody(writer);
         for (BlockEntity blockEntity : this.blockEntities) {
             BlockPos blockPos = blockEntity.getPos();
-            csvWriter.printRow(blockPos.getX(), blockPos.getY(), blockPos.getZ(), Registry.BLOCK_ENTITY.getId(blockEntity.getType()));
+            csvWriter.printRow(blockPos.getX(), blockPos.getY(), blockPos.getZ(), Registry.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
         }
+    }
+
+    @VisibleForTesting
+    public void method_23658(BlockBox blockBox) {
+        this.pendingBlockActions.removeIf(blockAction -> blockBox.contains(blockAction.getPos()));
     }
 
     @Override

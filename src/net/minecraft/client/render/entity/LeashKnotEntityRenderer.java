@@ -7,12 +7,15 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.model.LeashEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.decoration.LeadKnotEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,30 +30,18 @@ extends EntityRenderer<LeadKnotEntity> {
     }
 
     @Override
-    public void render(LeadKnotEntity leadKnotEntity, double d, double e, double f, float g, float h) {
-        GlStateManager.pushMatrix();
-        GlStateManager.disableCull();
-        GlStateManager.translatef((float)d, (float)e, (float)f);
-        float i = 0.0625f;
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.scalef(-1.0f, -1.0f, 1.0f);
-        GlStateManager.enableAlphaTest();
-        this.bindEntityTexture(leadKnotEntity);
-        if (this.renderOutlines) {
-            GlStateManager.enableColorMaterial();
-            GlStateManager.setupSolidRenderingTextureCombine(this.getOutlineColor(leadKnotEntity));
-        }
-        this.model.render(leadKnotEntity, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0625f);
-        if (this.renderOutlines) {
-            GlStateManager.tearDownSolidRenderingTextureCombine();
-            GlStateManager.disableColorMaterial();
-        }
-        GlStateManager.popMatrix();
-        super.render(leadKnotEntity, d, e, f, g, h);
+    public void render(LeadKnotEntity leadKnotEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        matrixStack.push();
+        matrixStack.scale(-1.0f, -1.0f, 1.0f);
+        this.model.setAngles(leadKnotEntity, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(SKIN));
+        this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
+        matrixStack.pop();
+        super.render(leadKnotEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
-    protected Identifier getTexture(LeadKnotEntity leadKnotEntity) {
+    public Identifier getTexture(LeadKnotEntity leadKnotEntity) {
         return SKIN;
     }
 }

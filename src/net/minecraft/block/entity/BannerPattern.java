@@ -20,6 +20,7 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.util.DyeColor;
+import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,7 +67,7 @@ public enum BannerPattern {
     MOJANG("mojang", "moj", new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));
 
     public static final int COUNT;
-    public static final int field_18283;
+    public static final int LOOM_APPLICABLE_COUNT;
     private final String name;
     private final String id;
     private final String[] recipePattern = new String[3];
@@ -90,6 +91,12 @@ public enum BannerPattern {
     }
 
     @Environment(value=EnvType.CLIENT)
+    public Identifier getSpriteId(boolean bl) {
+        String string = bl ? "banner" : "shield";
+        return new Identifier("entity/" + string + "/" + this.getName());
+    }
+
+    @Environment(value=EnvType.CLIENT)
     public String getName() {
         return this.name;
     }
@@ -110,20 +117,20 @@ public enum BannerPattern {
 
     static {
         COUNT = BannerPattern.values().length;
-        field_18283 = COUNT - 5 - 1;
+        LOOM_APPLICABLE_COUNT = COUNT - 5 - 1;
     }
 
-    public static class Builder {
-        private final List<Pair<BannerPattern, DyeColor>> patterns = Lists.newArrayList();
+    public static class Patterns {
+        private final List<Pair<BannerPattern, DyeColor>> entries = Lists.newArrayList();
 
-        public Builder with(BannerPattern pattern, DyeColor dyeColor) {
-            this.patterns.add((Pair<BannerPattern, DyeColor>)Pair.of((Object)((Object)pattern), (Object)dyeColor));
+        public Patterns add(BannerPattern pattern, DyeColor color) {
+            this.entries.add((Pair<BannerPattern, DyeColor>)Pair.of((Object)((Object)pattern), (Object)color));
             return this;
         }
 
-        public ListTag build() {
+        public ListTag toTag() {
             ListTag listTag = new ListTag();
-            for (Pair<BannerPattern, DyeColor> pair : this.patterns) {
+            for (Pair<BannerPattern, DyeColor> pair : this.entries) {
                 CompoundTag compoundTag = new CompoundTag();
                 compoundTag.putString("Pattern", ((BannerPattern)((Object)pair.getLeft())).id);
                 compoundTag.putInt("Color", ((DyeColor)pair.getRight()).getId());

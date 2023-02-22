@@ -182,6 +182,13 @@ public class JsonHelper {
         throw new JsonSyntaxException("Expected " + name + " to be a Long, was " + JsonHelper.getType(element));
     }
 
+    public static long getLong(JsonObject object, String name) {
+        if (object.has(name)) {
+            return JsonHelper.asLong(object.get(name), name);
+        }
+        throw new JsonSyntaxException("Missing " + name + ", expected to find a Long");
+    }
+
     public static long getLong(JsonObject object, String element, long defaultLong) {
         if (object.has(element)) {
             return JsonHelper.asLong(object.get(element), element);
@@ -259,6 +266,7 @@ public class JsonHelper {
         throw new JsonSyntaxException("Missing " + element + ", expected to find a JsonArray");
     }
 
+    @Nullable
     public static JsonArray getArray(JsonObject object, String name, @Nullable JsonArray defaultArray) {
         if (object.has(name)) {
             return JsonHelper.asArray(object.get(name), name);

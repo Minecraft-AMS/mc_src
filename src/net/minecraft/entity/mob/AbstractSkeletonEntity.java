@@ -135,7 +135,7 @@ implements RangedAttackMob {
         super.tickRiding();
         if (this.getVehicle() instanceof MobEntityWithAi) {
             MobEntityWithAi mobEntityWithAi = (MobEntityWithAi)this.getVehicle();
-            this.field_6283 = mobEntityWithAi.field_6283;
+            this.bodyYaw = mobEntityWithAi.bodyYaw;
         }
     }
 
@@ -188,9 +188,9 @@ implements RangedAttackMob {
     public void attack(LivingEntity target, float f) {
         ItemStack itemStack = this.getArrowType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
         ProjectileEntity projectileEntity = this.createArrowProjectile(itemStack, f);
-        double d = target.x - this.x;
-        double e = target.getBoundingBox().y1 + (double)(target.getHeight() / 3.0f) - projectileEntity.y;
-        double g = target.z - this.z;
+        double d = target.getX() - this.getX();
+        double e = target.getBodyY(0.3333333333333333) - projectileEntity.getY();
+        double g = target.getZ() - this.getZ();
         double h = MathHelper.sqrt(d * d + g * g);
         projectileEntity.setVelocity(d, e + h * (double)0.2f, g, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));

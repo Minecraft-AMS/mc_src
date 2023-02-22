@@ -31,6 +31,7 @@ extends Screen {
     private TextFieldWidget addressField;
     private TextFieldWidget serverNameField;
     private ButtonWidget resourcePackOptionButton;
+    private final Screen parent;
     private final Predicate<String> addressTextFilter = string -> {
         if (ChatUtil.isEmpty(string)) {
             return true;
@@ -48,10 +49,11 @@ extends Screen {
         }
     };
 
-    public AddServerScreen(BooleanConsumer callback, ServerInfo serverEntry) {
+    public AddServerScreen(Screen parent, BooleanConsumer callback, ServerInfo server) {
         super(new TranslatableText("addServer.title", new Object[0]));
+        this.parent = parent;
         this.callback = callback;
-        this.server = serverEntry;
+        this.server = server;
     }
 
     @Override
@@ -64,7 +66,7 @@ extends Screen {
     protected void init() {
         this.minecraft.keyboard.enableRepeatEvents(true);
         this.serverNameField = new TextFieldWidget(this.font, this.width / 2 - 100, 66, 200, 20, I18n.translate("addServer.enterName", new Object[0]));
-        this.serverNameField.method_1876(true);
+        this.serverNameField.setSelected(true);
         this.serverNameField.setText(this.server.name);
         this.serverNameField.setChangedListener(this::onClose);
         this.children.add(this.serverNameField);
@@ -80,7 +82,7 @@ extends Screen {
         }));
         this.buttonAdd = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 18, 200, 20, I18n.translate("addServer.add", new Object[0]), buttonWidget -> this.addAndClose()));
         this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 18, 200, 20, I18n.translate("gui.cancel", new Object[0]), buttonWidget -> this.callback.accept(false)));
-        this.onClose();
+        this.updateButtonActiveState();
     }
 
     @Override
@@ -93,7 +95,7 @@ extends Screen {
     }
 
     private void onClose(String text) {
-        this.onClose();
+        this.updateButtonActiveState();
     }
 
     @Override
@@ -109,7 +111,14 @@ extends Screen {
 
     @Override
     public void onClose() {
-        this.buttonAdd.active = !this.addressField.getText().isEmpty() && this.addressField.getText().split(":").length > 0 && !this.serverNameField.getText().isEmpty();
+        this.updateButtonActiveState();
+        this.minecraft.openScreen(this.parent);
+    }
+
+    private void updateButtonActiveState() {
+        String string = this.addressField.getText();
+        boolean bl = !string.isEmpty() && string.split(":").length > 0 && string.indexOf(32) == -1;
+        this.buttonAdd.active = bl && !this.serverNameField.getText().isEmpty();
     }
 
     @Override

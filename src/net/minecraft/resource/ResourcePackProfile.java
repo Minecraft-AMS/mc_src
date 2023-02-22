@@ -148,20 +148,20 @@ implements AutoCloseable {
         BOTTOM;
 
 
-        public <T, P extends ResourcePackProfile> int insert(List<T> items, T item, Function<T, P> converter, boolean inverse) {
+        public <T, P extends ResourcePackProfile> int insert(List<T> items, T item, Function<T, P> profileGetter, boolean listInversed) {
             ResourcePackProfile resourcePackProfile;
             int i;
             InsertionPosition insertionPosition;
-            InsertionPosition insertionPosition2 = insertionPosition = inverse ? this.inverse() : this;
+            InsertionPosition insertionPosition2 = insertionPosition = listInversed ? this.inverse() : this;
             if (insertionPosition == BOTTOM) {
                 ResourcePackProfile resourcePackProfile2;
                 int i2;
-                for (i2 = 0; i2 < items.size() && (resourcePackProfile2 = (ResourcePackProfile)converter.apply(items.get(i2))).isPinned() && resourcePackProfile2.getInitialPosition() == this; ++i2) {
+                for (i2 = 0; i2 < items.size() && (resourcePackProfile2 = (ResourcePackProfile)profileGetter.apply(items.get(i2))).isPinned() && resourcePackProfile2.getInitialPosition() == this; ++i2) {
                 }
                 items.add(i2, item);
                 return i2;
             }
-            for (i = items.size() - 1; i >= 0 && (resourcePackProfile = (ResourcePackProfile)converter.apply(items.get(i))).isPinned() && resourcePackProfile.getInitialPosition() == this; --i) {
+            for (i = items.size() - 1; i >= 0 && (resourcePackProfile = (ResourcePackProfile)profileGetter.apply(items.get(i))).isPinned() && resourcePackProfile.getInitialPosition() == this; --i) {
             }
             items.add(i + 1, item);
             return i + 1;

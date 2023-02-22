@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
@@ -21,8 +21,8 @@ public class ShulkerBoxScreen
 extends ContainerScreen<ShulkerBoxContainer> {
     private static final Identifier TEXTURE = new Identifier("textures/gui/container/shulker_box.png");
 
-    public ShulkerBoxScreen(ShulkerBoxContainer shulkerBoxContainer, PlayerInventory playerInventory, Text text) {
-        super(shulkerBoxContainer, playerInventory, text);
+    public ShulkerBoxScreen(ShulkerBoxContainer container, PlayerInventory inventory, Text title) {
+        super(container, inventory, title);
         ++this.containerHeight;
     }
 
@@ -41,7 +41,7 @@ extends ContainerScreen<ShulkerBoxContainer> {
 
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(TEXTURE);
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;

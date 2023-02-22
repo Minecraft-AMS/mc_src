@@ -54,7 +54,7 @@ public class TeleportCommand {
 
     private static int execute(ServerCommandSource source, Collection<? extends Entity> targets, Entity destination) {
         for (Entity entity : targets) {
-            TeleportCommand.teleport(source, entity, (ServerWorld)destination.world, destination.x, destination.y, destination.z, EnumSet.noneOf(PlayerPositionLookS2CPacket.Flag.class), destination.yaw, destination.pitch, null);
+            TeleportCommand.teleport(source, entity, (ServerWorld)destination.world, destination.getX(), destination.getY(), destination.getZ(), EnumSet.noneOf(PlayerPositionLookS2CPacket.Flag.class), destination.yaw, destination.pitch, null);
         }
         if (targets.size() == 1) {
             source.sendFeedback(new TranslatableText("commands.teleport.success.entity.single", targets.iterator().next().getDisplayName(), destination.getDisplayName()), true);
@@ -109,7 +109,7 @@ public class TeleportCommand {
             world.getChunkManager().addTicket(ChunkTicketType.POST_TELEPORT, chunkPos, 1, target.getEntityId());
             target.stopRiding();
             if (((ServerPlayerEntity)target).isSleeping()) {
-                ((ServerPlayerEntity)target).wakeUp(true, true, false);
+                ((ServerPlayerEntity)target).wakeUp(true, true);
             }
             if (world == target.world) {
                 ((ServerPlayerEntity)target).networkHandler.teleportRequest(x, y, z, yaw, pitch, movementFlags);
@@ -133,7 +133,7 @@ public class TeleportCommand {
                     target.copyFrom(entity);
                     target.refreshPositionAndAngles(x, y, z, f, g);
                     target.setHeadYaw(f);
-                    world.method_18769(target);
+                    world.onDimensionChanged(target);
                     entity.removed = true;
                 } else {
                     return;

@@ -52,6 +52,7 @@ Tickable {
     private AnimationStage animationStage = AnimationStage.CLOSED;
     private float animationProgress;
     private float prevAnimationProgress;
+    @Nullable
     private DyeColor cachedColor;
     private boolean cachedColorUpdateNeeded;
 
@@ -252,15 +253,6 @@ Tickable {
     }
 
     @Override
-    public boolean isInvEmpty() {
-        for (ItemStack itemStack : this.inventory) {
-            if (itemStack.isEmpty()) continue;
-            return false;
-        }
-        return true;
-    }
-
-    @Override
     public int[] getInvAvailableSlots(Direction side) {
         return AVAILABLE_SLOTS;
     }
@@ -279,6 +271,7 @@ Tickable {
         return MathHelper.lerp(f, this.prevAnimationProgress, this.animationProgress);
     }
 
+    @Nullable
     @Environment(value=EnvType.CLIENT)
     public DyeColor getColor() {
         if (this.cachedColorUpdateNeeded) {

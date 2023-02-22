@@ -32,16 +32,16 @@ extends Goal {
     private Path targetPath;
     private BlockPos target;
     private final boolean requiresNighttime;
-    private final List<BlockPos> field_18413 = Lists.newArrayList();
-    private final int field_18414;
-    private final BooleanSupplier field_18415;
+    private final List<BlockPos> visitedTargets = Lists.newArrayList();
+    private final int distance;
+    private final BooleanSupplier doorPassingThroughGetter;
 
     public MoveThroughVillageGoal(MobEntityWithAi mob, double speed, boolean requiresNighttime, int distance, BooleanSupplier doorPassingThroughGetter) {
         this.mob = mob;
         this.speed = speed;
         this.requiresNighttime = requiresNighttime;
-        this.field_18414 = distance;
-        this.field_18415 = doorPassingThroughGetter;
+        this.distance = distance;
+        this.doorPassingThroughGetter = doorPassingThroughGetter;
         this.setControls(EnumSet.of(Goal.Control.MOVE));
         if (!(mob.getNavigation() instanceof MobNavigation)) {
             throw new IllegalArgumentException("Unsupported mob for MoveThroughVillageGoal");
@@ -50,7 +50,7 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        this.method_6297();
+        this.forgetOldTarget();
         if (this.requiresNighttime && this.mob.world.isDay()) {
             return false;
         }
@@ -63,7 +63,7 @@ extends Goal {
             if (!serverWorld.isNearOccupiedPointOfInterest((BlockPos)blockPos2)) {
                 return Double.NEGATIVE_INFINITY;
             }
-            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::method_19052, (BlockPos)blockPos2, 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
+            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::shouldVisit, (BlockPos)blockPos2, 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
             if (!optional.isPresent()) {
                 return Double.NEGATIVE_INFINITY;
             }
@@ -72,22 +72,22 @@ extends Goal {
         if (vec3d == null) {
             return false;
         }
-        Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::method_19052, new BlockPos(vec3d), 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
+        Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(PointOfInterestType.ALWAYS_TRUE, this::shouldVisit, new BlockPos(vec3d), 10, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED);
         if (!optional.isPresent()) {
             return false;
         }
         this.target = optional.get().toImmutable();
         MobNavigation mobNavigation = (MobNavigation)this.mob.getNavigation();
         boolean bl = mobNavigation.canEnterOpenDoors();
-        mobNavigation.setCanPathThroughDoors(this.field_18415.getAsBoolean());
+        mobNavigation.setCanPathThroughDoors(this.doorPassingThroughGetter.getAsBoolean());
         this.targetPath = mobNavigation.findPathTo(this.target, 0);
         mobNavigation.setCanPathThroughDoors(bl);
         if (this.targetPath == null) {
-            Vec3d vec3d2 = TargetFinder.method_6373(this.mob, 10, 7, new Vec3d(this.target.getX(), this.target.getY(), this.target.getZ()));
+            Vec3d vec3d2 = TargetFinder.findTargetTowards(this.mob, 10, 7, new Vec3d(this.target));
             if (vec3d2 == null) {
                 return false;
             }
-            mobNavigation.setCanPathThroughDoors(this.field_18415.getAsBoolean());
+            mobNavigation.setCanPathThroughDoors(this.doorPassingThroughGetter.getAsBoolean());
             this.targetPath = this.mob.getNavigation().findPathTo(vec3d2.x, vec3d2.y, vec3d2.z, 0);
             mobNavigation.setCanPathThroughDoors(bl);
             if (this.targetPath == null) {
@@ -109,7 +109,7 @@ extends Goal {
         if (this.mob.getNavigation().isIdle()) {
             return false;
         }
-        return !this.target.isWithinDistance(this.mob.getPos(), (double)(this.mob.getWidth() + (float)this.field_18414));
+        return !this.target.isWithinDistance(this.mob.getPos(), (double)(this.mob.getWidth() + (float)this.distance));
     }
 
     @Override
@@ -119,22 +119,22 @@ extends Goal {
 
     @Override
     public void stop() {
-        if (this.mob.getNavigation().isIdle() || this.target.isWithinDistance(this.mob.getPos(), (double)this.field_18414)) {
-            this.field_18413.add(this.target);
+        if (this.mob.getNavigation().isIdle() || this.target.isWithinDistance(this.mob.getPos(), (double)this.distance)) {
+            this.visitedTargets.add(this.target);
         }
     }
 
-    private boolean method_19052(BlockPos blockPos) {
-        for (BlockPos blockPos2 : this.field_18413) {
-            if (!Objects.equals(blockPos, blockPos2)) continue;
+    private boolean shouldVisit(BlockPos pos) {
+        for (BlockPos blockPos : this.visitedTargets) {
+            if (!Objects.equals(pos, blockPos)) continue;
             return false;
         }
         return true;
     }
 
-    private void method_6297() {
-        if (this.field_18413.size() > 15) {
-            this.field_18413.remove(0);
+    private void forgetOldTarget() {
+        if (this.visitedTargets.size() > 15) {
+            this.visitedTargets.remove(0);
         }
     }
 }

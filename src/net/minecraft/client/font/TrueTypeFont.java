@@ -6,18 +6,17 @@
  *  it.unimi.dsi.fastutil.chars.CharSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.stb.STBTTFontinfo
  *  org.lwjgl.stb.STBTruetype
  *  org.lwjgl.system.MemoryStack
+ *  org.lwjgl.system.MemoryUtil
  */
 package net.minecraft.client.font;
 
 import it.unimi.dsi.fastutil.chars.CharArraySet;
 import it.unimi.dsi.fastutil.chars.CharSet;
-import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import net.fabricmc.api.EnvType;
@@ -25,17 +24,16 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.RenderableGlyph;
 import net.minecraft.client.texture.NativeImage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.stb.STBTTFontinfo;
 import org.lwjgl.stb.STBTruetype;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class TrueTypeFont
 implements Font {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private final ByteBuffer field_21839;
     private final STBTTFontinfo info;
     private final float oversample;
     private final CharSet excludedCharacters = new CharArraySet();
@@ -44,18 +42,19 @@ implements Font {
     private final float scaleFactor;
     private final float ascent;
 
-    public TrueTypeFont(STBTTFontinfo info, float f, float oversample, float shiftX, float shiftY, String excludedCharacters) {
-        this.info = info;
-        this.oversample = oversample;
-        excludedCharacters.chars().forEach(i -> this.excludedCharacters.add((char)(i & 0xFFFF)));
-        this.shiftX = shiftX * oversample;
-        this.shiftY = shiftY * oversample;
-        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)info, (float)(f * oversample));
+    public TrueTypeFont(ByteBuffer byteBuffer, STBTTFontinfo sTBTTFontinfo, float f, float g, float h, float i2, String string) {
+        this.field_21839 = byteBuffer;
+        this.info = sTBTTFontinfo;
+        this.oversample = g;
+        string.chars().forEach(i -> this.excludedCharacters.add((char)(i & 0xFFFF)));
+        this.shiftX = h * g;
+        this.shiftY = i2 * g;
+        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)sTBTTFontinfo, (float)(f * g));
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             IntBuffer intBuffer = memoryStack.mallocInt(1);
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
             IntBuffer intBuffer3 = memoryStack.mallocInt(1);
-            STBTruetype.stbtt_GetFontVMetrics((STBTTFontinfo)info, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3);
+            STBTruetype.stbtt_GetFontVMetrics((STBTTFontinfo)sTBTTFontinfo, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3);
             this.ascent = (float)intBuffer.get(0) * this.scaleFactor;
         }
     }
@@ -91,12 +90,10 @@ implements Font {
         }
     }
 
-    public static STBTTFontinfo getSTBTTFontInfo(ByteBuffer font) throws IOException {
-        STBTTFontinfo sTBTTFontinfo = STBTTFontinfo.create();
-        if (!STBTruetype.stbtt_InitFont((STBTTFontinfo)sTBTTFontinfo, (ByteBuffer)font)) {
-            throw new IOException("Invalid ttf");
-        }
-        return sTBTTFontinfo;
+    @Override
+    public void close() {
+        this.info.free();
+        MemoryUtil.memFree((Buffer)this.field_21839);
     }
 
     @Override
@@ -115,13 +112,13 @@ implements Font {
         private final float advance;
         private final int glyphIndex;
 
-        private TtfGlyph(int xMax, int yMax, int yMin, int advance, float f, float glyphIndex, int i) {
-            this.width = yMax - xMax;
-            this.height = yMin - advance;
-            this.advance = f / TrueTypeFont.this.oversample;
-            this.bearingX = (glyphIndex + (float)xMax + TrueTypeFont.this.shiftX) / TrueTypeFont.this.oversample;
-            this.ascent = (TrueTypeFont.this.ascent - (float)yMin + TrueTypeFont.this.shiftY) / TrueTypeFont.this.oversample;
-            this.glyphIndex = i;
+        private TtfGlyph(int xMin, int xMax, int yMax, int yMin, float advance, float bearing, int index) {
+            this.width = xMax - xMin;
+            this.height = yMax - yMin;
+            this.advance = advance / TrueTypeFont.this.oversample;
+            this.bearingX = (bearing + (float)xMin + TrueTypeFont.this.shiftX) / TrueTypeFont.this.oversample;
+            this.ascent = (TrueTypeFont.this.ascent - (float)yMax + TrueTypeFont.this.shiftY) / TrueTypeFont.this.oversample;
+            this.glyphIndex = index;
         }
 
         @Override
@@ -156,10 +153,9 @@ implements Font {
 
         @Override
         public void upload(int x, int y) {
-            try (NativeImage nativeImage = new NativeImage(NativeImage.Format.LUMINANCE, this.width, this.height, false);){
-                nativeImage.makeGlyphBitmapSubpixel(TrueTypeFont.this.info, this.glyphIndex, this.width, this.height, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.shiftX, TrueTypeFont.this.shiftY, 0, 0);
-                nativeImage.upload(0, x, y, 0, 0, this.width, this.height, false);
-            }
+            NativeImage nativeImage = new NativeImage(NativeImage.Format.LUMINANCE, this.width, this.height, false);
+            nativeImage.makeGlyphBitmapSubpixel(TrueTypeFont.this.info, this.glyphIndex, this.width, this.height, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.shiftX, TrueTypeFont.this.shiftY, 0, 0);
+            nativeImage.upload(0, x, y, 0, 0, this.width, this.height, false, true);
         }
 
         @Override

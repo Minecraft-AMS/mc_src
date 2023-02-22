@@ -30,7 +30,6 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.ObserverBlock;
 import net.minecraft.block.RepeaterBlock;
 import net.minecraft.block.enums.WireConnection;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.DustParticleEffect;
@@ -45,9 +44,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class RedstoneWireBlock
@@ -144,7 +143,7 @@ extends Block {
             boolean bl;
             boolean bl2 = bl = blockState.isSideSolidFullSquare(view, blockPos, Direction.UP) || blockState.getBlock() == Blocks.HOPPER;
             if (bl && RedstoneWireBlock.connectsTo(view.getBlockState(blockPos.up()))) {
-                if (blockState.method_21743(view, blockPos)) {
+                if (blockState.isFullCube(view, blockPos)) {
                     return WireConnection.UP;
                 }
                 return WireConnection.SIDE;
@@ -157,7 +156,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockPos blockPos = pos.down();
         BlockState blockState = world.getBlockState(blockPos);
         return blockState.isSideSolidFullSquare(world, blockPos, Direction.UP) || blockState.getBlock() == Blocks.HOPPER;
@@ -409,11 +408,6 @@ extends Block {
         float j = Math.max(0.0f, g * g * 0.7f - 0.5f);
         float k = Math.max(0.0f, g * g * 0.6f - 0.7f);
         world.addParticle(new DustParticleEffect(h, j, k, 1.0f), d, e, f, 0.0, 0.0, 0.0);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

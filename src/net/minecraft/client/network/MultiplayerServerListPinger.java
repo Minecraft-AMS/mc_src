@@ -89,17 +89,17 @@ public class MultiplayerServerListPinger {
         entry.ping = -1L;
         entry.playerListSummary = null;
         clientConnection.setPacketListener(new ClientQueryPacketListener(){
-            private boolean field_3775;
-            private boolean field_3773;
-            private long field_3772;
+            private boolean sentQuery;
+            private boolean received;
+            private long startTime;
 
             @Override
             public void onResponse(QueryResponseS2CPacket packet) {
-                if (this.field_3773) {
+                if (this.received) {
                     clientConnection.disconnect(new TranslatableText("multiplayer.status.unrequested", new Object[0]));
                     return;
                 }
-                this.field_3773 = true;
+                this.received = true;
                 ServerMetadata serverMetadata = packet.getServerMetadata();
                 entry.label = serverMetadata.getDescription() != null ? serverMetadata.getDescription().asFormattedString() : "";
                 if (serverMetadata.getVersion() != null) {
@@ -140,14 +140,14 @@ public class MultiplayerServerListPinger {
                 } else {
                     entry.setIcon(null);
                 }
-                this.field_3772 = Util.getMeasuringTimeMs();
-                clientConnection.send(new QueryPingC2SPacket(this.field_3772));
-                this.field_3775 = true;
+                this.startTime = Util.getMeasuringTimeMs();
+                clientConnection.send(new QueryPingC2SPacket(this.startTime));
+                this.sentQuery = true;
             }
 
             @Override
             public void onPong(QueryPongS2CPacket packet) {
-                long l = this.field_3772;
+                long l = this.startTime;
                 long m = Util.getMeasuringTimeMs();
                 entry.ping = m - l;
                 clientConnection.disconnect(new TranslatableText("multiplayer.status.finished", new Object[0]));
@@ -155,7 +155,7 @@ public class MultiplayerServerListPinger {
 
             @Override
             public void onDisconnected(Text reason) {
-                if (!this.field_3775) {
+                if (!this.sentQuery) {
                     LOGGER.error("Can't ping {}: {}", (Object)entry.address, (Object)reason.getString());
                     entry.label = (Object)((Object)Formatting.DARK_RED) + I18n.translate("multiplayer.status.cannot_connect", new Object[0]);
                     entry.playerCountLabel = "";
@@ -255,7 +255,7 @@ public class MultiplayerServerListPinger {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void method_3000() {
+    public void tick() {
         List<ClientConnection> list = this.clientConnections;
         synchronized (list) {
             Iterator<ClientConnection> iterator = this.clientConnections.iterator();
@@ -274,7 +274,7 @@ public class MultiplayerServerListPinger {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void method_3004() {
+    public void cancel() {
         List<ClientConnection> list = this.clientConnections;
         synchronized (list) {
             Iterator<ClientConnection> iterator = this.clientConnections.iterator();

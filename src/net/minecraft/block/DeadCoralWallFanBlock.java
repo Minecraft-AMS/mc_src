@@ -27,9 +27,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class DeadCoralWallFanBlock
@@ -74,7 +74,7 @@ extends DeadCoralFanBlock {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         Direction direction = state.get(FACING);
         BlockPos blockPos = pos.offset(direction.getOpposite());
         BlockState blockState = world.getBlockState(blockPos);
@@ -86,10 +86,10 @@ extends DeadCoralFanBlock {
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         Direction[] directions;
         BlockState blockState = super.getPlacementState(ctx);
-        World collisionView = ctx.getWorld();
+        World worldView = ctx.getWorld();
         BlockPos blockPos = ctx.getBlockPos();
         for (Direction direction : directions = ctx.getPlacementDirections()) {
-            if (!direction.getAxis().isHorizontal() || !(blockState = (BlockState)blockState.with(FACING, direction.getOpposite())).canPlaceAt(collisionView, blockPos)) continue;
+            if (!direction.getAxis().isHorizontal() || !(blockState = (BlockState)blockState.with(FACING, direction.getOpposite())).canPlaceAt(worldView, blockPos)) continue;
             return blockState;
         }
         return null;

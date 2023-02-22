@@ -200,7 +200,7 @@ public class EntitySelector {
             predicate = predicate.and(entity -> box.intersects(entity.getBoundingBox()));
         }
         if (!this.distance.isDummy()) {
-            predicate = predicate.and(entity -> this.distance.matchesSquared(entity.squaredDistanceTo(vec3d)));
+            predicate = predicate.and(entity -> this.distance.testSqrt(entity.squaredDistanceTo(vec3d)));
         }
         return predicate;
     }

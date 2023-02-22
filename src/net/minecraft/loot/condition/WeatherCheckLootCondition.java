@@ -12,11 +12,11 @@ package net.minecraft.loot.condition;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.jetbrains.annotations.Nullable;
 
 public class WeatherCheckLootCondition

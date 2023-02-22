@@ -15,9 +15,9 @@ implements NameableContainerFactory {
     private final Text name;
     private final ContainerFactory baseFactory;
 
-    public SimpleNamedContainerFactory(ContainerFactory containerFactory, Text text) {
-        this.baseFactory = containerFactory;
-        this.name = text;
+    public SimpleNamedContainerFactory(ContainerFactory baseFactory, Text name) {
+        this.baseFactory = baseFactory;
+        this.name = name;
     }
 
     @Override

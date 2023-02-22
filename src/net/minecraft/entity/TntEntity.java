@@ -64,9 +64,6 @@ extends Entity {
 
     @Override
     public void tick() {
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
         if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
@@ -83,13 +80,15 @@ extends Entity {
             }
         } else {
             this.checkWaterState();
-            this.world.addParticle(ParticleTypes.SMOKE, this.x, this.y + 0.5, this.z, 0.0, 0.0, 0.0);
+            if (this.world.isClient) {
+                this.world.addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
+            }
         }
     }
 
     private void explode() {
         float f = 4.0f;
-        this.world.createExplosion(this, this.x, this.y + (double)(this.getHeight() / 16.0f), this.z, 4.0f, Explosion.DestructionType.BREAK);
+        this.world.createExplosion(this, this.getX(), this.getBodyY(0.0625), this.getZ(), 4.0f, Explosion.DestructionType.BREAK);
     }
 
     @Override

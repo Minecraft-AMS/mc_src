@@ -30,8 +30,8 @@ extends Screen {
     private int buttonEnableTimer;
     protected final BooleanConsumer callback;
 
-    public ConfirmScreen(BooleanConsumer booleanConsumer, Text text, Text text2) {
-        this(booleanConsumer, text, text2, I18n.translate("gui.yes", new Object[0]), I18n.translate("gui.no", new Object[0]));
+    public ConfirmScreen(BooleanConsumer callback, Text title, Text message) {
+        this(callback, title, message, I18n.translate("gui.yes", new Object[0]), I18n.translate("gui.no", new Object[0]));
     }
 
     public ConfirmScreen(BooleanConsumer callback, Text title, Text message, String yesTranslated, String noTranslated) {

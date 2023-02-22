@@ -9,11 +9,13 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.IllagerEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.IllagerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.VindicatorEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,16 +29,16 @@ extends IllagerEntityRenderer<VindicatorEntity> {
         this.addFeature(new HeldItemFeatureRenderer<VindicatorEntity, IllagerEntityModel<VindicatorEntity>>((FeatureRendererContext)this){
 
             @Override
-            public void render(VindicatorEntity vindicatorEntity, float f, float g, float h, float i, float j, float k, float l) {
+            public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, VindicatorEntity vindicatorEntity, float f, float g, float h, float j, float k, float l) {
                 if (vindicatorEntity.isAttacking()) {
-                    super.render(vindicatorEntity, f, g, h, i, j, k, l);
+                    super.render(matrixStack, vertexConsumerProvider, i, vindicatorEntity, f, g, h, j, k, l);
                 }
             }
         });
     }
 
     @Override
-    protected Identifier getTexture(VindicatorEntity vindicatorEntity) {
+    public Identifier getTexture(VindicatorEntity vindicatorEntity) {
         return SKIN;
     }
 }

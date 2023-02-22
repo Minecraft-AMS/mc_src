@@ -20,17 +20,19 @@ import net.minecraft.world.FeatureUpdater;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.storage.RegionBasedStorage;
+import net.minecraft.world.storage.StorageIoWorker;
 import org.jetbrains.annotations.Nullable;
 
 public class VersionedChunkStorage
-extends RegionBasedStorage {
+implements AutoCloseable {
+    private final StorageIoWorker worker;
     protected final DataFixer dataFixer;
     @Nullable
     private FeatureUpdater featureUpdater;
 
     public VersionedChunkStorage(File file, DataFixer dataFixer) {
-        super(file);
         this.dataFixer = dataFixer;
+        this.worker = new StorageIoWorker(new RegionBasedStorage(file), "chunk");
     }
 
     public CompoundTag updateChunkTag(DimensionType dimensionType, Supplier<PersistentStateManager> persistentStateManagerFactory, CompoundTag tag) {
@@ -53,12 +55,25 @@ extends RegionBasedStorage {
         return tag.contains("DataVersion", 99) ? tag.getInt("DataVersion") : -1;
     }
 
-    @Override
-    public void setTagAt(ChunkPos pos, CompoundTag tag) throws IOException {
-        super.setTagAt(pos, tag);
+    @Nullable
+    public CompoundTag getNbt(ChunkPos chunkPos) throws IOException {
+        return this.worker.getNbt(chunkPos);
+    }
+
+    public void setTagAt(ChunkPos chunkPos, CompoundTag compoundTag) {
+        this.worker.setResult(chunkPos, compoundTag);
         if (this.featureUpdater != null) {
-            this.featureUpdater.markResolved(pos.toLong());
+            this.featureUpdater.markResolved(chunkPos.toLong());
         }
+    }
+
+    public void completeAll() {
+        this.worker.completeAll().join();
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.worker.close();
     }
 }
 

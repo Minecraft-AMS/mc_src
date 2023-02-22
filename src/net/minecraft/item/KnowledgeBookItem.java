@@ -19,7 +19,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeManager;
 import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypedActionResult;
@@ -44,7 +43,7 @@ extends Item {
         }
         if (compoundTag == null || !compoundTag.contains("Recipes", 9)) {
             LOGGER.error("Tag not valid: {}", (Object)compoundTag);
-            return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+            return TypedActionResult.fail(itemStack);
         }
         if (!world.isClient) {
             ListTag listTag = compoundTag.getList("Recipes", 8);
@@ -55,14 +54,14 @@ extends Item {
                 Optional<Recipe<?>> optional = recipeManager.get(new Identifier(string));
                 if (!optional.isPresent()) {
                     LOGGER.error("Invalid recipe: {}", (Object)string);
-                    return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+                    return TypedActionResult.fail(itemStack);
                 }
                 list.add(optional.get());
             }
             user.unlockRecipes(list);
             user.incrementStat(Stats.USED.getOrCreateStat(this));
         }
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.success(itemStack);
     }
 }
 

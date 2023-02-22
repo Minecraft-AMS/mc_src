@@ -11,7 +11,6 @@ import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
@@ -22,8 +21,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class LanternBlock
@@ -59,14 +58,9 @@ extends Block {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
-    }
-
-    @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         Direction direction = LanternBlock.attachedDirection(state).getOpposite();
-        return Block.isSolidSmallSquare(world, pos.offset(direction), direction.getOpposite());
+        return Block.sideCoversSmallSquare(world, pos.offset(direction), direction.getOpposite());
     }
 
     protected static Direction attachedDirection(BlockState state) {

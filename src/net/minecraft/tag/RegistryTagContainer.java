@@ -48,7 +48,7 @@ extends TagContainer<T> {
             }
             map.put(identifier, builder.build(identifier));
         }
-        this.method_20735(map);
+        this.setEntries(map);
     }
 }
 

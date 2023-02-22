@@ -17,6 +17,7 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 
 public class BuriedTreasureGenerator {
 
@@ -36,12 +37,12 @@ public class BuriedTreasureGenerator {
         }
 
         @Override
-        public boolean generate(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
-            int i = world.getTop(Heightmap.Type.OCEAN_FLOOR_WG, this.boundingBox.minX, this.boundingBox.minZ);
+        public boolean generate(IWorld world, ChunkGenerator<?> generator, Random random, BlockBox box, ChunkPos pos) {
+            int i = world.getTopY(Heightmap.Type.OCEAN_FLOOR_WG, this.boundingBox.minX, this.boundingBox.minZ);
             BlockPos.Mutable mutable = new BlockPos.Mutable(this.boundingBox.minX, i, this.boundingBox.minZ);
             while (mutable.getY() > 0) {
                 BlockState blockState = world.getBlockState(mutable);
-                BlockState blockState2 = world.getBlockState(mutable.down());
+                BlockState blockState2 = world.getBlockState((BlockPos)mutable.down());
                 if (blockState2 == Blocks.SANDSTONE.getDefaultState() || blockState2 == Blocks.STONE.getDefaultState() || blockState2 == Blocks.ANDESITE.getDefaultState() || blockState2 == Blocks.GRANITE.getDefaultState() || blockState2 == Blocks.DIORITE.getDefaultState()) {
                     BlockState blockState3 = blockState.isAir() || this.isLiquid(blockState) ? Blocks.SAND.getDefaultState() : blockState;
                     for (Direction direction : Direction.values()) {
@@ -57,7 +58,7 @@ public class BuriedTreasureGenerator {
                         world.setBlockState(blockPos, blockState3, 3);
                     }
                     this.boundingBox = new BlockBox(mutable.getX(), mutable.getY(), mutable.getZ(), mutable.getX(), mutable.getY(), mutable.getZ());
-                    return this.addChest(world, boundingBox, random, mutable, LootTables.BURIED_TREASURE_CHEST, null);
+                    return this.addChest(world, box, random, mutable, LootTables.BURIED_TREASURE_CHEST, null);
                 }
                 mutable.setOffset(0, -1, 0);
             }

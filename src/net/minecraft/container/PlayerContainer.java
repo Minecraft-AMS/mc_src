@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.container;
 
+import com.mojang.datafixers.util.Pair;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.container.CraftingContainer;
@@ -25,11 +26,17 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeFinder;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.Identifier;
 
 public class PlayerContainer
 extends CraftingContainer<CraftingInventory> {
-    private static final String[] EMPTY_ARMOR_SLOT_IDS = new String[]{"item/empty_armor_slot_boots", "item/empty_armor_slot_leggings", "item/empty_armor_slot_chestplate", "item/empty_armor_slot_helmet"};
+    public static final Identifier BLOCK_ATLAS_TEXTURE = new Identifier("textures/atlas/blocks.png");
+    public static final Identifier EMPTY_HELMET_SLOT_TEXTURE = new Identifier("item/empty_armor_slot_helmet");
+    public static final Identifier EMPTY_CHESTPLATE_SLOT_TEXTURE = new Identifier("item/empty_armor_slot_chestplate");
+    public static final Identifier EMPTY_LEGGINGS_SLOT_TEXTURE = new Identifier("item/empty_armor_slot_leggings");
+    public static final Identifier EMPTY_BOOTS_SLOT_TEXTURE = new Identifier("item/empty_armor_slot_boots");
+    public static final Identifier EMPTY_OFFHAND_ARMOR_SLOT = new Identifier("item/empty_armor_slot_shield");
+    private static final Identifier[] EMPTY_ARMOR_SLOT_TEXTURES = new Identifier[]{EMPTY_BOOTS_SLOT_TEXTURE, EMPTY_LEGGINGS_SLOT_TEXTURE, EMPTY_CHESTPLATE_SLOT_TEXTURE, EMPTY_HELMET_SLOT_TEXTURE};
     private static final EquipmentSlot[] EQUIPMENT_SLOT_ORDER = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     private final CraftingInventory craftingInventory = new CraftingInventory(this, 2, 2);
     private final CraftingResultInventory craftingResultInventory = new CraftingResultInventory();
@@ -71,10 +78,9 @@ extends CraftingContainer<CraftingInventory> {
                 }
 
                 @Override
-                @Nullable
                 @Environment(value=EnvType.CLIENT)
-                public String getBackgroundSprite() {
-                    return EMPTY_ARMOR_SLOT_IDS[equipmentSlot.getEntitySlotId()];
+                public Pair<Identifier, Identifier> getBackgroundSprite() {
+                    return Pair.of((Object)BLOCK_ATLAS_TEXTURE, (Object)EMPTY_ARMOR_SLOT_TEXTURES[equipmentSlot.getEntitySlotId()]);
                 }
             });
         }
@@ -89,10 +95,9 @@ extends CraftingContainer<CraftingInventory> {
         this.addSlot(new Slot(inventory, 40, 77, 62){
 
             @Override
-            @Nullable
             @Environment(value=EnvType.CLIENT)
-            public String getBackgroundSprite() {
-                return "item/empty_armor_slot_shield";
+            public Pair<Identifier, Identifier> getBackgroundSprite() {
+                return Pair.of((Object)BLOCK_ATLAS_TEXTURE, (Object)EMPTY_OFFHAND_ARMOR_SLOT);
             }
         });
     }

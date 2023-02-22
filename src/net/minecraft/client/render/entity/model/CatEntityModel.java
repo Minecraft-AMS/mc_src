@@ -9,6 +9,7 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelUtil;
 import net.minecraft.client.render.entity.model.OcelotEntityModel;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.entity.passive.TameableEntity;
@@ -73,11 +74,11 @@ extends OcelotEntityModel<T> {
     }
 
     @Override
-    public void setAngles(T catEntity, float f, float g, float h, float i, float j, float k) {
-        super.setAngles(catEntity, f, g, h, i, j, k);
+    public void setAngles(T catEntity, float f, float g, float h, float i, float j) {
+        super.setAngles(catEntity, f, g, h, i, j);
         if (this.sleepAnimation > 0.0f) {
-            this.head.roll = this.lerpAngle(this.head.roll, -1.2707963f, this.sleepAnimation);
-            this.head.yaw = this.lerpAngle(this.head.yaw, 1.2707963f, this.sleepAnimation);
+            this.head.roll = ModelUtil.interpolateAngle(this.head.roll, -1.2707963f, this.sleepAnimation);
+            this.head.yaw = ModelUtil.interpolateAngle(this.head.yaw, 1.2707963f, this.sleepAnimation);
             this.leftFrontLeg.pitch = -1.2707963f;
             this.rightFrontLeg.pitch = -0.47079635f;
             this.rightFrontLeg.roll = -0.2f;
@@ -87,22 +88,12 @@ extends OcelotEntityModel<T> {
             this.rightBackLeg.roll = -0.5f;
             this.rightBackLeg.pivotX = -0.3f;
             this.rightBackLeg.pivotY = 20.0f;
-            this.upperTail.pitch = this.lerpAngle(this.upperTail.pitch, 0.8f, this.tailCurlAnimation);
-            this.lowerTail.pitch = this.lerpAngle(this.lowerTail.pitch, -0.4f, this.tailCurlAnimation);
+            this.upperTail.pitch = ModelUtil.interpolateAngle(this.upperTail.pitch, 0.8f, this.tailCurlAnimation);
+            this.lowerTail.pitch = ModelUtil.interpolateAngle(this.lowerTail.pitch, -0.4f, this.tailCurlAnimation);
         }
         if (this.headDownAnimation > 0.0f) {
-            this.head.pitch = this.lerpAngle(this.head.pitch, -0.58177644f, this.headDownAnimation);
+            this.head.pitch = ModelUtil.interpolateAngle(this.head.pitch, -0.58177644f, this.headDownAnimation);
         }
-    }
-
-    protected float lerpAngle(float from, float to, float intermediate) {
-        float f;
-        for (f = to - from; f < (float)(-Math.PI); f += (float)Math.PI * 2) {
-        }
-        while (f >= (float)Math.PI) {
-            f -= (float)Math.PI * 2;
-        }
-        return from + intermediate * f;
     }
 }
 

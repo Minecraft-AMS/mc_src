@@ -8,6 +8,7 @@ import net.minecraft.entity.EntityCategory;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.OctavePerlinNoiseSampler;
 import net.minecraft.village.ZombieSiegeManager;
@@ -45,7 +46,7 @@ extends SurfaceChunkGenerator<OverworldChunkGeneratorConfig> {
     public OverworldChunkGenerator(IWorld world, BiomeSource biomeSource, OverworldChunkGeneratorConfig config) {
         super(world, biomeSource, 4, 8, 256, config, true);
         this.random.consume(2620);
-        this.noiseSampler = new OctavePerlinNoiseSampler(this.random, 16);
+        this.noiseSampler = new OctavePerlinNoiseSampler(this.random, 15, 0);
         this.amplified = world.getLevelProperties().getGeneratorType() == LevelGeneratorType.AMPLIFIED;
     }
 
@@ -53,7 +54,7 @@ extends SurfaceChunkGenerator<OverworldChunkGeneratorConfig> {
     public void populateEntities(ChunkRegion region) {
         int i = region.getCenterChunkX();
         int j = region.getCenterChunkZ();
-        Biome biome = region.getChunk(i, j).getBiomeArray()[0];
+        Biome biome = region.getBiome(new ChunkPos(i, j).getCenterBlockPos());
         ChunkRandom chunkRandom = new ChunkRandom();
         chunkRandom.setSeed(region.getSeed(), i << 4, j << 4);
         SpawnHelper.populateEntities(region, biome, i, j, chunkRandom);
@@ -87,23 +88,24 @@ extends SurfaceChunkGenerator<OverworldChunkGeneratorConfig> {
         float g = 0.0f;
         float h = 0.0f;
         int i = 2;
-        float j = this.biomeSource.getBiomeForNoiseGen(x, z).getDepth();
-        for (int k = -2; k <= 2; ++k) {
-            for (int l = -2; l <= 2; ++l) {
-                Biome biome = this.biomeSource.getBiomeForNoiseGen(x + k, z + l);
-                float m = biome.getDepth();
-                float n = biome.getScale();
-                if (this.amplified && m > 0.0f) {
-                    m = 1.0f + m * 2.0f;
-                    n = 1.0f + n * 4.0f;
+        int j = this.getSeaLevel();
+        float k = this.biomeSource.getBiomeForNoiseGen(x, j, z).getDepth();
+        for (int l = -2; l <= 2; ++l) {
+            for (int m = -2; m <= 2; ++m) {
+                Biome biome = this.biomeSource.getBiomeForNoiseGen(x + l, j, z + m);
+                float n = biome.getDepth();
+                float o = biome.getScale();
+                if (this.amplified && n > 0.0f) {
+                    n = 1.0f + n * 2.0f;
+                    o = 1.0f + o * 4.0f;
                 }
-                float o = BIOME_WEIGHT_TABLE[k + 2 + (l + 2) * 5] / (m + 2.0f);
-                if (biome.getDepth() > j) {
-                    o /= 2.0f;
+                float p = BIOME_WEIGHT_TABLE[l + 2 + (m + 2) * 5] / (n + 2.0f);
+                if (biome.getDepth() > k) {
+                    p /= 2.0f;
                 }
-                f += n * o;
-                g += m * o;
-                h += o;
+                f += o * p;
+                g += n * p;
+                h += p;
             }
         }
         f /= h;
@@ -116,7 +118,7 @@ extends SurfaceChunkGenerator<OverworldChunkGeneratorConfig> {
     }
 
     private double sampleNoise(int x, int y) {
-        double d = this.noiseSampler.sample(x * 200, 10.0, y * 200, 1.0, 0.0, true) / 8000.0;
+        double d = this.noiseSampler.sample(x * 200, 10.0, y * 200, 1.0, 0.0, true) * 65535.0 / 8000.0;
         if (d < 0.0) {
             d = -d * 0.3;
         }

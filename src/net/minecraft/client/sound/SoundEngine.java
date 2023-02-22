@@ -86,7 +86,7 @@ public class SoundEngine {
         }
         this.contextPointer = ALC10.alcCreateContext((long)this.devicePointer, (IntBuffer)null);
         ALC10.alcMakeContextCurrent((long)this.contextPointer);
-        int i = this.method_20297();
+        int i = this.getMonoSourceCount();
         int j = MathHelper.clamp((int)MathHelper.sqrt(i), 2, 8);
         int k = MathHelper.clamp(i - j, 8, 255);
         this.streamingSources = new SourceSetImpl(k);
@@ -104,7 +104,7 @@ public class SoundEngine {
         LOGGER.info("OpenAL initialized.");
     }
 
-    private int method_20297() {
+    private int getMonoSourceCount() {
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             int i = ALC10.alcGetInteger((long)this.devicePointer, (int)4098);
             if (AlUtil.checkAlcErrors(this.devicePointer, "Get attributes size")) {

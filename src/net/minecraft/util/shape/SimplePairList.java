@@ -16,8 +16,8 @@ import net.minecraft.util.shape.PairList;
 public final class SimplePairList
 implements PairList {
     private final DoubleArrayList valueIndices;
-    private final IntArrayList field_1376;
-    private final IntArrayList field_1378;
+    private final IntArrayList minValues;
+    private final IntArrayList maxValues;
 
     protected SimplePairList(DoubleList first, DoubleList second, boolean includeFirstOnly, boolean includeSecondOnly) {
         int i = 0;
@@ -27,8 +27,8 @@ implements PairList {
         int l = second.size();
         int m = k + l;
         this.valueIndices = new DoubleArrayList(m);
-        this.field_1376 = new IntArrayList(m);
-        this.field_1378 = new IntArrayList(m);
+        this.minValues = new IntArrayList(m);
+        this.maxValues = new IntArrayList(m);
         while (true) {
             double e;
             boolean bl2;
@@ -39,15 +39,15 @@ implements PairList {
             double d2 = e = bl32 ? first.getDouble(i++) : second.getDouble(j++);
             if ((i == 0 || !bl) && !bl32 && !includeSecondOnly || (j == 0 || !bl2) && bl32 && !includeFirstOnly) continue;
             if (!(d >= e - 1.0E-7)) {
-                this.field_1376.add(i - 1);
-                this.field_1378.add(j - 1);
+                this.minValues.add(i - 1);
+                this.maxValues.add(j - 1);
                 this.valueIndices.add(e);
                 d = e;
                 continue;
             }
             if (this.valueIndices.isEmpty()) continue;
-            this.field_1376.set(this.field_1376.size() - 1, i - 1);
-            this.field_1378.set(this.field_1378.size() - 1, j - 1);
+            this.minValues.set(this.minValues.size() - 1, i - 1);
+            this.maxValues.set(this.maxValues.size() - 1, j - 1);
         }
         if (this.valueIndices.isEmpty()) {
             this.valueIndices.add(Math.min(first.getDouble(k - 1), second.getDouble(l - 1)));
@@ -55,9 +55,9 @@ implements PairList {
     }
 
     @Override
-    public boolean forEachPair(PairList.SectionPairPredicate predicate) {
+    public boolean forEachPair(PairList.Consumer predicate) {
         for (int i = 0; i < this.valueIndices.size() - 1; ++i) {
-            if (predicate.merge(this.field_1376.getInt(i), this.field_1378.getInt(i), i)) continue;
+            if (predicate.merge(this.minValues.getInt(i), this.maxValues.getInt(i), i)) continue;
             return false;
         }
         return true;

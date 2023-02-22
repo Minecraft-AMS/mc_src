@@ -4,22 +4,22 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class LightningEntityRenderer
@@ -29,24 +29,20 @@ extends EntityRenderer<LightningEntity> {
     }
 
     @Override
-    public void render(LightningEntity lightningEntity, double d, double e, double f, float g, float h) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GlStateManager.disableTexture();
-        GlStateManager.disableLighting();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-        double[] ds = new double[8];
-        double[] es = new double[8];
-        double i = 0.0;
-        double j = 0.0;
+    public void render(LightningEntity lightningEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        float[] fs = new float[8];
+        float[] gs = new float[8];
+        float h = 0.0f;
+        float j = 0.0f;
         Random random = new Random(lightningEntity.seed);
         for (int k = 7; k >= 0; --k) {
-            ds[k] = i;
-            es[k] = j;
-            i += (double)(random.nextInt(11) - 5);
-            j += (double)(random.nextInt(11) - 5);
+            fs[k] = h;
+            gs[k] = j;
+            h += (float)(random.nextInt(11) - 5);
+            j += (float)(random.nextInt(11) - 5);
         }
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getLightning());
+        Matrix4f matrix4f = matrixStack.peek().getModel();
         for (int l = 0; l < 4; ++l) {
             Random random2 = new Random(lightningEntity.seed);
             for (int m = 0; m < 3; ++m) {
@@ -58,64 +54,49 @@ extends EntityRenderer<LightningEntity> {
                 if (m > 0) {
                     o = n - 2;
                 }
-                double p = ds[n] - i;
-                double q = es[n] - j;
+                float p = fs[n] - h;
+                float q = gs[n] - j;
                 for (int r = n; r >= o; --r) {
-                    double s = p;
-                    double t = q;
+                    float s = p;
+                    float t = q;
                     if (m == 0) {
-                        p += (double)(random2.nextInt(11) - 5);
-                        q += (double)(random2.nextInt(11) - 5);
+                        p += (float)(random2.nextInt(11) - 5);
+                        q += (float)(random2.nextInt(11) - 5);
                     } else {
-                        p += (double)(random2.nextInt(31) - 15);
-                        q += (double)(random2.nextInt(31) - 15);
+                        p += (float)(random2.nextInt(31) - 15);
+                        q += (float)(random2.nextInt(31) - 15);
                     }
-                    bufferBuilder.begin(5, VertexFormats.POSITION_COLOR);
                     float u = 0.5f;
                     float v = 0.45f;
                     float w = 0.45f;
                     float x = 0.5f;
-                    double y = 0.1 + (double)l * 0.2;
+                    float y = 0.1f + (float)l * 0.2f;
                     if (m == 0) {
-                        y *= (double)r * 0.1 + 1.0;
+                        y = (float)((double)y * ((double)r * 0.1 + 1.0));
                     }
-                    double z = 0.1 + (double)l * 0.2;
+                    float z = 0.1f + (float)l * 0.2f;
                     if (m == 0) {
-                        z *= (double)(r - 1) * 0.1 + 1.0;
+                        z *= (float)(r - 1) * 0.1f + 1.0f;
                     }
-                    for (int aa = 0; aa < 5; ++aa) {
-                        double ab = d - y;
-                        double ac = f - y;
-                        if (aa == 1 || aa == 2) {
-                            ab += y * 2.0;
-                        }
-                        if (aa == 2 || aa == 3) {
-                            ac += y * 2.0;
-                        }
-                        double ad = d - z;
-                        double ae = f - z;
-                        if (aa == 1 || aa == 2) {
-                            ad += z * 2.0;
-                        }
-                        if (aa == 2 || aa == 3) {
-                            ae += z * 2.0;
-                        }
-                        bufferBuilder.vertex(ad + p, e + (double)(r * 16), ae + q).color(0.45f, 0.45f, 0.5f, 0.3f).next();
-                        bufferBuilder.vertex(ab + s, e + (double)((r + 1) * 16), ac + t).color(0.45f, 0.45f, 0.5f, 0.3f).next();
-                    }
-                    tessellator.draw();
+                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, false, true, false);
+                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, false, true, true);
+                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, true, false, true);
+                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, true, false, false);
                 }
             }
         }
-        GlStateManager.disableBlend();
-        GlStateManager.enableLighting();
-        GlStateManager.enableTexture();
+    }
+
+    private static void method_23183(Matrix4f matrix4f, VertexConsumer vertexConsumer, float f, float g, int i, float h, float j, float k, float l, float m, float n, float o, boolean bl, boolean bl2, boolean bl3, boolean bl4) {
+        vertexConsumer.vertex(matrix4f, f + (bl ? o : -o), i * 16, g + (bl2 ? o : -o)).color(k, l, m, 0.3f).next();
+        vertexConsumer.vertex(matrix4f, h + (bl ? n : -n), (i + 1) * 16, j + (bl2 ? n : -n)).color(k, l, m, 0.3f).next();
+        vertexConsumer.vertex(matrix4f, h + (bl3 ? n : -n), (i + 1) * 16, j + (bl4 ? n : -n)).color(k, l, m, 0.3f).next();
+        vertexConsumer.vertex(matrix4f, f + (bl3 ? o : -o), i * 16, g + (bl4 ? o : -o)).color(k, l, m, 0.3f).next();
     }
 
     @Override
-    @Nullable
-    protected Identifier getTexture(LightningEntity lightningEntity) {
-        return null;
+    public Identifier getTexture(LightningEntity lightningEntity) {
+        return SpriteAtlasTexture.BLOCK_ATLAS_TEX;
     }
 }
 

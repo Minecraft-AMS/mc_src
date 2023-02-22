@@ -14,14 +14,14 @@ public final class ProfilerTiming
 implements Comparable<ProfilerTiming> {
     public final double parentSectionUsagePercentage;
     public final double totalUsagePercentage;
-    public final long field_19384;
+    public final long visitCount;
     public final String name;
 
     public ProfilerTiming(String name, double parentUsagePercentage, double totalUsagePercentage, long visitCount) {
         this.name = name;
         this.parentSectionUsagePercentage = parentUsagePercentage;
         this.totalUsagePercentage = totalUsagePercentage;
-        this.field_19384 = visitCount;
+        this.visitCount = visitCount;
     }
 
     @Override

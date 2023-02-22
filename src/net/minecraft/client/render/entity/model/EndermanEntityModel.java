@@ -23,32 +23,33 @@ extends BipedEntityModel<T> {
         super(0.0f, -14.0f, 64, 32);
         float g = -14.0f;
         this.helmet = new ModelPart(this, 0, 16);
-        this.helmet.addCuboid(-4.0f, -8.0f, -4.0f, 8, 8, 8, f - 0.5f);
+        this.helmet.addCuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, f - 0.5f);
         this.helmet.setPivot(0.0f, -14.0f, 0.0f);
         this.torso = new ModelPart(this, 32, 16);
-        this.torso.addCuboid(-4.0f, 0.0f, -2.0f, 8, 12, 4, f);
+        this.torso.addCuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, f);
         this.torso.setPivot(0.0f, -14.0f, 0.0f);
         this.rightArm = new ModelPart(this, 56, 0);
-        this.rightArm.addCuboid(-1.0f, -2.0f, -1.0f, 2, 30, 2, f);
+        this.rightArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
         this.rightArm.setPivot(-3.0f, -12.0f, 0.0f);
         this.leftArm = new ModelPart(this, 56, 0);
         this.leftArm.mirror = true;
-        this.leftArm.addCuboid(-1.0f, -2.0f, -1.0f, 2, 30, 2, f);
+        this.leftArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
         this.leftArm.setPivot(5.0f, -12.0f, 0.0f);
         this.rightLeg = new ModelPart(this, 56, 0);
-        this.rightLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2, 30, 2, f);
+        this.rightLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
         this.rightLeg.setPivot(-2.0f, -2.0f, 0.0f);
         this.leftLeg = new ModelPart(this, 56, 0);
         this.leftLeg.mirror = true;
-        this.leftLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2, 30, 2, f);
+        this.leftLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
         this.leftLeg.setPivot(2.0f, -2.0f, 0.0f);
     }
 
     @Override
-    public void setAngles(T livingEntity, float f, float g, float h, float i, float j, float k) {
-        super.setAngles(livingEntity, f, g, h, i, j, k);
+    public void setAngles(T livingEntity, float f, float g, float h, float i, float j) {
+        float m;
+        super.setAngles(livingEntity, f, g, h, i, j);
         this.head.visible = true;
-        float l = -14.0f;
+        float k = -14.0f;
         this.torso.pitch = 0.0f;
         this.torso.pivotY = -14.0f;
         this.torso.pivotZ = -0.0f;
@@ -58,7 +59,7 @@ extends BipedEntityModel<T> {
         this.leftArm.pitch = (float)((double)this.leftArm.pitch * 0.5);
         this.rightLeg.pitch = (float)((double)this.rightLeg.pitch * 0.5);
         this.leftLeg.pitch = (float)((double)this.leftLeg.pitch * 0.5);
-        float m = 0.4f;
+        float l = 0.4f;
         if (this.rightArm.pitch > 0.4f) {
             this.rightArm.pitch = 0.4f;
         }
@@ -104,9 +105,12 @@ extends BipedEntityModel<T> {
         this.helmet.yaw = this.head.yaw;
         this.helmet.roll = this.head.roll;
         if (this.angry) {
-            float n = 1.0f;
+            m = 1.0f;
             this.head.pivotY -= 5.0f;
         }
+        m = -14.0f;
+        this.rightArm.setPivot(-5.0f, -12.0f, 0.0f);
+        this.leftArm.setPivot(5.0f, -12.0f, 0.0f);
     }
 }
 

@@ -46,12 +46,15 @@ public class ItemTags {
     public static final Tag<Item> SMALL_FLOWERS;
     public static final Tag<Item> BEDS;
     public static final Tag<Item> FENCES;
+    public static final Tag<Item> TALL_FLOWERS;
+    public static final Tag<Item> FLOWERS;
     public static final Tag<Item> BOATS;
     public static final Tag<Item> FISHES;
     public static final Tag<Item> SIGNS;
     public static final Tag<Item> MUSIC_DISCS;
     public static final Tag<Item> COALS;
     public static final Tag<Item> ARROWS;
+    public static final Tag<Item> LECTERN_BOOKS;
 
     public static void setContainer(TagContainer<Item> container) {
         ItemTags.container = container;
@@ -100,12 +103,15 @@ public class ItemTags {
         SMALL_FLOWERS = ItemTags.register("small_flowers");
         BEDS = ItemTags.register("beds");
         FENCES = ItemTags.register("fences");
+        TALL_FLOWERS = ItemTags.register("tall_flowers");
+        FLOWERS = ItemTags.register("flowers");
         BOATS = ItemTags.register("boats");
         FISHES = ItemTags.register("fishes");
         SIGNS = ItemTags.register("signs");
         MUSIC_DISCS = ItemTags.register("music_discs");
         COALS = ItemTags.register("coals");
         ARROWS = ItemTags.register("arrows");
+        LECTERN_BOOKS = ItemTags.register("lectern_books");
     }
 
     public static class CachingTag

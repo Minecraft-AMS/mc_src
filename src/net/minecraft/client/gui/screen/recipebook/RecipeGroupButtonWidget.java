@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.recipebook;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -17,7 +17,6 @@ import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.recipe.book.ClientRecipeBook;
 import net.minecraft.client.recipe.book.RecipeBookGroup;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.container.CraftingContainer;
 import net.minecraft.item.ItemStack;
@@ -29,9 +28,9 @@ extends ToggleButtonWidget {
     private final RecipeBookGroup category;
     private float bounce;
 
-    public RecipeGroupButtonWidget(RecipeBookGroup recipeBookGroup) {
+    public RecipeGroupButtonWidget(RecipeBookGroup category) {
         super(0, 0, 35, 27, false);
-        this.category = recipeBookGroup;
+        this.category = category;
         this.setTextureUV(153, 2, 35, 0, RecipeBookWidget.TEXTURE);
     }
 
@@ -54,14 +53,14 @@ extends ToggleButtonWidget {
     public void renderButton(int mouseX, int mouseY, float delta) {
         if (this.bounce > 0.0f) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(this.x + 8, this.y + 12, 0.0f);
-            GlStateManager.scalef(1.0f, f, 1.0f);
-            GlStateManager.translatef(-(this.x + 8), -(this.y + 12), 0.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef(this.x + 8, this.y + 12, 0.0f);
+            RenderSystem.scalef(1.0f, f, 1.0f);
+            RenderSystem.translatef(-(this.x + 8), -(this.y + 12), 0.0f);
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         minecraftClient.getTextureManager().bindTexture(this.texture);
-        GlStateManager.disableDepthTest();
+        RenderSystem.disableDepthTest();
         int i = this.u;
         int j = this.v;
         if (this.toggled) {
@@ -74,21 +73,17 @@ extends ToggleButtonWidget {
         if (this.toggled) {
             k -= 2;
         }
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.blit(k, this.y, i, j, this.width, this.height);
-        GlStateManager.enableDepthTest();
-        DiffuseLighting.enableForItems();
-        GlStateManager.disableLighting();
-        this.method_2621(minecraftClient.getItemRenderer());
-        GlStateManager.enableLighting();
-        DiffuseLighting.disable();
+        RenderSystem.enableDepthTest();
+        this.renderIcons(minecraftClient.getItemRenderer());
         if (this.bounce > 0.0f) {
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
             this.bounce -= delta;
         }
     }
 
-    private void method_2621(ItemRenderer itemRenderer) {
+    private void renderIcons(ItemRenderer itemRenderer) {
         int i;
         List<ItemStack> list = this.category.getIcons();
         int n = i = this.toggled ? -2 : 0;

@@ -24,10 +24,10 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,7 +43,7 @@ extends StructureFeature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean shouldStartAt(ChunkGenerator<?> chunkGenerator, Random random, int chunkX, int chunkZ) {
+    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
         if (this.lastSeed != chunkGenerator.getSeed()) {
             this.invalidateState();
         }
@@ -52,7 +52,7 @@ extends StructureFeature<DefaultFeatureConfig> {
             this.stateStillValid = true;
         }
         for (ChunkPos chunkPos : this.startPositions) {
-            if (chunkX != chunkPos.x || chunkZ != chunkPos.z) continue;
+            if (chunkZ != chunkPos.x || i != chunkPos.z) continue;
             return true;
         }
         return false;
@@ -114,7 +114,7 @@ extends StructureFeature<DefaultFeatureConfig> {
         this.lastSeed = chunkGenerator.getSeed();
         ArrayList list = Lists.newArrayList();
         for (Biome biome : Registry.BIOME) {
-            if (biome == null || !chunkGenerator.hasStructure(biome, Feature.STRONGHOLD)) continue;
+            if (biome == null || !chunkGenerator.hasStructure(biome, this)) continue;
             list.add(biome);
         }
         int i = ((ChunkGeneratorConfig)chunkGenerator.getConfig()).getStrongholdDistance();
@@ -137,7 +137,7 @@ extends StructureFeature<DefaultFeatureConfig> {
                 double e = (double)(4 * i + i * o * 6) + (random.nextDouble() - 0.5) * ((double)i * 2.5);
                 int q = (int)Math.round(Math.cos(d) * e);
                 int r = (int)Math.round(Math.sin(d) * e);
-                BlockPos blockPos = chunkGenerator.getBiomeSource().locateBiome((q << 4) + 8, (r << 4) + 8, 112, list, random);
+                BlockPos blockPos = chunkGenerator.getBiomeSource().locateBiome((q << 4) + 8, chunkGenerator.getSeaLevel(), (r << 4) + 8, 112, list, random);
                 if (blockPos != null) {
                     q = blockPos.getX() >> 4;
                     r = blockPos.getZ() >> 4;
@@ -157,8 +157,8 @@ extends StructureFeature<DefaultFeatureConfig> {
 
     public static class Start
     extends StructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, biome, blockBox, i, l);
+        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
+            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
         }
 
         @Override

@@ -90,7 +90,7 @@ public class Structure {
                 list2.add(new StructureBlockInfo(blockPos7, blockState, compoundTag));
                 continue;
             }
-            if (blockState.isFullOpaque(world, blockPos6) || blockState.method_21743(world, blockPos6)) {
+            if (blockState.isFullOpaque(world, blockPos6) || blockState.isFullCube(world, blockPos6)) {
                 list.add(new StructureBlockInfo(blockPos7, blockState, null));
                 continue;
             }
@@ -113,7 +113,7 @@ public class Structure {
         List<Entity> list = world.getEntities(Entity.class, new Box(blockPos, blockPos2), entity -> !(entity instanceof PlayerEntity));
         this.entities.clear();
         for (Entity entity2 : list) {
-            Vec3d vec3d = new Vec3d(entity2.x - (double)blockPos.getX(), entity2.y - (double)blockPos.getY(), entity2.z - (double)blockPos.getZ());
+            Vec3d vec3d = new Vec3d(entity2.getX() - (double)blockPos.getX(), entity2.getY() - (double)blockPos.getY(), entity2.getZ() - (double)blockPos.getZ());
             CompoundTag compoundTag = new CompoundTag();
             entity2.saveToTag(compoundTag);
             BlockPos blockPos3 = entity2 instanceof PaintingEntity ? ((PaintingEntity)entity2).getDecorationBlockPos().subtract(blockPos) : new BlockPos(vec3d);
@@ -265,7 +265,7 @@ public class Structure {
     }
 
     public static void method_20532(IWorld iWorld, int i, VoxelSet voxelSet, int j, int k, int l) {
-        voxelSet.method_1046((direction, m, n, o) -> {
+        voxelSet.forEachDirection((direction, m, n, o) -> {
             BlockState blockState4;
             BlockState blockState2;
             BlockState blockState3;
@@ -304,9 +304,9 @@ public class Structure {
             Vec3d vec3d = Structure.method_15176(structureEntityInfo.pos, blockMirror, blockRotation, blockPos2);
             Vec3d vec3d2 = vec3d.add(blockPos.getX(), blockPos.getY(), blockPos.getZ());
             ListTag listTag = new ListTag();
-            listTag.add(new DoubleTag(vec3d2.x));
-            listTag.add(new DoubleTag(vec3d2.y));
-            listTag.add(new DoubleTag(vec3d2.z));
+            listTag.add(DoubleTag.of(vec3d2.x));
+            listTag.add(DoubleTag.of(vec3d2.y));
+            listTag.add(DoubleTag.of(vec3d2.z));
             compoundTag.put("Pos", listTag);
             compoundTag.remove("UUIDMost");
             compoundTag.remove("UUIDLeast");
@@ -598,7 +598,7 @@ public class Structure {
     private ListTag createIntListTag(int ... is) {
         ListTag listTag = new ListTag();
         for (int i : is) {
-            listTag.add(new IntTag(i));
+            listTag.add(IntTag.of(i));
         }
         return listTag;
     }
@@ -606,7 +606,7 @@ public class Structure {
     private ListTag createDoubleListTag(double ... ds) {
         ListTag listTag = new ListTag();
         for (double d : ds) {
-            listTag.add(new DoubleTag(d));
+            listTag.add(DoubleTag.of(d));
         }
         return listTag;
     }

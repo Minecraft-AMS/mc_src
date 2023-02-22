@@ -16,6 +16,7 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
@@ -46,11 +47,10 @@ extends StructureFeature<VillageFeatureConfig> {
     }
 
     @Override
-    public boolean shouldStartAt(ChunkGenerator<?> chunkGenerator, Random random, int chunkX, int chunkZ) {
-        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkX, chunkZ, 0, 0);
-        if (chunkX == chunkPos.x && chunkZ == chunkPos.z) {
-            Biome biome = chunkGenerator.getBiomeSource().getBiome(new BlockPos((chunkX << 4) + 9, 0, (chunkZ << 4) + 9));
-            return chunkGenerator.hasStructure(biome, Feature.VILLAGE);
+    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
+        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkZ, i, 0, 0);
+        if (chunkZ == chunkPos.x && i == chunkPos.z) {
+            return chunkGenerator.hasStructure(biome, this);
         }
         return false;
     }
@@ -72,8 +72,8 @@ extends StructureFeature<VillageFeatureConfig> {
 
     public static class Start
     extends VillageStructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, biome, blockBox, i, l);
+        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
+            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
         }
 
         @Override

@@ -21,11 +21,11 @@ public enum CubeFace {
     WEST(new Corner(DirectionIds.WEST, DirectionIds.UP, DirectionIds.NORTH), new Corner(DirectionIds.WEST, DirectionIds.DOWN, DirectionIds.NORTH), new Corner(DirectionIds.WEST, DirectionIds.DOWN, DirectionIds.SOUTH), new Corner(DirectionIds.WEST, DirectionIds.UP, DirectionIds.SOUTH)),
     EAST(new Corner(DirectionIds.EAST, DirectionIds.UP, DirectionIds.SOUTH), new Corner(DirectionIds.EAST, DirectionIds.DOWN, DirectionIds.SOUTH), new Corner(DirectionIds.EAST, DirectionIds.DOWN, DirectionIds.NORTH), new Corner(DirectionIds.EAST, DirectionIds.UP, DirectionIds.NORTH));
 
-    private static final CubeFace[] field_3958;
+    private static final CubeFace[] DIRECTION_LOOKUP;
     private final Corner[] corners;
 
-    public static CubeFace method_3163(Direction direction) {
-        return field_3958[direction.getId()];
+    public static CubeFace getFace(Direction direction) {
+        return DIRECTION_LOOKUP[direction.getId()];
     }
 
     private CubeFace(Corner ... corners) {
@@ -37,7 +37,7 @@ public enum CubeFace {
     }
 
     static {
-        field_3958 = Util.make(new CubeFace[6], cubeFaces -> {
+        DIRECTION_LOOKUP = Util.make(new CubeFace[6], cubeFaces -> {
             cubeFaces[DirectionIds.DOWN] = DOWN;
             cubeFaces[DirectionIds.UP] = UP;
             cubeFaces[DirectionIds.NORTH] = NORTH;
@@ -53,10 +53,10 @@ public enum CubeFace {
         public final int ySide;
         public final int zSide;
 
-        private Corner(int i, int j, int k) {
-            this.xSide = i;
-            this.ySide = j;
-            this.zSide = k;
+        private Corner(int x, int y, int z) {
+            this.xSide = x;
+            this.ySide = y;
+            this.zSide = z;
         }
     }
 

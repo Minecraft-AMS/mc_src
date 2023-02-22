@@ -22,7 +22,7 @@ public class CampfireSmokeParticle
 extends SpriteBillboardParticle {
     private CampfireSmokeParticle(World world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, boolean bl) {
         super(world, x, y, z);
-        this.method_3087(3.0f);
+        this.scale(3.0f);
         this.setBoundingBoxSpacing(0.25f, 0.25f);
         this.maxAge = bl ? this.random.nextInt(50) + 280 : this.random.nextInt(50) + 80;
         this.gravityStrength = 3.0E-6f;

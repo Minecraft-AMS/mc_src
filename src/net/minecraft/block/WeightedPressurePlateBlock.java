@@ -14,9 +14,9 @@ import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class WeightedPressurePlateBlock
 extends AbstractPressurePlateBlock {
@@ -60,7 +60,7 @@ extends AbstractPressurePlateBlock {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 10;
     }
 

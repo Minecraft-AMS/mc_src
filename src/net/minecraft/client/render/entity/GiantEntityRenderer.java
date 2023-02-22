@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
@@ -16,6 +15,7 @@ import net.minecraft.client.render.entity.feature.ArmorBipedFeatureRenderer;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.GiantEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.GiantEntity;
 import net.minecraft.util.Identifier;
 
@@ -33,12 +33,12 @@ extends MobEntityRenderer<GiantEntity, BipedEntityModel<GiantEntity>> {
     }
 
     @Override
-    protected void scale(GiantEntity giantEntity, float f) {
-        GlStateManager.scalef(this.scale, this.scale, this.scale);
+    protected void scale(GiantEntity giantEntity, MatrixStack matrixStack, float f) {
+        matrixStack.scale(this.scale, this.scale, this.scale);
     }
 
     @Override
-    protected Identifier getTexture(GiantEntity giantEntity) {
+    public Identifier getTexture(GiantEntity giantEntity) {
         return SKIN;
     }
 }

@@ -14,15 +14,16 @@ import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class CakeBlock
 extends Block {
@@ -40,17 +41,22 @@ extends Block {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
             ItemStack itemStack = player.getStackInHand(hand);
-            return this.tryEat(world, pos, state, player) || itemStack.isEmpty();
+            if (this.tryEat(world, pos, state, player) == ActionResult.SUCCESS) {
+                return ActionResult.SUCCESS;
+            }
+            if (itemStack.isEmpty()) {
+                return ActionResult.CONSUME;
+            }
         }
         return this.tryEat(world, pos, state, player);
     }
 
-    private boolean tryEat(IWorld world, BlockPos pos, BlockState state, PlayerEntity player) {
+    private ActionResult tryEat(IWorld world, BlockPos pos, BlockState state, PlayerEntity player) {
         if (!player.canConsume(false)) {
-            return false;
+            return ActionResult.PASS;
         }
         player.incrementStat(Stats.EAT_CAKE_SLICE);
         player.getHungerManager().add(2, 0.1f);
@@ -60,7 +66,7 @@ extends Block {
         } else {
             world.removeBlock(pos, false);
         }
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -72,7 +78,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return world.getBlockState(pos.down()).getMaterial().isSolid();
     }
 

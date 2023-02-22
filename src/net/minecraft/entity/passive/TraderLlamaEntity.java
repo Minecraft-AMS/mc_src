@@ -21,6 +21,7 @@ import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.TrackTargetGoal;
 import net.minecraft.entity.passive.LlamaEntity;
+import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundTag;
@@ -112,11 +113,14 @@ extends LlamaEntity {
     @Override
     @Nullable
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        EntityData entityData2 = super.initialize(world, difficulty, spawnType, entityData, entityTag);
         if (spawnType == SpawnType.EVENT) {
             this.setBreedingAge(0);
         }
-        return entityData2;
+        if (entityData == null) {
+            entityData = new PassiveEntity.EntityData();
+            ((PassiveEntity.EntityData)entityData).setBabyAllowed(false);
+        }
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     public class DefendTraderGoal

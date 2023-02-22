@@ -106,7 +106,7 @@ extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         user.openEditBookScreen(itemStack, hand);
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.success(itemStack);
     }
 
     public static boolean resolve(ItemStack book, @Nullable ServerCommandSource commandSource, @Nullable PlayerEntity player) {
@@ -129,14 +129,13 @@ extends Item {
             catch (Exception exception) {
                 text = new LiteralText(string);
             }
-            listTag.set(i, new StringTag(Text.Serializer.toJson(text)));
+            listTag.set(i, StringTag.of(Text.Serializer.toJson(text)));
         }
         compoundTag.put("pages", listTag);
         return true;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint(ItemStack stack) {
         return true;
     }

@@ -10,11 +10,11 @@ import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.Stainable;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -40,16 +40,16 @@ implements Stainable {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof BeaconBlockEntity) {
             player.openContainer((BeaconBlockEntity)blockEntity);
             player.incrementStat(Stats.INTERACT_WITH_BEACON);
         }
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -68,11 +68,6 @@ implements Stainable {
         if (itemStack.hasCustomName() && (blockEntity = world.getBlockEntity(pos)) instanceof BeaconBlockEntity) {
             ((BeaconBlockEntity)blockEntity).setCustomName(itemStack.getName());
         }
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 }
 

@@ -15,15 +15,15 @@ extends StatusEffect {
     }
 
     @Override
-    public void method_5562(LivingEntity livingEntity, AbstractEntityAttributeContainer abstractEntityAttributeContainer, int i) {
-        livingEntity.setAbsorptionAmount(livingEntity.getAbsorptionAmount() - (float)(4 * (i + 1)));
-        super.method_5562(livingEntity, abstractEntityAttributeContainer, i);
+    public void onRemoved(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
+        entity.setAbsorptionAmount(entity.getAbsorptionAmount() - (float)(4 * (amplifier + 1)));
+        super.onRemoved(entity, attributes, amplifier);
     }
 
     @Override
-    public void method_5555(LivingEntity livingEntity, AbstractEntityAttributeContainer abstractEntityAttributeContainer, int i) {
-        livingEntity.setAbsorptionAmount(livingEntity.getAbsorptionAmount() + (float)(4 * (i + 1)));
-        super.method_5555(livingEntity, abstractEntityAttributeContainer, i);
+    public void onApplied(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
+        entity.setAbsorptionAmount(entity.getAbsorptionAmount() + (float)(4 * (amplifier + 1)));
+        super.onApplied(entity, attributes, amplifier);
     }
 }
 

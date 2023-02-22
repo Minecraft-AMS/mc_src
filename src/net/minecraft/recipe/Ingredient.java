@@ -129,12 +129,12 @@ implements Predicate<ItemStack> {
     }
 
     public static Ingredient ofItems(ItemConvertible ... items) {
-        return Ingredient.ofEntries(Arrays.stream(items).map(itemConvertible -> new StackEntry(new ItemStack((ItemConvertible)itemConvertible))));
+        return Ingredient.ofEntries(Arrays.stream(items).map(item -> new StackEntry(new ItemStack((ItemConvertible)item))));
     }
 
     @Environment(value=EnvType.CLIENT)
     public static Ingredient ofStacks(ItemStack ... stacks) {
-        return Ingredient.ofEntries(Arrays.stream(stacks).map(itemStack -> new StackEntry((ItemStack)itemStack)));
+        return Ingredient.ofEntries(Arrays.stream(stacks).map(stack -> new StackEntry((ItemStack)stack)));
     }
 
     public static Ingredient fromTag(Tag<Item> tag) {
@@ -217,8 +217,8 @@ implements Predicate<ItemStack> {
     implements Entry {
         private final ItemStack stack;
 
-        private StackEntry(ItemStack itemStack) {
-            this.stack = itemStack;
+        private StackEntry(ItemStack stack) {
+            this.stack = stack;
         }
 
         @Override

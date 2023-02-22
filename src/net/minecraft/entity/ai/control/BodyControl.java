@@ -11,13 +11,13 @@ public class BodyControl {
     private int activeTicks;
     private float lastHeadYaw;
 
-    public BodyControl(MobEntity mobEntity) {
-        this.entity = mobEntity;
+    public BodyControl(MobEntity entity) {
+        this.entity = entity;
     }
 
     public void tick() {
         if (this.isMoving()) {
-            this.entity.field_6283 = this.entity.yaw;
+            this.entity.bodyYaw = this.entity.yaw;
             this.rotateHead();
             this.lastHeadYaw = this.entity.headYaw;
             this.activeTicks = 0;
@@ -38,18 +38,18 @@ public class BodyControl {
     }
 
     private void rotateLook() {
-        this.entity.field_6283 = MathHelper.capRotation(this.entity.field_6283, this.entity.headYaw, this.entity.method_5986());
+        this.entity.bodyYaw = MathHelper.capRotation(this.entity.bodyYaw, this.entity.headYaw, this.entity.getBodyYawSpeed());
     }
 
     private void rotateHead() {
-        this.entity.headYaw = MathHelper.capRotation(this.entity.headYaw, this.entity.field_6283, this.entity.method_5986());
+        this.entity.headYaw = MathHelper.capRotation(this.entity.headYaw, this.entity.bodyYaw, this.entity.getBodyYawSpeed());
     }
 
     private void rotateBody() {
         int i = this.activeTicks - 10;
         float f = MathHelper.clamp((float)i / 10.0f, 0.0f, 1.0f);
-        float g = (float)this.entity.method_5986() * (1.0f - f);
-        this.entity.field_6283 = MathHelper.capRotation(this.entity.field_6283, this.entity.headYaw, g);
+        float g = (float)this.entity.getBodyYawSpeed() * (1.0f - f);
+        this.entity.bodyYaw = MathHelper.capRotation(this.entity.bodyYaw, this.entity.headYaw, g);
     }
 
     private boolean isIndependent() {
@@ -57,9 +57,9 @@ public class BodyControl {
     }
 
     private boolean isMoving() {
-        double d = this.entity.x - this.entity.prevX;
-        double e = this.entity.z - this.entity.prevZ;
-        return d * d + e * e > 2.500000277905201E-7;
+        double e;
+        double d = this.entity.getX() - this.entity.prevX;
+        return d * d + (e = this.entity.getZ() - this.entity.prevZ) * e > 2.500000277905201E-7;
     }
 }
 

@@ -17,14 +17,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.entry.LootEntry;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunction;
@@ -32,7 +30,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class SetContentsLootFunction
 extends ConditionalLootFunction {
@@ -58,10 +55,10 @@ extends ConditionalLootFunction {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        super.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter reporter) {
+        super.check(reporter);
         for (int i = 0; i < this.entries.size(); ++i) {
-            this.entries.get(i).check(reporter.makeChild(".entry[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.entries.get(i).check(reporter.makeChild(".entry[" + i + "]"));
         }
     }
 

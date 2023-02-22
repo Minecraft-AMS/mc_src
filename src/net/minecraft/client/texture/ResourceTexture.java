@@ -10,7 +10,7 @@
  */
 package net.minecraft.client.texture;
 
-import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.Closeable;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
@@ -18,6 +18,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.metadata.TextureResourceMetadata;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
@@ -36,20 +37,30 @@ extends AbstractTexture {
     }
 
     @Override
-    public void load(ResourceManager resourceManager) throws IOException {
-        try (TextureData textureData = this.loadTextureData(resourceManager);){
-            boolean bl = false;
-            boolean bl2 = false;
-            textureData.checkException();
-            TextureResourceMetadata textureResourceMetadata = textureData.getMetadata();
-            if (textureResourceMetadata != null) {
-                bl = textureResourceMetadata.shouldBlur();
-                bl2 = textureResourceMetadata.shouldClamp();
-            }
-            this.bindTexture();
-            TextureUtil.prepareImage(this.getGlId(), 0, textureData.getImage().getWidth(), textureData.getImage().getHeight());
-            textureData.getImage().upload(0, 0, 0, 0, 0, textureData.getImage().getWidth(), textureData.getImage().getHeight(), bl, bl2, false);
+    public void load(ResourceManager manager) throws IOException {
+        boolean bl2;
+        boolean bl;
+        TextureData textureData = this.loadTextureData(manager);
+        textureData.checkException();
+        TextureResourceMetadata textureResourceMetadata = textureData.getMetadata();
+        if (textureResourceMetadata != null) {
+            bl = textureResourceMetadata.shouldBlur();
+            bl2 = textureResourceMetadata.shouldClamp();
+        } else {
+            bl = false;
+            bl2 = false;
         }
+        NativeImage nativeImage = textureData.getImage();
+        if (!RenderSystem.isOnRenderThreadOrInit()) {
+            RenderSystem.recordRenderCall(() -> this.method_22810(nativeImage, bl, bl2));
+        } else {
+            this.method_22810(nativeImage, bl, bl2);
+        }
+    }
+
+    private void method_22810(NativeImage nativeImage, boolean bl, boolean bl2) {
+        TextureUtil.prepareImage(this.getGlId(), 0, nativeImage.getWidth(), nativeImage.getHeight());
+        nativeImage.upload(0, 0, 0, 0, 0, nativeImage.getWidth(), nativeImage.getHeight(), bl, bl2, false, true);
     }
 
     protected TextureData loadTextureData(ResourceManager resourceManager) {
@@ -59,8 +70,11 @@ extends AbstractTexture {
     @Environment(value=EnvType.CLIENT)
     public static class TextureData
     implements Closeable {
+        @Nullable
         private final TextureResourceMetadata metadata;
+        @Nullable
         private final NativeImage image;
+        @Nullable
         private final IOException exception;
 
         public TextureData(IOException exception) {

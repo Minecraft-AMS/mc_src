@@ -23,7 +23,6 @@ import net.minecraft.item.ArmorMaterial;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.math.BlockPointer;
@@ -38,8 +37,7 @@ extends Item {
 
         @Override
         protected ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
-            ItemStack itemStack = ArmorItem.dispenseArmor(pointer, stack);
-            return itemStack.isEmpty() ? super.dispenseSilently(pointer, stack) : itemStack;
+            return ArmorItem.dispenseArmor(pointer, stack) ? stack : super.dispenseSilently(pointer, stack);
         }
     };
     protected final EquipmentSlot slot;
@@ -47,11 +45,11 @@ extends Item {
     protected final float toughness;
     protected final ArmorMaterial type;
 
-    public static ItemStack dispenseArmor(BlockPointer pointer, ItemStack armor) {
+    public static boolean dispenseArmor(BlockPointer pointer, ItemStack armor) {
         BlockPos blockPos = pointer.getBlockPos().offset(pointer.getBlockState().get(DispenserBlock.FACING));
         List<Entity> list = pointer.getWorld().getEntities(LivingEntity.class, new Box(blockPos), EntityPredicates.EXCEPT_SPECTATOR.and(new EntityPredicates.CanPickup(armor)));
         if (list.isEmpty()) {
-            return ItemStack.EMPTY;
+            return false;
         }
         LivingEntity livingEntity = (LivingEntity)list.get(0);
         EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(armor);
@@ -61,7 +59,7 @@ extends Item {
             ((MobEntity)livingEntity).setEquipmentDropChance(equipmentSlot, 2.0f);
             ((MobEntity)livingEntity).setPersistent();
         }
-        return armor;
+        return true;
     }
 
     public ArmorItem(ArmorMaterial material, EquipmentSlot slot, Item.Settings settings) {
@@ -99,9 +97,9 @@ extends Item {
         if (itemStack2.isEmpty()) {
             user.equipStack(equipmentSlot, itemStack.copy());
             itemStack.setCount(0);
-            return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+            return TypedActionResult.success(itemStack);
         }
-        return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+        return TypedActionResult.fail(itemStack);
     }
 
     @Override

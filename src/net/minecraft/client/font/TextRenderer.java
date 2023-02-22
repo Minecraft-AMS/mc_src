@@ -15,23 +15,26 @@ import com.google.common.collect.Lists;
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.font.EmptyGlyphRenderer;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.FontStorage;
 import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphRenderer;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.texture.TextureManager;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.Rotation3;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
@@ -58,13 +61,13 @@ implements AutoCloseable {
     }
 
     public int drawWithShadow(String text, float x, float y, int color) {
-        GlStateManager.enableAlphaTest();
-        return this.draw(text, x, y, color, true);
+        RenderSystem.enableAlphaTest();
+        return this.draw(text, x, y, color, Rotation3.identity().getMatrix(), true);
     }
 
     public int draw(String text, float x, float y, int color) {
-        GlStateManager.enableAlphaTest();
-        return this.draw(text, x, y, color, false);
+        RenderSystem.enableAlphaTest();
+        return this.draw(text, x, y, color, Rotation3.identity().getMatrix(), false);
     }
 
     public String mirror(String text) {
@@ -78,48 +81,59 @@ implements AutoCloseable {
         }
     }
 
-    private int draw(String str, float x, float y, int color, boolean withShadow) {
-        if (str == null) {
+    private int draw(String text, float x, float y, int color, Matrix4f matrix, boolean shadow) {
+        if (text == null) {
             return 0;
         }
+        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
+        int i = this.draw(text, x, y, color, shadow, matrix, immediate, false, 0, 0xF000F0);
+        immediate.draw();
+        return i;
+    }
+
+    public int draw(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int backgroundColor, int light) {
+        return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumerProvider, seeThrough, backgroundColor, light);
+    }
+
+    private int drawInternal(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int backgroundColor, int light) {
         if (this.rightToLeft) {
-            str = this.mirror(str);
+            text = this.mirror(text);
         }
         if ((color & 0xFC000000) == 0) {
             color |= 0xFF000000;
         }
-        if (withShadow) {
-            this.drawLayer(str, x, y, color, true);
+        if (shadow) {
+            this.drawLayer(text, x, y, color, true, matrix, vertexConsumerProvider, seeThrough, backgroundColor, light);
         }
-        x = this.drawLayer(str, x, y, color, false);
-        return (int)x + (withShadow ? 1 : 0);
+        Matrix4f matrix4f = matrix.copy();
+        matrix4f.addToLastColumn(new Vector3f(0.0f, 0.0f, 0.001f));
+        x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumerProvider, seeThrough, backgroundColor, light);
+        return (int)x + (shadow ? 1 : 0);
     }
 
-    private float drawLayer(String str, float x, float y, int color, boolean isShadow) {
-        float f = isShadow ? 0.25f : 1.0f;
+    private float drawLayer(String text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int underlineColor, int light) {
+        float f = shadow ? 0.25f : 1.0f;
         float g = (float)(color >> 16 & 0xFF) / 255.0f * f;
         float h = (float)(color >> 8 & 0xFF) / 255.0f * f;
         float i = (float)(color & 0xFF) / 255.0f * f;
-        float j = g;
-        float k = h;
-        float l = i;
-        float m = (float)(color >> 24 & 0xFF) / 255.0f;
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        Identifier identifier = null;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
+        float j = x;
+        float k = g;
+        float l = h;
+        float m = i;
+        float n = (float)(color >> 24 & 0xFF) / 255.0f;
         boolean bl = false;
         boolean bl2 = false;
         boolean bl3 = false;
         boolean bl4 = false;
         boolean bl5 = false;
         ArrayList list = Lists.newArrayList();
-        for (int n = 0; n < str.length(); ++n) {
+        for (int o = 0; o < text.length(); ++o) {
+            float r;
             float q;
-            float p;
-            char c = str.charAt(n);
-            if (c == '\u00a7' && n + 1 < str.length()) {
-                Formatting formatting = Formatting.byCode(str.charAt(n + 1));
+            GlyphRenderer glyphRenderer;
+            char c = text.charAt(o);
+            if (c == '\u00a7' && o + 1 < text.length()) {
+                Formatting formatting = Formatting.byCode(text.charAt(o + 1));
                 if (formatting != null) {
                     if (formatting.affectsGlyphWidth()) {
                         bl = false;
@@ -127,15 +141,15 @@ implements AutoCloseable {
                         bl5 = false;
                         bl4 = false;
                         bl3 = false;
-                        j = g;
-                        k = h;
-                        l = i;
+                        k = g;
+                        l = h;
+                        m = i;
                     }
                     if (formatting.getColorValue() != null) {
-                        int o = formatting.getColorValue();
-                        j = (float)(o >> 16 & 0xFF) / 255.0f * f;
-                        k = (float)(o >> 8 & 0xFF) / 255.0f * f;
-                        l = (float)(o & 0xFF) / 255.0f * f;
+                        int p = formatting.getColorValue();
+                        k = (float)(p >> 16 & 0xFF) / 255.0f * f;
+                        l = (float)(p >> 8 & 0xFF) / 255.0f * f;
+                        m = (float)(p & 0xFF) / 255.0f * f;
                     } else if (formatting == Formatting.OBFUSCATED) {
                         bl = true;
                     } else if (formatting == Formatting.BOLD) {
@@ -148,50 +162,48 @@ implements AutoCloseable {
                         bl3 = true;
                     }
                 }
-                ++n;
+                ++o;
                 continue;
             }
             Glyph glyph = this.fontStorage.getGlyph(c);
-            GlyphRenderer glyphRenderer = bl && c != ' ' ? this.fontStorage.getObfuscatedGlyphRenderer(glyph) : this.fontStorage.getGlyphRenderer(c);
-            Identifier identifier2 = glyphRenderer.getId();
-            if (identifier2 != null) {
-                if (identifier != identifier2) {
-                    tessellator.draw();
-                    this.textureManager.bindTexture(identifier2);
-                    bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-                    identifier = identifier2;
-                }
-                p = bl2 ? glyph.getBoldOffset() : 0.0f;
-                q = isShadow ? glyph.getShadowOffset() : 0.0f;
-                this.drawGlyph(glyphRenderer, bl2, bl3, p, x + q, y + q, bufferBuilder, j, k, l, m);
+            GlyphRenderer glyphRenderer2 = glyphRenderer = bl && c != ' ' ? this.fontStorage.getObfuscatedGlyphRenderer(glyph) : this.fontStorage.getGlyphRenderer(c);
+            if (!(glyphRenderer instanceof EmptyGlyphRenderer)) {
+                q = bl2 ? glyph.getBoldOffset() : 0.0f;
+                r = shadow ? glyph.getShadowOffset() : 0.0f;
+                VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(glyphRenderer.method_24045(seeThrough));
+                this.drawGlyph(glyphRenderer, bl2, bl3, q, j + r, y + r, matrix, vertexConsumer, k, l, m, n, light);
             }
-            p = glyph.getAdvance(bl2);
-            float f2 = q = isShadow ? 1.0f : 0.0f;
+            q = glyph.getAdvance(bl2);
+            float f2 = r = shadow ? 1.0f : 0.0f;
             if (bl5) {
-                list.add(new Rectangle(x + q - 1.0f, y + q + 4.5f, x + q + p, y + q + 4.5f - 1.0f, j, k, l, m));
+                list.add(new GlyphRenderer.Rectangle(j + r - 1.0f, y + r + 4.5f, j + r + q, y + r + 4.5f - 1.0f, -0.01f, k, l, m, n));
             }
             if (bl4) {
-                list.add(new Rectangle(x + q - 1.0f, y + q + 9.0f, x + q + p, y + q + 9.0f - 1.0f, j, k, l, m));
+                list.add(new GlyphRenderer.Rectangle(j + r - 1.0f, y + r + 9.0f, j + r + q, y + r + 9.0f - 1.0f, -0.01f, k, l, m, n));
             }
-            x += p;
+            j += q;
         }
-        tessellator.draw();
+        if (underlineColor != 0) {
+            float s = (float)(underlineColor >> 24 & 0xFF) / 255.0f;
+            float t = (float)(underlineColor >> 16 & 0xFF) / 255.0f;
+            float u = (float)(underlineColor >> 8 & 0xFF) / 255.0f;
+            float v = (float)(underlineColor & 0xFF) / 255.0f;
+            list.add(new GlyphRenderer.Rectangle(x - 1.0f, y + 9.0f, j + 1.0f, y - 1.0f, 0.01f, t, u, v, s));
+        }
         if (!list.isEmpty()) {
-            GlStateManager.disableTexture();
-            bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
-            for (Rectangle rectangle : list) {
-                rectangle.draw(bufferBuilder);
+            GlyphRenderer glyphRenderer2 = this.fontStorage.getRectangleRenderer();
+            VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(glyphRenderer2.method_24045(seeThrough));
+            for (GlyphRenderer.Rectangle rectangle : list) {
+                glyphRenderer2.drawRectangle(rectangle, matrix, vertexConsumer2, light);
             }
-            tessellator.draw();
-            GlStateManager.enableTexture();
         }
-        return x;
+        return j;
     }
 
-    private void drawGlyph(GlyphRenderer glyphRenderer, boolean bold, boolean strikethrough, float boldOffset, float x, float y, BufferBuilder buffer, float red, float green, float blue, float alpha) {
-        glyphRenderer.draw(this.textureManager, strikethrough, x, y, buffer, red, green, blue, alpha);
+    private void drawGlyph(GlyphRenderer glyphRenderer, boolean bold, boolean italic, float weight, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, int light) {
+        glyphRenderer.draw(italic, x, y, matrix, vertexConsumer, red, green, blue, alpha, light);
         if (bold) {
-            glyphRenderer.draw(this.textureManager, strikethrough, x + boldOffset, y, buffer, red, green, blue, alpha);
+            glyphRenderer.draw(italic, x + weight, y, matrix, vertexConsumer, red, green, blue, alpha, light);
         }
     }
 
@@ -278,13 +290,14 @@ implements AutoCloseable {
 
     private void drawWrapped(String text, int x, int y, int maxWidth, int color) {
         List<String> list = this.wrapStringToWidthAsList(text, maxWidth);
+        Matrix4f matrix4f = Rotation3.identity().getMatrix();
         for (String string : list) {
             float f = x;
             if (this.rightToLeft) {
                 int i = this.getStringWidth(this.mirror(string));
                 f += (float)(maxWidth - i);
             }
-            this.draw(string, f, y, color, false);
+            this.draw(string, f, y, color, matrix4f, false);
             y += 9;
         }
     }
@@ -401,36 +414,6 @@ implements AutoCloseable {
 
     public boolean isRightToLeft() {
         return this.rightToLeft;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static class Rectangle {
-        protected final float xMin;
-        protected final float yMin;
-        protected final float xMax;
-        protected final float yMax;
-        protected final float red;
-        protected final float green;
-        protected final float blue;
-        protected final float alpha;
-
-        private Rectangle(float xMin, float yMin, float xMax, float yMax, float red, float green, float blue, float alpha) {
-            this.xMin = xMin;
-            this.yMin = yMin;
-            this.xMax = xMax;
-            this.yMax = yMax;
-            this.red = red;
-            this.green = green;
-            this.blue = blue;
-            this.alpha = alpha;
-        }
-
-        public void draw(BufferBuilder bufferBuilder) {
-            bufferBuilder.vertex(this.xMin, this.yMin, 0.0).color(this.red, this.green, this.blue, this.alpha).next();
-            bufferBuilder.vertex(this.xMax, this.yMin, 0.0).color(this.red, this.green, this.blue, this.alpha).next();
-            bufferBuilder.vertex(this.xMax, this.yMax, 0.0).color(this.red, this.green, this.blue, this.alpha).next();
-            bufferBuilder.vertex(this.xMin, this.yMax, 0.0).color(this.red, this.green, this.blue, this.alpha).next();
-        }
     }
 }
 

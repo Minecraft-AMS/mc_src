@@ -40,17 +40,20 @@ import net.minecraft.datafixer.NbtOps;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.DynamicSerializable;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.RegionBasedStorage;
+import net.minecraft.world.storage.StorageIoWorker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class SerializingRegionBasedStorage<R extends DynamicSerializable>
-extends RegionBasedStorage {
+implements AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
+    private final StorageIoWorker worker;
     private final Long2ObjectMap<Optional<R>> loadedElements = new Long2ObjectOpenHashMap();
     private final LongLinkedOpenHashSet unsavedElements = new LongLinkedOpenHashSet();
     private final BiFunction<Runnable, Dynamic<?>, R> deserializer;
@@ -59,17 +62,17 @@ extends RegionBasedStorage {
     private final DataFixTypes dataFixType;
 
     public SerializingRegionBasedStorage(File directory, BiFunction<Runnable, Dynamic<?>, R> deserializer, Function<Runnable, R> factory, DataFixer dataFixer, DataFixTypes dataFixType) {
-        super(directory);
         this.deserializer = deserializer;
         this.factory = factory;
         this.dataFixer = dataFixer;
         this.dataFixType = dataFixType;
+        this.worker = new StorageIoWorker(new RegionBasedStorage(directory), directory.getName());
     }
 
     protected void tick(BooleanSupplier shouldKeepTicking) {
         while (!this.unsavedElements.isEmpty() && shouldKeepTicking.getAsBoolean()) {
             ChunkPos chunkPos = ChunkSectionPos.from(this.unsavedElements.firstLong()).toChunkPos();
-            this.method_20370(chunkPos);
+            this.save(chunkPos);
         }
     }
 
@@ -90,7 +93,7 @@ extends RegionBasedStorage {
         this.loadDataAt(chunkSectionPos.toChunkPos());
         optional = this.getIfLoaded(pos);
         if (optional == null) {
-            throw new IllegalStateException();
+            throw Util.throwOrPause(new IllegalStateException());
         }
         return optional;
     }
@@ -116,7 +119,7 @@ extends RegionBasedStorage {
     @Nullable
     private CompoundTag method_20621(ChunkPos chunkPos) {
         try {
-            return this.getTagAt(chunkPos);
+            return this.worker.getNbt(chunkPos);
         }
         catch (IOException iOException) {
             LOGGER.error("Error reading chunk {} data from disk", (Object)chunkPos, (Object)iOException);
@@ -132,7 +135,7 @@ extends RegionBasedStorage {
         } else {
             int k;
             Dynamic dynamic2 = new Dynamic(dynamicOps, object);
-            int j = SerializingRegionBasedStorage.method_20369(dynamic2);
+            int j = SerializingRegionBasedStorage.getDataVersion(dynamic2);
             boolean bl = j != (k = SharedConstants.getGameVersion().getWorldVersion());
             Dynamic dynamic22 = this.dataFixer.update(this.dataFixType.getTypeReference(), dynamic2, j, k);
             OptionalDynamic optionalDynamic = dynamic22.get("Sections");
@@ -150,16 +153,11 @@ extends RegionBasedStorage {
         }
     }
 
-    private void method_20370(ChunkPos chunkPos) {
+    private void save(ChunkPos chunkPos) {
         Dynamic<Tag> dynamic = this.method_20367(chunkPos, NbtOps.INSTANCE);
         Tag tag = (Tag)dynamic.getValue();
         if (tag instanceof CompoundTag) {
-            try {
-                this.setTagAt(chunkPos, (CompoundTag)tag);
-            }
-            catch (IOException iOException) {
-                LOGGER.error("Error writing data to disk", (Throwable)iOException);
-            }
+            this.worker.setResult(chunkPos, (CompoundTag)tag);
         } else {
             LOGGER.error("Expected compound tag, got {}", (Object)tag);
         }
@@ -189,7 +187,7 @@ extends RegionBasedStorage {
         this.unsavedElements.add(pos);
     }
 
-    private static int method_20369(Dynamic<?> dynamic) {
+    private static int getDataVersion(Dynamic<?> dynamic) {
         return ((Number)dynamic.get("DataVersion").asNumber().orElse(1945)).intValue();
     }
 
@@ -198,10 +196,15 @@ extends RegionBasedStorage {
             for (int i = 0; i < 16; ++i) {
                 long l = ChunkSectionPos.from(chunkPos, i).asLong();
                 if (!this.unsavedElements.contains(l)) continue;
-                this.method_20370(chunkPos);
+                this.save(chunkPos);
                 return;
             }
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.worker.close();
     }
 }
 

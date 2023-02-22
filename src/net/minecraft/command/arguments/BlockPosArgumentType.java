@@ -47,7 +47,7 @@ implements ArgumentType<PosArgument> {
 
     public static BlockPos getLoadedBlockPos(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         BlockPos blockPos = ((PosArgument)context.getArgument(name, PosArgument.class)).toAbsoluteBlockPos((ServerCommandSource)context.getSource());
-        if (!((ServerCommandSource)context.getSource()).getWorld().isBlockLoaded(blockPos)) {
+        if (!((ServerCommandSource)context.getSource()).getWorld().isChunkLoaded(blockPos)) {
             throw UNLOADED_EXCEPTION.create();
         }
         ((ServerCommandSource)context.getSource()).getWorld();

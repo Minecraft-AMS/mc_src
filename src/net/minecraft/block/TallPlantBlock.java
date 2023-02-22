@@ -26,9 +26,9 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class TallPlantBlock
@@ -68,7 +68,7 @@ extends PlantBlock {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         if (state.get(HALF) == DoubleBlockHalf.UPPER) {
             BlockState blockState = world.getBlockState(pos.down());
             return blockState.getBlock() == this && blockState.get(HALF) == DoubleBlockHalf.LOWER;

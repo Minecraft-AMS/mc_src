@@ -25,8 +25,8 @@ extends AbstractSkeletonEntity {
         super((EntityType<? extends AbstractSkeletonEntity>)entityType, world);
     }
 
-    public static boolean method_20686(EntityType<StrayEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return StrayEntity.method_20680(entityType, iWorld, spawnType, blockPos, random) && (spawnType == SpawnType.SPAWNER || iWorld.isSkyVisible(blockPos));
+    public static boolean canSpawn(EntityType<StrayEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return StrayEntity.canSpawnInDark(type, world, spawnType, pos, random) && (spawnType == SpawnType.SPAWNER || world.isSkyVisible(pos));
     }
 
     @Override

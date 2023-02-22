@@ -4,21 +4,20 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.FoxHeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.FoxEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.passive.FoxEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class FoxEntityRenderer
@@ -34,16 +33,16 @@ extends MobEntityRenderer<FoxEntity, FoxEntityModel<FoxEntity>> {
     }
 
     @Override
-    protected void setupTransforms(FoxEntity foxEntity, float f, float g, float h) {
-        super.setupTransforms(foxEntity, f, g, h);
+    protected void setupTransforms(FoxEntity foxEntity, MatrixStack matrixStack, float f, float g, float h) {
+        super.setupTransforms(foxEntity, matrixStack, f, g, h);
         if (foxEntity.isChasing() || foxEntity.isWalking()) {
-            GlStateManager.rotatef(-MathHelper.lerp(h, foxEntity.prevPitch, foxEntity.pitch), 1.0f, 0.0f, 0.0f);
+            float i = -MathHelper.lerp(h, foxEntity.prevPitch, foxEntity.pitch);
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(i));
         }
     }
 
     @Override
-    @Nullable
-    protected Identifier getTexture(FoxEntity foxEntity) {
+    public Identifier getTexture(FoxEntity foxEntity) {
         if (foxEntity.getFoxType() == FoxEntity.Type.RED) {
             return foxEntity.isSleeping() ? SLEEPING_SKIN : SKIN;
         }

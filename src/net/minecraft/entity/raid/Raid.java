@@ -4,13 +4,13 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  org.jetbrains.annotations.NotNull
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.raid;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -62,7 +62,6 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class Raid {
@@ -213,7 +212,7 @@ public class Raid {
         if (this.status == Status.ONGOING) {
             boolean bl2;
             boolean bl = this.active;
-            this.active = this.world.isBlockLoaded(this.center);
+            this.active = this.world.isChunkLoaded(this.center);
             if (this.world.getDifficulty() == Difficulty.PEACEFUL) {
                 this.invalidate();
                 return;
@@ -404,14 +403,15 @@ public class Raid {
     private void playRaidHorn(BlockPos pos) {
         float f = 13.0f;
         int i = 64;
-        for (PlayerEntity playerEntity : this.world.getPlayers()) {
-            Vec3d vec3d = new Vec3d(playerEntity.x, playerEntity.y, playerEntity.z);
-            Vec3d vec3d2 = new Vec3d(pos.getX(), pos.getY(), pos.getZ());
+        Collection<ServerPlayerEntity> collection = this.bar.getPlayers();
+        for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
+            Vec3d vec3d = serverPlayerEntity.getPos();
+            Vec3d vec3d2 = new Vec3d(pos);
             float g = MathHelper.sqrt((vec3d2.x - vec3d.x) * (vec3d2.x - vec3d.x) + (vec3d2.z - vec3d.z) * (vec3d2.z - vec3d.z));
             double d = vec3d.x + (double)(13.0f / g) * (vec3d2.x - vec3d.x);
             double e = vec3d.z + (double)(13.0f / g) * (vec3d2.z - vec3d.z);
-            if (!(g <= 64.0f) && !this.world.isNearOccupiedPointOfInterest(new BlockPos(playerEntity))) continue;
-            ((ServerPlayerEntity)playerEntity).networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, d, playerEntity.y, e, 64.0f, 1.0f));
+            if (!(g <= 64.0f) && !collection.contains(serverPlayerEntity)) continue;
+            serverPlayerEntity.networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, d, serverPlayerEntity.getY(), e, 64.0f, 1.0f));
         }
     }
 
@@ -491,7 +491,7 @@ public class Raid {
         return this.waveToRaiders.values().stream().mapToInt(Set::size).sum();
     }
 
-    public void removeFromWave(@NotNull RaiderEntity entity, boolean countHealth) {
+    public void removeFromWave(RaiderEntity entity, boolean countHealth) {
         boolean bl;
         Set<RaiderEntity> set = this.waveToRaiders.get(entity.getWave());
         if (set != null && (bl = set.remove(entity))) {
@@ -511,7 +511,7 @@ public class Raid {
     public static ItemStack getOminousBanner() {
         ItemStack itemStack = new ItemStack(Items.WHITE_BANNER);
         CompoundTag compoundTag = itemStack.getOrCreateSubTag("BlockEntityTag");
-        ListTag listTag = new BannerPattern.Builder().with(BannerPattern.RHOMBUS_MIDDLE, DyeColor.CYAN).with(BannerPattern.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).with(BannerPattern.STRIPE_CENTER, DyeColor.GRAY).with(BannerPattern.BORDER, DyeColor.LIGHT_GRAY).with(BannerPattern.STRIPE_MIDDLE, DyeColor.BLACK).with(BannerPattern.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).with(BannerPattern.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY).with(BannerPattern.BORDER, DyeColor.BLACK).build();
+        ListTag listTag = new BannerPattern.Patterns().add(BannerPattern.RHOMBUS_MIDDLE, DyeColor.CYAN).add(BannerPattern.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_CENTER, DyeColor.GRAY).add(BannerPattern.BORDER, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_MIDDLE, DyeColor.BLACK).add(BannerPattern.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).add(BannerPattern.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY).add(BannerPattern.BORDER, DyeColor.BLACK).toTag();
         compoundTag.put("Patterns", listTag);
         itemStack.setCustomName(new TranslatableText("block.minecraft.ominous_banner", new Object[0]).formatted(Formatting.GOLD));
         return itemStack;
@@ -530,9 +530,9 @@ public class Raid {
             float f = this.world.random.nextFloat() * ((float)Math.PI * 2);
             int k = this.center.getX() + MathHelper.floor(MathHelper.cos(f) * 32.0f * (float)i) + this.world.random.nextInt(5);
             int l = this.center.getZ() + MathHelper.floor(MathHelper.sin(f) * 32.0f * (float)i) + this.world.random.nextInt(5);
-            int m = this.world.getTop(Heightmap.Type.WORLD_SURFACE, k, l);
+            int m = this.world.getTopY(Heightmap.Type.WORLD_SURFACE, k, l);
             mutable.set(k, m, l);
-            if (this.world.isNearOccupiedPointOfInterest(mutable) && proximity < 2 || !this.world.isAreaLoaded(mutable.getX() - 10, mutable.getY() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getY() + 10, mutable.getZ() + 10) || !this.world.getChunkManager().shouldTickChunk(new ChunkPos(mutable)) || !SpawnHelper.canSpawn(SpawnRestriction.Location.ON_GROUND, this.world, mutable, EntityType.RAVAGER) && (this.world.getBlockState(mutable.down()).getBlock() != Blocks.SNOW || !this.world.getBlockState(mutable).isAir())) continue;
+            if (this.world.isNearOccupiedPointOfInterest(mutable) && proximity < 2 || !this.world.isRegionLoaded(mutable.getX() - 10, mutable.getY() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getY() + 10, mutable.getZ() + 10) || !this.world.getChunkManager().shouldTickChunk(new ChunkPos(mutable)) || !SpawnHelper.canSpawn(SpawnRestriction.Location.ON_GROUND, this.world, mutable, EntityType.RAVAGER) && (this.world.getBlockState((BlockPos)mutable.down()).getBlock() != Blocks.SNOW || !this.world.getBlockState(mutable).isAir())) continue;
             return mutable;
         }
         return null;

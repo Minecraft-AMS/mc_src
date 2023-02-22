@@ -5,6 +5,8 @@
  *  com.google.common.collect.HashMultimap
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.attribute;
@@ -14,6 +16,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import java.util.Collection;
 import java.util.Map;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
@@ -72,6 +76,16 @@ public abstract class AbstractEntityAttributeContainer {
             entityAttributeInstance.removeModifier((EntityAttributeModifier)entry.getValue());
             entityAttributeInstance.addModifier((EntityAttributeModifier)entry.getValue());
         }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public void copyFrom(AbstractEntityAttributeContainer attributeContainer) {
+        this.values().forEach(entityAttributeInstance -> {
+            EntityAttributeInstance entityAttributeInstance2 = attributeContainer.get(entityAttributeInstance.getAttribute());
+            if (entityAttributeInstance2 != null) {
+                entityAttributeInstance.copyFrom(entityAttributeInstance2);
+            }
+        });
     }
 }
 

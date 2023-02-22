@@ -10,6 +10,7 @@ package net.minecraft.client.gui.screen.options;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.options.GameOptionsScreen;
 import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.options.GameOptions;
@@ -20,16 +21,12 @@ import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class ChatOptionsScreen
-extends Screen {
+extends GameOptionsScreen {
     private static final Option[] OPTIONS = new Option[]{Option.VISIBILITY, Option.CHAT_COLOR, Option.CHAT_LINKS, Option.CHAT_LINKS_PROMPT, Option.CHAT_OPACITY, Option.TEXT_BACKGROUND_OPACITY, Option.CHAT_SCALE, Option.CHAT_WIDTH, Option.CHAT_HEIGHT_FOCUSED, Option.SATURATION, Option.REDUCED_DEBUG_INFO, Option.AUTO_SUGGESTIONS, Option.NARRATOR};
-    private final Screen parent;
-    private final GameOptions options;
     private AbstractButtonWidget narratorOptionButton;
 
     public ChatOptionsScreen(Screen parent, GameOptions options) {
-        super(new TranslatableText("options.chat.title", new Object[0]));
-        this.parent = parent;
-        this.options = options;
+        super(parent, options, new TranslatableText("options.chat.title", new Object[0]));
     }
 
     @Override
@@ -49,19 +46,14 @@ extends Screen {
     }
 
     @Override
-    public void removed() {
-        this.minecraft.options.write();
-    }
-
-    @Override
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 20, 0xFFFFFF);
         super.render(mouseX, mouseY, delta);
     }
 
-    public void method_2096() {
-        this.narratorOptionButton.setMessage(Option.NARRATOR.getMessage(this.options));
+    public void setNarratorMessage() {
+        this.narratorOptionButton.setMessage(Option.NARRATOR.getMessage(this.gameOptions));
     }
 }
 

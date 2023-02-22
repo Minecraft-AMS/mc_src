@@ -92,11 +92,11 @@ extends HostileEntity {
         return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
-    public static boolean method_20739(EntityType<? extends PatrolEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        if (iWorld.getLightLevel(LightType.BLOCK, blockPos) > 8) {
+    public static boolean canSpawn(EntityType<? extends PatrolEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        if (world.getLightLevel(LightType.BLOCK, pos) > 8) {
             return false;
         }
-        return PatrolEntity.method_20681(entityType, iWorld, spawnType, blockPos, random);
+        return PatrolEntity.canSpawnIgnoreLightLevel(type, world, spawnType, pos, random);
     }
 
     @Override
@@ -139,22 +139,29 @@ extends HostileEntity {
         return this.patrolling;
     }
 
+    protected void method_22332(boolean bl) {
+        this.patrolling = bl;
+    }
+
     public static class PatrolGoal<T extends PatrolEntity>
     extends Goal {
         private final T actor;
         private final double leaderSpeed;
         private final double fellowSpeed;
+        private long field_20701;
 
         public PatrolGoal(T actor, double leaderSpeed, double fellowSpeed) {
             this.actor = actor;
             this.leaderSpeed = leaderSpeed;
             this.fellowSpeed = fellowSpeed;
+            this.field_20701 = -1L;
             this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
         @Override
         public boolean canStart() {
-            return ((PatrolEntity)this.actor).isRaidCenterSet() && ((MobEntity)this.actor).getTarget() == null && !((Entity)this.actor).hasPassengers() && ((PatrolEntity)this.actor).hasPatrolTarget();
+            boolean bl = ((PatrolEntity)this.actor).world.getTime() < this.field_20701;
+            return ((PatrolEntity)this.actor).isRaidCenterSet() && ((MobEntity)this.actor).getTarget() == null && !((Entity)this.actor).hasPassengers() && ((PatrolEntity)this.actor).hasPatrolTarget() && !bl;
         }
 
         @Override
@@ -170,19 +177,22 @@ extends HostileEntity {
             boolean bl = ((PatrolEntity)this.actor).isPatrolLeader();
             EntityNavigation entityNavigation = ((MobEntity)this.actor).getNavigation();
             if (entityNavigation.isIdle()) {
-                if (!bl || !((PatrolEntity)this.actor).getPatrolTarget().isWithinDistance(((Entity)this.actor).getPos(), 10.0)) {
+                List<PatrolEntity> list = this.method_22333();
+                if (((PatrolEntity)this.actor).isRaidCenterSet() && list.isEmpty()) {
+                    ((PatrolEntity)this.actor).method_22332(false);
+                } else if (!bl || !((PatrolEntity)this.actor).getPatrolTarget().isWithinDistance(((Entity)this.actor).getPos(), 10.0)) {
                     Vec3d vec3d = new Vec3d(((PatrolEntity)this.actor).getPatrolTarget());
-                    Vec3d vec3d2 = new Vec3d(((PatrolEntity)this.actor).x, ((PatrolEntity)this.actor).y, ((PatrolEntity)this.actor).z);
+                    Vec3d vec3d2 = ((Entity)this.actor).getPos();
                     Vec3d vec3d3 = vec3d2.subtract(vec3d);
                     vec3d = vec3d3.rotateY(90.0f).multiply(0.4).add(vec3d);
                     Vec3d vec3d4 = vec3d.subtract(vec3d2).normalize().multiply(10.0).add(vec3d2);
                     BlockPos blockPos = new BlockPos(vec3d4);
                     if (!entityNavigation.startMovingTo((blockPos = ((PatrolEntity)this.actor).world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, blockPos)).getX(), blockPos.getY(), blockPos.getZ(), bl ? this.fellowSpeed : this.leaderSpeed)) {
                         this.wander();
+                        this.field_20701 = ((PatrolEntity)this.actor).world.getTime() + 200L;
                     } else if (bl) {
-                        List<PatrolEntity> list = ((PatrolEntity)this.actor).world.getEntities(PatrolEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), patrolEntity -> !patrolEntity.isPatrolLeader() && patrolEntity.hasNoRaid());
-                        for (PatrolEntity patrolEntity2 : list) {
-                            patrolEntity2.setPatrolTarget(blockPos);
+                        for (PatrolEntity patrolEntity : list) {
+                            patrolEntity.setPatrolTarget(blockPos);
                         }
                     }
                 } else {
@@ -191,10 +201,14 @@ extends HostileEntity {
             }
         }
 
-        private void wander() {
+        private List<PatrolEntity> method_22333() {
+            return ((PatrolEntity)this.actor).world.getEntities(PatrolEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0), patrolEntity -> patrolEntity.hasNoRaid() && !patrolEntity.isPartOf((Entity)this.actor));
+        }
+
+        private boolean wander() {
             Random random = ((LivingEntity)this.actor).getRandom();
             BlockPos blockPos = ((PatrolEntity)this.actor).world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, new BlockPos((Entity)this.actor).add(-8 + random.nextInt(16), 0, -8 + random.nextInt(16)));
-            ((MobEntity)this.actor).getNavigation().startMovingTo(blockPos.getX(), blockPos.getY(), blockPos.getZ(), this.leaderSpeed);
+            return ((MobEntity)this.actor).getNavigation().startMovingTo(blockPos.getX(), blockPos.getY(), blockPos.getZ(), this.leaderSpeed);
         }
     }
 }

@@ -54,6 +54,10 @@ public class DamageSource {
     private boolean explosive;
     public final String name;
 
+    public static DamageSource sting(LivingEntity attacker) {
+        return new EntityDamageSource("sting", attacker);
+    }
+
     public static DamageSource mob(LivingEntity attacker) {
         return new EntityDamageSource("mob", attacker);
     }
@@ -182,7 +186,7 @@ public class DamageSource {
     }
 
     public Text getDeathMessage(LivingEntity livingEntity) {
-        LivingEntity livingEntity2 = livingEntity.method_6124();
+        LivingEntity livingEntity2 = livingEntity.getPrimeAdversary();
         String string = "death.attack." + this.name;
         String string2 = string + ".player";
         if (livingEntity2 != null) {
@@ -223,7 +227,7 @@ public class DamageSource {
     }
 
     @Nullable
-    public Vec3d method_5510() {
+    public Vec3d getPosition() {
         return null;
     }
 }

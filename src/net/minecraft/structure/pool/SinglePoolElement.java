@@ -40,6 +40,7 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 
 public class SinglePoolElement
 extends StructurePoolElement {
@@ -95,13 +96,13 @@ extends StructurePoolElement {
     }
 
     @Override
-    public boolean generate(StructureManager structureManager, IWorld world, BlockPos pos, BlockRotation rotation, BlockBox boundingBox, Random random) {
+    public boolean generate(StructureManager structureManager, IWorld world, ChunkGenerator<?> chunkGenerator, BlockPos blockPos, BlockRotation blockRotation, BlockBox blockBox, Random random) {
         StructurePlacementData structurePlacementData;
         Structure structure = structureManager.getStructureOrBlank(this.location);
-        if (structure.method_15172(world, pos, structurePlacementData = this.method_16616(rotation, boundingBox), 18)) {
-            List<Structure.StructureBlockInfo> list = Structure.process(world, pos, structurePlacementData, this.method_16614(structureManager, pos, rotation, false));
+        if (structure.method_15172(world, blockPos, structurePlacementData = this.method_16616(blockRotation, blockBox), 18)) {
+            List<Structure.StructureBlockInfo> list = Structure.process(world, blockPos, structurePlacementData, this.method_16614(structureManager, blockPos, blockRotation, false));
             for (Structure.StructureBlockInfo structureBlockInfo : list) {
-                this.method_16756(world, structureBlockInfo, pos, rotation, random, boundingBox);
+                this.method_16756(world, structureBlockInfo, blockPos, blockRotation, random, blockBox);
             }
             return true;
         }

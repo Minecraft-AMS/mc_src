@@ -30,13 +30,12 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class ZombiePigmanEntity
@@ -115,13 +114,13 @@ extends ZombieEntity {
         super.mobTick();
     }
 
-    public static boolean method_20682(EntityType<ZombiePigmanEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return iWorld.getDifficulty() != Difficulty.PEACEFUL;
+    public static boolean canSpawn(EntityType<ZombiePigmanEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return world.getDifficulty() != Difficulty.PEACEFUL;
     }
 
     @Override
-    public boolean canSpawn(CollisionView world) {
-        return world.intersectsEntities(this) && !world.intersectsFluid(this.getBoundingBox());
+    public boolean canSpawn(WorldView world) {
+        return world.intersectsEntities(this) && !world.containsFluid(this.getBoundingBox());
     }
 
     @Override
@@ -158,17 +157,15 @@ extends ZombieEntity {
         }
         Entity entity = source.getAttacker();
         if (entity instanceof PlayerEntity && !((PlayerEntity)entity).isCreative() && this.canSee(entity)) {
-            this.method_20804(entity);
+            this.method_20804((LivingEntity)entity);
         }
         return super.damage(source, amount);
     }
 
-    private boolean method_20804(Entity entity) {
+    private boolean method_20804(LivingEntity livingEntity) {
         this.anger = this.method_20806();
         this.angrySoundDelay = this.random.nextInt(40);
-        if (entity instanceof LivingEntity) {
-            this.setAttacker((LivingEntity)entity);
-        }
+        this.setAttacker(livingEntity);
         return true;
     }
 
@@ -193,11 +190,6 @@ extends ZombieEntity {
     @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.ENTITY_ZOMBIE_PIGMAN_DEATH;
-    }
-
-    @Override
-    public boolean interactMob(PlayerEntity player, Hand hand) {
-        return false;
     }
 
     @Override

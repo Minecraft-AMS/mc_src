@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
  *  org.apache.commons.lang3.Validate
  *  org.jetbrains.annotations.NotNull
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util;
 
+import com.google.common.collect.Lists;
 import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.Validate;
@@ -38,7 +39,7 @@ extends AbstractList<E> {
     }
 
     protected DefaultedList() {
-        this(new ArrayList(), null);
+        this(Lists.newArrayList(), null);
     }
 
     protected DefaultedList(List<E> delegate, @Nullable E initialElement) {

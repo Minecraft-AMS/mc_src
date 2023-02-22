@@ -68,6 +68,7 @@ extends ExplosiveProjectileEntity {
 
     @Override
     protected void onCollision(HitResult hitResult) {
+        super.onCollision(hitResult);
         if (!this.world.isClient) {
             if (hitResult.getType() == HitResult.Type.ENTITY) {
                 Entity entity = ((EntityHitResult)hitResult).getEntity();
@@ -95,7 +96,7 @@ extends ExplosiveProjectileEntity {
                 }
             }
             Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
-            this.world.createExplosion(this, this.x, this.y, this.z, 1.0f, false, destructionType);
+            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), 1.0f, false, destructionType);
             this.remove();
         }
     }

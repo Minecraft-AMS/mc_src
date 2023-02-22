@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnchantmentPredicate {
     public static final EnchantmentPredicate ANY = new EnchantmentPredicate();
+    public static final EnchantmentPredicate[] ARRAY_OF_ANY = new EnchantmentPredicate[0];
     private final Enchantment enchantment;
     private final NumberRange.IntRange levels;
 
@@ -86,7 +87,7 @@ public class EnchantmentPredicate {
 
     public static EnchantmentPredicate[] deserializeAll(@Nullable JsonElement el) {
         if (el == null || el.isJsonNull()) {
-            return new EnchantmentPredicate[0];
+            return ARRAY_OF_ANY;
         }
         JsonArray jsonArray = JsonHelper.asArray(el, "enchantments");
         EnchantmentPredicate[] enchantmentPredicates = new EnchantmentPredicate[jsonArray.size()];

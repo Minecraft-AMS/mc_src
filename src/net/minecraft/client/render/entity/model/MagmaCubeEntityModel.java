@@ -2,24 +2,28 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
+ *  com.google.common.collect.ImmutableList$Builder
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
+import java.util.Arrays;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.entity.mob.SlimeEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class MagmaCubeEntityModel<T extends SlimeEntity>
-extends EntityModel<T> {
+extends CompositeEntityModel<T> {
     private final ModelPart[] field_3427 = new ModelPart[8];
-    private final ModelPart field_3428;
+    private final ModelPart innerCube;
+    private final ImmutableList<ModelPart> field_20934;
 
     public MagmaCubeEntityModel() {
         for (int i = 0; i < this.field_3427.length; ++i) {
@@ -33,10 +37,18 @@ extends EntityModel<T> {
                 k = 19;
             }
             this.field_3427[i] = new ModelPart(this, j, k);
-            this.field_3427[i].addCuboid(-4.0f, 16 + i, -4.0f, 8, 1, 8);
+            this.field_3427[i].addCuboid(-4.0f, 16 + i, -4.0f, 8.0f, 1.0f, 8.0f);
         }
-        this.field_3428 = new ModelPart(this, 0, 16);
-        this.field_3428.addCuboid(-2.0f, 18.0f, -2.0f, 4, 4, 4);
+        this.innerCube = new ModelPart(this, 0, 16);
+        this.innerCube.addCuboid(-2.0f, 18.0f, -2.0f, 4.0f, 4.0f, 4.0f);
+        ImmutableList.Builder builder = ImmutableList.builder();
+        builder.add((Object)this.innerCube);
+        builder.addAll(Arrays.asList(this.field_3427));
+        this.field_20934 = builder.build();
+    }
+
+    @Override
+    public void setAngles(T slimeEntity, float f, float g, float h, float i, float j) {
     }
 
     @Override
@@ -50,18 +62,13 @@ extends EntityModel<T> {
         }
     }
 
-    @Override
-    public void render(T slimeEntity, float f, float g, float h, float i, float j, float k) {
-        this.setAngles(slimeEntity, f, g, h, i, j, k);
-        this.field_3428.render(k);
-        for (ModelPart modelPart : this.field_3427) {
-            modelPart.render(k);
-        }
+    public ImmutableList<ModelPart> getParts() {
+        return this.field_20934;
     }
 
     @Override
-    public /* synthetic */ void render(Entity entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.render((T)((SlimeEntity)entity), limbAngle, limbDistance, age, headYaw, headPitch, scale);
+    public /* synthetic */ Iterable getParts() {
+        return this.getParts();
     }
 }
 

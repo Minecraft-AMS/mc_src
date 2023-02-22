@@ -21,6 +21,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
@@ -28,6 +29,8 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.tag.ItemTags;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -166,10 +169,7 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (world.isClient) {
-            return;
-        }
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         LecternBlock.setPowered(world, pos, state, false);
     }
 
@@ -232,14 +232,18 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (state.get(HAS_BOOK).booleanValue()) {
             if (!world.isClient) {
                 this.openContainer(world, pos, player);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return false;
+        ItemStack itemStack = player.getStackInHand(hand);
+        if (itemStack.isEmpty() || itemStack.getItem().isIn(ItemTags.LECTERN_BOOKS)) {
+            return ActionResult.PASS;
+        }
+        return ActionResult.CONSUME;
     }
 
     @Override

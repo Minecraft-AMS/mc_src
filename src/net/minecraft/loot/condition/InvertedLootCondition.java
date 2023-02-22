@@ -12,15 +12,12 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Set;
-import java.util.function.Function;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class InvertedLootCondition
 implements LootCondition {
@@ -41,9 +38,9 @@ implements LootCondition {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        LootCondition.super.check(reporter, supplierGetter, parentLootTables, contextType);
-        this.term.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter reporter) {
+        LootCondition.super.check(reporter);
+        this.term.check(reporter);
     }
 
     public static LootCondition.Builder builder(LootCondition.Builder term) {

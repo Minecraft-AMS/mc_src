@@ -9,6 +9,7 @@ package net.minecraft.entity.projectile;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -20,6 +21,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -53,8 +55,8 @@ extends Entity {
     public ExplosiveProjectileEntity(EntityType<? extends ExplosiveProjectileEntity> type, LivingEntity owner, double directionX, double directionY, double directionZ, World world) {
         this(type, world);
         this.owner = owner;
-        this.refreshPositionAndAngles(owner.x, owner.y, owner.z, owner.yaw, owner.pitch);
-        this.updatePosition(this.x, this.y, this.z);
+        this.refreshPositionAndAngles(owner.getX(), owner.getY(), owner.getZ(), owner.yaw, owner.pitch);
+        this.refreshPosition();
         this.setVelocity(Vec3d.ZERO);
         double d = MathHelper.sqrt((directionX += this.random.nextGaussian() * 0.4) * directionX + (directionY += this.random.nextGaussian() * 0.4) * directionY + (directionZ += this.random.nextGaussian() * 0.4) * directionZ);
         this.posX = directionX / d * 0.1;
@@ -78,7 +80,7 @@ extends Entity {
 
     @Override
     public void tick() {
-        if (!this.world.isClient && (this.owner != null && this.owner.removed || !this.world.isBlockLoaded(new BlockPos(this)))) {
+        if (!this.world.isClient && (this.owner != null && this.owner.removed || !this.world.isChunkLoaded(new BlockPos(this)))) {
             this.remove();
             return;
         }
@@ -92,21 +94,21 @@ extends Entity {
             this.onCollision(hitResult);
         }
         Vec3d vec3d = this.getVelocity();
-        this.x += vec3d.x;
-        this.y += vec3d.y;
-        this.z += vec3d.z;
+        double d = this.getX() + vec3d.x;
+        double e = this.getY() + vec3d.y;
+        double f = this.getZ() + vec3d.z;
         ProjectileUtil.method_7484(this, 0.2f);
-        float f = this.getDrag();
+        float g = this.getDrag();
         if (this.isTouchingWater()) {
             for (int i = 0; i < 4; ++i) {
-                float g = 0.25f;
-                this.world.addParticle(ParticleTypes.BUBBLE, this.x - vec3d.x * 0.25, this.y - vec3d.y * 0.25, this.z - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
+                float h = 0.25f;
+                this.world.addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
             }
-            f = 0.8f;
+            g = 0.8f;
         }
-        this.setVelocity(vec3d.add(this.posX, this.posY, this.posZ).multiply(f));
-        this.world.addParticle(this.getParticleType(), this.x, this.y + 0.5, this.z, 0.0, 0.0, 0.0);
-        this.updatePosition(this.x, this.y, this.z);
+        this.setVelocity(vec3d.add(this.posX, this.posY, this.posZ).multiply(g));
+        this.world.addParticle(this.getParticleType(), d, e + 0.5, f, 0.0, 0.0, 0.0);
+        this.updatePosition(d, e, f);
     }
 
     protected boolean isBurning() {
@@ -121,7 +123,14 @@ extends Entity {
         return 0.95f;
     }
 
-    protected abstract void onCollision(HitResult var1);
+    protected void onCollision(HitResult hitResult) {
+        HitResult.Type type = hitResult.getType();
+        if (type == HitResult.Type.BLOCK) {
+            BlockHitResult blockHitResult = (BlockHitResult)hitResult;
+            BlockState blockState = this.world.getBlockState(blockHitResult.getBlockPos());
+            blockState.onProjectileHit(this.world, blockState, blockHitResult, this);
+        }
+    }
 
     @Override
     public void writeCustomDataToTag(CompoundTag tag) {
@@ -184,15 +193,9 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public int getLightmapCoordinates() {
-        return 0xF000F0;
-    }
-
-    @Override
     public Packet<?> createSpawnPacket() {
         int i = this.owner == null ? 0 : this.owner.getEntityId();
-        return new EntitySpawnS2CPacket(this.getEntityId(), this.getUuid(), this.x, this.y, this.z, this.pitch, this.yaw, this.getType(), i, new Vec3d(this.posX, this.posY, this.posZ));
+        return new EntitySpawnS2CPacket(this.getEntityId(), this.getUuid(), this.getX(), this.getY(), this.getZ(), this.pitch, this.yaw, this.getType(), i, new Vec3d(this.posX, this.posY, this.posZ));
     }
 }
 

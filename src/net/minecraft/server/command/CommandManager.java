@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.mojang.brigadier.CommandDispatcher
+ *  com.mojang.brigadier.ParseResults
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.arguments.ArgumentType
  *  com.mojang.brigadier.builder.ArgumentBuilder
@@ -16,11 +17,13 @@
  *  com.mojang.brigadier.tree.RootCommandNode
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.server.command;
 
 import com.google.common.collect.Maps;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
@@ -34,6 +37,7 @@ import com.mojang.brigadier.tree.RootCommandNode;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
+import net.minecraft.SharedConstants;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.network.packet.s2c.play.CommandTreeS2CPacket;
@@ -79,6 +83,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.command.SetBlockCommand;
 import net.minecraft.server.command.SetWorldSpawnCommand;
 import net.minecraft.server.command.SpawnPointCommand;
+import net.minecraft.server.command.SpectateCommand;
 import net.minecraft.server.command.SpreadPlayersCommand;
 import net.minecraft.server.command.StopSoundCommand;
 import net.minecraft.server.command.SummonCommand;
@@ -87,6 +92,7 @@ import net.minecraft.server.command.TeamCommand;
 import net.minecraft.server.command.TeammsgCommand;
 import net.minecraft.server.command.TeleportCommand;
 import net.minecraft.server.command.TellRawCommand;
+import net.minecraft.server.command.TestCommand;
 import net.minecraft.server.command.TimeCommand;
 import net.minecraft.server.command.TitleCommand;
 import net.minecraft.server.command.TriggerCommand;
@@ -113,8 +119,10 @@ import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 public class CommandManager {
     private static final Logger LOGGER = LogManager.getLogger();
@@ -161,6 +169,7 @@ public class CommandManager {
         SetBlockCommand.register(this.dispatcher);
         SpawnPointCommand.register(this.dispatcher);
         SetWorldSpawnCommand.register(this.dispatcher);
+        SpectateCommand.register(this.dispatcher);
         SpreadPlayersCommand.register(this.dispatcher);
         StopSoundCommand.register(this.dispatcher);
         SummonCommand.register(this.dispatcher);
@@ -174,6 +183,9 @@ public class CommandManager {
         TriggerCommand.register(this.dispatcher);
         WeatherCommand.register(this.dispatcher);
         WorldBorderCommand.register(this.dispatcher);
+        if (SharedConstants.isDevelopment) {
+            TestCommand.register(this.dispatcher);
+        }
         if (isDedicatedServer) {
             BanIpCommand.register(this.dispatcher);
             BanListCommand.register(this.dispatcher);
@@ -234,12 +246,17 @@ public class CommandManager {
         catch (Exception exception) {
             LiteralText text3 = new LiteralText(exception.getMessage() == null ? exception.getClass().getName() : exception.getMessage());
             if (LOGGER.isDebugEnabled()) {
+                LOGGER.error("Command exception: {}", (Object)command, (Object)exception);
                 StackTraceElement[] stackTraceElements = exception.getStackTrace();
                 for (int j = 0; j < Math.min(stackTraceElements.length, 3); ++j) {
                     text3.append("\n\n").append(stackTraceElements[j].getMethodName()).append("\n ").append(stackTraceElements[j].getFileName()).append(":").append(String.valueOf(stackTraceElements[j].getLineNumber()));
                 }
             }
             commandSource.sendError(new TranslatableText("command.failed", new Object[0]).styled(style -> style.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text3))));
+            if (SharedConstants.isDevelopment) {
+                commandSource.sendError(new LiteralText(Util.getInnermostMessage(exception)));
+                LOGGER.error("'" + command + "' threw an exception", (Throwable)exception);
+            }
             int n = 0;
             return n;
         }
@@ -301,6 +318,20 @@ public class CommandManager {
 
     public CommandDispatcher<ServerCommandSource> getDispatcher() {
         return this.dispatcher;
+    }
+
+    @Nullable
+    public static <S> CommandSyntaxException getException(ParseResults<S> parse) {
+        if (!parse.getReader().canRead()) {
+            return null;
+        }
+        if (parse.getExceptions().size() == 1) {
+            return (CommandSyntaxException)((Object)parse.getExceptions().values().iterator().next());
+        }
+        if (parse.getContext().getRange().isEmpty()) {
+            return CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(parse.getReader());
+        }
+        return CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().createWithContext(parse.getReader());
     }
 
     @FunctionalInterface

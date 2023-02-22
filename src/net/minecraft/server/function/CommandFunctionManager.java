@@ -203,8 +203,8 @@ implements SynchronousResourceReloadListener {
         return this.server.getCommandSource().withLevel(2).withSilent();
     }
 
-    public ServerCommandSource method_20796() {
-        return new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.server.method_21714(), "", new LiteralText(""), this.server, null);
+    public ServerCommandSource getCommandFunctionSource() {
+        return new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.server.getFunctionPermissionLevel(), "", new LiteralText(""), this.server, null);
     }
 
     public TagContainer<CommandFunction> getTags() {
@@ -222,9 +222,9 @@ implements SynchronousResourceReloadListener {
             this.element = element;
         }
 
-        public void execute(ArrayDeque<Entry> arrayDeque, int i) {
+        public void execute(ArrayDeque<Entry> stack, int maxChainLength) {
             try {
-                this.element.execute(this.manager, this.source, arrayDeque, i);
+                this.element.execute(this.manager, this.source, stack, maxChainLength);
             }
             catch (Throwable throwable) {
                 // empty catch block

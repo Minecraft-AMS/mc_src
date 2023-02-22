@@ -10,6 +10,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.CoralParentBlock;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
@@ -33,7 +34,7 @@ extends CoralParentBlock {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!CoralBlock.isInWater(state, world, pos)) {
             world.setBlockState(pos, (BlockState)this.deadCoralBlock.getDefaultState().with(WATERLOGGED, false), 2);
         }

@@ -7,12 +7,12 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.GhastEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.GhastEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,7 +27,7 @@ extends MobEntityRenderer<GhastEntity, GhastEntityModel<GhastEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(GhastEntity ghastEntity) {
+    public Identifier getTexture(GhastEntity ghastEntity) {
         if (ghastEntity.isShooting()) {
             return ANGRY_SKIN;
         }
@@ -35,12 +35,11 @@ extends MobEntityRenderer<GhastEntity, GhastEntityModel<GhastEntity>> {
     }
 
     @Override
-    protected void scale(GhastEntity ghastEntity, float f) {
+    protected void scale(GhastEntity ghastEntity, MatrixStack matrixStack, float f) {
         float g = 1.0f;
         float h = 4.5f;
         float i = 4.5f;
-        GlStateManager.scalef(4.5f, 4.5f, 4.5f);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        matrixStack.scale(4.5f, 4.5f, 4.5f);
     }
 }
 

@@ -12,7 +12,7 @@
 package net.minecraft.client.gui.screen.recipebook;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.recipe.book.ClientRecipeBook;
 import net.minecraft.client.recipe.book.RecipeBookGroup;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.resource.language.LanguageDefinition;
 import net.minecraft.client.resource.language.LanguageManager;
@@ -74,7 +73,7 @@ RecipeGridAligner<Ingredient> {
     protected final RecipeBookResults recipesArea = new RecipeBookResults();
     protected final RecipeFinder recipeFinder = new RecipeFinder();
     private int cachedInvChangeCount;
-    private boolean field_3087;
+    private boolean searching;
 
     public void initialize(int parentWidth, int parentHeight, MinecraftClient client, boolean isNarrow, CraftingContainer<?> craftingContainer) {
         this.client = client;
@@ -225,23 +224,20 @@ RecipeGridAligner<Ingredient> {
         if (!this.isOpen()) {
             return;
         }
-        DiffuseLighting.enableForItems();
-        GlStateManager.disableLighting();
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(0.0f, 0.0f, 100.0f);
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(0.0f, 0.0f, 100.0f);
         this.client.getTextureManager().bindTexture(TEXTURE);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         int i = (this.parentWidth - 147) / 2 - this.leftOffset;
         int j = (this.parentHeight - 166) / 2;
         this.blit(i, j, 1, 1, 147, 166);
         this.searchField.render(mouseX, mouseY, delta);
-        DiffuseLighting.disable();
         for (RecipeGroupButtonWidget recipeGroupButtonWidget : this.tabButtons) {
             recipeGroupButtonWidget.render(mouseX, mouseY, delta);
         }
         this.toggleCraftableButton.render(mouseX, mouseY, delta);
         this.recipesArea.draw(i, j, mouseX, mouseY, delta);
-        GlStateManager.popMatrix();
+        RenderSystem.popMatrix();
     }
 
     public void drawTooltip(int left, int top, int mouseX, int mouseY) {
@@ -340,7 +336,7 @@ RecipeGridAligner<Ingredient> {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        this.field_3087 = false;
+        this.searching = false;
         if (!this.isOpen() || this.client.player.isSpectator()) {
             return false;
         }
@@ -356,8 +352,8 @@ RecipeGridAligner<Ingredient> {
             return true;
         }
         if (this.client.options.keyChat.matchesKey(keyCode, scanCode) && !this.searchField.isFocused()) {
-            this.field_3087 = true;
-            this.searchField.method_1876(true);
+            this.searching = true;
+            this.searchField.setSelected(true);
             return true;
         }
         return false;
@@ -365,13 +361,13 @@ RecipeGridAligner<Ingredient> {
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        this.field_3087 = false;
+        this.searching = false;
         return Element.super.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char chr, int keyCode) {
-        if (this.field_3087) {
+        if (this.searching) {
             return false;
         }
         if (!this.isOpen() || this.client.player.isSpectator()) {

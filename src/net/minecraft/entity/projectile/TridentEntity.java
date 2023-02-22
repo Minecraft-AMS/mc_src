@@ -37,9 +37,10 @@ import org.jetbrains.annotations.Nullable;
 public class TridentEntity
 extends ProjectileEntity {
     private static final TrackedData<Byte> LOYALTY = DataTracker.registerData(TridentEntity.class, TrackedDataHandlerRegistry.BYTE);
+    private static final TrackedData<Boolean> field_21514 = DataTracker.registerData(TridentEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private ItemStack tridentStack = new ItemStack(Items.TRIDENT);
     private boolean dealtDamage;
-    public int field_7649;
+    public int returnTimer;
 
     public TridentEntity(EntityType<? extends TridentEntity> entityType, World world) {
         super((EntityType<? extends ProjectileEntity>)entityType, world);
@@ -49,6 +50,7 @@ extends ProjectileEntity {
         super(EntityType.TRIDENT, owner, world);
         this.tridentStack = item.copy();
         this.dataTracker.set(LOYALTY, (byte)EnchantmentHelper.getLoyalty(item));
+        this.dataTracker.set(field_21514, item.hasEnchantmentGlint());
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -60,6 +62,7 @@ extends ProjectileEntity {
     protected void initDataTracker() {
         super.initDataTracker();
         this.dataTracker.startTracking(LOYALTY, (byte)0);
+        this.dataTracker.startTracking(field_21514, false);
     }
 
     @Override
@@ -77,17 +80,17 @@ extends ProjectileEntity {
                 this.remove();
             } else if (i > 0) {
                 this.setNoClip(true);
-                Vec3d vec3d = new Vec3d(entity.x - this.x, entity.y + (double)entity.getStandingEyeHeight() - this.y, entity.z - this.z);
-                this.y += vec3d.y * 0.015 * (double)i;
+                Vec3d vec3d = new Vec3d(entity.getX() - this.getX(), entity.getEyeY() - this.getY(), entity.getZ() - this.getZ());
+                this.setPos(this.getX(), this.getY() + vec3d.y * 0.015 * (double)i, this.getZ());
                 if (this.world.isClient) {
-                    this.lastRenderY = this.y;
+                    this.lastRenderY = this.getY();
                 }
                 double d = 0.05 * (double)i;
                 this.setVelocity(this.getVelocity().multiply(0.95).add(vec3d.normalize().multiply(d)));
-                if (this.field_7649 == 0) {
+                if (this.returnTimer == 0) {
                     this.playSound(SoundEvents.ITEM_TRIDENT_RETURN, 10.0f, 1.0f);
                 }
-                ++this.field_7649;
+                ++this.returnTimer;
             }
         }
         super.tick();
@@ -104,6 +107,11 @@ extends ProjectileEntity {
     @Override
     protected ItemStack asItemStack() {
         return this.tridentStack.copy();
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean method_23751() {
+        return this.dataTracker.get(field_21514);
     }
 
     @Override
@@ -128,13 +136,18 @@ extends ProjectileEntity {
         DamageSource damageSource = DamageSource.trident(this, (entity2 = this.getOwner()) == null ? this : entity2);
         this.dealtDamage = true;
         SoundEvent soundEvent = SoundEvents.ITEM_TRIDENT_HIT;
-        if (entity.damage(damageSource, f) && entity instanceof LivingEntity) {
-            LivingEntity livingEntity2 = (LivingEntity)entity;
-            if (entity2 instanceof LivingEntity) {
-                EnchantmentHelper.onUserDamaged(livingEntity2, entity2);
-                EnchantmentHelper.onTargetDamaged((LivingEntity)entity2, livingEntity2);
+        if (entity.damage(damageSource, f)) {
+            if (entity.getType() == EntityType.ENDERMAN) {
+                return;
             }
-            this.onHit(livingEntity2);
+            if (entity instanceof LivingEntity) {
+                LivingEntity livingEntity2 = (LivingEntity)entity;
+                if (entity2 instanceof LivingEntity) {
+                    EnchantmentHelper.onUserDamaged(livingEntity2, entity2);
+                    EnchantmentHelper.onTargetDamaged((LivingEntity)entity2, livingEntity2);
+                }
+                this.onHit(livingEntity2);
+            }
         }
         this.setVelocity(this.getVelocity().multiply(-0.01, -0.1, -0.01));
         float g = 1.0f;
@@ -180,7 +193,7 @@ extends ProjectileEntity {
     }
 
     @Override
-    protected void age() {
+    public void age() {
         byte i = this.dataTracker.get(LOYALTY);
         if (this.pickupType != ProjectileEntity.PickupPermission.ALLOWED || i <= 0) {
             super.age();

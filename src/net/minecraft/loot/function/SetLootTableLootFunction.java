@@ -2,29 +2,24 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableSet
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonSerializationContext
  */
 package net.minecraft.loot.function;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
-import java.util.Set;
-import java.util.function.Function;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class SetLootTableLootFunction
 extends ConditionalLootFunction {
@@ -52,18 +47,17 @@ extends ConditionalLootFunction {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        if (parentLootTables.contains(this.id)) {
+    public void check(LootTableReporter reporter) {
+        if (reporter.hasSupplier(this.id)) {
             reporter.report("Table " + this.id + " is recursively called");
             return;
         }
-        super.check(reporter, supplierGetter, parentLootTables, contextType);
-        LootTable lootTable = supplierGetter.apply(this.id);
+        super.check(reporter);
+        LootTable lootTable = reporter.getSupplier(this.id);
         if (lootTable == null) {
             reporter.report("Unknown loot table called " + this.id);
         } else {
-            ImmutableSet set = ImmutableSet.builder().addAll(parentLootTables).add((Object)this.id).build();
-            lootTable.check(reporter.makeChild("->{" + this.id + "}"), supplierGetter, (Set<Identifier>)set, contextType);
+            lootTable.check(reporter.withSupplier("->{" + this.id + "}", this.id));
         }
     }
 

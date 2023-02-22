@@ -9,7 +9,7 @@
 package net.minecraft.client.gl;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.IOException;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -18,6 +18,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.JsonGlProgram;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.Matrix4f;
@@ -53,28 +54,15 @@ implements AutoCloseable {
         this.samplerHeights.add(this.samplerHeights.size(), height);
     }
 
-    private void setGlState() {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.disableBlend();
-        GlStateManager.disableDepthTest();
-        GlStateManager.disableAlphaTest();
-        GlStateManager.disableFog();
-        GlStateManager.disableLighting();
-        GlStateManager.disableColorMaterial();
-        GlStateManager.enableTexture();
-        GlStateManager.bindTexture(0);
-    }
-
     public void setProjectionMatrix(Matrix4f projectionMatrix) {
         this.projectionMatrix = projectionMatrix;
     }
 
     public void render(float time) {
-        this.setGlState();
         this.input.endWrite();
         float f = this.output.textureWidth;
         float g = this.output.textureHeight;
-        GlStateManager.viewport(0, 0, (int)f, (int)g);
+        RenderSystem.viewport(0, 0, (int)f, (int)g);
         this.program.bindSampler("DiffuseSampler", this.input);
         for (int i = 0; i < this.samplerValues.size(); ++i) {
             this.program.bindSampler(this.samplerNames.get(i), this.samplerValues.get(i));
@@ -85,22 +73,20 @@ implements AutoCloseable {
         this.program.getUniformByNameOrDummy("OutSize").set(f, g);
         this.program.getUniformByNameOrDummy("Time").set(time);
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        this.program.getUniformByNameOrDummy("ScreenSize").set(minecraftClient.window.getFramebufferWidth(), minecraftClient.window.getFramebufferHeight());
+        this.program.getUniformByNameOrDummy("ScreenSize").set(minecraftClient.getWindow().getFramebufferWidth(), minecraftClient.getWindow().getFramebufferHeight());
         this.program.enable();
         this.output.clear(MinecraftClient.IS_SYSTEM_MAC);
         this.output.beginWrite(false);
-        GlStateManager.depthMask(false);
-        GlStateManager.colorMask(true, true, true, true);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
+        RenderSystem.depthMask(false);
+        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
         bufferBuilder.vertex(0.0, 0.0, 500.0).color(255, 255, 255, 255).next();
         bufferBuilder.vertex(f, 0.0, 500.0).color(255, 255, 255, 255).next();
         bufferBuilder.vertex(f, g, 500.0).color(255, 255, 255, 255).next();
         bufferBuilder.vertex(0.0, g, 500.0).color(255, 255, 255, 255).next();
-        tessellator.draw();
-        GlStateManager.depthMask(true);
-        GlStateManager.colorMask(true, true, true, true);
+        bufferBuilder.end();
+        BufferRenderer.draw(bufferBuilder);
+        RenderSystem.depthMask(true);
         this.program.disable();
         this.output.endWrite();
         this.input.endRead();

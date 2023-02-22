@@ -7,138 +7,113 @@
  */
 package net.minecraft.client.render.block.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BeaconBlockEntity;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.util.math.Matrix3f;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class BeaconBlockEntityRenderer
 extends BlockEntityRenderer<BeaconBlockEntity> {
-    private static final Identifier BEAM_TEX = new Identifier("textures/entity/beacon_beam.png");
+    public static final Identifier BEAM_TEX = new Identifier("textures/entity/beacon_beam.png");
 
-    @Override
-    public void render(BeaconBlockEntity beaconBlockEntity, double d, double e, double f, float g, int i) {
-        this.render(d, e, f, (double)g, beaconBlockEntity.getBeamSegments(), beaconBlockEntity.getWorld().getTime());
+    public BeaconBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
+        super(blockEntityRenderDispatcher);
     }
 
-    private void render(double d, double e, double f, double g, List<BeaconBlockEntity.BeamSegment> list, long l) {
-        GlStateManager.alphaFunc(516, 0.1f);
-        this.bindTexture(BEAM_TEX);
-        GlStateManager.disableFog();
-        int i = 0;
-        for (int j = 0; j < list.size(); ++j) {
-            BeaconBlockEntity.BeamSegment beamSegment = list.get(j);
-            BeaconBlockEntityRenderer.renderBeaconLightBeam(d, e, f, g, l, i, j == list.size() - 1 ? 1024 : beamSegment.getHeight(), beamSegment.getColor());
-            i += beamSegment.getHeight();
+    @Override
+    public void render(BeaconBlockEntity beaconBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
+        long l = beaconBlockEntity.getWorld().getTime();
+        List<BeaconBlockEntity.BeamSegment> list = beaconBlockEntity.getBeamSegments();
+        int k = 0;
+        for (int m = 0; m < list.size(); ++m) {
+            BeaconBlockEntity.BeamSegment beamSegment = list.get(m);
+            BeaconBlockEntityRenderer.render(matrixStack, vertexConsumerProvider, f, l, k, m == list.size() - 1 ? 1024 : beamSegment.getHeight(), beamSegment.getColor());
+            k += beamSegment.getHeight();
         }
-        GlStateManager.enableFog();
     }
 
-    private static void renderBeaconLightBeam(double x, double y, double z, double tickDelta, long l, int i, int j, float[] fs) {
-        BeaconBlockEntityRenderer.renderLightBeam(x, y, z, tickDelta, 1.0, l, i, j, fs, 0.2, 0.25);
+    private static void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, float f, long l, int i, int j, float[] fs) {
+        BeaconBlockEntityRenderer.renderLightBeam(matrixStack, vertexConsumerProvider, BEAM_TEX, f, 1.0f, l, i, j, fs, 0.2f, 0.25f);
     }
 
-    public static void renderLightBeam(double x, double y, double z, double tickDelta, double textureOffset, long worldTime, int startHeight, int height, float[] beamColor, double innerRadius, double outerRadius) {
-        int i = startHeight + height;
-        GlStateManager.texParameter(3553, 10242, 10497);
-        GlStateManager.texParameter(3553, 10243, 10497);
-        GlStateManager.disableLighting();
-        GlStateManager.disableCull();
-        GlStateManager.disableBlend();
-        GlStateManager.depthMask(true);
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.pushMatrix();
-        GlStateManager.translated(x + 0.5, y, z + 0.5);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        double d = (double)Math.floorMod(worldTime, 40L) + tickDelta;
-        double e = height < 0 ? d : -d;
-        double f = MathHelper.fractionalPart(e * 0.2 - (double)MathHelper.floor(e * 0.1));
-        float g = beamColor[0];
-        float h = beamColor[1];
-        float j = beamColor[2];
-        GlStateManager.pushMatrix();
-        GlStateManager.rotated(d * 2.25 - 45.0, 0.0, 1.0, 0.0);
-        double k = 0.0;
-        double l = innerRadius;
-        double m = innerRadius;
-        double n = 0.0;
-        double o = -innerRadius;
-        double p = 0.0;
-        double q = 0.0;
-        double r = -innerRadius;
-        double s = 0.0;
-        double t = 1.0;
-        double u = -1.0 + f;
-        double v = (double)height * textureOffset * (0.5 / innerRadius) + u;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(0.0, i, l).texture(1.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, startHeight, l).texture(1.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(m, startHeight, 0.0).texture(0.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(m, i, 0.0).texture(0.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, i, r).texture(1.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, startHeight, r).texture(1.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(o, startHeight, 0.0).texture(0.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(o, i, 0.0).texture(0.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(m, i, 0.0).texture(1.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(m, startHeight, 0.0).texture(1.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, startHeight, r).texture(0.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, i, r).texture(0.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(o, i, 0.0).texture(1.0, v).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(o, startHeight, 0.0).texture(1.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, startHeight, l).texture(0.0, u).color(g, h, j, 1.0f).next();
-        bufferBuilder.vertex(0.0, i, l).texture(0.0, v).color(g, h, j, 1.0f).next();
-        tessellator.draw();
-        GlStateManager.popMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.depthMask(false);
-        k = -outerRadius;
-        l = -outerRadius;
-        m = outerRadius;
-        n = -outerRadius;
-        o = -outerRadius;
-        p = outerRadius;
-        q = outerRadius;
-        r = outerRadius;
-        s = 0.0;
-        t = 1.0;
-        u = -1.0 + f;
-        v = (double)height * textureOffset + u;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(k, i, l).texture(1.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(k, startHeight, l).texture(1.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(m, startHeight, n).texture(0.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(m, i, n).texture(0.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(q, i, r).texture(1.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(q, startHeight, r).texture(1.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(o, startHeight, p).texture(0.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(o, i, p).texture(0.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(m, i, n).texture(1.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(m, startHeight, n).texture(1.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(q, startHeight, r).texture(0.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(q, i, r).texture(0.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(o, i, p).texture(1.0, v).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(o, startHeight, p).texture(1.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(k, startHeight, l).texture(0.0, u).color(g, h, j, 0.125f).next();
-        bufferBuilder.vertex(k, i, l).texture(0.0, v).color(g, h, j, 0.125f).next();
-        tessellator.draw();
-        GlStateManager.popMatrix();
-        GlStateManager.enableLighting();
-        GlStateManager.enableTexture();
-        GlStateManager.depthMask(true);
+    public static void renderLightBeam(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, Identifier identifier, float f, float g, long l, int i, int j, float[] fs, float h, float k) {
+        int m = i + j;
+        matrixStack.push();
+        matrixStack.translate(0.5, 0.0, 0.5);
+        float n = (float)Math.floorMod(l, 40L) + f;
+        float o = j < 0 ? n : -n;
+        float p = MathHelper.fractionalPart(o * 0.2f - (float)MathHelper.floor(o * 0.1f));
+        float q = fs[0];
+        float r = fs[1];
+        float s = fs[2];
+        matrixStack.push();
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(n * 2.25f - 45.0f));
+        float t = 0.0f;
+        float u = h;
+        float v = h;
+        float w = 0.0f;
+        float x = -h;
+        float y = 0.0f;
+        float z = 0.0f;
+        float aa = -h;
+        float ab = 0.0f;
+        float ac = 1.0f;
+        float ad = -1.0f + p;
+        float ae = (float)j * g * (0.5f / h) + ad;
+        BeaconBlockEntityRenderer.method_22741(matrixStack, vertexConsumerProvider.getBuffer(RenderLayer.getBeaconBeam(identifier, false)), q, r, s, 1.0f, i, m, 0.0f, u, v, 0.0f, x, 0.0f, 0.0f, aa, 0.0f, 1.0f, ae, ad);
+        matrixStack.pop();
+        t = -k;
+        u = -k;
+        v = k;
+        w = -k;
+        x = -k;
+        y = k;
+        z = k;
+        aa = k;
+        ab = 0.0f;
+        ac = 1.0f;
+        ad = -1.0f + p;
+        ae = (float)j * g + ad;
+        BeaconBlockEntityRenderer.method_22741(matrixStack, vertexConsumerProvider.getBuffer(RenderLayer.getBeaconBeam(identifier, true)), q, r, s, 0.125f, i, m, t, u, v, w, x, y, z, aa, 0.0f, 1.0f, ae, ad);
+        matrixStack.pop();
+    }
+
+    private static void method_22741(MatrixStack matrixStack, VertexConsumer vertexConsumer, float f, float g, float h, float i, int j, int k, float l, float m, float n, float o, float p, float q, float r, float s, float t, float u, float v, float w) {
+        MatrixStack.Entry entry = matrixStack.peek();
+        Matrix4f matrix4f = entry.getModel();
+        Matrix3f matrix3f = entry.getNormal();
+        BeaconBlockEntityRenderer.method_22740(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, k, l, m, n, o, t, u, v, w);
+        BeaconBlockEntityRenderer.method_22740(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, k, r, s, p, q, t, u, v, w);
+        BeaconBlockEntityRenderer.method_22740(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, k, n, o, r, s, t, u, v, w);
+        BeaconBlockEntityRenderer.method_22740(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, k, p, q, l, m, t, u, v, w);
+    }
+
+    private static void method_22740(Matrix4f matrix4f, Matrix3f matrix3f, VertexConsumer vertexConsumer, float f, float g, float h, float i, int j, int k, float l, float m, float n, float o, float p, float q, float r, float s) {
+        BeaconBlockEntityRenderer.method_23076(matrix4f, matrix3f, vertexConsumer, f, g, h, i, k, l, m, q, r);
+        BeaconBlockEntityRenderer.method_23076(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, l, m, q, s);
+        BeaconBlockEntityRenderer.method_23076(matrix4f, matrix3f, vertexConsumer, f, g, h, i, j, n, o, p, s);
+        BeaconBlockEntityRenderer.method_23076(matrix4f, matrix3f, vertexConsumer, f, g, h, i, k, n, o, p, r);
+    }
+
+    private static void method_23076(Matrix4f matrix4f, Matrix3f matrix3f, VertexConsumer vertexConsumer, float f, float g, float h, float i, int j, float k, float l, float m, float n) {
+        vertexConsumer.vertex(matrix4f, k, j, l).color(f, g, h, i).texture(m, n).overlay(OverlayTexture.DEFAULT_UV).light(0xF000F0).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
     }
 
     @Override
-    public boolean method_3563(BeaconBlockEntity beaconBlockEntity) {
+    public boolean rendersOutsideBoundingBox(BeaconBlockEntity beaconBlockEntity) {
         return true;
     }
 }

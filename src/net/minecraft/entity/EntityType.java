@@ -77,6 +77,7 @@ import net.minecraft.entity.mob.ZombieHorseEntity;
 import net.minecraft.entity.mob.ZombiePigmanEntity;
 import net.minecraft.entity.mob.ZombieVillagerEntity;
 import net.minecraft.entity.passive.BatEntity;
+import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.passive.CodEntity;
@@ -146,8 +147,8 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -158,6 +159,7 @@ public class EntityType<T extends Entity> {
     public static final EntityType<ArmorStandEntity> ARMOR_STAND = EntityType.register("armor_stand", Builder.create(ArmorStandEntity::new, EntityCategory.MISC).setDimensions(0.5f, 1.975f));
     public static final EntityType<ArrowEntity> ARROW = EntityType.register("arrow", Builder.create(ArrowEntity::new, EntityCategory.MISC).setDimensions(0.5f, 0.5f));
     public static final EntityType<BatEntity> BAT = EntityType.register("bat", Builder.create(BatEntity::new, EntityCategory.AMBIENT).setDimensions(0.5f, 0.9f));
+    public static final EntityType<BeeEntity> BEE = EntityType.register("bee", Builder.create(BeeEntity::new, EntityCategory.CREATURE).setDimensions(0.7f, 0.6f));
     public static final EntityType<BlazeEntity> BLAZE = EntityType.register("blaze", Builder.create(BlazeEntity::new, EntityCategory.MONSTER).makeFireImmune().setDimensions(0.6f, 1.8f));
     public static final EntityType<BoatEntity> BOAT = EntityType.register("boat", Builder.create(BoatEntity::new, EntityCategory.MISC).setDimensions(1.375f, 0.5625f));
     public static final EntityType<CatEntity> CAT = EntityType.register("cat", Builder.create(CatEntity::new, EntityCategory.CREATURE).setDimensions(0.6f, 0.7f));
@@ -216,7 +218,7 @@ public class EntityType<T extends Entity> {
     public static final EntityType<RabbitEntity> RABBIT = EntityType.register("rabbit", Builder.create(RabbitEntity::new, EntityCategory.CREATURE).setDimensions(0.4f, 0.5f));
     public static final EntityType<SalmonEntity> SALMON = EntityType.register("salmon", Builder.create(SalmonEntity::new, EntityCategory.WATER_CREATURE).setDimensions(0.7f, 0.4f));
     public static final EntityType<SheepEntity> SHEEP = EntityType.register("sheep", Builder.create(SheepEntity::new, EntityCategory.CREATURE).setDimensions(0.9f, 1.3f));
-    public static final EntityType<ShulkerEntity> SHULKER = EntityType.register("shulker", Builder.create(ShulkerEntity::new, EntityCategory.MONSTER).makeFireImmune().method_20815().setDimensions(1.0f, 1.0f));
+    public static final EntityType<ShulkerEntity> SHULKER = EntityType.register("shulker", Builder.create(ShulkerEntity::new, EntityCategory.MONSTER).makeFireImmune().spawnableFarFromPlayer().setDimensions(1.0f, 1.0f));
     public static final EntityType<ShulkerBulletEntity> SHULKER_BULLET = EntityType.register("shulker_bullet", Builder.create(ShulkerBulletEntity::new, EntityCategory.MISC).setDimensions(0.3125f, 0.3125f));
     public static final EntityType<SilverfishEntity> SILVERFISH = EntityType.register("silverfish", Builder.create(SilverfishEntity::new, EntityCategory.MONSTER).setDimensions(0.4f, 0.3f));
     public static final EntityType<SkeletonEntity> SKELETON = EntityType.register("skeleton", Builder.create(SkeletonEntity::new, EntityCategory.MONSTER).setDimensions(0.6f, 1.99f));
@@ -241,7 +243,7 @@ public class EntityType<T extends Entity> {
     public static final EntityType<VillagerEntity> VILLAGER = EntityType.register("villager", Builder.create(VillagerEntity::new, EntityCategory.MISC).setDimensions(0.6f, 1.95f));
     public static final EntityType<IronGolemEntity> IRON_GOLEM = EntityType.register("iron_golem", Builder.create(IronGolemEntity::new, EntityCategory.MISC).setDimensions(1.4f, 2.7f));
     public static final EntityType<VindicatorEntity> VINDICATOR = EntityType.register("vindicator", Builder.create(VindicatorEntity::new, EntityCategory.MONSTER).setDimensions(0.6f, 1.95f));
-    public static final EntityType<PillagerEntity> PILLAGER = EntityType.register("pillager", Builder.create(PillagerEntity::new, EntityCategory.MONSTER).method_20815().setDimensions(0.6f, 1.95f));
+    public static final EntityType<PillagerEntity> PILLAGER = EntityType.register("pillager", Builder.create(PillagerEntity::new, EntityCategory.MONSTER).spawnableFarFromPlayer().setDimensions(0.6f, 1.95f));
     public static final EntityType<WanderingTraderEntity> WANDERING_TRADER = EntityType.register("wandering_trader", Builder.create(WanderingTraderEntity::new, EntityCategory.CREATURE).setDimensions(0.6f, 1.95f));
     public static final EntityType<WitchEntity> WITCH = EntityType.register("witch", Builder.create(WitchEntity::new, EntityCategory.MONSTER).setDimensions(0.6f, 1.95f));
     public static final EntityType<WitherEntity> WITHER = EntityType.register("wither", Builder.create(WitherEntity::new, EntityCategory.MONSTER).makeFireImmune().setDimensions(0.9f, 3.5f));
@@ -261,7 +263,7 @@ public class EntityType<T extends Entity> {
     private final boolean saveable;
     private final boolean summonable;
     private final boolean fireImmune;
-    private final boolean field_19423;
+    private final boolean spawnableFarFromPlayer;
     @Nullable
     private String translationKey;
     @Nullable
@@ -285,7 +287,7 @@ public class EntityType<T extends Entity> {
     public EntityType(EntityFactory<T> factory, EntityCategory category, boolean saveable, boolean summonable, boolean fireImmune, boolean spawnableFarFromPlayer, EntityDimensions dimensions) {
         this.factory = factory;
         this.category = category;
-        this.field_19423 = spawnableFarFromPlayer;
+        this.spawnableFarFromPlayer = spawnableFarFromPlayer;
         this.saveable = saveable;
         this.summonable = summonable;
         this.fireImmune = fireImmune;
@@ -321,7 +323,7 @@ public class EntityType<T extends Entity> {
         if (entity instanceof MobEntity) {
             MobEntity mobEntity = (MobEntity)entity;
             mobEntity.headYaw = mobEntity.yaw;
-            mobEntity.field_6283 = mobEntity.yaw;
+            mobEntity.bodyYaw = mobEntity.yaw;
             mobEntity.initialize(world, world.getLocalDifficulty(new BlockPos(mobEntity)), spawnType, null, itemTag);
             mobEntity.playAmbientSound();
         }
@@ -332,13 +334,13 @@ public class EntityType<T extends Entity> {
         return entity;
     }
 
-    protected static double getOriginY(CollisionView world, BlockPos pos, boolean bl, Box boundingBox) {
+    protected static double getOriginY(WorldView worldView, BlockPos pos, boolean invertY, Box boundingBox) {
         Box box = new Box(pos);
-        if (bl) {
+        if (invertY) {
             box = box.stretch(0.0, -1.0, 0.0);
         }
-        Stream<VoxelShape> stream = world.getCollisions(null, box, Collections.emptySet());
-        return 1.0 + VoxelShapes.calculateMaxOffset(Direction.Axis.Y, boundingBox, stream, bl ? -2.0 : -1.0);
+        Stream<VoxelShape> stream = worldView.getCollisions(null, box, Collections.emptySet());
+        return 1.0 + VoxelShapes.calculateMaxOffset(Direction.Axis.Y, boundingBox, stream, invertY ? -2.0 : -1.0);
     }
 
     public static void loadFromEntityTag(World world, @Nullable PlayerEntity player, @Nullable Entity entity, @Nullable CompoundTag itemTag) {
@@ -371,8 +373,8 @@ public class EntityType<T extends Entity> {
         return this.fireImmune;
     }
 
-    public boolean method_20814() {
-        return this.field_19423;
+    public boolean isSpawnableFarFromPlayer() {
+        return this.spawnableFarFromPlayer;
     }
 
     public EntityCategory getCategory() {
@@ -524,13 +526,13 @@ public class EntityType<T extends Entity> {
         private boolean saveable = true;
         private boolean summonable = true;
         private boolean fireImmune;
-        private boolean field_19424;
+        private boolean spawnableFarFromPlayer;
         private EntityDimensions size = EntityDimensions.changing(0.6f, 1.8f);
 
         private Builder(EntityFactory<T> factory, EntityCategory category) {
             this.factory = factory;
             this.category = category;
-            this.field_19424 = category == EntityCategory.CREATURE || category == EntityCategory.MISC;
+            this.spawnableFarFromPlayer = category == EntityCategory.CREATURE || category == EntityCategory.MISC;
         }
 
         public static <T extends Entity> Builder<T> create(EntityFactory<T> factory, EntityCategory category) {
@@ -561,8 +563,8 @@ public class EntityType<T extends Entity> {
             return this;
         }
 
-        public Builder<T> method_20815() {
-            this.field_19424 = true;
+        public Builder<T> spawnableFarFromPlayer() {
+            this.spawnableFarFromPlayer = true;
             return this;
         }
 
@@ -578,7 +580,7 @@ public class EntityType<T extends Entity> {
                     LOGGER.warn("No data fixer registered for entity {}", (Object)id);
                 }
             }
-            return new EntityType<T>(this.factory, this.category, this.saveable, this.summonable, this.fireImmune, this.field_19424, this.size);
+            return new EntityType<T>(this.factory, this.category, this.saveable, this.summonable, this.fireImmune, this.spawnableFarFromPlayer, this.size);
         }
     }
 }

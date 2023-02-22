@@ -44,7 +44,7 @@ extends PathNodeMaker {
         int i = 0;
         for (Direction direction : Direction.values()) {
             PathNode pathNode = this.getPathNodeInWater(node.x + direction.getOffsetX(), node.y + direction.getOffsetY(), node.z + direction.getOffsetZ());
-            if (pathNode == null || pathNode.field_42) continue;
+            if (pathNode == null || pathNode.visited) continue;
             successors[i++] = pathNode;
         }
         return i;
@@ -87,9 +87,9 @@ extends PathNodeMaker {
         if (f >= 0.0f) {
             pathNode = super.getNode(x, y, z);
             pathNode.type = pathNodeType;
-            pathNode.field_43 = Math.max(pathNode.field_43, f);
-            if (this.blockView.getFluidState(new BlockPos(x, y, z)).isEmpty()) {
-                pathNode.field_43 += 8.0f;
+            pathNode.penalty = Math.max(pathNode.penalty, f);
+            if (this.field_20622.getFluidState(new BlockPos(x, y, z)).isEmpty()) {
+                pathNode.penalty += 8.0f;
             }
         }
         if (pathNodeType == PathNodeType.OPEN) {
@@ -103,9 +103,9 @@ extends PathNodeMaker {
         for (int j = x; j < x + this.field_31; ++j) {
             for (int k = y; k < y + this.field_30; ++k) {
                 for (int l = i; l < i + this.field_28; ++l) {
-                    FluidState fluidState = this.blockView.getFluidState(mutable.set(j, k, l));
-                    BlockState blockState = this.blockView.getBlockState(mutable.set(j, k, l));
-                    if (fluidState.isEmpty() && blockState.canPlaceAtSide(this.blockView, mutable.down(), BlockPlacementEnvironment.WATER) && blockState.isAir()) {
+                    FluidState fluidState = this.field_20622.getFluidState(mutable.set(j, k, l));
+                    BlockState blockState = this.field_20622.getBlockState(mutable.set(j, k, l));
+                    if (fluidState.isEmpty() && blockState.canPlaceAtSide(this.field_20622, (BlockPos)mutable.down(), BlockPlacementEnvironment.WATER) && blockState.isAir()) {
                         return PathNodeType.BREACH;
                     }
                     if (fluidState.matches(FluidTags.WATER)) continue;
@@ -113,8 +113,8 @@ extends PathNodeMaker {
                 }
             }
         }
-        BlockState blockState2 = this.blockView.getBlockState(mutable);
-        if (blockState2.canPlaceAtSide(this.blockView, mutable, BlockPlacementEnvironment.WATER)) {
+        BlockState blockState2 = this.field_20622.getBlockState(mutable);
+        if (blockState2.canPlaceAtSide(this.field_20622, mutable, BlockPlacementEnvironment.WATER)) {
             return PathNodeType.WATER;
         }
         return PathNodeType.BLOCKED;

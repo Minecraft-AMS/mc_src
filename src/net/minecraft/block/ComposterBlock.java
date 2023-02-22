@@ -28,11 +28,13 @@ import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BooleanBiFunction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
@@ -149,7 +151,7 @@ implements InventoryProvider {
     public static void playEffects(World world, BlockPos pos, boolean fill) {
         BlockState blockState = world.getBlockState(pos);
         world.playSound(pos.getX(), (double)pos.getY(), (double)pos.getZ(), fill ? SoundEvents.BLOCK_COMPOSTER_FILL_SUCCESS : SoundEvents.BLOCK_COMPOSTER_FILL, SoundCategory.BLOCKS, 1.0f, 1.0f, false);
-        double d = blockState.getOutlineShape(world, pos).method_1102(Direction.Axis.Y, 0.5, 0.5) + 0.03125;
+        double d = blockState.getOutlineShape(world, pos).getEndingCoord(Direction.Axis.Y, 0.5, 0.5) + 0.03125;
         double e = 0.13125f;
         double f = 0.7375f;
         Random random = world.getRandom();
@@ -184,7 +186,7 @@ implements InventoryProvider {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         int i = state.get(LEVEL);
         ItemStack itemStack = player.getStackInHand(hand);
         if (i < 8 && ITEM_TO_LEVEL_INCREASE_CHANCE.containsKey((Object)itemStack.getItem())) {
@@ -195,7 +197,7 @@ implements InventoryProvider {
                     itemStack.decrement(1);
                 }
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (i == 8) {
             if (!world.isClient) {
@@ -209,9 +211,9 @@ implements InventoryProvider {
             }
             ComposterBlock.emptyComposter(state, world, pos);
             world.playSound(null, pos, SoundEvents.BLOCK_COMPOSTER_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     private static void emptyComposter(BlockState state, IWorld world, BlockPos pos) {
@@ -233,12 +235,12 @@ implements InventoryProvider {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (state.get(LEVEL) == 7) {
             world.setBlockState(pos, (BlockState)state.cycle(LEVEL), 3);
             world.playSound(null, pos, SoundEvents.BLOCK_COMPOSTER_READY, SoundCategory.BLOCKS, 1.0f, 1.0f);
         }
-        super.onScheduledTick(state, world, pos, random);
+        super.scheduledTick(state, world, pos, random);
     }
 
     @Override

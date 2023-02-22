@@ -8,6 +8,7 @@
  *  com.google.gson.JsonDeserializer
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonParseException
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -20,6 +21,7 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.mojang.datafixers.util.Pair;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,6 +38,7 @@ import net.minecraft.client.render.model.UnbakedModel;
 import net.minecraft.client.render.model.WeightedBakedModel;
 import net.minecraft.client.render.model.json.ModelVariant;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,13 +76,13 @@ implements UnbakedModel {
     }
 
     @Override
-    public Collection<Identifier> getTextureDependencies(Function<Identifier, UnbakedModel> unbakedModelGetter, Set<String> unresolvedTextureReferences) {
+    public Collection<SpriteIdentifier> getTextureDependencies(Function<Identifier, UnbakedModel> unbakedModelGetter, Set<Pair<String, String>> unresolvedTextureReferences) {
         return this.getVariants().stream().map(ModelVariant::getLocation).distinct().flatMap(identifier -> ((UnbakedModel)unbakedModelGetter.apply((Identifier)identifier)).getTextureDependencies(unbakedModelGetter, unresolvedTextureReferences).stream()).collect(Collectors.toSet());
     }
 
     @Override
     @Nullable
-    public BakedModel bake(ModelLoader loader, Function<Identifier, Sprite> textureGetter, ModelBakeSettings rotationContainer) {
+    public BakedModel bake(ModelLoader loader, Function<SpriteIdentifier, Sprite> textureGetter, ModelBakeSettings rotationContainer, Identifier modelId) {
         if (this.getVariants().isEmpty()) {
             return null;
         }

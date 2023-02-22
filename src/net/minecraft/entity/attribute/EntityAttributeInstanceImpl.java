@@ -14,7 +14,6 @@ package net.minecraft.entity.attribute;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -68,12 +67,12 @@ implements EntityAttributeInstance {
     }
 
     @Override
-    public Collection<EntityAttributeModifier> getModifiers(EntityAttributeModifier.Operation operation) {
+    public Set<EntityAttributeModifier> getModifiers(EntityAttributeModifier.Operation operation) {
         return this.modifiersByOperation.get((Object)operation);
     }
 
     @Override
-    public Collection<EntityAttributeModifier> getModifiers() {
+    public Set<EntityAttributeModifier> getModifiers() {
         HashSet set = Sets.newHashSet();
         for (EntityAttributeModifier.Operation operation : EntityAttributeModifier.Operation.values()) {
             set.addAll(this.getModifiers(operation));
@@ -136,7 +135,7 @@ implements EntityAttributeInstance {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void clearModifiers() {
-        ArrayList collection = this.getModifiers();
+        Collection<EntityAttributeModifier> collection = this.getModifiers();
         if (collection == null) {
             return;
         }

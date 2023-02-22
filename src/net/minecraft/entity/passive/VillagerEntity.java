@@ -73,8 +73,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.scoreboard.AbstractTeam;
-import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
@@ -125,7 +123,7 @@ VillagerDataContainer {
     private long lastRestockTime;
     private int restocksToday;
     private long field_20332;
-    private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.WALK_TARGET, MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.PATH, MemoryModuleType.INTERACTABLE_DOORS, MemoryModuleType.OPENED_DOORS, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_LAST_SEEN_TIME});
+    private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.WALK_TARGET, MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.PATH, MemoryModuleType.INTERACTABLE_DOORS, MemoryModuleType.OPENED_DOORS, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WOKEN, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_LAST_SEEN_TIME});
     private static final ImmutableList<SensorType<? extends Sensor<? super VillagerEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.INTERACTABLE_DOORS, SensorType.NEAREST_BED, SensorType.HURT_BY, SensorType.VILLAGER_HOSTILES, SensorType.VILLAGER_BABIES, SensorType.SECONDARY_POIS, SensorType.GOLEM_LAST_SEEN);
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, PointOfInterestType>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villagerEntity, pointOfInterestType) -> pointOfInterestType == PointOfInterestType.HOME, MemoryModuleType.JOB_SITE, (villagerEntity, pointOfInterestType) -> villagerEntity.getVillagerData().getProfession().getWorkStation() == pointOfInterestType, MemoryModuleType.MEETING_POINT, (villagerEntity, pointOfInterestType) -> pointOfInterestType == PointOfInterestType.MEETING);
 
@@ -323,27 +321,29 @@ VillagerDataContainer {
 
     private boolean needRestock() {
         for (TradeOffer tradeOffer : this.getOffers()) {
-            if (!tradeOffer.isDisabled()) continue;
+            if (!tradeOffer.method_21834()) continue;
             return true;
         }
         return false;
     }
 
     private boolean canRestock() {
-        return this.restocksToday < 2 && this.world.getTime() > this.lastRestockTime + 2400L;
+        return this.restocksToday == 0 || this.restocksToday < 2 && this.world.getTime() > this.lastRestockTime + 2400L;
     }
 
     public boolean shouldRestock() {
         long l = this.lastRestockTime + 12000L;
-        boolean bl = this.world.getTime() > l;
-        long m = this.world.getTimeOfDay();
+        long m = this.world.getTime();
+        boolean bl = m > l;
+        long n = this.world.getTimeOfDay();
         if (this.field_20332 > 0L) {
-            long o = m / 24000L;
-            long n = this.field_20332 / 24000L;
-            bl |= o > n;
+            long p = n / 24000L;
+            long o = this.field_20332 / 24000L;
+            bl |= p > o;
         }
-        this.field_20332 = m;
+        this.field_20332 = n;
         if (bl) {
+            this.lastRestockTime = m;
             this.clearDailyRestockCount();
         }
         return this.canRestock() && this.needRestock();
@@ -423,7 +423,9 @@ VillagerDataContainer {
         this.lastRestockTime = tag.getLong("LastRestock");
         this.lastGossipDecayTime = tag.getLong("LastGossipDecay");
         this.setCanPickUpLoot(true);
-        this.reinitializeBrain((ServerWorld)this.world);
+        if (this.world instanceof ServerWorld) {
+            this.reinitializeBrain((ServerWorld)this.world);
+        }
         this.restocksToday = tag.getInt("RestocksToday");
     }
 
@@ -455,7 +457,7 @@ VillagerDataContainer {
     }
 
     public void playWorkSound() {
-        SoundEvent soundEvent = this.getVillagerData().getProfession().getWorkStation().getSound();
+        SoundEvent soundEvent = this.getVillagerData().getProfession().getWorkSound();
         if (soundEvent != null) {
             this.playSound(soundEvent, this.getSoundVolume(), this.getSoundPitch());
         }
@@ -485,7 +487,7 @@ VillagerDataContainer {
             i += 5;
         }
         if (offer.shouldRewardPlayerExperience()) {
-            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.x, this.y + 0.5, this.z, i));
+            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.getX(), this.getY() + 0.5, this.getZ(), i));
         }
     }
 
@@ -502,6 +504,7 @@ VillagerDataContainer {
 
     @Override
     public void onDeath(DamageSource source) {
+        LOGGER.info("Villager {} died, message: '{}'", (Object)this, (Object)source.getDeathMessage(this).getString());
         Entity entity = source.getAttacker();
         if (entity != null) {
             this.notifyDeath(entity);
@@ -595,18 +598,8 @@ VillagerDataContainer {
     }
 
     @Override
-    public Text getDisplayName() {
-        AbstractTeam abstractTeam = this.getScoreboardTeam();
-        Text text = this.getCustomName();
-        if (text != null) {
-            return Team.modifyText(abstractTeam, text).styled(style -> style.setHoverEvent(this.getHoverEvent()).setInsertion(this.getUuidAsString()));
-        }
-        VillagerProfession villagerProfession = this.getVillagerData().getProfession();
-        Text text2 = new TranslatableText(this.getType().getTranslationKey() + '.' + Registry.VILLAGER_PROFESSION.getId(villagerProfession).getPath(), new Object[0]).styled(style -> style.setHoverEvent(this.getHoverEvent()).setInsertion(this.getUuidAsString()));
-        if (abstractTeam != null) {
-            text2.formatted(abstractTeam.getColor());
-        }
-        return text2;
+    protected Text getDefaultName() {
+        return new TranslatableText(this.getType().getTranslationKey() + '.' + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath(), new Object[0]);
     }
 
     @Override
@@ -631,7 +624,7 @@ VillagerDataContainer {
         if (spawnType == SpawnType.BREEDING) {
             this.setVillagerData(this.getVillagerData().withProfession(VillagerProfession.NONE));
         }
-        if (spawnType == SpawnType.COMMAND || spawnType == SpawnType.SPAWN_EGG || spawnType == SpawnType.SPAWNER) {
+        if (spawnType == SpawnType.COMMAND || spawnType == SpawnType.SPAWN_EGG || spawnType == SpawnType.SPAWNER || spawnType == SpawnType.DISPENSER) {
             this.setVillagerData(this.getVillagerData().withType(VillagerType.forBiome(world.getBiome(new BlockPos(this)))));
         }
         return super.initialize(world, difficulty, spawnType, entityData, entityTag);
@@ -649,7 +642,7 @@ VillagerDataContainer {
     @Override
     public void onStruckByLightning(LightningEntity lightning) {
         WitchEntity witchEntity = EntityType.WITCH.create(this.world);
-        witchEntity.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, this.pitch);
+        witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
         witchEntity.initialize(this.world, this.world.getLocalDifficulty(new BlockPos(witchEntity)), SpawnType.CONVERSION, null, null);
         witchEntity.setAiDisabled(this.isAiDisabled());
         if (this.hasCustomName()) {
@@ -883,6 +876,12 @@ VillagerDataContainer {
     public void sleep(BlockPos pos) {
         super.sleep(pos);
         this.brain.putMemory(MemoryModuleType.LAST_SLEPT, Timestamp.of(this.world.getTime()));
+    }
+
+    @Override
+    public void wakeUp() {
+        super.wakeUp();
+        this.brain.putMemory(MemoryModuleType.LAST_WOKEN, Timestamp.of(this.world.getTime()));
     }
 
     private boolean hasRecentlyWorkedAndSlept(long worldTime) {

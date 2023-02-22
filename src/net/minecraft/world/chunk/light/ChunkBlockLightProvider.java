@@ -1,9 +1,11 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.apache.commons.lang3.mutable.MutableInt
  */
 package net.minecraft.world.chunk.light;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -16,6 +18,7 @@ import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.chunk.ChunkProvider;
 import net.minecraft.world.chunk.light.BlockLightStorage;
 import net.minecraft.world.chunk.light.ChunkLightProvider;
+import org.apache.commons.lang3.mutable.MutableInt;
 
 public final class ChunkBlockLightProvider
 extends ChunkLightProvider<BlockLightStorage.Data, BlockLightStorage> {
@@ -56,17 +59,17 @@ extends ChunkLightProvider<BlockLightStorage.Data, BlockLightStorage> {
         if (direction == null) {
             return 15;
         }
-        AtomicInteger atomicInteger = new AtomicInteger();
-        BlockState blockState = this.method_20479(targetId, atomicInteger);
-        if (atomicInteger.get() >= 15) {
+        MutableInt mutableInt = new MutableInt();
+        BlockState blockState = this.getStateForLighting(targetId, mutableInt);
+        if (mutableInt.getValue() >= 15) {
             return 15;
         }
-        BlockState blockState2 = this.method_20479(sourceId, null);
-        VoxelShape voxelShape = this.method_20710(blockState2, sourceId, direction);
-        if (VoxelShapes.method_20713(voxelShape, voxelShape2 = this.method_20710(blockState, targetId, direction.getOpposite()))) {
+        BlockState blockState2 = this.getStateForLighting(sourceId, null);
+        VoxelShape voxelShape = this.getOpaqueShape(blockState2, sourceId, direction);
+        if (VoxelShapes.unionCoversFullCube(voxelShape, voxelShape2 = this.getOpaqueShape(blockState, targetId, direction.getOpposite()))) {
             return 15;
         }
-        return level + Math.max(1, atomicInteger.get());
+        return level + Math.max(1, mutableInt.getValue());
     }
 
     @Override
@@ -110,9 +113,9 @@ extends ChunkLightProvider<BlockLightStorage.Data, BlockLightStorage> {
     }
 
     @Override
-    public void method_15514(BlockPos blockPos, int i) {
+    public void addLightSource(BlockPos pos, int level) {
         ((BlockLightStorage)this.lightStorage).updateAll();
-        this.updateLevel(Long.MAX_VALUE, blockPos.asLong(), 15 - i, true);
+        this.updateLevel(Long.MAX_VALUE, pos.asLong(), 15 - level, true);
     }
 }
 

@@ -60,9 +60,6 @@ extends Entity {
 
     @Override
     public void tick() {
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
         ++this.field_7034;
         if (!this.world.isClient) {
             BlockPos blockPos = new BlockPos(this);
@@ -106,7 +103,7 @@ extends Entity {
         if (!this.removed && !this.world.isClient) {
             this.remove();
             if (!source.isExplosive()) {
-                this.world.createExplosion(null, this.x, this.y, this.z, 6.0f, Explosion.DestructionType.DESTROY);
+                this.world.createExplosion(null, this.getX(), this.getY(), this.getZ(), 6.0f, Explosion.DestructionType.DESTROY);
             }
             this.crystalDestroyed(source);
         }

@@ -275,6 +275,6 @@ extends PacketListener {
 
     public void onChunkRenderDistanceCenter(ChunkRenderDistanceCenterS2CPacket var1);
 
-    public void method_21707(PlayerActionResponseS2CPacket var1);
+    public void onPlayerActionResponse(PlayerActionResponseS2CPacket var1);
 }
 

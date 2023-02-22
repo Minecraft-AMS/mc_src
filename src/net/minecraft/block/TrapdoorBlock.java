@@ -13,7 +13,6 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.Material;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.enums.BlockHalf;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -24,6 +23,7 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -90,9 +90,9 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (this.material == Material.METAL) {
-            return false;
+            return ActionResult.PASS;
         }
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 2);
@@ -100,7 +100,7 @@ implements Waterloggable {
             world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         this.playToggleSound(player, world, pos, state.get(OPEN));
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     protected void playToggleSound(@Nullable PlayerEntity player, World world, BlockPos pos, boolean open) {
@@ -141,11 +141,6 @@ implements Waterloggable {
             blockState = (BlockState)((BlockState)blockState.with(OPEN, true)).with(POWERED, true);
         }
         return (BlockState)blockState.with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

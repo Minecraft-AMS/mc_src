@@ -7,16 +7,17 @@
  */
 package net.minecraft.client.render.debug;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
@@ -26,36 +27,32 @@ public class HeightmapDebugRenderer
 implements DebugRenderer.Renderer {
     private final MinecraftClient client;
 
-    public HeightmapDebugRenderer(MinecraftClient minecraftClient) {
-        this.client = minecraftClient;
+    public HeightmapDebugRenderer(MinecraftClient client) {
+        this.client = client;
     }
 
     @Override
-    public void render(long l) {
-        Camera camera = this.client.gameRenderer.getCamera();
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         ClientWorld iWorld = this.client.world;
-        double d = camera.getPos().x;
-        double e = camera.getPos().y;
-        double f = camera.getPos().z;
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.disableTexture();
-        BlockPos blockPos = new BlockPos(camera.getPos().x, 0.0, camera.getPos().z);
+        RenderSystem.pushMatrix();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableTexture();
+        BlockPos blockPos = new BlockPos(cameraX, 0.0, cameraZ);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         bufferBuilder.begin(5, VertexFormats.POSITION_COLOR);
         for (BlockPos blockPos2 : BlockPos.iterate(blockPos.add(-40, 0, -40), blockPos.add(40, 0, 40))) {
             int i;
-            if (iWorld.getBlockState(blockPos2.add(0, i = iWorld.getTop(Heightmap.Type.WORLD_SURFACE_WG, blockPos2.getX(), blockPos2.getZ()), 0).down()).isAir()) {
-                WorldRenderer.buildBox(bufferBuilder, (double)((float)blockPos2.getX() + 0.25f) - d, (double)i - e, (double)((float)blockPos2.getZ() + 0.25f) - f, (double)((float)blockPos2.getX() + 0.75f) - d, (double)i + 0.09375 - e, (double)((float)blockPos2.getZ() + 0.75f) - f, 0.0f, 0.0f, 1.0f, 0.5f);
+            if (iWorld.getBlockState(blockPos2.add(0, i = iWorld.getTopY(Heightmap.Type.WORLD_SURFACE_WG, blockPos2.getX(), blockPos2.getZ()), 0).down()).isAir()) {
+                WorldRenderer.drawBox(bufferBuilder, (double)((float)blockPos2.getX() + 0.25f) - cameraX, (double)i - cameraY, (double)((float)blockPos2.getZ() + 0.25f) - cameraZ, (double)((float)blockPos2.getX() + 0.75f) - cameraX, (double)i + 0.09375 - cameraY, (double)((float)blockPos2.getZ() + 0.75f) - cameraZ, 0.0f, 0.0f, 1.0f, 0.5f);
                 continue;
             }
-            WorldRenderer.buildBox(bufferBuilder, (double)((float)blockPos2.getX() + 0.25f) - d, (double)i - e, (double)((float)blockPos2.getZ() + 0.25f) - f, (double)((float)blockPos2.getX() + 0.75f) - d, (double)i + 0.09375 - e, (double)((float)blockPos2.getZ() + 0.75f) - f, 0.0f, 1.0f, 0.0f, 0.5f);
+            WorldRenderer.drawBox(bufferBuilder, (double)((float)blockPos2.getX() + 0.25f) - cameraX, (double)i - cameraY, (double)((float)blockPos2.getZ() + 0.25f) - cameraZ, (double)((float)blockPos2.getX() + 0.75f) - cameraX, (double)i + 0.09375 - cameraY, (double)((float)blockPos2.getZ() + 0.75f) - cameraZ, 0.0f, 1.0f, 0.0f, 0.5f);
         }
         tessellator.draw();
-        GlStateManager.enableTexture();
-        GlStateManager.popMatrix();
+        RenderSystem.enableTexture();
+        RenderSystem.popMatrix();
     }
 }
 

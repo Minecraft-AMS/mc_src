@@ -26,8 +26,8 @@ extends Goal {
     protected Path fleePath;
     protected final EntityNavigation fleeingEntityNavigation;
     protected final Class<T> classToFleeFrom;
-    protected final Predicate<LivingEntity> field_6393;
-    protected final Predicate<LivingEntity> field_6388;
+    protected final Predicate<LivingEntity> extraInclusionSelector;
+    protected final Predicate<LivingEntity> inclusionSelector;
     private final TargetPredicate withinRangePredicate;
 
     public FleeEntityGoal(MobEntityWithAi mob, Class<T> fleeFromType, float distance, double slowSpeed, double fastSpeed) {
@@ -37,11 +37,11 @@ extends Goal {
     public FleeEntityGoal(MobEntityWithAi mob, Class<T> fleeFromType, Predicate<LivingEntity> extraInclusionSelector, float distance, double slowSpeed, double fastSpeed, Predicate<LivingEntity> inclusionSelector) {
         this.mob = mob;
         this.classToFleeFrom = fleeFromType;
-        this.field_6393 = extraInclusionSelector;
+        this.extraInclusionSelector = extraInclusionSelector;
         this.fleeDistance = distance;
         this.slowSpeed = slowSpeed;
         this.fastSpeed = fastSpeed;
-        this.field_6388 = inclusionSelector;
+        this.inclusionSelector = inclusionSelector;
         this.fleeingEntityNavigation = mob.getNavigation();
         this.setControls(EnumSet.of(Goal.Control.MOVE));
         this.withinRangePredicate = new TargetPredicate().setBaseMaxDistance(distance).setPredicate(inclusionSelector.and(extraInclusionSelector));
@@ -53,11 +53,11 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        this.targetEntity = this.mob.world.method_21727(this.classToFleeFrom, this.withinRangePredicate, this.mob, this.mob.x, this.mob.y, this.mob.z, this.mob.getBoundingBox().expand(this.fleeDistance, 3.0, this.fleeDistance));
+        this.targetEntity = this.mob.world.getClosestEntityIncludingUngeneratedChunks(this.classToFleeFrom, this.withinRangePredicate, this.mob, this.mob.getX(), this.mob.getY(), this.mob.getZ(), this.mob.getBoundingBox().expand(this.fleeDistance, 3.0, this.fleeDistance));
         if (this.targetEntity == null) {
             return false;
         }
-        Vec3d vec3d = TargetFinder.method_6379(this.mob, 16, 7, new Vec3d(((LivingEntity)this.targetEntity).x, ((LivingEntity)this.targetEntity).y, ((LivingEntity)this.targetEntity).z));
+        Vec3d vec3d = TargetFinder.findTargetAwayFrom(this.mob, 16, 7, ((Entity)this.targetEntity).getPos());
         if (vec3d == null) {
             return false;
         }

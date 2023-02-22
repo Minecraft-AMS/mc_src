@@ -34,7 +34,6 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint(ItemStack stack) {
         return true;
     }

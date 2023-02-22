@@ -27,10 +27,10 @@ extends ZombieEntityModel<T> {
     public DrownedEntityModel(float scale, float f, int textureWidth, int i) {
         super(scale, f, textureWidth, i);
         this.rightArm = new ModelPart(this, 32, 48);
-        this.rightArm.addCuboid(-3.0f, -2.0f, -2.0f, 4, 12, 4, scale);
+        this.rightArm.addCuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
         this.rightArm.setPivot(-5.0f, 2.0f + f, 0.0f);
         this.rightLeg = new ModelPart(this, 16, 48);
-        this.rightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4, 12, 4, scale);
+        this.rightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
         this.rightLeg.setPivot(-1.9f, 12.0f + f, 0.0f);
     }
 
@@ -54,8 +54,8 @@ extends ZombieEntityModel<T> {
     }
 
     @Override
-    public void setAngles(T zombieEntity, float f, float g, float h, float i, float j, float k) {
-        super.setAngles(zombieEntity, f, g, h, i, j, k);
+    public void setAngles(T zombieEntity, float f, float g, float h, float i, float j) {
+        super.setAngles(zombieEntity, f, g, h, i, j);
         if (this.leftArmPose == BipedEntityModel.ArmPose.THROW_SPEAR) {
             this.leftArm.pitch = this.leftArm.pitch * 0.5f - (float)Math.PI;
             this.leftArm.yaw = 0.0f;
@@ -65,10 +65,10 @@ extends ZombieEntityModel<T> {
             this.rightArm.yaw = 0.0f;
         }
         if (this.field_3396 > 0.0f) {
-            this.rightArm.pitch = this.method_2804(this.rightArm.pitch, -2.5132742f, this.field_3396) + this.field_3396 * 0.35f * MathHelper.sin(0.1f * h);
-            this.leftArm.pitch = this.method_2804(this.leftArm.pitch, -2.5132742f, this.field_3396) - this.field_3396 * 0.35f * MathHelper.sin(0.1f * h);
-            this.rightArm.roll = this.method_2804(this.rightArm.roll, -0.15f, this.field_3396);
-            this.leftArm.roll = this.method_2804(this.leftArm.roll, 0.15f, this.field_3396);
+            this.rightArm.pitch = this.lerpAngle(this.rightArm.pitch, -2.5132742f, this.field_3396) + this.field_3396 * 0.35f * MathHelper.sin(0.1f * h);
+            this.leftArm.pitch = this.lerpAngle(this.leftArm.pitch, -2.5132742f, this.field_3396) - this.field_3396 * 0.35f * MathHelper.sin(0.1f * h);
+            this.rightArm.roll = this.lerpAngle(this.rightArm.roll, -0.15f, this.field_3396);
+            this.leftArm.roll = this.lerpAngle(this.leftArm.roll, 0.15f, this.field_3396);
             this.leftLeg.pitch -= this.field_3396 * 0.55f * MathHelper.sin(0.1f * h);
             this.rightLeg.pitch += this.field_3396 * 0.55f * MathHelper.sin(0.1f * h);
             this.head.pitch = 0.0f;

@@ -36,8 +36,8 @@ public class Box {
         this.z2 = Math.max(z1, z2);
     }
 
-    public Box(BlockPos blockPos) {
-        this(blockPos.getX(), blockPos.getY(), blockPos.getZ(), blockPos.getX() + 1, blockPos.getY() + 1, blockPos.getZ() + 1);
+    public Box(BlockPos pos) {
+        this(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1);
     }
 
     public Box(BlockPos pos1, BlockPos pos2) {
@@ -251,7 +251,7 @@ public class Box {
         double d = max.x - min.x;
         double e = max.y - min.y;
         double f = max.z - min.z;
-        Direction direction = Box.method_1007(this, min, ds, null, d, e, f);
+        Direction direction = Box.traceCollisionSide(this, min, ds, null, d, e, f);
         if (direction == null) {
             return Optional.empty();
         }
@@ -267,7 +267,7 @@ public class Box {
         double e = to.y - from.y;
         double f = to.z - from.z;
         for (Box box : boxes) {
-            direction = Box.method_1007(box.offset(pos), from, ds, direction, d, e, f);
+            direction = Box.traceCollisionSide(box.offset(pos), from, ds, direction, d, e, f);
         }
         if (direction == null) {
             return null;
@@ -277,23 +277,23 @@ public class Box {
     }
 
     @Nullable
-    private static Direction method_1007(Box box, Vec3d vec3d, double[] ds, @Nullable Direction direction, double d, double e, double f) {
-        if (d > 1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, d, e, f, box.x1, box.y1, box.y2, box.z1, box.z2, Direction.WEST, vec3d.x, vec3d.y, vec3d.z);
-        } else if (d < -1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, d, e, f, box.x2, box.y1, box.y2, box.z1, box.z2, Direction.EAST, vec3d.x, vec3d.y, vec3d.z);
+    private static Direction traceCollisionSide(Box box, Vec3d intersectingVector, double[] traceDistanceResult, @Nullable Direction approachDirection, double xDelta, double yDelta, double zDelta) {
+        if (xDelta > 1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, xDelta, yDelta, zDelta, box.x1, box.y1, box.y2, box.z1, box.z2, Direction.WEST, intersectingVector.x, intersectingVector.y, intersectingVector.z);
+        } else if (xDelta < -1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, xDelta, yDelta, zDelta, box.x2, box.y1, box.y2, box.z1, box.z2, Direction.EAST, intersectingVector.x, intersectingVector.y, intersectingVector.z);
         }
-        if (e > 1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, e, f, d, box.y1, box.z1, box.z2, box.x1, box.x2, Direction.DOWN, vec3d.y, vec3d.z, vec3d.x);
-        } else if (e < -1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, e, f, d, box.y2, box.z1, box.z2, box.x1, box.x2, Direction.UP, vec3d.y, vec3d.z, vec3d.x);
+        if (yDelta > 1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, yDelta, zDelta, xDelta, box.y1, box.z1, box.z2, box.x1, box.x2, Direction.DOWN, intersectingVector.y, intersectingVector.z, intersectingVector.x);
+        } else if (yDelta < -1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, yDelta, zDelta, xDelta, box.y2, box.z1, box.z2, box.x1, box.x2, Direction.UP, intersectingVector.y, intersectingVector.z, intersectingVector.x);
         }
-        if (f > 1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, f, d, e, box.z1, box.x1, box.x2, box.y1, box.y2, Direction.NORTH, vec3d.z, vec3d.x, vec3d.y);
-        } else if (f < -1.0E-7) {
-            direction = Box.traceCollisionSide(ds, direction, f, d, e, box.z2, box.x1, box.x2, box.y1, box.y2, Direction.SOUTH, vec3d.z, vec3d.x, vec3d.y);
+        if (zDelta > 1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, zDelta, xDelta, yDelta, box.z1, box.x1, box.x2, box.y1, box.y2, Direction.NORTH, intersectingVector.z, intersectingVector.x, intersectingVector.y);
+        } else if (zDelta < -1.0E-7) {
+            approachDirection = Box.traceCollisionSide(traceDistanceResult, approachDirection, zDelta, xDelta, yDelta, box.z2, box.x1, box.x2, box.y1, box.y2, Direction.SOUTH, intersectingVector.z, intersectingVector.x, intersectingVector.y);
         }
-        return direction;
+        return approachDirection;
     }
 
     @Nullable

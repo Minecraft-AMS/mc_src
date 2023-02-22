@@ -15,10 +15,10 @@ import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.chunk.ChunkCache;
 
 public abstract class PathNodeMaker {
-    protected CollisionView blockView;
+    protected ChunkCache field_20622;
     protected MobEntity entity;
     protected final Int2ObjectMap<PathNode> pathNodeCache = new Int2ObjectOpenHashMap();
     protected int field_31;
@@ -28,8 +28,8 @@ public abstract class PathNodeMaker {
     protected boolean canOpenDoors;
     protected boolean canSwim;
 
-    public void init(CollisionView collisionView, MobEntity mobEntity) {
-        this.blockView = collisionView;
+    public void init(ChunkCache chunkCache, MobEntity mobEntity) {
+        this.field_20622 = chunkCache;
         this.entity = mobEntity;
         this.pathNodeCache.clear();
         this.field_31 = MathHelper.floor(mobEntity.getWidth() + 1.0f);
@@ -38,7 +38,7 @@ public abstract class PathNodeMaker {
     }
 
     public void clear() {
-        this.blockView = null;
+        this.field_20622 = null;
         this.entity = null;
     }
 

@@ -26,10 +26,10 @@ extends Decorator<ChanceDecoratorConfig> {
     @Override
     public Stream<BlockPos> getPositions(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, ChanceDecoratorConfig chanceDecoratorConfig, BlockPos blockPos) {
         if (random.nextInt(chanceDecoratorConfig.chance) == 0) {
-            int i = random.nextInt(16);
-            int j = random.nextInt(chunkGenerator.getMaxY());
-            int k = random.nextInt(16);
-            return Stream.of(blockPos.add(i, j, k));
+            int i = random.nextInt(16) + blockPos.getX();
+            int j = random.nextInt(16) + blockPos.getZ();
+            int k = random.nextInt(chunkGenerator.getMaxY());
+            return Stream.of(new BlockPos(i, k, j));
         }
         return Stream.empty();
     }

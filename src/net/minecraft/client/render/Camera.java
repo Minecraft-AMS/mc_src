@@ -7,9 +7,9 @@
  */
 package net.minecraft.client.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.fluid.FluidState;
@@ -19,6 +19,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.RayTraceContext;
@@ -30,11 +31,12 @@ public class Camera {
     private Entity focusedEntity;
     private Vec3d pos = Vec3d.ZERO;
     private final BlockPos.Mutable blockPos = new BlockPos.Mutable();
-    private Vec3d horizontalPlane;
-    private Vec3d verticalPlane;
-    private Vec3d diagonalPlane;
+    private final Vector3f horizontalPlane = new Vector3f(0.0f, 0.0f, 1.0f);
+    private final Vector3f verticalPlane = new Vector3f(0.0f, 1.0f, 0.0f);
+    private final Vector3f diagonalPlane = new Vector3f(1.0f, 0.0f, 0.0f);
     private float pitch;
     private float yaw;
+    private final Quaternion rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
     private boolean thirdPerson;
     private boolean inverseView;
     private float cameraY;
@@ -47,12 +49,10 @@ public class Camera {
         this.thirdPerson = thirdPerson;
         this.inverseView = inverseView;
         this.setRotation(focusedEntity.getYaw(tickDelta), focusedEntity.getPitch(tickDelta));
-        this.setPos(MathHelper.lerp((double)tickDelta, focusedEntity.prevX, focusedEntity.x), MathHelper.lerp((double)tickDelta, focusedEntity.prevY, focusedEntity.y) + (double)MathHelper.lerp(tickDelta, this.lastCameraY, this.cameraY), MathHelper.lerp((double)tickDelta, focusedEntity.prevZ, focusedEntity.z));
+        this.setPos(MathHelper.lerp((double)tickDelta, focusedEntity.prevX, focusedEntity.getX()), MathHelper.lerp((double)tickDelta, focusedEntity.prevY, focusedEntity.getY()) + (double)MathHelper.lerp(tickDelta, this.lastCameraY, this.cameraY), MathHelper.lerp((double)tickDelta, focusedEntity.prevZ, focusedEntity.getZ()));
         if (thirdPerson) {
             if (inverseView) {
-                this.yaw += 180.0f;
-                this.pitch += -this.pitch * 2.0f;
-                this.updateRotation();
+                this.setRotation(this.yaw + 180.0f, -this.pitch);
             }
             this.moveBy(-this.clipToSpace(4.0), 0.0, 0.0);
         } else if (focusedEntity instanceof LivingEntity && ((LivingEntity)focusedEntity).isSleeping()) {
@@ -60,8 +60,6 @@ public class Camera {
             this.setRotation(direction != null ? direction.asRotation() - 180.0f : 0.0f, 0.0f);
             this.moveBy(0.0, 0.3, 0.0);
         }
-        GlStateManager.rotatef(this.pitch, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(this.yaw + 180.0f, 0.0f, 1.0f, 0.0f);
     }
 
     public void updateEyeHeight() {
@@ -80,35 +78,31 @@ public class Camera {
             float g = (i >> 1 & 1) * 2 - 1;
             float h = (i >> 2 & 1) * 2 - 1;
             Vec3d vec3d = this.pos.add(f *= 0.1f, g *= 0.1f, h *= 0.1f);
-            if (((HitResult)(hitResult = this.area.rayTrace(new RayTraceContext(vec3d, vec3d2 = new Vec3d(this.pos.x - this.horizontalPlane.x * desiredCameraDistance + (double)f + (double)h, this.pos.y - this.horizontalPlane.y * desiredCameraDistance + (double)g, this.pos.z - this.horizontalPlane.z * desiredCameraDistance + (double)h), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.NONE, this.focusedEntity)))).getType() == HitResult.Type.MISS || !((d = hitResult.getPos().distanceTo(this.pos)) < desiredCameraDistance)) continue;
+            if (((HitResult)(hitResult = this.area.rayTrace(new RayTraceContext(vec3d, vec3d2 = new Vec3d(this.pos.x - (double)this.horizontalPlane.getX() * desiredCameraDistance + (double)f + (double)h, this.pos.y - (double)this.horizontalPlane.getY() * desiredCameraDistance + (double)g, this.pos.z - (double)this.horizontalPlane.getZ() * desiredCameraDistance + (double)h), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.NONE, this.focusedEntity)))).getType() == HitResult.Type.MISS || !((d = hitResult.getPos().distanceTo(this.pos)) < desiredCameraDistance)) continue;
             desiredCameraDistance = d;
         }
         return desiredCameraDistance;
     }
 
     protected void moveBy(double x, double y, double z) {
-        double d = this.horizontalPlane.x * x + this.verticalPlane.x * y + this.diagonalPlane.x * z;
-        double e = this.horizontalPlane.y * x + this.verticalPlane.y * y + this.diagonalPlane.y * z;
-        double f = this.horizontalPlane.z * x + this.verticalPlane.z * y + this.diagonalPlane.z * z;
+        double d = (double)this.horizontalPlane.getX() * x + (double)this.verticalPlane.getX() * y + (double)this.diagonalPlane.getX() * z;
+        double e = (double)this.horizontalPlane.getY() * x + (double)this.verticalPlane.getY() * y + (double)this.diagonalPlane.getY() * z;
+        double f = (double)this.horizontalPlane.getZ() * x + (double)this.verticalPlane.getZ() * y + (double)this.diagonalPlane.getZ() * z;
         this.setPos(new Vec3d(this.pos.x + d, this.pos.y + e, this.pos.z + f));
-    }
-
-    protected void updateRotation() {
-        float f = MathHelper.cos((this.yaw + 90.0f) * ((float)Math.PI / 180));
-        float g = MathHelper.sin((this.yaw + 90.0f) * ((float)Math.PI / 180));
-        float h = MathHelper.cos(-this.pitch * ((float)Math.PI / 180));
-        float i = MathHelper.sin(-this.pitch * ((float)Math.PI / 180));
-        float j = MathHelper.cos((-this.pitch + 90.0f) * ((float)Math.PI / 180));
-        float k = MathHelper.sin((-this.pitch + 90.0f) * ((float)Math.PI / 180));
-        this.horizontalPlane = new Vec3d(f * h, i, g * h);
-        this.verticalPlane = new Vec3d(f * j, k, g * j);
-        this.diagonalPlane = this.horizontalPlane.crossProduct(this.verticalPlane).multiply(-1.0);
     }
 
     protected void setRotation(float yaw, float pitch) {
         this.pitch = pitch;
         this.yaw = yaw;
-        this.updateRotation();
+        this.rotation.set(0.0f, 0.0f, 0.0f, 1.0f);
+        this.rotation.hamiltonProduct(Vector3f.POSITIVE_Y.getDegreesQuaternion(-yaw));
+        this.rotation.hamiltonProduct(Vector3f.POSITIVE_X.getDegreesQuaternion(pitch));
+        this.horizontalPlane.set(0.0f, 0.0f, 1.0f);
+        this.horizontalPlane.rotate(this.rotation);
+        this.verticalPlane.set(0.0f, 1.0f, 0.0f);
+        this.verticalPlane.rotate(this.rotation);
+        this.diagonalPlane.set(1.0f, 0.0f, 0.0f);
+        this.diagonalPlane.rotate(this.rotation);
     }
 
     protected void setPos(double x, double y, double z) {
@@ -136,6 +130,10 @@ public class Camera {
         return this.yaw;
     }
 
+    public Quaternion getRotation() {
+        return this.rotation;
+    }
+
     public Entity getFocusedEntity() {
         return this.focusedEntity;
     }
@@ -159,11 +157,11 @@ public class Camera {
         return fluidState;
     }
 
-    public final Vec3d getHorizontalPlane() {
+    public final Vector3f getHorizontalPlane() {
         return this.horizontalPlane;
     }
 
-    public final Vec3d getVerticalPlane() {
+    public final Vector3f getVerticalPlane() {
         return this.verticalPlane;
     }
 

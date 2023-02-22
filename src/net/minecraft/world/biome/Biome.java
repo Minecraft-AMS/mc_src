@@ -46,9 +46,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.OctaveSimplexNoiseSampler;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LightType;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.GenerationStep;
@@ -57,13 +57,9 @@ import net.minecraft.world.gen.carver.CarverConfig;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
-import net.minecraft.world.gen.decorator.Decorator;
-import net.minecraft.world.gen.decorator.DecoratorConfig;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.DecoratedFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
-import net.minecraft.world.gen.feature.FlowerFeature;
 import net.minecraft.world.gen.feature.StructureFeature;
 import net.minecraft.world.gen.surfacebuilder.ConfiguredSurfaceBuilder;
 import net.minecraft.world.gen.surfacebuilder.SurfaceBuilder;
@@ -76,8 +72,8 @@ public abstract class Biome {
     public static final Logger LOGGER = LogManager.getLogger();
     public static final Set<Biome> BIOMES = Sets.newHashSet();
     public static final IdList<Biome> PARENT_BIOME_ID_MAP = new IdList();
-    protected static final OctaveSimplexNoiseSampler TEMPERATURE_NOISE = new OctaveSimplexNoiseSampler(new Random(1234L), 1);
-    public static final OctaveSimplexNoiseSampler FOLIAGE_NOISE = new OctaveSimplexNoiseSampler(new Random(2345L), 1);
+    protected static final OctaveSimplexNoiseSampler TEMPERATURE_NOISE = new OctaveSimplexNoiseSampler(new ChunkRandom(1234L), 0, 0);
+    public static final OctaveSimplexNoiseSampler FOLIAGE_NOISE = new OctaveSimplexNoiseSampler(new ChunkRandom(2345L), 0, 0);
     @Nullable
     protected String translationKey;
     protected final float depth;
@@ -86,14 +82,15 @@ public abstract class Biome {
     protected final float downfall;
     protected final int waterColor;
     protected final int waterFogColor;
+    private final int skyColor;
     @Nullable
     protected final String parent;
     protected final ConfiguredSurfaceBuilder<?> surfaceBuilder;
     protected final Category category;
     protected final Precipitation precipitation;
     protected final Map<GenerationStep.Carver, List<ConfiguredCarver<?>>> carvers = Maps.newHashMap();
-    protected final Map<GenerationStep.Feature, List<ConfiguredFeature<?>>> features = Maps.newHashMap();
-    protected final List<ConfiguredFeature<?>> flowerFeatures = Lists.newArrayList();
+    protected final Map<GenerationStep.Feature, List<ConfiguredFeature<?, ?>>> features = Maps.newHashMap();
+    protected final List<ConfiguredFeature<?, ?>> flowerFeatures = Lists.newArrayList();
     protected final Map<StructureFeature<?>, FeatureConfig> structureFeatures = Maps.newHashMap();
     private final Map<EntityCategory, List<SpawnEntry>> spawns = Maps.newHashMap();
     private final ThreadLocal<Long2FloatLinkedOpenHashMap> temperatureCache = ThreadLocal.withInitial(() -> Util.make(() -> {
@@ -115,11 +112,6 @@ public abstract class Biome {
         return new ConfiguredCarver<C>(carver, config);
     }
 
-    public static <F extends FeatureConfig, D extends DecoratorConfig> ConfiguredFeature<?> configureFeature(Feature<F> feature, F featureConfig, Decorator<D> decorator, D decoratorConfig) {
-        Feature<DecoratedFeatureConfig> feature2 = feature instanceof FlowerFeature ? Feature.DECORATED_FLOWER : Feature.DECORATED;
-        return new ConfiguredFeature<DecoratedFeatureConfig>(feature2, new DecoratedFeatureConfig(feature, featureConfig, decorator, decoratorConfig));
-    }
-
     protected Biome(Settings settings) {
         if (settings.surfaceBuilder == null || settings.precipitation == null || settings.category == null || settings.depth == null || settings.scale == null || settings.temperature == null || settings.downfall == null || settings.waterColor == null || settings.waterFogColor == null) {
             throw new IllegalStateException("You are missing parameters to build a proper biome for " + this.getClass().getSimpleName() + "\n" + settings);
@@ -133,6 +125,7 @@ public abstract class Biome {
         this.downfall = settings.downfall.floatValue();
         this.waterColor = settings.waterColor;
         this.waterFogColor = settings.waterFogColor;
+        this.skyColor = this.calculateSkyColor();
         this.parent = settings.parent;
         for (GenerationStep.Feature feature : GenerationStep.Feature.values()) {
             this.features.put(feature, Lists.newArrayList());
@@ -146,11 +139,16 @@ public abstract class Biome {
         return this.parent != null;
     }
 
+    private int calculateSkyColor() {
+        float f = this.temperature;
+        f /= 3.0f;
+        f = MathHelper.clamp(f, -1.0f, 1.0f);
+        return MathHelper.hsvToRgb(0.62222224f - f * 0.05f, 0.5f + f * 0.1f, 1.0f);
+    }
+
     @Environment(value=EnvType.CLIENT)
-    public int getSkyColor(float temperature) {
-        temperature /= 3.0f;
-        temperature = MathHelper.clamp(temperature, -1.0f, 1.0f);
-        return MathHelper.hsvToRgb(0.62222224f - temperature * 0.05f, 0.5f + temperature * 0.1f, 1.0f);
+    public int getSkyColor() {
+        return this.skyColor;
     }
 
     protected void addSpawn(EntityCategory type, SpawnEntry spawnEntry) {
@@ -175,7 +173,7 @@ public abstract class Biome {
 
     protected float computeTemperature(BlockPos blockPos) {
         if (blockPos.getY() > 64) {
-            float f = (float)(TEMPERATURE_NOISE.sample((float)blockPos.getX() / 8.0f, (float)blockPos.getZ() / 8.0f) * 4.0);
+            float f = (float)(TEMPERATURE_NOISE.sample((float)blockPos.getX() / 8.0f, (float)blockPos.getZ() / 8.0f, false) * 4.0);
             return this.getTemperature() - (f + (float)blockPos.getY() - 64.0f) * 0.05f / 30.0f;
         }
         return this.getTemperature();
@@ -196,11 +194,11 @@ public abstract class Biome {
         return g;
     }
 
-    public boolean canSetSnow(CollisionView world, BlockPos blockPos) {
-        return this.canSetSnow(world, blockPos, true);
+    public boolean canSetIce(WorldView world, BlockPos blockPos) {
+        return this.canSetIce(world, blockPos, true);
     }
 
-    public boolean canSetSnow(CollisionView world, BlockPos pos, boolean bl) {
+    public boolean canSetIce(WorldView world, BlockPos pos, boolean doWaterCheck) {
         if (this.getTemperature(pos) >= 0.15f) {
             return false;
         }
@@ -208,12 +206,12 @@ public abstract class Biome {
             BlockState blockState = world.getBlockState(pos);
             FluidState fluidState = world.getFluidState(pos);
             if (fluidState.getFluid() == Fluids.WATER && blockState.getBlock() instanceof FluidBlock) {
-                boolean bl2;
-                if (!bl) {
+                boolean bl;
+                if (!doWaterCheck) {
                     return true;
                 }
-                boolean bl3 = bl2 = world.isWaterAt(pos.west()) && world.isWaterAt(pos.east()) && world.isWaterAt(pos.north()) && world.isWaterAt(pos.south());
-                if (!bl2) {
+                boolean bl2 = bl = world.isWater(pos.west()) && world.isWater(pos.east()) && world.isWater(pos.north()) && world.isWater(pos.south());
+                if (!bl) {
                     return true;
                 }
             }
@@ -221,15 +219,15 @@ public abstract class Biome {
         return false;
     }
 
-    public boolean canSetIce(CollisionView world, BlockPos blockPos) {
+    public boolean canSetSnow(WorldView worldView, BlockPos blockPos) {
         BlockState blockState;
         if (this.getTemperature(blockPos) >= 0.15f) {
             return false;
         }
-        return blockPos.getY() >= 0 && blockPos.getY() < 256 && world.getLightLevel(LightType.BLOCK, blockPos) < 10 && (blockState = world.getBlockState(blockPos)).isAir() && Blocks.SNOW.getDefaultState().canPlaceAt(world, blockPos);
+        return blockPos.getY() >= 0 && blockPos.getY() < 256 && worldView.getLightLevel(LightType.BLOCK, blockPos) < 10 && (blockState = worldView.getBlockState(blockPos)).isAir() && Blocks.SNOW.getDefaultState().canPlaceAt(worldView, blockPos);
     }
 
-    public void addFeature(GenerationStep.Feature step, ConfiguredFeature<?> configuredFeature) {
+    public void addFeature(GenerationStep.Feature step, ConfiguredFeature<?, ?> configuredFeature) {
         if (configuredFeature.feature == Feature.DECORATED_FLOWER) {
             this.flowerFeatures.add(configuredFeature);
         }
@@ -244,8 +242,8 @@ public abstract class Biome {
         return this.carvers.computeIfAbsent(carver2, carver -> Lists.newArrayList());
     }
 
-    public <C extends FeatureConfig> void addStructureFeature(StructureFeature<C> structureFeature, C featureConfig) {
-        this.structureFeatures.put(structureFeature, featureConfig);
+    public <C extends FeatureConfig> void addStructureFeature(ConfiguredFeature<C, ? extends StructureFeature<C>> configuredFeature) {
+        this.structureFeatures.put((StructureFeature<?>)configuredFeature.feature, (FeatureConfig)configuredFeature.config);
     }
 
     public <C extends FeatureConfig> boolean hasStructureFeature(StructureFeature<C> structureFeature) {
@@ -257,24 +255,24 @@ public abstract class Biome {
         return (C)this.structureFeatures.get(structureFeature);
     }
 
-    public List<ConfiguredFeature<?>> getFlowerFeatures() {
+    public List<ConfiguredFeature<?, ?>> getFlowerFeatures() {
         return this.flowerFeatures;
     }
 
-    public List<ConfiguredFeature<?>> getFeaturesForStep(GenerationStep.Feature feature) {
+    public List<ConfiguredFeature<?, ?>> getFeaturesForStep(GenerationStep.Feature feature) {
         return this.features.get((Object)feature);
     }
 
     public void generateFeatureStep(GenerationStep.Feature step, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, IWorld world, long seed, ChunkRandom random, BlockPos pos) {
         int i = 0;
-        for (ConfiguredFeature<?> configuredFeature : this.features.get((Object)step)) {
+        for (ConfiguredFeature<?, ?> configuredFeature : this.features.get((Object)step)) {
             random.setFeatureSeed(seed, i, step.ordinal());
             try {
                 configuredFeature.generate(world, chunkGenerator, random, pos);
             }
             catch (Exception exception) {
                 CrashReport crashReport = CrashReport.create(exception, "Feature placement");
-                crashReport.addElement("Feature").add("Id", Registry.FEATURE.getId(configuredFeature.feature)).add("Description", configuredFeature.feature::toString);
+                crashReport.addElement("Feature").add("Id", Registry.FEATURE.getId((Feature<?>)configuredFeature.feature)).add("Description", () -> configuredFeature.feature.toString());
                 throw new CrashException(crashReport);
             }
             ++i;
@@ -282,15 +280,15 @@ public abstract class Biome {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public int getGrassColorAt(BlockPos blockPos) {
-        double d = MathHelper.clamp(this.getTemperature(blockPos), 0.0f, 1.0f);
+    public int getGrassColorAt(double x, double z) {
+        double d = MathHelper.clamp(this.getTemperature(), 0.0f, 1.0f);
         double e = MathHelper.clamp(this.getRainfall(), 0.0f, 1.0f);
         return GrassColors.getColor(d, e);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public int getFoliageColorAt(BlockPos blockPos) {
-        double d = MathHelper.clamp(this.getTemperature(blockPos), 0.0f, 1.0f);
+    public int getFoliageColor() {
+        double d = MathHelper.clamp(this.getTemperature(), 0.0f, 1.0f);
         double e = MathHelper.clamp(this.getRainfall(), 0.0f, 1.0f);
         return FoliageColors.getColor(d, e);
     }

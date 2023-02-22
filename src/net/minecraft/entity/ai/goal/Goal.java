@@ -32,6 +32,10 @@ public abstract class Goal {
         this.controls.addAll(controls);
     }
 
+    public String toString() {
+        return this.getClass().getSimpleName();
+    }
+
     public EnumSet<Control> getControls() {
         return this.controls;
     }

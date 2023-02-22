@@ -1,17 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.fluid;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.Item;
@@ -22,16 +15,10 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 
 public class EmptyFluid
 extends Fluid {
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.SOLID;
-    }
-
     @Override
     public Item getBucketItem() {
         return Items.AIR;
@@ -48,7 +35,7 @@ extends Fluid {
     }
 
     @Override
-    public int getTickRate(CollisionView collisionView) {
+    public int getTickRate(WorldView world) {
         return 0;
     }
 
@@ -68,7 +55,7 @@ extends Fluid {
     }
 
     @Override
-    public float method_20784(FluidState fluidState) {
+    public float getHeight(FluidState state) {
         return 0.0f;
     }
 

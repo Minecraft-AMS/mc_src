@@ -46,9 +46,9 @@ public class StatusEffect {
         return Registry.STATUS_EFFECT.getRawId(type);
     }
 
-    protected StatusEffect(StatusEffectType statusEffectType, int i) {
-        this.type = statusEffectType;
-        this.color = i;
+    protected StatusEffect(StatusEffectType type, int color) {
+        this.type = type;
+        this.color = color;
     }
 
     public void applyUpdateEffect(LivingEntity entity, int amplifier) {
@@ -120,7 +120,7 @@ public class StatusEffect {
         return false;
     }
 
-    protected String method_5559() {
+    protected String loadTranslationKey() {
         if (this.translationKey == null) {
             this.translationKey = Util.createTranslationKey("effect", Registry.STATUS_EFFECT.getId(this));
         }
@@ -128,10 +128,10 @@ public class StatusEffect {
     }
 
     public String getTranslationKey() {
-        return this.method_5559();
+        return this.loadTranslationKey();
     }
 
-    public Text method_5560() {
+    public Text getName() {
         return new TranslatableText(this.getTranslationKey(), new Object[0]);
     }
 
@@ -155,30 +155,30 @@ public class StatusEffect {
         return this.attributeModifiers;
     }
 
-    public void method_5562(LivingEntity livingEntity, AbstractEntityAttributeContainer abstractEntityAttributeContainer, int i) {
+    public void onRemoved(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
         for (Map.Entry<EntityAttribute, EntityAttributeModifier> entry : this.attributeModifiers.entrySet()) {
-            EntityAttributeInstance entityAttributeInstance = abstractEntityAttributeContainer.get(entry.getKey());
+            EntityAttributeInstance entityAttributeInstance = attributes.get(entry.getKey());
             if (entityAttributeInstance == null) continue;
             entityAttributeInstance.removeModifier(entry.getValue());
         }
     }
 
-    public void method_5555(LivingEntity livingEntity, AbstractEntityAttributeContainer abstractEntityAttributeContainer, int i) {
+    public void onApplied(LivingEntity entity, AbstractEntityAttributeContainer attributes, int amplifier) {
         for (Map.Entry<EntityAttribute, EntityAttributeModifier> entry : this.attributeModifiers.entrySet()) {
-            EntityAttributeInstance entityAttributeInstance = abstractEntityAttributeContainer.get(entry.getKey());
+            EntityAttributeInstance entityAttributeInstance = attributes.get(entry.getKey());
             if (entityAttributeInstance == null) continue;
             EntityAttributeModifier entityAttributeModifier = entry.getValue();
             entityAttributeInstance.removeModifier(entityAttributeModifier);
-            entityAttributeInstance.addModifier(new EntityAttributeModifier(entityAttributeModifier.getId(), this.getTranslationKey() + " " + i, this.method_5563(i, entityAttributeModifier), entityAttributeModifier.getOperation()));
+            entityAttributeInstance.addModifier(new EntityAttributeModifier(entityAttributeModifier.getId(), this.getTranslationKey() + " " + amplifier, this.adjustModifierAmount(amplifier, entityAttributeModifier), entityAttributeModifier.getOperation()));
         }
     }
 
-    public double method_5563(int i, EntityAttributeModifier entityAttributeModifier) {
-        return entityAttributeModifier.getAmount() * (double)(i + 1);
+    public double adjustModifierAmount(int amplifier, EntityAttributeModifier modifier) {
+        return modifier.getAmount() * (double)(amplifier + 1);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean method_5573() {
+    public boolean isBeneficial() {
         return this.type == StatusEffectType.BENEFICIAL;
     }
 }

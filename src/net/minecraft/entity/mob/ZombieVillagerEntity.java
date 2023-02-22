@@ -20,9 +20,11 @@ import net.minecraft.block.BedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.datafixer.NbtOps;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityInteraction;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -135,10 +137,11 @@ implements VillagerDataContainer {
             }
             if (!this.world.isClient) {
                 this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
+                player.swingHand(hand, true);
             }
             return true;
         }
-        return false;
+        return super.interactMob(player, hand);
     }
 
     @Override
@@ -169,7 +172,7 @@ implements VillagerDataContainer {
     public void handleStatus(byte status) {
         if (status == 16) {
             if (!this.isSilent()) {
-                this.world.playSound(this.x + 0.5, this.y + 0.5, this.z + 0.5, SoundEvents.ENTITY_ZOMBIE_VILLAGER_CURE, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
+                this.world.playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ZOMBIE_VILLAGER_CURE, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
             }
             return;
         }
@@ -179,6 +182,17 @@ implements VillagerDataContainer {
     private void finishConversion(ServerWorld world) {
         PlayerEntity playerEntity;
         VillagerEntity villagerEntity = EntityType.VILLAGER.create(world);
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+            ItemStack itemStack = this.getEquippedStack(equipmentSlot);
+            if (itemStack.isEmpty()) continue;
+            if (EnchantmentHelper.hasBindingCurse(itemStack)) {
+                villagerEntity.equip(equipmentSlot.getEntitySlotId() + 300, itemStack);
+                continue;
+            }
+            double d = this.getDropChance(equipmentSlot);
+            if (!(d > 1.0)) continue;
+            this.dropStack(itemStack);
+        }
         villagerEntity.copyPositionAndRotation(this);
         villagerEntity.setVillagerData(this.getVillagerData());
         if (this.field_20299 != null) {
@@ -198,6 +212,10 @@ implements VillagerDataContainer {
             villagerEntity.setCustomName(this.getCustomName());
             villagerEntity.setCustomNameVisible(this.isCustomNameVisible());
         }
+        if (this.isPersistent()) {
+            villagerEntity.setPersistent();
+        }
+        villagerEntity.setInvulnerable(this.isInvulnerable());
         world.spawnEntity(villagerEntity);
         if (this.converter != null && (playerEntity = world.getPlayerByUuid(this.converter)) instanceof ServerPlayerEntity) {
             Criterions.CURED_ZOMBIE_VILLAGER.trigger((ServerPlayerEntity)playerEntity, this, villagerEntity);
@@ -212,9 +230,9 @@ implements VillagerDataContainer {
         if (this.random.nextFloat() < 0.01f) {
             int j = 0;
             BlockPos.Mutable mutable = new BlockPos.Mutable();
-            for (int k = (int)this.x - 4; k < (int)this.x + 4 && j < 14; ++k) {
-                for (int l = (int)this.y - 4; l < (int)this.y + 4 && j < 14; ++l) {
-                    for (int m = (int)this.z - 4; m < (int)this.z + 4 && j < 14; ++m) {
+            for (int k = (int)this.getX() - 4; k < (int)this.getX() + 4 && j < 14; ++k) {
+                for (int l = (int)this.getY() - 4; l < (int)this.getY() + 4 && j < 14; ++l) {
+                    for (int m = (int)this.getZ() - 4; m < (int)this.getZ() + 4 && j < 14; ++m) {
                         Block block = this.world.getBlockState(mutable.set(k, l, m)).getBlock();
                         if (block != Blocks.IRON_BARS && !(block instanceof BedBlock)) continue;
                         if (this.random.nextFloat() < 0.3f) {

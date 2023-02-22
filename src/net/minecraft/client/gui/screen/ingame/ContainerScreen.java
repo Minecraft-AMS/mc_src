@@ -3,23 +3,22 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Sets
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.gui.screen.ingame;
 
 import com.google.common.collect.Sets;
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.datafixers.util.Pair;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.ContainerProvider;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.container.Container;
 import net.minecraft.container.Slot;
@@ -88,21 +87,18 @@ implements ContainerProvider<T> {
         int i = this.x;
         int j = this.y;
         this.drawBackground(delta, mouseX, mouseY);
-        GlStateManager.disableRescaleNormal();
-        DiffuseLighting.disable();
-        GlStateManager.disableLighting();
-        GlStateManager.disableDepthTest();
+        RenderSystem.disableRescaleNormal();
+        RenderSystem.disableDepthTest();
         super.render(mouseX, mouseY, delta);
-        DiffuseLighting.enableForItems();
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(i, j, 0.0f);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.enableRescaleNormal();
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(i, j, 0.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableRescaleNormal();
         this.focusedSlot = null;
         int k = 240;
         int l = 240;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, 240.0f, 240.0f);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.glMultiTexCoord2f(33986, 240.0f, 240.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         for (int m = 0; m < ((Container)this.container).slots.size(); ++m) {
             Slot slot = ((Container)this.container).slots.get(m);
             if (slot.doDrawHoveringEffect()) {
@@ -110,19 +106,15 @@ implements ContainerProvider<T> {
             }
             if (!this.isPointOverSlot(slot, mouseX, mouseY) || !slot.doDrawHoveringEffect()) continue;
             this.focusedSlot = slot;
-            GlStateManager.disableLighting();
-            GlStateManager.disableDepthTest();
+            RenderSystem.disableDepthTest();
             n = slot.xPosition;
             o = slot.yPosition;
-            GlStateManager.colorMask(true, true, true, false);
+            RenderSystem.colorMask(true, true, true, false);
             this.fillGradient(n, o, n + 16, o + 16, -2130706433, -2130706433);
-            GlStateManager.colorMask(true, true, true, true);
-            GlStateManager.enableLighting();
-            GlStateManager.enableDepthTest();
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.enableDepthTest();
         }
-        DiffuseLighting.disable();
         this.drawForeground(mouseX, mouseY);
-        DiffuseLighting.enableForItems();
         PlayerInventory playerInventory = this.minecraft.player.inventory;
         ItemStack itemStack2 = itemStack = this.touchDragStack.isEmpty() ? playerInventory.getCursorStack() : this.touchDragStack;
         if (!itemStack.isEmpty()) {
@@ -153,10 +145,8 @@ implements ContainerProvider<T> {
             int r = this.touchDropY + (int)((float)p * f);
             this.drawItem(this.touchDropReturningStack, q, r, null);
         }
-        GlStateManager.popMatrix();
-        GlStateManager.enableLighting();
-        GlStateManager.enableDepthTest();
-        DiffuseLighting.enable();
+        RenderSystem.popMatrix();
+        RenderSystem.enableDepthTest();
     }
 
     protected void drawMouseoverTooltip(int mouseX, int mouseY) {
@@ -166,12 +156,12 @@ implements ContainerProvider<T> {
     }
 
     private void drawItem(ItemStack stack, int xPosition, int yPosition, String amountText) {
-        GlStateManager.translatef(0.0f, 0.0f, 32.0f);
-        this.blitOffset = 200;
+        RenderSystem.translatef(0.0f, 0.0f, 32.0f);
+        this.setBlitOffset(200);
         this.itemRenderer.zOffset = 200.0f;
         this.itemRenderer.renderGuiItem(stack, xPosition, yPosition);
         this.itemRenderer.renderGuiItemOverlay(this.font, stack, xPosition, yPosition - (this.touchDragStack.isEmpty() ? 0 : 8), amountText);
-        this.blitOffset = 0;
+        this.setBlitOffset(0);
         this.itemRenderer.zOffset = 0.0f;
     }
 
@@ -181,7 +171,7 @@ implements ContainerProvider<T> {
     protected abstract void drawBackground(float var1, int var2, int var3);
 
     private void drawSlot(Slot slot) {
-        String string2;
+        Pair<Identifier, Identifier> pair;
         int i = slot.xPosition;
         int j = slot.yPosition;
         ItemStack itemStack = slot.getStack();
@@ -210,26 +200,24 @@ implements ContainerProvider<T> {
                 this.calculateOffset();
             }
         }
-        this.blitOffset = 100;
+        this.setBlitOffset(100);
         this.itemRenderer.zOffset = 100.0f;
-        if (itemStack.isEmpty() && slot.doDrawHoveringEffect() && (string2 = slot.getBackgroundSprite()) != null) {
-            Sprite sprite = this.minecraft.getSpriteAtlas().getSprite(string2);
-            GlStateManager.disableLighting();
-            this.minecraft.getTextureManager().bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
-            ContainerScreen.blit(i, j, this.blitOffset, 16, 16, sprite);
-            GlStateManager.enableLighting();
+        if (itemStack.isEmpty() && slot.doDrawHoveringEffect() && (pair = slot.getBackgroundSprite()) != null) {
+            Sprite sprite = this.minecraft.getSpriteAtlas((Identifier)pair.getFirst()).apply((Identifier)pair.getSecond());
+            this.minecraft.getTextureManager().bindTexture(sprite.getAtlas().getId());
+            ContainerScreen.blit(i, j, this.getBlitOffset(), 16, 16, sprite);
             bl2 = true;
         }
         if (!bl2) {
             if (bl) {
                 ContainerScreen.fill(i, j, i + 16, j + 16, -2130706433);
             }
-            GlStateManager.enableDepthTest();
+            RenderSystem.enableDepthTest();
             this.itemRenderer.renderGuiItem(this.minecraft.player, itemStack, i, j);
             this.itemRenderer.renderGuiItemOverlay(this.font, itemStack, i, j, string);
         }
         this.itemRenderer.zOffset = 0.0f;
-        this.blitOffset = 0;
+        this.setBlitOffset(0);
     }
 
     private void calculateOffset() {
@@ -303,7 +291,7 @@ implements ContainerProvider<T> {
                         if (this.minecraft.options.keyPickItem.matchesMouse(button)) {
                             this.onMouseClick(slot, k, button, SlotActionType.CLONE);
                         } else {
-                            boolean bl3 = k != -999 && (InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 344));
+                            boolean bl3 = k != -999 && (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 344));
                             SlotActionType slotActionType = SlotActionType.PICKUP;
                             if (bl3) {
                                 this.quickMovingStack = slot != null && slot.hasStack() ? slot.getStack().copy() : ItemStack.EMPTY;
@@ -449,7 +437,7 @@ implements ContainerProvider<T> {
                     this.onMouseClick(slot, k, button, SlotActionType.CLONE);
                 } else {
                     boolean bl2;
-                    boolean bl3 = bl2 = k != -999 && (InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 344));
+                    boolean bl3 = bl2 = k != -999 && (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 344));
                     if (bl2) {
                         this.quickMovingStack = slot != null && slot.hasStack() ? slot.getStack().copy() : ItemStack.EMPTY;
                     }
@@ -478,7 +466,7 @@ implements ContainerProvider<T> {
         if (slot != null) {
             invSlot = slot.id;
         }
-        this.minecraft.interactionManager.method_2906(((Container)this.container).syncId, invSlot, button, slotActionType, this.minecraft.player);
+        this.minecraft.interactionManager.clickSlot(((Container)this.container).syncId, invSlot, button, slotActionType, this.minecraft.player);
     }
 
     @Override

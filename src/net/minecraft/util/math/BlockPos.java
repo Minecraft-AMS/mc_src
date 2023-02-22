@@ -28,6 +28,7 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.CuboidBlockIterator;
 import net.minecraft.util.DynamicSerializable;
 import net.minecraft.util.math.AxisCycleDirection;
+import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
@@ -61,7 +62,7 @@ implements DynamicSerializable {
     }
 
     public BlockPos(Entity entity) {
-        this(entity.x, entity.y, entity.z);
+        this(entity.getX(), entity.getY(), entity.getZ());
     }
 
     public BlockPos(Vec3d pos) {
@@ -156,23 +157,25 @@ implements DynamicSerializable {
     }
 
     public BlockPos up() {
-        return this.up(1);
+        return this.offset(Direction.UP);
     }
 
     public BlockPos up(int distance) {
         return this.offset(Direction.UP, distance);
     }
 
+    @Override
     public BlockPos down() {
-        return this.down(1);
+        return this.offset(Direction.DOWN);
     }
 
+    @Override
     public BlockPos down(int distance) {
         return this.offset(Direction.DOWN, distance);
     }
 
     public BlockPos north() {
-        return this.north(1);
+        return this.offset(Direction.NORTH);
     }
 
     public BlockPos north(int distance) {
@@ -180,7 +183,7 @@ implements DynamicSerializable {
     }
 
     public BlockPos south() {
-        return this.south(1);
+        return this.offset(Direction.SOUTH);
     }
 
     public BlockPos south(int distance) {
@@ -188,7 +191,7 @@ implements DynamicSerializable {
     }
 
     public BlockPos west() {
-        return this.west(1);
+        return this.offset(Direction.WEST);
     }
 
     public BlockPos west(int distance) {
@@ -196,7 +199,7 @@ implements DynamicSerializable {
     }
 
     public BlockPos east() {
-        return this.east(1);
+        return this.offset(Direction.EAST);
     }
 
     public BlockPos east(int distance) {
@@ -204,14 +207,15 @@ implements DynamicSerializable {
     }
 
     public BlockPos offset(Direction direction) {
-        return this.offset(direction, 1);
+        return new BlockPos(this.getX() + direction.getOffsetX(), this.getY() + direction.getOffsetY(), this.getZ() + direction.getOffsetZ());
     }
 
-    public BlockPos offset(Direction direction, int distance) {
-        if (distance == 0) {
+    @Override
+    public BlockPos offset(Direction direction, int i) {
+        if (i == 0) {
             return this;
         }
-        return new BlockPos(this.getX() + direction.getOffsetX() * distance, this.getY() + direction.getOffsetY() * distance, this.getZ() + direction.getOffsetZ() * distance);
+        return new BlockPos(this.getX() + direction.getOffsetX() * i, this.getY() + direction.getOffsetY() * i, this.getZ() + direction.getOffsetZ() * i);
     }
 
     public BlockPos rotate(BlockRotation rotation) {
@@ -245,6 +249,10 @@ implements DynamicSerializable {
 
     public static Stream<BlockPos> stream(BlockPos pos1, BlockPos pos2) {
         return BlockPos.stream(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()), Math.max(pos1.getX(), pos2.getX()), Math.max(pos1.getY(), pos2.getY()), Math.max(pos1.getZ(), pos2.getZ()));
+    }
+
+    public static Stream<BlockPos> method_23627(BlockBox blockBox) {
+        return BlockPos.stream(Math.min(blockBox.minX, blockBox.maxX), Math.min(blockBox.minY, blockBox.maxY), Math.min(blockBox.minZ, blockBox.maxZ), Math.max(blockBox.minX, blockBox.maxX), Math.max(blockBox.minY, blockBox.maxY), Math.max(blockBox.minZ, blockBox.maxZ));
     }
 
     public static Stream<BlockPos> stream(final int minX, final int minY, final int minZ, final int maxX, final int maxY, final int maxZ) {
@@ -292,6 +300,21 @@ implements DynamicSerializable {
         return this.crossProduct(vec);
     }
 
+    @Override
+    public /* synthetic */ Vec3i offset(Direction direction, int i) {
+        return this.offset(direction, i);
+    }
+
+    @Override
+    public /* synthetic */ Vec3i down(int i) {
+        return this.down(i);
+    }
+
+    @Override
+    public /* synthetic */ Vec3i down() {
+        return this.down();
+    }
+
     private static /* synthetic */ void method_19441(int[] is, int i) {
         is[0] = i;
     }
@@ -321,7 +344,7 @@ implements DynamicSerializable {
         }
 
         public static PooledMutable getEntityPos(Entity entity) {
-            return PooledMutable.get(entity.x, entity.y, entity.z);
+            return PooledMutable.get(entity.getX(), entity.getY(), entity.getZ());
         }
 
         public static PooledMutable get(double x, double y, double z) {
@@ -454,6 +477,10 @@ implements DynamicSerializable {
             this(MathHelper.floor(d), MathHelper.floor(e), MathHelper.floor(f));
         }
 
+        public Mutable(Entity entity) {
+            this(entity.getX(), entity.getY(), entity.getZ());
+        }
+
         @Override
         public BlockPos add(double x, double y, double z) {
             return super.add(x, y, z).toImmutable();
@@ -465,8 +492,8 @@ implements DynamicSerializable {
         }
 
         @Override
-        public BlockPos offset(Direction direction, int distance) {
-            return super.offset(direction, distance).toImmutable();
+        public BlockPos offset(Direction direction, int i) {
+            return super.offset(direction, i).toImmutable();
         }
 
         @Override
@@ -497,7 +524,7 @@ implements DynamicSerializable {
         }
 
         public Mutable set(Entity entity) {
-            return this.set(entity.x, entity.y, entity.z);
+            return this.set(entity.getX(), entity.getY(), entity.getZ());
         }
 
         public Mutable set(double x, double y, double z) {
@@ -548,6 +575,21 @@ implements DynamicSerializable {
         @Override
         public /* synthetic */ Vec3i crossProduct(Vec3i vec) {
             return super.crossProduct(vec);
+        }
+
+        @Override
+        public /* synthetic */ Vec3i offset(Direction direction, int i) {
+            return this.offset(direction, i);
+        }
+
+        @Override
+        public /* synthetic */ Vec3i down(int i) {
+            return super.down(i);
+        }
+
+        @Override
+        public /* synthetic */ Vec3i down() {
+            return super.down();
         }
     }
 }

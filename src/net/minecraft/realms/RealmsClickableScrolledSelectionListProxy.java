@@ -106,7 +106,7 @@ extends ListWidget {
         for (int j = 0; j < i; ++j) {
             int k = y + j * this.itemHeight + this.headerHeight;
             int l = this.itemHeight - 4;
-            if (k > this.field_2165 || k + l < this.field_2166) {
+            if (k > this.bottom || k + l < this.top) {
                 this.updateItemPosition(j, x, k, f);
             }
             if (this.renderSelection && this.isSelectedItem(j)) {
@@ -117,11 +117,11 @@ extends ListWidget {
     }
 
     public int y0() {
-        return this.field_2166;
+        return this.top;
     }
 
     public int y1() {
-        return this.field_2165;
+        return this.bottom;
     }
 
     public int headerHeight() {
@@ -129,7 +129,7 @@ extends ListWidget {
     }
 
     public double yo() {
-        return this.field_2175;
+        return this.scroll;
     }
 
     public int itemHeight() {

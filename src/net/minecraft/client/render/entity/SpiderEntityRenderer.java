@@ -32,7 +32,7 @@ extends MobEntityRenderer<T, SpiderEntityModel<T>> {
     }
 
     @Override
-    protected Identifier getTexture(T spiderEntity) {
+    public Identifier getTexture(T spiderEntity) {
         return SKIN;
     }
 }

@@ -2,204 +2,197 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.ParrotEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class ParrotEntityModel
-extends EntityModel<ParrotEntity> {
-    private final ModelPart field_3458;
-    private final ModelPart field_3460;
-    private final ModelPart field_3459;
-    private final ModelPart field_3455;
-    private final ModelPart field_3452;
-    private final ModelPart field_3461;
-    private final ModelPart field_3451;
-    private final ModelPart field_3453;
-    private final ModelPart field_3456;
-    private final ModelPart field_3450;
-    private final ModelPart field_3457;
+extends CompositeEntityModel<ParrotEntity> {
+    private final ModelPart torso;
+    private final ModelPart tail;
+    private final ModelPart leftWing;
+    private final ModelPart rightWing;
+    private final ModelPart head;
+    private final ModelPart forehead;
+    private final ModelPart innerBeak;
+    private final ModelPart outerBeak;
+    private final ModelPart headFeathers;
+    private final ModelPart leftLeg;
+    private final ModelPart rightLeg;
 
     public ParrotEntityModel() {
         this.textureWidth = 32;
         this.textureHeight = 32;
-        this.field_3458 = new ModelPart(this, 2, 8);
-        this.field_3458.addCuboid(-1.5f, 0.0f, -1.5f, 3, 6, 3);
-        this.field_3458.setPivot(0.0f, 16.5f, -3.0f);
-        this.field_3460 = new ModelPart(this, 22, 1);
-        this.field_3460.addCuboid(-1.5f, -1.0f, -1.0f, 3, 4, 1);
-        this.field_3460.setPivot(0.0f, 21.07f, 1.16f);
-        this.field_3459 = new ModelPart(this, 19, 8);
-        this.field_3459.addCuboid(-0.5f, 0.0f, -1.5f, 1, 5, 3);
-        this.field_3459.setPivot(1.5f, 16.94f, -2.76f);
-        this.field_3455 = new ModelPart(this, 19, 8);
-        this.field_3455.addCuboid(-0.5f, 0.0f, -1.5f, 1, 5, 3);
-        this.field_3455.setPivot(-1.5f, 16.94f, -2.76f);
-        this.field_3452 = new ModelPart(this, 2, 2);
-        this.field_3452.addCuboid(-1.0f, -1.5f, -1.0f, 2, 3, 2);
-        this.field_3452.setPivot(0.0f, 15.69f, -2.76f);
-        this.field_3461 = new ModelPart(this, 10, 0);
-        this.field_3461.addCuboid(-1.0f, -0.5f, -2.0f, 2, 1, 4);
-        this.field_3461.setPivot(0.0f, -2.0f, -1.0f);
-        this.field_3452.addChild(this.field_3461);
-        this.field_3451 = new ModelPart(this, 11, 7);
-        this.field_3451.addCuboid(-0.5f, -1.0f, -0.5f, 1, 2, 1);
-        this.field_3451.setPivot(0.0f, -0.5f, -1.5f);
-        this.field_3452.addChild(this.field_3451);
-        this.field_3453 = new ModelPart(this, 16, 7);
-        this.field_3453.addCuboid(-0.5f, 0.0f, -0.5f, 1, 2, 1);
-        this.field_3453.setPivot(0.0f, -1.75f, -2.45f);
-        this.field_3452.addChild(this.field_3453);
-        this.field_3456 = new ModelPart(this, 2, 18);
-        this.field_3456.addCuboid(0.0f, -4.0f, -2.0f, 0, 5, 4);
-        this.field_3456.setPivot(0.0f, -2.15f, 0.15f);
-        this.field_3452.addChild(this.field_3456);
-        this.field_3450 = new ModelPart(this, 14, 18);
-        this.field_3450.addCuboid(-0.5f, 0.0f, -0.5f, 1, 2, 1);
-        this.field_3450.setPivot(1.0f, 22.0f, -1.05f);
-        this.field_3457 = new ModelPart(this, 14, 18);
-        this.field_3457.addCuboid(-0.5f, 0.0f, -0.5f, 1, 2, 1);
-        this.field_3457.setPivot(-1.0f, 22.0f, -1.05f);
+        this.torso = new ModelPart(this, 2, 8);
+        this.torso.addCuboid(-1.5f, 0.0f, -1.5f, 3.0f, 6.0f, 3.0f);
+        this.torso.setPivot(0.0f, 16.5f, -3.0f);
+        this.tail = new ModelPart(this, 22, 1);
+        this.tail.addCuboid(-1.5f, -1.0f, -1.0f, 3.0f, 4.0f, 1.0f);
+        this.tail.setPivot(0.0f, 21.07f, 1.16f);
+        this.leftWing = new ModelPart(this, 19, 8);
+        this.leftWing.addCuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f);
+        this.leftWing.setPivot(1.5f, 16.94f, -2.76f);
+        this.rightWing = new ModelPart(this, 19, 8);
+        this.rightWing.addCuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f);
+        this.rightWing.setPivot(-1.5f, 16.94f, -2.76f);
+        this.head = new ModelPart(this, 2, 2);
+        this.head.addCuboid(-1.0f, -1.5f, -1.0f, 2.0f, 3.0f, 2.0f);
+        this.head.setPivot(0.0f, 15.69f, -2.76f);
+        this.forehead = new ModelPart(this, 10, 0);
+        this.forehead.addCuboid(-1.0f, -0.5f, -2.0f, 2.0f, 1.0f, 4.0f);
+        this.forehead.setPivot(0.0f, -2.0f, -1.0f);
+        this.head.addChild(this.forehead);
+        this.innerBeak = new ModelPart(this, 11, 7);
+        this.innerBeak.addCuboid(-0.5f, -1.0f, -0.5f, 1.0f, 2.0f, 1.0f);
+        this.innerBeak.setPivot(0.0f, -0.5f, -1.5f);
+        this.head.addChild(this.innerBeak);
+        this.outerBeak = new ModelPart(this, 16, 7);
+        this.outerBeak.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
+        this.outerBeak.setPivot(0.0f, -1.75f, -2.45f);
+        this.head.addChild(this.outerBeak);
+        this.headFeathers = new ModelPart(this, 2, 18);
+        this.headFeathers.addCuboid(0.0f, -4.0f, -2.0f, 0.0f, 5.0f, 4.0f);
+        this.headFeathers.setPivot(0.0f, -2.15f, 0.15f);
+        this.head.addChild(this.headFeathers);
+        this.leftLeg = new ModelPart(this, 14, 18);
+        this.leftLeg.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
+        this.leftLeg.setPivot(1.0f, 22.0f, -1.05f);
+        this.rightLeg = new ModelPart(this, 14, 18);
+        this.rightLeg.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
+        this.rightLeg.setPivot(-1.0f, 22.0f, -1.05f);
     }
 
     @Override
-    public void render(ParrotEntity parrotEntity, float f, float g, float h, float i, float j, float k) {
-        this.method_17105(k);
+    public Iterable<ModelPart> getParts() {
+        return ImmutableList.of((Object)this.torso, (Object)this.leftWing, (Object)this.rightWing, (Object)this.tail, (Object)this.head, (Object)this.leftLeg, (Object)this.rightLeg);
     }
 
     @Override
-    public void setAngles(ParrotEntity parrotEntity, float f, float g, float h, float i, float j, float k) {
-        this.method_17111(ParrotEntityModel.method_17107(parrotEntity), parrotEntity.age, f, g, h, i, j);
+    public void setAngles(ParrotEntity parrotEntity, float f, float g, float h, float i, float j) {
+        this.method_17111(ParrotEntityModel.getPose(parrotEntity), parrotEntity.age, f, g, h, i, j);
     }
 
     @Override
     public void animateModel(ParrotEntity parrotEntity, float f, float g, float h) {
-        this.method_17110(ParrotEntityModel.method_17107(parrotEntity));
+        this.method_17110(ParrotEntityModel.getPose(parrotEntity));
     }
 
-    public void method_17106(float f, float g, float h, float i, float j, int k) {
+    public void method_17106(MatrixStack matrixStack, VertexConsumer vertexConsumer, int i, int j, float f, float g, float h, float k, int l) {
         this.method_17110(Pose.ON_SHOULDER);
-        this.method_17111(Pose.ON_SHOULDER, k, f, g, 0.0f, h, i);
-        this.method_17105(j);
+        this.method_17111(Pose.ON_SHOULDER, l, f, g, 0.0f, h, k);
+        this.getParts().forEach(modelPart -> modelPart.render(matrixStack, vertexConsumer, i, j));
     }
 
-    private void method_17105(float f) {
-        this.field_3458.render(f);
-        this.field_3459.render(f);
-        this.field_3455.render(f);
-        this.field_3460.render(f);
-        this.field_3452.render(f);
-        this.field_3450.render(f);
-        this.field_3457.render(f);
-    }
-
-    private void method_17111(Pose pose, int i, float f, float g, float h, float j, float k) {
-        this.field_3452.pitch = k * ((float)Math.PI / 180);
-        this.field_3452.yaw = j * ((float)Math.PI / 180);
-        this.field_3452.roll = 0.0f;
-        this.field_3452.pivotX = 0.0f;
-        this.field_3458.pivotX = 0.0f;
-        this.field_3460.pivotX = 0.0f;
-        this.field_3455.pivotX = -1.5f;
-        this.field_3459.pivotX = 1.5f;
+    private void method_17111(Pose pose, int age, float limbAngle, float limbDistance, float age2, float headYaw, float headPitch) {
+        this.head.pitch = headPitch * ((float)Math.PI / 180);
+        this.head.yaw = headYaw * ((float)Math.PI / 180);
+        this.head.roll = 0.0f;
+        this.head.pivotX = 0.0f;
+        this.torso.pivotX = 0.0f;
+        this.tail.pivotX = 0.0f;
+        this.rightWing.pivotX = -1.5f;
+        this.leftWing.pivotX = 1.5f;
         switch (pose) {
             case SITTING: {
                 break;
             }
             case PARTY: {
-                float l = MathHelper.cos(i);
-                float m = MathHelper.sin(i);
-                this.field_3452.pivotX = l;
-                this.field_3452.pivotY = 15.69f + m;
-                this.field_3452.pitch = 0.0f;
-                this.field_3452.yaw = 0.0f;
-                this.field_3452.roll = MathHelper.sin(i) * 0.4f;
-                this.field_3458.pivotX = l;
-                this.field_3458.pivotY = 16.5f + m;
-                this.field_3459.roll = -0.0873f - h;
-                this.field_3459.pivotX = 1.5f + l;
-                this.field_3459.pivotY = 16.94f + m;
-                this.field_3455.roll = 0.0873f + h;
-                this.field_3455.pivotX = -1.5f + l;
-                this.field_3455.pivotY = 16.94f + m;
-                this.field_3460.pivotX = l;
-                this.field_3460.pivotY = 21.07f + m;
+                float f = MathHelper.cos(age);
+                float g = MathHelper.sin(age);
+                this.head.pivotX = f;
+                this.head.pivotY = 15.69f + g;
+                this.head.pitch = 0.0f;
+                this.head.yaw = 0.0f;
+                this.head.roll = MathHelper.sin(age) * 0.4f;
+                this.torso.pivotX = f;
+                this.torso.pivotY = 16.5f + g;
+                this.leftWing.roll = -0.0873f - age2;
+                this.leftWing.pivotX = 1.5f + f;
+                this.leftWing.pivotY = 16.94f + g;
+                this.rightWing.roll = 0.0873f + age2;
+                this.rightWing.pivotX = -1.5f + f;
+                this.rightWing.pivotY = 16.94f + g;
+                this.tail.pivotX = f;
+                this.tail.pivotY = 21.07f + g;
                 break;
             }
             case STANDING: {
-                this.field_3450.pitch += MathHelper.cos(f * 0.6662f) * 1.4f * g;
-                this.field_3457.pitch += MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g;
+                this.leftLeg.pitch += MathHelper.cos(limbAngle * 0.6662f) * 1.4f * limbDistance;
+                this.rightLeg.pitch += MathHelper.cos(limbAngle * 0.6662f + (float)Math.PI) * 1.4f * limbDistance;
             }
             default: {
-                float n = h * 0.3f;
-                this.field_3452.pivotY = 15.69f + n;
-                this.field_3460.pitch = 1.015f + MathHelper.cos(f * 0.6662f) * 0.3f * g;
-                this.field_3460.pivotY = 21.07f + n;
-                this.field_3458.pivotY = 16.5f + n;
-                this.field_3459.roll = -0.0873f - h;
-                this.field_3459.pivotY = 16.94f + n;
-                this.field_3455.roll = 0.0873f + h;
-                this.field_3455.pivotY = 16.94f + n;
-                this.field_3450.pivotY = 22.0f + n;
-                this.field_3457.pivotY = 22.0f + n;
+                float h = age2 * 0.3f;
+                this.head.pivotY = 15.69f + h;
+                this.tail.pitch = 1.015f + MathHelper.cos(limbAngle * 0.6662f) * 0.3f * limbDistance;
+                this.tail.pivotY = 21.07f + h;
+                this.torso.pivotY = 16.5f + h;
+                this.leftWing.roll = -0.0873f - age2;
+                this.leftWing.pivotY = 16.94f + h;
+                this.rightWing.roll = 0.0873f + age2;
+                this.rightWing.pivotY = 16.94f + h;
+                this.leftLeg.pivotY = 22.0f + h;
+                this.rightLeg.pivotY = 22.0f + h;
             }
         }
     }
 
     private void method_17110(Pose pose) {
-        this.field_3456.pitch = -0.2214f;
-        this.field_3458.pitch = 0.4937f;
-        this.field_3459.pitch = -0.6981f;
-        this.field_3459.yaw = (float)(-Math.PI);
-        this.field_3455.pitch = -0.6981f;
-        this.field_3455.yaw = (float)(-Math.PI);
-        this.field_3450.pitch = -0.0299f;
-        this.field_3457.pitch = -0.0299f;
-        this.field_3450.pivotY = 22.0f;
-        this.field_3457.pivotY = 22.0f;
-        this.field_3450.roll = 0.0f;
-        this.field_3457.roll = 0.0f;
+        this.headFeathers.pitch = -0.2214f;
+        this.torso.pitch = 0.4937f;
+        this.leftWing.pitch = -0.6981f;
+        this.leftWing.yaw = (float)(-Math.PI);
+        this.rightWing.pitch = -0.6981f;
+        this.rightWing.yaw = (float)(-Math.PI);
+        this.leftLeg.pitch = -0.0299f;
+        this.rightLeg.pitch = -0.0299f;
+        this.leftLeg.pivotY = 22.0f;
+        this.rightLeg.pivotY = 22.0f;
+        this.leftLeg.roll = 0.0f;
+        this.rightLeg.roll = 0.0f;
         switch (pose) {
             case FLYING: {
-                this.field_3450.pitch += 0.6981317f;
-                this.field_3457.pitch += 0.6981317f;
+                this.leftLeg.pitch += 0.6981317f;
+                this.rightLeg.pitch += 0.6981317f;
                 break;
             }
             case SITTING: {
                 float f = 1.9f;
-                this.field_3452.pivotY = 17.59f;
-                this.field_3460.pitch = 1.5388988f;
-                this.field_3460.pivotY = 22.97f;
-                this.field_3458.pivotY = 18.4f;
-                this.field_3459.roll = -0.0873f;
-                this.field_3459.pivotY = 18.84f;
-                this.field_3455.roll = 0.0873f;
-                this.field_3455.pivotY = 18.84f;
-                this.field_3450.pivotY += 1.9f;
-                this.field_3457.pivotY += 1.9f;
-                this.field_3450.pitch += 1.5707964f;
-                this.field_3457.pitch += 1.5707964f;
+                this.head.pivotY = 17.59f;
+                this.tail.pitch = 1.5388988f;
+                this.tail.pivotY = 22.97f;
+                this.torso.pivotY = 18.4f;
+                this.leftWing.roll = -0.0873f;
+                this.leftWing.pivotY = 18.84f;
+                this.rightWing.roll = 0.0873f;
+                this.rightWing.pivotY = 18.84f;
+                this.leftLeg.pivotY += 1.9f;
+                this.rightLeg.pivotY += 1.9f;
+                this.leftLeg.pitch += 1.5707964f;
+                this.rightLeg.pitch += 1.5707964f;
                 break;
             }
             case PARTY: {
-                this.field_3450.roll = -0.34906584f;
-                this.field_3457.roll = 0.34906584f;
+                this.leftLeg.roll = -0.34906584f;
+                this.rightLeg.roll = 0.34906584f;
                 break;
             }
         }
     }
 
-    private static Pose method_17107(ParrotEntity parrotEntity) {
+    private static Pose getPose(ParrotEntity parrotEntity) {
         if (parrotEntity.getSongPlaying()) {
             return Pose.PARTY;
         }
@@ -210,16 +203,6 @@ extends EntityModel<ParrotEntity> {
             return Pose.FLYING;
         }
         return Pose.STANDING;
-    }
-
-    @Override
-    public /* synthetic */ void setAngles(Entity entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.setAngles((ParrotEntity)entity, limbAngle, limbDistance, age, headYaw, headPitch, scale);
-    }
-
-    @Override
-    public /* synthetic */ void render(Entity entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.render((ParrotEntity)entity, limbAngle, limbDistance, age, headYaw, headPitch, scale);
     }
 
     @Environment(value=EnvType.CLIENT)

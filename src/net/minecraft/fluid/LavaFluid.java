@@ -14,7 +14,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.BaseFluid;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
@@ -30,10 +29,10 @@ import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class LavaFluid
@@ -46,12 +45,6 @@ extends BaseFluid {
     @Override
     public Fluid getStill() {
         return Fluids.LAVA;
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.SOLID;
     }
 
     @Override
@@ -110,7 +103,7 @@ extends BaseFluid {
         }
     }
 
-    private boolean canLightFire(CollisionView world, BlockPos pos) {
+    private boolean canLightFire(WorldView world, BlockPos pos) {
         for (Direction direction : Direction.values()) {
             if (!this.hasBurnableBlock(world, pos.offset(direction))) continue;
             return true;
@@ -118,8 +111,8 @@ extends BaseFluid {
         return false;
     }
 
-    private boolean hasBurnableBlock(CollisionView world, BlockPos pos) {
-        if (pos.getY() >= 0 && pos.getY() < 256 && !world.isBlockLoaded(pos)) {
+    private boolean hasBurnableBlock(WorldView world, BlockPos pos) {
+        if (pos.getY() >= 0 && pos.getY() < 256 && !world.isChunkLoaded(pos)) {
             return false;
         }
         return world.getBlockState(pos).getMaterial().isBurnable();
@@ -138,8 +131,8 @@ extends BaseFluid {
     }
 
     @Override
-    public int method_15733(CollisionView collisionView) {
-        return collisionView.getDimension().doesWaterVaporize() ? 4 : 2;
+    public int method_15733(WorldView worldView) {
+        return worldView.getDimension().doesWaterVaporize() ? 4 : 2;
     }
 
     @Override
@@ -153,7 +146,7 @@ extends BaseFluid {
     }
 
     @Override
-    public int getLevelDecreasePerBlock(CollisionView world) {
+    public int getLevelDecreasePerBlock(WorldView world) {
         return world.getDimension().doesWaterVaporize() ? 1 : 2;
     }
 
@@ -163,8 +156,8 @@ extends BaseFluid {
     }
 
     @Override
-    public int getTickRate(CollisionView collisionView) {
-        return collisionView.getDimension().isNether() ? 10 : 30;
+    public int getTickRate(WorldView world) {
+        return world.getDimension().isNether() ? 10 : 30;
     }
 
     @Override

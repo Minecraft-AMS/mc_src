@@ -23,16 +23,17 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
 import org.jetbrains.annotations.Nullable;
 
 public class EmptyChunk
 extends WorldChunk {
-    private static final Biome[] BIOMES = Util.make(new Biome[256], biomes -> Arrays.fill(biomes, Biomes.PLAINS));
+    private static final Biome[] BIOMES = Util.make(new Biome[BiomeArray.DEFAULT_LENGTH], biomes -> Arrays.fill(biomes, Biomes.PLAINS));
 
     public EmptyChunk(World world, ChunkPos chunkPos) {
-        super(world, chunkPos, BIOMES);
+        super(world, chunkPos, new BiomeArray(BIOMES));
     }
 
     @Override

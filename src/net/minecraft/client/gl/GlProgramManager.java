@@ -9,7 +9,8 @@
  */
 package net.minecraft.client.gl;
 
-import com.mojang.blaze3d.platform.GLX;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -20,41 +21,37 @@ import org.apache.logging.log4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class GlProgramManager {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static GlProgramManager INSTANCE;
 
-    public static void init() {
-        INSTANCE = new GlProgramManager();
+    public static void useProgram(int i) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        GlStateManager.useProgram(i);
     }
 
-    public static GlProgramManager getInstance() {
-        return INSTANCE;
-    }
-
-    private GlProgramManager() {
-    }
-
-    public void deleteProgram(GlProgram glProgram) {
+    public static void deleteProgram(GlProgram glProgram) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         glProgram.getFragmentShader().release();
         glProgram.getVertexShader().release();
-        GLX.glDeleteProgram(glProgram.getProgramRef());
+        GlStateManager.deleteProgram(glProgram.getProgramRef());
     }
 
-    public int createProgram() throws IOException {
-        int i = GLX.glCreateProgram();
+    public static int createProgram() throws IOException {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
+        int i = GlStateManager.createProgram();
         if (i <= 0) {
             throw new IOException("Could not create shader program (returned program ID " + i + ")");
         }
         return i;
     }
 
-    public void linkProgram(GlProgram glProgram) throws IOException {
+    public static void linkProgram(GlProgram glProgram) throws IOException {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         glProgram.getFragmentShader().attachTo(glProgram);
         glProgram.getVertexShader().attachTo(glProgram);
-        GLX.glLinkProgram(glProgram.getProgramRef());
-        int i = GLX.glGetProgrami(glProgram.getProgramRef(), GLX.GL_LINK_STATUS);
+        GlStateManager.linkProgram(glProgram.getProgramRef());
+        int i = GlStateManager.getProgram(glProgram.getProgramRef(), 35714);
         if (i == 0) {
             LOGGER.warn("Error encountered when linking program containing VS {} and FS {}. Log output:", (Object)glProgram.getVertexShader().getName(), (Object)glProgram.getFragmentShader().getName());
-            LOGGER.warn(GLX.glGetProgramInfoLog(glProgram.getProgramRef(), 32768));
+            LOGGER.warn(GlStateManager.getProgramInfoLog(glProgram.getProgramRef(), 32768));
         }
     }
 }

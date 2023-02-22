@@ -180,7 +180,7 @@ extends HorseBaseEntity {
         if (this.isBaby()) {
             return super.interactMob(player, hand);
         }
-        if (player.isSneaking()) {
+        if (player.shouldCancelInteraction()) {
             this.openInventory(player);
             return true;
         }

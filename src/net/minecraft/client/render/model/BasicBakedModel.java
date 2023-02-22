@@ -20,7 +20,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.RetexturedBakedQuad;
 import net.minecraft.client.render.model.json.JsonUnbakedModel;
 import net.minecraft.client.render.model.json.ModelItemPropertyOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
@@ -35,18 +34,20 @@ implements BakedModel {
     protected final Map<Direction, List<BakedQuad>> faceQuads;
     protected final boolean usesAo;
     protected final boolean hasDepth;
+    protected final boolean isSideLit;
     protected final Sprite sprite;
     protected final ModelTransformation transformation;
     protected final ModelItemPropertyOverrideList itemPropertyOverrides;
 
-    public BasicBakedModel(List<BakedQuad> quads, Map<Direction, List<BakedQuad>> faceQuads, boolean usesAo, boolean is3dInGui, Sprite sprite, ModelTransformation transformation, ModelItemPropertyOverrideList itemPropertyOverrides) {
+    public BasicBakedModel(List<BakedQuad> quads, Map<Direction, List<BakedQuad>> faceQuads, boolean usesAo, boolean isSideLit, boolean hasDepth, Sprite sprite, ModelTransformation modelTransformation, ModelItemPropertyOverrideList modelItemPropertyOverrideList) {
         this.quads = quads;
         this.faceQuads = faceQuads;
         this.usesAo = usesAo;
-        this.hasDepth = is3dInGui;
+        this.hasDepth = hasDepth;
+        this.isSideLit = isSideLit;
         this.sprite = sprite;
-        this.transformation = transformation;
-        this.itemPropertyOverrides = itemPropertyOverrides;
+        this.transformation = modelTransformation;
+        this.itemPropertyOverrides = modelItemPropertyOverrideList;
     }
 
     @Override
@@ -62,6 +63,11 @@ implements BakedModel {
     @Override
     public boolean hasDepth() {
         return this.hasDepth;
+    }
+
+    @Override
+    public boolean isSideLit() {
+        return this.isSideLit;
     }
 
     @Override
@@ -91,36 +97,23 @@ implements BakedModel {
         private final ModelItemPropertyOverrideList itemPropertyOverrides;
         private final boolean usesAo;
         private Sprite particleTexture;
-        private final boolean depthInGui;
+        private final boolean isSideLit;
+        private final boolean hasDepth;
         private final ModelTransformation transformation;
 
-        public Builder(JsonUnbakedModel unbakedModel, ModelItemPropertyOverrideList itemPropertyOverrides) {
-            this(unbakedModel.useAmbientOcclusion(), unbakedModel.hasDepthInGui(), unbakedModel.getTransformations(), itemPropertyOverrides);
+        public Builder(JsonUnbakedModel unbakedModel, ModelItemPropertyOverrideList itemPropertyOverrides, boolean hasDepth) {
+            this(unbakedModel.useAmbientOcclusion(), unbakedModel.getGuiLight().isSide(), hasDepth, unbakedModel.getTransformations(), itemPropertyOverrides);
         }
 
-        public Builder(BlockState state, BakedModel bakedModel, Sprite sprite, Random random, long randomSeed) {
-            this(bakedModel.useAmbientOcclusion(), bakedModel.hasDepth(), bakedModel.getTransformation(), bakedModel.getItemPropertyOverrides());
-            this.particleTexture = bakedModel.getSprite();
-            for (Direction direction : Direction.values()) {
-                random.setSeed(randomSeed);
-                for (BakedQuad bakedQuad : bakedModel.getQuads(state, direction, random)) {
-                    this.addQuad(direction, new RetexturedBakedQuad(bakedQuad, sprite));
-                }
-            }
-            random.setSeed(randomSeed);
-            for (BakedQuad bakedQuad2 : bakedModel.getQuads(state, null, random)) {
-                this.addQuad(new RetexturedBakedQuad(bakedQuad2, sprite));
-            }
-        }
-
-        private Builder(boolean usesAo, boolean depthInGui, ModelTransformation transformation, ModelItemPropertyOverrideList itemPropertyOverrides) {
+        private Builder(boolean usesAo, boolean isSideLit, boolean hasDepth, ModelTransformation modelTransformation, ModelItemPropertyOverrideList modelItemPropertyOverrideList) {
             for (Direction direction : Direction.values()) {
                 this.faceQuads.put(direction, Lists.newArrayList());
             }
-            this.itemPropertyOverrides = itemPropertyOverrides;
+            this.itemPropertyOverrides = modelItemPropertyOverrideList;
             this.usesAo = usesAo;
-            this.depthInGui = depthInGui;
-            this.transformation = transformation;
+            this.isSideLit = isSideLit;
+            this.hasDepth = hasDepth;
+            this.transformation = modelTransformation;
         }
 
         public Builder addQuad(Direction side, BakedQuad quad) {
@@ -142,7 +135,7 @@ implements BakedModel {
             if (this.particleTexture == null) {
                 throw new RuntimeException("Missing particle!");
             }
-            return new BasicBakedModel(this.quads, this.faceQuads, this.usesAo, this.depthInGui, this.particleTexture, this.transformation, this.itemPropertyOverrides);
+            return new BasicBakedModel(this.quads, this.faceQuads, this.usesAo, this.isSideLit, this.hasDepth, this.particleTexture, this.transformation, this.itemPropertyOverrides);
         }
     }
 }

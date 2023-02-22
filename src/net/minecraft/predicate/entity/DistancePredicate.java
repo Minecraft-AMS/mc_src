@@ -45,13 +45,13 @@ public class DistancePredicate {
         float j = (float)(d - g);
         float k = (float)(e - h);
         float l = (float)(f - i);
-        if (!(this.x.matches(MathHelper.abs(j)) && this.y.matches(MathHelper.abs(k)) && this.z.matches(MathHelper.abs(l)))) {
+        if (!(this.x.test(MathHelper.abs(j)) && this.y.test(MathHelper.abs(k)) && this.z.test(MathHelper.abs(l)))) {
             return false;
         }
-        if (!this.horizontal.matchesSquared(j * j + l * l)) {
+        if (!this.horizontal.testSqrt(j * j + l * l)) {
             return false;
         }
-        return this.absolute.matchesSquared(j * j + k * k + l * l);
+        return this.absolute.testSqrt(j * j + k * k + l * l);
     }
 
     public static DistancePredicate deserialize(@Nullable JsonElement el) {

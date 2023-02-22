@@ -2,84 +2,78 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class SalmonEntityModel<T extends Entity>
-extends EntityModel<T> {
-    private final ModelPart field_3546;
-    private final ModelPart field_3548;
-    private final ModelPart field_3547;
-    private final ModelPart field_3545;
-    private final ModelPart field_3543;
-    private final ModelPart field_3549;
-    private final ModelPart field_3542;
-    private final ModelPart field_3544;
+extends CompositeEntityModel<T> {
+    private final ModelPart torso;
+    private final ModelPart tail;
+    private final ModelPart head;
+    private final ModelPart rightFin;
+    private final ModelPart leftFin;
 
     public SalmonEntityModel() {
         this.textureWidth = 32;
         this.textureHeight = 32;
         int i = 20;
-        this.field_3546 = new ModelPart(this, 0, 0);
-        this.field_3546.addCuboid(-1.5f, -2.5f, 0.0f, 3, 5, 8);
-        this.field_3546.setPivot(0.0f, 20.0f, 0.0f);
-        this.field_3548 = new ModelPart(this, 0, 13);
-        this.field_3548.addCuboid(-1.5f, -2.5f, 0.0f, 3, 5, 8);
-        this.field_3548.setPivot(0.0f, 20.0f, 8.0f);
-        this.field_3547 = new ModelPart(this, 22, 0);
-        this.field_3547.addCuboid(-1.0f, -2.0f, -3.0f, 2, 4, 3);
-        this.field_3547.setPivot(0.0f, 20.0f, 0.0f);
-        this.field_3549 = new ModelPart(this, 20, 10);
-        this.field_3549.addCuboid(0.0f, -2.5f, 0.0f, 0, 5, 6);
-        this.field_3549.setPivot(0.0f, 0.0f, 8.0f);
-        this.field_3548.addChild(this.field_3549);
-        this.field_3545 = new ModelPart(this, 2, 1);
-        this.field_3545.addCuboid(0.0f, 0.0f, 0.0f, 0, 2, 3);
-        this.field_3545.setPivot(0.0f, -4.5f, 5.0f);
-        this.field_3546.addChild(this.field_3545);
-        this.field_3543 = new ModelPart(this, 0, 2);
-        this.field_3543.addCuboid(0.0f, 0.0f, 0.0f, 0, 2, 4);
-        this.field_3543.setPivot(0.0f, -4.5f, -1.0f);
-        this.field_3548.addChild(this.field_3543);
-        this.field_3542 = new ModelPart(this, -4, 0);
-        this.field_3542.addCuboid(-2.0f, 0.0f, 0.0f, 2, 0, 2);
-        this.field_3542.setPivot(-1.5f, 21.5f, 0.0f);
-        this.field_3542.roll = -0.7853982f;
-        this.field_3544 = new ModelPart(this, 0, 0);
-        this.field_3544.addCuboid(0.0f, 0.0f, 0.0f, 2, 0, 2);
-        this.field_3544.setPivot(1.5f, 21.5f, 0.0f);
-        this.field_3544.roll = 0.7853982f;
+        this.torso = new ModelPart(this, 0, 0);
+        this.torso.addCuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f);
+        this.torso.setPivot(0.0f, 20.0f, 0.0f);
+        this.tail = new ModelPart(this, 0, 13);
+        this.tail.addCuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f);
+        this.tail.setPivot(0.0f, 20.0f, 8.0f);
+        this.head = new ModelPart(this, 22, 0);
+        this.head.addCuboid(-1.0f, -2.0f, -3.0f, 2.0f, 4.0f, 3.0f);
+        this.head.setPivot(0.0f, 20.0f, 0.0f);
+        ModelPart modelPart = new ModelPart(this, 20, 10);
+        modelPart.addCuboid(0.0f, -2.5f, 0.0f, 0.0f, 5.0f, 6.0f);
+        modelPart.setPivot(0.0f, 0.0f, 8.0f);
+        this.tail.addChild(modelPart);
+        ModelPart modelPart2 = new ModelPart(this, 2, 1);
+        modelPart2.addCuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 3.0f);
+        modelPart2.setPivot(0.0f, -4.5f, 5.0f);
+        this.torso.addChild(modelPart2);
+        ModelPart modelPart3 = new ModelPart(this, 0, 2);
+        modelPart3.addCuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 4.0f);
+        modelPart3.setPivot(0.0f, -4.5f, -1.0f);
+        this.tail.addChild(modelPart3);
+        this.rightFin = new ModelPart(this, -4, 0);
+        this.rightFin.addCuboid(-2.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f);
+        this.rightFin.setPivot(-1.5f, 21.5f, 0.0f);
+        this.rightFin.roll = -0.7853982f;
+        this.leftFin = new ModelPart(this, 0, 0);
+        this.leftFin.addCuboid(0.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f);
+        this.leftFin.setPivot(1.5f, 21.5f, 0.0f);
+        this.leftFin.roll = 0.7853982f;
     }
 
     @Override
-    public void render(T entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.setAngles(entity, limbAngle, limbDistance, age, headYaw, headPitch, scale);
-        this.field_3546.render(scale);
-        this.field_3548.render(scale);
-        this.field_3547.render(scale);
-        this.field_3542.render(scale);
-        this.field_3544.render(scale);
+    public Iterable<ModelPart> getParts() {
+        return ImmutableList.of((Object)this.torso, (Object)this.tail, (Object)this.head, (Object)this.rightFin, (Object)this.leftFin);
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
+    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
         float f = 1.0f;
         float g = 1.0f;
         if (!((Entity)entity).isTouchingWater()) {
             f = 1.3f;
             g = 1.7f;
         }
-        this.field_3548.yaw = -f * 0.25f * MathHelper.sin(g * 0.6f * age);
+        this.tail.yaw = -f * 0.25f * MathHelper.sin(g * 0.6f * customAngle);
     }
 }
 

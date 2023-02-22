@@ -28,7 +28,7 @@ implements PairList {
     }
 
     @Override
-    public boolean forEachPair(PairList.SectionPairPredicate predicate) {
+    public boolean forEachPair(PairList.Consumer predicate) {
         int i = this.firstSectionCount / this.gcd;
         int j = this.secondSectionCount / this.gcd;
         for (int k = 0; k <= this.mergedList.size(); ++k) {

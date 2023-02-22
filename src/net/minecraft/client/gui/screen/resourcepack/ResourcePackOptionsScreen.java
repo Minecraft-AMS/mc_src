@@ -15,10 +15,12 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.options.GameOptionsScreen;
 import net.minecraft.client.gui.screen.resourcepack.AvailableResourcePackListWidget;
 import net.minecraft.client.gui.screen.resourcepack.ResourcePackListWidget;
 import net.minecraft.client.gui.screen.resourcepack.SelectedResourcePackListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.resource.ClientResourcePackProfile;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.resource.ResourcePackManager;
@@ -27,15 +29,13 @@ import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
 public class ResourcePackOptionsScreen
-extends Screen {
-    private final Screen parent;
+extends GameOptionsScreen {
     private AvailableResourcePackListWidget availablePacks;
     private SelectedResourcePackListWidget enabledPacks;
     private boolean dirty;
 
-    public ResourcePackOptionsScreen(Screen parent) {
-        super(new TranslatableText("resourcePack.title", new Object[0]));
-        this.parent = parent;
+    public ResourcePackOptionsScreen(Screen parent, GameOptions gameOptions) {
+        super(parent, gameOptions, new TranslatableText("resourcePack.title", new Object[0]));
     }
 
     @Override
@@ -45,19 +45,19 @@ extends Screen {
             if (this.dirty) {
                 ArrayList list = Lists.newArrayList();
                 for (ResourcePackListWidget.ResourcePackEntry resourcePackEntry : this.enabledPacks.children()) {
-                    list.add(resourcePackEntry.getPackContainer());
+                    list.add(resourcePackEntry.getPack());
                 }
                 Collections.reverse(list);
                 this.minecraft.getResourcePackManager().setEnabledProfiles(list);
-                this.minecraft.options.resourcePacks.clear();
-                this.minecraft.options.incompatibleResourcePacks.clear();
+                this.gameOptions.resourcePacks.clear();
+                this.gameOptions.incompatibleResourcePacks.clear();
                 for (ClientResourcePackProfile clientResourcePackProfile : list) {
                     if (clientResourcePackProfile.isPinned()) continue;
-                    this.minecraft.options.resourcePacks.add(clientResourcePackProfile.getName());
+                    this.gameOptions.resourcePacks.add(clientResourcePackProfile.getName());
                     if (clientResourcePackProfile.getCompatibility().isCompatible()) continue;
-                    this.minecraft.options.incompatibleResourcePacks.add(clientResourcePackProfile.getName());
+                    this.gameOptions.incompatibleResourcePacks.add(clientResourcePackProfile.getName());
                 }
-                this.minecraft.options.write();
+                this.gameOptions.write();
                 this.minecraft.openScreen(this.parent);
                 this.minecraft.reloadResources();
             } else {
@@ -75,7 +75,10 @@ extends Screen {
         this.enabledPacks = new SelectedResourcePackListWidget(this.minecraft, 200, this.height);
         this.enabledPacks.setLeftPos(this.width / 2 + 4);
         if (selectedResourcePackListWidget != null) {
-            this.enabledPacks.children().addAll(selectedResourcePackListWidget.children());
+            selectedResourcePackListWidget.children().forEach(resourcePackEntry -> {
+                this.enabledPacks.children().add((ResourcePackListWidget.ResourcePackEntry)resourcePackEntry);
+                resourcePackEntry.method_24232(this.enabledPacks);
+            });
         }
         this.children.add(this.enabledPacks);
         if (!this.dirty) {
@@ -96,7 +99,7 @@ extends Screen {
 
     public void enable(ResourcePackListWidget.ResourcePackEntry resourcePack) {
         this.availablePacks.children().remove(resourcePack);
-        resourcePack.method_20145(this.enabledPacks);
+        resourcePack.enable(this.enabledPacks);
         this.markDirty();
     }
 
@@ -106,8 +109,8 @@ extends Screen {
         this.markDirty();
     }
 
-    public boolean method_2669(ResourcePackListWidget.ResourcePackEntry resourcePackEntry) {
-        return this.enabledPacks.children().contains(resourcePackEntry);
+    public boolean isEnabled(ResourcePackListWidget.ResourcePackEntry resourcePack) {
+        return this.enabledPacks.children().contains(resourcePack);
     }
 
     @Override

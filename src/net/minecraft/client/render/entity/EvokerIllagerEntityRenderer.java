@@ -9,10 +9,12 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.IllagerEntityRenderer;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.IllagerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.SpellcastingIllagerEntity;
 import net.minecraft.util.Identifier;
 
@@ -26,16 +28,16 @@ extends IllagerEntityRenderer<T> {
         this.addFeature(new HeldItemFeatureRenderer<T, IllagerEntityModel<T>>(this){
 
             @Override
-            public void render(T spellcastingIllagerEntity, float f, float g, float h, float i, float j, float k, float l) {
+            public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T spellcastingIllagerEntity, float f, float g, float h, float j, float k, float l) {
                 if (((SpellcastingIllagerEntity)spellcastingIllagerEntity).isSpellcasting()) {
-                    super.render(spellcastingIllagerEntity, f, g, h, i, j, k, l);
+                    super.render(matrixStack, vertexConsumerProvider, i, spellcastingIllagerEntity, f, g, h, j, k, l);
                 }
             }
         });
     }
 
     @Override
-    protected Identifier getTexture(T spellcastingIllagerEntity) {
+    public Identifier getTexture(T spellcastingIllagerEntity) {
         return EVOKER_TEXTURE;
     }
 }

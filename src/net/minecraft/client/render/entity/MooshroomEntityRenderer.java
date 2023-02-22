@@ -34,7 +34,7 @@ extends MobEntityRenderer<MooshroomEntity, CowEntityModel<MooshroomEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(MooshroomEntity mooshroomEntity) {
+    public Identifier getTexture(MooshroomEntity mooshroomEntity) {
         return SKIN.get((Object)mooshroomEntity.getMooshroomType());
     }
 }

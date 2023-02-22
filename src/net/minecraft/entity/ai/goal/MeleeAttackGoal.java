@@ -18,29 +18,29 @@ extends Goal {
     protected final MobEntityWithAi mob;
     protected int ticksUntilAttack;
     private final double speed;
-    private final boolean field_6502;
-    private Path field_6509;
-    private int field_6501;
+    private final boolean pauseWhenMobIdle;
+    private Path path;
+    private int updateCountdownTicks;
     private double targetX;
     private double targetY;
     private double targetZ;
-    protected final int field_6504 = 20;
-    private long field_19200;
+    protected final int attackIntervalTicks = 20;
+    private long lastUpdateTime;
 
     public MeleeAttackGoal(MobEntityWithAi mob, double speed, boolean pauseWhenMobIdle) {
         this.mob = mob;
         this.speed = speed;
-        this.field_6502 = pauseWhenMobIdle;
+        this.pauseWhenMobIdle = pauseWhenMobIdle;
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
     }
 
     @Override
     public boolean canStart() {
         long l = this.mob.world.getTime();
-        if (l - this.field_19200 < 20L) {
+        if (l - this.lastUpdateTime < 20L) {
             return false;
         }
-        this.field_19200 = l;
+        this.lastUpdateTime = l;
         LivingEntity livingEntity = this.mob.getTarget();
         if (livingEntity == null) {
             return false;
@@ -48,11 +48,11 @@ extends Goal {
         if (!livingEntity.isAlive()) {
             return false;
         }
-        this.field_6509 = this.mob.getNavigation().findPathTo(livingEntity, 0);
-        if (this.field_6509 != null) {
+        this.path = this.mob.getNavigation().findPathTo(livingEntity, 0);
+        if (this.path != null) {
             return true;
         }
-        return this.getSquaredMaxAttackDistance(livingEntity) >= this.mob.squaredDistanceTo(livingEntity.x, livingEntity.getBoundingBox().y1, livingEntity.z);
+        return this.getSquaredMaxAttackDistance(livingEntity) >= this.mob.squaredDistanceTo(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ());
     }
 
     @Override
@@ -64,7 +64,7 @@ extends Goal {
         if (!livingEntity.isAlive()) {
             return false;
         }
-        if (!this.field_6502) {
+        if (!this.pauseWhenMobIdle) {
             return !this.mob.getNavigation().isIdle();
         }
         if (!this.mob.isInWalkTargetRange(new BlockPos(livingEntity))) {
@@ -75,9 +75,9 @@ extends Goal {
 
     @Override
     public void start() {
-        this.mob.getNavigation().startMovingAlong(this.field_6509, this.speed);
+        this.mob.getNavigation().startMovingAlong(this.path, this.speed);
         this.mob.setAttacking(true);
-        this.field_6501 = 0;
+        this.updateCountdownTicks = 0;
     }
 
     @Override
@@ -94,20 +94,20 @@ extends Goal {
     public void tick() {
         LivingEntity livingEntity = this.mob.getTarget();
         this.mob.getLookControl().lookAt(livingEntity, 30.0f, 30.0f);
-        double d = this.mob.squaredDistanceTo(livingEntity.x, livingEntity.getBoundingBox().y1, livingEntity.z);
-        --this.field_6501;
-        if ((this.field_6502 || this.mob.getVisibilityCache().canSee(livingEntity)) && this.field_6501 <= 0 && (this.targetX == 0.0 && this.targetY == 0.0 && this.targetZ == 0.0 || livingEntity.squaredDistanceTo(this.targetX, this.targetY, this.targetZ) >= 1.0 || this.mob.getRandom().nextFloat() < 0.05f)) {
-            this.targetX = livingEntity.x;
-            this.targetY = livingEntity.getBoundingBox().y1;
-            this.targetZ = livingEntity.z;
-            this.field_6501 = 4 + this.mob.getRandom().nextInt(7);
+        double d = this.mob.squaredDistanceTo(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ());
+        --this.updateCountdownTicks;
+        if ((this.pauseWhenMobIdle || this.mob.getVisibilityCache().canSee(livingEntity)) && this.updateCountdownTicks <= 0 && (this.targetX == 0.0 && this.targetY == 0.0 && this.targetZ == 0.0 || livingEntity.squaredDistanceTo(this.targetX, this.targetY, this.targetZ) >= 1.0 || this.mob.getRandom().nextFloat() < 0.05f)) {
+            this.targetX = livingEntity.getX();
+            this.targetY = livingEntity.getY();
+            this.targetZ = livingEntity.getZ();
+            this.updateCountdownTicks = 4 + this.mob.getRandom().nextInt(7);
             if (d > 1024.0) {
-                this.field_6501 += 10;
+                this.updateCountdownTicks += 10;
             } else if (d > 256.0) {
-                this.field_6501 += 5;
+                this.updateCountdownTicks += 5;
             }
             if (!this.mob.getNavigation().startMovingTo(livingEntity, this.speed)) {
-                this.field_6501 += 15;
+                this.updateCountdownTicks += 15;
             }
         }
         this.ticksUntilAttack = Math.max(this.ticksUntilAttack - 1, 0);

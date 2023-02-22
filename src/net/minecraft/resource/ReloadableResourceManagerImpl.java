@@ -60,13 +60,12 @@ implements ReloadableResourceManager {
         this.mainThread = mainThread;
     }
 
-    @Override
     public void addPack(ResourcePack pack) {
         for (String string : pack.getNamespaces(this.type)) {
             this.namespaces.add(string);
             NamespaceResourceManager namespaceResourceManager = this.namespaceManagers.get(string);
             if (namespaceResourceManager == null) {
-                namespaceResourceManager = new NamespaceResourceManager(this.type);
+                namespaceResourceManager = new NamespaceResourceManager(this.type, string);
                 this.namespaceManagers.put(string, namespaceResourceManager);
             }
             namespaceResourceManager.addPack(pack);
@@ -136,15 +135,9 @@ implements ReloadableResourceManager {
     }
 
     protected ResourceReloadMonitor beginReloadInner(Executor prepareExecutor, Executor applyExecutor, List<ResourceReloadListener> listeners, CompletableFuture<Unit> initialStage) {
-        ProfilingResourceReloader resourceReloadMonitor = LOGGER.isDebugEnabled() ? new ProfilingResourceReloader(this, new ArrayList<ResourceReloadListener>(listeners), prepareExecutor, applyExecutor, initialStage) : ResourceReloader.create(this, new ArrayList<ResourceReloadListener>(listeners), prepareExecutor, applyExecutor, initialStage);
+        ProfilingResourceReloader resourceReloadMonitor = LOGGER.isDebugEnabled() ? new ProfilingResourceReloader(this, Lists.newArrayList(listeners), prepareExecutor, applyExecutor, initialStage) : ResourceReloader.create(this, Lists.newArrayList(listeners), prepareExecutor, applyExecutor, initialStage);
         this.initialListeners.clear();
         return resourceReloadMonitor;
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public ResourceReloadMonitor beginInitialMonitoredReload(Executor prepareExecutor, Executor applyExecutor, CompletableFuture<Unit> initialStage) {
-        return this.beginReloadInner(prepareExecutor, applyExecutor, this.initialListeners, initialStage);
     }
 
     @Override
@@ -152,9 +145,71 @@ implements ReloadableResourceManager {
         this.clear();
         LOGGER.info("Reloading ResourceManager: {}", (Object)packs.stream().map(ResourcePack::getName).collect(Collectors.joining(", ")));
         for (ResourcePack resourcePack : packs) {
-            this.addPack(resourcePack);
+            try {
+                this.addPack(resourcePack);
+            }
+            catch (Exception exception) {
+                LOGGER.error("Failed to add resource pack {}", (Object)resourcePack.getName(), (Object)exception);
+                return new FailedResourceReloadMonitor(new PackAdditionFailedException(resourcePack, (Throwable)exception));
+            }
         }
         return this.beginReloadInner(prepareExecutor, applyExecutor, this.listeners, initialStage);
+    }
+
+    static class FailedResourceReloadMonitor
+    implements ResourceReloadMonitor {
+        private final PackAdditionFailedException exception;
+        private final CompletableFuture<Unit> future;
+
+        public FailedResourceReloadMonitor(PackAdditionFailedException exception) {
+            this.exception = exception;
+            this.future = new CompletableFuture();
+            this.future.completeExceptionally(exception);
+        }
+
+        @Override
+        public CompletableFuture<Unit> whenComplete() {
+            return this.future;
+        }
+
+        @Override
+        @Environment(value=EnvType.CLIENT)
+        public float getProgress() {
+            return 0.0f;
+        }
+
+        @Override
+        @Environment(value=EnvType.CLIENT)
+        public boolean isPrepareStageComplete() {
+            return false;
+        }
+
+        @Override
+        @Environment(value=EnvType.CLIENT)
+        public boolean isApplyStageComplete() {
+            return true;
+        }
+
+        @Override
+        @Environment(value=EnvType.CLIENT)
+        public void throwExceptions() {
+            throw this.exception;
+        }
+    }
+
+    public static class PackAdditionFailedException
+    extends RuntimeException {
+        private final ResourcePack pack;
+
+        public PackAdditionFailedException(ResourcePack pack, Throwable cause) {
+            super(pack.getName(), cause);
+            this.pack = pack;
+        }
+
+        @Environment(value=EnvType.CLIENT)
+        public ResourcePack getPack() {
+            return this.pack;
+        }
     }
 }
 

@@ -19,12 +19,12 @@ extends QuadrupedEntityModel<T> {
     private float field_3552;
 
     public SheepEntityModel() {
-        super(12, 0.0f);
+        super(12, 0.0f, false, 8.0f, 4.0f, 2.0f, 2.0f, 24);
         this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-3.0f, -4.0f, -6.0f, 6, 6, 8, 0.0f);
+        this.head.addCuboid(-3.0f, -4.0f, -6.0f, 6.0f, 6.0f, 8.0f, 0.0f);
         this.head.setPivot(0.0f, 6.0f, -8.0f);
         this.torso = new ModelPart(this, 28, 8);
-        this.torso.addCuboid(-4.0f, -10.0f, -7.0f, 8, 16, 6, 0.0f);
+        this.torso.addCuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, 0.0f);
         this.torso.setPivot(0.0f, 5.0f, 2.0f);
     }
 
@@ -36,8 +36,8 @@ extends QuadrupedEntityModel<T> {
     }
 
     @Override
-    public void setAngles(T sheepEntity, float f, float g, float h, float i, float j, float k) {
-        super.setAngles(sheepEntity, f, g, h, i, j, k);
+    public void setAngles(T sheepEntity, float f, float g, float h, float i, float j) {
+        super.setAngles(sheepEntity, f, g, h, i, j);
         this.head.pitch = this.field_3552;
     }
 }

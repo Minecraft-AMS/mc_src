@@ -24,10 +24,14 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.Vector3f;
+import net.minecraft.client.util.math.Vector4f;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3i;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,6 +108,40 @@ public enum Direction implements StringIdentifiable
         return new Direction[]{direction, direction2, direction3, direction3.getOpposite(), direction2.getOpposite(), direction.getOpposite()};
     }
 
+    @Environment(value=EnvType.CLIENT)
+    public static Direction transform(Matrix4f matrix4f, Direction direction) {
+        Vec3i vec3i = direction.getVector();
+        Vector4f vector4f = new Vector4f(vec3i.getX(), vec3i.getY(), vec3i.getZ(), 0.0f);
+        vector4f.transform(matrix4f);
+        return Direction.getFacing(vector4f.getX(), vector4f.getY(), vector4f.getZ());
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public Quaternion getRotationQuaternion() {
+        Quaternion quaternion = Vector3f.POSITIVE_X.getDegreesQuaternion(90.0f);
+        switch (this) {
+            case DOWN: {
+                return Vector3f.POSITIVE_X.getDegreesQuaternion(180.0f);
+            }
+            case UP: {
+                return Quaternion.IDENTITY.copy();
+            }
+            case NORTH: {
+                quaternion.hamiltonProduct(Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+                return quaternion;
+            }
+            case SOUTH: {
+                return quaternion;
+            }
+            case WEST: {
+                quaternion.hamiltonProduct(Vector3f.POSITIVE_Z.getDegreesQuaternion(90.0f));
+                return quaternion;
+            }
+        }
+        quaternion.hamiltonProduct(Vector3f.POSITIVE_Z.getDegreesQuaternion(-90.0f));
+        return quaternion;
+    }
+
     public int getId() {
         return this.id;
     }
@@ -118,31 +156,6 @@ public enum Direction implements StringIdentifiable
 
     public Direction getOpposite() {
         return Direction.byId(this.idOpposite);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public Direction rotateClockwise(Axis axis) {
-        switch (axis) {
-            case X: {
-                if (this == WEST || this == EAST) {
-                    return this;
-                }
-                return this.rotateXClockwise();
-            }
-            case Y: {
-                if (this == UP || this == DOWN) {
-                    return this;
-                }
-                return this.rotateYClockwise();
-            }
-            case Z: {
-                if (this == NORTH || this == SOUTH) {
-                    return this;
-                }
-                return this.rotateZClockwise();
-            }
-        }
-        throw new IllegalStateException("Unable to get CW facing for axis " + axis);
     }
 
     public Direction rotateYClockwise() {
@@ -161,44 +174,6 @@ public enum Direction implements StringIdentifiable
             }
         }
         throw new IllegalStateException("Unable to get Y-rotated facing of " + this);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    private Direction rotateXClockwise() {
-        switch (this) {
-            case UP: {
-                return NORTH;
-            }
-            case NORTH: {
-                return DOWN;
-            }
-            case DOWN: {
-                return SOUTH;
-            }
-            case SOUTH: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get X-rotated facing of " + this);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    private Direction rotateZClockwise() {
-        switch (this) {
-            case UP: {
-                return EAST;
-            }
-            case EAST: {
-                return DOWN;
-            }
-            case DOWN: {
-                return WEST;
-            }
-            case WEST: {
-                return UP;
-            }
-        }
-        throw new IllegalStateException("Unable to get Z-rotated facing of " + this);
     }
 
     public Direction rotateYCounterclockwise() {
@@ -220,15 +195,20 @@ public enum Direction implements StringIdentifiable
     }
 
     public int getOffsetX() {
-        return this.axis == Axis.X ? this.direction.offset() : 0;
+        return this.vector.getX();
     }
 
     public int getOffsetY() {
-        return this.axis == Axis.Y ? this.direction.offset() : 0;
+        return this.vector.getY();
     }
 
     public int getOffsetZ() {
-        return this.axis == Axis.Z ? this.direction.offset() : 0;
+        return this.vector.getZ();
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public Vector3f getUnitVector() {
+        return new Vector3f(this.getOffsetX(), this.getOffsetY(), this.getOffsetZ());
     }
 
     public String getName() {
@@ -361,8 +341,8 @@ public enum Direction implements StringIdentifiable
         }
 
         @Override
-        public /* synthetic */ boolean test(@Nullable Object object) {
-            return this.test((Direction)object);
+        public /* synthetic */ boolean test(@Nullable Object direction) {
+            return this.test((Direction)direction);
         }
     }
 
@@ -373,9 +353,9 @@ public enum Direction implements StringIdentifiable
         private final int offset;
         private final String desc;
 
-        private AxisDirection(int j, String string2) {
-            this.offset = j;
-            this.desc = string2;
+        private AxisDirection(int offset, String description) {
+            this.offset = offset;
+            this.desc = description;
         }
 
         public int offset() {
@@ -393,8 +373,8 @@ public enum Direction implements StringIdentifiable
         X("x"){
 
             @Override
-            public int choose(int i, int j, int k) {
-                return i;
+            public int choose(int x, int y, int z) {
+                return x;
             }
 
             @Override
@@ -411,8 +391,8 @@ public enum Direction implements StringIdentifiable
         Y("y"){
 
             @Override
-            public int choose(int i, int j, int k) {
-                return j;
+            public int choose(int x, int y, int z) {
+                return y;
             }
 
             @Override
@@ -429,8 +409,8 @@ public enum Direction implements StringIdentifiable
         Z("z"){
 
             @Override
-            public int choose(int i, int j, int k) {
-                return k;
+            public int choose(int x, int y, int z) {
+                return z;
             }
 
             @Override
@@ -473,7 +453,7 @@ public enum Direction implements StringIdentifiable
             return this.name;
         }
 
-        public static Axis method_16699(Random random) {
+        public static Axis pickRandomAxis(Random random) {
             return Axis.values()[random.nextInt(Axis.values().length)];
         }
 

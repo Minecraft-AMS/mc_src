@@ -14,6 +14,7 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.GenerationStep;
@@ -33,11 +34,11 @@ extends ChunkGenerator<DebugChunkGeneratorConfig> {
     }
 
     @Override
-    public void buildSurface(Chunk chunk) {
+    public void buildSurface(ChunkRegion chunkRegion, Chunk chunk) {
     }
 
     @Override
-    public void carve(Chunk chunk, GenerationStep.Carver carverStep) {
+    public void carve(BiomeAccess biomeAccess, Chunk chunk, GenerationStep.Carver carver) {
     }
 
     @Override

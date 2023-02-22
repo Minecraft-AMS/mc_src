@@ -38,11 +38,12 @@ public class RunArgs {
 
     @Environment(value=EnvType.CLIENT)
     public static class AutoConnect {
-        public final String serverIP;
+        @Nullable
+        public final String serverAddress;
         public final int serverPort;
 
-        public AutoConnect(String serverIP, int serverPort) {
-            this.serverIP = serverIP;
+        public AutoConnect(@Nullable String serverAddress, int serverPort) {
+            this.serverAddress = serverAddress;
             this.serverPort = serverPort;
         }
     }
@@ -52,6 +53,7 @@ public class RunArgs {
         public final File runDir;
         public final File resourcePackDir;
         public final File assetDir;
+        @Nullable
         public final String assetIndex;
 
         public Directories(File runDir, File resPackDir, File assetDir, @Nullable String assetIndex) {

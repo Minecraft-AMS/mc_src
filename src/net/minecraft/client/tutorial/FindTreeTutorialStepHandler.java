@@ -57,7 +57,7 @@ implements TutorialStepHandler {
                 this.tutorialManager.setStep(TutorialStep.CRAFT_PLANKS);
                 return;
             }
-            if (FindTreeTutorialStepHandler.method_4896(clientPlayerEntity)) {
+            if (FindTreeTutorialStepHandler.hasBrokenTreeBlocks(clientPlayerEntity)) {
                 this.tutorialManager.setStep(TutorialStep.CRAFT_PLANKS);
                 return;
             }
@@ -93,9 +93,9 @@ implements TutorialStepHandler {
         }
     }
 
-    public static boolean method_4896(ClientPlayerEntity clientPlayerEntity) {
+    public static boolean hasBrokenTreeBlocks(ClientPlayerEntity player) {
         for (Block block : TREE_BLOCKS) {
-            if (clientPlayerEntity.getStatHandler().getStat(Stats.MINED.getOrCreateStat(block)) <= 0) continue;
+            if (player.getStatHandler().getStat(Stats.MINED.getOrCreateStat(block)) <= 0) continue;
             return true;
         }
         return false;

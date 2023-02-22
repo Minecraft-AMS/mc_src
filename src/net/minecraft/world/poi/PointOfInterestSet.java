@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.util.DynamicSerializable;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.world.poi.PointOfInterest;
@@ -52,11 +53,11 @@ implements DynamicSerializable {
         this.valid = true;
     }
 
-    public <T> PointOfInterestSet(Runnable runnable, Dynamic<T> dynamic2) {
-        this.updateListener = runnable;
+    public <T> PointOfInterestSet(Runnable updateListener, Dynamic<T> dynamic2) {
+        this.updateListener = updateListener;
         try {
             this.valid = dynamic2.get("Valid").asBoolean(false);
-            dynamic2.get("Records").asStream().forEach(dynamic -> this.add(new PointOfInterest(dynamic, runnable)));
+            dynamic2.get("Records").asStream().forEach(dynamic -> this.add(new PointOfInterest(dynamic, updateListener)));
         }
         catch (Exception exception) {
             LOGGER.error("Failed to load POI chunk", (Throwable)exception);
@@ -85,7 +86,7 @@ implements DynamicSerializable {
             if (pointOfInterestType2.equals(pointOfInterest.getType())) {
                 return false;
             }
-            throw new IllegalStateException("POI data mismatch: already registered at " + blockPos);
+            throw Util.throwOrPause(new IllegalStateException("POI data mismatch: already registered at " + blockPos));
         }
         this.pointsOfInterestByPos.put(s, (Object)poi);
         this.pointsOfInterestByType.computeIfAbsent(pointOfInterestType2, pointOfInterestType -> Sets.newHashSet()).add(poi);
@@ -109,7 +110,7 @@ implements DynamicSerializable {
     public boolean releaseTicket(BlockPos pos) {
         PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(ChunkSectionPos.getPackedLocalPos(pos));
         if (pointOfInterest == null) {
-            throw new IllegalStateException("POI never registered at " + pos);
+            throw Util.throwOrPause(new IllegalStateException("POI never registered at " + pos));
         }
         boolean bl = pointOfInterest.releaseTicket();
         this.updateListener.run();
@@ -147,6 +148,10 @@ implements DynamicSerializable {
     private void clear() {
         this.pointsOfInterestByPos.clear();
         this.pointsOfInterestByType.clear();
+    }
+
+    boolean isValid() {
+        return this.valid;
     }
 
     private /* synthetic */ void method_20352(Short2ObjectMap short2ObjectMap, BlockPos blockPos, PointOfInterestType pointOfInterestType) {

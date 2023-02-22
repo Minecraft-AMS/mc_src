@@ -36,6 +36,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Packet;
@@ -56,26 +57,24 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
-import net.minecraft.world.LightType;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.dimension.Dimension;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.explosion.Explosion;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.level.LevelGeneratorType;
 import net.minecraft.world.level.LevelProperties;
 import org.apache.logging.log4j.LogManager;
@@ -84,8 +83,7 @@ import org.apache.logging.log4j.util.Supplier;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class World
-implements BlockRenderView,
-IWorld,
+implements IWorld,
 AutoCloseable {
     protected static final Logger LOGGER = LogManager.getLogger();
     private static final Direction[] DIRECTIONS = Direction.values();
@@ -93,7 +91,6 @@ AutoCloseable {
     public final List<BlockEntity> tickingBlockEntities = Lists.newArrayList();
     protected final List<BlockEntity> pendingBlockEntities = Lists.newArrayList();
     protected final List<BlockEntity> unloadedBlockEntities = Lists.newArrayList();
-    private final long unusedWhite = 0xFFFFFFL;
     private final Thread thread;
     private int ambientDarkness;
     protected int lcgBlockSeed = new Random().nextInt();
@@ -102,7 +99,6 @@ AutoCloseable {
     protected float rainGradient;
     protected float thunderGradientPrev;
     protected float thunderGradient;
-    private int ticksSinceLightning;
     public final Random random = new Random();
     public final Dimension dimension;
     protected final ChunkManager chunkManager;
@@ -111,6 +107,7 @@ AutoCloseable {
     public final boolean isClient;
     protected boolean iteratingTickingBlockEntities;
     private final WorldBorder border;
+    private final BiomeAccess biomeAccess;
 
     protected World(LevelProperties levelProperties, DimensionType dimensionType, BiFunction<World, Dimension, ChunkManager> chunkManagerProvider, Profiler profiler, boolean isClient) {
         this.profiler = profiler;
@@ -120,20 +117,7 @@ AutoCloseable {
         this.isClient = isClient;
         this.border = this.dimension.createWorldBorder();
         this.thread = Thread.currentThread();
-    }
-
-    @Override
-    public Biome getBiome(BlockPos blockPos) {
-        ChunkManager chunkManager = this.getChunkManager();
-        WorldChunk worldChunk = chunkManager.getWorldChunk(blockPos.getX() >> 4, blockPos.getZ() >> 4, false);
-        if (worldChunk != null) {
-            return worldChunk.getBiome(blockPos);
-        }
-        ChunkGenerator<?> chunkGenerator = this.getChunkManager().getChunkGenerator();
-        if (chunkGenerator == null) {
-            return Biomes.PLAINS;
-        }
-        return chunkGenerator.getBiomeSource().getBiome(blockPos);
+        this.biomeAccess = new BiomeAccess(this, isClient ? levelProperties.getSeed() : LevelProperties.sha256Hash(levelProperties.getSeed()), dimensionType.getBiomeAccessType());
     }
 
     @Override
@@ -243,16 +227,16 @@ AutoCloseable {
     }
 
     @Override
-    public boolean breakBlock(BlockPos pos, boolean bl) {
+    public boolean breakBlock(BlockPos pos, boolean drop, @Nullable Entity breakingEntity) {
         BlockState blockState = this.getBlockState(pos);
         if (blockState.isAir()) {
             return false;
         }
         FluidState fluidState = this.getFluidState(pos);
         this.playLevelEvent(2001, pos, Block.getRawIdFromState(blockState));
-        if (bl) {
+        if (drop) {
             BlockEntity blockEntity = blockState.getBlock().hasBlockEntity() ? this.getBlockEntity(pos) : null;
-            Block.dropStacks(blockState, this, pos, blockEntity);
+            Block.dropStacks(blockState, this, pos, blockEntity, breakingEntity, ItemStack.EMPTY);
         }
         return this.setBlockState(pos, fluidState.getBlockState(), 3);
     }
@@ -328,28 +312,14 @@ AutoCloseable {
     }
 
     @Override
-    public int getLightLevel(BlockPos blockPos, int i) {
-        if (blockPos.getX() < -30000000 || blockPos.getZ() < -30000000 || blockPos.getX() >= 30000000 || blockPos.getZ() >= 30000000) {
-            return 15;
-        }
-        if (blockPos.getY() < 0) {
-            return 0;
-        }
-        if (blockPos.getY() >= 256) {
-            blockPos = new BlockPos(blockPos.getX(), 255, blockPos.getZ());
-        }
-        return this.getWorldChunk(blockPos).getLightLevel(blockPos, i);
-    }
-
-    @Override
-    public int getTop(Heightmap.Type type, int x, int z) {
-        int i = x < -30000000 || z < -30000000 || x >= 30000000 || z >= 30000000 ? this.getSeaLevel() + 1 : (this.isChunkLoaded(x >> 4, z >> 4) ? this.getChunk(x >> 4, z >> 4).sampleHeightmap(type, x & 0xF, z & 0xF) + 1 : 0);
+    public int getTopY(Heightmap.Type heightmap, int x, int z) {
+        int i = x < -30000000 || z < -30000000 || x >= 30000000 || z >= 30000000 ? this.getSeaLevel() + 1 : (this.isChunkLoaded(x >> 4, z >> 4) ? this.getChunk(x >> 4, z >> 4).sampleHeightmap(heightmap, x & 0xF, z & 0xF) + 1 : 0);
         return i;
     }
 
     @Override
-    public int getLightLevel(LightType type, BlockPos pos) {
-        return this.getChunkManager().getLightingProvider().get(type).getLightLevel(pos);
+    public LightingProvider getLightingProvider() {
+        return this.getChunkManager().getLightingProvider();
     }
 
     @Override
@@ -371,7 +341,11 @@ AutoCloseable {
     }
 
     public boolean isDay() {
-        return this.ambientDarkness < 4;
+        return this.dimension.getType() == DimensionType.OVERWORLD && this.ambientDarkness < 4;
+    }
+
+    public boolean isNight() {
+        return this.dimension.getType() == DimensionType.OVERWORLD && !this.isDay();
     }
 
     @Override
@@ -400,116 +374,16 @@ AutoCloseable {
     public void addImportantParticle(ParticleEffect parameters, boolean alwaysSpawn, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public float getAmbientLight(float delta) {
-        float f = this.getSkyAngle(delta);
-        float g = 1.0f - (MathHelper.cos(f * ((float)Math.PI * 2)) * 2.0f + 0.2f);
-        g = MathHelper.clamp(g, 0.0f, 1.0f);
-        g = 1.0f - g;
-        g = (float)((double)g * (1.0 - (double)(this.getRainGradient(delta) * 5.0f) / 16.0));
-        g = (float)((double)g * (1.0 - (double)(this.getThunderGradient(delta) * 5.0f) / 16.0));
-        return g * 0.8f + 0.2f;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d getSkyColor(BlockPos blockPos, float f) {
-        float p;
-        float o;
-        float g = this.getSkyAngle(f);
-        float h = MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.5f;
-        h = MathHelper.clamp(h, 0.0f, 1.0f);
-        Biome biome = this.getBiome(blockPos);
-        float i = biome.getTemperature(blockPos);
-        int j = biome.getSkyColor(i);
-        float k = (float)(j >> 16 & 0xFF) / 255.0f;
-        float l = (float)(j >> 8 & 0xFF) / 255.0f;
-        float m = (float)(j & 0xFF) / 255.0f;
-        k *= h;
-        l *= h;
-        m *= h;
-        float n = this.getRainGradient(f);
-        if (n > 0.0f) {
-            o = (k * 0.3f + l * 0.59f + m * 0.11f) * 0.6f;
-            p = 1.0f - n * 0.75f;
-            k = k * p + o * (1.0f - p);
-            l = l * p + o * (1.0f - p);
-            m = m * p + o * (1.0f - p);
-        }
-        if ((o = this.getThunderGradient(f)) > 0.0f) {
-            p = (k * 0.3f + l * 0.59f + m * 0.11f) * 0.2f;
-            float q = 1.0f - o * 0.75f;
-            k = k * q + p * (1.0f - q);
-            l = l * q + p * (1.0f - q);
-            m = m * q + p * (1.0f - q);
-        }
-        if (this.ticksSinceLightning > 0) {
-            p = (float)this.ticksSinceLightning - f;
-            if (p > 1.0f) {
-                p = 1.0f;
-            }
-            k = k * (1.0f - (p *= 0.45f)) + 0.8f * p;
-            l = l * (1.0f - p) + 0.8f * p;
-            m = m * (1.0f - p) + 1.0f * p;
-        }
-        return new Vec3d(k, l, m);
-    }
-
     public float getSkyAngleRadians(float f) {
         float g = this.getSkyAngle(f);
         return g * ((float)Math.PI * 2);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d getCloudColor(float f) {
-        float n;
-        float m;
-        float g = this.getSkyAngle(f);
-        float h = MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.5f;
-        h = MathHelper.clamp(h, 0.0f, 1.0f);
-        float i = 1.0f;
-        float j = 1.0f;
-        float k = 1.0f;
-        float l = this.getRainGradient(f);
-        if (l > 0.0f) {
-            m = (i * 0.3f + j * 0.59f + k * 0.11f) * 0.6f;
-            n = 1.0f - l * 0.95f;
-            i = i * n + m * (1.0f - n);
-            j = j * n + m * (1.0f - n);
-            k = k * n + m * (1.0f - n);
-        }
-        i *= h * 0.9f + 0.1f;
-        j *= h * 0.9f + 0.1f;
-        k *= h * 0.85f + 0.15f;
-        m = this.getThunderGradient(f);
-        if (m > 0.0f) {
-            n = (i * 0.3f + j * 0.59f + k * 0.11f) * 0.2f;
-            float o = 1.0f - m * 0.95f;
-            i = i * o + n * (1.0f - o);
-            j = j * o + n * (1.0f - o);
-            k = k * o + n * (1.0f - o);
-        }
-        return new Vec3d(i, j, k);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d getFogColor(float f) {
-        float g = this.getSkyAngle(f);
-        return this.dimension.getFogColor(g, f);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public float getStarsBrightness(float f) {
-        float g = this.getSkyAngle(f);
-        float h = 1.0f - (MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.25f);
-        h = MathHelper.clamp(h, 0.0f, 1.0f);
-        return h * h * 0.5f;
     }
 
     public boolean addBlockEntity(BlockEntity blockEntity) {
         boolean bl;
         if (this.iteratingTickingBlockEntities) {
             Supplier[] supplierArray = new Supplier[2];
-            supplierArray[0] = () -> Registry.BLOCK_ENTITY.getId(blockEntity.getType());
+            supplierArray[0] = () -> Registry.BLOCK_ENTITY_TYPE.getId(blockEntity.getType());
             supplierArray[1] = blockEntity::getPos;
             LOGGER.error("Adding block entity while ticking: {} @ {}", supplierArray);
         }
@@ -567,7 +441,7 @@ AutoCloseable {
             if (!blockEntity.isRemoved()) continue;
             iterator.remove();
             this.blockEntities.remove(blockEntity);
-            if (!this.isBlockLoaded(blockEntity.getPos())) continue;
+            if (!this.isChunkLoaded(blockEntity.getPos())) continue;
             this.getWorldChunk(blockEntity.getPos()).removeBlockEntity(blockEntity.getPos());
         }
         this.iteratingTickingBlockEntities = false;
@@ -579,7 +453,7 @@ AutoCloseable {
                 if (!this.blockEntities.contains(blockEntity2)) {
                     this.addBlockEntity(blockEntity2);
                 }
-                if (!this.isBlockLoaded(blockEntity2.getPos())) continue;
+                if (!this.isChunkLoaded(blockEntity2.getPos())) continue;
                 WorldChunk worldChunk = this.getWorldChunk(blockEntity2.getPos());
                 BlockState blockState = worldChunk.getBlockState(blockEntity2.getPos());
                 worldChunk.setBlockEntity(blockEntity2.getPos(), blockEntity2);
@@ -631,7 +505,7 @@ AutoCloseable {
         int k = MathHelper.floor(box.y1);
         int l = MathHelper.ceil(box.y2);
         int m = MathHelper.floor(box.z1);
-        if (this.isAreaLoaded(i, k, m, j, l, n = MathHelper.ceil(box.z2))) {
+        if (this.isRegionLoaded(i, k, m, j, l, n = MathHelper.ceil(box.z2))) {
             try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();){
                 for (int o = i; o < j; ++o) {
                     for (int p = k; p < l; ++p) {
@@ -657,7 +531,7 @@ AutoCloseable {
         int k = MathHelper.floor(area.y1);
         int l = MathHelper.ceil(area.y2);
         int m = MathHelper.floor(area.z1);
-        if (this.isAreaLoaded(i, k, m, j, l, n = MathHelper.ceil(area.z2))) {
+        if (this.isRegionLoaded(i, k, m, j, l, n = MathHelper.ceil(area.z2))) {
             try (BlockPos.PooledMutable pooledMutable = BlockPos.PooledMutable.get();){
                 for (int o = i; o < j; ++o) {
                     for (int p = k; p < l; ++p) {
@@ -703,7 +577,7 @@ AutoCloseable {
         return explosion;
     }
 
-    public boolean method_8506(@Nullable PlayerEntity playerEntity, BlockPos blockPos, Direction direction) {
+    public boolean extinguishFire(@Nullable PlayerEntity playerEntity, BlockPos blockPos, Direction direction) {
         if (this.getBlockState(blockPos = blockPos.offset(direction)).getBlock() == Blocks.FIRE) {
             this.playLevelEvent(playerEntity, 1009, blockPos, 0);
             this.removeBlock(blockPos, false);
@@ -755,7 +629,7 @@ AutoCloseable {
         }
         if (blockEntity != null && !blockEntity.isRemoved()) {
             if (this.iteratingTickingBlockEntities) {
-                blockEntity.setPos(pos);
+                blockEntity.setLocation(this, pos);
                 Iterator<BlockEntity> iterator = this.pendingBlockEntities.iterator();
                 while (iterator.hasNext()) {
                     BlockEntity blockEntity2 = iterator.next();
@@ -830,12 +704,14 @@ AutoCloseable {
     }
 
     @Override
-    public ChunkStatus getLeastChunkStatusForCollisionCalculation() {
-        return ChunkStatus.FULL;
+    @Nullable
+    public BlockView getExistingChunk(int chunkX, int chunkZ) {
+        return this.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false);
     }
 
     @Override
     public List<Entity> getEntities(@Nullable Entity except, Box box, @Nullable Predicate<? super Entity> predicate) {
+        this.getProfiler().visit("getEntities");
         ArrayList list = Lists.newArrayList();
         int i = MathHelper.floor((box.x1 - 2.0) / 16.0);
         int j = MathHelper.floor((box.x2 + 2.0) / 16.0);
@@ -845,13 +721,14 @@ AutoCloseable {
             for (int n = k; n <= l; ++n) {
                 WorldChunk worldChunk = this.getChunkManager().getWorldChunk(m, n, false);
                 if (worldChunk == null) continue;
-                worldChunk.getEntities(except, box, (List<Entity>)list, predicate);
+                worldChunk.getEntities(except, box, list, predicate);
             }
         }
         return list;
     }
 
-    public List<Entity> getEntities(@Nullable EntityType<?> type, Box box, Predicate<? super Entity> predicate) {
+    public <T extends Entity> List<T> getEntities(@Nullable EntityType<T> type, Box box, Predicate<? super T> predicate) {
+        this.getProfiler().visit("getEntities");
         int i = MathHelper.floor((box.x1 - 2.0) / 16.0);
         int j = MathHelper.ceil((box.x2 + 2.0) / 16.0);
         int k = MathHelper.floor((box.z1 - 2.0) / 16.0);
@@ -861,7 +738,7 @@ AutoCloseable {
             for (int n = k; n < l; ++n) {
                 WorldChunk worldChunk = this.getChunkManager().getWorldChunk(m, n, false);
                 if (worldChunk == null) continue;
-                worldChunk.getEntities(type, box, (List<Entity>)list, predicate);
+                worldChunk.getEntities(type, box, list, predicate);
             }
         }
         return list;
@@ -869,6 +746,7 @@ AutoCloseable {
 
     @Override
     public <T extends Entity> List<T> getEntities(Class<? extends T> entityClass, Box box, @Nullable Predicate<? super T> predicate) {
+        this.getProfiler().visit("getEntities");
         int i = MathHelper.floor((box.x1 - 2.0) / 16.0);
         int j = MathHelper.ceil((box.x2 + 2.0) / 16.0);
         int k = MathHelper.floor((box.z1 - 2.0) / 16.0);
@@ -886,7 +764,8 @@ AutoCloseable {
     }
 
     @Override
-    public <T extends Entity> List<T> method_21729(Class<? extends T> class_, Box box, @Nullable Predicate<? super T> predicate) {
+    public <T extends Entity> List<T> getEntitiesIncludingUngeneratedChunks(Class<? extends T> entityClass, Box box, @Nullable Predicate<? super T> predicate) {
+        this.getProfiler().visit("getLoadedEntities");
         int i = MathHelper.floor((box.x1 - 2.0) / 16.0);
         int j = MathHelper.ceil((box.x2 + 2.0) / 16.0);
         int k = MathHelper.floor((box.z1 - 2.0) / 16.0);
@@ -895,9 +774,9 @@ AutoCloseable {
         ChunkManager chunkManager = this.getChunkManager();
         for (int m = i; m < j; ++m) {
             for (int n = k; n < l; ++n) {
-                WorldChunk worldChunk = chunkManager.method_21730(m, n);
+                WorldChunk worldChunk = chunkManager.getWorldChunk(m, n);
                 if (worldChunk == null) continue;
-                worldChunk.getEntities(class_, box, list, predicate);
+                worldChunk.getEntities(entityClass, box, list, predicate);
             }
         }
         return list;
@@ -907,7 +786,7 @@ AutoCloseable {
     public abstract Entity getEntityById(int var1);
 
     public void markDirty(BlockPos pos, BlockEntity blockEntity) {
-        if (this.isBlockLoaded(pos)) {
+        if (this.isChunkLoaded(pos)) {
             this.getWorldChunk(pos).markDirty();
         }
     }
@@ -928,22 +807,22 @@ AutoCloseable {
 
     public int getReceivedStrongRedstonePower(BlockPos blockPos) {
         int i = 0;
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.down(), Direction.DOWN))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.down(), Direction.DOWN))) >= 15) {
             return i;
         }
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.up(), Direction.UP))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.up(), Direction.UP))) >= 15) {
             return i;
         }
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.north(), Direction.NORTH))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.north(), Direction.NORTH))) >= 15) {
             return i;
         }
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.south(), Direction.SOUTH))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.south(), Direction.SOUTH))) >= 15) {
             return i;
         }
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.west(), Direction.WEST))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.west(), Direction.WEST))) >= 15) {
             return i;
         }
-        if ((i = Math.max(i, this.getEmittedStrongRedstonePower(blockPos.east(), Direction.EAST))) >= 15) {
+        if ((i = Math.max(i, this.getStrongRedstonePower(blockPos.east(), Direction.EAST))) >= 15) {
             return i;
         }
         return i;
@@ -1126,14 +1005,6 @@ AutoCloseable {
         return this.dimension.isNether() ? 128 : 256;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public double getHorizonHeight() {
-        if (this.properties.getGeneratorType() == LevelGeneratorType.FLAT) {
-            return 0.0;
-        }
-        return 63.0;
-    }
-
     public CrashReportSection addDetailsToCrashReport(CrashReport report) {
         CrashReportSection crashReportSection = report.addElement("Affected level", 1);
         crashReportSection.add("All players", () -> this.getPlayers().size() + " total; " + this.getPlayers());
@@ -1159,7 +1030,7 @@ AutoCloseable {
     public void updateHorizontalAdjacent(BlockPos pos, Block block) {
         for (Direction direction : Direction.Type.HORIZONTAL) {
             BlockPos blockPos = pos.offset(direction);
-            if (!this.isBlockLoaded(blockPos)) continue;
+            if (!this.isChunkLoaded(blockPos)) continue;
             BlockState blockState = this.getBlockState(blockPos);
             if (blockState.getBlock() == Blocks.COMPARATOR) {
                 blockState.neighborUpdate(this, blockPos, block, pos, false);
@@ -1174,7 +1045,7 @@ AutoCloseable {
     public LocalDifficulty getLocalDifficulty(BlockPos pos) {
         long l = 0L;
         float f = 0.0f;
-        if (this.isBlockLoaded(pos)) {
+        if (this.isChunkLoaded(pos)) {
             f = this.getMoonSize();
             l = this.getWorldChunk(pos).getInhabitedTime();
         }
@@ -1186,13 +1057,7 @@ AutoCloseable {
         return this.ambientDarkness;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public int getTicksSinceLightning() {
-        return this.ticksSinceLightning;
-    }
-
     public void setLightningTicksLeft(int lightningTicksLeft) {
-        this.ticksSinceLightning = lightningTicksLeft;
     }
 
     @Override
@@ -1202,11 +1067,6 @@ AutoCloseable {
 
     public void sendPacket(Packet<?> packet) {
         throw new UnsupportedOperationException("Can't send packets to server unless you're on the client.");
-    }
-
-    @Nullable
-    public BlockPos locateStructure(String id, BlockPos center, int radius, boolean skipExistingChunks) {
-        return null;
     }
 
     @Override
@@ -1243,8 +1103,8 @@ AutoCloseable {
     }
 
     @Override
-    public BlockPos getTopPosition(Heightmap.Type type, BlockPos blockPos) {
-        return new BlockPos(blockPos.getX(), this.getTop(type, blockPos.getX(), blockPos.getZ()), blockPos.getZ());
+    public BiomeAccess getBiomeAccess() {
+        return this.biomeAccess;
     }
 
     @Override

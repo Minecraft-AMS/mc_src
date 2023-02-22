@@ -11,7 +11,6 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import net.minecraft.class_3267;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
@@ -27,6 +26,7 @@ import net.minecraft.world.gen.decorator.ChanceRangeDecorator;
 import net.minecraft.world.gen.decorator.ChanceRangeDecoratorConfig;
 import net.minecraft.world.gen.decorator.ChanceTopSolidHeightmapDecorator;
 import net.minecraft.world.gen.decorator.ChorusPlantDecorator;
+import net.minecraft.world.gen.decorator.ConfiguredDecorator;
 import net.minecraft.world.gen.decorator.CountBiasedRangeDecorator;
 import net.minecraft.world.gen.decorator.CountChanceDecoratorConfig;
 import net.minecraft.world.gen.decorator.CountChanceHeightmapDecorator;
@@ -45,7 +45,6 @@ import net.minecraft.world.gen.decorator.CountTopSolidDecorator;
 import net.minecraft.world.gen.decorator.CountVeryBiasedRangeDecorator;
 import net.minecraft.world.gen.decorator.DarkOakTreeDecorator;
 import net.minecraft.world.gen.decorator.DecoratorConfig;
-import net.minecraft.world.gen.decorator.DungeonDecoratorConfig;
 import net.minecraft.world.gen.decorator.DungeonsDecorator;
 import net.minecraft.world.gen.decorator.EmeraldOreDecorator;
 import net.minecraft.world.gen.decorator.EndGatewayDecorator;
@@ -70,9 +69,11 @@ import net.minecraft.world.gen.decorator.RangeDecoratorConfig;
 import net.minecraft.world.gen.decorator.TopSolidHeightmapNoiseBiasedDecoratorConfig;
 import net.minecraft.world.gen.decorator.WaterLakeDecorator;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public abstract class Decorator<DC extends DecoratorConfig> {
+    public static final Decorator<NopeDecoratorConfig> NOPE = Decorator.register("nope", new NopeDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
     public static final Decorator<CountDecoratorConfig> COUNT_HEIGHTMAP = Decorator.register("count_heightmap", new CountHeightmapDecorator((Function<Dynamic<?>, ? extends CountDecoratorConfig>)((Function<Dynamic<?>, CountDecoratorConfig>)CountDecoratorConfig::deserialize)));
     public static final Decorator<CountDecoratorConfig> COUNT_TOP_SOLID = Decorator.register("count_top_solid", new CountTopSolidDecorator((Function<Dynamic<?>, ? extends CountDecoratorConfig>)((Function<Dynamic<?>, CountDecoratorConfig>)CountDecoratorConfig::deserialize)));
     public static final Decorator<CountDecoratorConfig> COUNT_HEIGHTMAP_32 = Decorator.register("count_heightmap_32", new CountHeightmap32Decorator((Function<Dynamic<?>, ? extends CountDecoratorConfig>)((Function<Dynamic<?>, CountDecoratorConfig>)CountDecoratorConfig::deserialize)));
@@ -80,11 +81,10 @@ public abstract class Decorator<DC extends DecoratorConfig> {
     public static final Decorator<CountDecoratorConfig> COUNT_HEIGHT_64 = Decorator.register("count_height_64", new CountHeight64Decorator((Function<Dynamic<?>, ? extends CountDecoratorConfig>)((Function<Dynamic<?>, CountDecoratorConfig>)CountDecoratorConfig::deserialize)));
     public static final Decorator<NoiseHeightmapDecoratorConfig> NOISE_HEIGHTMAP_32 = Decorator.register("noise_heightmap_32", new NoiseHeightmap32Decorator((Function<Dynamic<?>, ? extends NoiseHeightmapDecoratorConfig>)((Function<Dynamic<?>, NoiseHeightmapDecoratorConfig>)NoiseHeightmapDecoratorConfig::deserialize)));
     public static final Decorator<NoiseHeightmapDecoratorConfig> NOISE_HEIGHTMAP_DOUBLE = Decorator.register("noise_heightmap_double", new NoiseHeightmapDoubleDecorator((Function<Dynamic<?>, ? extends NoiseHeightmapDecoratorConfig>)((Function<Dynamic<?>, NoiseHeightmapDecoratorConfig>)NoiseHeightmapDecoratorConfig::deserialize)));
-    public static final Decorator<NopeDecoratorConfig> NOPE = Decorator.register("nope", new NopeDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
-    public static final Decorator<class_3267> CHANCE_HEIGHTMAP = Decorator.register("chance_heightmap", new ChanceHeightmapDecorator((Function<Dynamic<?>, ? extends class_3267>)((Function<Dynamic<?>, class_3267>)class_3267::method_14415)));
-    public static final Decorator<class_3267> CHANCE_HEIGHTMAP_DOUBLE = Decorator.register("chance_heightmap_double", new ChanceHeightmapDoubleDecorator((Function<Dynamic<?>, ? extends class_3267>)((Function<Dynamic<?>, class_3267>)class_3267::method_14415)));
-    public static final Decorator<class_3267> CHANCE_PASSTHROUGH = Decorator.register("chance_passthrough", new ChancePassthroughDecorator((Function<Dynamic<?>, ? extends class_3267>)((Function<Dynamic<?>, class_3267>)class_3267::method_14415)));
-    public static final Decorator<class_3267> CHANCE_TOP_SOLID_HEIGHTMAP = Decorator.register("chance_top_solid_heightmap", new ChanceTopSolidHeightmapDecorator((Function<Dynamic<?>, ? extends class_3267>)((Function<Dynamic<?>, class_3267>)class_3267::method_14415)));
+    public static final Decorator<ChanceDecoratorConfig> CHANCE_HEIGHTMAP = Decorator.register("chance_heightmap", new ChanceHeightmapDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
+    public static final Decorator<ChanceDecoratorConfig> CHANCE_HEIGHTMAP_DOUBLE = Decorator.register("chance_heightmap_double", new ChanceHeightmapDoubleDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
+    public static final Decorator<ChanceDecoratorConfig> CHANCE_PASSTHROUGH = Decorator.register("chance_passthrough", new ChancePassthroughDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
+    public static final Decorator<ChanceDecoratorConfig> CHANCE_TOP_SOLID_HEIGHTMAP = Decorator.register("chance_top_solid_heightmap", new ChanceTopSolidHeightmapDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
     public static final Decorator<CountExtraChanceDecoratorConfig> COUNT_EXTRA_HEIGHTMAP = Decorator.register("count_extra_heightmap", new CountExtraHeightmapDecorator((Function<Dynamic<?>, ? extends CountExtraChanceDecoratorConfig>)((Function<Dynamic<?>, CountExtraChanceDecoratorConfig>)CountExtraChanceDecoratorConfig::deserialize)));
     public static final Decorator<RangeDecoratorConfig> COUNT_RANGE = Decorator.register("count_range", new CountRangeDecorator((Function<Dynamic<?>, ? extends RangeDecoratorConfig>)((Function<Dynamic<?>, RangeDecoratorConfig>)RangeDecoratorConfig::deserialize)));
     public static final Decorator<RangeDecoratorConfig> COUNT_BIASED_RANGE = Decorator.register("count_biased_range", new CountBiasedRangeDecorator((Function<Dynamic<?>, ? extends RangeDecoratorConfig>)((Function<Dynamic<?>, RangeDecoratorConfig>)RangeDecoratorConfig::deserialize)));
@@ -104,9 +104,9 @@ public abstract class Decorator<DC extends DecoratorConfig> {
     public static final Decorator<NopeDecoratorConfig> EMERALD_ORE = Decorator.register("emerald_ore", new EmeraldOreDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
     public static final Decorator<ChanceDecoratorConfig> LAVA_LAKE = Decorator.register("lava_lake", new LavaLakeDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
     public static final Decorator<ChanceDecoratorConfig> WATER_LAKE = Decorator.register("water_lake", new WaterLakeDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
-    public static final Decorator<DungeonDecoratorConfig> DUNGEONS = Decorator.register("dungeons", new DungeonsDecorator((Function<Dynamic<?>, ? extends DungeonDecoratorConfig>)((Function<Dynamic<?>, DungeonDecoratorConfig>)DungeonDecoratorConfig::deserialize)));
+    public static final Decorator<ChanceDecoratorConfig> DUNGEONS = Decorator.register("dungeons", new DungeonsDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
     public static final Decorator<NopeDecoratorConfig> DARK_OAK_TREE = Decorator.register("dark_oak_tree", new DarkOakTreeDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
-    public static final Decorator<class_3267> ICEBERG = Decorator.register("iceberg", new IcebergDecorator((Function<Dynamic<?>, ? extends class_3267>)((Function<Dynamic<?>, class_3267>)class_3267::method_14415)));
+    public static final Decorator<ChanceDecoratorConfig> ICEBERG = Decorator.register("iceberg", new IcebergDecorator((Function<Dynamic<?>, ? extends ChanceDecoratorConfig>)((Function<Dynamic<?>, ChanceDecoratorConfig>)ChanceDecoratorConfig::deserialize)));
     public static final Decorator<CountDecoratorConfig> LIGHT_GEM_CHANCE = Decorator.register("light_gem_chance", new LightGemChanceDecorator((Function<Dynamic<?>, ? extends CountDecoratorConfig>)((Function<Dynamic<?>, CountDecoratorConfig>)CountDecoratorConfig::deserialize)));
     public static final Decorator<NopeDecoratorConfig> END_ISLAND = Decorator.register("end_island", new EndIslandDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
     public static final Decorator<NopeDecoratorConfig> CHORUS_PLANT = Decorator.register("chorus_plant", new ChorusPlantDecorator((Function<Dynamic<?>, ? extends NopeDecoratorConfig>)((Function<Dynamic<?>, NopeDecoratorConfig>)NopeDecoratorConfig::deserialize)));
@@ -125,7 +125,11 @@ public abstract class Decorator<DC extends DecoratorConfig> {
         return (DC)((DecoratorConfig)this.configDeserializer.apply(dynamic));
     }
 
-    protected <FC extends FeatureConfig> boolean generate(IWorld world, ChunkGenerator<? extends ChunkGeneratorConfig> generator, Random random, BlockPos pos, DC decoratorConfig, ConfiguredFeature<FC> configuredFeature) {
+    public ConfiguredDecorator<DC> configure(DC decoratorConfig) {
+        return new ConfiguredDecorator<DC>(this, decoratorConfig);
+    }
+
+    protected <FC extends FeatureConfig, F extends Feature<FC>> boolean generate(IWorld world, ChunkGenerator<? extends ChunkGeneratorConfig> generator, Random random, BlockPos pos, DC decoratorConfig, ConfiguredFeature<FC, F> configuredFeature) {
         AtomicBoolean atomicBoolean = new AtomicBoolean(false);
         this.getPositions(world, generator, random, decoratorConfig, pos).forEach(blockPos -> {
             boolean bl = configuredFeature.generate(world, (ChunkGenerator<ChunkGeneratorConfig>)generator, random, (BlockPos)blockPos);

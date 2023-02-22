@@ -10,6 +10,7 @@ package net.minecraft.client.gui.screen.options;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.options.GameOptionsScreen;
 import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.options.GameOptions;
@@ -20,16 +21,12 @@ import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class AccessibilityScreen
-extends Screen {
-    private static final Option[] OPTIONS = new Option[]{Option.NARRATOR, Option.SUBTITLES, Option.TEXT_BACKGROUND_OPACITY, Option.TEXT_BACKGROUND, Option.CHAT_OPACITY, Option.AUTO_JUMP};
-    private final Screen parent;
-    private final GameOptions gameOptions;
+extends GameOptionsScreen {
+    private static final Option[] OPTIONS = new Option[]{Option.NARRATOR, Option.SUBTITLES, Option.TEXT_BACKGROUND_OPACITY, Option.TEXT_BACKGROUND, Option.CHAT_OPACITY, Option.AUTO_JUMP, Option.SNEAK_TOGGLED, Option.SPRINT_TOGGLED};
     private AbstractButtonWidget narratorButton;
 
     public AccessibilityScreen(Screen parent, GameOptions gameOptions) {
-        super(new TranslatableText("options.accessibility.title", new Object[0]));
-        this.parent = parent;
-        this.gameOptions = gameOptions;
+        super(parent, gameOptions, new TranslatableText("options.accessibility.title", new Object[0]));
     }
 
     @Override
@@ -49,18 +46,13 @@ extends Screen {
     }
 
     @Override
-    public void removed() {
-        this.minecraft.options.write();
-    }
-
-    @Override
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 20, 0xFFFFFF);
         super.render(mouseX, mouseY, delta);
     }
 
-    public void method_19366() {
+    public void setNarratorMessage() {
         this.narratorButton.setMessage(Option.NARRATOR.getMessage(this.gameOptions));
     }
 }

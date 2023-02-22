@@ -10,13 +10,13 @@ import net.minecraft.block.Fertilizable;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.block.sapling.SaplingGenerator;
 import net.minecraft.entity.EntityContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 
 public class SaplingBlock
@@ -38,18 +38,18 @@ implements Fertilizable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        super.onScheduledTick(state, world, pos, random);
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        super.scheduledTick(state, world, pos, random);
         if (world.getLightLevel(pos.up()) >= 9 && random.nextInt(7) == 0) {
             this.generate(world, pos, state, random);
         }
     }
 
-    public void generate(IWorld world, BlockPos pos, BlockState state, Random random) {
-        if (state.get(STAGE) == 0) {
-            world.setBlockState(pos, (BlockState)state.cycle(STAGE), 4);
+    public void generate(ServerWorld serverWorld, BlockPos blockPos, BlockState blockState, Random random) {
+        if (blockState.get(STAGE) == 0) {
+            serverWorld.setBlockState(blockPos, (BlockState)blockState.cycle(STAGE), 4);
         } else {
-            this.generator.generate(world, pos, state, random);
+            this.generator.generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), blockPos, blockState, random);
         }
     }
 
@@ -64,7 +64,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void grow(World world, Random random, BlockPos pos, BlockState state) {
+    public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
         this.generate(world, pos, state, random);
     }
 

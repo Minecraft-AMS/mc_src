@@ -7,11 +7,11 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.SkeletonEntityRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.AbstractSkeletonEntity;
 import net.minecraft.util.Identifier;
 
@@ -25,13 +25,13 @@ extends SkeletonEntityRenderer {
     }
 
     @Override
-    protected Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
+    public Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
         return SKIN;
     }
 
     @Override
-    protected void scale(AbstractSkeletonEntity abstractSkeletonEntity, float f) {
-        GlStateManager.scalef(1.2f, 1.2f, 1.2f);
+    protected void scale(AbstractSkeletonEntity abstractSkeletonEntity, MatrixStack matrixStack, float f) {
+        matrixStack.scale(1.2f, 1.2f, 1.2f);
     }
 }
 

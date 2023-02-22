@@ -10,94 +10,38 @@ import com.mojang.datafixers.Dynamic;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.ModifiableTestableWorld;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.MegaTreeFeature;
+import net.minecraft.world.gen.feature.MegaTreeFeatureConfig;
 
 public class MegaPineTreeFeature
-extends MegaTreeFeature<DefaultFeatureConfig> {
-    private static final BlockState LOG = Blocks.SPRUCE_LOG.getDefaultState();
-    private static final BlockState LEAVES = Blocks.SPRUCE_LEAVES.getDefaultState();
-    private static final BlockState PODZOL = Blocks.PODZOL.getDefaultState();
-    private final boolean field_13677;
-
-    public MegaPineTreeFeature(Function<Dynamic<?>, ? extends DefaultFeatureConfig> function, boolean bl, boolean bl2) {
-        super(function, bl, 13, 15, LOG, LEAVES);
-        this.field_13677 = bl2;
+extends MegaTreeFeature<MegaTreeFeatureConfig> {
+    public MegaPineTreeFeature(Function<Dynamic<?>, ? extends MegaTreeFeatureConfig> function) {
+        super(function);
     }
 
     @Override
-    public boolean generate(Set<BlockPos> logPositions, ModifiableTestableWorld world, Random random, BlockPos pos, BlockBox blockBox) {
-        int i = this.getHeight(random);
-        if (!this.checkTreeFitsAndReplaceGround(world, pos, i)) {
+    public boolean generate(ModifiableTestableWorld modifiableTestableWorld, Random random, BlockPos blockPos, Set<BlockPos> set, Set<BlockPos> set2, BlockBox blockBox, MegaTreeFeatureConfig megaTreeFeatureConfig) {
+        int i = this.getHeight(random, megaTreeFeatureConfig);
+        if (!this.checkTreeFitsAndReplaceGround(modifiableTestableWorld, blockPos, i)) {
             return false;
         }
-        this.makeTopLeaves(world, pos.getX(), pos.getZ(), pos.getY() + i, 0, random, blockBox, logPositions);
-        for (int j = 0; j < i; ++j) {
-            if (MegaPineTreeFeature.isAirOrLeaves(world, pos.up(j))) {
-                this.setBlockState(logPositions, world, pos.up(j), this.log, blockBox);
-            }
-            if (j >= i - 1) continue;
-            if (MegaPineTreeFeature.isAirOrLeaves(world, pos.add(1, j, 0))) {
-                this.setBlockState(logPositions, world, pos.add(1, j, 0), this.log, blockBox);
-            }
-            if (MegaPineTreeFeature.isAirOrLeaves(world, pos.add(1, j, 1))) {
-                this.setBlockState(logPositions, world, pos.add(1, j, 1), this.log, blockBox);
-            }
-            if (!MegaPineTreeFeature.isAirOrLeaves(world, pos.add(0, j, 1))) continue;
-            this.setBlockState(logPositions, world, pos.add(0, j, 1), this.log, blockBox);
-        }
-        this.replaceGround(world, random, pos);
+        this.makeTopLeaves(modifiableTestableWorld, random, blockPos.getX(), blockPos.getZ(), blockPos.getY() + i, 0, set2, blockBox, megaTreeFeatureConfig);
+        this.method_23400(modifiableTestableWorld, random, blockPos, i, set, blockBox, megaTreeFeatureConfig);
         return true;
     }
 
-    private void makeTopLeaves(ModifiableTestableWorld modifiableTestableWorld, int i, int j, int k, int l, Random random, BlockBox blockBox, Set<BlockPos> set) {
-        int m = random.nextInt(5) + (this.field_13677 ? this.baseHeight : 3);
+    private void makeTopLeaves(ModifiableTestableWorld modifiableTestableWorld, Random random, int i, int j, int k, int l, Set<BlockPos> set, BlockBox blockBox, MegaTreeFeatureConfig megaTreeFeatureConfig) {
+        int m = random.nextInt(5) + megaTreeFeatureConfig.crownHeight;
         int n = 0;
         for (int o = k - m; o <= k; ++o) {
             int p = k - o;
             int q = l + MathHelper.floor((float)p / (float)m * 3.5f);
-            this.makeSquaredLeafLayer(modifiableTestableWorld, new BlockPos(i, o, j), q + (p > 0 && q == n && (o & 1) == 0 ? 1 : 0), blockBox, set);
+            this.makeSquaredLeafLayer(modifiableTestableWorld, random, new BlockPos(i, o, j), q + (p > 0 && q == n && (o & 1) == 0 ? 1 : 0), set, blockBox, megaTreeFeatureConfig);
             n = q;
-        }
-    }
-
-    public void replaceGround(ModifiableTestableWorld world, Random random, BlockPos pos) {
-        this.replaceGroundNear(world, pos.west().north());
-        this.replaceGroundNear(world, pos.east(2).north());
-        this.replaceGroundNear(world, pos.west().south(2));
-        this.replaceGroundNear(world, pos.east(2).south(2));
-        for (int i = 0; i < 5; ++i) {
-            int j = random.nextInt(64);
-            int k = j % 8;
-            int l = j / 8;
-            if (k != 0 && k != 7 && l != 0 && l != 7) continue;
-            this.replaceGroundNear(world, pos.add(-3 + k, 0, -3 + l));
-        }
-    }
-
-    private void replaceGroundNear(ModifiableTestableWorld modifiableTestableWorld, BlockPos blockPos) {
-        for (int i = -2; i <= 2; ++i) {
-            for (int j = -2; j <= 2; ++j) {
-                if (Math.abs(i) == 2 && Math.abs(j) == 2) continue;
-                this.prepareGroundColumn(modifiableTestableWorld, blockPos.add(i, 0, j));
-            }
-        }
-    }
-
-    private void prepareGroundColumn(ModifiableTestableWorld modifiableTestableWorld, BlockPos blockPos) {
-        for (int i = 2; i >= -3; --i) {
-            BlockPos blockPos2 = blockPos.up(i);
-            if (MegaPineTreeFeature.isNaturalDirtOrGrass(modifiableTestableWorld, blockPos2)) {
-                this.setBlockState(modifiableTestableWorld, blockPos2, PODZOL);
-                break;
-            }
-            if (!MegaPineTreeFeature.isAir(modifiableTestableWorld, blockPos2) && i < 0) break;
         }
     }
 }

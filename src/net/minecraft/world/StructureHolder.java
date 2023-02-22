@@ -10,11 +10,9 @@ package net.minecraft.world;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Map;
 import net.minecraft.structure.StructureStart;
-import net.minecraft.world.BlockView;
 import org.jetbrains.annotations.Nullable;
 
-public interface StructureHolder
-extends BlockView {
+public interface StructureHolder {
     @Nullable
     public StructureStart getStructureStart(String var1);
 

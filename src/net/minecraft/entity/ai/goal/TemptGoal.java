@@ -6,6 +6,7 @@ package net.minecraft.entity.ai.goal;
 import java.util.EnumSet;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.mob.MobEntityWithAi;
 import net.minecraft.entity.player.PlayerEntity;
@@ -38,7 +39,7 @@ extends Goal {
         this.food = food;
         this.canBeScared = canBeScared;
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
-        if (!(mob.getNavigation() instanceof MobNavigation)) {
+        if (!(mob.getNavigation() instanceof MobNavigation) && !(mob.getNavigation() instanceof BirdNavigation)) {
             throw new IllegalArgumentException("Unsupported mob type for TemptGoal");
         }
     }
@@ -71,9 +72,9 @@ extends Goal {
                     return false;
                 }
             } else {
-                this.lastPlayerX = this.closestPlayer.x;
-                this.lastPlayerY = this.closestPlayer.y;
-                this.lastPlayerZ = this.closestPlayer.z;
+                this.lastPlayerX = this.closestPlayer.getX();
+                this.lastPlayerY = this.closestPlayer.getY();
+                this.lastPlayerZ = this.closestPlayer.getZ();
             }
             this.lastPlayerPitch = this.closestPlayer.pitch;
             this.lastPlayerYaw = this.closestPlayer.yaw;
@@ -87,9 +88,9 @@ extends Goal {
 
     @Override
     public void start() {
-        this.lastPlayerX = this.closestPlayer.x;
-        this.lastPlayerY = this.closestPlayer.y;
-        this.lastPlayerZ = this.closestPlayer.z;
+        this.lastPlayerX = this.closestPlayer.getX();
+        this.lastPlayerY = this.closestPlayer.getY();
+        this.lastPlayerZ = this.closestPlayer.getZ();
         this.active = true;
     }
 
@@ -103,7 +104,7 @@ extends Goal {
 
     @Override
     public void tick() {
-        this.mob.getLookControl().lookAt(this.closestPlayer, this.mob.method_5986() + 20, this.mob.getLookPitchSpeed());
+        this.mob.getLookControl().lookAt(this.closestPlayer, this.mob.getBodyYawSpeed() + 20, this.mob.getLookPitchSpeed());
         if (this.mob.squaredDistanceTo(this.closestPlayer) < 6.25) {
             this.mob.getNavigation().stop();
         } else {

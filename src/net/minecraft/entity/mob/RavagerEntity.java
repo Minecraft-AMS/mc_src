@@ -49,9 +49,9 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class RavagerEntity
@@ -125,11 +125,11 @@ extends RaiderEntity {
 
     @Override
     protected EntityNavigation createNavigation(World world) {
-        return new class_1586(this, world);
+        return new Navigation(this, world);
     }
 
     @Override
-    public int method_5986() {
+    public int getBodyYawSpeed() {
         return 45;
     }
 
@@ -172,7 +172,7 @@ extends RaiderEntity {
                 BlockState blockState = this.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
                 if (!(block instanceof LeavesBlock)) continue;
-                bl = this.world.breakBlock(blockPos, true) || bl;
+                bl = this.world.breakBlock(blockPos, true, this) || bl;
             }
             if (!bl && this.onGround) {
                 this.jump();
@@ -199,9 +199,9 @@ extends RaiderEntity {
 
     private void spawnStunnedParticles() {
         if (this.random.nextInt(6) == 0) {
-            double d = this.x - (double)this.getWidth() * Math.sin(this.field_6283 * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
-            double e = this.y + (double)this.getHeight() - 0.3;
-            double f = this.z + (double)this.getWidth() * Math.cos(this.field_6283 * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
+            double d = this.getX() - (double)this.getWidth() * Math.sin(this.bodyYaw * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
+            double e = this.getY() + (double)this.getHeight() - 0.3;
+            double f = this.getZ() + (double)this.getWidth() * Math.cos(this.bodyYaw * ((float)Math.PI / 180)) + (this.random.nextDouble() * 0.6 - 0.3);
             this.world.addParticle(ParticleTypes.ENTITY_EFFECT, d, e, f, 0.4980392156862745, 0.5137254901960784, 0.5725490196078431);
         }
     }
@@ -254,8 +254,8 @@ extends RaiderEntity {
     }
 
     private void knockBack(Entity entity) {
-        double d = entity.x - this.x;
-        double e = entity.z - this.z;
+        double d = entity.getX() - this.getX();
+        double e = entity.getZ() - this.getZ();
         double f = Math.max(d * d + e * e, 0.001);
         entity.addVelocity(d / f * 4.0, 0.2, e / f * 4.0);
     }
@@ -317,8 +317,8 @@ extends RaiderEntity {
     }
 
     @Override
-    public boolean canSpawn(CollisionView world) {
-        return !world.intersectsFluid(this.getBoundingBox());
+    public boolean canSpawn(WorldView world) {
+        return !world.containsFluid(this.getBoundingBox());
     }
 
     @Override
@@ -330,29 +330,29 @@ extends RaiderEntity {
         return false;
     }
 
-    static class class_1587
+    static class PathNodeMaker
     extends LandPathNodeMaker {
-        private class_1587() {
+        private PathNodeMaker() {
         }
 
         @Override
-        protected PathNodeType method_61(BlockView blockView, boolean bl, boolean bl2, BlockPos blockPos, PathNodeType pathNodeType) {
-            if (pathNodeType == PathNodeType.LEAVES) {
+        protected PathNodeType adjustNodeType(BlockView world, boolean canOpenDoors, boolean canEnterOpenDoors, BlockPos pos, PathNodeType type) {
+            if (type == PathNodeType.LEAVES) {
                 return PathNodeType.OPEN;
             }
-            return super.method_61(blockView, bl, bl2, blockPos, pathNodeType);
+            return super.adjustNodeType(world, canOpenDoors, canEnterOpenDoors, pos, type);
         }
     }
 
-    static class class_1586
+    static class Navigation
     extends MobNavigation {
-        public class_1586(MobEntity world, World world2) {
+        public Navigation(MobEntity world, World world2) {
             super(world, world2);
         }
 
         @Override
         protected PathNodeNavigator createPathNodeNavigator(int i) {
-            this.nodeMaker = new class_1587();
+            this.nodeMaker = new PathNodeMaker();
             return new PathNodeNavigator(this.nodeMaker, i);
         }
     }

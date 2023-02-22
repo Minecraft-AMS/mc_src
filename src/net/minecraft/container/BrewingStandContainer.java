@@ -77,7 +77,7 @@ extends Container {
                     return ItemStack.EMPTY;
                 }
                 slot.onStackChanged(itemStack2, itemStack);
-            } else if (this.ingredientSlot.canInsert(itemStack2) ? !this.insertItem(itemStack2, 3, 4, false) : (SlotPotion.matches(itemStack) && itemStack.getCount() == 1 ? !this.insertItem(itemStack2, 0, 3, false) : (SlotFuel.matches(itemStack) ? !this.insertItem(itemStack2, 4, 5, false) : (invSlot >= 5 && invSlot < 32 ? !this.insertItem(itemStack2, 32, 41, false) : (invSlot >= 32 && invSlot < 41 ? !this.insertItem(itemStack2, 5, 32, false) : !this.insertItem(itemStack2, 5, 41, false)))))) {
+            } else if (SlotFuel.matches(itemStack) ? this.insertItem(itemStack2, 4, 5, false) || this.ingredientSlot.canInsert(itemStack2) && !this.insertItem(itemStack2, 3, 4, false) : (this.ingredientSlot.canInsert(itemStack2) ? !this.insertItem(itemStack2, 3, 4, false) : (SlotPotion.matches(itemStack) && itemStack.getCount() == 1 ? !this.insertItem(itemStack2, 0, 3, false) : (invSlot >= 5 && invSlot < 32 ? !this.insertItem(itemStack2, 32, 41, false) : (invSlot >= 32 && invSlot < 41 ? !this.insertItem(itemStack2, 5, 32, false) : !this.insertItem(itemStack2, 5, 41, false)))))) {
                 return ItemStack.EMPTY;
             }
             if (itemStack2.isEmpty()) {
@@ -105,8 +105,8 @@ extends Container {
 
     static class SlotFuel
     extends Slot {
-        public SlotFuel(Inventory invSlot, int xPosition, int i, int j) {
-            super(invSlot, xPosition, i, j);
+        public SlotFuel(Inventory invSlot, int xPosition, int yPosition, int i) {
+            super(invSlot, xPosition, yPosition, i);
         }
 
         @Override
@@ -126,8 +126,8 @@ extends Container {
 
     static class SlotIngredient
     extends Slot {
-        public SlotIngredient(Inventory invSlot, int xPosition, int i, int j) {
-            super(invSlot, xPosition, i, j);
+        public SlotIngredient(Inventory invSlot, int xPosition, int yPosition, int i) {
+            super(invSlot, xPosition, yPosition, i);
         }
 
         @Override
@@ -143,8 +143,8 @@ extends Container {
 
     static class SlotPotion
     extends Slot {
-        public SlotPotion(Inventory invSlot, int xPosition, int i, int j) {
-            super(invSlot, xPosition, i, j);
+        public SlotPotion(Inventory invSlot, int xPosition, int yPosition, int i) {
+            super(invSlot, xPosition, yPosition, i);
         }
 
         @Override

@@ -10,7 +10,7 @@ import net.minecraft.entity.mob.MobEntityWithAi;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 
 public class GoToOwnerAndPurrGoal
 extends MoveToTargetPosGoal {
@@ -57,7 +57,7 @@ extends MoveToTargetPosGoal {
     }
 
     @Override
-    protected boolean isTargetPos(CollisionView world, BlockPos pos) {
+    protected boolean isTargetPos(WorldView world, BlockPos pos) {
         return world.isAir(pos.up()) && world.getBlockState(pos).getBlock().matches(BlockTags.BEDS);
     }
 }

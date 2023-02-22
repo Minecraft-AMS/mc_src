@@ -14,7 +14,7 @@ package net.minecraft.client.gui.hud;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.mojang.authlib.GameProfile;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Comparator;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -130,10 +130,10 @@ extends DrawableHelper {
             int w = p + s * o + s * 5;
             int x = q + v * 9;
             PlayerListHud.fill(w, x, w + o, x + 8, n2);
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            GlStateManager.enableAlphaTest();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.enableAlphaTest();
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
             if (u >= list.size()) continue;
             PlayerListEntry playerListEntry2 = (PlayerListEntry)list.get(u);
             GameProfile gameProfile = playerListEntry2.getProfile();
@@ -173,13 +173,13 @@ extends DrawableHelper {
     }
 
     protected void renderLatencyIcon(int i, int j, int y, PlayerListEntry playerEntry) {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.client.getTextureManager().bindTexture(GUI_ICONS_LOCATION);
         boolean k = false;
         int l = playerEntry.getLatency() < 0 ? 5 : (playerEntry.getLatency() < 150 ? 0 : (playerEntry.getLatency() < 300 ? 1 : (playerEntry.getLatency() < 600 ? 2 : (playerEntry.getLatency() < 1000 ? 3 : 4))));
-        this.blitOffset += 100;
+        this.setBlitOffset(this.getBlitOffset() + 100);
         this.blit(j + i - 11, y, 0, 176 + l * 8, 10, 8);
-        this.blitOffset -= 100;
+        this.setBlitOffset(this.getBlitOffset() - 100);
     }
 
     private void renderScoreboardObjective(ScoreboardObjective scoreboardObjective, int i, String string, int j, int k, PlayerListEntry playerListEntry) {

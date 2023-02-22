@@ -11,14 +11,15 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
 public class DolphinJumpGoal
 extends DiveJumpingGoal {
-    private static final int[] field_6474 = new int[]{0, 1, 4, 5, 6, 7};
+    private static final int[] OFFSET_MULTIPLIERS = new int[]{0, 1, 4, 5, 6, 7};
     private final DolphinEntity dolphin;
     private final int chance;
-    private boolean field_6473;
+    private boolean inWater;
 
     public DolphinJumpGoal(DolphinEntity dolphin, int chance) {
         this.dolphin = dolphin;
@@ -34,7 +35,7 @@ extends DiveJumpingGoal {
         int i = direction.getOffsetX();
         int j = direction.getOffsetZ();
         BlockPos blockPos = new BlockPos(this.dolphin);
-        for (int k : field_6474) {
+        for (int k : OFFSET_MULTIPLIERS) {
             if (this.isWater(blockPos, i, j, k) && this.isAirAbove(blockPos, i, j, k)) continue;
             return false;
         }
@@ -75,17 +76,17 @@ extends DiveJumpingGoal {
 
     @Override
     public void tick() {
-        boolean bl = this.field_6473;
+        boolean bl = this.inWater;
         if (!bl) {
             FluidState fluidState = this.dolphin.world.getFluidState(new BlockPos(this.dolphin));
-            this.field_6473 = fluidState.matches(FluidTags.WATER);
+            this.inWater = fluidState.matches(FluidTags.WATER);
         }
-        if (this.field_6473 && !bl) {
+        if (this.inWater && !bl) {
             this.dolphin.playSound(SoundEvents.ENTITY_DOLPHIN_JUMP, 1.0f, 1.0f);
         }
         Vec3d vec3d = this.dolphin.getVelocity();
         if (vec3d.y * vec3d.y < (double)0.03f && this.dolphin.pitch != 0.0f) {
-            this.dolphin.pitch = this.updatePitch(this.dolphin.pitch, 0.0f, 0.2f);
+            this.dolphin.pitch = MathHelper.lerpAngle(this.dolphin.pitch, 0.0f, 0.2f);
         } else {
             double d = Math.sqrt(Entity.squaredHorizontalLength(vec3d));
             double e = Math.signum(-vec3d.y) * Math.acos(d / vec3d.length()) * 57.2957763671875;

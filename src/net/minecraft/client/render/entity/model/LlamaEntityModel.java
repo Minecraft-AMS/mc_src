@@ -2,118 +2,117 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.QuadrupedEntityModel;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
 import net.minecraft.entity.passive.PassiveEntity;
+import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class LlamaEntityModel<T extends AbstractDonkeyEntity>
-extends QuadrupedEntityModel<T> {
-    private final ModelPart field_3430;
-    private final ModelPart field_3429;
+extends EntityModel<T> {
+    private final ModelPart head;
+    private final ModelPart torso;
+    private final ModelPart rightBackLeg;
+    private final ModelPart leftBackLeg;
+    private final ModelPart rightFrontLeg;
+    private final ModelPart leftFrontLeg;
+    private final ModelPart rightChest;
+    private final ModelPart leftChest;
 
     public LlamaEntityModel(float f) {
-        super(15, f);
         this.textureWidth = 128;
         this.textureHeight = 64;
         this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-2.0f, -14.0f, -10.0f, 4, 4, 9, f);
+        this.head.addCuboid(-2.0f, -14.0f, -10.0f, 4.0f, 4.0f, 9.0f, f);
         this.head.setPivot(0.0f, 7.0f, -6.0f);
-        this.head.setTextureOffset(0, 14).addCuboid(-4.0f, -16.0f, -6.0f, 8, 18, 6, f);
-        this.head.setTextureOffset(17, 0).addCuboid(-4.0f, -19.0f, -4.0f, 3, 3, 2, f);
-        this.head.setTextureOffset(17, 0).addCuboid(1.0f, -19.0f, -4.0f, 3, 3, 2, f);
+        this.head.setTextureOffset(0, 14).addCuboid(-4.0f, -16.0f, -6.0f, 8.0f, 18.0f, 6.0f, f);
+        this.head.setTextureOffset(17, 0).addCuboid(-4.0f, -19.0f, -4.0f, 3.0f, 3.0f, 2.0f, f);
+        this.head.setTextureOffset(17, 0).addCuboid(1.0f, -19.0f, -4.0f, 3.0f, 3.0f, 2.0f, f);
         this.torso = new ModelPart(this, 29, 0);
-        this.torso.addCuboid(-6.0f, -10.0f, -7.0f, 12, 18, 10, f);
+        this.torso.addCuboid(-6.0f, -10.0f, -7.0f, 12.0f, 18.0f, 10.0f, f);
         this.torso.setPivot(0.0f, 5.0f, 2.0f);
-        this.field_3430 = new ModelPart(this, 45, 28);
-        this.field_3430.addCuboid(-3.0f, 0.0f, 0.0f, 8, 8, 3, f);
-        this.field_3430.setPivot(-8.5f, 3.0f, 3.0f);
-        this.field_3430.yaw = 1.5707964f;
-        this.field_3429 = new ModelPart(this, 45, 41);
-        this.field_3429.addCuboid(-3.0f, 0.0f, 0.0f, 8, 8, 3, f);
-        this.field_3429.setPivot(5.5f, 3.0f, 3.0f);
-        this.field_3429.yaw = 1.5707964f;
+        this.rightChest = new ModelPart(this, 45, 28);
+        this.rightChest.addCuboid(-3.0f, 0.0f, 0.0f, 8.0f, 8.0f, 3.0f, f);
+        this.rightChest.setPivot(-8.5f, 3.0f, 3.0f);
+        this.rightChest.yaw = 1.5707964f;
+        this.leftChest = new ModelPart(this, 45, 41);
+        this.leftChest.addCuboid(-3.0f, 0.0f, 0.0f, 8.0f, 8.0f, 3.0f, f);
+        this.leftChest.setPivot(5.5f, 3.0f, 3.0f);
+        this.leftChest.yaw = 1.5707964f;
         int i = 4;
         int j = 14;
-        this.backRightLeg = new ModelPart(this, 29, 29);
-        this.backRightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4, 14, 4, f);
-        this.backRightLeg.setPivot(-2.5f, 10.0f, 6.0f);
-        this.backLeftLeg = new ModelPart(this, 29, 29);
-        this.backLeftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4, 14, 4, f);
-        this.backLeftLeg.setPivot(2.5f, 10.0f, 6.0f);
-        this.frontRightLeg = new ModelPart(this, 29, 29);
-        this.frontRightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4, 14, 4, f);
-        this.frontRightLeg.setPivot(-2.5f, 10.0f, -4.0f);
-        this.frontLeftLeg = new ModelPart(this, 29, 29);
-        this.frontLeftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4, 14, 4, f);
-        this.frontLeftLeg.setPivot(2.5f, 10.0f, -4.0f);
-        this.backRightLeg.pivotX -= 1.0f;
-        this.backLeftLeg.pivotX += 1.0f;
-        this.backRightLeg.pivotZ += 0.0f;
-        this.backLeftLeg.pivotZ += 0.0f;
-        this.frontRightLeg.pivotX -= 1.0f;
-        this.frontLeftLeg.pivotX += 1.0f;
-        this.frontRightLeg.pivotZ -= 1.0f;
-        this.frontLeftLeg.pivotZ -= 1.0f;
-        this.field_3537 += 2.0f;
+        this.rightBackLeg = new ModelPart(this, 29, 29);
+        this.rightBackLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 14.0f, 4.0f, f);
+        this.rightBackLeg.setPivot(-2.5f, 10.0f, 6.0f);
+        this.leftBackLeg = new ModelPart(this, 29, 29);
+        this.leftBackLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 14.0f, 4.0f, f);
+        this.leftBackLeg.setPivot(2.5f, 10.0f, 6.0f);
+        this.rightFrontLeg = new ModelPart(this, 29, 29);
+        this.rightFrontLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 14.0f, 4.0f, f);
+        this.rightFrontLeg.setPivot(-2.5f, 10.0f, -4.0f);
+        this.leftFrontLeg = new ModelPart(this, 29, 29);
+        this.leftFrontLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 14.0f, 4.0f, f);
+        this.leftFrontLeg.setPivot(2.5f, 10.0f, -4.0f);
+        this.rightBackLeg.pivotX -= 1.0f;
+        this.leftBackLeg.pivotX += 1.0f;
+        this.rightBackLeg.pivotZ += 0.0f;
+        this.leftBackLeg.pivotZ += 0.0f;
+        this.rightFrontLeg.pivotX -= 1.0f;
+        this.leftFrontLeg.pivotX += 1.0f;
+        this.rightFrontLeg.pivotZ -= 1.0f;
+        this.leftFrontLeg.pivotZ -= 1.0f;
     }
 
     @Override
-    public void render(T abstractDonkeyEntity, float f, float g, float h, float i, float j, float k) {
-        boolean bl = !((PassiveEntity)abstractDonkeyEntity).isBaby() && ((AbstractDonkeyEntity)abstractDonkeyEntity).hasChest();
-        this.setAngles(abstractDonkeyEntity, f, g, h, i, j, k);
+    public void setAngles(T abstractDonkeyEntity, float f, float g, float h, float i, float j) {
+        boolean bl;
+        this.head.pitch = j * ((float)Math.PI / 180);
+        this.head.yaw = i * ((float)Math.PI / 180);
+        this.torso.pitch = 1.5707964f;
+        this.rightBackLeg.pitch = MathHelper.cos(f * 0.6662f) * 1.4f * g;
+        this.leftBackLeg.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g;
+        this.rightFrontLeg.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g;
+        this.leftFrontLeg.pitch = MathHelper.cos(f * 0.6662f) * 1.4f * g;
+        this.rightChest.visible = bl = !((PassiveEntity)abstractDonkeyEntity).isBaby() && ((AbstractDonkeyEntity)abstractDonkeyEntity).hasChest();
+        this.leftChest.visible = bl;
+    }
+
+    @Override
+    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
         if (this.child) {
-            float l = 2.0f;
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(0.0f, this.field_3540 * k, this.field_3537 * k);
-            GlStateManager.popMatrix();
-            GlStateManager.pushMatrix();
-            float m = 0.7f;
-            GlStateManager.scalef(0.71428573f, 0.64935064f, 0.7936508f);
-            GlStateManager.translatef(0.0f, 21.0f * k, 0.22f);
-            this.head.render(k);
-            GlStateManager.popMatrix();
-            GlStateManager.pushMatrix();
-            float n = 1.1f;
-            GlStateManager.scalef(0.625f, 0.45454544f, 0.45454544f);
-            GlStateManager.translatef(0.0f, 33.0f * k, 0.0f);
-            this.torso.render(k);
-            GlStateManager.popMatrix();
-            GlStateManager.pushMatrix();
-            GlStateManager.scalef(0.45454544f, 0.41322312f, 0.45454544f);
-            GlStateManager.translatef(0.0f, 33.0f * k, 0.0f);
-            this.backRightLeg.render(k);
-            this.backLeftLeg.render(k);
-            this.frontRightLeg.render(k);
-            this.frontLeftLeg.render(k);
-            GlStateManager.popMatrix();
+            float f = 2.0f;
+            matrices.push();
+            float g = 0.7f;
+            matrices.scale(0.71428573f, 0.64935064f, 0.7936508f);
+            matrices.translate(0.0, 1.3125, 0.22f);
+            this.head.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
+            matrices.pop();
+            matrices.push();
+            float h = 1.1f;
+            matrices.scale(0.625f, 0.45454544f, 0.45454544f);
+            matrices.translate(0.0, 2.0625, 0.0);
+            this.torso.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
+            matrices.pop();
+            matrices.push();
+            matrices.scale(0.45454544f, 0.41322312f, 0.45454544f);
+            matrices.translate(0.0, 2.0625, 0.0);
+            ImmutableList.of((Object)this.rightBackLeg, (Object)this.leftBackLeg, (Object)this.rightFrontLeg, (Object)this.leftFrontLeg, (Object)this.rightChest, (Object)this.leftChest).forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
+            matrices.pop();
         } else {
-            this.head.render(k);
-            this.torso.render(k);
-            this.backRightLeg.render(k);
-            this.backLeftLeg.render(k);
-            this.frontRightLeg.render(k);
-            this.frontLeftLeg.render(k);
+            ImmutableList.of((Object)this.head, (Object)this.torso, (Object)this.rightBackLeg, (Object)this.leftBackLeg, (Object)this.rightFrontLeg, (Object)this.leftFrontLeg, (Object)this.rightChest, (Object)this.leftChest).forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha));
         }
-        if (bl) {
-            this.field_3430.render(k);
-            this.field_3429.render(k);
-        }
-    }
-
-    @Override
-    public /* synthetic */ void render(Entity entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.render((T)((AbstractDonkeyEntity)entity), limbAngle, limbDistance, age, headYaw, headPitch, scale);
     }
 }
 

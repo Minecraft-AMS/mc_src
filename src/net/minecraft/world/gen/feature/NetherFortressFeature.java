@@ -18,11 +18,10 @@ import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.math.BlockBox;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class NetherFortressFeature
@@ -34,22 +33,21 @@ extends StructureFeature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean shouldStartAt(ChunkGenerator<?> chunkGenerator, Random random, int chunkX, int chunkZ) {
-        int i = chunkX >> 4;
+    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
         int j = chunkZ >> 4;
-        random.setSeed((long)(i ^ j << 4) ^ chunkGenerator.getSeed());
+        int k = i >> 4;
+        random.setSeed((long)(j ^ k << 4) ^ chunkGenerator.getSeed());
         random.nextInt();
         if (random.nextInt(3) != 0) {
-            return false;
-        }
-        if (chunkX != (i << 4) + 4 + random.nextInt(8)) {
             return false;
         }
         if (chunkZ != (j << 4) + 4 + random.nextInt(8)) {
             return false;
         }
-        Biome biome = chunkGenerator.getBiomeSource().getBiome(new BlockPos((chunkX << 4) + 9, 0, (chunkZ << 4) + 9));
-        return chunkGenerator.hasStructure(biome, Feature.NETHER_BRIDGE);
+        if (i != (k << 4) + 4 + random.nextInt(8)) {
+            return false;
+        }
+        return chunkGenerator.hasStructure(biome, this);
     }
 
     @Override
@@ -74,8 +72,8 @@ extends StructureFeature<DefaultFeatureConfig> {
 
     public static class Start
     extends StructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, biome, blockBox, i, l);
+        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
+            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
         }
 
         @Override

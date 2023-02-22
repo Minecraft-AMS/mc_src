@@ -57,16 +57,16 @@ public class PlaySoundCommand {
         double d = Math.pow(volume > 1.0f ? (double)(volume * 16.0f) : 16.0, 2.0);
         int i = 0;
         for (ServerPlayerEntity serverPlayerEntity : targets) {
-            double e = pos.x - serverPlayerEntity.x;
-            double f = pos.y - serverPlayerEntity.y;
-            double g = pos.z - serverPlayerEntity.z;
+            double e = pos.x - serverPlayerEntity.getX();
+            double f = pos.y - serverPlayerEntity.getY();
+            double g = pos.z - serverPlayerEntity.getZ();
             double h = e * e + f * f + g * g;
             Vec3d vec3d = pos;
             float j = volume;
             if (h > d) {
                 if (minVolume <= 0.0f) continue;
                 double k = MathHelper.sqrt(h);
-                vec3d = new Vec3d(serverPlayerEntity.x + e / k * 2.0, serverPlayerEntity.y + f / k * 2.0, serverPlayerEntity.z + g / k * 2.0);
+                vec3d = new Vec3d(serverPlayerEntity.getX() + e / k * 2.0, serverPlayerEntity.getY() + f / k * 2.0, serverPlayerEntity.getZ() + g / k * 2.0);
                 j = minVolume;
             }
             serverPlayerEntity.networkHandler.sendPacket(new PlaySoundIdS2CPacket(sound, category, vec3d, j, pitch));
@@ -78,7 +78,7 @@ public class PlaySoundCommand {
         if (targets.size() == 1) {
             source.sendFeedback(new TranslatableText("commands.playsound.success.single", sound, targets.iterator().next().getDisplayName()), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.playsound.success.single", sound, targets.iterator().next().getDisplayName()), true);
+            source.sendFeedback(new TranslatableText("commands.playsound.success.multiple", sound, targets.size()), true);
         }
         return i;
     }

@@ -16,9 +16,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.PlayerSkinTexture;
-import net.minecraft.client.texture.SkinRemappingImageFilter;
-import net.minecraft.client.texture.Texture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.world.ClientWorld;
@@ -97,12 +96,12 @@ extends PlayerEntity {
 
     public static PlayerSkinTexture loadSkin(Identifier id, String playerName) {
         TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
-        Texture texture = textureManager.getTexture(id);
-        if (texture == null) {
-            texture = new PlayerSkinTexture(null, String.format("http://skins.minecraft.net/MinecraftSkins/%s.png", ChatUtil.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), new SkinRemappingImageFilter());
-            textureManager.registerTexture(id, texture);
+        AbstractTexture abstractTexture = textureManager.getTexture(id);
+        if (abstractTexture == null) {
+            abstractTexture = new PlayerSkinTexture(null, String.format("http://skins.minecraft.net/MinecraftSkins/%s.png", ChatUtil.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
+            textureManager.registerTexture(id, abstractTexture);
         }
-        return (PlayerSkinTexture)texture;
+        return (PlayerSkinTexture)abstractTexture;
     }
 
     public static Identifier getSkinId(String playerName) {

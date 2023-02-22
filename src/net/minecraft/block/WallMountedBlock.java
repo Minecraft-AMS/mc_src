@@ -16,8 +16,8 @@ import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class WallMountedBlock
@@ -29,13 +29,13 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return WallMountedBlock.canPlaceAt(world, pos, WallMountedBlock.getDirection(state).getOpposite());
     }
 
-    public static boolean canPlaceAt(CollisionView world, BlockPos pos, Direction direction) {
+    public static boolean canPlaceAt(WorldView worldView, BlockPos pos, Direction direction) {
         BlockPos blockPos = pos.offset(direction);
-        return world.getBlockState(blockPos).isSideSolidFullSquare(world, blockPos, direction.getOpposite());
+        return worldView.getBlockState(blockPos).isSideSolidFullSquare(worldView, blockPos, direction.getOpposite());
     }
 
     @Override

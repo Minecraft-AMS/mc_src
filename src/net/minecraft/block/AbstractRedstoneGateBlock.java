@@ -10,20 +10,21 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.RedstoneWireBlock;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerTickScheduler;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.TickPriority;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public abstract class AbstractRedstoneGateBlock
 extends HorizontalFacingBlock {
@@ -40,12 +41,12 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return AbstractRedstoneGateBlock.topCoversMediumSquare(world, pos.down());
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (this.isLocked(world, pos, state)) {
             return;
         }
@@ -56,7 +57,7 @@ extends HorizontalFacingBlock {
         } else if (!bl) {
             world.setBlockState(pos, (BlockState)state.with(POWERED, true), 2);
             if (!bl2) {
-                world.getBlockTickScheduler().schedule(pos, this, this.getUpdateDelayInternal(state), TickPriority.HIGH);
+                ((ServerTickScheduler)world.getBlockTickScheduler()).schedule(pos, this, this.getUpdateDelayInternal(state), TickPriority.VERY_HIGH);
             }
         }
     }
@@ -108,7 +109,7 @@ extends HorizontalFacingBlock {
         }
     }
 
-    public boolean isLocked(CollisionView world, BlockPos pos, BlockState state) {
+    public boolean isLocked(WorldView worldView, BlockPos pos, BlockState state) {
         return false;
     }
 
@@ -127,15 +128,15 @@ extends HorizontalFacingBlock {
         return Math.max(i, blockState.getBlock() == Blocks.REDSTONE_WIRE ? blockState.get(RedstoneWireBlock.POWER) : 0);
     }
 
-    protected int getMaxInputLevelSides(CollisionView view, BlockPos pos, BlockState state) {
+    protected int getMaxInputLevelSides(WorldView worldView, BlockPos pos, BlockState state) {
         Direction direction = state.get(FACING);
         Direction direction2 = direction.rotateYClockwise();
         Direction direction3 = direction.rotateYCounterclockwise();
-        return Math.max(this.getInputLevel(view, pos.offset(direction2), direction2), this.getInputLevel(view, pos.offset(direction3), direction3));
+        return Math.max(this.getInputLevel(worldView, pos.offset(direction2), direction2), this.getInputLevel(worldView, pos.offset(direction3), direction3));
     }
 
-    protected int getInputLevel(CollisionView view, BlockPos pos, Direction dir) {
-        BlockState blockState = view.getBlockState(pos);
+    protected int getInputLevel(WorldView worldView, BlockPos pos, Direction dir) {
+        BlockState blockState = worldView.getBlockState(pos);
         Block block = blockState.getBlock();
         if (this.isValidInput(blockState)) {
             if (block == Blocks.REDSTONE_BLOCK) {
@@ -144,7 +145,7 @@ extends HorizontalFacingBlock {
             if (block == Blocks.REDSTONE_WIRE) {
                 return blockState.get(RedstoneWireBlock.POWER);
             }
-            return view.getEmittedStrongRedstonePower(pos, dir);
+            return worldView.getStrongRedstonePower(pos, dir);
         }
         return 0;
     }
@@ -206,15 +207,5 @@ extends HorizontalFacingBlock {
     }
 
     protected abstract int getUpdateDelayInternal(BlockState var1);
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
-    }
-
-    @Override
-    public boolean isOpaque(BlockState state) {
-        return true;
-    }
 }
 

@@ -12,7 +12,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HorizontalConnectingBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
@@ -74,11 +73,6 @@ extends HorizontalConnectingBlock {
     public final boolean connectsTo(BlockState state, boolean bl) {
         Block block = state.getBlock();
         return !PaneBlock.cannotConnect(block) && bl || block instanceof PaneBlock;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT_MIPPED;
     }
 
     @Override

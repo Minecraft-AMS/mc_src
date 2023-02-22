@@ -10,7 +10,6 @@ package net.minecraft.realms;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.Tessellator;
-import net.minecraft.realms.RealmsBufferBuilder;
 import net.minecraft.realms.RealmsVertexFormat;
 
 @Environment(value=EnvType.CLIENT)
@@ -27,18 +26,6 @@ public class Tezzelator {
         return this;
     }
 
-    public void color(float f, float g, float h, float i) {
-        t.getBuffer().color(f, g, h, i);
-    }
-
-    public void tex2(short s, short t) {
-        Tezzelator.t.getBuffer().texture(s, t);
-    }
-
-    public void normal(float f, float g, float h) {
-        t.getBuffer().normal(f, g, h);
-    }
-
     public void begin(int i, RealmsVertexFormat realmsVertexFormat) {
         t.getBuffer().begin(i, realmsVertexFormat.getVertexFormat());
     }
@@ -47,16 +34,13 @@ public class Tezzelator {
         t.getBuffer().next();
     }
 
-    public void offset(double d, double e, double f) {
-        t.getBuffer().setOffset(d, e, f);
+    public Tezzelator color(int i, int j, int k, int l) {
+        t.getBuffer().color(i, j, k, l);
+        return this;
     }
 
-    public RealmsBufferBuilder color(int i, int j, int k, int l) {
-        return new RealmsBufferBuilder(t.getBuffer().color(i, j, k, l));
-    }
-
-    public Tezzelator tex(double d, double e) {
-        t.getBuffer().texture(d, e);
+    public Tezzelator tex(float f, float g) {
+        t.getBuffer().texture(f, g);
         return this;
     }
 }

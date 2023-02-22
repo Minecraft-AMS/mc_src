@@ -82,11 +82,11 @@ RecipeInputProvider {
 
     public ItemStack add(ItemStack itemStack) {
         ItemStack itemStack2 = itemStack.copy();
-        this.method_20634(itemStack2);
+        this.addToExistingSlot(itemStack2);
         if (itemStack2.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        this.method_20633(itemStack2);
+        this.addToNewSlot(itemStack2);
         if (itemStack2.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -157,32 +157,32 @@ RecipeInputProvider {
         return this.stackList.stream().filter(itemStack -> !itemStack.isEmpty()).collect(Collectors.toList()).toString();
     }
 
-    private void method_20633(ItemStack itemStack) {
+    private void addToNewSlot(ItemStack stack) {
         for (int i = 0; i < this.size; ++i) {
-            ItemStack itemStack2 = this.getInvStack(i);
-            if (!itemStack2.isEmpty()) continue;
-            this.setInvStack(i, itemStack.copy());
-            itemStack.setCount(0);
-            return;
-        }
-    }
-
-    private void method_20634(ItemStack itemStack) {
-        for (int i = 0; i < this.size; ++i) {
-            ItemStack itemStack2 = this.getInvStack(i);
-            if (!ItemStack.areItemsEqualIgnoreDamage(itemStack2, itemStack)) continue;
-            this.method_20632(itemStack, itemStack2);
+            ItemStack itemStack = this.getInvStack(i);
             if (!itemStack.isEmpty()) continue;
+            this.setInvStack(i, stack.copy());
+            stack.setCount(0);
             return;
         }
     }
 
-    private void method_20632(ItemStack itemStack, ItemStack itemStack2) {
-        int i = Math.min(this.getInvMaxStackAmount(), itemStack2.getMaxCount());
-        int j = Math.min(itemStack.getCount(), i - itemStack2.getCount());
+    private void addToExistingSlot(ItemStack stack) {
+        for (int i = 0; i < this.size; ++i) {
+            ItemStack itemStack = this.getInvStack(i);
+            if (!ItemStack.areItemsEqualIgnoreDamage(itemStack, stack)) continue;
+            this.transfer(stack, itemStack);
+            if (!stack.isEmpty()) continue;
+            return;
+        }
+    }
+
+    private void transfer(ItemStack source, ItemStack target) {
+        int i = Math.min(this.getInvMaxStackAmount(), target.getMaxCount());
+        int j = Math.min(source.getCount(), i - target.getCount());
         if (j > 0) {
-            itemStack2.increment(j);
-            itemStack.decrement(j);
+            target.increment(j);
+            source.decrement(j);
             this.markDirty();
         }
     }

@@ -9,11 +9,13 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.IllagerEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.IllagerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.IllusionerEntity;
 import net.minecraft.util.Identifier;
@@ -30,9 +32,9 @@ extends IllagerEntityRenderer<IllusionerEntity> {
         this.addFeature(new HeldItemFeatureRenderer<IllusionerEntity, IllagerEntityModel<IllusionerEntity>>((FeatureRendererContext)this){
 
             @Override
-            public void render(IllusionerEntity illusionerEntity, float f, float g, float h, float i, float j, float k, float l) {
+            public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, IllusionerEntity illusionerEntity, float f, float g, float h, float j, float k, float l) {
                 if (illusionerEntity.isSpellcasting() || illusionerEntity.isAttacking()) {
-                    super.render(illusionerEntity, f, g, h, i, j, k, l);
+                    super.render(matrixStack, vertexConsumerProvider, i, illusionerEntity, f, g, h, j, k, l);
                 }
             }
         });
@@ -40,31 +42,34 @@ extends IllagerEntityRenderer<IllusionerEntity> {
     }
 
     @Override
-    protected Identifier getTexture(IllusionerEntity illusionerEntity) {
+    public Identifier getTexture(IllusionerEntity illusionerEntity) {
         return SKIN;
     }
 
     @Override
-    public void render(IllusionerEntity illusionerEntity, double d, double e, double f, float g, float h) {
+    public void render(IllusionerEntity illusionerEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         if (illusionerEntity.isInvisible()) {
-            Vec3d[] vec3ds = illusionerEntity.method_7065(h);
-            float i = this.getAnimationProgress(illusionerEntity, h);
+            Vec3d[] vec3ds = illusionerEntity.method_7065(g);
+            float h = this.getAnimationProgress(illusionerEntity, g);
             for (int j = 0; j < vec3ds.length; ++j) {
-                super.render(illusionerEntity, d + vec3ds[j].x + (double)MathHelper.cos((float)j + i * 0.5f) * 0.025, e + vec3ds[j].y + (double)MathHelper.cos((float)j + i * 0.75f) * 0.0125, f + vec3ds[j].z + (double)MathHelper.cos((float)j + i * 0.7f) * 0.025, g, h);
+                matrixStack.push();
+                matrixStack.translate(vec3ds[j].x + (double)MathHelper.cos((float)j + h * 0.5f) * 0.025, vec3ds[j].y + (double)MathHelper.cos((float)j + h * 0.75f) * 0.0125, vec3ds[j].z + (double)MathHelper.cos((float)j + h * 0.7f) * 0.025);
+                super.render(illusionerEntity, f, g, matrixStack, vertexConsumerProvider, i);
+                matrixStack.pop();
             }
         } else {
-            super.render(illusionerEntity, d, e, f, g, h);
+            super.render(illusionerEntity, f, g, matrixStack, vertexConsumerProvider, i);
         }
     }
 
     @Override
-    protected boolean method_4056(IllusionerEntity illusionerEntity) {
+    protected boolean isFullyVisible(IllusionerEntity illusionerEntity) {
         return true;
     }
 
     @Override
-    protected /* synthetic */ boolean method_4056(LivingEntity livingEntity) {
-        return this.method_4056((IllusionerEntity)livingEntity);
+    protected /* synthetic */ boolean isFullyVisible(LivingEntity entity) {
+        return this.isFullyVisible((IllusionerEntity)entity);
     }
 }
 

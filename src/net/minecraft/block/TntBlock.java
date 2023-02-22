@@ -22,6 +22,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -83,26 +84,28 @@ extends Block {
         if (world.isClient) {
             return;
         }
-        TntEntity tntEntity = new TntEntity(world, (float)pos.getX() + 0.5f, pos.getY(), (float)pos.getZ() + 0.5f, igniter);
+        TntEntity tntEntity = new TntEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, igniter);
         world.spawnEntity(tntEntity);
-        world.playSound(null, tntEntity.x, tntEntity.y, tntEntity.z, SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
+        world.playSound(null, tntEntity.getX(), tntEntity.getY(), tntEntity.getZ(), SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
         if (item == Items.FLINT_AND_STEEL || item == Items.FIRE_CHARGE) {
             TntBlock.primeTnt(world, pos, player);
             world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-            if (item == Items.FLINT_AND_STEEL) {
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
-            } else {
-                itemStack.decrement(1);
+            if (!player.isCreative()) {
+                if (item == Items.FLINT_AND_STEEL) {
+                    itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+                } else {
+                    itemStack.decrement(1);
+                }
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return super.activate(state, world, pos, player, hand, hit);
+        return super.onUse(state, world, pos, player, hand, hit);
     }
 
     @Override

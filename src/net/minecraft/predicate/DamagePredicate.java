@@ -48,10 +48,10 @@ public class DamagePredicate {
         if (this == ANY) {
             return true;
         }
-        if (!this.dealt.matches(dealt)) {
+        if (!this.dealt.test(dealt)) {
             return false;
         }
-        if (!this.taken.matches(taken)) {
+        if (!this.taken.test(taken)) {
             return false;
         }
         if (!this.sourceEntity.test(player, source.getAttacker())) {

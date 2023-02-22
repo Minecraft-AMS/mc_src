@@ -22,13 +22,13 @@ extends Item {
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
         ItemStack itemStack = super.finishUsing(stack, world, user);
         if (!world.isClient) {
-            double d = user.x;
-            double e = user.y;
-            double f = user.z;
+            double d = user.getX();
+            double e = user.getY();
+            double f = user.getZ();
             for (int i = 0; i < 16; ++i) {
-                double g = user.x + (user.getRandom().nextDouble() - 0.5) * 16.0;
-                double h = MathHelper.clamp(user.y + (double)(user.getRandom().nextInt(16) - 8), 0.0, (double)(world.getEffectiveHeight() - 1));
-                double j = user.z + (user.getRandom().nextDouble() - 0.5) * 16.0;
+                double g = user.getX() + (user.getRandom().nextDouble() - 0.5) * 16.0;
+                double h = MathHelper.clamp(user.getY() + (double)(user.getRandom().nextInt(16) - 8), 0.0, (double)(world.getEffectiveHeight() - 1));
+                double j = user.getZ() + (user.getRandom().nextDouble() - 0.5) * 16.0;
                 if (user.hasVehicle()) {
                     user.stopRiding();
                 }

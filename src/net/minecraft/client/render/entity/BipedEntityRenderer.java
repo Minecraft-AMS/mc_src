@@ -31,7 +31,7 @@ extends MobEntityRenderer<T, M> {
     }
 
     @Override
-    protected Identifier getTexture(T mobEntity) {
+    public Identifier getTexture(T mobEntity) {
         return SKIN;
     }
 }

@@ -28,6 +28,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -63,15 +64,15 @@ extends StructurePiece {
     }
 
     @Override
-    public boolean generate(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
-        this.placementData.setBoundingBox(boundingBox);
+    public boolean generate(IWorld world, ChunkGenerator<?> generator, Random random, BlockBox box, ChunkPos pos) {
+        this.placementData.setBoundingBox(box);
         this.boundingBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
         if (this.structure.method_15172(world, this.pos, this.placementData, 2)) {
             List<Structure.StructureBlockInfo> list = this.structure.method_16445(this.pos, this.placementData, Blocks.STRUCTURE_BLOCK);
             for (Structure.StructureBlockInfo structureBlockInfo : list) {
                 StructureBlockMode structureBlockMode;
                 if (structureBlockInfo.tag == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.tag.getString("mode"))) != StructureBlockMode.DATA) continue;
-                this.handleMetadata(structureBlockInfo.tag.getString("metadata"), structureBlockInfo.pos, world, random, boundingBox);
+                this.handleMetadata(structureBlockInfo.tag.getString("metadata"), structureBlockInfo.pos, world, random, box);
             }
             List<Structure.StructureBlockInfo> list2 = this.structure.method_16445(this.pos, this.placementData, Blocks.JIGSAW);
             for (Structure.StructureBlockInfo structureBlockInfo2 : list2) {

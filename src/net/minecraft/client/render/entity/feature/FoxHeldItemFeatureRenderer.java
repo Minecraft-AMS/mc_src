@@ -7,14 +7,16 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.FoxEntityModel;
 import net.minecraft.client.render.model.json.ModelTransformation;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.passive.FoxEntity;
 import net.minecraft.item.ItemStack;
@@ -27,47 +29,39 @@ extends FeatureRenderer<FoxEntity, FoxEntityModel<FoxEntity>> {
     }
 
     @Override
-    public void render(FoxEntity foxEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, FoxEntity foxEntity, float f, float g, float h, float j, float k, float l) {
         float m;
-        ItemStack itemStack = foxEntity.getEquippedStack(EquipmentSlot.MAINHAND);
-        if (itemStack.isEmpty()) {
-            return;
-        }
         boolean bl = foxEntity.isSleeping();
         boolean bl2 = foxEntity.isBaby();
-        GlStateManager.pushMatrix();
+        matrixStack.push();
         if (bl2) {
             m = 0.75f;
-            GlStateManager.scalef(0.75f, 0.75f, 0.75f);
-            GlStateManager.translatef(0.0f, 8.0f * l, 3.35f * l);
+            matrixStack.scale(0.75f, 0.75f, 0.75f);
+            matrixStack.translate(0.0, 0.5, 0.209375f);
         }
-        GlStateManager.translatef(((FoxEntityModel)this.getContextModel()).head.pivotX / 16.0f, ((FoxEntityModel)this.getContextModel()).head.pivotY / 16.0f, ((FoxEntityModel)this.getContextModel()).head.pivotZ / 16.0f);
-        m = foxEntity.getHeadRoll(h) * 57.295776f;
-        GlStateManager.rotatef(m, 0.0f, 0.0f, 1.0f);
-        GlStateManager.rotatef(j, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(k, 1.0f, 0.0f, 0.0f);
+        matrixStack.translate(((FoxEntityModel)this.getContextModel()).head.pivotX / 16.0f, ((FoxEntityModel)this.getContextModel()).head.pivotY / 16.0f, ((FoxEntityModel)this.getContextModel()).head.pivotZ / 16.0f);
+        m = foxEntity.getHeadRoll(h);
+        matrixStack.multiply(Vector3f.POSITIVE_Z.getRadialQuaternion(m));
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(k));
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(l));
         if (foxEntity.isBaby()) {
             if (bl) {
-                GlStateManager.translatef(0.4f, 0.26f, 0.15f);
+                matrixStack.translate(0.4f, 0.26f, 0.15f);
             } else {
-                GlStateManager.translatef(0.06f, 0.26f, -0.5f);
+                matrixStack.translate(0.06f, 0.26f, -0.5);
             }
         } else if (bl) {
-            GlStateManager.translatef(0.46f, 0.26f, 0.22f);
+            matrixStack.translate(0.46f, 0.26f, 0.22f);
         } else {
-            GlStateManager.translatef(0.06f, 0.27f, -0.5f);
+            matrixStack.translate(0.06f, 0.27f, -0.5);
         }
-        GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(90.0f));
         if (bl) {
-            GlStateManager.rotatef(90.0f, 0.0f, 0.0f, 1.0f);
+            matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(90.0f));
         }
-        MinecraftClient.getInstance().getItemRenderer().renderHeldItem(itemStack, foxEntity, ModelTransformation.Type.GROUND, false);
-        GlStateManager.popMatrix();
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        ItemStack itemStack = foxEntity.getEquippedStack(EquipmentSlot.MAINHAND);
+        MinecraftClient.getInstance().getHeldItemRenderer().renderItem(foxEntity, itemStack, ModelTransformation.Mode.GROUND, false, matrixStack, vertexConsumerProvider, i);
+        matrixStack.pop();
     }
 }
 

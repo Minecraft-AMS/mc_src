@@ -106,7 +106,7 @@ public class TradeOffer {
         ++this.uses;
     }
 
-    public int method_21725() {
+    public int getDemandBonus() {
         return this.demandBonus;
     }
 
@@ -140,6 +140,10 @@ public class TradeOffer {
 
     public void clearUses() {
         this.uses = this.maxUses;
+    }
+
+    public boolean method_21834() {
+        return this.uses > 0;
     }
 
     public boolean shouldRewardPlayerExperience() {

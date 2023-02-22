@@ -32,7 +32,7 @@ extends IdentifierNormalizingSchema {
     }
 
     protected static void method_5232(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> Schema100.method_5196(schema));
+        schema.register(map, string, () -> Schema100.targetItems(schema));
     }
 
     protected static void method_5273(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
@@ -53,13 +53,13 @@ extends IdentifierNormalizingSchema {
         schema.register((Map)map, "minecraft:commandblock_minecart", string -> DSL.optionalFields((String)"DisplayState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema)));
         Schema1460.method_5232(schema, map, "minecraft:cow");
         Schema1460.method_5232(schema, map, "minecraft:creeper");
-        schema.register((Map)map, "minecraft:donkey", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:donkey", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         schema.registerSimple((Map)map, "minecraft:dragon_fireball");
         schema.registerSimple((Map)map, "minecraft:egg");
         Schema1460.method_5232(schema, map, "minecraft:elder_guardian");
         schema.registerSimple((Map)map, "minecraft:ender_crystal");
         Schema1460.method_5232(schema, map, "minecraft:ender_dragon");
-        schema.register((Map)map, "minecraft:enderman", string -> DSL.optionalFields((String)"carriedBlockState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:enderman", string -> DSL.optionalFields((String)"carriedBlockState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:endermite");
         schema.registerSimple((Map)map, "minecraft:ender_pearl");
         schema.registerSimple((Map)map, "minecraft:evocation_fangs");
@@ -73,18 +73,18 @@ extends IdentifierNormalizingSchema {
         Schema1460.method_5232(schema, map, "minecraft:giant");
         Schema1460.method_5232(schema, map, "minecraft:guardian");
         schema.register((Map)map, "minecraft:hopper_minecart", string -> DSL.optionalFields((String)"DisplayState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
-        schema.register((Map)map, "minecraft:horse", string -> DSL.optionalFields((String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:horse", string -> DSL.optionalFields((String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:husk");
         schema.registerSimple((Map)map, "minecraft:illusion_illager");
         schema.register((Map)map, "minecraft:item", string -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         schema.register((Map)map, "minecraft:item_frame", string -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         schema.registerSimple((Map)map, "minecraft:leash_knot");
-        schema.register((Map)map, "minecraft:llama", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"DecorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:llama", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"DecorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         schema.registerSimple((Map)map, "minecraft:llama_spit");
         Schema1460.method_5232(schema, map, "minecraft:magma_cube");
         schema.register((Map)map, "minecraft:minecart", string -> DSL.optionalFields((String)"DisplayState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema)));
         Schema1460.method_5232(schema, map, "minecraft:mooshroom");
-        schema.register((Map)map, "minecraft:mule", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:mule", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:ocelot");
         schema.registerSimple((Map)map, "minecraft:painting");
         schema.registerSimple((Map)map, "minecraft:parrot");
@@ -97,7 +97,7 @@ extends IdentifierNormalizingSchema {
         schema.registerSimple((Map)map, "minecraft:shulker_bullet");
         Schema1460.method_5232(schema, map, "minecraft:silverfish");
         Schema1460.method_5232(schema, map, "minecraft:skeleton");
-        schema.register((Map)map, "minecraft:skeleton_horse", string -> DSL.optionalFields((String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:skeleton_horse", string -> DSL.optionalFields((String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:slime");
         schema.registerSimple((Map)map, "minecraft:small_fireball");
         schema.registerSimple((Map)map, "minecraft:snowball");
@@ -110,7 +110,7 @@ extends IdentifierNormalizingSchema {
         schema.registerSimple((Map)map, "minecraft:tnt");
         schema.register((Map)map, "minecraft:tnt_minecart", string -> DSL.optionalFields((String)"DisplayState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema)));
         Schema1460.method_5232(schema, map, "minecraft:vex");
-        schema.register((Map)map, "minecraft:villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:villager_golem");
         Schema1460.method_5232(schema, map, "minecraft:vindication_illager");
         Schema1460.method_5232(schema, map, "minecraft:witch");
@@ -121,7 +121,7 @@ extends IdentifierNormalizingSchema {
         schema.registerSimple((Map)map, "minecraft:xp_bottle");
         schema.registerSimple((Map)map, "minecraft:xp_orb");
         Schema1460.method_5232(schema, map, "minecraft:zombie");
-        schema.register((Map)map, "minecraft:zombie_horse", string -> DSL.optionalFields((String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register((Map)map, "minecraft:zombie_horse", string -> DSL.optionalFields((String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema1460.method_5232(schema, map, "minecraft:zombie_pigman");
         Schema1460.method_5232(schema, map, "minecraft:zombie_villager");
         return map;

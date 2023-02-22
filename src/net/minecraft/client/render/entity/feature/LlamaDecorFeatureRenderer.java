@@ -9,9 +9,14 @@ package net.minecraft.client.render.entity.feature;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.LlamaEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.LlamaEntity;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
@@ -28,22 +33,20 @@ extends FeatureRenderer<LlamaEntity, LlamaEntityModel<LlamaEntity>> {
     }
 
     @Override
-    public void render(LlamaEntity llamaEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, LlamaEntity llamaEntity, float f, float g, float h, float j, float k, float l) {
+        Identifier identifier;
         DyeColor dyeColor = llamaEntity.getCarpetColor();
         if (dyeColor != null) {
-            this.bindTexture(LLAMA_DECOR[dyeColor.getId()]);
+            identifier = LLAMA_DECOR[dyeColor.getId()];
         } else if (llamaEntity.isTrader()) {
-            this.bindTexture(TRADER_LLAMA_DECOR);
+            identifier = TRADER_LLAMA_DECOR;
         } else {
             return;
         }
         ((LlamaEntityModel)this.getContextModel()).copyStateTo(this.model);
-        this.model.render(llamaEntity, f, g, i, j, k, l);
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        this.model.setAngles(llamaEntity, f, g, j, k, l);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityCutoutNoCull(identifier));
+        this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
 

@@ -16,12 +16,12 @@ extends AbstractDoubleList
 implements PairList {
     private final DoubleList first;
     private final DoubleList second;
-    private final boolean field_1380;
+    private final boolean inverted;
 
     public DisjointPairList(DoubleList first, DoubleList second, boolean inverted) {
         this.first = first;
         this.second = second;
-        this.field_1380 = inverted;
+        this.inverted = inverted;
     }
 
     public int size() {
@@ -29,25 +29,25 @@ implements PairList {
     }
 
     @Override
-    public boolean forEachPair(PairList.SectionPairPredicate predicate) {
-        if (this.field_1380) {
-            return this.method_1067((i, j, k) -> predicate.merge(j, i, k));
+    public boolean forEachPair(PairList.Consumer predicate) {
+        if (this.inverted) {
+            return this.iterateSections((i, j, k) -> predicate.merge(j, i, k));
         }
-        return this.method_1067(predicate);
+        return this.iterateSections(predicate);
     }
 
-    private boolean method_1067(PairList.SectionPairPredicate sectionPairPredicate) {
+    private boolean iterateSections(PairList.Consumer consumer) {
         int j;
         int i = this.first.size() - 1;
         for (j = 0; j < i; ++j) {
-            if (sectionPairPredicate.merge(j, -1, j)) continue;
+            if (consumer.merge(j, -1, j)) continue;
             return false;
         }
-        if (!sectionPairPredicate.merge(i, -1, i)) {
+        if (!consumer.merge(i, -1, i)) {
             return false;
         }
         for (j = 0; j < this.second.size(); ++j) {
-            if (sectionPairPredicate.merge(i, j, i + 1 + j)) continue;
+            if (consumer.merge(i, j, i + 1 + j)) continue;
             return false;
         }
         return true;

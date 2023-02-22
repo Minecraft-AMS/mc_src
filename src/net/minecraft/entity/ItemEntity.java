@@ -9,6 +9,7 @@
 package net.minecraft.entity;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -87,9 +88,9 @@ extends Entity {
         if (this.pickupDelay > 0 && this.pickupDelay != Short.MAX_VALUE) {
             --this.pickupDelay;
         }
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
+        this.prevX = this.getX();
+        this.prevY = this.getY();
+        this.prevZ = this.getZ();
         Vec3d vec3d = this.getVelocity();
         if (this.isInFluid(FluidTags.WATER)) {
             this.applyBuoyancy();
@@ -101,21 +102,21 @@ extends Entity {
         } else {
             boolean bl = this.noClip = !this.world.doesNotCollide(this);
             if (this.noClip) {
-                this.pushOutOfBlocks(this.x, (this.getBoundingBox().y1 + this.getBoundingBox().y2) / 2.0, this.z);
+                this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().y1 + this.getBoundingBox().y2) / 2.0, this.getZ());
             }
         }
         if (!this.onGround || ItemEntity.squaredHorizontalLength(this.getVelocity()) > (double)1.0E-5f || (this.age + this.getEntityId()) % 4 == 0) {
             this.move(MovementType.SELF, this.getVelocity());
             float f = 0.98f;
             if (this.onGround) {
-                f = this.world.getBlockState(new BlockPos(this.x, this.getBoundingBox().y1 - 1.0, this.z)).getBlock().getSlipperiness() * 0.98f;
+                f = this.world.getBlockState(new BlockPos(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
             }
             this.setVelocity(this.getVelocity().multiply(f, 0.98, f));
             if (this.onGround) {
                 this.setVelocity(this.getVelocity().multiply(1.0, -0.5, 1.0));
             }
         }
-        boolean bl = MathHelper.floor(this.prevX) != MathHelper.floor(this.x) || MathHelper.floor(this.prevY) != MathHelper.floor(this.y) || MathHelper.floor(this.prevZ) != MathHelper.floor(this.z);
+        boolean bl = MathHelper.floor(this.prevX) != MathHelper.floor(this.getX()) || MathHelper.floor(this.prevY) != MathHelper.floor(this.getY()) || MathHelper.floor(this.prevZ) != MathHelper.floor(this.getZ());
         int n = i = bl ? 2 : 40;
         if (this.age % i == 0) {
             if (this.world.getFluidState(new BlockPos(this)).matches(FluidTags.LAVA)) {
@@ -144,15 +145,15 @@ extends Entity {
     }
 
     private void tryMerge() {
+        if (!this.canMerge()) {
+            return;
+        }
         List<ItemEntity> list = this.world.getEntities(ItemEntity.class, this.getBoundingBox().expand(0.5, 0.0, 0.5), itemEntity -> itemEntity != this && itemEntity.canMerge());
-        if (!list.isEmpty()) {
-            for (ItemEntity itemEntity2 : list) {
-                if (this.canMerge()) {
-                    this.tryMerge(itemEntity2);
-                    continue;
-                }
-                return;
-            }
+        for (ItemEntity itemEntity2 : list) {
+            if (!itemEntity2.canMerge()) continue;
+            this.tryMerge(itemEntity2);
+            if (!this.removed) continue;
+            break;
         }
     }
 
@@ -164,16 +165,7 @@ extends Entity {
     private void tryMerge(ItemEntity other) {
         ItemStack itemStack = this.getStack();
         ItemStack itemStack2 = other.getStack();
-        if (itemStack2.getItem() != itemStack.getItem()) {
-            return;
-        }
-        if (itemStack2.getCount() + itemStack.getCount() > itemStack2.getMaxCount()) {
-            return;
-        }
-        if (itemStack2.hasTag() ^ itemStack.hasTag()) {
-            return;
-        }
-        if (itemStack2.hasTag() && !itemStack2.getTag().equals(itemStack.getTag())) {
+        if (!Objects.equals(this.getOwner(), other.getOwner()) || !ItemEntity.canMerge(itemStack, itemStack2)) {
             return;
         }
         if (itemStack2.getCount() < itemStack.getCount()) {
@@ -183,22 +175,39 @@ extends Entity {
         }
     }
 
-    private static void merge(ItemEntity targetEntity, ItemStack targetStack, ItemEntity sourceEntity, ItemStack sourceStack) {
-        int i = Math.min(targetStack.getMaxCount() - targetStack.getCount(), sourceStack.getCount());
-        ItemStack itemStack = targetStack.copy();
+    public static boolean canMerge(ItemStack stack1, ItemStack stack2) {
+        if (stack2.getItem() != stack1.getItem()) {
+            return false;
+        }
+        if (stack2.getCount() + stack1.getCount() > stack2.getMaxCount()) {
+            return false;
+        }
+        if (stack2.hasTag() ^ stack1.hasTag()) {
+            return false;
+        }
+        return !stack2.hasTag() || stack2.getTag().equals(stack1.getTag());
+    }
+
+    public static ItemStack merge(ItemStack stack1, ItemStack stack2, int maxCount) {
+        int i = Math.min(Math.min(stack1.getMaxCount(), maxCount) - stack1.getCount(), stack2.getCount());
+        ItemStack itemStack = stack1.copy();
         itemStack.increment(i);
+        stack2.decrement(i);
+        return itemStack;
+    }
+
+    private static void merge(ItemEntity targetEntity, ItemStack stack1, ItemStack stack2) {
+        ItemStack itemStack = ItemEntity.merge(stack1, stack2, 64);
         targetEntity.setStack(itemStack);
-        sourceStack.decrement(i);
-        sourceEntity.setStack(sourceStack);
+    }
+
+    private static void merge(ItemEntity targetEntity, ItemStack targetStack, ItemEntity sourceEntity, ItemStack sourceStack) {
+        ItemEntity.merge(targetEntity, targetStack, sourceStack);
         targetEntity.pickupDelay = Math.max(targetEntity.pickupDelay, sourceEntity.pickupDelay);
         targetEntity.age = Math.min(targetEntity.age, sourceEntity.age);
         if (sourceStack.isEmpty()) {
             sourceEntity.remove();
         }
-    }
-
-    public void setCreativeDespawnTime() {
-        this.age = 4800;
     }
 
     @Override
@@ -266,7 +275,7 @@ extends Entity {
         ItemStack itemStack = this.getStack();
         Item item = itemStack.getItem();
         int i = itemStack.getCount();
-        if (this.pickupDelay == 0 && (this.owner == null || 6000 - this.age <= 200 || this.owner.equals(player.getUuid())) && player.inventory.insertStack(itemStack)) {
+        if (this.pickupDelay == 0 && (this.owner == null || this.owner.equals(player.getUuid())) && player.inventory.insertStack(itemStack)) {
             player.sendPickup(this, i);
             if (itemStack.isEmpty()) {
                 this.remove();

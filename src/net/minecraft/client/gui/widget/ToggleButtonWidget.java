@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -54,7 +54,7 @@ extends AbstractButtonWidget {
     public void renderButton(int mouseX, int mouseY, float delta) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         minecraftClient.getTextureManager().bindTexture(this.texture);
-        GlStateManager.disableDepthTest();
+        RenderSystem.disableDepthTest();
         int i = this.u;
         int j = this.v;
         if (this.toggled) {
@@ -64,7 +64,7 @@ extends AbstractButtonWidget {
             j += this.hoverVOffset;
         }
         this.blit(this.x, this.y, i, j, this.width, this.height);
-        GlStateManager.enableDepthTest();
+        RenderSystem.enableDepthTest();
     }
 }
 

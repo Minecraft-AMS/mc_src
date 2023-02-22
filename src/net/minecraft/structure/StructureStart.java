@@ -20,14 +20,13 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public abstract class StructureStart {
-    public static final StructureStart DEFAULT = new StructureStart((StructureFeature)Feature.MINESHAFT, 0, 0, Biomes.PLAINS, BlockBox.empty(), 0, 0L){
+    public static final StructureStart DEFAULT = new StructureStart((StructureFeature)Feature.MINESHAFT, 0, 0, BlockBox.empty(), 0, 0L){
 
         @Override
         public void initialize(ChunkGenerator<?> chunkGenerator, StructureManager structureManager, int x, int z, Biome biome) {
@@ -38,19 +37,17 @@ public abstract class StructureStart {
     protected BlockBox boundingBox;
     private final int chunkX;
     private final int chunkZ;
-    private final Biome biome;
     private int references;
     protected final ChunkRandom random;
 
-    public StructureStart(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-        this.feature = structureFeature;
+    public StructureStart(StructureFeature<?> feature, int chunkX, int chunkZ, BlockBox box, int references, long l) {
+        this.feature = feature;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
-        this.references = i;
-        this.biome = biome;
+        this.references = references;
         this.random = new ChunkRandom();
         this.random.setStructureSeed(l, chunkX, chunkZ);
-        this.boundingBox = blockBox;
+        this.boundingBox = box;
     }
 
     public abstract void initialize(ChunkGenerator<?> var1, StructureManager var2, int var3, int var4, Biome var5);
@@ -66,13 +63,13 @@ public abstract class StructureStart {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void generateStructure(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
+    public void generateStructure(IWorld world, ChunkGenerator<?> chunkGenerator, Random random, BlockBox blockBox, ChunkPos chunkPos) {
         List<StructurePiece> list = this.children;
         synchronized (list) {
             Iterator<StructurePiece> iterator = this.children.iterator();
             while (iterator.hasNext()) {
                 StructurePiece structurePiece = iterator.next();
-                if (!structurePiece.getBoundingBox().intersects(boundingBox) || structurePiece.generate(world, random, boundingBox, pos)) continue;
+                if (!structurePiece.getBoundingBox().intersects(blockBox) || structurePiece.generate(world, chunkGenerator, random, blockBox, chunkPos)) continue;
                 iterator.remove();
             }
             this.setBoundingBoxFromChildren();
@@ -96,7 +93,6 @@ public abstract class StructureStart {
             return compoundTag;
         }
         compoundTag.putString("id", Registry.STRUCTURE_FEATURE.getId(this.getFeature()).toString());
-        compoundTag.putString("biome", Registry.BIOME.getId(this.biome).toString());
         compoundTag.putInt("ChunkX", chunkX);
         compoundTag.putInt("ChunkZ", chunkZ);
         compoundTag.putInt("references", this.references);
@@ -157,6 +153,10 @@ public abstract class StructureStart {
 
     public void incrementReferences() {
         ++this.references;
+    }
+
+    public int getReferences() {
+        return this.references;
     }
 
     protected int getReferenceCountToBeInExistingChunk() {

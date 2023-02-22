@@ -75,6 +75,11 @@ extends Screen {
     }
 
     @Override
+    public void onClose() {
+        this.minecraft.openScreen(this.parent);
+    }
+
+    @Override
     public boolean charTyped(char chr, int keyCode) {
         return this.searchBox.charTyped(chr, keyCode);
     }

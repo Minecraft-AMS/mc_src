@@ -15,10 +15,6 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 @Environment(value=EnvType.CLIENT)
 public class ArmorStandArmorEntityModel
 extends BipedEntityModel<ArmorStandEntity> {
-    public ArmorStandArmorEntityModel() {
-        this(0.0f);
-    }
-
     public ArmorStandArmorEntityModel(float f) {
         this(f, 64, 32);
     }
@@ -28,7 +24,7 @@ extends BipedEntityModel<ArmorStandEntity> {
     }
 
     @Override
-    public void setAngles(ArmorStandEntity armorStandEntity, float f, float g, float h, float i, float j, float k) {
+    public void setAngles(ArmorStandEntity armorStandEntity, float f, float g, float h, float i, float j) {
         this.head.pitch = (float)Math.PI / 180 * armorStandEntity.getHeadRotation().getPitch();
         this.head.yaw = (float)Math.PI / 180 * armorStandEntity.getHeadRotation().getYaw();
         this.head.roll = (float)Math.PI / 180 * armorStandEntity.getHeadRotation().getRoll();

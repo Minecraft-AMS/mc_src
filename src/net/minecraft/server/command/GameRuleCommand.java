@@ -19,7 +19,7 @@ import net.minecraft.world.GameRules;
 public class GameRuleCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         final LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)CommandManager.literal("gamerule").requires(source -> source.hasPermissionLevel(2));
-        GameRules.forEachType(new GameRules.RuleConsumer(){
+        GameRules.forEachType(new GameRules.RuleTypeConsumer(){
 
             @Override
             public <T extends GameRules.Rule<T>> void accept(GameRules.RuleKey<T> key, GameRules.RuleType<T> type) {
@@ -34,13 +34,13 @@ public class GameRuleCommand {
         T rule = serverCommandSource.getMinecraftServer().getGameRules().get(key);
         ((GameRules.Rule)rule).set(context, "value");
         serverCommandSource.sendFeedback(new TranslatableText("commands.gamerule.set", key.getName(), ((GameRules.Rule)rule).toString()), true);
-        return ((GameRules.Rule)rule).toCommandResult();
+        return ((GameRules.Rule)rule).getCommandResult();
     }
 
     private static <T extends GameRules.Rule<T>> int executeQuery(ServerCommandSource source, GameRules.RuleKey<T> key) {
         T rule = source.getMinecraftServer().getGameRules().get(key);
         source.sendFeedback(new TranslatableText("commands.gamerule.query", key.getName(), ((GameRules.Rule)rule).toString()), false);
-        return ((GameRules.Rule)rule).toCommandResult();
+        return ((GameRules.Rule)rule).getCommandResult();
     }
 }
 

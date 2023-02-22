@@ -29,10 +29,10 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class SilverfishEntity
 extends HostileEntity {
@@ -109,7 +109,7 @@ extends HostileEntity {
 
     @Override
     public void tick() {
-        this.field_6283 = this.yaw;
+        this.bodyYaw = this.yaw;
         super.tick();
     }
 
@@ -120,16 +120,16 @@ extends HostileEntity {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, CollisionView world) {
-        if (InfestedBlock.isInfestable(world.getBlockState(pos.down()))) {
+    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
+        if (InfestedBlock.isInfestable(worldView.getBlockState(pos.down()))) {
             return 10.0f;
         }
-        return super.getPathfindingFavor(pos, world);
+        return super.getPathfindingFavor(pos, worldView);
     }
 
-    public static boolean method_20684(EntityType<SilverfishEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        if (SilverfishEntity.method_20681(entityType, iWorld, spawnType, blockPos, random)) {
-            PlayerEntity playerEntity = iWorld.getClosestPlayer((double)blockPos.getX() + 0.5, (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5, 5.0, true);
+    public static boolean canSpawn(EntityType<SilverfishEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        if (SilverfishEntity.canSpawnIgnoreLightLevel(type, world, spawnType, pos, random)) {
+            PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 5.0, true);
             return playerEntity == null;
         }
         return false;
@@ -161,7 +161,7 @@ extends HostileEntity {
             Random random = this.mob.getRandom();
             if (this.mob.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) && random.nextInt(10) == 0) {
                 this.direction = Direction.random(random);
-                BlockPos blockPos = new BlockPos(this.mob.x, this.mob.y + 0.5, this.mob.z).offset(this.direction);
+                BlockPos blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 0.5, this.mob.getZ()).offset(this.direction);
                 BlockState blockState = this.mob.world.getBlockState(blockPos);
                 if (InfestedBlock.isInfestable(blockState)) {
                     this.canInfest = true;
@@ -187,7 +187,7 @@ extends HostileEntity {
                 return;
             }
             World iWorld = this.mob.world;
-            BlockPos blockPos = new BlockPos(this.mob.x, this.mob.y + 0.5, this.mob.z).offset(this.direction);
+            BlockPos blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 0.5, this.mob.getZ()).offset(this.direction);
             BlockState blockState = iWorld.getBlockState(blockPos);
             if (InfestedBlock.isInfestable(blockState)) {
                 iWorld.setBlockState(blockPos, InfestedBlock.fromRegularBlock(blockState.getBlock()), 3);
@@ -235,7 +235,7 @@ extends HostileEntity {
                             Block block = blockState.getBlock();
                             if (block instanceof InfestedBlock) {
                                 if (world.getGameRules().getBoolean(GameRules.MOB_GRIEFING)) {
-                                    world.breakBlock(blockPos2, true);
+                                    world.breakBlock(blockPos2, true, this.silverfish);
                                 } else {
                                     world.setBlockState(blockPos2, ((InfestedBlock)block).getRegularBlock().getDefaultState(), 3);
                                 }

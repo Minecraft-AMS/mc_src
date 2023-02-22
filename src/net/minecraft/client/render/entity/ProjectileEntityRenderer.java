@@ -7,14 +7,18 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.util.math.Matrix3f;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.util.math.MathHelper;
 
@@ -26,18 +30,12 @@ extends EntityRenderer<T> {
     }
 
     @Override
-    public void render(T projectileEntity, double d, double e, double f, float g, float h) {
-        this.bindEntityTexture(projectileEntity);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.pushMatrix();
-        GlStateManager.disableLighting();
-        GlStateManager.translatef((float)d, (float)e, (float)f);
-        GlStateManager.rotatef(MathHelper.lerp(h, ((ProjectileEntity)projectileEntity).prevYaw, ((ProjectileEntity)projectileEntity).yaw) - 90.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(MathHelper.lerp(h, ((ProjectileEntity)projectileEntity).prevPitch, ((ProjectileEntity)projectileEntity).pitch), 0.0f, 0.0f, 1.0f);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        boolean i = false;
-        float j = 0.0f;
+    public void render(T projectileEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        matrixStack.push();
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(MathHelper.lerp(g, ((ProjectileEntity)projectileEntity).prevYaw, ((ProjectileEntity)projectileEntity).yaw) - 90.0f));
+        matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.lerp(g, ((ProjectileEntity)projectileEntity).prevPitch, ((ProjectileEntity)projectileEntity).pitch)));
+        boolean j = false;
+        float h = 0.0f;
         float k = 0.5f;
         float l = 0.0f;
         float m = 0.15625f;
@@ -46,51 +44,39 @@ extends EntityRenderer<T> {
         float p = 0.15625f;
         float q = 0.3125f;
         float r = 0.05625f;
-        GlStateManager.enableRescaleNormal();
-        float s = (float)((ProjectileEntity)projectileEntity).shake - h;
+        float s = (float)((ProjectileEntity)projectileEntity).shake - g;
         if (s > 0.0f) {
             float t = -MathHelper.sin(s * 3.0f) * s;
-            GlStateManager.rotatef(t, 0.0f, 0.0f, 1.0f);
+            matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(t));
         }
-        GlStateManager.rotatef(45.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.scalef(0.05625f, 0.05625f, 0.05625f);
-        GlStateManager.translatef(-4.0f, 0.0f, 0.0f);
-        if (this.renderOutlines) {
-            GlStateManager.enableColorMaterial();
-            GlStateManager.setupSolidRenderingTextureCombine(this.getOutlineColor(projectileEntity));
-        }
-        GlStateManager.normal3f(0.05625f, 0.0f, 0.0f);
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(-7.0, -2.0, -2.0).texture(0.0, 0.15625).next();
-        bufferBuilder.vertex(-7.0, -2.0, 2.0).texture(0.15625, 0.15625).next();
-        bufferBuilder.vertex(-7.0, 2.0, 2.0).texture(0.15625, 0.3125).next();
-        bufferBuilder.vertex(-7.0, 2.0, -2.0).texture(0.0, 0.3125).next();
-        tessellator.draw();
-        GlStateManager.normal3f(-0.05625f, 0.0f, 0.0f);
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(-7.0, 2.0, -2.0).texture(0.0, 0.15625).next();
-        bufferBuilder.vertex(-7.0, 2.0, 2.0).texture(0.15625, 0.15625).next();
-        bufferBuilder.vertex(-7.0, -2.0, 2.0).texture(0.15625, 0.3125).next();
-        bufferBuilder.vertex(-7.0, -2.0, -2.0).texture(0.0, 0.3125).next();
-        tessellator.draw();
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(45.0f));
+        matrixStack.scale(0.05625f, 0.05625f, 0.05625f);
+        matrixStack.translate(-4.0, 0.0, 0.0);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityCutout(this.getTexture(projectileEntity)));
+        MatrixStack.Entry entry = matrixStack.peek();
+        Matrix4f matrix4f = entry.getModel();
+        Matrix3f matrix3f = entry.getNormal();
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, -2, -2, 0.0f, 0.15625f, -1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, -2, 2, 0.15625f, 0.15625f, -1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, 2, 2, 0.15625f, 0.3125f, -1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, 2, -2, 0.0f, 0.3125f, -1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, 2, -2, 0.0f, 0.15625f, 1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, 2, 2, 0.15625f, 0.15625f, 1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, -2, 2, 0.15625f, 0.3125f, 1, 0, 0, i);
+        this.method_23153(matrix4f, matrix3f, vertexConsumer, -7, -2, -2, 0.0f, 0.3125f, 1, 0, 0, i);
         for (int u = 0; u < 4; ++u) {
-            GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-            GlStateManager.normal3f(0.0f, 0.0f, 0.05625f);
-            bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-            bufferBuilder.vertex(-8.0, -2.0, 0.0).texture(0.0, 0.0).next();
-            bufferBuilder.vertex(8.0, -2.0, 0.0).texture(0.5, 0.0).next();
-            bufferBuilder.vertex(8.0, 2.0, 0.0).texture(0.5, 0.15625).next();
-            bufferBuilder.vertex(-8.0, 2.0, 0.0).texture(0.0, 0.15625).next();
-            tessellator.draw();
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(90.0f));
+            this.method_23153(matrix4f, matrix3f, vertexConsumer, -8, -2, 0, 0.0f, 0.0f, 0, 1, 0, i);
+            this.method_23153(matrix4f, matrix3f, vertexConsumer, 8, -2, 0, 0.5f, 0.0f, 0, 1, 0, i);
+            this.method_23153(matrix4f, matrix3f, vertexConsumer, 8, 2, 0, 0.5f, 0.15625f, 0, 1, 0, i);
+            this.method_23153(matrix4f, matrix3f, vertexConsumer, -8, 2, 0, 0.0f, 0.15625f, 0, 1, 0, i);
         }
-        if (this.renderOutlines) {
-            GlStateManager.tearDownSolidRenderingTextureCombine();
-            GlStateManager.disableColorMaterial();
-        }
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.enableLighting();
-        GlStateManager.popMatrix();
-        super.render(projectileEntity, d, e, f, g, h);
+        matrixStack.pop();
+        super.render(projectileEntity, f, g, matrixStack, vertexConsumerProvider, i);
+    }
+
+    public void method_23153(Matrix4f matrix4f, Matrix3f matrix3f, VertexConsumer vertexConsumer, int i, int j, int k, float f, float g, int l, int m, int n, int o) {
+        vertexConsumer.vertex(matrix4f, i, j, k).color(255, 255, 255, 255).texture(f, g).overlay(OverlayTexture.DEFAULT_UV).light(o).normal(matrix3f, l, n, m).next();
     }
 }
 

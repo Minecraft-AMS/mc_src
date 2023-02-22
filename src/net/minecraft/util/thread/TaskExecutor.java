@@ -29,7 +29,7 @@ Runnable {
     private final String name;
 
     public static TaskExecutor<Runnable> create(Executor executor, String name) {
-        return new TaskExecutor<Runnable>(new TaskQueue.QueueMailbox(new ConcurrentLinkedQueue()), executor, name);
+        return new TaskExecutor<Runnable>(new TaskQueue.Simple(new ConcurrentLinkedQueue()), executor, name);
     }
 
     public TaskExecutor(TaskQueue<? super T, ? extends Runnable> queue, Executor executor, String name) {

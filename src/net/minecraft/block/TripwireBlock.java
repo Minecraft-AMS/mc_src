@@ -11,12 +11,12 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.ConnectingBlock;
 import net.minecraft.block.HorizontalConnectingBlock;
 import net.minecraft.block.TripwireHookBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.Items;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
@@ -70,11 +70,6 @@ extends Block {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.TRANSLUCENT;
-    }
-
-    @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
         if (oldState.getBlock() == state.getBlock()) {
             return;
@@ -125,10 +120,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (world.isClient) {
-            return;
-        }
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!world.getBlockState(pos).get(POWERED).booleanValue()) {
             return;
         }

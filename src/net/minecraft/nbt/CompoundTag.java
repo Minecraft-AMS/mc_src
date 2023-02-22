@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,8 @@ import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
+import net.minecraft.nbt.TagReaders;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.crash.CrashException;
@@ -54,7 +57,50 @@ public class CompoundTag
 implements Tag {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Pattern PATTERN = Pattern.compile("[A-Za-z0-9._+-]+");
-    private final Map<String, Tag> tags = Maps.newHashMap();
+    public static final TagReader<CompoundTag> READER = new TagReader<CompoundTag>(){
+
+        @Override
+        public CompoundTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            byte b;
+            positionTracker.add(384L);
+            if (i > 512) {
+                throw new RuntimeException("Tried to read NBT tag with too high complexity, depth > 512");
+            }
+            HashMap map = Maps.newHashMap();
+            while ((b = CompoundTag.readByte(dataInput, positionTracker)) != 0) {
+                String string = CompoundTag.readString(dataInput, positionTracker);
+                positionTracker.add(224 + 16 * string.length());
+                Tag tag = CompoundTag.read(TagReaders.of(b), string, dataInput, i + 1, positionTracker);
+                if (map.put(string, tag) == null) continue;
+                positionTracker.add(288L);
+            }
+            return new CompoundTag(map);
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "COMPOUND";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Compound";
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    private final Map<String, Tag> tags;
+
+    private CompoundTag(Map<String, Tag> tags) {
+        this.tags = tags;
+    }
+
+    public CompoundTag() {
+        this(Maps.newHashMap());
+    }
 
     @Override
     public void write(DataOutput output) throws IOException {
@@ -65,23 +111,6 @@ implements Tag {
         output.writeByte(0);
     }
 
-    @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        byte b;
-        positionTracker.add(384L);
-        if (depth > 512) {
-            throw new RuntimeException("Tried to read NBT tag with too high complexity, depth > 512");
-        }
-        this.tags.clear();
-        while ((b = CompoundTag.readByte(input, positionTracker)) != 0) {
-            String string = CompoundTag.readString(input, positionTracker);
-            positionTracker.add(224 + 16 * string.length());
-            Tag tag = CompoundTag.createTag(b, string, input, depth + 1, positionTracker);
-            if (this.tags.put(string, tag) == null) continue;
-            positionTracker.add(288L);
-        }
-    }
-
     public Set<String> getKeys() {
         return this.tags.keySet();
     }
@@ -89,6 +118,10 @@ implements Tag {
     @Override
     public byte getType() {
         return 10;
+    }
+
+    public TagReader<CompoundTag> getReader() {
+        return READER;
     }
 
     public int getSize() {
@@ -101,19 +134,19 @@ implements Tag {
     }
 
     public void putByte(String key, byte value) {
-        this.tags.put(key, new ByteTag(value));
+        this.tags.put(key, ByteTag.of(value));
     }
 
     public void putShort(String key, short value) {
-        this.tags.put(key, new ShortTag(value));
+        this.tags.put(key, ShortTag.of(value));
     }
 
     public void putInt(String key, int value) {
-        this.tags.put(key, new IntTag(value));
+        this.tags.put(key, IntTag.of(value));
     }
 
     public void putLong(String key, long value) {
-        this.tags.put(key, new LongTag(value));
+        this.tags.put(key, LongTag.of(value));
     }
 
     public void putUuid(String key, UUID uuid) {
@@ -129,16 +162,21 @@ implements Tag {
         return this.contains(key + "Most", 99) && this.contains(key + "Least", 99);
     }
 
+    public void removeUuid(String key) {
+        this.remove(key + "Most");
+        this.remove(key + "Least");
+    }
+
     public void putFloat(String key, float value) {
-        this.tags.put(key, new FloatTag(value));
+        this.tags.put(key, FloatTag.of(value));
     }
 
     public void putDouble(String key, double value) {
-        this.tags.put(key, new DoubleTag(value));
+        this.tags.put(key, DoubleTag.of(value));
     }
 
     public void putString(String key, String value) {
-        this.tags.put(key, new StringTag(value));
+        this.tags.put(key, StringTag.of(value));
     }
 
     public void putByteArray(String key, byte[] value) {
@@ -162,7 +200,7 @@ implements Tag {
     }
 
     public void putBoolean(String key, boolean value) {
-        this.putByte(key, value ? (byte)1 : 0);
+        this.tags.put(key, ByteTag.of(value));
     }
 
     @Nullable
@@ -284,7 +322,7 @@ implements Tag {
             }
         }
         catch (ClassCastException classCastException) {
-            throw new CrashException(this.createCrashReport(key, 7, classCastException));
+            throw new CrashException(this.createCrashReport(key, ByteArrayTag.READER, classCastException));
         }
         return new byte[0];
     }
@@ -296,7 +334,7 @@ implements Tag {
             }
         }
         catch (ClassCastException classCastException) {
-            throw new CrashException(this.createCrashReport(key, 11, classCastException));
+            throw new CrashException(this.createCrashReport(key, IntArrayTag.READER, classCastException));
         }
         return new int[0];
     }
@@ -308,7 +346,7 @@ implements Tag {
             }
         }
         catch (ClassCastException classCastException) {
-            throw new CrashException(this.createCrashReport(key, 12, classCastException));
+            throw new CrashException(this.createCrashReport(key, LongArrayTag.READER, classCastException));
         }
         return new long[0];
     }
@@ -320,7 +358,7 @@ implements Tag {
             }
         }
         catch (ClassCastException classCastException) {
-            throw new CrashException(this.createCrashReport(key, 10, classCastException));
+            throw new CrashException(this.createCrashReport(key, READER, classCastException));
         }
         return new CompoundTag();
     }
@@ -336,7 +374,7 @@ implements Tag {
             }
         }
         catch (ClassCastException classCastException) {
-            throw new CrashException(this.createCrashReport(key, 9, classCastException));
+            throw new CrashException(this.createCrashReport(key, ListTag.READER, classCastException));
         }
         return new ListTag();
     }
@@ -371,22 +409,19 @@ implements Tag {
         return this.tags.isEmpty();
     }
 
-    private CrashReport createCrashReport(String key, int type, ClassCastException classCastException) {
+    private CrashReport createCrashReport(String key, TagReader<?> tagReader, ClassCastException classCastException) {
         CrashReport crashReport = CrashReport.create(classCastException, "Reading NBT data");
         CrashReportSection crashReportSection = crashReport.addElement("Corrupt NBT tag", 1);
-        crashReportSection.add("Tag type found", () -> TYPES[this.tags.get(key).getType()]);
-        crashReportSection.add("Tag type expected", () -> TYPES[type]);
+        crashReportSection.add("Tag type found", () -> this.tags.get(key).getReader().getCrashReportName());
+        crashReportSection.add("Tag type expected", tagReader::getCrashReportName);
         crashReportSection.add("Tag name", key);
         return crashReport;
     }
 
     @Override
     public CompoundTag copy() {
-        CompoundTag compoundTag = new CompoundTag();
-        for (String string : this.tags.keySet()) {
-            compoundTag.put(string, this.tags.get(string).copy());
-        }
-        return compoundTag;
+        HashMap map = Maps.newHashMap((Map)Maps.transformValues(this.tags, Tag::copy));
+        return new CompoundTag(map);
     }
 
     public boolean equals(Object o) {
@@ -417,19 +452,17 @@ implements Tag {
         return input.readUTF();
     }
 
-    static Tag createTag(byte type, String key, DataInput input, int depth, PositionTracker tracker) throws IOException {
-        Tag tag = Tag.createTag(type);
+    private static Tag read(TagReader<?> reader, String key, DataInput input, int depth, PositionTracker tracker) {
         try {
-            tag.read(input, depth, tracker);
+            return reader.read(input, depth, tracker);
         }
         catch (IOException iOException) {
             CrashReport crashReport = CrashReport.create(iOException, "Loading NBT data");
             CrashReportSection crashReportSection = crashReport.addElement("NBT Tag");
             crashReportSection.add("Tag name", key);
-            crashReportSection.add("Tag type", type);
+            crashReportSection.add("Tag type", reader.getCrashReportName());
             throw new CrashException(crashReport);
         }
-        return tag;
     }
 
     public CompoundTag copyFrom(CompoundTag source) {

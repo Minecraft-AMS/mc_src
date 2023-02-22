@@ -39,16 +39,18 @@ implements BakedModel {
     private final List<Pair<Predicate<BlockState>, BakedModel>> components;
     protected final boolean ambientOcclusion;
     protected final boolean depthGui;
+    protected final boolean field_21863;
     protected final Sprite sprite;
     protected final ModelTransformation transformations;
     protected final ModelItemPropertyOverrideList itemPropertyOverrides;
-    private final Map<BlockState, BitSet> field_5431 = new Object2ObjectOpenCustomHashMap(Util.identityHashStrategy());
+    private final Map<BlockState, BitSet> stateCache = new Object2ObjectOpenCustomHashMap(Util.identityHashStrategy());
 
     public MultipartBakedModel(List<Pair<Predicate<BlockState>, BakedModel>> components) {
         this.components = components;
         BakedModel bakedModel = (BakedModel)components.iterator().next().getRight();
         this.ambientOcclusion = bakedModel.useAmbientOcclusion();
         this.depthGui = bakedModel.hasDepth();
+        this.field_21863 = bakedModel.isSideLit();
         this.sprite = bakedModel.getSprite();
         this.transformations = bakedModel.getTransformation();
         this.itemPropertyOverrides = bakedModel.getItemPropertyOverrides();
@@ -59,7 +61,7 @@ implements BakedModel {
         if (state == null) {
             return Collections.emptyList();
         }
-        BitSet bitSet = this.field_5431.get(state);
+        BitSet bitSet = this.stateCache.get(state);
         if (bitSet == null) {
             bitSet = new BitSet();
             for (int i = 0; i < this.components.size(); ++i) {
@@ -67,7 +69,7 @@ implements BakedModel {
                 if (!((Predicate)pair.getLeft()).test(state)) continue;
                 bitSet.set(i);
             }
-            this.field_5431.put(state, bitSet);
+            this.stateCache.put(state, bitSet);
         }
         ArrayList list = Lists.newArrayList();
         long l = random.nextLong();
@@ -86,6 +88,11 @@ implements BakedModel {
     @Override
     public boolean hasDepth() {
         return this.depthGui;
+    }
+
+    @Override
+    public boolean isSideLit() {
+        return this.field_21863;
     }
 
     @Override

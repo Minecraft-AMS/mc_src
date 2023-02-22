@@ -2,10 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Maps
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture$Type
  *  com.mojang.util.UUIDTypeAdapter
- *  javax.xml.bind.DatatypeConverter
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.codec.binary.Base64
@@ -15,10 +15,10 @@
  */
 package com.mojang.realmsclient.util;
 
+import com.google.common.collect.Maps;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
-import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.realmsclient.util.RealmsUtil;
 import com.mojang.realmsclient.util.SkinProcessor;
 import com.mojang.util.UUIDTypeAdapter;
@@ -33,13 +33,12 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import javax.imageio.ImageIO;
-import javax.xml.bind.DatatypeConverter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.realms.Realms;
 import net.minecraft.realms.RealmsScreen;
 import org.apache.commons.codec.binary.Base64;
@@ -49,9 +48,9 @@ import org.apache.logging.log4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsTextureManager {
-    private static final Map<String, RealmsTexture> textures = new HashMap<String, RealmsTexture>();
-    private static final Map<String, Boolean> skinFetchStatus = new HashMap<String, Boolean>();
-    private static final Map<String, String> fetchedSkins = new HashMap<String, String>();
+    private static final Map<String, RealmsTexture> textures = Maps.newHashMap();
+    private static final Map<String, Boolean> skinFetchStatus = Maps.newHashMap();
+    private static final Map<String, String> fetchedSkins = Maps.newHashMap();
     private static final Logger LOGGER = LogManager.getLogger();
 
     public static void bindWorldTemplate(String id, String image) {
@@ -60,14 +59,18 @@ public class RealmsTextureManager {
             return;
         }
         int i = RealmsTextureManager.getTextureId(id, image);
-        GlStateManager.bindTexture(i);
+        RenderSystem.bindTexture(i);
     }
 
     public static void withBoundFace(String uuid, Runnable r) {
-        GLX.withTextureRestore(() -> {
+        RenderSystem.pushTextureAttributes();
+        try {
             RealmsTextureManager.bindFace(uuid);
             r.run();
-        });
+        }
+        finally {
+            RenderSystem.popAttributes();
+        }
     }
 
     private static void bindDefaultFace(UUID uuid) {
@@ -77,7 +80,7 @@ public class RealmsTextureManager {
     private static void bindFace(final String uuid) {
         UUID uUID = UUIDTypeAdapter.fromString((String)uuid);
         if (textures.containsKey(uuid)) {
-            GlStateManager.bindTexture(RealmsTextureManager.textures.get((Object)uuid).textureId);
+            RenderSystem.bindTexture(RealmsTextureManager.textures.get((Object)uuid).textureId);
             return;
         }
         if (skinFetchStatus.containsKey(uuid)) {
@@ -85,7 +88,7 @@ public class RealmsTextureManager {
                 RealmsTextureManager.bindDefaultFace(uUID);
             } else if (fetchedSkins.containsKey(uuid)) {
                 int i = RealmsTextureManager.getTextureId(uuid, fetchedSkins.get(uuid));
-                GlStateManager.bindTexture(i);
+                RenderSystem.bindTexture(i);
             } else {
                 RealmsTextureManager.bindDefaultFace(uUID);
             }
@@ -145,7 +148,7 @@ public class RealmsTextureManager {
                             }
                         }
                         ImageIO.write((RenderedImage)bufferedImage, "png", byteArrayOutputStream);
-                        fetchedSkins.put(uuid, DatatypeConverter.printBase64Binary((byte[])byteArrayOutputStream.toByteArray()));
+                        fetchedSkins.put(uuid, new Base64().encodeToString(byteArrayOutputStream.toByteArray()));
                         skinFetchStatus.put(uuid, true);
                         break block17;
                     }
@@ -168,10 +171,10 @@ public class RealmsTextureManager {
             if (realmsTexture.image.equals(image)) {
                 return realmsTexture.textureId;
             }
-            GlStateManager.deleteTexture(realmsTexture.textureId);
+            RenderSystem.deleteTexture(realmsTexture.textureId);
             i = realmsTexture.textureId;
         } else {
-            i = GlStateManager.genTexture();
+            i = GlStateManager.getTexLevelParameter();
         }
         IntBuffer intBuffer = null;
         int j = 0;
@@ -196,8 +199,8 @@ public class RealmsTextureManager {
         catch (IOException iOException) {
             iOException.printStackTrace();
         }
-        GlStateManager.activeTexture(GLX.GL_TEXTURE0);
-        GlStateManager.bindTexture(i);
+        RenderSystem.activeTexture(33984);
+        RenderSystem.bindTexture(i);
         TextureUtil.initTexture(intBuffer, j, k);
         textures.put(id, new RealmsTexture(image, i));
         return i;

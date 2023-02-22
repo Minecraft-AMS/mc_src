@@ -27,7 +27,6 @@ public class RotatingCubeMapRenderer {
     public void render(float delta, float alpha) {
         this.time += delta;
         this.cubeMap.draw(this.client, MathHelper.sin(this.time * 0.001f) * 5.0f + 25.0f, -this.time * 0.1f, alpha);
-        this.client.window.method_4493(MinecraftClient.IS_SYSTEM_MAC);
     }
 }
 

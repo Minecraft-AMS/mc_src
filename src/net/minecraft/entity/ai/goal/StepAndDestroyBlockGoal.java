@@ -19,10 +19,10 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import org.jetbrains.annotations.Nullable;
@@ -136,7 +136,7 @@ extends MoveToTargetPosGoal {
     }
 
     @Override
-    protected boolean isTargetPos(CollisionView world, BlockPos pos) {
+    protected boolean isTargetPos(WorldView world, BlockPos pos) {
         Chunk chunk = world.getChunk(pos.getX() >> 4, pos.getZ() >> 4, ChunkStatus.FULL, false);
         if (chunk != null) {
             return chunk.getBlockState(pos).getBlock() == this.targetBlock && chunk.getBlockState(pos.up()).isAir() && chunk.getBlockState(pos.up(2)).isAir();

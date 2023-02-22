@@ -42,8 +42,9 @@ extends Task<VillagerEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, VillagerEntity villagerEntity) {
-        this.raid = serverWorld.getRaidAt(new BlockPos(villagerEntity));
-        return this.raid != null && this.raid.hasWon() && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity);
+        BlockPos blockPos = new BlockPos(villagerEntity);
+        this.raid = serverWorld.getRaidAt(blockPos);
+        return this.raid != null && this.raid.hasWon() && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity, blockPos);
     }
 
     @Override
@@ -63,11 +64,11 @@ extends Task<VillagerEntity> {
         if (random.nextInt(100) == 0) {
             villagerEntity.playCelebrateSound();
         }
-        if (random.nextInt(200) == 0 && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity)) {
+        if (random.nextInt(200) == 0 && SeekSkyTask.isSkyVisible(serverWorld, villagerEntity, new BlockPos(villagerEntity))) {
             DyeColor dyeColor = DyeColor.values()[random.nextInt(DyeColor.values().length)];
             int i = random.nextInt(3);
             ItemStack itemStack = this.createFirework(dyeColor, i);
-            FireworkEntity fireworkEntity = new FireworkEntity(villagerEntity.world, villagerEntity.x, villagerEntity.y + (double)villagerEntity.getStandingEyeHeight(), villagerEntity.z, itemStack);
+            FireworkEntity fireworkEntity = new FireworkEntity(villagerEntity.world, villagerEntity.getX(), villagerEntity.getEyeY(), villagerEntity.getZ(), itemStack);
             villagerEntity.world.spawnEntity(fireworkEntity);
         }
     }

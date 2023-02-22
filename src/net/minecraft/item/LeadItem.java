@@ -37,23 +37,23 @@ extends Item {
         return ActionResult.PASS;
     }
 
-    public static boolean attachHeldMobsToBlock(PlayerEntity player, World world, BlockPos pos) {
+    public static ActionResult attachHeldMobsToBlock(PlayerEntity playerEntity, World world, BlockPos blockPos) {
         LeadKnotEntity leadKnotEntity = null;
         boolean bl = false;
         double d = 7.0;
-        int i = pos.getX();
-        int j = pos.getY();
-        int k = pos.getZ();
+        int i = blockPos.getX();
+        int j = blockPos.getY();
+        int k = blockPos.getZ();
         List<MobEntity> list = world.getNonSpectatingEntities(MobEntity.class, new Box((double)i - 7.0, (double)j - 7.0, (double)k - 7.0, (double)i + 7.0, (double)j + 7.0, (double)k + 7.0));
         for (MobEntity mobEntity : list) {
-            if (mobEntity.getHoldingEntity() != player) continue;
+            if (mobEntity.getHoldingEntity() != playerEntity) continue;
             if (leadKnotEntity == null) {
-                leadKnotEntity = LeadKnotEntity.getOrCreate(world, pos);
+                leadKnotEntity = LeadKnotEntity.getOrCreate(world, blockPos);
             }
             mobEntity.attachLeash(leadKnotEntity, true);
             bl = true;
         }
-        return bl;
+        return bl ? ActionResult.SUCCESS : ActionResult.PASS;
     }
 }
 

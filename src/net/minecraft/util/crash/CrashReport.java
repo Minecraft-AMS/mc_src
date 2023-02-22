@@ -229,7 +229,7 @@ public class CrashReport {
             this.hasStackTrace = crashReportSection.method_584(stackTraceElement, stackTraceElement2);
             if (i > 0 && !this.otherSections.isEmpty()) {
                 CrashReportSection crashReportSection2 = this.otherSections.get(this.otherSections.size() - 1);
-                crashReportSection2.method_580(i);
+                crashReportSection2.trimStackTraceEnd(i);
             } else if (stackTraceElements != null && stackTraceElements.length >= i && 0 <= j && j < stackTraceElements.length) {
                 this.stackTrace = new StackTraceElement[j];
                 System.arraycopy(stackTraceElements, 0, this.stackTrace, 0, this.stackTrace.length);
@@ -257,6 +257,10 @@ public class CrashReport {
         }
         CrashReport crashReport = cause instanceof CrashException ? ((CrashException)cause).getReport() : new CrashReport(title, cause);
         return crashReport;
+    }
+
+    public static void method_24305() {
+        new CrashReport("Don't panic!", new Throwable()).asString();
     }
 }
 

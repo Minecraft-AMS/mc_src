@@ -7,6 +7,7 @@
  *  io.netty.buffer.Unpooled
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
@@ -26,11 +27,11 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
+import org.jetbrains.annotations.Nullable;
 
 public class ChunkDataS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -38,6 +39,8 @@ implements Packet<ClientPlayPacketListener> {
     private int chunkZ;
     private int verticalStripBitmask;
     private CompoundTag heightmaps;
+    @Nullable
+    private BiomeArray biomeArray;
     private byte[] data;
     private List<CompoundTag> blockEntities;
     private boolean isFullChunk;
@@ -55,6 +58,9 @@ implements Packet<ClientPlayPacketListener> {
             if (!entry.getKey().shouldSendToClient()) continue;
             this.heightmaps.put(entry.getKey().getName(), new LongArrayTag(entry.getValue().asLongArray()));
         }
+        if (this.isFullChunk) {
+            this.biomeArray = chunk.getBiomeArray().copy();
+        }
         this.data = new byte[this.getDataSize(chunk, includedSectionsMask)];
         this.verticalStripBitmask = this.writeData(new PacketByteBuf(this.getWriteBuffer()), chunk, includedSectionsMask);
         this.blockEntities = Lists.newArrayList();
@@ -70,13 +76,16 @@ implements Packet<ClientPlayPacketListener> {
 
     @Override
     public void read(PacketByteBuf buf) throws IOException {
+        int i;
         this.chunkX = buf.readInt();
         this.chunkZ = buf.readInt();
         this.isFullChunk = buf.readBoolean();
         this.verticalStripBitmask = buf.readVarInt();
         this.heightmaps = buf.readCompoundTag();
-        int i = buf.readVarInt();
-        if (i > 0x200000) {
+        if (this.isFullChunk) {
+            this.biomeArray = new BiomeArray(buf);
+        }
+        if ((i = buf.readVarInt()) > 0x200000) {
             throw new RuntimeException("Chunk Packet trying to allocate too much memory on read.");
         }
         this.data = new byte[i];
@@ -95,6 +104,9 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeBoolean(this.isFullChunk);
         buf.writeVarInt(this.verticalStripBitmask);
         buf.writeCompoundTag(this.heightmaps);
+        if (this.biomeArray != null) {
+            this.biomeArray.toPacket(buf);
+        }
         buf.writeVarInt(this.data.length);
         buf.writeBytes(this.data);
         buf.writeVarInt(this.blockEntities.size());
@@ -129,12 +141,6 @@ implements Packet<ClientPlayPacketListener> {
             i |= 1 << j;
             chunkSection.toPacket(packetByteBuf);
         }
-        if (this.isFullChunk()) {
-            Biome[] biomes = chunk.getBiomeArray();
-            for (k = 0; k < biomes.length; ++k) {
-                packetByteBuf.writeInt(Registry.BIOME.getRawId(biomes[k]));
-            }
-        }
         return i;
     }
 
@@ -146,9 +152,6 @@ implements Packet<ClientPlayPacketListener> {
             ChunkSection chunkSection = chunkSections[j];
             if (chunkSection == WorldChunk.EMPTY_SECTION || this.isFullChunk() && chunkSection.isEmpty() || (includedSectionsMark & 1 << j) == 0) continue;
             i += chunkSection.getPacketSize();
-        }
-        if (this.isFullChunk()) {
-            i += chunk.getBiomeArray().length * 4;
         }
         return i;
     }
@@ -180,6 +183,12 @@ implements Packet<ClientPlayPacketListener> {
     @Environment(value=EnvType.CLIENT)
     public List<CompoundTag> getBlockEntityTagList() {
         return this.blockEntities;
+    }
+
+    @Nullable
+    @Environment(value=EnvType.CLIENT)
+    public BiomeArray getBiomeArray() {
+        return this.biomeArray == null ? null : this.biomeArray.copy();
     }
 }
 

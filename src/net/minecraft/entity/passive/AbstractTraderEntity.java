@@ -15,10 +15,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criterions;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Npc;
+import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -37,6 +39,8 @@ import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOffers;
 import net.minecraft.village.Trader;
 import net.minecraft.village.TraderOfferList;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
 import org.jetbrains.annotations.Nullable;
@@ -54,6 +58,15 @@ Trader {
 
     public AbstractTraderEntity(EntityType<? extends AbstractTraderEntity> entityType, World world) {
         super((EntityType<? extends PassiveEntity>)entityType, world);
+    }
+
+    @Override
+    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+        if (entityData == null) {
+            entityData = new PassiveEntity.EntityData();
+            ((PassiveEntity.EntityData)entityData).setBabyAllowed(false);
+        }
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     public int getHeadRollingTimeLeft() {
@@ -142,7 +155,7 @@ Trader {
     }
 
     @Override
-    public SoundEvent method_18010() {
+    public SoundEvent getYesSound() {
         return SoundEvents.ENTITY_VILLAGER_YES;
     }
 
@@ -207,7 +220,7 @@ Trader {
             double d = this.random.nextGaussian() * 0.02;
             double e = this.random.nextGaussian() * 0.02;
             double f = this.random.nextGaussian() * 0.02;
-            this.world.addParticle(parameters, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 1.0 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), d, e, f);
+            this.world.addParticle(parameters, this.getParticleX(1.0), this.getRandomBodyY() + 1.0, this.getParticleZ(1.0), d, e, f);
         }
     }
 

@@ -10,14 +10,13 @@
 package net.minecraft.client.toast;
 
 import com.google.common.collect.Queues;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Arrays;
 import java.util.Deque;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -38,10 +37,9 @@ extends DrawableHelper {
         if (this.client.options.hudHidden) {
             return;
         }
-        DiffuseLighting.disable();
         for (int i = 0; i < this.visibleEntries.length; ++i) {
             Entry<?> entry = this.visibleEntries[i];
-            if (entry != null && entry.draw(this.client.window.getScaledWidth(), i)) {
+            if (entry != null && entry.draw(this.client.getWindow().getScaledWidth(), i)) {
                 this.visibleEntries[i] = null;
             }
             if (this.visibleEntries[i] != null || this.toastQueue.isEmpty()) continue;
@@ -110,10 +108,10 @@ extends DrawableHelper {
             if (this.visibility == Toast.Visibility.SHOW && l - this.field_2243 <= 600L) {
                 this.field_2242 = l;
             }
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef((float)x - 160.0f * this.getDissapearProgress(l), y * 32, 500 + y);
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef((float)x - 160.0f * this.getDissapearProgress(l), y * 32, 800 + y);
             Toast.Visibility visibility = this.instance.draw(this.field_2245, l - this.field_2242);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
             if (visibility != this.visibility) {
                 this.field_2243 = l - (long)((int)((1.0f - this.getDissapearProgress(l)) * 600.0f));
                 this.visibility = visibility;

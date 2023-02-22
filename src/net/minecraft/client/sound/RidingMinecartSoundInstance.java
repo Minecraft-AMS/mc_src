@@ -28,9 +28,9 @@ extends MovingSoundInstance {
         this.repeat = true;
         this.repeatDelay = 0;
         this.volume = 0.0f;
-        this.x = (float)minecart.x;
-        this.y = (float)minecart.y;
-        this.z = (float)minecart.z;
+        this.x = (float)minecart.getX();
+        this.y = (float)minecart.getY();
+        this.z = (float)minecart.getZ();
     }
 
     @Override
@@ -44,9 +44,9 @@ extends MovingSoundInstance {
             this.done = true;
             return;
         }
-        this.x = (float)this.minecart.x;
-        this.y = (float)this.minecart.y;
-        this.z = (float)this.minecart.z;
+        this.x = (float)this.minecart.getX();
+        this.y = (float)this.minecart.getY();
+        this.z = (float)this.minecart.getZ();
         float f = MathHelper.sqrt(Entity.squaredHorizontalLength(this.minecart.getVelocity()));
         if ((double)f >= 0.01) {
             this.distance = MathHelper.clamp(this.distance + 0.0025f, 0.0f, 1.0f);

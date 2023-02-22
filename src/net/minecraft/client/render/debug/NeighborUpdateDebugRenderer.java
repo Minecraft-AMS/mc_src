@@ -13,7 +13,6 @@ package net.minecraft.client.render.debug;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,58 +21,53 @@ import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 
 @Environment(value=EnvType.CLIENT)
 public class NeighborUpdateDebugRenderer
 implements DebugRenderer.Renderer {
-    private final MinecraftClient field_4622;
-    private final Map<Long, Map<BlockPos, Integer>> field_4623 = Maps.newTreeMap((Comparator)Ordering.natural().reverse());
+    private final MinecraftClient client;
+    private final Map<Long, Map<BlockPos, Integer>> neighborUpdates = Maps.newTreeMap((Comparator)Ordering.natural().reverse());
 
-    NeighborUpdateDebugRenderer(MinecraftClient minecraftClient) {
-        this.field_4622 = minecraftClient;
+    NeighborUpdateDebugRenderer(MinecraftClient client) {
+        this.client = client;
     }
 
-    public void method_3870(long l, BlockPos blockPos) {
+    public void addNeighborUpdate(long time, BlockPos pos) {
         Integer integer;
-        HashMap map = this.field_4623.get(l);
+        HashMap map = this.neighborUpdates.get(time);
         if (map == null) {
             map = Maps.newHashMap();
-            this.field_4623.put(l, map);
+            this.neighborUpdates.put(time, map);
         }
-        if ((integer = (Integer)map.get(blockPos)) == null) {
+        if ((integer = (Integer)map.get(pos)) == null) {
             integer = 0;
         }
-        map.put(blockPos, integer + 1);
+        map.put(pos, integer + 1);
     }
 
     @Override
-    public void render(long l) {
-        long m = this.field_4622.world.getTime();
-        Camera camera = this.field_4622.gameRenderer.getCamera();
-        double d = camera.getPos().x;
-        double e = camera.getPos().y;
-        double f = camera.getPos().z;
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.lineWidth(2.0f);
-        GlStateManager.disableTexture();
-        GlStateManager.depthMask(false);
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
+        long l = this.client.world.getTime();
         int i = 200;
-        double g = 0.0025;
+        double d = 0.0025;
         HashSet set = Sets.newHashSet();
         HashMap map = Maps.newHashMap();
-        Iterator<Map.Entry<Long, Map<BlockPos, Integer>>> iterator = this.field_4623.entrySet().iterator();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
+        Iterator<Map.Entry<Long, Map<BlockPos, Integer>>> iterator = this.neighborUpdates.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Long, Map<BlockPos, Integer>> entry = iterator.next();
             Long long_ = entry.getKey();
             Map<BlockPos, Integer> map2 = entry.getValue();
-            long n = m - long_;
-            if (n > 200L) {
+            long m = l - long_;
+            if (m > 200L) {
                 iterator.remove();
                 continue;
             }
@@ -81,18 +75,16 @@ implements DebugRenderer.Renderer {
                 BlockPos blockPos = entry2.getKey();
                 Integer integer = entry2.getValue();
                 if (!set.add(blockPos)) continue;
-                WorldRenderer.drawBoxOutline(new Box(BlockPos.ORIGIN).expand(0.002).contract(0.0025 * (double)n).offset(blockPos.getX(), blockPos.getY(), blockPos.getZ()).offset(-d, -e, -f), 1.0f, 1.0f, 1.0f, 1.0f);
+                Box box = new Box(BlockPos.ORIGIN).expand(0.002).contract(0.0025 * (double)m).offset(blockPos.getX(), blockPos.getY(), blockPos.getZ()).offset(-cameraX, -cameraY, -cameraZ);
+                WorldRenderer.drawBox(vertexConsumer, box.x1, box.y1, box.z1, box.x2, box.y2, box.z2, 1.0f, 1.0f, 1.0f, 1.0f);
                 map.put(blockPos, integer);
             }
         }
         for (Map.Entry entry : map.entrySet()) {
             BlockPos blockPos2 = (BlockPos)entry.getKey();
             Integer integer2 = (Integer)entry.getValue();
-            DebugRenderer.method_3711(String.valueOf(integer2), blockPos2.getX(), blockPos2.getY(), blockPos2.getZ(), -1);
+            DebugRenderer.drawString(String.valueOf(integer2), blockPos2.getX(), blockPos2.getY(), blockPos2.getZ(), -1);
         }
-        GlStateManager.depthMask(true);
-        GlStateManager.enableTexture();
-        GlStateManager.disableBlend();
     }
 }
 

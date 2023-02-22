@@ -1,9 +1,15 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
@@ -12,13 +18,13 @@ import net.minecraft.block.FarmlandBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
-import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class GrassPathBlock
 extends Block {
@@ -50,12 +56,12 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         FarmlandBlock.setToDirt(state, world, pos);
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.up());
         return !blockState.getMaterial().isSolid() || blockState.getBlock() instanceof FenceGateBlock;
     }
@@ -68,6 +74,12 @@ extends Block {
     @Override
     public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
         return false;
+    }
+
+    @Override
+    @Environment(value=EnvType.CLIENT)
+    public boolean hasInWallOverlay(BlockState state, BlockView view, BlockPos pos) {
+        return true;
     }
 }
 

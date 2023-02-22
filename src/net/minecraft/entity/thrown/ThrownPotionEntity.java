@@ -169,7 +169,7 @@ implements FlyingItemEntity {
     }
 
     private void applyLingeringPotion(ItemStack itemStack, Potion potion) {
-        AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.x, this.y, this.z);
+        AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.getX(), this.getY(), this.getZ());
         areaEffectCloudEntity.setOwner(this.getOwner());
         areaEffectCloudEntity.setRadius(3.0f);
         areaEffectCloudEntity.setRadiusOnUse(-0.5f);
@@ -194,7 +194,7 @@ implements FlyingItemEntity {
         BlockState blockState = this.world.getBlockState(blockPos);
         Block block = blockState.getBlock();
         if (block == Blocks.FIRE) {
-            this.world.method_8506(null, blockPos.offset(direction), direction.getOpposite());
+            this.world.extinguishFire(null, blockPos.offset(direction), direction.getOpposite());
         } else if (block == Blocks.CAMPFIRE && blockState.get(CampfireBlock.LIT).booleanValue()) {
             this.world.playLevelEvent(null, 1009, blockPos, 0);
             this.world.setBlockState(blockPos, (BlockState)blockState.with(CampfireBlock.LIT, false));

@@ -19,14 +19,15 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.TorchBlock;
 import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class RedstoneTorchBlock
 extends TorchBlock {
@@ -39,7 +40,7 @@ extends TorchBlock {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 2;
     }
 
@@ -73,7 +74,7 @@ extends TorchBlock {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         RedstoneTorchBlock.update(state, world, pos, random, this.shouldUnpower(world, pos, state));
     }
 

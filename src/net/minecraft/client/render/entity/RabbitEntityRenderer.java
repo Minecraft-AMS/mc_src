@@ -33,7 +33,7 @@ extends MobEntityRenderer<RabbitEntity, RabbitEntityModel<RabbitEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(RabbitEntity rabbitEntity) {
+    public Identifier getTexture(RabbitEntity rabbitEntity) {
         String string = Formatting.strip(rabbitEntity.getName().getString());
         if (string != null && "Toast".equals(string)) {
             return TOAST_SKIN;

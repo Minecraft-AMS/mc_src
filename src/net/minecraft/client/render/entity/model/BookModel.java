@@ -2,61 +2,68 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class BookModel
 extends Model {
-    private final ModelPart leftCover = new ModelPart(this).setTextureOffset(0, 0).addCuboid(-6.0f, -5.0f, 0.0f, 6, 10, 0);
-    private final ModelPart rightCover = new ModelPart(this).setTextureOffset(16, 0).addCuboid(0.0f, -5.0f, 0.0f, 6, 10, 0);
+    private final ModelPart leftCover = new ModelPart(64, 32, 0, 0).addCuboid(-6.0f, -5.0f, -0.005f, 6.0f, 10.0f, 0.005f);
+    private final ModelPart rightCover = new ModelPart(64, 32, 16, 0).addCuboid(0.0f, -5.0f, -0.005f, 6.0f, 10.0f, 0.005f);
     private final ModelPart leftBlock;
     private final ModelPart rightBlock;
     private final ModelPart leftPage;
     private final ModelPart rightPage;
-    private final ModelPart spine = new ModelPart(this).setTextureOffset(12, 0).addCuboid(-1.0f, -5.0f, 0.0f, 2, 10, 0);
+    private final ModelPart spine = new ModelPart(64, 32, 12, 0).addCuboid(-1.0f, -5.0f, 0.0f, 2.0f, 10.0f, 0.005f);
+    private final List<ModelPart> parts;
 
     public BookModel() {
-        this.leftBlock = new ModelPart(this).setTextureOffset(0, 10).addCuboid(0.0f, -4.0f, -0.99f, 5, 8, 1);
-        this.rightBlock = new ModelPart(this).setTextureOffset(12, 10).addCuboid(0.0f, -4.0f, -0.01f, 5, 8, 1);
-        this.leftPage = new ModelPart(this).setTextureOffset(24, 10).addCuboid(0.0f, -4.0f, 0.0f, 5, 8, 0);
-        this.rightPage = new ModelPart(this).setTextureOffset(24, 10).addCuboid(0.0f, -4.0f, 0.0f, 5, 8, 0);
+        super(RenderLayer::getEntitySolid);
+        this.leftBlock = new ModelPart(64, 32, 0, 10).addCuboid(0.0f, -4.0f, -0.99f, 5.0f, 8.0f, 1.0f);
+        this.rightBlock = new ModelPart(64, 32, 12, 10).addCuboid(0.0f, -4.0f, -0.01f, 5.0f, 8.0f, 1.0f);
+        this.leftPage = new ModelPart(64, 32, 24, 10).addCuboid(0.0f, -4.0f, 0.0f, 5.0f, 8.0f, 0.005f);
+        this.rightPage = new ModelPart(64, 32, 24, 10).addCuboid(0.0f, -4.0f, 0.0f, 5.0f, 8.0f, 0.005f);
+        this.parts = ImmutableList.of((Object)this.leftCover, (Object)this.rightCover, (Object)this.spine, (Object)this.leftBlock, (Object)this.rightBlock, (Object)this.leftPage, (Object)this.rightPage);
         this.leftCover.setPivot(0.0f, 0.0f, -1.0f);
         this.rightCover.setPivot(0.0f, 0.0f, 1.0f);
         this.spine.yaw = 1.5707964f;
     }
 
-    public void render(float ticks, float leftPageAngle, float rightPageAngle, float pageTurningSpeed, float f, float g) {
-        this.setPageAngles(ticks, leftPageAngle, rightPageAngle, pageTurningSpeed, f, g);
-        this.leftCover.render(g);
-        this.rightCover.render(g);
-        this.spine.render(g);
-        this.leftBlock.render(g);
-        this.rightBlock.render(g);
-        this.leftPage.render(g);
-        this.rightPage.render(g);
+    @Override
+    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
+        this.method_24184(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
     }
 
-    private void setPageAngles(float ticks, float leftPageAngle, float rightPageAngle, float pageTurningSpeed, float f, float g) {
-        float h = (MathHelper.sin(ticks * 0.02f) * 0.1f + 1.25f) * pageTurningSpeed;
-        this.leftCover.yaw = (float)Math.PI + h;
-        this.rightCover.yaw = -h;
-        this.leftBlock.yaw = h;
-        this.rightBlock.yaw = -h;
-        this.leftPage.yaw = h - h * 2.0f * leftPageAngle;
-        this.rightPage.yaw = h - h * 2.0f * rightPageAngle;
-        this.leftBlock.pivotX = MathHelper.sin(h);
-        this.rightBlock.pivotX = MathHelper.sin(h);
-        this.leftPage.pivotX = MathHelper.sin(h);
-        this.rightPage.pivotX = MathHelper.sin(h);
+    public void method_24184(MatrixStack matrixStack, VertexConsumer vertexConsumer, int i, int j, float f, float g, float h, float k) {
+        this.parts.forEach(modelPart -> modelPart.render(matrixStack, vertexConsumer, i, j, f, g, h, k));
+    }
+
+    public void setPageAngles(float f, float g, float h, float i) {
+        float j = (MathHelper.sin(f * 0.02f) * 0.1f + 1.25f) * i;
+        this.leftCover.yaw = (float)Math.PI + j;
+        this.rightCover.yaw = -j;
+        this.leftBlock.yaw = j;
+        this.rightBlock.yaw = -j;
+        this.leftPage.yaw = j - j * 2.0f * g;
+        this.rightPage.yaw = j - j * 2.0f * h;
+        this.leftBlock.pivotX = MathHelper.sin(j);
+        this.rightBlock.pivotX = MathHelper.sin(j);
+        this.leftPage.pivotX = MathHelper.sin(j);
+        this.rightPage.pivotX = MathHelper.sin(j);
     }
 }
 

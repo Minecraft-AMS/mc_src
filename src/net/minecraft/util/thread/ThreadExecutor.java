@@ -31,8 +31,8 @@ Executor {
     private final Queue<R> tasks = Queues.newConcurrentLinkedQueue();
     private int executionsInProgress;
 
-    protected ThreadExecutor(String string) {
-        this.name = string;
+    protected ThreadExecutor(String name) {
+        this.name = name;
     }
 
     protected abstract R createTask(Runnable var1);
@@ -49,7 +49,7 @@ Executor {
         return !this.isOnThread();
     }
 
-    public int method_21684() {
+    public int getTaskCount() {
         return this.tasks.size();
     }
 
@@ -73,11 +73,11 @@ Executor {
         }, this);
     }
 
-    public CompletableFuture<Void> method_20493(Runnable runnable) {
+    public CompletableFuture<Void> submit(Runnable task) {
         if (this.shouldExecuteAsync()) {
-            return this.submitAsync(runnable);
+            return this.submitAsync(task);
         }
-        runnable.run();
+        task.run();
         return CompletableFuture.completedFuture(null);
     }
 
@@ -131,7 +131,7 @@ Executor {
         try {
             while (!stopCondition.getAsBoolean()) {
                 if (this.runTask()) continue;
-                this.method_20813();
+                this.waitForTasks();
             }
         }
         finally {
@@ -139,7 +139,7 @@ Executor {
         }
     }
 
-    protected void method_20813() {
+    protected void waitForTasks() {
         Thread.yield();
         LockSupport.parkNanos("waiting for tasks", 100000L);
     }

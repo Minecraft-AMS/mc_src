@@ -160,7 +160,7 @@ extends PersistentState {
             compoundTag.putString("CollisionRule", team.getCollisionRule().name);
             ListTag listTag2 = new ListTag();
             for (String string : team.getPlayerList()) {
-                listTag2.add(new StringTag(string));
+                listTag2.add(StringTag.of(string));
             }
             compoundTag.put("Players", listTag2);
             listTag.add(compoundTag);

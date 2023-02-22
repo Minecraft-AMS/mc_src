@@ -218,7 +218,9 @@ public class RailPlacementHelper {
         return railPlacementHelper.method_10455(this);
     }
 
-    public RailPlacementHelper updateBlockState(boolean powered, boolean forceUpdate) {
+    public RailPlacementHelper updateBlockState(boolean powered, boolean forceUpdate, RailShape railShape) {
+        boolean bl10;
+        boolean bl6;
         BlockPos blockPos = this.pos.north();
         BlockPos blockPos2 = this.pos.south();
         BlockPos blockPos3 = this.pos.west();
@@ -227,85 +229,92 @@ public class RailPlacementHelper {
         boolean bl2 = this.method_10465(blockPos2);
         boolean bl3 = this.method_10465(blockPos3);
         boolean bl4 = this.method_10465(blockPos4);
-        RailShape railShape = null;
-        if ((bl || bl2) && !bl3 && !bl4) {
-            railShape = RailShape.NORTH_SOUTH;
+        RailShape railShape2 = null;
+        boolean bl5 = bl || bl2;
+        boolean bl7 = bl6 = bl3 || bl4;
+        if (bl5 && !bl6) {
+            railShape2 = RailShape.NORTH_SOUTH;
         }
-        if ((bl3 || bl4) && !bl && !bl2) {
-            railShape = RailShape.EAST_WEST;
+        if (bl6 && !bl5) {
+            railShape2 = RailShape.EAST_WEST;
         }
+        boolean bl72 = bl2 && bl4;
+        boolean bl8 = bl2 && bl3;
+        boolean bl9 = bl && bl4;
+        boolean bl11 = bl10 = bl && bl3;
         if (!this.allowCurves) {
-            if (bl2 && bl4 && !bl && !bl3) {
-                railShape = RailShape.SOUTH_EAST;
+            if (bl72 && !bl && !bl3) {
+                railShape2 = RailShape.SOUTH_EAST;
             }
-            if (bl2 && bl3 && !bl && !bl4) {
-                railShape = RailShape.SOUTH_WEST;
+            if (bl8 && !bl && !bl4) {
+                railShape2 = RailShape.SOUTH_WEST;
             }
-            if (bl && bl3 && !bl2 && !bl4) {
-                railShape = RailShape.NORTH_WEST;
+            if (bl10 && !bl2 && !bl4) {
+                railShape2 = RailShape.NORTH_WEST;
             }
-            if (bl && bl4 && !bl2 && !bl3) {
-                railShape = RailShape.NORTH_EAST;
+            if (bl9 && !bl2 && !bl3) {
+                railShape2 = RailShape.NORTH_EAST;
             }
         }
-        if (railShape == null) {
-            if (bl || bl2) {
-                railShape = RailShape.NORTH_SOUTH;
-            }
-            if (bl3 || bl4) {
-                railShape = RailShape.EAST_WEST;
+        if (railShape2 == null) {
+            if (bl5 && bl6) {
+                railShape2 = railShape;
+            } else if (bl5) {
+                railShape2 = RailShape.NORTH_SOUTH;
+            } else if (bl6) {
+                railShape2 = RailShape.EAST_WEST;
             }
             if (!this.allowCurves) {
                 if (powered) {
-                    if (bl2 && bl4) {
-                        railShape = RailShape.SOUTH_EAST;
+                    if (bl72) {
+                        railShape2 = RailShape.SOUTH_EAST;
                     }
-                    if (bl3 && bl2) {
-                        railShape = RailShape.SOUTH_WEST;
+                    if (bl8) {
+                        railShape2 = RailShape.SOUTH_WEST;
                     }
-                    if (bl4 && bl) {
-                        railShape = RailShape.NORTH_EAST;
+                    if (bl9) {
+                        railShape2 = RailShape.NORTH_EAST;
                     }
-                    if (bl && bl3) {
-                        railShape = RailShape.NORTH_WEST;
+                    if (bl10) {
+                        railShape2 = RailShape.NORTH_WEST;
                     }
                 } else {
-                    if (bl && bl3) {
-                        railShape = RailShape.NORTH_WEST;
+                    if (bl10) {
+                        railShape2 = RailShape.NORTH_WEST;
                     }
-                    if (bl4 && bl) {
-                        railShape = RailShape.NORTH_EAST;
+                    if (bl9) {
+                        railShape2 = RailShape.NORTH_EAST;
                     }
-                    if (bl3 && bl2) {
-                        railShape = RailShape.SOUTH_WEST;
+                    if (bl8) {
+                        railShape2 = RailShape.SOUTH_WEST;
                     }
-                    if (bl2 && bl4) {
-                        railShape = RailShape.SOUTH_EAST;
+                    if (bl72) {
+                        railShape2 = RailShape.SOUTH_EAST;
                     }
                 }
             }
         }
-        if (railShape == RailShape.NORTH_SOUTH) {
+        if (railShape2 == RailShape.NORTH_SOUTH) {
             if (AbstractRailBlock.isRail(this.world, blockPos.up())) {
-                railShape = RailShape.ASCENDING_NORTH;
+                railShape2 = RailShape.ASCENDING_NORTH;
             }
             if (AbstractRailBlock.isRail(this.world, blockPos2.up())) {
-                railShape = RailShape.ASCENDING_SOUTH;
+                railShape2 = RailShape.ASCENDING_SOUTH;
             }
         }
-        if (railShape == RailShape.EAST_WEST) {
+        if (railShape2 == RailShape.EAST_WEST) {
             if (AbstractRailBlock.isRail(this.world, blockPos4.up())) {
-                railShape = RailShape.ASCENDING_EAST;
+                railShape2 = RailShape.ASCENDING_EAST;
             }
             if (AbstractRailBlock.isRail(this.world, blockPos3.up())) {
-                railShape = RailShape.ASCENDING_WEST;
+                railShape2 = RailShape.ASCENDING_WEST;
             }
         }
-        if (railShape == null) {
-            railShape = RailShape.NORTH_SOUTH;
+        if (railShape2 == null) {
+            railShape2 = railShape;
         }
-        this.computeNeighbors(railShape);
-        this.state = (BlockState)this.state.with(this.block.getShapeProperty(), railShape);
+        this.computeNeighbors(railShape2);
+        this.state = (BlockState)this.state.with(this.block.getShapeProperty(), railShape2);
         if (forceUpdate || this.world.getBlockState(this.pos) != this.state) {
             this.world.setBlockState(this.pos, this.state, 3);
             for (int i = 0; i < this.neighbors.size(); ++i) {

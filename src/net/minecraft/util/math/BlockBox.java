@@ -127,8 +127,8 @@ public class BlockBox {
         this.maxZ += dz;
     }
 
-    public BlockBox method_19311(int i, int j, int k) {
-        return new BlockBox(this.minX + i, this.minY + j, this.minZ + k, this.maxX + i, this.maxY + j, this.maxZ + k);
+    public BlockBox translated(int x, int y, int z) {
+        return new BlockBox(this.minX + x, this.minY + y, this.minZ + z, this.maxX + x, this.maxY + y, this.maxZ + z);
     }
 
     public boolean contains(Vec3i vec) {
@@ -152,7 +152,7 @@ public class BlockBox {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public Vec3i method_19635() {
+    public Vec3i method_22874() {
         return new BlockPos(this.minX + (this.maxX - this.minX + 1) / 2, this.minY + (this.maxY - this.minY + 1) / 2, this.minZ + (this.maxZ - this.minZ + 1) / 2);
     }
 

@@ -23,6 +23,7 @@ import net.minecraft.entity.EntityContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -58,9 +59,9 @@ implements Fertilizable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        super.onScheduledTick(state, world, pos, random);
-        if (world.getLightLevel(pos, 0) < 9) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        super.scheduledTick(state, world, pos, random);
+        if (world.getBaseLightLevel(pos, 0) < 9) {
             return;
         }
         float f = CropBlock.getAvailableMoisture(this, world, pos);
@@ -111,7 +112,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void grow(World world, Random random, BlockPos pos, BlockState state) {
+    public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
         int i = Math.min(7, state.get(AGE) + MathHelper.nextInt(world.random, 2, 5));
         BlockState blockState = (BlockState)state.with(AGE, i);
         world.setBlockState(pos, blockState, 2);

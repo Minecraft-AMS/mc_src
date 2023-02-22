@@ -80,12 +80,12 @@ extends RecipeBook {
         compoundTag.putBoolean("isFurnaceFilteringCraftable", this.furnaceFilteringCraftable);
         ListTag listTag = new ListTag();
         for (Identifier identifier : this.recipes) {
-            listTag.add(new StringTag(identifier.toString()));
+            listTag.add(StringTag.of(identifier.toString()));
         }
         compoundTag.put("recipes", listTag);
         ListTag listTag2 = new ListTag();
         for (Identifier identifier2 : this.toBeDisplayed) {
-            listTag2.add(new StringTag(identifier2.toString()));
+            listTag2.add(StringTag.of(identifier2.toString()));
         }
         compoundTag.put("toBeDisplayed", listTag2);
         return compoundTag;
@@ -97,14 +97,14 @@ extends RecipeBook {
         this.furnaceGuiOpen = tag.getBoolean("isFurnaceGuiOpen");
         this.furnaceFilteringCraftable = tag.getBoolean("isFurnaceFilteringCraftable");
         ListTag listTag = tag.getList("recipes", 8);
-        this.method_20732(listTag, this::add);
+        this.handleList(listTag, this::add);
         ListTag listTag2 = tag.getList("toBeDisplayed", 8);
-        this.method_20732(listTag2, this::display);
+        this.handleList(listTag2, this::display);
     }
 
-    private void method_20732(ListTag listTag, Consumer<Recipe<?>> consumer) {
-        for (int i = 0; i < listTag.size(); ++i) {
-            String string = listTag.getString(i);
+    private void handleList(ListTag list, Consumer<Recipe<?>> handler) {
+        for (int i = 0; i < list.size(); ++i) {
+            String string = list.getString(i);
             try {
                 Identifier identifier = new Identifier(string);
                 Optional<Recipe<?>> optional = this.manager.get(identifier);
@@ -112,7 +112,7 @@ extends RecipeBook {
                     LOGGER.error("Tried to load unrecognized recipe: {} removed now.", (Object)identifier);
                     continue;
                 }
-                consumer.accept(optional.get());
+                handler.accept(optional.get());
                 continue;
             }
             catch (InvalidIdentifierException invalidIdentifierException) {

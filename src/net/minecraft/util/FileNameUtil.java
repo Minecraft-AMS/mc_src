@@ -21,7 +21,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 
 public class FileNameUtil {
-    private static final Pattern field_18956 = Pattern.compile("(<name>.*) \\((<count>\\d*)\\)", 66);
+    private static final Pattern FILE_NAME_WITH_COUNT = Pattern.compile("(<name>.*) \\((<count>\\d*)\\)", 66);
     private static final Pattern RESERVED_WINDOWS_NAMES = Pattern.compile(".*\\.|(?:COM|CLOCK\\$|CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\\..*)?", 2);
 
     @Environment(value=EnvType.CLIENT)
@@ -32,7 +32,7 @@ public class FileNameUtil {
         if (RESERVED_WINDOWS_NAMES.matcher(name = name.replaceAll("[./\"]", "_")).matches()) {
             name = "_" + name + "_";
         }
-        Matcher matcher = field_18956.matcher(name);
+        Matcher matcher = FILE_NAME_WITH_COUNT.matcher(name);
         int i = 0;
         if (matcher.matches()) {
             name = matcher.group("name");
@@ -79,11 +79,11 @@ public class FileNameUtil {
         return true;
     }
 
-    public static Path method_20202(Path path, String string, String string2) {
-        String string3 = string + string2;
-        Path path2 = Paths.get(string3, new String[0]);
-        if (path2.endsWith(string2)) {
-            throw new InvalidPathException(string3, "empty resource name");
+    public static Path getResourcePath(Path path, String resourceName, String extension) {
+        String string = resourceName + extension;
+        Path path2 = Paths.get(string, new String[0]);
+        if (path2.endsWith(extension)) {
+            throw new InvalidPathException(string, "empty resource name");
         }
         return path.resolve(path2);
     }

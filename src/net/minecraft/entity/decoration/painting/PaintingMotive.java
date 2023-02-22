@@ -39,9 +39,9 @@ public class PaintingMotive {
         return Registry.register(Registry.PAINTING_MOTIVE, id, new PaintingMotive(width, height));
     }
 
-    public PaintingMotive(int i, int j) {
-        this.width = i;
-        this.height = j;
+    public PaintingMotive(int width, int height) {
+        this.width = width;
+        this.height = height;
     }
 
     public int getWidth() {

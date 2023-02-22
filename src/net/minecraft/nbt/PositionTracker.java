@@ -13,8 +13,8 @@ public class PositionTracker {
     private final long max;
     private long pos;
 
-    public PositionTracker(long l) {
-        this.max = l;
+    public PositionTracker(long max) {
+        this.max = max;
     }
 
     public void add(long bits) {

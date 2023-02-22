@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.Bootstrap;
+import net.minecraft.SharedConstants;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.crash.CrashException;
@@ -70,7 +71,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class Util {
-    private static final AtomicInteger field_18034 = new AtomicInteger(1);
+    private static final AtomicInteger NEXT_SERVER_WORKER_ID = new AtomicInteger(1);
     private static final ExecutorService SERVER_WORKER_EXECUTOR = Util.createServerWorkerExecutor();
     public static LongSupplier nanoTimeSupplier = System::nanoTime;
     private static final Logger LOGGER = LogManager.getLogger();
@@ -105,10 +106,22 @@ public class Util {
     private static ExecutorService createServerWorkerExecutor() {
         int i = MathHelper.clamp(Runtime.getRuntime().availableProcessors() - 1, 1, 7);
         Object executorService = i <= 0 ? MoreExecutors.newDirectExecutorService() : new ForkJoinPool(i, forkJoinPool -> {
-            ForkJoinWorkerThread forkJoinWorkerThread = new ForkJoinWorkerThread(forkJoinPool){};
-            forkJoinWorkerThread.setName("Server-Worker-" + field_18034.getAndIncrement());
+            ForkJoinWorkerThread forkJoinWorkerThread = new ForkJoinWorkerThread(forkJoinPool){
+
+                @Override
+                protected void onTermination(Throwable throwable) {
+                    if (throwable != null) {
+                        LOGGER.warn("{} died", (Object)this.getName(), (Object)throwable);
+                    } else {
+                        LOGGER.debug("{} shutdown", (Object)this.getName());
+                    }
+                    super.onTermination(throwable);
+                }
+            };
+            forkJoinWorkerThread.setName("Server-Worker-" + NEXT_SERVER_WORKER_ID.getAndIncrement());
             return forkJoinWorkerThread;
         }, (thread, throwable) -> {
+            Util.throwOrPause(throwable);
             if (throwable instanceof CompletionException) {
                 throwable = throwable.getCause();
             }
@@ -146,6 +159,11 @@ public class Util {
         return completableFuture;
     }
 
+    @Environment(value=EnvType.CLIENT)
+    public static void throwUnchecked(Throwable throwable) {
+        throw throwable instanceof RuntimeException ? (RuntimeException)throwable : new RuntimeException(throwable);
+    }
+
     public static OperatingSystem getOperatingSystem() {
         String string = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         if (string.contains("win")) {
@@ -174,7 +192,7 @@ public class Util {
         return runtimeMXBean.getInputArguments().stream().filter(string -> string.startsWith("-X"));
     }
 
-    public static <T> T method_20793(List<T> list) {
+    public static <T> T getLast(List<T> list) {
         return list.get(list.size() - 1);
     }
 
@@ -266,6 +284,32 @@ public class Util {
         return dynamic.set(name + "Most", dynamic.createLong(uuid.getMostSignificantBits())).set(name + "Least", dynamic.createLong(uuid.getLeastSignificantBits()));
     }
 
+    public static <T extends Throwable> T throwOrPause(T t) {
+        if (SharedConstants.isDevelopment) {
+            LOGGER.error("Trying to throw a fatal exception, pausing in IDE", t);
+            try {
+                while (true) {
+                    Thread.sleep(1000L);
+                    LOGGER.error("paused");
+                }
+            }
+            catch (InterruptedException interruptedException) {
+                return t;
+            }
+        }
+        return t;
+    }
+
+    public static String getInnermostMessage(Throwable t) {
+        if (t.getCause() != null) {
+            return Util.getInnermostMessage(t.getCause());
+        }
+        if (t.getMessage() != null) {
+            return t.getMessage();
+        }
+        return t.toString();
+    }
+
     static enum IdentityHashStrategy implements Hash.Strategy<Object>
     {
         INSTANCE;
@@ -287,8 +331,8 @@ public class Util {
 
             @Override
             @Environment(value=EnvType.CLIENT)
-            protected String[] getURLOpenCommand(URL uRL) {
-                return new String[]{"rundll32", "url.dll,FileProtocolHandler", uRL.toString()};
+            protected String[] getURLOpenCommand(URL url) {
+                return new String[]{"rundll32", "url.dll,FileProtocolHandler", url.toString()};
             }
         }
         ,
@@ -296,8 +340,8 @@ public class Util {
 
             @Override
             @Environment(value=EnvType.CLIENT)
-            protected String[] getURLOpenCommand(URL uRL) {
-                return new String[]{"open", uRL.toString()};
+            protected String[] getURLOpenCommand(URL url) {
+                return new String[]{"open", url.toString()};
             }
         }
         ,
@@ -305,9 +349,9 @@ public class Util {
 
 
         @Environment(value=EnvType.CLIENT)
-        public void open(URL uRL) {
+        public void open(URL url) {
             try {
-                Process process = AccessController.doPrivileged(() -> Runtime.getRuntime().exec(this.getURLOpenCommand(uRL)));
+                Process process = AccessController.doPrivileged(() -> Runtime.getRuntime().exec(this.getURLOpenCommand(url)));
                 for (String string : IOUtils.readLines((InputStream)process.getErrorStream())) {
                     LOGGER.error(string);
                 }
@@ -316,7 +360,7 @@ public class Util {
                 process.getOutputStream().close();
             }
             catch (IOException | PrivilegedActionException exception) {
-                LOGGER.error("Couldn't open url '{}'", (Object)uRL, (Object)exception);
+                LOGGER.error("Couldn't open url '{}'", (Object)url, (Object)exception);
             }
         }
 
@@ -341,9 +385,9 @@ public class Util {
         }
 
         @Environment(value=EnvType.CLIENT)
-        protected String[] getURLOpenCommand(URL uRL) {
-            String string = uRL.toString();
-            if ("file".equals(uRL.getProtocol())) {
+        protected String[] getURLOpenCommand(URL url) {
+            String string = url.toString();
+            if ("file".equals(url.getProtocol())) {
                 string = string.replace("file:", "file://");
             }
             return new String[]{"xdg-open", string};

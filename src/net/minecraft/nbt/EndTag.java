@@ -8,14 +8,43 @@ import java.io.DataOutput;
 import java.io.IOException;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 public class EndTag
 implements Tag {
-    @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(64L);
+    public static final TagReader<EndTag> READER = new TagReader<EndTag>(){
+
+        @Override
+        public EndTag read(DataInput dataInput, int i, PositionTracker positionTracker) {
+            positionTracker.add(64L);
+            return INSTANCE;
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "END";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_End";
+        }
+
+        @Override
+        public boolean isImmutable() {
+            return true;
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    public static final EndTag INSTANCE = new EndTag();
+
+    private EndTag() {
     }
 
     @Override
@@ -27,6 +56,10 @@ implements Tag {
         return 0;
     }
 
+    public TagReader<EndTag> getReader() {
+        return READER;
+    }
+
     @Override
     public String toString() {
         return "END";
@@ -34,20 +67,12 @@ implements Tag {
 
     @Override
     public EndTag copy() {
-        return new EndTag();
+        return this;
     }
 
     @Override
     public Text toText(String indent, int depth) {
         return new LiteralText("");
-    }
-
-    public boolean equals(Object o) {
-        return o instanceof EndTag;
-    }
-
-    public int hashCode() {
-        return this.getType();
     }
 
     @Override

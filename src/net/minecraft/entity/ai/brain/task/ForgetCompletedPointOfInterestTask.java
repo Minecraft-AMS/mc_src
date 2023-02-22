@@ -17,6 +17,7 @@ import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.GlobalPos;
@@ -44,19 +45,24 @@ extends Task<LivingEntity> {
     protected void run(ServerWorld world, LivingEntity entity, long time) {
         Brain<?> brain = entity.getBrain();
         GlobalPos globalPos = brain.getOptionalMemory(this.memoryModule).get();
+        BlockPos blockPos = globalPos.getPos();
         ServerWorld serverWorld = world.getServer().getWorld(globalPos.getDimension());
-        if (this.method_20499(serverWorld, globalPos.getPos()) || this.method_20500(serverWorld, globalPos.getPos(), entity)) {
+        if (this.hasCompletedPointOfInterest(serverWorld, blockPos)) {
             brain.forget(this.memoryModule);
+        } else if (this.isBedOccupiedByOthers(serverWorld, blockPos, entity)) {
+            brain.forget(this.memoryModule);
+            world.getPointOfInterestStorage().releaseTicket(blockPos);
+            DebugInfoSender.sendPointOfInterest(world, blockPos);
         }
     }
 
-    private boolean method_20500(ServerWorld serverWorld, BlockPos blockPos, LivingEntity livingEntity) {
-        BlockState blockState = serverWorld.getBlockState(blockPos);
-        return blockState.getBlock().matches(BlockTags.BEDS) && blockState.get(BedBlock.OCCUPIED) != false && !livingEntity.isSleeping();
+    private boolean isBedOccupiedByOthers(ServerWorld world, BlockPos pos, LivingEntity entity) {
+        BlockState blockState = world.getBlockState(pos);
+        return blockState.getBlock().matches(BlockTags.BEDS) && blockState.get(BedBlock.OCCUPIED) != false && !entity.isSleeping();
     }
 
-    private boolean method_20499(ServerWorld serverWorld, BlockPos blockPos) {
-        return !serverWorld.getPointOfInterestStorage().test(blockPos, this.condition);
+    private boolean hasCompletedPointOfInterest(ServerWorld world, BlockPos pos) {
+        return !world.getPointOfInterestStorage().test(pos, this.condition);
     }
 }
 

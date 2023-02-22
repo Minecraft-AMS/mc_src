@@ -8,6 +8,7 @@
 package net.minecraft.realms;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -76,55 +77,53 @@ extends ListWidget {
         int i = this.getScrollbarPosition();
         int j = i + 6;
         this.capYPosition();
-        GlStateManager.disableLighting();
-        GlStateManager.disableFog();
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        int k = this.field_2180 + this.width / 2 - this.getRowWidth() / 2 + 2;
-        int l = this.field_2166 + 4 - (int)this.field_2175;
+        int k = this.left + this.width / 2 - this.getRowWidth() / 2 + 2;
+        int l = this.top + 4 - (int)this.scroll;
         if (this.renderHeader) {
             this.renderHeader(k, l, tessellator);
         }
         this.renderList(k, l, mouseX, mouseY, delta);
-        GlStateManager.disableDepthTest();
-        this.renderHoleBackground(0, this.field_2166, 255, 255);
-        this.renderHoleBackground(this.field_2165, this.height, 255, 255);
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
-        GlStateManager.disableAlphaTest();
-        GlStateManager.shadeModel(7425);
-        GlStateManager.disableTexture();
+        RenderSystem.disableDepthTest();
+        this.renderHoleBackground(0, this.top, 255, 255);
+        this.renderHoleBackground(this.bottom, this.height, 255, 255);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE);
+        RenderSystem.disableAlphaTest();
+        RenderSystem.shadeModel(7425);
+        RenderSystem.disableTexture();
         int m = this.getMaxScroll();
         if (m > 0) {
-            int n = (this.field_2165 - this.field_2166) * (this.field_2165 - this.field_2166) / this.getMaxPosition();
-            int o = (int)this.field_2175 * (this.field_2165 - this.field_2166 - (n = MathHelper.clamp(n, 32, this.field_2165 - this.field_2166 - 8))) / m + this.field_2166;
-            if (o < this.field_2166) {
-                o = this.field_2166;
+            int n = (this.bottom - this.top) * (this.bottom - this.top) / this.getMaxPosition();
+            int o = (int)this.scroll * (this.bottom - this.top - (n = MathHelper.clamp(n, 32, this.bottom - this.top - 8))) / m + this.top;
+            if (o < this.top) {
+                o = this.top;
             }
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, this.field_2165, 0.0).texture(0.0, 1.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(j, this.field_2165, 0.0).texture(1.0, 1.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(j, this.field_2166, 0.0).texture(1.0, 0.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(i, this.field_2166, 0.0).texture(0.0, 0.0).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(i, this.bottom, 0.0).texture(0.0f, 1.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(j, this.bottom, 0.0).texture(1.0f, 1.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(j, this.top, 0.0).texture(1.0f, 0.0f).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(i, this.top, 0.0).texture(0.0f, 0.0f).color(0, 0, 0, 255).next();
             tessellator.draw();
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, o + n, 0.0).texture(0.0, 1.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(j, o + n, 0.0).texture(1.0, 1.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(j, o, 0.0).texture(1.0, 0.0).color(128, 128, 128, 255).next();
-            bufferBuilder.vertex(i, o, 0.0).texture(0.0, 0.0).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(i, o + n, 0.0).texture(0.0f, 1.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(j, o + n, 0.0).texture(1.0f, 1.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(j, o, 0.0).texture(1.0f, 0.0f).color(128, 128, 128, 255).next();
+            bufferBuilder.vertex(i, o, 0.0).texture(0.0f, 0.0f).color(128, 128, 128, 255).next();
             tessellator.draw();
             bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-            bufferBuilder.vertex(i, o + n - 1, 0.0).texture(0.0, 1.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(j - 1, o + n - 1, 0.0).texture(1.0, 1.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(j - 1, o, 0.0).texture(1.0, 0.0).color(192, 192, 192, 255).next();
-            bufferBuilder.vertex(i, o, 0.0).texture(0.0, 0.0).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(i, o + n - 1, 0.0).texture(0.0f, 1.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(j - 1, o + n - 1, 0.0).texture(1.0f, 1.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(j - 1, o, 0.0).texture(1.0f, 0.0f).color(192, 192, 192, 255).next();
+            bufferBuilder.vertex(i, o, 0.0).texture(0.0f, 0.0f).color(192, 192, 192, 255).next();
             tessellator.draw();
         }
         this.renderDecorations(mouseX, mouseY);
-        GlStateManager.enableTexture();
-        GlStateManager.shadeModel(7424);
-        GlStateManager.enableAlphaTest();
-        GlStateManager.disableBlend();
+        RenderSystem.enableTexture();
+        RenderSystem.shadeModel(7424);
+        RenderSystem.enableAlphaTest();
+        RenderSystem.disableBlend();
     }
 
     @Override

@@ -89,9 +89,9 @@ extends LivingEntity {
 
     @Override
     public void calculateDimensions() {
-        double d = this.x;
-        double e = this.y;
-        double f = this.z;
+        double d = this.getX();
+        double e = this.getY();
+        double f = this.getZ();
         super.calculateDimensions();
         this.updatePosition(d, e, f);
     }
@@ -309,16 +309,19 @@ extends LivingEntity {
         if (this.isMarker() || itemStack.getItem() == Items.NAME_TAG) {
             return ActionResult.PASS;
         }
-        if (this.world.isClient || player.isSpectator()) {
+        if (player.isSpectator()) {
             return ActionResult.SUCCESS;
+        }
+        if (player.world.isClient) {
+            return ActionResult.CONSUME;
         }
         EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(itemStack);
         if (itemStack.isEmpty()) {
             EquipmentSlot equipmentSlot3;
             EquipmentSlot equipmentSlot2 = this.method_6916(hitPos);
             EquipmentSlot equipmentSlot4 = equipmentSlot3 = this.method_6915(equipmentSlot2) ? equipmentSlot : equipmentSlot2;
-            if (this.hasStackEquipped(equipmentSlot3)) {
-                this.method_6904(player, equipmentSlot3, itemStack, hand);
+            if (this.hasStackEquipped(equipmentSlot3) && this.method_6904(player, equipmentSlot3, itemStack, hand)) {
+                return ActionResult.SUCCESS;
             }
         } else {
             if (this.method_6915(equipmentSlot)) {
@@ -327,16 +330,18 @@ extends LivingEntity {
             if (equipmentSlot.getType() == EquipmentSlot.Type.HAND && !this.shouldShowArms()) {
                 return ActionResult.FAIL;
             }
-            this.method_6904(player, equipmentSlot, itemStack, hand);
+            if (this.method_6904(player, equipmentSlot, itemStack, hand)) {
+                return ActionResult.SUCCESS;
+            }
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.PASS;
     }
 
     /*
      * Enabled force condition propagation
      * Lifted jumps to return sites
      */
-    protected EquipmentSlot method_6916(Vec3d vec3d) {
+    private EquipmentSlot method_6916(Vec3d vec3d) {
         EquipmentSlot equipmentSlot = EquipmentSlot.MAINHAND;
         boolean bl = this.isSmall();
         double d = bl ? vec3d.y * 2.0 : vec3d.y;
@@ -368,36 +373,37 @@ extends LivingEntity {
         return EquipmentSlot.OFFHAND;
     }
 
-    public boolean method_6915(EquipmentSlot equipmentSlot) {
+    private boolean method_6915(EquipmentSlot equipmentSlot) {
         return (this.disabledSlots & 1 << equipmentSlot.getArmorStandSlotId()) != 0 || equipmentSlot.getType() == EquipmentSlot.Type.HAND && !this.shouldShowArms();
     }
 
-    private void method_6904(PlayerEntity playerEntity, EquipmentSlot equipmentSlot, ItemStack itemStack, Hand hand) {
+    private boolean method_6904(PlayerEntity playerEntity, EquipmentSlot equipmentSlot, ItemStack itemStack, Hand hand) {
         ItemStack itemStack2 = this.getEquippedStack(equipmentSlot);
         if (!itemStack2.isEmpty() && (this.disabledSlots & 1 << equipmentSlot.getArmorStandSlotId() + 8) != 0) {
-            return;
+            return false;
         }
         if (itemStack2.isEmpty() && (this.disabledSlots & 1 << equipmentSlot.getArmorStandSlotId() + 16) != 0) {
-            return;
+            return false;
         }
         if (playerEntity.abilities.creativeMode && itemStack2.isEmpty() && !itemStack.isEmpty()) {
             ItemStack itemStack3 = itemStack.copy();
             itemStack3.setCount(1);
             this.equipStack(equipmentSlot, itemStack3);
-            return;
+            return true;
         }
         if (!itemStack.isEmpty() && itemStack.getCount() > 1) {
             if (!itemStack2.isEmpty()) {
-                return;
+                return false;
             }
             ItemStack itemStack3 = itemStack.copy();
             itemStack3.setCount(1);
             this.equipStack(equipmentSlot, itemStack3);
             itemStack.decrement(1);
-            return;
+            return true;
         }
         this.equipStack(equipmentSlot, itemStack);
         playerEntity.setStackInHand(hand, itemStack2);
+        return true;
     }
 
     @Override
@@ -461,7 +467,7 @@ extends LivingEntity {
     public void handleStatus(byte status) {
         if (status == 32) {
             if (this.world.isClient) {
-                this.world.playSound(this.x, this.y, this.z, SoundEvents.ENTITY_ARMOR_STAND_HIT, this.getSoundCategory(), 0.3f, 1.0f, false);
+                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_HIT, this.getSoundCategory(), 0.3f, 1.0f, false);
                 this.field_7112 = this.world.getTime();
             }
         } else {
@@ -481,7 +487,7 @@ extends LivingEntity {
 
     private void method_6898() {
         if (this.world instanceof ServerWorld) {
-            ((ServerWorld)this.world).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_PLANKS.getDefaultState()), this.x, this.y + (double)this.getHeight() / 1.5, this.z, 10, this.getWidth() / 4.0f, this.getHeight() / 4.0f, this.getWidth() / 4.0f, 0.05);
+            ((ServerWorld)this.world).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.OAK_PLANKS.getDefaultState()), this.getX(), this.getBodyY(0.6666666666666666), this.getZ(), 10, this.getWidth() / 4.0f, this.getHeight() / 4.0f, this.getWidth() / 4.0f, 0.05);
         }
     }
 
@@ -520,13 +526,13 @@ extends LivingEntity {
     }
 
     private void method_6920() {
-        this.world.playSound(null, this.x, this.y, this.z, SoundEvents.ENTITY_ARMOR_STAND_BREAK, this.getSoundCategory(), 1.0f, 1.0f);
+        this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_BREAK, this.getSoundCategory(), 1.0f, 1.0f);
     }
 
     @Override
-    protected float turnHead(float yaw, float headRotation) {
-        this.field_6220 = this.prevYaw;
-        this.field_6283 = this.yaw;
+    protected float turnHead(float bodyRotation, float headRotation) {
+        this.prevBodyYaw = this.prevYaw;
+        this.bodyYaw = this.yaw;
         return 0.0f;
     }
 
@@ -550,13 +556,13 @@ extends LivingEntity {
 
     @Override
     public void setYaw(float yaw) {
-        this.field_6220 = this.prevYaw = yaw;
+        this.prevBodyYaw = this.prevYaw = yaw;
         this.prevHeadYaw = this.headYaw = yaw;
     }
 
     @Override
     public void setHeadYaw(float headYaw) {
-        this.field_6220 = this.prevYaw = headYaw;
+        this.prevBodyYaw = this.prevYaw = headYaw;
         this.prevHeadYaw = this.headYaw = headYaw;
     }
 
@@ -721,6 +727,11 @@ extends LivingEntity {
     @Override
     public boolean collides() {
         return super.collides() && !this.isMarker();
+    }
+
+    @Override
+    public boolean handleAttack(Entity attacker) {
+        return attacker instanceof PlayerEntity && !this.world.canPlayerModifyAt((PlayerEntity)attacker, new BlockPos(this));
     }
 
     @Override

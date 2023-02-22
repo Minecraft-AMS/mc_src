@@ -17,11 +17,13 @@ import net.minecraft.block.entity.ComparatorBlockEntity;
 import net.minecraft.block.enums.ComparatorMode;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -66,13 +68,14 @@ implements BlockEntityProvider {
     @Override
     protected boolean hasPower(World world, BlockPos pos, BlockState state) {
         int i = this.getPower(world, pos, state);
-        if (i >= 15) {
-            return true;
-        }
         if (i == 0) {
             return false;
         }
-        return i >= this.getMaxInputLevelSides(world, pos, state);
+        int j = this.getMaxInputLevelSides(world, pos, state);
+        if (i > j) {
+            return true;
+        }
+        return i == j && state.get(MODE) == ComparatorMode.COMPARE;
     }
 
     @Override
@@ -105,15 +108,15 @@ implements BlockEntityProvider {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (!player.abilities.allowModifyWorld) {
-            return false;
+            return ActionResult.PASS;
         }
         float f = (state = (BlockState)state.cycle(MODE)).get(MODE) == ComparatorMode.SUBTRACT ? 0.55f : 0.5f;
         world.playSound(player, pos, SoundEvents.BLOCK_COMPARATOR_CLICK, SoundCategory.BLOCKS, 0.3f, f);
         world.setBlockState(pos, state, 2);
         this.update(world, pos, state);
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -153,7 +156,7 @@ implements BlockEntityProvider {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         this.update(world, pos, state);
     }
 

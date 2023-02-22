@@ -7,13 +7,18 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
@@ -24,31 +29,27 @@ extends FeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractCl
     }
 
     @Override
-    public void render(AbstractClientPlayerEntity abstractClientPlayerEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, AbstractClientPlayerEntity abstractClientPlayerEntity, float f, float g, float h, float j, float k, float l) {
         if (!"deadmau5".equals(abstractClientPlayerEntity.getName().getString()) || !abstractClientPlayerEntity.hasSkinTexture() || abstractClientPlayerEntity.isInvisible()) {
             return;
         }
-        this.bindTexture(abstractClientPlayerEntity.getSkinTexture());
-        for (int m = 0; m < 2; ++m) {
-            float n = MathHelper.lerp(h, abstractClientPlayerEntity.prevYaw, abstractClientPlayerEntity.yaw) - MathHelper.lerp(h, abstractClientPlayerEntity.field_6220, abstractClientPlayerEntity.field_6283);
-            float o = MathHelper.lerp(h, abstractClientPlayerEntity.prevPitch, abstractClientPlayerEntity.pitch);
-            GlStateManager.pushMatrix();
-            GlStateManager.rotatef(n, 0.0f, 1.0f, 0.0f);
-            GlStateManager.rotatef(o, 1.0f, 0.0f, 0.0f);
-            GlStateManager.translatef(0.375f * (float)(m * 2 - 1), 0.0f, 0.0f);
-            GlStateManager.translatef(0.0f, -0.375f, 0.0f);
-            GlStateManager.rotatef(-o, 1.0f, 0.0f, 0.0f);
-            GlStateManager.rotatef(-n, 0.0f, 1.0f, 0.0f);
-            float p = 1.3333334f;
-            GlStateManager.scalef(1.3333334f, 1.3333334f, 1.3333334f);
-            ((PlayerEntityModel)this.getContextModel()).renderEars(0.0625f);
-            GlStateManager.popMatrix();
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntitySolid(abstractClientPlayerEntity.getSkinTexture()));
+        int m = LivingEntityRenderer.getOverlay(abstractClientPlayerEntity, 0.0f);
+        for (int n = 0; n < 2; ++n) {
+            float o = MathHelper.lerp(h, abstractClientPlayerEntity.prevYaw, abstractClientPlayerEntity.yaw) - MathHelper.lerp(h, abstractClientPlayerEntity.prevBodyYaw, abstractClientPlayerEntity.bodyYaw);
+            float p = MathHelper.lerp(h, abstractClientPlayerEntity.prevPitch, abstractClientPlayerEntity.pitch);
+            matrixStack.push();
+            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(o));
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(p));
+            matrixStack.translate(0.375f * (float)(n * 2 - 1), 0.0, 0.0);
+            matrixStack.translate(0.0, -0.375, 0.0);
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-p));
+            matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(-o));
+            float q = 1.3333334f;
+            matrixStack.scale(1.3333334f, 1.3333334f, 1.3333334f);
+            ((PlayerEntityModel)this.getContextModel()).renderEars(matrixStack, vertexConsumer, i, m);
+            matrixStack.pop();
         }
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return true;
     }
 }
 

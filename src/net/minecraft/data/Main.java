@@ -69,7 +69,7 @@ public class Main {
     public static DataGenerator create(Path output, Collection<Path> inputs, boolean includeClient, boolean includeServer, boolean includeDev, boolean includeReports, boolean validate) {
         DataGenerator dataGenerator = new DataGenerator(output, inputs);
         if (includeClient || includeServer) {
-            dataGenerator.install(new SnbtProvider(dataGenerator).method_21672(new StructureValidatorProvider()));
+            dataGenerator.install(new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
         }
         if (includeServer) {
             dataGenerator.install(new FluidTagsProvider(dataGenerator));

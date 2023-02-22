@@ -15,8 +15,8 @@ public class AnimationFrameResourceMetadata {
     private final int index;
     private final int time;
 
-    public AnimationFrameResourceMetadata(int i) {
-        this(i, -1);
+    public AnimationFrameResourceMetadata(int index) {
+        this(index, -1);
     }
 
     public AnimationFrameResourceMetadata(int index, int time) {

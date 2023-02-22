@@ -4,18 +4,18 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.TurtleEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TurtleEntityRenderer
@@ -27,16 +27,15 @@ extends MobEntityRenderer<TurtleEntity, TurtleEntityModel<TurtleEntity>> {
     }
 
     @Override
-    public void render(TurtleEntity turtleEntity, double d, double e, double f, float g, float h) {
+    public void render(TurtleEntity turtleEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         if (turtleEntity.isBaby()) {
-            this.field_4673 *= 0.5f;
+            this.shadowSize *= 0.5f;
         }
-        super.render(turtleEntity, d, e, f, g, h);
+        super.render(turtleEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
-    @Nullable
-    protected Identifier getTexture(TurtleEntity turtleEntity) {
+    public Identifier getTexture(TurtleEntity turtleEntity) {
         return SKIN;
     }
 }

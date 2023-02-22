@@ -2,159 +2,106 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.block.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import java.nio.FloatBuffer;
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.EndPortalBlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.util.GlAllocationUtils;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
 
 @Environment(value=EnvType.CLIENT)
-public class EndPortalBlockEntityRenderer
-extends BlockEntityRenderer<EndPortalBlockEntity> {
-    private static final Identifier SKY_TEX = new Identifier("textures/environment/end_sky.png");
-    private static final Identifier PORTAL_TEX = new Identifier("textures/entity/end_portal.png");
+public class EndPortalBlockEntityRenderer<T extends EndPortalBlockEntity>
+extends BlockEntityRenderer<T> {
+    public static final Identifier SKY_TEX = new Identifier("textures/environment/end_sky.png");
+    public static final Identifier PORTAL_TEX = new Identifier("textures/entity/end_portal.png");
     private static final Random RANDOM = new Random(31100L);
-    private static final FloatBuffer field_4408 = GlAllocationUtils.allocateFloatBuffer(16);
-    private static final FloatBuffer field_4404 = GlAllocationUtils.allocateFloatBuffer(16);
-    private final FloatBuffer field_4403 = GlAllocationUtils.allocateFloatBuffer(16);
+    private static final List<RenderLayer> field_21732 = (List)IntStream.range(0, 16).mapToObj(i -> RenderLayer.getEndPortal(i + 1)).collect(ImmutableList.toImmutableList());
+
+    public EndPortalBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
+        super(blockEntityRenderDispatcher);
+    }
 
     @Override
-    public void render(EndPortalBlockEntity endPortalBlockEntity, double d, double e, double f, float g, int i) {
-        GlStateManager.disableLighting();
+    public void render(T endPortalBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
         RANDOM.setSeed(31100L);
-        GlStateManager.getMatrix(2982, field_4408);
-        GlStateManager.getMatrix(2983, field_4404);
-        double h = d * d + e * e + f * f;
-        int j = this.method_3592(h);
-        float k = this.method_3594();
-        boolean bl = false;
-        GameRenderer gameRenderer = MinecraftClient.getInstance().gameRenderer;
-        for (int l = 0; l < j; ++l) {
-            GlStateManager.pushMatrix();
-            float m = 2.0f / (float)(18 - l);
-            if (l == 0) {
-                this.bindTexture(SKY_TEX);
-                m = 0.15f;
-                GlStateManager.enableBlend();
-                GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            }
-            if (l >= 1) {
-                this.bindTexture(PORTAL_TEX);
-                bl = true;
-                gameRenderer.setFogBlack(true);
-            }
-            if (l == 1) {
-                GlStateManager.enableBlend();
-                GlStateManager.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
-            }
-            GlStateManager.texGenMode(GlStateManager.TexCoord.S, 9216);
-            GlStateManager.texGenMode(GlStateManager.TexCoord.T, 9216);
-            GlStateManager.texGenMode(GlStateManager.TexCoord.R, 9216);
-            GlStateManager.texGenParam(GlStateManager.TexCoord.S, 9474, this.method_3593(1.0f, 0.0f, 0.0f, 0.0f));
-            GlStateManager.texGenParam(GlStateManager.TexCoord.T, 9474, this.method_3593(0.0f, 1.0f, 0.0f, 0.0f));
-            GlStateManager.texGenParam(GlStateManager.TexCoord.R, 9474, this.method_3593(0.0f, 0.0f, 1.0f, 0.0f));
-            GlStateManager.enableTexGen(GlStateManager.TexCoord.S);
-            GlStateManager.enableTexGen(GlStateManager.TexCoord.T);
-            GlStateManager.enableTexGen(GlStateManager.TexCoord.R);
-            GlStateManager.popMatrix();
-            GlStateManager.matrixMode(5890);
-            GlStateManager.pushMatrix();
-            GlStateManager.loadIdentity();
-            GlStateManager.translatef(0.5f, 0.5f, 0.0f);
-            GlStateManager.scalef(0.5f, 0.5f, 1.0f);
-            float n = l + 1;
-            GlStateManager.translatef(17.0f / n, (2.0f + n / 1.5f) * ((float)(Util.getMeasuringTimeMs() % 800000L) / 800000.0f), 0.0f);
-            GlStateManager.rotatef((n * n * 4321.0f + n * 9.0f) * 2.0f, 0.0f, 0.0f, 1.0f);
-            GlStateManager.scalef(4.5f - n / 4.0f, 4.5f - n / 4.0f, 1.0f);
-            GlStateManager.multMatrix(field_4404);
-            GlStateManager.multMatrix(field_4408);
-            Tessellator tessellator = Tessellator.getInstance();
-            BufferBuilder bufferBuilder = tessellator.getBuffer();
-            bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
-            float o = (RANDOM.nextFloat() * 0.5f + 0.1f) * m;
-            float p = (RANDOM.nextFloat() * 0.5f + 0.4f) * m;
-            float q = (RANDOM.nextFloat() * 0.5f + 0.5f) * m;
-            if (endPortalBlockEntity.shouldDrawSide(Direction.SOUTH)) {
-                bufferBuilder.vertex(d, e, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e + 1.0, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e + 1.0, f + 1.0).color(o, p, q, 1.0f).next();
-            }
-            if (endPortalBlockEntity.shouldDrawSide(Direction.NORTH)) {
-                bufferBuilder.vertex(d, e + 1.0, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e + 1.0, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e, f).color(o, p, q, 1.0f).next();
-            }
-            if (endPortalBlockEntity.shouldDrawSide(Direction.EAST)) {
-                bufferBuilder.vertex(d + 1.0, e + 1.0, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e + 1.0, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f).color(o, p, q, 1.0f).next();
-            }
-            if (endPortalBlockEntity.shouldDrawSide(Direction.WEST)) {
-                bufferBuilder.vertex(d, e, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e + 1.0, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e + 1.0, f).color(o, p, q, 1.0f).next();
-            }
-            if (endPortalBlockEntity.shouldDrawSide(Direction.DOWN)) {
-                bufferBuilder.vertex(d, e, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e, f + 1.0).color(o, p, q, 1.0f).next();
-            }
-            if (endPortalBlockEntity.shouldDrawSide(Direction.UP)) {
-                bufferBuilder.vertex(d, e + (double)k, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e + (double)k, f + 1.0).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d + 1.0, e + (double)k, f).color(o, p, q, 1.0f).next();
-                bufferBuilder.vertex(d, e + (double)k, f).color(o, p, q, 1.0f).next();
-            }
-            tessellator.draw();
-            GlStateManager.popMatrix();
-            GlStateManager.matrixMode(5888);
-            this.bindTexture(SKY_TEX);
+        double d = ((BlockEntity)endPortalBlockEntity).getPos().getSquaredDistance(this.dispatcher.camera.getPos(), true);
+        int k = this.method_3592(d);
+        float g = this.method_3594();
+        Matrix4f matrix4f = matrixStack.peek().getModel();
+        this.method_23084(endPortalBlockEntity, g, 0.15f, matrix4f, vertexConsumerProvider.getBuffer(field_21732.get(0)));
+        for (int l = 1; l < k; ++l) {
+            this.method_23084(endPortalBlockEntity, g, 2.0f / (float)(18 - l), matrix4f, vertexConsumerProvider.getBuffer(field_21732.get(l)));
         }
-        GlStateManager.disableBlend();
-        GlStateManager.disableTexGen(GlStateManager.TexCoord.S);
-        GlStateManager.disableTexGen(GlStateManager.TexCoord.T);
-        GlStateManager.disableTexGen(GlStateManager.TexCoord.R);
-        GlStateManager.enableLighting();
-        if (bl) {
-            gameRenderer.setFogBlack(false);
+    }
+
+    private void method_23084(T endPortalBlockEntity, float f, float g, Matrix4f matrix4f, VertexConsumer vertexConsumer) {
+        float h = (RANDOM.nextFloat() * 0.5f + 0.1f) * g;
+        float i = (RANDOM.nextFloat() * 0.5f + 0.4f) * g;
+        float j = (RANDOM.nextFloat() * 0.5f + 0.5f) * g;
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, h, i, j, Direction.SOUTH);
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, h, i, j, Direction.NORTH);
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, h, i, j, Direction.EAST);
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, h, i, j, Direction.WEST);
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, h, i, j, Direction.DOWN);
+        this.method_23085(endPortalBlockEntity, matrix4f, vertexConsumer, 0.0f, 1.0f, f, f, 1.0f, 1.0f, 0.0f, 0.0f, h, i, j, Direction.UP);
+    }
+
+    private void method_23085(T endPortalBlockEntity, Matrix4f matrix4f, VertexConsumer vertexConsumer, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p, Direction direction) {
+        if (((EndPortalBlockEntity)endPortalBlockEntity).shouldDrawSide(direction)) {
+            vertexConsumer.vertex(matrix4f, f, h, j).color(n, o, p, 1.0f).next();
+            vertexConsumer.vertex(matrix4f, g, h, k).color(n, o, p, 1.0f).next();
+            vertexConsumer.vertex(matrix4f, g, i, l).color(n, o, p, 1.0f).next();
+            vertexConsumer.vertex(matrix4f, f, i, m).color(n, o, p, 1.0f).next();
         }
     }
 
     protected int method_3592(double d) {
-        int i = d > 36864.0 ? 1 : (d > 25600.0 ? 3 : (d > 16384.0 ? 5 : (d > 9216.0 ? 7 : (d > 4096.0 ? 9 : (d > 1024.0 ? 11 : (d > 576.0 ? 13 : (d > 256.0 ? 14 : 15)))))));
-        return i;
+        if (d > 36864.0) {
+            return 1;
+        }
+        if (d > 25600.0) {
+            return 3;
+        }
+        if (d > 16384.0) {
+            return 5;
+        }
+        if (d > 9216.0) {
+            return 7;
+        }
+        if (d > 4096.0) {
+            return 9;
+        }
+        if (d > 1024.0) {
+            return 11;
+        }
+        if (d > 576.0) {
+            return 13;
+        }
+        if (d > 256.0) {
+            return 14;
+        }
+        return 15;
     }
 
     protected float method_3594() {
         return 0.75f;
-    }
-
-    private FloatBuffer method_3593(float f, float g, float h, float i) {
-        this.field_4403.clear();
-        this.field_4403.put(f).put(g).put(h).put(i);
-        this.field_4403.flip();
-        return this.field_4403;
     }
 }
 

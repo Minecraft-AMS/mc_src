@@ -28,6 +28,8 @@ public interface BakedModel {
 
     public boolean hasDepth();
 
+    public boolean isSideLit();
+
     public boolean isBuiltin();
 
     public Sprite getSprite();

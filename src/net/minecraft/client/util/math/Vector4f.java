@@ -7,22 +7,32 @@
  */
 package net.minecraft.client.util.math;
 
-import java.util.Arrays;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.util.math.Matrix4f;
 import net.minecraft.client.util.math.Vector3f;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Quaternion;
 
 @Environment(value=EnvType.CLIENT)
 public class Vector4f {
-    private final float[] components;
+    private float x;
+    private float y;
+    private float z;
+    private float w;
 
     public Vector4f() {
-        this.components = new float[4];
     }
 
     public Vector4f(float x, float y, float z, float w) {
-        this.components = new float[]{x, y, z, w};
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+
+    public Vector4f(Vector3f vector) {
+        this(vector.getX(), vector.getY(), vector.getZ(), 1.0f);
     }
 
     public boolean equals(Object o) {
@@ -33,49 +43,101 @@ public class Vector4f {
             return false;
         }
         Vector4f vector4f = (Vector4f)o;
-        return Arrays.equals(this.components, vector4f.components);
+        if (Float.compare(vector4f.x, this.x) != 0) {
+            return false;
+        }
+        if (Float.compare(vector4f.y, this.y) != 0) {
+            return false;
+        }
+        if (Float.compare(vector4f.z, this.z) != 0) {
+            return false;
+        }
+        return Float.compare(vector4f.w, this.w) == 0;
     }
 
     public int hashCode() {
-        return Arrays.hashCode(this.components);
+        int i = Float.floatToIntBits(this.x);
+        i = 31 * i + Float.floatToIntBits(this.y);
+        i = 31 * i + Float.floatToIntBits(this.z);
+        i = 31 * i + Float.floatToIntBits(this.w);
+        return i;
     }
 
     public float getX() {
-        return this.components[0];
+        return this.x;
     }
 
     public float getY() {
-        return this.components[1];
+        return this.y;
     }
 
     public float getZ() {
-        return this.components[2];
+        return this.z;
     }
 
     public float getW() {
-        return this.components[3];
+        return this.w;
     }
 
     public void multiplyComponentwise(Vector3f vector) {
-        this.components[0] = this.components[0] * vector.getX();
-        this.components[1] = this.components[1] * vector.getY();
-        this.components[2] = this.components[2] * vector.getZ();
+        this.x *= vector.getX();
+        this.y *= vector.getY();
+        this.z *= vector.getZ();
     }
 
     public void set(float x, float y, float z, float w) {
-        this.components[0] = x;
-        this.components[1] = y;
-        this.components[2] = z;
-        this.components[3] = w;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
     }
 
-    public void method_4959(Quaternion quaternion) {
-        Quaternion quaternion2 = new Quaternion(quaternion);
-        quaternion2.hamiltonProduct(new Quaternion(this.getX(), this.getY(), this.getZ(), 0.0f));
-        Quaternion quaternion3 = new Quaternion(quaternion);
-        quaternion3.conjugate();
-        quaternion2.hamiltonProduct(quaternion3);
-        this.set(quaternion2.getB(), quaternion2.getC(), quaternion2.getD(), this.getW());
+    public float dotProduct(Vector4f other) {
+        return this.x * other.x + this.y * other.y + this.z * other.z + this.w * other.w;
+    }
+
+    public boolean normalize() {
+        float f = this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
+        if ((double)f < 1.0E-5) {
+            return false;
+        }
+        float g = MathHelper.fastInverseSqrt(f);
+        this.x *= g;
+        this.y *= g;
+        this.z *= g;
+        this.w *= g;
+        return true;
+    }
+
+    public void transform(Matrix4f matrix) {
+        float f = this.x;
+        float g = this.y;
+        float h = this.z;
+        float i = this.w;
+        this.x = matrix.a00 * f + matrix.a01 * g + matrix.a02 * h + matrix.a03 * i;
+        this.y = matrix.a10 * f + matrix.a11 * g + matrix.a12 * h + matrix.a13 * i;
+        this.z = matrix.a20 * f + matrix.a21 * g + matrix.a22 * h + matrix.a23 * i;
+        this.w = matrix.a30 * f + matrix.a31 * g + matrix.a32 * h + matrix.a33 * i;
+    }
+
+    public void rotate(Quaternion rotation) {
+        Quaternion quaternion = new Quaternion(rotation);
+        quaternion.hamiltonProduct(new Quaternion(this.getX(), this.getY(), this.getZ(), 0.0f));
+        Quaternion quaternion2 = new Quaternion(rotation);
+        quaternion2.conjugate();
+        quaternion.hamiltonProduct(quaternion2);
+        this.set(quaternion.getB(), quaternion.getC(), quaternion.getD(), this.getW());
+    }
+
+    public void normalizeProjectiveCoordinates() {
+        this.x /= this.w;
+        this.y /= this.w;
+        this.z /= this.w;
+        this.w = 1.0f;
+    }
+
+    public String toString() {
+        return "[" + this.x + ", " + this.y + ", " + this.z + ", " + this.w + "]";
     }
 }
 

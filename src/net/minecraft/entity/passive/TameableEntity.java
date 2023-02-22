@@ -92,6 +92,7 @@ extends AnimalEntity {
         return !this.isLeashed();
     }
 
+    @Environment(value=EnvType.CLIENT)
     protected void showEmoteParticle(boolean positive) {
         DefaultParticleType particleEffect = ParticleTypes.HEART;
         if (!positive) {
@@ -101,7 +102,7 @@ extends AnimalEntity {
             double d = this.random.nextGaussian() * 0.02;
             double e = this.random.nextGaussian() * 0.02;
             double f = this.random.nextGaussian() * 0.02;
-            this.world.addParticle(particleEffect, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 0.5 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), d, e, f);
+            this.world.addParticle(particleEffect, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
         }
     }
 

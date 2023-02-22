@@ -119,7 +119,7 @@ Tickable {
         }
         if (!this.needsCooldown() && this.getCachedState().get(HopperBlock.ENABLED).booleanValue()) {
             boolean bl = false;
-            if (!this.isEmpty()) {
+            if (!this.isInvEmpty()) {
                 bl = this.insert();
             }
             if (!this.isFull()) {
@@ -132,19 +132,6 @@ Tickable {
             }
         }
         return false;
-    }
-
-    private boolean isEmpty() {
-        for (ItemStack itemStack : this.inventory) {
-            if (itemStack.isEmpty()) continue;
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean isInvEmpty() {
-        return this.isEmpty();
     }
 
     private boolean isFull() {
@@ -331,7 +318,7 @@ Tickable {
         if (block instanceof InventoryProvider) {
             inventory = ((InventoryProvider)((Object)block)).getInventory(blockState, world, blockPos);
         } else if (block.hasBlockEntity() && (blockEntity = world.getBlockEntity(blockPos)) instanceof Inventory && (inventory = (Inventory)((Object)blockEntity)) instanceof ChestBlockEntity && block instanceof ChestBlock) {
-            inventory = ChestBlock.getInventory(blockState, world, blockPos, true);
+            inventory = ChestBlock.getInventory((ChestBlock)block, blockState, world, blockPos, true);
         }
         if (inventory == null && !(list = world.getEntities((Entity)null, new Box(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5), EntityPredicates.VALID_INVENTORIES)).isEmpty()) {
             inventory = (Inventory)((Object)list.get(world.random.nextInt(list.size())));

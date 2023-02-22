@@ -55,16 +55,20 @@ public class EnchantmentHelper {
             CompoundTag compoundTag = listTag.getCompound(i);
             Identifier identifier2 = Identifier.tryParse(compoundTag.getString("id"));
             if (identifier2 == null || !identifier2.equals(identifier)) continue;
-            return compoundTag.getInt("lvl");
+            return MathHelper.clamp(compoundTag.getInt("lvl"), 0, 255);
         }
         return 0;
     }
 
     public static Map<Enchantment, Integer> getEnchantments(ItemStack stack) {
-        LinkedHashMap map = Maps.newLinkedHashMap();
         ListTag listTag = stack.getItem() == Items.ENCHANTED_BOOK ? EnchantedBookItem.getEnchantmentTag(stack) : stack.getEnchantments();
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTag = listTag.getCompound(i);
+        return EnchantmentHelper.getEnchantments(listTag);
+    }
+
+    public static Map<Enchantment, Integer> getEnchantments(ListTag tag) {
+        LinkedHashMap map = Maps.newLinkedHashMap();
+        for (int i = 0; i < tag.size(); ++i) {
+            CompoundTag compoundTag = tag.getCompound(i);
             Registry.ENCHANTMENT.getOrEmpty(Identifier.tryParse(compoundTag.getString("id"))).ifPresent(enchantment -> map.put(enchantment, compoundTag.getInt("lvl")));
         }
         return map;
@@ -286,7 +290,7 @@ public class EnchantmentHelper {
         if (!list2.isEmpty()) {
             list.add(WeightedPicker.getRandom(random, list2));
             while (random.nextInt(50) <= level) {
-                EnchantmentHelper.remove(list2, (InfoEnchantment)Util.method_20793(list));
+                EnchantmentHelper.remove(list2, (InfoEnchantment)Util.getLast(list));
                 if (list2.isEmpty()) break;
                 list.add(WeightedPicker.getRandom(random, list2));
                 level /= 2;

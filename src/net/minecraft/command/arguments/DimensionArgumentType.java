@@ -39,7 +39,7 @@ implements ArgumentType<DimensionType> {
 
     public DimensionType parse(StringReader stringReader) throws CommandSyntaxException {
         Identifier identifier = Identifier.fromCommandInput(stringReader);
-        return Registry.DIMENSION.getOrEmpty(identifier).orElseThrow(() -> INVALID_DIMENSION_EXCEPTION.create((Object)identifier));
+        return Registry.DIMENSION_TYPE.getOrEmpty(identifier).orElseThrow(() -> INVALID_DIMENSION_EXCEPTION.create((Object)identifier));
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {

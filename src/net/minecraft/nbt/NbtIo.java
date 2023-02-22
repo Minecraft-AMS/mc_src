@@ -28,6 +28,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.EndTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReaders;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
@@ -110,12 +111,11 @@ public class NbtIo {
     private static Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
         byte b = input.readByte();
         if (b == 0) {
-            return new EndTag();
+            return EndTag.INSTANCE;
         }
         input.readUTF();
-        Tag tag = Tag.createTag(b);
         try {
-            tag.read(input, depth, tracker);
+            return TagReaders.of(b).read(input, depth, tracker);
         }
         catch (IOException iOException) {
             CrashReport crashReport = CrashReport.create(iOException, "Loading NBT data");
@@ -123,7 +123,6 @@ public class NbtIo {
             crashReportSection.add("Tag type", b);
             throw new CrashException(crashReport);
         }
-        return tag;
     }
 }
 

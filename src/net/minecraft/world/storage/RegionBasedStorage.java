@@ -19,12 +19,12 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.storage.RegionFile;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class RegionBasedStorage
+public final class RegionBasedStorage
 implements AutoCloseable {
-    protected final Long2ObjectLinkedOpenHashMap<RegionFile> cachedRegionFiles = new Long2ObjectLinkedOpenHashMap();
+    private final Long2ObjectLinkedOpenHashMap<RegionFile> cachedRegionFiles = new Long2ObjectLinkedOpenHashMap();
     private final File directory;
 
-    protected RegionBasedStorage(File directory) {
+    RegionBasedStorage(File directory) {
         this.directory = directory;
     }
 
@@ -41,7 +41,7 @@ implements AutoCloseable {
             this.directory.mkdirs();
         }
         File file = new File(this.directory, "r." + pos.getRegionX() + "." + pos.getRegionZ() + ".mca");
-        RegionFile regionFile2 = new RegionFile(file);
+        RegionFile regionFile2 = new RegionFile(file, this.directory);
         this.cachedRegionFiles.putAndMoveToFirst(l, (Object)regionFile2);
         return regionFile2;
     }
@@ -49,7 +49,7 @@ implements AutoCloseable {
     @Nullable
     public CompoundTag getTagAt(ChunkPos pos) throws IOException {
         RegionFile regionFile = this.getRegionFile(pos);
-        try (DataInputStream dataInputStream = regionFile.getChunkDataInputStream(pos);){
+        try (DataInputStream dataInputStream = regionFile.getChunkInputStream(pos);){
             if (dataInputStream == null) {
                 CompoundTag compoundTag = null;
                 return compoundTag;
@@ -59,10 +59,10 @@ implements AutoCloseable {
         }
     }
 
-    protected void setTagAt(ChunkPos pos, CompoundTag tag) throws IOException {
-        RegionFile regionFile = this.getRegionFile(pos);
-        try (DataOutputStream dataOutputStream = regionFile.getChunkDataOutputStream(pos);){
-            NbtIo.write(tag, (DataOutput)dataOutputStream);
+    protected void write(ChunkPos chunkPos, CompoundTag compoundTag) throws IOException {
+        RegionFile regionFile = this.getRegionFile(chunkPos);
+        try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(chunkPos);){
+            NbtIo.write(compoundTag, (DataOutput)dataOutputStream);
         }
     }
 

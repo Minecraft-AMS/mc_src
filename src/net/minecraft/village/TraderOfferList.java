@@ -60,7 +60,7 @@ extends ArrayList<TradeOffer> {
             buffer.writeInt(tradeOffer.getTraderExperience());
             buffer.writeInt(tradeOffer.getSpecialPrice());
             buffer.writeFloat(tradeOffer.getPriceMultiplier());
-            buffer.writeInt(tradeOffer.method_21725());
+            buffer.writeInt(tradeOffer.getDemandBonus());
         }
     }
 

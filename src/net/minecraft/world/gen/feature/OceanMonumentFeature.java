@@ -22,11 +22,11 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class OceanMonumentFeature
@@ -54,17 +54,17 @@ extends StructureFeature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean shouldStartAt(ChunkGenerator<?> chunkGenerator, Random random, int chunkX, int chunkZ) {
-        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkX, chunkZ, 0, 0);
-        if (chunkX == chunkPos.x && chunkZ == chunkPos.z) {
-            Set<Biome> set = chunkGenerator.getBiomeSource().getBiomesInArea(chunkX * 16 + 9, chunkZ * 16 + 9, 16);
-            for (Biome biome : set) {
-                if (chunkGenerator.hasStructure(biome, Feature.OCEAN_MONUMENT)) continue;
+    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
+        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkZ, i, 0, 0);
+        if (chunkZ == chunkPos.x && i == chunkPos.z) {
+            Set<Biome> set = chunkGenerator.getBiomeSource().getBiomesInArea(chunkZ * 16 + 9, chunkGenerator.getSeaLevel(), i * 16 + 9, 16);
+            for (Biome biome2 : set) {
+                if (chunkGenerator.hasStructure(biome2, this)) continue;
                 return false;
             }
-            Set<Biome> set2 = chunkGenerator.getBiomeSource().getBiomesInArea(chunkX * 16 + 9, chunkZ * 16 + 9, 29);
-            for (Biome biome2 : set2) {
-                if (biome2.getCategory() == Biome.Category.OCEAN || biome2.getCategory() == Biome.Category.RIVER) continue;
+            Set<Biome> set2 = chunkGenerator.getBiomeSource().getBiomesInArea(chunkZ * 16 + 9, chunkGenerator.getSeaLevel(), i * 16 + 9, 29);
+            for (Biome biome3 : set2) {
+                if (biome3.getCategory() == Biome.Category.OCEAN || biome3.getCategory() == Biome.Category.RIVER) continue;
                 return false;
             }
             return true;
@@ -96,8 +96,8 @@ extends StructureFeature<DefaultFeatureConfig> {
     extends StructureStart {
         private boolean field_13717;
 
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, biome, blockBox, i, l);
+        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
+            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
         }
 
         @Override
@@ -115,12 +115,12 @@ extends StructureFeature<DefaultFeatureConfig> {
         }
 
         @Override
-        public void generateStructure(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
+        public void generateStructure(IWorld world, ChunkGenerator<?> chunkGenerator, Random random, BlockBox blockBox, ChunkPos chunkPos) {
             if (!this.field_13717) {
                 this.children.clear();
                 this.method_16588(this.getChunkX(), this.getChunkZ());
             }
-            super.generateStructure(world, random, boundingBox, pos);
+            super.generateStructure(world, chunkGenerator, random, blockBox, chunkPos);
         }
     }
 }

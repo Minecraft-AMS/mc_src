@@ -102,7 +102,7 @@ public class Scoreboard {
             if (scoreboardPlayerScore == null) continue;
             list.add(scoreboardPlayerScore);
         }
-        Collections.sort(list, ScoreboardPlayerScore.COMPARATOR);
+        list.sort(ScoreboardPlayerScore.COMPARATOR);
         return list;
     }
 

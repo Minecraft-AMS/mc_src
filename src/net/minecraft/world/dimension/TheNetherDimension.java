@@ -27,8 +27,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class TheNetherDimension
 extends Dimension {
+    private static final Vec3d field_21216 = new Vec3d(0.2f, 0.03f, 0.03f);
+
     public TheNetherDimension(World world, DimensionType type) {
-        super(world, type);
+        super(world, type, 0.1f);
         this.waterVaporizes = true;
         this.isNether = true;
     }
@@ -36,16 +38,7 @@ extends Dimension {
     @Override
     @Environment(value=EnvType.CLIENT)
     public Vec3d getFogColor(float skyAngle, float tickDelta) {
-        return new Vec3d(0.2f, 0.03f, 0.03f);
-    }
-
-    @Override
-    protected void initializeLightLevelToBrightness() {
-        float f = 0.1f;
-        for (int i = 0; i <= 15; ++i) {
-            float g = 1.0f - (float)i / 15.0f;
-            this.lightLevelToBrightness[i] = (1.0f - g) / (g * 3.0f + 1.0f) * 0.9f + 0.1f;
-        }
+        return field_21216;
     }
 
     @Override
@@ -53,7 +46,7 @@ extends Dimension {
         CavesChunkGeneratorConfig cavesChunkGeneratorConfig = ChunkGeneratorType.CAVES.createSettings();
         cavesChunkGeneratorConfig.setDefaultBlock(Blocks.NETHERRACK.getDefaultState());
         cavesChunkGeneratorConfig.setDefaultFluid(Blocks.LAVA.getDefaultState());
-        return ChunkGeneratorType.CAVES.create(this.world, BiomeSourceType.FIXED.applyConfig(BiomeSourceType.FIXED.getConfig().setBiome(Biomes.NETHER)), cavesChunkGeneratorConfig);
+        return ChunkGeneratorType.CAVES.create(this.world, BiomeSourceType.FIXED.applyConfig(BiomeSourceType.FIXED.getConfig(this.world.getLevelProperties()).setBiome(Biomes.NETHER)), cavesChunkGeneratorConfig);
     }
 
     @Override

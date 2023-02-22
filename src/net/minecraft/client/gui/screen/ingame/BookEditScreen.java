@@ -10,6 +10,7 @@ package net.minecraft.client.gui.screen.ingame;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import java.util.ListIterator;
 import net.fabricmc.api.EnvType;
@@ -175,13 +176,13 @@ extends Screen {
         }
         this.removeEmptyPages();
         ListTag listTag = new ListTag();
-        this.pages.stream().map(StringTag::new).forEach(listTag::add);
+        this.pages.stream().map(StringTag::of).forEach(listTag::add);
         if (!this.pages.isEmpty()) {
             this.itemStack.putSubTag("pages", listTag);
         }
         if (signBook) {
-            this.itemStack.putSubTag("author", new StringTag(this.player.getGameProfile().getName()));
-            this.itemStack.putSubTag("title", new StringTag(this.title.trim()));
+            this.itemStack.putSubTag("author", StringTag.of(this.player.getGameProfile().getName()));
+            this.itemStack.putSubTag("title", StringTag.of(this.title.trim()));
         }
         this.minecraft.getNetworkHandler().sendPacket(new BookUpdateC2SPacket(this.itemStack, signBook, this.hand));
     }
@@ -460,7 +461,7 @@ extends Screen {
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         this.setFocused(null);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(BookScreen.BOOK_TEXTURE);
         int i = (this.width - 192) / 2;
         int j = 2;
@@ -563,18 +564,18 @@ extends Screen {
         this.translateRelativePositionToGlPosition(position3);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GlStateManager.color4f(0.0f, 0.0f, 255.0f, 255.0f);
-        GlStateManager.disableTexture();
-        GlStateManager.enableColorLogicOp();
-        GlStateManager.logicOp(GlStateManager.LogicOp.OR_REVERSE);
+        RenderSystem.color4f(0.0f, 0.0f, 255.0f, 255.0f);
+        RenderSystem.disableTexture();
+        RenderSystem.enableColorLogicOp();
+        RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
         bufferBuilder.begin(7, VertexFormats.POSITION);
         bufferBuilder.vertex(position.x, position3.y, 0.0).next();
         bufferBuilder.vertex(position3.x, position3.y, 0.0).next();
         bufferBuilder.vertex(position3.x, position.y, 0.0).next();
         bufferBuilder.vertex(position.x, position.y, 0.0).next();
         tessellator.draw();
-        GlStateManager.disableColorLogicOp();
-        GlStateManager.enableTexture();
+        RenderSystem.disableColorLogicOp();
+        RenderSystem.enableTexture();
     }
 
     private Position getCursorPositionForIndex(String content, int index) {
@@ -740,9 +741,9 @@ extends Screen {
         Position() {
         }
 
-        Position(int i, int j) {
-            this.x = i;
-            this.y = j;
+        Position(int x, int y) {
+            this.x = x;
+            this.y = y;
         }
     }
 }

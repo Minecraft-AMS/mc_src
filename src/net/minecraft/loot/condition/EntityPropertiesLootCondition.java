@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.entity.Entity;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
@@ -23,7 +24,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class EntityPropertiesLootCondition
 implements LootCondition {
@@ -37,14 +37,14 @@ implements LootCondition {
 
     @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
-        return ImmutableSet.of(LootContextParameters.POSITION, this.entity.getIdentifier());
+        return ImmutableSet.of(LootContextParameters.POSITION, this.entity.getParameter());
     }
 
     @Override
     public boolean test(LootContext lootContext) {
-        Entity entity = lootContext.get(this.entity.getIdentifier());
+        Entity entity = lootContext.get(this.entity.getParameter());
         BlockPos blockPos = lootContext.get(LootContextParameters.POSITION);
-        return blockPos != null && this.predicate.test(lootContext.getWorld(), new Vec3d(blockPos), entity);
+        return this.predicate.test(lootContext.getWorld(), blockPos != null ? new Vec3d(blockPos) : null, entity);
     }
 
     public static LootCondition.Builder create(LootContext.EntityTarget entity) {

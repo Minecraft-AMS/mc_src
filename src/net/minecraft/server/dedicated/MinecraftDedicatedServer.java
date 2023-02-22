@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Random;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
@@ -165,7 +166,7 @@ implements DedicatedServer {
         this.setMotd(serverPropertiesHandler.motd);
         this.setForceGameMode(serverPropertiesHandler.forceGameMode);
         super.setPlayerIdleTimeout(serverPropertiesHandler.playerIdleTimeout.get());
-        this.setWhitelistEnabled(serverPropertiesHandler.enforceWhitelist);
+        this.setEnforceWhitelist(serverPropertiesHandler.enforceWhitelist);
         this.defaultGameMode = serverPropertiesHandler.gameMode;
         LOGGER.info("Default game type: {}", (Object)this.defaultGameMode);
         InetAddress inetAddress = null;
@@ -312,15 +313,18 @@ implements DedicatedServer {
     @Override
     public CrashReport populateCrashReport(CrashReport crashReport) {
         crashReport = super.populateCrashReport(crashReport);
-        crashReport.getSystemDetailsSection().add("Is Modded", () -> {
-            String string = this.getServerModName();
-            if (!"vanilla".equals(string)) {
-                return "Definitely; Server brand changed to '" + string + "'";
-            }
-            return "Unknown (can't tell)";
-        });
+        crashReport.getSystemDetailsSection().add("Is Modded", () -> this.method_24307().orElse("Unknown (can't tell)"));
         crashReport.getSystemDetailsSection().add("Type", () -> "Dedicated Server (map_server.txt)");
         return crashReport;
+    }
+
+    @Override
+    public Optional<String> method_24307() {
+        String string = this.getServerModName();
+        if (!"vanilla".equals(string)) {
+            return Optional.of("Definitely; Server brand changed to '" + string + "'");
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -337,8 +341,8 @@ implements DedicatedServer {
     }
 
     @Override
-    public void tickWorlds(BooleanSupplier booleanSupplier) {
-        super.tickWorlds(booleanSupplier);
+    public void tickWorlds(BooleanSupplier shouldKeepTicking) {
+        super.tickWorlds(shouldKeepTicking);
         this.executeQueuedCommands();
     }
 
@@ -458,8 +462,8 @@ implements DedicatedServer {
     }
 
     @Override
-    public int method_21714() {
-        return this.getProperties().field_20324;
+    public int getFunctionPermissionLevel() {
+        return this.getProperties().functionPermissionLevel;
     }
 
     @Override

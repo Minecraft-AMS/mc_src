@@ -39,14 +39,14 @@ extends Goal {
         double d = Double.MAX_VALUE;
         for (Entity entity2 : list) {
             llamaEntity2 = (LlamaEntity)entity2;
-            if (!llamaEntity2.isFollowing() || llamaEntity2.method_6793() || (e = this.llama.squaredDistanceTo(llamaEntity2)) > d) continue;
+            if (!llamaEntity2.isFollowing() || llamaEntity2.hasFollower() || (e = this.llama.squaredDistanceTo(llamaEntity2)) > d) continue;
             d = e;
             llamaEntity = llamaEntity2;
         }
         if (llamaEntity == null) {
             for (Entity entity2 : list) {
                 llamaEntity2 = (LlamaEntity)entity2;
-                if (!llamaEntity2.isLeashed() || llamaEntity2.method_6793() || (e = this.llama.squaredDistanceTo(llamaEntity2)) > d) continue;
+                if (!llamaEntity2.isLeashed() || llamaEntity2.hasFollower() || (e = this.llama.squaredDistanceTo(llamaEntity2)) > d) continue;
                 d = e;
                 llamaEntity = llamaEntity2;
             }
@@ -60,7 +60,7 @@ extends Goal {
         if (!llamaEntity.isLeashed() && !this.canFollow((LlamaEntity)llamaEntity, 1)) {
             return false;
         }
-        this.llama.method_6791((LlamaEntity)llamaEntity);
+        this.llama.follow((LlamaEntity)llamaEntity);
         return true;
     }
 
@@ -88,7 +88,7 @@ extends Goal {
 
     @Override
     public void stop() {
-        this.llama.method_6797();
+        this.llama.stopFollowing();
         this.speed = 2.1;
     }
 
@@ -100,8 +100,8 @@ extends Goal {
         LlamaEntity llamaEntity = this.llama.getFollowing();
         double d = this.llama.distanceTo(llamaEntity);
         float f = 2.0f;
-        Vec3d vec3d = new Vec3d(llamaEntity.x - this.llama.x, llamaEntity.y - this.llama.y, llamaEntity.z - this.llama.z).normalize().multiply(Math.max(d - 2.0, 0.0));
-        this.llama.getNavigation().startMovingTo(this.llama.x + vec3d.x, this.llama.y + vec3d.y, this.llama.z + vec3d.z, this.speed);
+        Vec3d vec3d = new Vec3d(llamaEntity.getX() - this.llama.getX(), llamaEntity.getY() - this.llama.getY(), llamaEntity.getZ() - this.llama.getZ()).normalize().multiply(Math.max(d - 2.0, 0.0));
+        this.llama.getNavigation().startMovingTo(this.llama.getX() + vec3d.x, this.llama.getY() + vec3d.y, this.llama.getZ() + vec3d.z, this.speed);
     }
 
     private boolean canFollow(LlamaEntity llama, int length) {

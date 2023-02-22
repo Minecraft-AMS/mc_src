@@ -9,11 +9,11 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SnowBlock;
 import net.minecraft.block.SnowyBlock;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.CollisionView;
-import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.light.ChunkLightProvider;
 
 public abstract class SpreadableBlock
@@ -22,26 +22,23 @@ extends SnowyBlock {
         super(settings);
     }
 
-    private static boolean canSurvive(BlockState state, CollisionView world, BlockPos pos) {
+    private static boolean canSurvive(BlockState state, WorldView worldView, BlockPos pos) {
         BlockPos blockPos = pos.up();
-        BlockState blockState = world.getBlockState(blockPos);
+        BlockState blockState = worldView.getBlockState(blockPos);
         if (blockState.getBlock() == Blocks.SNOW && blockState.get(SnowBlock.LAYERS) == 1) {
             return true;
         }
-        int i = ChunkLightProvider.method_20049(world, state, pos, blockState, blockPos, Direction.UP, blockState.getOpacity(world, blockPos));
-        return i < world.getMaxLightLevel();
+        int i = ChunkLightProvider.getRealisticOpacity(worldView, state, pos, blockState, blockPos, Direction.UP, blockState.getOpacity(worldView, blockPos));
+        return i < worldView.getMaxLightLevel();
     }
 
-    private static boolean canSpread(BlockState state, CollisionView world, BlockPos pos) {
+    private static boolean canSpread(BlockState state, WorldView worldView, BlockPos pos) {
         BlockPos blockPos = pos.up();
-        return SpreadableBlock.canSurvive(state, world, pos) && !world.getFluidState(blockPos).matches(FluidTags.WATER);
+        return SpreadableBlock.canSurvive(state, worldView, pos) && !worldView.getFluidState(blockPos).matches(FluidTags.WATER);
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (world.isClient) {
-            return;
-        }
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!SpreadableBlock.canSurvive(state, world, pos)) {
             world.setBlockState(pos, Blocks.DIRT.getDefaultState());
             return;

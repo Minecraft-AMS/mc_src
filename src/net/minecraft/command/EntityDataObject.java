@@ -35,7 +35,7 @@ import net.minecraft.text.TranslatableText;
 public class EntityDataObject
 implements DataCommandObject {
     private static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.data.entity.invalid", new Object[0]));
-    public static final Function<String, DataCommand.ObjectType> field_13800 = string -> new DataCommand.ObjectType((String)string){
+    public static final Function<String, DataCommand.ObjectType> TYPE_FACTORY = string -> new DataCommand.ObjectType((String)string){
         final /* synthetic */ String field_13802;
         {
             this.field_13802 = string;
@@ -51,40 +51,40 @@ implements DataCommandObject {
             return argument.then(CommandManager.literal("entity").then(argumentAdder.apply((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.argument(this.field_13802, EntityArgumentType.entity()))));
         }
     };
-    private final Entity field_13801;
+    private final Entity entity;
 
     public EntityDataObject(Entity entity) {
-        this.field_13801 = entity;
+        this.entity = entity;
     }
 
     @Override
     public void setTag(CompoundTag tag) throws CommandSyntaxException {
-        if (this.field_13801 instanceof PlayerEntity) {
+        if (this.entity instanceof PlayerEntity) {
             throw INVALID_ENTITY_EXCEPTION.create();
         }
-        UUID uUID = this.field_13801.getUuid();
-        this.field_13801.fromTag(tag);
-        this.field_13801.setUuid(uUID);
+        UUID uUID = this.entity.getUuid();
+        this.entity.fromTag(tag);
+        this.entity.setUuid(uUID);
     }
 
     @Override
     public CompoundTag getTag() {
-        return NbtPredicate.entityToTag(this.field_13801);
+        return NbtPredicate.entityToTag(this.entity);
     }
 
     @Override
     public Text feedbackModify() {
-        return new TranslatableText("commands.data.entity.modified", this.field_13801.getDisplayName());
+        return new TranslatableText("commands.data.entity.modified", this.entity.getDisplayName());
     }
 
     @Override
     public Text feedbackQuery(Tag tag) {
-        return new TranslatableText("commands.data.entity.query", this.field_13801.getDisplayName(), tag.toText());
+        return new TranslatableText("commands.data.entity.query", this.entity.getDisplayName(), tag.toText());
     }
 
     @Override
     public Text feedbackGet(NbtPathArgumentType.NbtPath nbtPath, double scale, int result) {
-        return new TranslatableText("commands.data.entity.get", nbtPath, this.field_13801.getDisplayName(), String.format(Locale.ROOT, "%.2f", scale), result);
+        return new TranslatableText("commands.data.entity.get", nbtPath, this.entity.getDisplayName(), String.format(Locale.ROOT, "%.2f", scale), result);
     }
 }
 

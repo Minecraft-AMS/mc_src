@@ -23,11 +23,11 @@ public interface TaskQueue<T, F> {
 
     public boolean isEmpty();
 
-    public static final class PrioritizedQueueMailbox
-    implements TaskQueue<PrioritizedMessage, Runnable> {
+    public static final class Prioritized
+    implements TaskQueue<PrioritizedTask, Runnable> {
         private final List<Queue<Runnable>> queues;
 
-        public PrioritizedQueueMailbox(int priorityCount) {
+        public Prioritized(int priorityCount) {
             this.queues = IntStream.range(0, priorityCount).mapToObj(i -> Queues.newConcurrentLinkedQueue()).collect(Collectors.toList());
         }
 
@@ -43,9 +43,9 @@ public interface TaskQueue<T, F> {
         }
 
         @Override
-        public boolean add(PrioritizedMessage prioritizedMessage) {
-            int i = prioritizedMessage.getPriority();
-            this.queues.get(i).add(prioritizedMessage);
+        public boolean add(PrioritizedTask prioritizedTask) {
+            int i = prioritizedTask.getPriority();
+            this.queues.get(i).add(prioritizedTask);
             return true;
         }
 
@@ -61,12 +61,12 @@ public interface TaskQueue<T, F> {
         }
     }
 
-    public static final class PrioritizedMessage
+    public static final class PrioritizedTask
     implements Runnable {
         private final int priority;
         private final Runnable runnable;
 
-        public PrioritizedMessage(int priority, Runnable runnable) {
+        public PrioritizedTask(int priority, Runnable runnable) {
             this.priority = priority;
             this.runnable = runnable;
         }
@@ -81,11 +81,11 @@ public interface TaskQueue<T, F> {
         }
     }
 
-    public static final class QueueMailbox<T>
+    public static final class Simple<T>
     implements TaskQueue<T, T> {
         private final Queue<T> queue;
 
-        public QueueMailbox(Queue<T> queue) {
+        public Simple(Queue<T> queue) {
             this.queue = queue;
         }
 

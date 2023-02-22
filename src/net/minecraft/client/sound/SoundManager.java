@@ -39,6 +39,7 @@ import net.minecraft.client.sound.SoundEntry;
 import net.minecraft.client.sound.SoundEntryDeserializer;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.sound.SoundSystem;
+import net.minecraft.client.sound.TickableSoundInstance;
 import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
@@ -164,6 +165,10 @@ extends SinglePreparationResourceReloadListener<SoundList> {
 
     public Collection<Identifier> getKeys() {
         return this.sounds.keySet();
+    }
+
+    public void playNextTick(TickableSoundInstance sound) {
+        this.soundSystem.playNextTick(sound);
     }
 
     public void play(SoundInstance sound) {

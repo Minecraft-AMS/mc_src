@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.ImmutableMap$Builder
- *  com.google.common.collect.ImmutableSet
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonElement
@@ -15,14 +14,12 @@
 package net.minecraft.loot;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import net.minecraft.loot.BinomialLootTableRange;
 import net.minecraft.loot.ConstantLootTableRange;
 import net.minecraft.loot.LootPool;
@@ -30,8 +27,11 @@ import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.LootTables;
 import net.minecraft.loot.UniformLootTableRange;
+import net.minecraft.loot.condition.LootCondition;
+import net.minecraft.loot.condition.LootConditionManager;
 import net.minecraft.loot.condition.LootConditions;
 import net.minecraft.loot.context.LootContext;
+import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.loot.entry.LootEntries;
 import net.minecraft.loot.entry.LootEntry;
 import net.minecraft.loot.function.LootFunction;
@@ -41,7 +41,6 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.BoundedIntUnaryOperator;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,9 +49,11 @@ extends JsonDataLoader {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Gson GSON = new GsonBuilder().registerTypeAdapter(UniformLootTableRange.class, (Object)new UniformLootTableRange.Serializer()).registerTypeAdapter(BinomialLootTableRange.class, (Object)new BinomialLootTableRange.Serializer()).registerTypeAdapter(ConstantLootTableRange.class, (Object)new ConstantLootTableRange.Serializer()).registerTypeAdapter(BoundedIntUnaryOperator.class, (Object)new BoundedIntUnaryOperator.Serializer()).registerTypeAdapter(LootPool.class, (Object)new LootPool.Serializer()).registerTypeAdapter(LootTable.class, (Object)new LootTable.Serializer()).registerTypeHierarchyAdapter(LootEntry.class, (Object)new LootEntries.Serializer()).registerTypeHierarchyAdapter(LootFunction.class, (Object)new LootFunctions.Factory()).registerTypeHierarchyAdapter(LootCondition.class, (Object)new LootConditions.Factory()).registerTypeHierarchyAdapter(LootContext.EntityTarget.class, (Object)new LootContext.EntityTarget.Serializer()).create();
     private Map<Identifier, LootTable> suppliers = ImmutableMap.of();
+    private final LootConditionManager conditionManager;
 
-    public LootManager() {
+    public LootManager(LootConditionManager conditionManager) {
         super(GSON, "loot_tables");
+        this.conditionManager = conditionManager;
     }
 
     public LootTable getSupplier(Identifier id) {
@@ -77,15 +78,14 @@ extends JsonDataLoader {
         });
         builder.put((Object)LootTables.EMPTY, (Object)LootTable.EMPTY);
         ImmutableMap immutableMap = builder.build();
-        LootTableReporter lootTableReporter = new LootTableReporter();
-        immutableMap.forEach((id, supplier) -> LootManager.check(lootTableReporter, id, supplier, arg_0 -> ((ImmutableMap)immutableMap).get(arg_0)));
+        LootTableReporter lootTableReporter = new LootTableReporter(LootContextTypes.GENERIC, this.conditionManager::get, arg_0 -> ((ImmutableMap)immutableMap).get(arg_0));
+        immutableMap.forEach((identifier, lootTable) -> LootManager.check(lootTableReporter, identifier, lootTable));
         lootTableReporter.getMessages().forEach((key, value) -> LOGGER.warn("Found validation problem in " + key + ": " + value));
         this.suppliers = immutableMap;
     }
 
-    public static void check(LootTableReporter reporter, Identifier id, LootTable supplier, Function<Identifier, LootTable> supplierGetter) {
-        ImmutableSet set = ImmutableSet.of((Object)id);
-        supplier.check(reporter.makeChild("{" + id.toString() + "}"), supplierGetter, (Set<Identifier>)set, supplier.getType());
+    public static void check(LootTableReporter reporter, Identifier id, LootTable table) {
+        table.check(reporter.withContextType(table.getType()).withSupplier("{" + id + "}", id));
     }
 
     public static JsonElement toJson(LootTable supplier) {

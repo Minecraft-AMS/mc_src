@@ -12,6 +12,7 @@
 package net.minecraft.client.util;
 
 import com.google.common.collect.Lists;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
@@ -34,7 +35,8 @@ public final class Monitor {
         this.populateVideoModes();
     }
 
-    private void populateVideoModes() {
+    public void populateVideoModes() {
+        RenderSystem.assertThread(RenderSystem::isInInitPhase);
         this.videoModes.clear();
         GLFWVidMode.Buffer buffer = GLFW.glfwGetVideoModes((long)this.handle);
         for (int i = buffer.limit() - 1; i >= 0; --i) {
@@ -53,6 +55,7 @@ public final class Monitor {
     }
 
     public VideoMode findClosestVideoMode(Optional<VideoMode> optional) {
+        RenderSystem.assertThread(RenderSystem::isInInitPhase);
         if (optional.isPresent()) {
             VideoMode videoMode = optional.get();
             for (VideoMode videoMode2 : this.videoModes) {
@@ -64,6 +67,7 @@ public final class Monitor {
     }
 
     public int findClosestVideoModeIndex(VideoMode videoMode) {
+        RenderSystem.assertThread(RenderSystem::isInInitPhase);
         return this.videoModes.indexOf(videoMode);
     }
 

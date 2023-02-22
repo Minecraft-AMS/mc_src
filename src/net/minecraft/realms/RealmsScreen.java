@@ -227,7 +227,7 @@ implements RealmsConfirmResultListener {
     }
 
     protected boolean isKeyDown(int i) {
-        return InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), i);
+        return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), i);
     }
 
     protected void narrateLabels() {

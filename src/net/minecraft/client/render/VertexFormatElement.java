@@ -9,6 +9,8 @@
  */
 package net.minecraft.client.render;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+import java.util.function.IntConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +23,7 @@ public class VertexFormatElement {
     private final Type type;
     private final int index;
     private final int count;
+    private final int size;
 
     public VertexFormatElement(int index, Format format, Type type, int count) {
         if (this.isValidType(index, type)) {
@@ -32,9 +35,10 @@ public class VertexFormatElement {
         this.format = format;
         this.index = index;
         this.count = count;
+        this.size = format.getSize() * this.count;
     }
 
-    private final boolean isValidType(int index, Type type) {
+    private boolean isValidType(int index, Type type) {
         return index == 0 || type == Type.UV;
     }
 
@@ -59,7 +63,7 @@ public class VertexFormatElement {
     }
 
     public final int getSize() {
-        return this.format.getSize() * this.count;
+        return this.size;
     }
 
     public final boolean isPosition() {
@@ -92,6 +96,14 @@ public class VertexFormatElement {
         i = 31 * i + this.index;
         i = 31 * i + this.count;
         return i;
+    }
+
+    public void startDrawing(long pointer, int stride) {
+        this.type.startDrawing(this.count, this.format.getGlId(), stride, pointer, this.index);
+    }
+
+    public void endDrawing() {
+        this.type.endDrawing(this.index);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -129,22 +141,62 @@ public class VertexFormatElement {
 
     @Environment(value=EnvType.CLIENT)
     public static enum Type {
-        POSITION("Position"),
-        NORMAL("Normal"),
-        COLOR("Vertex Color"),
-        UV("UV"),
-        MATRIX("Bone Matrix"),
-        BLEND_WEIGHT("Blend Weight"),
-        PADDING("Padding");
+        POSITION("Position", (i, j, k, l, m) -> {
+            GlStateManager.vertexPointer(i, j, k, l);
+            GlStateManager.enableClientState(32884);
+        }, i -> GlStateManager.disableClientState(32884)),
+        NORMAL("Normal", (i, j, k, l, m) -> {
+            GlStateManager.normalPointer(j, k, l);
+            GlStateManager.enableClientState(32885);
+        }, i -> GlStateManager.disableClientState(32885)),
+        COLOR("Vertex Color", (i, j, k, l, m) -> {
+            GlStateManager.colorPointer(i, j, k, l);
+            GlStateManager.enableClientState(32886);
+        }, i -> {
+            GlStateManager.disableClientState(32886);
+            GlStateManager.clearCurrentColor();
+        }),
+        UV("UV", (i, j, k, l, m) -> {
+            GlStateManager.clientActiveTexture(33984 + m);
+            GlStateManager.texCoordPointer(i, j, k, l);
+            GlStateManager.enableClientState(32888);
+            GlStateManager.clientActiveTexture(33984);
+        }, i -> {
+            GlStateManager.clientActiveTexture(33984 + i);
+            GlStateManager.disableClientState(32888);
+            GlStateManager.clientActiveTexture(33984);
+        }),
+        PADDING("Padding", (i, j, k, l, m) -> {}, i -> {}),
+        GENERIC("Generic", (i, j, k, l, m) -> {
+            GlStateManager.enableVertexAttribArray(m);
+            GlStateManager.vertexAttribPointer(m, i, j, false, k, l);
+        }, GlStateManager::method_22607);
 
         private final String name;
+        private final Starter stater;
+        private final IntConsumer finisher;
 
-        private Type(String name) {
+        private Type(String name, Starter starter, IntConsumer intConsumer) {
             this.name = name;
+            this.stater = starter;
+            this.finisher = intConsumer;
+        }
+
+        private void startDrawing(int count, int glId, int stride, long pointer, int elementIndex) {
+            this.stater.setupBufferState(count, glId, stride, pointer, elementIndex);
+        }
+
+        public void endDrawing(int elementIndex) {
+            this.finisher.accept(elementIndex);
         }
 
         public String getName() {
             return this.name;
+        }
+
+        @Environment(value=EnvType.CLIENT)
+        static interface Starter {
+            public void setupBufferState(int var1, int var2, int var3, long var4, int var6);
         }
     }
 }

@@ -17,6 +17,7 @@ import net.minecraft.block.BedBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
+import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.OpenDoorsTask;
@@ -24,14 +25,15 @@ import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.GlobalPos;
+import net.minecraft.util.Timestamp;
 import net.minecraft.util.math.BlockPos;
 
 public class SleepTask
 extends Task<LivingEntity> {
-    private long field_18848;
+    private long startTime;
 
     public SleepTask() {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.HOME, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.HOME, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.LAST_WOKEN, (Object)((Object)MemoryModuleState.REGISTERED)));
     }
 
     @Override
@@ -39,8 +41,13 @@ extends Task<LivingEntity> {
         if (entity.hasVehicle()) {
             return false;
         }
-        GlobalPos globalPos = entity.getBrain().getOptionalMemory(MemoryModuleType.HOME).get();
+        Brain<?> brain = entity.getBrain();
+        GlobalPos globalPos = brain.getOptionalMemory(MemoryModuleType.HOME).get();
         if (!Objects.equals(world.getDimension().getType(), globalPos.getDimension())) {
+            return false;
+        }
+        Optional<Timestamp> optional = brain.getOptionalMemory(MemoryModuleType.LAST_WOKEN);
+        if (optional.isPresent() && world.getTime() - optional.get().getTime() < 100L) {
             return false;
         }
         BlockState blockState = world.getBlockState(globalPos.getPos());
@@ -54,13 +61,13 @@ extends Task<LivingEntity> {
             return false;
         }
         BlockPos blockPos = optional.get().getPos();
-        return entity.getBrain().hasActivity(Activity.REST) && entity.y > (double)blockPos.getY() + 0.4 && blockPos.isWithinDistance(entity.getPos(), 1.14);
+        return entity.getBrain().hasActivity(Activity.REST) && entity.getY() > (double)blockPos.getY() + 0.4 && blockPos.isWithinDistance(entity.getPos(), 1.14);
     }
 
     @Override
     protected void run(ServerWorld world, LivingEntity entity, long time) {
-        if (time > this.field_18848) {
-            entity.getBrain().getOptionalMemory(MemoryModuleType.OPENED_DOORS).ifPresent(set -> OpenDoorsTask.method_21697(world, (List<BlockPos>)ImmutableList.of(), 0, entity, entity.getBrain()));
+        if (time > this.startTime) {
+            entity.getBrain().getOptionalMemory(MemoryModuleType.OPENED_DOORS).ifPresent(set -> OpenDoorsTask.closeOpenedDoors(world, (List<BlockPos>)ImmutableList.of(), 0, entity, entity.getBrain()));
             entity.sleep(entity.getBrain().getOptionalMemory(MemoryModuleType.HOME).get().getPos());
         }
     }
@@ -74,7 +81,7 @@ extends Task<LivingEntity> {
     protected void finishRunning(ServerWorld world, LivingEntity entity, long time) {
         if (entity.isSleeping()) {
             entity.wakeUp();
-            this.field_18848 = time + 40L;
+            this.startTime = time + 40L;
         }
     }
 }

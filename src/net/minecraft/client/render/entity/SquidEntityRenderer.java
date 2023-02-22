@@ -7,13 +7,13 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.SquidEntityModel;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.passive.SquidEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -28,29 +28,24 @@ extends MobEntityRenderer<SquidEntity, SquidEntityModel<SquidEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(SquidEntity squidEntity) {
+    public Identifier getTexture(SquidEntity squidEntity) {
         return SKIN;
     }
 
     @Override
-    protected void setupTransforms(SquidEntity squidEntity, float f, float g, float h) {
+    protected void setupTransforms(SquidEntity squidEntity, MatrixStack matrixStack, float f, float g, float h) {
         float i = MathHelper.lerp(h, squidEntity.field_6905, squidEntity.field_6907);
         float j = MathHelper.lerp(h, squidEntity.field_6906, squidEntity.field_6903);
-        GlStateManager.translatef(0.0f, 0.5f, 0.0f);
-        GlStateManager.rotatef(180.0f - g, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(i, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(j, 0.0f, 1.0f, 0.0f);
-        GlStateManager.translatef(0.0f, -1.2f, 0.0f);
+        matrixStack.translate(0.0, 0.5, 0.0);
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f - g));
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(i));
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(j));
+        matrixStack.translate(0.0, -1.2f, 0.0);
     }
 
     @Override
     protected float getAnimationProgress(SquidEntity squidEntity, float f) {
         return MathHelper.lerp(f, squidEntity.field_6900, squidEntity.field_6904);
-    }
-
-    @Override
-    protected /* synthetic */ float getAnimationProgress(LivingEntity entity, float tickDelta) {
-        return this.getAnimationProgress((SquidEntity)entity, tickDelta);
     }
 }
 

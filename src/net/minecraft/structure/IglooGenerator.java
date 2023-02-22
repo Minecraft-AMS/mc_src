@@ -31,6 +31,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 
 public class IglooGenerator {
@@ -98,16 +99,16 @@ public class IglooGenerator {
         }
 
         @Override
-        public boolean generate(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
+        public boolean generate(IWorld world, ChunkGenerator<?> generator, Random random, BlockBox box, ChunkPos pos) {
             BlockPos blockPos4;
             BlockState blockState;
             StructurePlacementData structurePlacementData = new StructurePlacementData().setRotation(this.rotation).setMirrored(BlockMirror.NONE).setPosition((BlockPos)field_14408.get(this.template)).addProcessor(BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
             BlockPos blockPos = (BlockPos)field_14406.get(this.template);
             BlockPos blockPos2 = this.pos.add(Structure.method_15171(structurePlacementData, new BlockPos(3 - blockPos.getX(), 0, 0 - blockPos.getZ())));
-            int i = world.getTop(Heightmap.Type.WORLD_SURFACE_WG, blockPos2.getX(), blockPos2.getZ());
+            int i = world.getTopY(Heightmap.Type.WORLD_SURFACE_WG, blockPos2.getX(), blockPos2.getZ());
             BlockPos blockPos3 = this.pos;
             this.pos = this.pos.add(0, i - 90 - 1, 0);
-            boolean bl = super.generate(world, random, boundingBox, pos);
+            boolean bl = super.generate(world, generator, random, box, pos);
             if (this.template.equals(TOP_TEMPLATE) && !(blockState = world.getBlockState((blockPos4 = this.pos.add(Structure.method_15171(structurePlacementData, new BlockPos(3, 0, 5)))).down())).isAir() && blockState.getBlock() != Blocks.LADDER) {
                 world.setBlockState(blockPos4, Blocks.SNOW_BLOCK.getDefaultState(), 3);
             }

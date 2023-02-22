@@ -14,7 +14,7 @@
 package net.minecraft.client.gui.screen.world;
 
 import com.google.common.hash.Hashing;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.File;
 import java.io.FileInputStream;
 import java.text.DateFormat;
@@ -195,16 +195,16 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             this.client.textRenderer.draw(string, k + 32 + 3, j + 1, 0xFFFFFF);
             this.client.textRenderer.draw(string2, k + 32 + 3, j + this.client.textRenderer.fontHeight + 3, 0x808080);
             this.client.textRenderer.draw(string3, k + 32 + 3, j + this.client.textRenderer.fontHeight + this.client.textRenderer.fontHeight + 3, 0x808080);
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             this.client.getTextureManager().bindTexture(this.icon != null ? this.iconLocation : UNKNOWN_SERVER_LOCATION);
-            GlStateManager.enableBlend();
+            RenderSystem.enableBlend();
             DrawableHelper.blit(k, j, 0.0f, 0.0f, 32, 32, 32, 32);
-            GlStateManager.disableBlend();
+            RenderSystem.disableBlend();
             if (this.client.options.touchscreen || bl) {
                 int q;
                 this.client.getTextureManager().bindTexture(WORLD_SELECTION_LOCATION);
                 DrawableHelper.fill(k, j, k + 32, j + 32, -1601138544);
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 int p = n - k;
                 int n2 = q = p < 32 ? 32 : 0;
                 if (this.level.isDifferentVersion()) {

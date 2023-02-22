@@ -2,21 +2,26 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  it.unimi.dsi.fastutil.longs.Long2ByteFunction
+ *  it.unimi.dsi.fastutil.longs.Long2ByteMap
  *  it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap
+ *  it.unimi.dsi.fastutil.longs.LongArrayList
  *  it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet
+ *  it.unimi.dsi.fastutil.longs.LongList
  */
 package net.minecraft.world.chunk.light;
 
-import it.unimi.dsi.fastutil.longs.Long2ByteFunction;
+import it.unimi.dsi.fastutil.longs.Long2ByteMap;
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongList;
+import java.util.function.LongPredicate;
 import net.minecraft.util.math.MathHelper;
 
 public abstract class LevelPropagator {
     private final int levelCount;
     private final LongLinkedOpenHashSet[] pendingIdUpdatesByLevel;
-    private final Long2ByteFunction idToLevel;
+    private final Long2ByteMap pendingUpdates;
     private int minPendingLevel;
     private volatile boolean hasPendingUpdates;
 
@@ -36,7 +41,7 @@ public abstract class LevelPropagator {
                 }
             };
         }
-        this.idToLevel = new Long2ByteOpenHashMap(expectedTotalSize, 0.5f){
+        this.pendingUpdates = new Long2ByteOpenHashMap(expectedTotalSize, 0.5f){
 
             protected void rehash(int newN) {
                 if (newN > expectedTotalSize) {
@@ -44,7 +49,7 @@ public abstract class LevelPropagator {
                 }
             }
         };
-        this.idToLevel.defaultReturnValue((byte)-1);
+        this.pendingUpdates.defaultReturnValue((byte)-1);
         this.minPendingLevel = levelCount;
     }
 
@@ -70,7 +75,7 @@ public abstract class LevelPropagator {
     }
 
     protected void removePendingUpdate(long id) {
-        int i = this.idToLevel.get(id) & 0xFF;
+        int i = this.pendingUpdates.get(id) & 0xFF;
         if (i == 255) {
             return;
         }
@@ -80,9 +85,15 @@ public abstract class LevelPropagator {
         this.hasPendingUpdates = this.minPendingLevel < this.levelCount;
     }
 
+    public void method_24206(LongPredicate longPredicate) {
+        LongArrayList longList = new LongArrayList();
+        this.pendingUpdates.keySet().forEach(arg_0 -> LevelPropagator.method_24207(longPredicate, (LongList)longList, arg_0));
+        longList.forEach(this::removePendingUpdate);
+    }
+
     private void removePendingUpdate(long id, int level, int levelCount, boolean removeFully) {
         if (removeFully) {
-            this.idToLevel.remove(id);
+            this.pendingUpdates.remove(id);
         }
         this.pendingIdUpdatesByLevel[level].remove(id);
         if (this.pendingIdUpdatesByLevel[level].isEmpty() && this.minPendingLevel == level) {
@@ -91,7 +102,7 @@ public abstract class LevelPropagator {
     }
 
     private void addPendingUpdate(long id, int level, int targetLevel) {
-        this.idToLevel.put(id, (byte)level);
+        this.pendingUpdates.put(id, (byte)level);
         this.pendingIdUpdatesByLevel[targetLevel].add(id);
         if (this.minPendingLevel > targetLevel) {
             this.minPendingLevel = targetLevel;
@@ -103,7 +114,7 @@ public abstract class LevelPropagator {
     }
 
     protected void updateLevel(long sourceId, long id, int level, boolean decrease) {
-        this.updateLevel(sourceId, id, level, this.getLevel(id), this.idToLevel.get(id) & 0xFF, decrease);
+        this.updateLevel(sourceId, id, level, this.getLevel(id), this.pendingUpdates.get(id) & 0xFF, decrease);
         this.hasPendingUpdates = this.minPendingLevel < this.levelCount;
     }
 
@@ -134,7 +145,7 @@ public abstract class LevelPropagator {
     }
 
     protected final void propagateLevel(long sourceId, long targetId, int level, boolean decrease) {
-        int i = this.idToLevel.get(targetId) & 0xFF;
+        int i = this.pendingUpdates.get(targetId) & 0xFF;
         int j = MathHelper.clamp(this.getPropagatedLevel(sourceId, targetId, level), 0, this.levelCount - 1);
         if (decrease) {
             this.updateLevel(sourceId, targetId, j, this.getLevel(targetId), i, true);
@@ -171,7 +182,7 @@ public abstract class LevelPropagator {
             if (longLinkedOpenHashSet.isEmpty()) {
                 this.increaseMinPendingLevel(this.levelCount);
             }
-            if ((j = this.idToLevel.remove(l) & 0xFF) < i) {
+            if ((j = this.pendingUpdates.remove(l) & 0xFF) < i) {
                 this.setLevel(l, j);
                 this.propagateLevel(l, j, true);
                 continue;
@@ -185,6 +196,10 @@ public abstract class LevelPropagator {
         return maxSteps;
     }
 
+    public int method_24208() {
+        return this.pendingUpdates.size();
+    }
+
     protected abstract boolean isMarker(long var1);
 
     protected abstract int recalculateLevel(long var1, long var3, int var5);
@@ -196,5 +211,11 @@ public abstract class LevelPropagator {
     protected abstract void setLevel(long var1, int var3);
 
     protected abstract int getPropagatedLevel(long var1, long var3, int var5);
+
+    private static /* synthetic */ void method_24207(LongPredicate longPredicate, LongList longList, long l) {
+        if (longPredicate.test(l)) {
+            longList.add(l);
+        }
+    }
 }
 

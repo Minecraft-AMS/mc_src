@@ -1,9 +1,15 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.block.AttachedStemBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPlacementEnvironment;
@@ -11,12 +17,14 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
 import net.minecraft.block.FenceGateBlock;
+import net.minecraft.block.PistonExtensionBlock;
 import net.minecraft.block.StemBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -25,10 +33,10 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class FarmlandBlock
 extends Block {
@@ -49,9 +57,9 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.up());
-        return !blockState.getMaterial().isSolid() || blockState.getBlock() instanceof FenceGateBlock;
+        return !blockState.getMaterial().isSolid() || blockState.getBlock() instanceof FenceGateBlock || blockState.getBlock() instanceof PistonExtensionBlock;
     }
 
     @Override
@@ -73,7 +81,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!state.canPlaceAt(world, pos)) {
             FarmlandBlock.setToDirt(state, world, pos);
             return;
@@ -107,9 +115,9 @@ extends Block {
         return block instanceof CropBlock || block instanceof StemBlock || block instanceof AttachedStemBlock;
     }
 
-    private static boolean isWaterNearby(CollisionView world, BlockPos pos) {
+    private static boolean isWaterNearby(WorldView worldView, BlockPos pos) {
         for (BlockPos blockPos : BlockPos.iterate(pos.add(-4, 0, -4), pos.add(4, 1, 4))) {
-            if (!world.getFluidState(blockPos).matches(FluidTags.WATER)) continue;
+            if (!worldView.getFluidState(blockPos).matches(FluidTags.WATER)) continue;
             return true;
         }
         return false;
@@ -123,6 +131,12 @@ extends Block {
     @Override
     public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
         return false;
+    }
+
+    @Override
+    @Environment(value=EnvType.CLIENT)
+    public boolean hasInWallOverlay(BlockState state, BlockView view, BlockPos pos) {
+        return true;
     }
 }
 

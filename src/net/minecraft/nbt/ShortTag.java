@@ -9,18 +9,51 @@ import java.io.IOException;
 import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 public class ShortTag
 extends AbstractNumberTag {
-    private short value;
+    public static final TagReader<ShortTag> READER = new TagReader<ShortTag>(){
 
-    public ShortTag() {
+        @Override
+        public ShortTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(80L);
+            return ShortTag.of(dataInput.readShort());
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "SHORT";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Short";
+        }
+
+        @Override
+        public boolean isImmutable() {
+            return true;
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    private final short value;
+
+    private ShortTag(short value) {
+        this.value = value;
     }
 
-    public ShortTag(short s) {
-        this.value = s;
+    public static ShortTag of(short value) {
+        if (value >= -128 && value <= 1024) {
+            return Cache.VALUES[value + 128];
+        }
+        return new ShortTag(value);
     }
 
     @Override
@@ -29,14 +62,12 @@ extends AbstractNumberTag {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(80L);
-        this.value = input.readShort();
-    }
-
-    @Override
     public byte getType() {
         return 2;
+    }
+
+    public TagReader<ShortTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -46,7 +77,7 @@ extends AbstractNumberTag {
 
     @Override
     public ShortTag copy() {
-        return new ShortTag(this.value);
+        return this;
     }
 
     public boolean equals(Object o) {
@@ -104,6 +135,16 @@ extends AbstractNumberTag {
     @Override
     public /* synthetic */ Tag copy() {
         return this.copy();
+    }
+
+    static class Cache {
+        static final ShortTag[] VALUES = new ShortTag[1153];
+
+        static {
+            for (int i = 0; i < VALUES.length; ++i) {
+                Cache.VALUES[i] = new ShortTag((short)(-128 + i));
+            }
+        }
     }
 }
 

@@ -13,25 +13,16 @@ import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.types.DynamicOps;
 import java.util.Map;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class RandomBooleanFeatureConfig
 implements FeatureConfig {
-    public final ConfiguredFeature<?> featureTrue;
-    public final ConfiguredFeature<?> featureFalse;
+    public final ConfiguredFeature<?, ?> featureTrue;
+    public final ConfiguredFeature<?, ?> featureFalse;
 
-    public RandomBooleanFeatureConfig(ConfiguredFeature<?> featureTrue, ConfiguredFeature<?> featureFalse) {
-        this.featureTrue = featureTrue;
-        this.featureFalse = featureFalse;
-    }
-
-    public RandomBooleanFeatureConfig(Feature<?> featureTrue, FeatureConfig featureConfigTrue, Feature<?> featureFalse, FeatureConfig featureConfig) {
-        this(RandomBooleanFeatureConfig.configure(featureTrue, featureConfigTrue), RandomBooleanFeatureConfig.configure(featureFalse, featureConfig));
-    }
-
-    private static <FC extends FeatureConfig> ConfiguredFeature<FC> configure(Feature<FC> feature, FeatureConfig config) {
-        return new ConfiguredFeature<FeatureConfig>(feature, config);
+    public RandomBooleanFeatureConfig(ConfiguredFeature<?, ?> configuredFeature, ConfiguredFeature<?, ?> configuredFeature2) {
+        this.featureTrue = configuredFeature;
+        this.featureFalse = configuredFeature2;
     }
 
     @Override
@@ -40,8 +31,8 @@ implements FeatureConfig {
     }
 
     public static <T> RandomBooleanFeatureConfig deserialize(Dynamic<T> dynamic) {
-        ConfiguredFeature<?> configuredFeature = ConfiguredFeature.deserialize(dynamic.get("feature_true").orElseEmptyMap());
-        ConfiguredFeature<?> configuredFeature2 = ConfiguredFeature.deserialize(dynamic.get("feature_false").orElseEmptyMap());
+        ConfiguredFeature<?, ?> configuredFeature = ConfiguredFeature.deserialize(dynamic.get("feature_true").orElseEmptyMap());
+        ConfiguredFeature<?, ?> configuredFeature2 = ConfiguredFeature.deserialize(dynamic.get("feature_false").orElseEmptyMap());
         return new RandomBooleanFeatureConfig(configuredFeature, configuredFeature2);
     }
 }

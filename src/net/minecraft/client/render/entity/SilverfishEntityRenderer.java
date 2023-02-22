@@ -32,7 +32,7 @@ extends MobEntityRenderer<SilverfishEntity, SilverfishEntityModel<SilverfishEnti
     }
 
     @Override
-    protected Identifier getTexture(SilverfishEntity silverfishEntity) {
+    public Identifier getTexture(SilverfishEntity silverfishEntity) {
         return SKIN;
     }
 
@@ -42,7 +42,7 @@ extends MobEntityRenderer<SilverfishEntity, SilverfishEntityModel<SilverfishEnti
     }
 
     @Override
-    protected /* synthetic */ Identifier getTexture(Entity entity) {
+    public /* synthetic */ Identifier getTexture(Entity entity) {
         return this.getTexture((SilverfishEntity)entity);
     }
 }

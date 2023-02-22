@@ -14,7 +14,7 @@ import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 
 public class CatSitOnBlockGoal
 extends MoveToTargetPosGoal {
@@ -54,7 +54,7 @@ extends MoveToTargetPosGoal {
     }
 
     @Override
-    protected boolean isTargetPos(CollisionView world, BlockPos pos) {
+    protected boolean isTargetPos(WorldView world, BlockPos pos) {
         if (!world.isAir(pos.up())) {
             return false;
         }

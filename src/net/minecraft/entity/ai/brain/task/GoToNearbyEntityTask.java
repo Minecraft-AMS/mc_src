@@ -21,12 +21,12 @@ import net.minecraft.util.math.Vec3d;
 public class GoToNearbyEntityTask
 extends Task<MobEntityWithAi> {
     private final MemoryModuleType<? extends Entity> entityMemory;
-    private final float field_18381;
+    private final float speed;
 
-    public GoToNearbyEntityTask(MemoryModuleType<? extends Entity> memoryModuleType, float f) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), memoryModuleType, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
-        this.entityMemory = memoryModuleType;
-        this.field_18381 = f;
+    public GoToNearbyEntityTask(MemoryModuleType<? extends Entity> entityMemory, float speed) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), entityMemory, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
+        this.entityMemory = entityMemory;
+        this.speed = speed;
     }
 
     @Override
@@ -38,15 +38,14 @@ extends Task<MobEntityWithAi> {
     @Override
     protected void run(ServerWorld serverWorld, MobEntityWithAi mobEntityWithAi, long l) {
         Entity entity = mobEntityWithAi.getBrain().getOptionalMemory(this.entityMemory).get();
-        GoToNearbyEntityTask.method_19596(mobEntityWithAi, entity, this.field_18381);
+        GoToNearbyEntityTask.setWalkTarget(mobEntityWithAi, entity, this.speed);
     }
 
-    public static void method_19596(MobEntityWithAi mobEntityWithAi, Entity entity, float f) {
+    public static void setWalkTarget(MobEntityWithAi entity, Entity target, float speed) {
         for (int i = 0; i < 10; ++i) {
-            Vec3d vec3d = new Vec3d(entity.x, entity.y, entity.z);
-            Vec3d vec3d2 = TargetFinder.method_20658(mobEntityWithAi, 16, 7, vec3d);
-            if (vec3d2 == null) continue;
-            mobEntityWithAi.getBrain().putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d2, f, 0));
+            Vec3d vec3d = TargetFinder.findGroundTargetAwayFrom(entity, 16, 7, target.getPos());
+            if (vec3d == null) continue;
+            entity.getBrain().putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, speed, 0));
             return;
         }
     }

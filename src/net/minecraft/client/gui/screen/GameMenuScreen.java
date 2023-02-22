@@ -28,16 +28,16 @@ import net.minecraft.util.Util;
 @Environment(value=EnvType.CLIENT)
 public class GameMenuScreen
 extends Screen {
-    private final boolean field_19319;
+    private final boolean showMenu;
 
-    public GameMenuScreen(boolean bl) {
-        super(bl ? new TranslatableText("menu.game", new Object[0]) : new TranslatableText("menu.paused", new Object[0]));
-        this.field_19319 = bl;
+    public GameMenuScreen(boolean showMenu) {
+        super(showMenu ? new TranslatableText("menu.game", new Object[0]) : new TranslatableText("menu.paused", new Object[0]));
+        this.showMenu = showMenu;
     }
 
     @Override
     protected void init() {
-        if (this.field_19319) {
+        if (this.showMenu) {
             this.initWidgets();
         }
     }
@@ -98,7 +98,7 @@ extends Screen {
 
     @Override
     public void render(int mouseX, int mouseY, float delta) {
-        if (this.field_19319) {
+        if (this.showMenu) {
             this.renderBackground();
             this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 40, 0xFFFFFF);
         } else {

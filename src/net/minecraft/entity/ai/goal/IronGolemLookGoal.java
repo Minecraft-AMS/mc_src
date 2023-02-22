@@ -29,7 +29,7 @@ extends Goal {
         if (this.golem.getRandom().nextInt(8000) != 0) {
             return false;
         }
-        this.targetVillager = this.golem.world.method_21726(VillagerEntity.class, CLOSE_VILLAGER_PREDICATE, this.golem, this.golem.x, this.golem.y, this.golem.z, this.golem.getBoundingBox().expand(6.0, 2.0, 6.0));
+        this.targetVillager = this.golem.world.getClosestEntity(VillagerEntity.class, CLOSE_VILLAGER_PREDICATE, this.golem, this.golem.getX(), this.golem.getY(), this.golem.getZ(), this.golem.getBoundingBox().expand(6.0, 2.0, 6.0));
         return this.targetVillager != null;
     }
 
@@ -41,12 +41,12 @@ extends Goal {
     @Override
     public void start() {
         this.lookCountdown = 400;
-        this.golem.method_6497(true);
+        this.golem.setLookingAtVillager(true);
     }
 
     @Override
     public void stop() {
-        this.golem.method_6497(false);
+        this.golem.setLookingAtVillager(false);
         this.targetVillager = null;
     }
 

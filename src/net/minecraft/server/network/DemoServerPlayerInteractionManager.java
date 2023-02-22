@@ -19,10 +19,10 @@ import net.minecraft.world.World;
 
 public class DemoServerPlayerInteractionManager
 extends ServerPlayerInteractionManager {
-    private boolean field_13890;
+    private boolean sentHelp;
     private boolean demoEnded;
-    private int field_13888;
-    private int field_13887;
+    private int reminderTicks;
+    private int tick;
 
     public DemoServerPlayerInteractionManager(ServerWorld serverWorld) {
         super(serverWorld);
@@ -31,16 +31,16 @@ extends ServerPlayerInteractionManager {
     @Override
     public void update() {
         super.update();
-        ++this.field_13887;
+        ++this.tick;
         long l = this.world.getTime();
         long m = l / 24000L + 1L;
-        if (!this.field_13890 && this.field_13887 > 20) {
-            this.field_13890 = true;
+        if (!this.sentHelp && this.tick > 20) {
+            this.sentHelp = true;
             this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(5, 0.0f));
         }
         boolean bl = this.demoEnded = l > 120500L;
         if (this.demoEnded) {
-            ++this.field_13888;
+            ++this.reminderTicks;
         }
         if (l % 24000L == 500L) {
             if (m <= 6L) {
@@ -64,19 +64,19 @@ extends ServerPlayerInteractionManager {
     }
 
     private void sendDemoReminder() {
-        if (this.field_13888 > 100) {
+        if (this.reminderTicks > 100) {
             this.player.sendMessage(new TranslatableText("demo.reminder", new Object[0]));
-            this.field_13888 = 0;
+            this.reminderTicks = 0;
         }
     }
 
     @Override
-    public void method_14263(BlockPos blockPos, PlayerActionC2SPacket.Action action, Direction direction, int i) {
+    public void processBlockBreakingAction(BlockPos pos, PlayerActionC2SPacket.Action action, Direction direction, int worldHeight) {
         if (this.demoEnded) {
             this.sendDemoReminder();
             return;
         }
-        super.method_14263(blockPos, action, direction, i);
+        super.processBlockBreakingAction(pos, action, direction, worldHeight);
     }
 
     @Override

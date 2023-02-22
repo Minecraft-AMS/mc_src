@@ -60,7 +60,6 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
@@ -135,7 +134,7 @@ public class EnderDragonFight {
         }
         ListTag listTag = new ListTag();
         for (int i : this.gateways) {
-            listTag.add(new IntTag(i));
+            listTag.add(IntTag.of(i));
         }
         compoundTag.put("Gateways", listTag);
         return compoundTag;
@@ -185,7 +184,9 @@ public class EnderDragonFight {
         } else {
             LOGGER.info("Found that the dragon has not yet been killed in this world.");
             this.previouslyKilled = false;
-            this.generateEndPortal(false);
+            if (this.findEndPortal() == null) {
+                this.generateEndPortal(false);
+            }
         }
         List<EnderDragonEntity> list = this.world.getAliveEnderDragons();
         if (list.isEmpty()) {
@@ -339,7 +340,7 @@ public class EnderDragonFight {
 
     private void generateEndGateway(BlockPos blockPos) {
         this.world.playLevelEvent(3000, blockPos, 0);
-        Feature.END_GATEWAY.generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), blockPos, EndGatewayFeatureConfig.createConfig());
+        Feature.END_GATEWAY.configure(EndGatewayFeatureConfig.createConfig()).generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), blockPos);
     }
 
     private void generateEndPortal(boolean previouslyKilled) {
@@ -350,7 +351,7 @@ public class EnderDragonFight {
                 this.exitPortalLocation = this.exitPortalLocation.down();
             }
         }
-        endPortalFeature.generate((IWorld)this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), this.exitPortalLocation, FeatureConfig.DEFAULT);
+        endPortalFeature.configure(FeatureConfig.DEFAULT).generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), this.exitPortalLocation);
     }
 
     private EnderDragonEntity createDragon() {

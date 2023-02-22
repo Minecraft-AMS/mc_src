@@ -37,6 +37,7 @@ import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphAtlasTexture;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
+import net.minecraft.client.font.WhiteRectangleGlyph;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -53,6 +54,7 @@ implements AutoCloseable {
     private final TextureManager textureManager;
     private final Identifier id;
     private GlyphRenderer blankGlyphRenderer;
+    private GlyphRenderer whiteRectangleGlyphRenderer;
     private final List<Font> fonts = Lists.newArrayList();
     private final Char2ObjectMap<GlyphRenderer> glyphRendererCache = new Char2ObjectOpenHashMap();
     private final Char2ObjectMap<Glyph> glyphCache = new Char2ObjectOpenHashMap();
@@ -65,25 +67,22 @@ implements AutoCloseable {
     }
 
     public void setFonts(List<Font> fonts) {
-        for (Font font : this.fonts) {
-            font.close();
-        }
-        this.fonts.clear();
+        this.method_24290();
         this.closeGlyphAtlases();
-        this.glyphAtlases.clear();
         this.glyphRendererCache.clear();
         this.glyphCache.clear();
         this.charactersByWidth.clear();
         this.blankGlyphRenderer = this.getGlyphRenderer(BlankGlyph.INSTANCE);
+        this.whiteRectangleGlyphRenderer = this.getGlyphRenderer(WhiteRectangleGlyph.INSTANCE);
         HashSet set = Sets.newHashSet();
-        block1: for (char c = '\u0000'; c < '\uffff'; c = (char)((char)(c + 1))) {
-            for (Font font2 : fonts) {
-                Glyph glyph = c == ' ' ? SPACE : font2.getGlyph(c);
+        block0: for (char c = '\u0000'; c < '\uffff'; c = (char)((char)(c + 1))) {
+            for (Font font : fonts) {
+                Glyph glyph = c == ' ' ? SPACE : font.getGlyph(c);
                 if (glyph == null) continue;
-                set.add(font2);
-                if (glyph == BlankGlyph.INSTANCE) continue block1;
+                set.add(font);
+                if (glyph == BlankGlyph.INSTANCE) continue block0;
                 ((CharList)this.charactersByWidth.computeIfAbsent(MathHelper.ceil(glyph.getAdvance(false)), i -> new CharArrayList())).add(c);
-                continue block1;
+                continue block0;
             }
         }
         fonts.stream().filter(set::contains).forEach(this.fonts::add);
@@ -91,13 +90,22 @@ implements AutoCloseable {
 
     @Override
     public void close() {
+        this.method_24290();
         this.closeGlyphAtlases();
     }
 
-    public void closeGlyphAtlases() {
+    private void method_24290() {
+        for (Font font : this.fonts) {
+            font.close();
+        }
+        this.fonts.clear();
+    }
+
+    private void closeGlyphAtlases() {
         for (GlyphAtlasTexture glyphAtlasTexture : this.glyphAtlases) {
             glyphAtlasTexture.close();
         }
+        this.glyphAtlases.clear();
     }
 
     public Glyph getGlyph(char character) {
@@ -136,6 +144,10 @@ implements AutoCloseable {
             return this.getGlyphRenderer(charList.get(RANDOM.nextInt(charList.size())).charValue());
         }
         return this.blankGlyphRenderer;
+    }
+
+    public GlyphRenderer getRectangleRenderer() {
+        return this.whiteRectangleGlyphRenderer;
     }
 }
 

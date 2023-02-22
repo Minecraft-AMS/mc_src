@@ -9,7 +9,7 @@
 package net.minecraft.client.gui.screen.ingame;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
@@ -19,9 +19,15 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
 import net.minecraft.client.gui.screen.ingame.EnchantingPhrases;
 import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.model.BookModel;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.container.EnchantingTableContainer;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.player.PlayerInventory;
@@ -38,14 +44,14 @@ extends ContainerScreen<EnchantingTableContainer> {
     private static final Identifier BOOK_TEXURE = new Identifier("textures/entity/enchanting_table_book.png");
     private static final BookModel bookModel = new BookModel();
     private final Random random = new Random();
-    public int field_2915;
+    public int ticks;
     public float nextPageAngle;
     public float pageAngle;
-    public float field_2909;
-    public float field_2906;
+    public float approximatePageAngle;
+    public float pageRotationSpeed;
     public float nextPageTurningSpeed;
     public float pageTurningSpeed;
-    private ItemStack field_2913 = ItemStack.EMPTY;
+    private ItemStack stack = ItemStack.EMPTY;
 
     public EnchantingScreen(EnchantingTableContainer container, PlayerInventory inventory, Text title) {
         super(container, inventory, title);
@@ -60,7 +66,7 @@ extends ContainerScreen<EnchantingTableContainer> {
     @Override
     public void tick() {
         super.tick();
-        this.method_2478();
+        this.doTick();
     }
 
     @Override
@@ -79,34 +85,35 @@ extends ContainerScreen<EnchantingTableContainer> {
 
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        DiffuseLighting.disableGuiDepthLighting();
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(TEXTURE);
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;
         this.blit(i, j, 0, 0, this.containerWidth, this.containerHeight);
-        GlStateManager.pushMatrix();
-        GlStateManager.matrixMode(5889);
-        GlStateManager.pushMatrix();
-        GlStateManager.loadIdentity();
-        int k = (int)this.minecraft.window.getScaleFactor();
-        GlStateManager.viewport((this.width - 320) / 2 * k, (this.height - 240) / 2 * k, 320 * k, 240 * k);
-        GlStateManager.translatef(-0.34f, 0.23f, 0.0f);
-        GlStateManager.multMatrix(Matrix4f.method_4929(90.0, 1.3333334f, 9.0f, 80.0f));
-        float f = 1.0f;
-        GlStateManager.matrixMode(5888);
-        GlStateManager.loadIdentity();
-        DiffuseLighting.enable();
-        GlStateManager.translatef(0.0f, 3.3f, -16.0f);
-        GlStateManager.scalef(1.0f, 1.0f, 1.0f);
-        float g = 5.0f;
-        GlStateManager.scalef(5.0f, 5.0f, 5.0f);
-        GlStateManager.rotatef(180.0f, 0.0f, 0.0f, 1.0f);
-        this.minecraft.getTextureManager().bindTexture(BOOK_TEXURE);
-        GlStateManager.rotatef(20.0f, 1.0f, 0.0f, 0.0f);
-        float h = MathHelper.lerp(delta, this.pageTurningSpeed, this.nextPageTurningSpeed);
-        GlStateManager.translatef((1.0f - h) * 0.2f, (1.0f - h) * 0.1f, (1.0f - h) * 0.25f);
-        GlStateManager.rotatef(-(1.0f - h) * 90.0f - 90.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(180.0f, 1.0f, 0.0f, 0.0f);
+        RenderSystem.matrixMode(5889);
+        RenderSystem.pushMatrix();
+        RenderSystem.loadIdentity();
+        int k = (int)this.minecraft.getWindow().getScaleFactor();
+        RenderSystem.viewport((this.width - 320) / 2 * k, (this.height - 240) / 2 * k, 320 * k, 240 * k);
+        RenderSystem.translatef(-0.34f, 0.23f, 0.0f);
+        RenderSystem.multMatrix(Matrix4f.viewboxMatrix(90.0, 1.3333334f, 9.0f, 80.0f));
+        RenderSystem.matrixMode(5888);
+        MatrixStack matrixStack = new MatrixStack();
+        matrixStack.push();
+        MatrixStack.Entry entry = matrixStack.peek();
+        entry.getModel().loadIdentity();
+        entry.getNormal().loadIdentity();
+        matrixStack.translate(0.0, 3.3f, 1984.0);
+        float f = 5.0f;
+        matrixStack.scale(5.0f, 5.0f, 5.0f);
+        matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(20.0f));
+        float g = MathHelper.lerp(delta, this.pageTurningSpeed, this.nextPageTurningSpeed);
+        matrixStack.translate((1.0f - g) * 0.2f, (1.0f - g) * 0.1f, (1.0f - g) * 0.25f);
+        float h = -(1.0f - g) * 90.0f - 90.0f;
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(h));
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(180.0f));
         float l = MathHelper.lerp(delta, this.pageAngle, this.nextPageAngle) + 0.25f;
         float m = MathHelper.lerp(delta, this.pageAngle, this.nextPageAngle) + 0.75f;
         l = (l - (float)MathHelper.fastFloor(l)) * 1.6f - 0.3f;
@@ -123,26 +130,28 @@ extends ContainerScreen<EnchantingTableContainer> {
         if (m > 1.0f) {
             m = 1.0f;
         }
-        GlStateManager.enableRescaleNormal();
-        bookModel.render(0.0f, l, m, h, 0.0f, 0.0625f);
-        GlStateManager.disableRescaleNormal();
-        DiffuseLighting.disable();
-        GlStateManager.matrixMode(5889);
-        GlStateManager.viewport(0, 0, this.minecraft.window.getFramebufferWidth(), this.minecraft.window.getFramebufferHeight());
-        GlStateManager.popMatrix();
-        GlStateManager.matrixMode(5888);
-        GlStateManager.popMatrix();
-        DiffuseLighting.disable();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableRescaleNormal();
+        bookModel.setPageAngles(0.0f, l, m, g);
+        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
+        VertexConsumer vertexConsumer = immediate.getBuffer(bookModel.getLayer(BOOK_TEXURE));
+        bookModel.render(matrixStack, vertexConsumer, 0xF000F0, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
+        immediate.draw();
+        matrixStack.pop();
+        RenderSystem.matrixMode(5889);
+        RenderSystem.viewport(0, 0, this.minecraft.getWindow().getFramebufferWidth(), this.minecraft.getWindow().getFramebufferHeight());
+        RenderSystem.popMatrix();
+        RenderSystem.matrixMode(5888);
+        DiffuseLighting.enableGuiDepthLighting();
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         EnchantingPhrases.getInstance().setSeed(((EnchantingTableContainer)this.container).getSeed());
         int n = ((EnchantingTableContainer)this.container).getLapisCount();
         for (int o = 0; o < 3; ++o) {
             int p = i + 60;
             int q = p + 20;
-            this.blitOffset = 0;
+            this.setBlitOffset(0);
             this.minecraft.getTextureManager().bindTexture(TEXTURE);
             int r = ((EnchantingTableContainer)this.container).enchantmentPower[o];
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             if (r == 0) {
                 this.blit(p, j + 14 + 19 * o, 0, 185, 108, 19);
                 continue;
@@ -208,15 +217,15 @@ extends ContainerScreen<EnchantingTableContainer> {
         }
     }
 
-    public void method_2478() {
+    public void doTick() {
         ItemStack itemStack = ((EnchantingTableContainer)this.container).getSlot(0).getStack();
-        if (!ItemStack.areEqualIgnoreDamage(itemStack, this.field_2913)) {
-            this.field_2913 = itemStack;
+        if (!ItemStack.areEqualIgnoreDamage(itemStack, this.stack)) {
+            this.stack = itemStack;
             do {
-                this.field_2909 += (float)(this.random.nextInt(4) - this.random.nextInt(4));
-            } while (this.nextPageAngle <= this.field_2909 + 1.0f && this.nextPageAngle >= this.field_2909 - 1.0f);
+                this.approximatePageAngle += (float)(this.random.nextInt(4) - this.random.nextInt(4));
+            } while (this.nextPageAngle <= this.approximatePageAngle + 1.0f && this.nextPageAngle >= this.approximatePageAngle - 1.0f);
         }
-        ++this.field_2915;
+        ++this.ticks;
         this.pageAngle = this.nextPageAngle;
         this.pageTurningSpeed = this.nextPageTurningSpeed;
         boolean bl = false;
@@ -226,11 +235,11 @@ extends ContainerScreen<EnchantingTableContainer> {
         }
         this.nextPageTurningSpeed = bl ? (this.nextPageTurningSpeed += 0.2f) : (this.nextPageTurningSpeed -= 0.2f);
         this.nextPageTurningSpeed = MathHelper.clamp(this.nextPageTurningSpeed, 0.0f, 1.0f);
-        float f = (this.field_2909 - this.nextPageAngle) * 0.4f;
+        float f = (this.approximatePageAngle - this.nextPageAngle) * 0.4f;
         float g = 0.2f;
         f = MathHelper.clamp(f, -0.2f, 0.2f);
-        this.field_2906 += (f - this.field_2906) * 0.9f;
-        this.nextPageAngle += this.field_2906;
+        this.pageRotationSpeed += (f - this.pageRotationSpeed) * 0.9f;
+        this.nextPageAngle += this.pageRotationSpeed;
     }
 }
 

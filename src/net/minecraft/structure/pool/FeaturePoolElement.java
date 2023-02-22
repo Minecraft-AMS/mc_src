@@ -34,18 +34,19 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.Feature;
 
 public class FeaturePoolElement
 extends StructurePoolElement {
-    private final ConfiguredFeature<?> feature;
+    private final ConfiguredFeature<?, ?> feature;
     private final CompoundTag tag;
 
     @Deprecated
-    public FeaturePoolElement(ConfiguredFeature<?> feature) {
+    public FeaturePoolElement(ConfiguredFeature<?, ?> feature) {
         this(feature, StructurePool.Projection.RIGID);
     }
 
-    public FeaturePoolElement(ConfiguredFeature<?> configuredFeature, StructurePool.Projection projection) {
+    public FeaturePoolElement(ConfiguredFeature<?, ?> configuredFeature, StructurePool.Projection projection) {
         super(projection);
         this.feature = configuredFeature;
         this.tag = this.method_19299();
@@ -83,9 +84,8 @@ extends StructurePoolElement {
     }
 
     @Override
-    public boolean generate(StructureManager structureManager, IWorld world, BlockPos pos, BlockRotation rotation, BlockBox boundingBox, Random random) {
-        ChunkGenerator<?> chunkGenerator = world.getChunkManager().getChunkGenerator();
-        return this.feature.generate(world, chunkGenerator, random, pos);
+    public boolean generate(StructureManager structureManager, IWorld world, ChunkGenerator<?> chunkGenerator, BlockPos blockPos, BlockRotation blockRotation, BlockBox blockBox, Random random) {
+        return this.feature.generate(world, chunkGenerator, random, blockPos);
     }
 
     @Override
@@ -99,7 +99,7 @@ extends StructurePoolElement {
     }
 
     public String toString() {
-        return "Feature[" + Registry.FEATURE.getId(this.feature.feature) + "]";
+        return "Feature[" + Registry.FEATURE.getId((Feature<?>)this.feature.feature) + "]";
     }
 }
 

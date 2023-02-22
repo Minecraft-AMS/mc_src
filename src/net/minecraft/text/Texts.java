@@ -71,7 +71,7 @@ public class Texts {
         }
         ArrayList list = Lists.newArrayList(elements);
         list.sort(Comparable::compareTo);
-        return Texts.join(elements, transformer);
+        return Texts.join(list, transformer);
     }
 
     public static <T> Text join(Collection<T> elements, Function<T, Text> transformer) {

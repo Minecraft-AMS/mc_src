@@ -11,7 +11,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityCategory;
 import net.minecraft.entity.EntityType;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.DefaultBiomeFeatures;
 import net.minecraft.world.gen.feature.Feature;
@@ -24,8 +23,8 @@ public final class ModifiedBadlandsPlateauBiome
 extends Biome {
     public ModifiedBadlandsPlateauBiome() {
         super(new Biome.Settings().configureSurfaceBuilder(SurfaceBuilder.BADLANDS, SurfaceBuilder.BADLANDS_CONFIG).precipitation(Biome.Precipitation.NONE).category(Biome.Category.MESA).depth(0.45f).scale(0.3f).temperature(2.0f).downfall(0.0f).waterColor(4159204).waterFogColor(329011).parent("badlands_plateau"));
-        this.addStructureFeature(Feature.MINESHAFT, new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.MESA));
-        this.addStructureFeature(Feature.STRONGHOLD, FeatureConfig.DEFAULT);
+        this.addStructureFeature(Feature.MINESHAFT.configure(new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.MESA)));
+        this.addStructureFeature(Feature.STRONGHOLD.configure(FeatureConfig.DEFAULT));
         DefaultBiomeFeatures.addLandCarvers(this);
         DefaultBiomeFeatures.addDefaultStructures(this);
         DefaultBiomeFeatures.addDefaultLakes(this);
@@ -52,13 +51,13 @@ extends Biome {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getFoliageColorAt(BlockPos blockPos) {
+    public int getFoliageColor() {
         return 10387789;
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getGrassColorAt(BlockPos blockPos) {
+    public int getGrassColorAt(double x, double z) {
         return 9470285;
     }
 }

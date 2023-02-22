@@ -29,7 +29,7 @@ import org.apache.commons.lang3.ArrayUtils;
 public class ControlsListWidget
 extends ElementListWidget<Entry> {
     private final ControlsOptionsScreen gui;
-    private int field_2733;
+    private int maxKeyNameLength;
 
     public ControlsListWidget(ControlsOptionsScreen gui, MinecraftClient client) {
         super(client, gui.width + 45, gui.height, 43, gui.height - 32, 20);
@@ -44,8 +44,8 @@ extends ElementListWidget<Entry> {
                 string = string2;
                 this.addEntry(new CategoryEntry(string2));
             }
-            if ((i = client.textRenderer.getStringWidth(I18n.translate(((KeyBinding)keyBinding).getId(), new Object[0]))) > this.field_2733) {
-                this.field_2733 = i;
+            if ((i = client.textRenderer.getStringWidth(I18n.translate(((KeyBinding)keyBinding).getId(), new Object[0]))) > this.maxKeyNameLength) {
+                this.maxKeyNameLength = i;
             }
             this.addEntry(new KeyBindingEntry((KeyBinding)keyBinding));
         }
@@ -99,7 +99,7 @@ extends ElementListWidget<Entry> {
         @Override
         public void render(int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
             boolean bl2 = ((ControlsListWidget)ControlsListWidget.this).gui.focusedBinding == this.binding;
-            ((ControlsListWidget)ControlsListWidget.this).minecraft.textRenderer.draw(this.bindingName, k + 90 - ControlsListWidget.this.field_2733, j + m / 2 - ((ControlsListWidget)ControlsListWidget.this).minecraft.textRenderer.fontHeight / 2, 0xFFFFFF);
+            ((ControlsListWidget)ControlsListWidget.this).minecraft.textRenderer.draw(this.bindingName, k + 90 - ControlsListWidget.this.maxKeyNameLength, j + m / 2 - ((ControlsListWidget)ControlsListWidget.this).minecraft.textRenderer.fontHeight / 2, 0xFFFFFF);
             this.resetButton.x = k + 190;
             this.resetButton.y = j;
             this.resetButton.active = !this.binding.isDefault();
@@ -148,8 +148,8 @@ extends ElementListWidget<Entry> {
         private final String name;
         private final int nameWidth;
 
-        public CategoryEntry(String string) {
-            this.name = I18n.translate(string, new Object[0]);
+        public CategoryEntry(String translationKey) {
+            this.name = I18n.translate(translationKey, new Object[0]);
             this.nameWidth = ((ControlsListWidget)ControlsListWidget.this).minecraft.textRenderer.getStringWidth(this.name);
         }
 

@@ -15,6 +15,7 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -72,17 +73,17 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (player.canModifyWorld()) {
             if (world.isClient) {
-                return true;
+                return ActionResult.SUCCESS;
             }
             BlockState blockState = (BlockState)state.cycle(INVERTED);
             world.setBlockState(pos, blockState, 4);
             DaylightDetectorBlock.updateState(blockState, world, pos);
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return super.activate(state, world, pos, player, hand, hit);
+        return super.onUse(state, world, pos, player, hand, hit);
     }
 
     @Override

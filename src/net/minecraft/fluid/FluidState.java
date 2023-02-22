@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.state.State;
@@ -55,8 +54,8 @@ extends State<FluidState> {
         return this.getFluid().getHeight(this, world, pos);
     }
 
-    default public float method_20785() {
-        return this.getFluid().method_20784(this);
+    default public float getHeight() {
+        return this.getFluid().getHeight(this);
     }
 
     default public int getLevel() {
@@ -64,12 +63,12 @@ extends State<FluidState> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    default public boolean method_15756(BlockView blockView, BlockPos blockPos) {
+    default public boolean method_15756(BlockView world, BlockPos pos) {
         for (int i = -1; i <= 1; ++i) {
             for (int j = -1; j <= 1; ++j) {
-                BlockPos blockPos2 = blockPos.add(i, 0, j);
-                FluidState fluidState = blockView.getFluidState(blockPos2);
-                if (fluidState.getFluid().matchesType(this.getFluid()) || blockView.getBlockState(blockPos2).isFullOpaque(blockView, blockPos2)) continue;
+                BlockPos blockPos = pos.add(i, 0, j);
+                FluidState fluidState = world.getFluidState(blockPos);
+                if (fluidState.getFluid().matchesType(this.getFluid()) || world.getBlockState(blockPos).isFullOpaque(world, blockPos)) continue;
                 return true;
             }
         }
@@ -105,11 +104,6 @@ extends State<FluidState> {
     @Environment(value=EnvType.CLIENT)
     default public ParticleEffect getParticle() {
         return this.getFluid().getParticle();
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    default public RenderLayer getRenderLayer() {
-        return this.getFluid().getRenderLayer();
     }
 
     default public boolean matches(Tag<Fluid> tag) {

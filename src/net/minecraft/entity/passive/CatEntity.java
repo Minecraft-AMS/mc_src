@@ -54,6 +54,7 @@ import net.minecraft.item.DyeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTables;
 import net.minecraft.loot.context.LootContext;
@@ -114,7 +115,7 @@ extends TameableEntity {
     }
 
     public Identifier getTexture() {
-        return TEXTURES.get(this.getCatType());
+        return TEXTURES.getOrDefault(this.getCatType(), TEXTURES.get(0));
     }
 
     @Override
@@ -126,7 +127,7 @@ extends TameableEntity {
         this.goalSelector.add(2, this.sitGoal);
         this.goalSelector.add(3, this.temptGoal);
         this.goalSelector.add(5, new GoToOwnerAndPurrGoal(this, 1.1, 8));
-        this.goalSelector.add(6, new FollowOwnerGoal(this, 1.0, 10.0f, 5.0f));
+        this.goalSelector.add(6, new FollowOwnerGoal(this, 1.0, 10.0f, 5.0f, false));
         this.goalSelector.add(7, new CatSitOnBlockGoal(this, 0.8));
         this.goalSelector.add(8, new PounceAtTargetGoal(this, 0.3f));
         this.goalSelector.add(9, new AttackGoal(this));
@@ -202,17 +203,17 @@ extends TameableEntity {
         if (this.getMoveControl().isMoving()) {
             double d = this.getMoveControl().getSpeed();
             if (d == 0.6) {
-                this.setSneaking(true);
+                this.setPose(EntityPose.CROUCHING);
                 this.setSprinting(false);
             } else if (d == 1.33) {
-                this.setSneaking(false);
+                this.setPose(EntityPose.STANDING);
                 this.setSprinting(true);
             } else {
-                this.setSneaking(false);
+                this.setPose(EntityPose.STANDING);
                 this.setSprinting(false);
             }
         } else {
-            this.setSneaking(false);
+            this.setPose(EntityPose.STANDING);
             this.setSprinting(false);
         }
     }
@@ -256,10 +257,12 @@ extends TameableEntity {
         super.initAttributes();
         this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(10.0);
         this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3f);
+        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE).setBaseValue(3.0);
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -270,9 +273,13 @@ extends TameableEntity {
         super.eat(player, stack);
     }
 
+    private float method_22327() {
+        return (float)this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue();
+    }
+
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), 3.0f);
+        return target.damage(DamageSource.mob(this), this.method_22327());
     }
 
     @Override
@@ -374,11 +381,24 @@ extends TameableEntity {
         return entityData;
     }
 
+    /*
+     * Enabled aggressive block sorting
+     */
     @Override
     public boolean interactMob(PlayerEntity player, Hand hand) {
         boolean bl;
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
+        if (itemStack.getItem() instanceof SpawnEggItem) {
+            return super.interactMob(player, hand);
+        }
+        if (this.world.isClient) {
+            if (this.isTamed()) {
+                if (this.isOwner(player)) return true;
+            }
+            if (this.isBreedingItem(itemStack)) return true;
+            return false;
+        }
         if (this.isTamed()) {
             if (this.isOwner(player)) {
                 if (item instanceof DyeItem) {
@@ -391,35 +411,34 @@ extends TameableEntity {
                         this.setPersistent();
                         return true;
                     }
-                } else if (this.isBreedingItem(itemStack)) {
-                    if (this.getHealth() < this.getMaximumHealth() && item.isFood()) {
+                } else {
+                    if (item.isFood() && this.isBreedingItem(itemStack) && this.getHealth() < this.getMaximumHealth()) {
                         this.eat(player, itemStack);
                         this.heal(item.getFoodComponent().getHunger());
                         return true;
                     }
-                } else if (!this.world.isClient) {
+                    boolean bl2 = super.interactMob(player, hand);
+                    if (bl2) {
+                        if (!this.isBaby()) return bl2;
+                    }
                     this.sitGoal.setEnabledWithOwner(!this.isSitting());
+                    return bl2;
                 }
             }
         } else if (this.isBreedingItem(itemStack)) {
             this.eat(player, itemStack);
-            if (!this.world.isClient) {
-                if (this.random.nextInt(3) == 0) {
-                    this.setOwner(player);
-                    this.showEmoteParticle(true);
-                    this.sitGoal.setEnabledWithOwner(true);
-                    this.world.sendEntityStatus(this, (byte)7);
-                } else {
-                    this.showEmoteParticle(false);
-                    this.world.sendEntityStatus(this, (byte)6);
-                }
+            if (this.random.nextInt(3) == 0) {
+                this.setOwner(player);
+                this.sitGoal.setEnabledWithOwner(true);
+                this.world.sendEntityStatus(this, (byte)7);
+            } else {
+                this.world.sendEntityStatus(this, (byte)6);
             }
             this.setPersistent();
             return true;
         }
-        if (bl = super.interactMob(player, hand)) {
-            this.setPersistent();
-        }
+        if (!(bl = super.interactMob(player, hand))) return bl;
+        this.setPersistent();
         return bl;
     }
 
@@ -537,7 +556,7 @@ extends TameableEntity {
             LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.cat.world).put(LootContextParameters.POSITION, mutable).put(LootContextParameters.THIS_ENTITY, this.cat).setRandom(random);
             List<ItemStack> list = lootTable.getDrops(builder.build(LootContextTypes.GIFT));
             for (ItemStack itemStack : list) {
-                this.cat.world.spawnEntity(new ItemEntity(this.cat.world, (float)mutable.getX() - MathHelper.sin(this.cat.field_6283 * ((float)Math.PI / 180)), mutable.getY(), (float)mutable.getZ() + MathHelper.cos(this.cat.field_6283 * ((float)Math.PI / 180)), itemStack));
+                this.cat.world.spawnEntity(new ItemEntity(this.cat.world, (float)mutable.getX() - MathHelper.sin(this.cat.bodyYaw * ((float)Math.PI / 180)), mutable.getY(), (float)mutable.getZ() + MathHelper.cos(this.cat.bodyYaw * ((float)Math.PI / 180)), itemStack));
             }
         }
 

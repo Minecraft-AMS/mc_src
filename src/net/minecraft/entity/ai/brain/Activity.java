@@ -18,8 +18,8 @@ public class Activity {
     public static final Activity HIDE = Activity.register("hide");
     private final String id;
 
-    private Activity(String string) {
-        this.id = string;
+    private Activity(String id) {
+        this.id = id;
     }
 
     public String getId() {

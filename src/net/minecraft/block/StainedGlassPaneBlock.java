@@ -7,7 +7,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.PaneBlock;
 import net.minecraft.block.Stainable;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.util.DyeColor;
 
 public class StainedGlassPaneBlock
@@ -24,11 +23,6 @@ implements Stainable {
     @Override
     public DyeColor getColor() {
         return this.color;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.TRANSLUCENT;
     }
 }
 

@@ -7,12 +7,16 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.model.EvokerFangsEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.mob.EvokerFangsEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,32 +31,30 @@ extends EntityRenderer<EvokerFangsEntity> {
     }
 
     @Override
-    public void render(EvokerFangsEntity model, double x, double y, double d, float f, float g) {
+    public void render(EvokerFangsEntity model, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         float h = model.getAnimationProgress(g);
         if (h == 0.0f) {
             return;
         }
-        float i = 2.0f;
+        float j = 2.0f;
         if (h > 0.9f) {
-            i = (float)((double)i * ((1.0 - (double)h) / (double)0.1f));
+            j = (float)((double)j * ((1.0 - (double)h) / (double)0.1f));
         }
-        GlStateManager.pushMatrix();
-        GlStateManager.disableCull();
-        GlStateManager.enableAlphaTest();
-        this.bindEntityTexture(model);
-        GlStateManager.translatef((float)x, (float)y, (float)d);
-        GlStateManager.rotatef(90.0f - model.yaw, 0.0f, 1.0f, 0.0f);
-        GlStateManager.scalef(-i, -i, i);
-        float j = 0.03125f;
-        GlStateManager.translatef(0.0f, -0.626f, 0.0f);
-        this.model.render(model, h, 0.0f, 0.0f, model.yaw, model.pitch, 0.03125f);
-        GlStateManager.popMatrix();
-        GlStateManager.enableCull();
-        super.render(model, x, y, d, f, g);
+        matrixStack.push();
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f - model.yaw));
+        matrixStack.scale(-j, -j, j);
+        float k = 0.03125f;
+        matrixStack.translate(0.0, -0.626f, 0.0);
+        matrixStack.scale(0.5f, 0.5f, 0.5f);
+        this.model.setAngles(model, h, 0.0f, 0.0f, model.yaw, model.pitch);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(SKIN));
+        this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
+        matrixStack.pop();
+        super.render(model, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
-    protected Identifier getTexture(EvokerFangsEntity evokerFangsEntity) {
+    public Identifier getTexture(EvokerFangsEntity evokerFangsEntity) {
         return SKIN;
     }
 }

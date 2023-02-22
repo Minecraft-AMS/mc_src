@@ -39,7 +39,7 @@ import net.minecraft.util.UserCache;
 
 public class CommandSyntaxProvider
 implements DataProvider {
-    private static final Gson field_17169 = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private final DataGenerator root;
 
     public CommandSyntaxProvider(DataGenerator dataGenerator) {
@@ -57,7 +57,7 @@ implements DataProvider {
         MinecraftDedicatedServer minecraftServer = new MinecraftDedicatedServer(file, serverPropertiesLoader, Schemas.getFixer(), yggdrasilAuthenticationService, minecraftSessionService, gameProfileRepository, userCache, WorldGenerationProgressLogger::new, serverPropertiesLoader.getPropertiesHandler().levelName);
         Path path = this.root.getOutput().resolve("reports/commands.json");
         CommandDispatcher<ServerCommandSource> commandDispatcher = minecraftServer.getCommandManager().getDispatcher();
-        DataProvider.writeToPath(field_17169, dataCache, (JsonElement)ArgumentTypes.toJson(commandDispatcher, commandDispatcher.getRoot()), path);
+        DataProvider.writeToPath(GSON, dataCache, (JsonElement)ArgumentTypes.toJson(commandDispatcher, commandDispatcher.getRoot()), path);
     }
 
     @Override

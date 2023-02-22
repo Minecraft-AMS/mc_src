@@ -8,10 +8,13 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.container.CartographyTableContainer;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.FilledMapItem;
@@ -48,7 +51,7 @@ extends ContainerScreen<CartographyTableContainer> {
     protected void drawBackground(float delta, int mouseX, int mouseY) {
         MapState mapState;
         this.renderBackground();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(TEXTURE);
         int i = this.x;
         int j = this.y;
@@ -89,19 +92,19 @@ extends ContainerScreen<CartographyTableContainer> {
             this.blit(i + 67 + 16, j + 13, this.containerWidth, 132, 50, 66);
             this.drawMap(mapState, i + 86, j + 16, 0.34f);
             this.minecraft.getTextureManager().bindTexture(TEXTURE);
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(0.0f, 0.0f, 1.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef(0.0f, 0.0f, 1.0f);
             this.blit(i + 67, j + 13 + 16, this.containerWidth, 132, 50, 66);
             this.drawMap(mapState, i + 70, j + 32, 0.34f);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
         } else if (isGlassPane) {
             this.blit(i + 67, j + 13, this.containerWidth, 0, 66, 66);
             this.drawMap(mapState, i + 71, j + 17, 0.45f);
             this.minecraft.getTextureManager().bindTexture(TEXTURE);
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(0.0f, 0.0f, 1.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef(0.0f, 0.0f, 1.0f);
             this.blit(i + 66, j + 12, 0, this.containerHeight, 66, 66);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
         } else {
             this.blit(i + 67, j + 13, this.containerWidth, 0, 66, 66);
             this.drawMap(mapState, i + 71, j + 17, 0.45f);
@@ -110,11 +113,13 @@ extends ContainerScreen<CartographyTableContainer> {
 
     private void drawMap(@Nullable MapState state, int x, int y, float size) {
         if (state != null) {
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(x, y, 1.0f);
-            GlStateManager.scalef(size, size, 1.0f);
-            this.minecraft.gameRenderer.getMapRenderer().draw(state, true);
-            GlStateManager.popMatrix();
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef(x, y, 1.0f);
+            RenderSystem.scalef(size, size, 1.0f);
+            VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
+            this.minecraft.gameRenderer.getMapRenderer().draw(new MatrixStack(), immediate, state, true, 0xF000F0);
+            immediate.draw();
+            RenderSystem.popMatrix();
         }
     }
 }

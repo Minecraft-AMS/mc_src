@@ -107,7 +107,7 @@ public class Screens {
         Screens.register(ContainerType.MERCHANT, MerchantScreen::new);
         Screens.register(ContainerType.SHULKER_BOX, ShulkerBoxScreen::new);
         Screens.register(ContainerType.SMOKER, SmokerScreen::new);
-        Screens.register(ContainerType.CARTOGRAPHY, CartographyTableScreen::new);
+        Screens.register(ContainerType.CARTOGRAPHY_TABLE, CartographyTableScreen::new);
         Screens.register(ContainerType.STONECUTTER, StonecutterScreen::new);
     }
 

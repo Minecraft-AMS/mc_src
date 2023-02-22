@@ -56,8 +56,8 @@ public class LookTargetUtil {
     }
 
     public static void give(LivingEntity entity, ItemStack stack, LivingEntity target) {
-        double d = entity.y - (double)0.3f + (double)entity.getStandingEyeHeight();
-        ItemEntity itemEntity = new ItemEntity(entity.world, entity.x, d, entity.z, stack);
+        double d = entity.getEyeY() - (double)0.3f;
+        ItemEntity itemEntity = new ItemEntity(entity.world, entity.getX(), d, entity.getZ(), stack);
         BlockPos blockPos = new BlockPos(target);
         BlockPos blockPos2 = new BlockPos(entity);
         float f = 0.3f;

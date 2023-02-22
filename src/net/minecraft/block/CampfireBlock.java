@@ -21,13 +21,13 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.CampfireBlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.AbstractFireballEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
@@ -43,15 +43,19 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
+import net.minecraft.util.BooleanBiFunction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +68,7 @@ implements Waterloggable {
     public static final BooleanProperty SIGNAL_FIRE = Properties.SIGNAL_FIRE;
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     public static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
+    private static final VoxelShape field_21580 = Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
 
     public CampfireBlock(Block.Settings settings) {
         super(settings);
@@ -71,7 +76,7 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         ItemStack itemStack;
         CampfireBlockEntity campfireBlockEntity;
         Optional<CampfireCookingRecipe> optional;
@@ -79,10 +84,11 @@ implements Waterloggable {
         if (state.get(LIT).booleanValue() && (blockEntity = world.getBlockEntity(pos)) instanceof CampfireBlockEntity && (optional = (campfireBlockEntity = (CampfireBlockEntity)blockEntity).getRecipeFor(itemStack = player.getStackInHand(hand))).isPresent()) {
             if (!world.isClient && campfireBlockEntity.addItem(player.abilities.creativeMode ? itemStack.copy() : itemStack, optional.get().getCookTime())) {
                 player.incrementStat(Stats.INTERACT_WITH_CAMPFIRE);
+                return ActionResult.SUCCESS;
             }
-            return true;
+            return ActionResult.CONSUME;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     @Override
@@ -145,11 +151,6 @@ implements Waterloggable {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
-    }
-
-    @Override
     @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (!state.get(LIT).booleanValue()) {
@@ -189,12 +190,31 @@ implements Waterloggable {
         return false;
     }
 
+    @Nullable
+    private Entity method_23756(Entity entity) {
+        if (entity instanceof AbstractFireballEntity) {
+            return ((AbstractFireballEntity)entity).owner;
+        }
+        if (entity instanceof ProjectileEntity) {
+            return ((ProjectileEntity)entity).getOwner();
+        }
+        return null;
+    }
+
     @Override
     public void onProjectileHit(World world, BlockState state, BlockHitResult hitResult, Entity entity) {
-        ProjectileEntity projectileEntity;
-        if (!world.isClient && entity instanceof ProjectileEntity && (projectileEntity = (ProjectileEntity)entity).isOnFire() && !state.get(LIT).booleanValue() && !state.get(WATERLOGGED).booleanValue()) {
-            BlockPos blockPos = hitResult.getBlockPos();
-            world.setBlockState(blockPos, (BlockState)state.with(Properties.LIT, true), 11);
+        if (!world.isClient) {
+            boolean bl;
+            boolean bl2 = bl = entity instanceof AbstractFireballEntity || entity instanceof ProjectileEntity && entity.isOnFire();
+            if (bl) {
+                boolean bl22;
+                Entity entity2 = this.method_23756(entity);
+                boolean bl3 = bl22 = entity2 == null || entity2 instanceof PlayerEntity || world.getGameRules().getBoolean(GameRules.MOB_GRIEFING);
+                if (bl22 && !state.get(LIT).booleanValue() && !state.get(WATERLOGGED).booleanValue()) {
+                    BlockPos blockPos = hitResult.getBlockPos();
+                    world.setBlockState(blockPos, (BlockState)state.with(Properties.LIT, true), 11);
+                }
+            }
         }
     }
 
@@ -205,6 +225,25 @@ implements Waterloggable {
         if (lotsOfSmoke) {
             world.addParticle(ParticleTypes.SMOKE, (double)pos.getX() + 0.25 + random.nextDouble() / 2.0 * (double)(random.nextBoolean() ? 1 : -1), (double)pos.getY() + 0.4, (double)pos.getZ() + 0.25 + random.nextDouble() / 2.0 * (double)(random.nextBoolean() ? 1 : -1), 0.0, 0.005, 0.0);
         }
+    }
+
+    public static boolean isLitCampfireInRange(World world, BlockPos pos, int range) {
+        for (int i = 1; i <= range; ++i) {
+            BlockPos blockPos = pos.down(i);
+            BlockState blockState = world.getBlockState(blockPos);
+            if (CampfireBlock.isLitCampfire(blockState)) {
+                return true;
+            }
+            boolean bl = VoxelShapes.matchesAnywhere(field_21580, blockState.getCollisionShape(world, pos, EntityContext.absent()), BooleanBiFunction.AND);
+            if (!bl) continue;
+            BlockState blockState2 = world.getBlockState(blockPos.down());
+            return CampfireBlock.isLitCampfire(blockState2);
+        }
+        return false;
+    }
+
+    private static boolean isLitCampfire(BlockState state) {
+        return state.getBlock() == Blocks.CAMPFIRE && state.get(LIT) != false;
     }
 
     @Override

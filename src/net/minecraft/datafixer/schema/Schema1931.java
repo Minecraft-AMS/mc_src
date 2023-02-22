@@ -21,7 +21,7 @@ extends IdentifierNormalizingSchema {
     }
 
     protected static void method_18247(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> Schema100.method_5196(schema));
+        schema.register(map, string, () -> Schema100.targetItems(schema));
     }
 
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {

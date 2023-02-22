@@ -34,15 +34,17 @@ import net.minecraft.loot.condition.EntityScoresLootCondition;
 import net.minecraft.loot.condition.InvertedLootCondition;
 import net.minecraft.loot.condition.KilledByPlayerLootCondition;
 import net.minecraft.loot.condition.LocationCheckLootCondition;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.MatchToolLootCondition;
 import net.minecraft.loot.condition.RandomChanceLootCondition;
 import net.minecraft.loot.condition.RandomChanceWithLootingLootCondition;
+import net.minecraft.loot.condition.ReferenceLootCondition;
 import net.minecraft.loot.condition.SurvivesExplosionLootCondition;
 import net.minecraft.loot.condition.TableBonusLootCondition;
+import net.minecraft.loot.condition.TimeCheckLootCondition;
 import net.minecraft.loot.condition.WeatherCheckLootCondition;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class LootConditions {
     private static final Map<Identifier, LootCondition.Factory<?>> byId = Maps.newHashMap();
@@ -134,6 +136,8 @@ public class LootConditions {
         LootConditions.register(new DamageSourcePropertiesLootCondition.Factory());
         LootConditions.register(new LocationCheckLootCondition.Factory());
         LootConditions.register(new WeatherCheckLootCondition.Factory());
+        LootConditions.register(new ReferenceLootCondition.Factory());
+        LootConditions.register(new TimeCheckLootCondition.Factory());
     }
 
     public static class Factory

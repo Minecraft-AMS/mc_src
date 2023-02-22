@@ -2,8 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Charsets
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.lwjgl.BufferUtils
  *  org.lwjgl.glfw.GLFW
  *  org.lwjgl.glfw.GLFWErrorCallback
  *  org.lwjgl.glfw.GLFWErrorCallbackI
@@ -11,10 +13,13 @@
  */
 package net.minecraft.client.util;
 
+import com.google.common.base.Charsets;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
@@ -22,7 +27,7 @@ import org.lwjgl.system.MemoryUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class Clipboard {
-    private final ByteBuffer clipboardBuffer = ByteBuffer.allocateDirect(1024);
+    private final ByteBuffer clipboardBuffer = BufferUtils.createByteBuffer((int)8192);
 
     public String getClipboard(long window, GLFWErrorCallbackI gLFWErrorCallbackI) {
         GLFWErrorCallback gLFWErrorCallback = GLFW.glfwSetErrorCallback((GLFWErrorCallbackI)gLFWErrorCallbackI);
@@ -35,19 +40,30 @@ public class Clipboard {
         return string;
     }
 
-    private void setClipboard(long window, ByteBuffer byteBuffer, String string) {
-        MemoryUtil.memUTF8((CharSequence)string, (boolean)true, (ByteBuffer)byteBuffer);
-        GLFW.glfwSetClipboardString((long)window, (ByteBuffer)byteBuffer);
+    private static void setClipboard(long l, ByteBuffer byteBuffer, byte[] bs) {
+        byteBuffer.clear();
+        byteBuffer.put(bs);
+        byteBuffer.put((byte)0);
+        byteBuffer.flip();
+        GLFW.glfwSetClipboardString((long)l, (ByteBuffer)byteBuffer);
     }
 
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     public void setClipboard(long window, String string) {
-        int i = MemoryUtil.memLengthUTF8((CharSequence)string, (boolean)true);
+        byte[] bs = string.getBytes(Charsets.UTF_8);
+        int i = bs.length + 1;
         if (i < this.clipboardBuffer.capacity()) {
-            this.setClipboard(window, this.clipboardBuffer, string);
-            this.clipboardBuffer.clear();
+            Clipboard.setClipboard(window, this.clipboardBuffer, bs);
         } else {
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(i);
-            this.setClipboard(window, byteBuffer, string);
+            ByteBuffer byteBuffer = MemoryUtil.memAlloc((int)i);
+            try {
+                Clipboard.setClipboard(window, byteBuffer, bs);
+            }
+            finally {
+                MemoryUtil.memFree((Buffer)byteBuffer);
+            }
         }
     }
 }

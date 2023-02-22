@@ -25,93 +25,94 @@ import net.minecraft.entity.ai.pathing.PathNodeMaker;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.chunk.ChunkCache;
 import org.jetbrains.annotations.Nullable;
 
 public class PathNodeNavigator {
     private final PathMinHeap minHeap = new PathMinHeap();
     private final Set<PathNode> field_59 = Sets.newHashSet();
-    private final PathNode[] field_60 = new PathNode[32];
-    private final int field_18708;
-    private PathNodeMaker pathNodeMaker;
+    private final PathNode[] successors = new PathNode[32];
+    private final int range;
+    private final PathNodeMaker pathNodeMaker;
 
-    public PathNodeNavigator(PathNodeMaker pathNodeMaker, int i) {
+    public PathNodeNavigator(PathNodeMaker pathNodeMaker, int range) {
         this.pathNodeMaker = pathNodeMaker;
-        this.field_18708 = i;
+        this.range = range;
     }
 
     @Nullable
-    public Path pathfind(CollisionView collisionView, MobEntity mobEntity, Set<BlockPos> set, float f, int i) {
+    public Path findPathToAny(ChunkCache world, MobEntity mob, Set<BlockPos> positions, float followRange, int distance, float rangeMultiplier) {
         this.minHeap.clear();
-        this.pathNodeMaker.init(collisionView, mobEntity);
+        this.pathNodeMaker.init(world, mob);
         PathNode pathNode = this.pathNodeMaker.getStart();
-        Map<TargetPathNode, BlockPos> map = set.stream().collect(Collectors.toMap(blockPos -> this.pathNodeMaker.getNode((double)blockPos.getX(), (double)blockPos.getY(), (double)blockPos.getZ()), Function.identity()));
-        Path path = this.pathfind(pathNode, map, f, i);
+        Map<TargetPathNode, BlockPos> map = positions.stream().collect(Collectors.toMap(blockPos -> this.pathNodeMaker.getNode((double)blockPos.getX(), (double)blockPos.getY(), (double)blockPos.getZ()), Function.identity()));
+        Path path = this.findPathToAny(pathNode, map, followRange, distance, rangeMultiplier);
         this.pathNodeMaker.clear();
         return path;
     }
 
     @Nullable
-    private Path pathfind(PathNode pathNode, Map<TargetPathNode, BlockPos> map, float f, int i) {
+    private Path findPathToAny(PathNode startNode, Map<TargetPathNode, BlockPos> positions, float followRange, int distance, float rangeMultiplier) {
         Stream<Path> stream;
         Optional<Path> optional;
-        Set<TargetPathNode> set = map.keySet();
-        pathNode.field_36 = 0.0f;
-        pathNode.heapWeight = pathNode.field_34 = this.method_21658(pathNode, set);
+        Set<TargetPathNode> set = positions.keySet();
+        startNode.penalizedPathLength = 0.0f;
+        startNode.heapWeight = startNode.distanceToNearestTarget = this.calculateDistances(startNode, set);
         this.minHeap.clear();
         this.field_59.clear();
-        this.minHeap.push(pathNode);
-        int j = 0;
-        while (!this.minHeap.isEmpty() && ++j < this.field_18708) {
-            PathNode pathNode2 = this.minHeap.pop();
-            pathNode2.field_42 = true;
-            set.stream().filter(targetPathNode -> pathNode2.method_21653((PathNode)targetPathNode) <= (float)i).forEach(TargetPathNode::markReached);
+        this.minHeap.push(startNode);
+        int i = 0;
+        int j = (int)((float)this.range * rangeMultiplier);
+        while (!this.minHeap.isEmpty() && ++i < j) {
+            PathNode pathNode = this.minHeap.pop();
+            pathNode.visited = true;
+            set.stream().filter(targetPathNode -> pathNode.getManhattanDistance((PathNode)targetPathNode) <= (float)distance).forEach(TargetPathNode::markReached);
             if (set.stream().anyMatch(TargetPathNode::isReached)) break;
-            if (pathNode2.getDistance(pathNode) >= f) continue;
-            int k = this.pathNodeMaker.getSuccessors(this.field_60, pathNode2);
+            if (pathNode.getDistance(startNode) >= followRange) continue;
+            int k = this.pathNodeMaker.getSuccessors(this.successors, pathNode);
             for (int l = 0; l < k; ++l) {
-                PathNode pathNode3 = this.field_60[l];
-                float g = pathNode2.getDistance(pathNode3);
-                pathNode3.field_46 = pathNode2.field_46 + g;
-                float h = pathNode2.field_36 + g + pathNode3.field_43;
-                if (!(pathNode3.field_46 < f) || pathNode3.isInHeap() && !(h < pathNode3.field_36)) continue;
-                pathNode3.field_35 = pathNode2;
-                pathNode3.field_36 = h;
-                pathNode3.field_34 = this.method_21658(pathNode3, set) * 1.5f;
-                if (pathNode3.isInHeap()) {
-                    this.minHeap.setNodeWeight(pathNode3, pathNode3.field_36 + pathNode3.field_34);
+                PathNode pathNode2 = this.successors[l];
+                float f = pathNode.getDistance(pathNode2);
+                pathNode2.pathLength = pathNode.pathLength + f;
+                float g = pathNode.penalizedPathLength + f + pathNode2.penalty;
+                if (!(pathNode2.pathLength < followRange) || pathNode2.isInHeap() && !(g < pathNode2.penalizedPathLength)) continue;
+                pathNode2.previous = pathNode;
+                pathNode2.penalizedPathLength = g;
+                pathNode2.distanceToNearestTarget = this.calculateDistances(pathNode2, set) * 1.5f;
+                if (pathNode2.isInHeap()) {
+                    this.minHeap.setNodeWeight(pathNode2, pathNode2.penalizedPathLength + pathNode2.distanceToNearestTarget);
                     continue;
                 }
-                pathNode3.heapWeight = pathNode3.field_36 + pathNode3.field_34;
-                this.minHeap.push(pathNode3);
+                pathNode2.heapWeight = pathNode2.penalizedPathLength + pathNode2.distanceToNearestTarget;
+                this.minHeap.push(pathNode2);
             }
         }
-        if (!(optional = (stream = set.stream().anyMatch(TargetPathNode::isReached) ? set.stream().filter(TargetPathNode::isReached).map(targetPathNode -> this.method_55(targetPathNode.getNearestNode(), (BlockPos)map.get(targetPathNode), true)).sorted(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.method_55(targetPathNode.getNearestNode(), (BlockPos)map.get(targetPathNode), false)).sorted(Comparator.comparingDouble(Path::method_21656).thenComparingInt(Path::getLength))).findFirst()).isPresent()) {
+        if (!(optional = (stream = set.stream().anyMatch(TargetPathNode::isReached) ? set.stream().filter(TargetPathNode::isReached).map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), true)).sorted(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), false)).sorted(Comparator.comparingDouble(Path::getManhattanDistanceFromTarget).thenComparingInt(Path::getLength))).findFirst()).isPresent()) {
             return null;
         }
         Path path = optional.get();
         return path;
     }
 
-    private float method_21658(PathNode pathNode, Set<TargetPathNode> set) {
+    private float calculateDistances(PathNode node, Set<TargetPathNode> targets) {
         float f = Float.MAX_VALUE;
-        for (TargetPathNode targetPathNode : set) {
-            float g = pathNode.getDistance(targetPathNode);
-            targetPathNode.updateNearestNode(g, pathNode);
+        for (TargetPathNode targetPathNode : targets) {
+            float g = node.getDistance(targetPathNode);
+            targetPathNode.updateNearestNode(g, node);
             f = Math.min(g, f);
         }
         return f;
     }
 
-    private Path method_55(PathNode pathNode, BlockPos blockPos, boolean bl) {
+    private Path createPath(PathNode endNode, BlockPos target, boolean reachesTarget) {
         ArrayList list = Lists.newArrayList();
-        PathNode pathNode2 = pathNode;
-        list.add(0, pathNode2);
-        while (pathNode2.field_35 != null) {
-            pathNode2 = pathNode2.field_35;
-            list.add(0, pathNode2);
+        PathNode pathNode = endNode;
+        list.add(0, pathNode);
+        while (pathNode.previous != null) {
+            pathNode = pathNode.previous;
+            list.add(0, pathNode);
         }
-        return new Path(list, blockPos, bl);
+        return new Path(list, target, reachesTarget);
     }
 }
 

@@ -10,14 +10,17 @@ package net.minecraft.block;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.AbstractChestBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
+import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.entity.EnderChestBlockEntity;
 import net.minecraft.container.GenericContainer;
 import net.minecraft.container.SimpleNamedContainerFactory;
@@ -34,6 +37,7 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -46,7 +50,7 @@ import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 
 public class EnderChestBlock
-extends BlockWithEntity
+extends AbstractChestBlock<EnderChestBlockEntity>
 implements Waterloggable {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
@@ -54,19 +58,19 @@ implements Waterloggable {
     public static final TranslatableText CONTAINER_NAME = new TranslatableText("container.enderchest", new Object[0]);
 
     protected EnderChestBlock(Block.Settings settings) {
-        super(settings);
+        super(settings, () -> BlockEntityType.ENDER_CHEST);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(WATERLOGGED, false));
+    }
+
+    @Override
+    @Environment(value=EnvType.CLIENT)
+    public DoubleBlockProperties.PropertySource<? extends ChestBlockEntity> getBlockEntitySource(BlockState state, World world, BlockPos pos, boolean ignoreBlocked) {
+        return DoubleBlockProperties.PropertyRetriever::getFallback;
     }
 
     @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
         return SHAPE;
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasBlockEntityBreakingRender(BlockState state) {
-        return true;
     }
 
     @Override
@@ -81,24 +85,24 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         EnderChestInventory enderChestInventory = player.getEnderChestInventory();
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (enderChestInventory == null || !(blockEntity instanceof EnderChestBlockEntity)) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         BlockPos blockPos = pos.up();
         if (world.getBlockState(blockPos).isSimpleFullBlock(world, blockPos)) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         EnderChestBlockEntity enderChestBlockEntity = (EnderChestBlockEntity)blockEntity;
         enderChestInventory.setCurrentBlockEntity(enderChestBlockEntity);
         player.openContainer(new SimpleNamedContainerFactory((i, playerInventory, playerEntity) -> GenericContainer.createGeneric9x3(i, playerInventory, enderChestInventory), CONTAINER_NAME));
         player.incrementStat(Stats.OPEN_ENDERCHEST);
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override

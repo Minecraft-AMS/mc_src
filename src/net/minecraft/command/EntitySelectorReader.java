@@ -60,7 +60,7 @@ public class EntitySelectorReader {
     public static final BiConsumer<Vec3d, List<? extends Entity>> RANDOM = (vec3d, list) -> Collections.shuffle(list);
     public static final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> DEFAULT_SUGGESTION_PROVIDER = (suggestionsBuilder, consumer) -> suggestionsBuilder.buildFuture();
     private final StringReader reader;
-    private final boolean field_10846;
+    private final boolean atAllowed;
     private int limit;
     private boolean includesNonPlayers;
     private boolean localWorldOnly;
@@ -89,28 +89,28 @@ public class EntitySelectorReader {
     @Nullable
     private UUID uuid;
     private BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> suggestionProvider = DEFAULT_SUGGESTION_PROVIDER;
-    private boolean field_10854;
-    private boolean field_10874;
-    private boolean field_10851;
-    private boolean field_10873;
-    private boolean field_10849;
-    private boolean field_10871;
-    private boolean field_10845;
-    private boolean field_10868;
+    private boolean selectsName;
+    private boolean excludesName;
+    private boolean hasLimit;
+    private boolean hasSorter;
+    private boolean selectsGameMode;
+    private boolean excludesGameMode;
+    private boolean selectsTeam;
+    private boolean excludesTeam;
     @Nullable
     private EntityType<?> entityType;
-    private boolean field_10865;
-    private boolean field_10841;
-    private boolean field_10864;
+    private boolean excludesEntityType;
+    private boolean selectsScores;
+    private boolean selectsAdvancements;
     private boolean usesAt;
 
-    public EntitySelectorReader(StringReader stringReader) {
-        this(stringReader, true);
+    public EntitySelectorReader(StringReader reader) {
+        this(reader, true);
     }
 
-    public EntitySelectorReader(StringReader stringReader, boolean bl) {
-        this.reader = stringReader;
-        this.field_10846 = bl;
+    public EntitySelectorReader(StringReader reader, boolean atAllowed) {
+        this.reader = reader;
+        this.atAllowed = atAllowed;
     }
 
     public EntitySelector build() {
@@ -403,7 +403,7 @@ public class EntitySelectorReader {
         this.startCursor = this.reader.getCursor();
         this.suggestionProvider = this::suggestSelector;
         if (this.reader.canRead() && this.reader.peek() == '@') {
-            if (!this.field_10846) {
+            if (!this.atAllowed) {
                 throw NOT_ALLOWED_EXCEPTION.createWithContext((ImmutableStringReader)this.reader);
             }
             this.reader.skip();
@@ -425,7 +425,7 @@ public class EntitySelectorReader {
 
     private CompletableFuture<Suggestions> suggestSelector(SuggestionsBuilder builder, Consumer<SuggestionsBuilder> consumer) {
         consumer.accept(builder);
-        if (this.field_10846) {
+        if (this.atAllowed) {
             EntitySelectorReader.suggestSelector(builder);
         }
         return builder.buildFuture();
@@ -478,96 +478,96 @@ public class EntitySelectorReader {
         return this.suggestionProvider.apply(builder.createOffset(this.reader.getCursor()), consumer);
     }
 
-    public boolean method_9912() {
-        return this.field_10854;
+    public boolean selectsName() {
+        return this.selectsName;
     }
 
-    public void method_9899(boolean bl) {
-        this.field_10854 = bl;
+    public void setSelectsName(boolean selectsName) {
+        this.selectsName = selectsName;
     }
 
-    public boolean method_9844() {
-        return this.field_10874;
+    public boolean excludesName() {
+        return this.excludesName;
     }
 
-    public void method_9913(boolean bl) {
-        this.field_10874 = bl;
+    public void setExcludesName(boolean bl) {
+        this.excludesName = bl;
     }
 
-    public boolean method_9866() {
-        return this.field_10851;
+    public boolean hasLimit() {
+        return this.hasLimit;
     }
 
-    public void method_9877(boolean bl) {
-        this.field_10851 = bl;
+    public void setHasLimit(boolean hasLimit) {
+        this.hasLimit = hasLimit;
     }
 
-    public boolean method_9889() {
-        return this.field_10873;
+    public boolean hasSorter() {
+        return this.hasSorter;
     }
 
-    public void method_9887(boolean bl) {
-        this.field_10873 = bl;
+    public void setHasSorter(boolean hasSorter) {
+        this.hasSorter = hasSorter;
     }
 
-    public boolean method_9839() {
-        return this.field_10849;
+    public boolean selectsGameMode() {
+        return this.selectsGameMode;
     }
 
-    public void method_9890(boolean bl) {
-        this.field_10849 = bl;
+    public void setSelectsGameMode(boolean selectsGameMode) {
+        this.selectsGameMode = selectsGameMode;
     }
 
-    public boolean method_9837() {
-        return this.field_10871;
+    public boolean excludesGameMode() {
+        return this.excludesGameMode;
     }
 
-    public void method_9857(boolean bl) {
-        this.field_10871 = bl;
+    public void setHasNegatedGameMode(boolean hasNegatedGameMode) {
+        this.excludesGameMode = hasNegatedGameMode;
     }
 
-    public boolean method_9904() {
-        return this.field_10845;
+    public boolean selectsTeam() {
+        return this.selectsTeam;
     }
 
-    public void method_9865(boolean bl) {
-        this.field_10845 = bl;
+    public void setSelectsTeam(boolean selectsTeam) {
+        this.selectsTeam = selectsTeam;
     }
 
-    public void method_9833(boolean bl) {
-        this.field_10868 = bl;
+    public void setExcludesTeam(boolean excludesTeam) {
+        this.excludesTeam = excludesTeam;
     }
 
     public void setEntityType(EntityType<?> entityType) {
         this.entityType = entityType;
     }
 
-    public void method_9860() {
-        this.field_10865 = true;
+    public void setExcludesEntityType() {
+        this.excludesEntityType = true;
     }
 
     public boolean selectsEntityType() {
         return this.entityType != null;
     }
 
-    public boolean method_9910() {
-        return this.field_10865;
+    public boolean excludesEntityType() {
+        return this.excludesEntityType;
     }
 
-    public boolean method_9843() {
-        return this.field_10841;
+    public boolean selectsScores() {
+        return this.selectsScores;
     }
 
-    public void method_9848(boolean bl) {
-        this.field_10841 = bl;
+    public void setSelectsScores(boolean selectsScores) {
+        this.selectsScores = selectsScores;
     }
 
-    public boolean method_9861() {
-        return this.field_10864;
+    public boolean selectsAdvancements() {
+        return this.selectsAdvancements;
     }
 
-    public void method_9906(boolean bl) {
-        this.field_10864 = bl;
+    public void setSelectsAdvancements(boolean selectsAdvancements) {
+        this.selectsAdvancements = selectsAdvancements;
     }
 }
 

@@ -22,8 +22,10 @@ import com.google.gson.JsonParseException;
 import java.lang.reflect.Type;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.math.Quaternion;
 
 @Environment(value=EnvType.CLIENT)
 public class Transformation {
@@ -33,9 +35,26 @@ public class Transformation {
     public final Vector3f scale;
 
     public Transformation(Vector3f rotation, Vector3f translation, Vector3f scale) {
-        this.rotation = new Vector3f(rotation);
-        this.translation = new Vector3f(translation);
-        this.scale = new Vector3f(scale);
+        this.rotation = rotation.copy();
+        this.translation = translation.copy();
+        this.scale = scale.copy();
+    }
+
+    public void apply(boolean leftHanded, MatrixStack matrices) {
+        if (this == IDENTITY) {
+            return;
+        }
+        float f = this.rotation.getX();
+        float g = this.rotation.getY();
+        float h = this.rotation.getZ();
+        if (leftHanded) {
+            g = -g;
+            h = -h;
+        }
+        int i = leftHanded ? -1 : 1;
+        matrices.translate((float)i * this.translation.getX(), this.translation.getY(), this.translation.getZ());
+        matrices.multiply(new Quaternion(f, g, h, true));
+        matrices.scale(this.scale.getX(), this.scale.getY(), this.scale.getZ());
     }
 
     public boolean equals(Object o) {
@@ -77,9 +96,9 @@ public class Transformation {
             return new Transformation(vector3f, vector3f2, vector3f3);
         }
 
-        private Vector3f parseVector3f(JsonObject json, String key, Vector3f default_) {
+        private Vector3f parseVector3f(JsonObject json, String key, Vector3f fallback) {
             if (!json.has(key)) {
-                return default_;
+                return fallback;
             }
             JsonArray jsonArray = JsonHelper.getArray(json, key);
             if (jsonArray.size() != 3) {

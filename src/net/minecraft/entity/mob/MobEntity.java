@@ -73,12 +73,12 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class MobEntity
@@ -264,7 +264,7 @@ extends LivingEntity {
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
                 double g = 10.0;
-                this.world.addParticle(ParticleTypes.POOF, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth() - d * 10.0, this.y + (double)(this.random.nextFloat() * this.getHeight()) - e * 10.0, this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth() - f * 10.0, d, e, f);
+                this.world.addParticle(ParticleTypes.POOF, this.offsetX(1.0) - d * 10.0, this.getRandomBodyY() - e * 10.0, this.getParticleZ(1.0) - f * 10.0, d, e, f);
             }
         } else {
             this.world.sendEntityStatus(this, (byte)20);
@@ -301,7 +301,7 @@ extends LivingEntity {
     }
 
     @Override
-    protected float turnHead(float yaw, float headRotation) {
+    protected float turnHead(float bodyRotation, float headRotation) {
         this.bodyControl.tick();
         return headRotation;
     }
@@ -336,12 +336,12 @@ extends LivingEntity {
         tag.put("HandItems", listTag2);
         ListTag listTag3 = new ListTag();
         for (float f : this.armorDropChances) {
-            listTag3.add(new FloatTag(f));
+            listTag3.add(FloatTag.of(f));
         }
         tag.put("ArmorDropChances", listTag3);
         ListTag listTag4 = new ListTag();
         for (float g : this.handDropChances) {
-            listTag4.add(new FloatTag(g));
+            listTag4.add(FloatTag.of(g));
         }
         tag.put("HandDropChances", listTag4);
         if (this.holdingEntity != null) {
@@ -356,6 +356,8 @@ extends LivingEntity {
                 ((CompoundTag)compoundTag2).putInt("Z", blockPos.getZ());
             }
             tag.put("Leash", (Tag)compoundTag2);
+        } else if (this.leashTag != null) {
+            tag.put("Leash", this.leashTag.copy());
         }
         tag.putBoolean("LeftHanded", this.isLeftHanded());
         if (this.lootTable != null) {
@@ -472,7 +474,7 @@ extends LivingEntity {
         boolean bl = this.isBetterItemFor(itemStack, itemStack2 = this.getEquippedStack(equipmentSlot = MobEntity.getPreferredEquipmentSlot(itemStack)), equipmentSlot);
         if (bl && this.canPickupItem(itemStack)) {
             double d = this.getDropChance(equipmentSlot);
-            if (!itemStack2.isEmpty() && (double)(this.random.nextFloat() - 0.1f) < d) {
+            if (!itemStack2.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1f, 0.0f) < d) {
                 this.dropStack(itemStack2);
             }
             this.equipStack(equipmentSlot, itemStack);
@@ -529,7 +531,16 @@ extends LivingEntity {
         return false;
     }
 
-    protected void checkDespawn() {
+    protected boolean method_23734() {
+        return false;
+    }
+
+    @Override
+    public void checkDespawn() {
+        if (this.world.getDifficulty() == Difficulty.PEACEFUL && this.method_23734()) {
+            this.remove();
+            return;
+        }
         if (this.isPersistent() || this.cannotDespawn()) {
             this.despawnCounter = 0;
             return;
@@ -551,9 +562,6 @@ extends LivingEntity {
     @Override
     protected final void tickNewAi() {
         ++this.despawnCounter;
-        this.world.getProfiler().push("checkDespawn");
-        this.checkDespawn();
-        this.world.getProfiler().pop();
         this.world.getProfiler().push("sensing");
         this.visibilityCache.clear();
         this.world.getProfiler().pop();
@@ -592,7 +600,7 @@ extends LivingEntity {
         return 40;
     }
 
-    public int method_5986() {
+    public int getBodyYawSpeed() {
         return 75;
     }
 
@@ -602,13 +610,13 @@ extends LivingEntity {
 
     public void lookAtEntity(Entity targetEntity, float maxYawChange, float maxPitchChange) {
         double f;
-        double d = targetEntity.x - this.x;
-        double e = targetEntity.z - this.z;
+        double d = targetEntity.getX() - this.getX();
+        double e = targetEntity.getZ() - this.getZ();
         if (targetEntity instanceof LivingEntity) {
             LivingEntity livingEntity = (LivingEntity)targetEntity;
-            f = livingEntity.y + (double)livingEntity.getStandingEyeHeight() - (this.y + (double)this.getStandingEyeHeight());
+            f = livingEntity.getEyeY() - this.getEyeY();
         } else {
-            f = (targetEntity.getBoundingBox().y1 + targetEntity.getBoundingBox().y2) / 2.0 - (this.y + (double)this.getStandingEyeHeight());
+            f = (targetEntity.getBoundingBox().y1 + targetEntity.getBoundingBox().y2) / 2.0 - this.getEyeY();
         }
         double g = MathHelper.sqrt(d * d + e * e);
         float h = (float)(MathHelper.atan2(e, d) * 57.2957763671875) - 90.0f;
@@ -628,17 +636,17 @@ extends LivingEntity {
         return oldAngle + f;
     }
 
-    public static boolean method_20636(EntityType<? extends MobEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        BlockPos blockPos2 = blockPos.down();
-        return spawnType == SpawnType.SPAWNER || iWorld.getBlockState(blockPos2).allowsSpawning(iWorld, blockPos2, entityType);
+    public static boolean canMobSpawn(EntityType<? extends MobEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        BlockPos blockPos = pos.down();
+        return spawnType == SpawnType.SPAWNER || world.getBlockState(blockPos).allowsSpawning(world, blockPos, type);
     }
 
     public boolean canSpawn(IWorld world, SpawnType spawnType) {
         return true;
     }
 
-    public boolean canSpawn(CollisionView world) {
-        return !world.intersectsFluid(this.getBoundingBox()) && world.intersectsEntities(this);
+    public boolean canSpawn(WorldView world) {
+        return !world.containsFluid(this.getBoundingBox()) && world.intersectsEntities(this);
     }
 
     public int getLimitPerChunk() {
@@ -705,7 +713,7 @@ extends LivingEntity {
             ItemStack itemStack = this.getEquippedStack(equipmentSlot);
             float f = this.getDropChance(equipmentSlot);
             boolean bl2 = bl = f > 1.0f;
-            if (itemStack.isEmpty() || EnchantmentHelper.hasVanishingCurse(itemStack) || !allowDrops && !bl || !(this.random.nextFloat() - (float)lootingMultiplier * 0.01f < f)) continue;
+            if (itemStack.isEmpty() || EnchantmentHelper.hasVanishingCurse(itemStack) || !allowDrops && !bl || !(Math.max(this.random.nextFloat() - (float)lootingMultiplier * 0.01f, 0.0f) < f)) continue;
             if (!bl && itemStack.isDamageable()) {
                 itemStack.setDamage(itemStack.getMaxDamage() - this.random.nextInt(1 + this.random.nextInt(Math.max(itemStack.getMaxDamage() - 3, 1))));
             }
@@ -1166,6 +1174,7 @@ extends LivingEntity {
                 }
             }
             this.dealDamage(this, target);
+            this.onAttacking(target);
         }
         return bl;
     }
@@ -1174,7 +1183,7 @@ extends LivingEntity {
         if (this.world.isDay() && !this.world.isClient) {
             BlockPos blockPos;
             float f = this.getBrightnessAtEyes();
-            BlockPos blockPos2 = blockPos = this.getVehicle() instanceof BoatEntity ? new BlockPos(this.x, Math.round(this.y), this.z).up() : new BlockPos(this.x, Math.round(this.y), this.z);
+            BlockPos blockPos2 = blockPos = this.getVehicle() instanceof BoatEntity ? new BlockPos(this.getX(), Math.round(this.getY()), this.getZ()).up() : new BlockPos(this.getX(), Math.round(this.getY()), this.getZ());
             if (f > 0.5f && this.random.nextFloat() * 30.0f < (f - 0.4f) * 2.0f && this.world.isSkyVisible(blockPos)) {
                 return true;
             }

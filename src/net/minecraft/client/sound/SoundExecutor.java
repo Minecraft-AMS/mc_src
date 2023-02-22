@@ -52,7 +52,7 @@ extends ThreadExecutor<Runnable> {
     }
 
     @Override
-    protected void method_20813() {
+    protected void waitForTasks() {
         LockSupport.park("waiting for tasks");
     }
 

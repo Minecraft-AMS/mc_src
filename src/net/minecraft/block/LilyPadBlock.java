@@ -12,6 +12,7 @@ import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
@@ -28,8 +29,8 @@ extends PlantBlock {
     @Override
     public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         super.onEntityCollision(state, world, pos, entity);
-        if (entity instanceof BoatEntity) {
-            world.breakBlock(new BlockPos(pos), true);
+        if (world instanceof ServerWorld && entity instanceof BoatEntity) {
+            world.breakBlock(new BlockPos(pos), true, entity);
         }
     }
 

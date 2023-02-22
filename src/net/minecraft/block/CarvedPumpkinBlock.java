@@ -27,8 +27,9 @@ import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.util.MaterialPredicate;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class CarvedPumpkinBlock
@@ -57,8 +58,8 @@ extends HorizontalFacingBlock {
         this.trySpawnEntity(world, pos);
     }
 
-    public boolean canDispense(CollisionView world, BlockPos pos) {
-        return this.getSnowGolemDispenserPattern().searchAround(world, pos) != null || this.getIronGolemDispenserPattern().searchAround(world, pos) != null;
+    public boolean canDispense(WorldView worldView, BlockPos pos) {
+        return this.getSnowGolemDispenserPattern().searchAround(worldView, pos) != null || this.getIronGolemDispenserPattern().searchAround(worldView, pos) != null;
     }
 
     private void trySpawnEntity(World world, BlockPos pos) {
@@ -147,6 +148,11 @@ extends HorizontalFacingBlock {
             this.ironGolemPattern = BlockPatternBuilder.start().aisle("~^~", "###", "~#~").where('^', CachedBlockPosition.matchesBlockState(IS_PUMPKIN_PREDICATE)).where('#', CachedBlockPosition.matchesBlockState(BlockStatePredicate.forBlock(Blocks.IRON_BLOCK))).where('~', CachedBlockPosition.matchesBlockState(MaterialPredicate.create(Material.AIR))).build();
         }
         return this.ironGolemPattern;
+    }
+
+    @Override
+    public boolean allowsSpawning(BlockState state, BlockView view, BlockPos pos, EntityType<?> type) {
+        return true;
     }
 }
 

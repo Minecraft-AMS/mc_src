@@ -123,10 +123,10 @@ extends JsonDataLoader {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public void method_20702(Iterable<Recipe<?>> iterable) {
+    public void setRecipes(Iterable<Recipe<?>> recipes) {
         this.errored = false;
         HashMap map = Maps.newHashMap();
-        iterable.forEach(recipe -> {
+        recipes.forEach(recipe -> {
             Map map2 = map.computeIfAbsent(recipe.getType(), recipeType -> Maps.newHashMap());
             Recipe recipe2 = map2.put(recipe.getId(), recipe);
             if (recipe2 != null) {

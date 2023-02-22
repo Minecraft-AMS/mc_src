@@ -34,7 +34,7 @@ import net.minecraft.util.math.BlockPos;
 public class BlockDataObject
 implements DataCommandObject {
     private static final SimpleCommandExceptionType INVALID_BLOCK_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.data.block.invalid", new Object[0]));
-    public static final Function<String, DataCommand.ObjectType> field_13786 = string -> new DataCommand.ObjectType((String)string){
+    public static final Function<String, DataCommand.ObjectType> TYPE_FACTORY = string -> new DataCommand.ObjectType((String)string){
         final /* synthetic */ String field_13787;
         {
             this.field_13787 = string;
@@ -58,9 +58,9 @@ implements DataCommandObject {
     private final BlockEntity blockEntity;
     private final BlockPos pos;
 
-    public BlockDataObject(BlockEntity blockEntity, BlockPos blockPos) {
+    public BlockDataObject(BlockEntity blockEntity, BlockPos pos) {
         this.blockEntity = blockEntity;
-        this.pos = blockPos;
+        this.pos = pos;
     }
 
     @Override

@@ -5,6 +5,7 @@
  *  com.google.common.cache.CacheBuilder
  *  com.google.common.cache.CacheLoader
  *  com.google.common.cache.LoadingCache
+ *  com.google.common.collect.Maps
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture$Type
@@ -19,12 +20,12 @@ package com.mojang.realmsclient.util;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Maps;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.util.UUIDTypeAdapter;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -46,8 +47,8 @@ public class RealmsUtil {
             return gameProfile;
         }
 
-        public /* synthetic */ Object load(Object uuid) throws Exception {
-            return this.load((String)uuid);
+        public /* synthetic */ Object load(Object object) throws Exception {
+            return this.load((String)object);
         }
     });
 
@@ -62,7 +63,7 @@ public class RealmsUtil {
             return sessionService.getTextures(gameProfile, false);
         }
         catch (Exception exception) {
-            return new HashMap<MinecraftProfileTexture.Type, MinecraftProfileTexture>();
+            return Maps.newHashMap();
         }
     }
 

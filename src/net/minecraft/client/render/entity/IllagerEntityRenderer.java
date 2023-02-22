@@ -7,13 +7,13 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.HeadFeatureRenderer;
 import net.minecraft.client.render.entity.model.IllagerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.IllagerEntity;
 
 @Environment(value=EnvType.CLIENT)
@@ -24,15 +24,10 @@ extends MobEntityRenderer<T, IllagerEntityModel<T>> {
         this.addFeature(new HeadFeatureRenderer(this));
     }
 
-    public IllagerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new IllagerEntityModel(0.0f, 0.0f, 64, 64), 0.5f);
-        this.addFeature(new HeadFeatureRenderer(this));
-    }
-
     @Override
-    protected void scale(T illagerEntity, float f) {
+    protected void scale(T illagerEntity, MatrixStack matrixStack, float f) {
         float g = 0.9375f;
-        GlStateManager.scalef(0.9375f, 0.9375f, 0.9375f);
+        matrixStack.scale(0.9375f, 0.9375f, 0.9375f);
     }
 }
 

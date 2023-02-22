@@ -59,8 +59,8 @@ extends DamageSource {
 
     @Override
     @Nullable
-    public Vec3d method_5510() {
-        return new Vec3d(this.source.x, this.source.y, this.source.z);
+    public Vec3d getPosition() {
+        return this.source != null ? this.source.getPos() : null;
     }
 }
 

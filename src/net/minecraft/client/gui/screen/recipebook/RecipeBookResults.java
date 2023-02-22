@@ -20,7 +20,6 @@ import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeDisplayListener;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.book.RecipeBook;
 import org.jetbrains.annotations.Nullable;
@@ -99,7 +98,6 @@ public class RecipeBookResults {
             int i = this.client.textRenderer.getStringWidth(string);
             this.client.textRenderer.draw(string, left - i / 2 + 73, top + 141, -1);
         }
-        DiffuseLighting.disable();
         this.hoveredResultButton = null;
         for (AnimatedResultButton animatedResultButton : this.resultButtons) {
             animatedResultButton.render(mouseX, mouseY, delta);
@@ -113,7 +111,7 @@ public class RecipeBookResults {
 
     public void drawTooltip(int i, int j) {
         if (this.client.currentScreen != null && this.hoveredResultButton != null && !this.alternatesWidget.isVisible()) {
-            this.client.currentScreen.renderTooltip(this.hoveredResultButton.method_2644(this.client.currentScreen), i, j);
+            this.client.currentScreen.renderTooltip(this.hoveredResultButton.getTooltip(this.client.currentScreen), i, j);
         }
     }
 

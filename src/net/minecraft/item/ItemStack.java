@@ -64,6 +64,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.RegistryTagManager;
@@ -116,6 +117,9 @@ public final class ItemStack {
     public ItemStack(ItemConvertible item, int count) {
         this.item = item == null ? null : item.asItem();
         this.count = count;
+        if (this.item != null && this.item.isDamageable()) {
+            this.setDamage(this.getDamage());
+        }
         this.updateEmptyState();
     }
 
@@ -201,7 +205,7 @@ public final class ItemStack {
         tag.putString("id", identifier == null ? "minecraft:air" : identifier.toString());
         tag.putByte("Count", (byte)this.count);
         if (this.tag != null) {
-            tag.put("tag", this.tag);
+            tag.put("tag", this.tag.copy());
         }
         return tag;
     }
@@ -303,6 +307,9 @@ public final class ItemStack {
     }
 
     public ItemStack copy() {
+        if (this.isEmpty()) {
+            return EMPTY;
+        }
         ItemStack itemStack = new ItemStack(this.getItem(), this.count);
         itemStack.setCooldown(this.getCooldown());
         if (this.tag != null) {
@@ -467,6 +474,9 @@ public final class ItemStack {
 
     public void setTag(@Nullable CompoundTag tag) {
         this.tag = tag;
+        if (this.getItem().isDamageable()) {
+            this.setDamage(this.getDamage());
+        }
     }
 
     public Text getName() {
@@ -659,7 +669,6 @@ public final class ItemStack {
         return Lists.newArrayList((Iterable)new LiteralText("missingno").formatted(Formatting.DARK_GRAY));
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint() {
         return this.getItem().hasEnchantmentGlint(this);
     }
@@ -729,13 +738,14 @@ public final class ItemStack {
             ListTag listTag = this.tag.getList("AttributeModifiers", 10);
             for (int i = 0; i < listTag.size(); ++i) {
                 CompoundTag compoundTag = listTag.getCompound(i);
-                EntityAttributeModifier entityAttributeModifier = EntityAttributes.createFromTag(compoundTag);
-                if (entityAttributeModifier == null || compoundTag.contains("Slot", 8) && !compoundTag.getString("Slot").equals(slot.getName()) || entityAttributeModifier.getId().getLeastSignificantBits() == 0L || entityAttributeModifier.getId().getMostSignificantBits() == 0L) continue;
-                multimap.put((Object)compoundTag.getString("AttributeName"), (Object)entityAttributeModifier);
+                EntityAttributeModifier entityAttributeModifier2 = EntityAttributes.createFromTag(compoundTag);
+                if (entityAttributeModifier2 == null || compoundTag.contains("Slot", 8) && !compoundTag.getString("Slot").equals(slot.getName()) || entityAttributeModifier2.getId().getLeastSignificantBits() == 0L || entityAttributeModifier2.getId().getMostSignificantBits() == 0L) continue;
+                multimap.put((Object)compoundTag.getString("AttributeName"), (Object)entityAttributeModifier2);
             }
         } else {
             multimap = this.getItem().getModifiers(slot);
         }
+        multimap.values().forEach(entityAttributeModifier -> entityAttributeModifier.setSerialize(false));
         return multimap;
     }
 
@@ -862,6 +872,14 @@ public final class ItemStack {
 
     public boolean isFood() {
         return this.getItem().isFood();
+    }
+
+    public SoundEvent getDrinkSound() {
+        return this.getItem().getDrinkSound();
+    }
+
+    public SoundEvent getEatSound() {
+        return this.getItem().getEatSound();
     }
 }
 

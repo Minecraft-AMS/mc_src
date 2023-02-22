@@ -52,7 +52,7 @@ implements DataProvider {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private final DataGenerator root;
-    private final List<Pair<Supplier<Consumer<BiConsumer<Identifier, LootTable.Builder>>>, LootContextType>> field_11354 = ImmutableList.of((Object)Pair.of(FishingLootTableGenerator::new, (Object)LootContextTypes.FISHING), (Object)Pair.of(ChestLootTableGenerator::new, (Object)LootContextTypes.CHEST), (Object)Pair.of(EntityLootTableGenerator::new, (Object)LootContextTypes.ENTITY), (Object)Pair.of(BlockLootTableGenerator::new, (Object)LootContextTypes.BLOCK), (Object)Pair.of(GiftLootTableGenerator::new, (Object)LootContextTypes.GIFT));
+    private final List<Pair<Supplier<Consumer<BiConsumer<Identifier, LootTable.Builder>>>, LootContextType>> lootTypeGenerators = ImmutableList.of((Object)Pair.of(FishingLootTableGenerator::new, (Object)LootContextTypes.FISHING), (Object)Pair.of(ChestLootTableGenerator::new, (Object)LootContextTypes.CHEST), (Object)Pair.of(EntityLootTableGenerator::new, (Object)LootContextTypes.ENTITY), (Object)Pair.of(BlockLootTableGenerator::new, (Object)LootContextTypes.BLOCK), (Object)Pair.of(GiftLootTableGenerator::new, (Object)LootContextTypes.GIFT));
 
     public LootTablesProvider(DataGenerator dataGenerator) {
         this.root = dataGenerator;
@@ -62,17 +62,17 @@ implements DataProvider {
     public void run(DataCache dataCache) {
         Path path = this.root.getOutput();
         HashMap map = Maps.newHashMap();
-        this.field_11354.forEach(pair -> ((Consumer)((Supplier)pair.getFirst()).get()).accept((identifier, builder) -> {
+        this.lootTypeGenerators.forEach(pair -> ((Consumer)((Supplier)pair.getFirst()).get()).accept((identifier, builder) -> {
             if (map.put(identifier, builder.withType((LootContextType)pair.getSecond()).create()) != null) {
                 throw new IllegalStateException("Duplicate loot table " + identifier);
             }
         }));
-        LootTableReporter lootTableReporter = new LootTableReporter();
+        LootTableReporter lootTableReporter = new LootTableReporter(LootContextTypes.GENERIC, identifier -> null, map::get);
         Sets.SetView set = Sets.difference(LootTables.getAll(), map.keySet());
         for (Identifier identifier2 : set) {
             lootTableReporter.report("Missing built-in table: " + identifier2);
         }
-        map.forEach((identifier, lootTable) -> LootManager.check(lootTableReporter, identifier, lootTable, map::get));
+        map.forEach((identifier, lootTable) -> LootManager.check(lootTableReporter, identifier, lootTable));
         Multimap<String, String> multimap = lootTableReporter.getMessages();
         if (!multimap.isEmpty()) {
             multimap.forEach((string, string2) -> LOGGER.warn("Found validation problem in " + string + ": " + string2));

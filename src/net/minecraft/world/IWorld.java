@@ -23,13 +23,14 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.EntityView;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ModifiableTestableWorld;
 import net.minecraft.world.TickScheduler;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.dimension.Dimension;
 import net.minecraft.world.level.LevelProperties;
@@ -37,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 public interface IWorld
 extends EntityView,
-CollisionView,
+WorldView,
 ModifiableTestableWorld {
     public long getSeed();
 
@@ -93,13 +94,18 @@ ModifiableTestableWorld {
     }
 
     @Override
-    default public Stream<VoxelShape> method_20743(@Nullable Entity entity, Box box, Set<Entity> set) {
-        return EntityView.super.method_20743(entity, box, set);
+    default public Stream<VoxelShape> getEntityCollisions(@Nullable Entity entity, Box box, Set<Entity> excluded) {
+        return EntityView.super.getEntityCollisions(entity, box, excluded);
     }
 
     @Override
     default public boolean intersectsEntities(@Nullable Entity except, VoxelShape shape) {
         return EntityView.super.intersectsEntities(except, shape);
+    }
+
+    @Override
+    default public BlockPos getTopPosition(Heightmap.Type heightmap, BlockPos pos) {
+        return WorldView.super.getTopPosition(heightmap, pos);
     }
 }
 

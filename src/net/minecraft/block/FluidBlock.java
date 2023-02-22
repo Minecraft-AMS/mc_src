@@ -28,6 +28,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.context.LootContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -37,9 +38,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class FluidBlock
 extends Block
@@ -61,7 +62,7 @@ implements FluidDrainable {
     }
 
     @Override
-    public void onRandomTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         world.getFluidState(pos).onRandomTick(world, pos, random);
     }
 
@@ -84,10 +85,7 @@ implements FluidDrainable {
     @Override
     @Environment(value=EnvType.CLIENT)
     public boolean isSideInvisible(BlockState state, BlockState neighbor, Direction facing) {
-        if (neighbor.getFluidState().getFluid().matchesType(this.fluid)) {
-            return true;
-        }
-        return super.isOpaque(state);
+        return neighbor.getFluidState().getFluid().matchesType(this.fluid);
     }
 
     @Override
@@ -106,8 +104,8 @@ implements FluidDrainable {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
-        return this.fluid.getTickRate(world);
+    public int getTickRate(WorldView worldView) {
+        return this.fluid.getTickRate(worldView);
     }
 
     @Override

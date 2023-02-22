@@ -31,6 +31,7 @@ import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.function.ApplyBonusLootFunction;
 import net.minecraft.loot.function.CopyNameLootFunction;
 import net.minecraft.loot.function.CopyNbtLootFunction;
+import net.minecraft.loot.function.CopyStateFunction;
 import net.minecraft.loot.function.EnchantRandomlyLootFunction;
 import net.minecraft.loot.function.EnchantWithLevelsLootFunction;
 import net.minecraft.loot.function.ExplorationMapLootFunction;
@@ -129,6 +130,7 @@ public class LootFunctions {
         LootFunctions.register(new SetLoreLootFunction.Factory());
         LootFunctions.register(new FillPlayerHeadLootFunction.Factory());
         LootFunctions.register(new CopyNbtLootFunction.Factory());
+        LootFunctions.register(new CopyStateFunction.Factory());
     }
 
     public static class Factory

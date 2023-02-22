@@ -44,6 +44,7 @@ import net.minecraft.client.sound.Source;
 import net.minecraft.client.sound.StaticSound;
 import net.minecraft.client.sound.TickableSoundInstance;
 import net.minecraft.client.sound.WeightedSoundSet;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -77,6 +78,7 @@ public class SoundSystem {
     private final Map<SoundInstance, Integer> startTicks = Maps.newHashMap();
     private final Map<SoundInstance, Integer> soundEndTicks = Maps.newHashMap();
     private final List<ListenerSoundInstance> listeners = Lists.newArrayList();
+    private final List<TickableSoundInstance> soundsToPlayNextTick = Lists.newArrayList();
     private final List<Sound> preloadedSounds = Lists.newArrayList();
 
     public SoundSystem(SoundManager loader, GameOptions settings, ResourceManager resourceManager) {
@@ -167,6 +169,7 @@ public class SoundSystem {
             this.tickingSounds.clear();
             this.sounds.clear();
             this.soundEndTicks.clear();
+            this.soundsToPlayNextTick.clear();
         }
     }
 
@@ -187,6 +190,8 @@ public class SoundSystem {
 
     private void tick() {
         ++this.ticks;
+        this.soundsToPlayNextTick.forEach(this::play);
+        this.soundsToPlayNextTick.clear();
         for (TickableSoundInstance tickableSoundInstance : this.tickingSounds) {
             tickableSoundInstance.tick();
             if (tickableSoundInstance.isDone()) {
@@ -330,6 +335,10 @@ public class SoundSystem {
         }
     }
 
+    public void playNextTick(TickableSoundInstance sound) {
+        this.soundsToPlayNextTick.add(sound);
+    }
+
     public void addPreloadedSound(Sound sound) {
         this.preloadedSounds.add(sound);
     }
@@ -363,11 +372,11 @@ public class SoundSystem {
             return;
         }
         Vec3d vec3d = camera.getPos();
-        Vec3d vec3d2 = camera.getHorizontalPlane();
-        Vec3d vec3d3 = camera.getVerticalPlane();
+        Vector3f vector3f = camera.getHorizontalPlane();
+        Vector3f vector3f2 = camera.getVerticalPlane();
         this.taskQueue.execute(() -> {
             this.listener.setPosition(vec3d);
-            this.listener.setOrientation(vec3d2, vec3d3);
+            this.listener.setOrientation(vector3f, vector3f2);
         });
     }
 

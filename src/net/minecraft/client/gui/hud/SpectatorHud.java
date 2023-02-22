@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.hud;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -16,7 +16,6 @@ import net.minecraft.client.gui.hud.spectator.SpectatorMenu;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCloseCallback;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuState;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -58,44 +57,42 @@ implements SpectatorMenuCloseCallback {
             this.spectatorMenu.close();
             return;
         }
-        int i = this.client.window.getScaledWidth() / 2;
-        int j = this.blitOffset;
-        this.blitOffset = -90;
-        int k = MathHelper.floor((float)this.client.window.getScaledHeight() - 22.0f * f);
+        int i = this.client.getWindow().getScaledWidth() / 2;
+        int j = this.getBlitOffset();
+        this.setBlitOffset(-90);
+        int k = MathHelper.floor((float)this.client.getWindow().getScaledHeight() - 22.0f * f);
         SpectatorMenuState spectatorMenuState = this.spectatorMenu.getCurrentState();
         this.renderSpectatorMenu(f, i, k, spectatorMenuState);
-        this.blitOffset = j;
+        this.setBlitOffset(j);
     }
 
     protected void renderSpectatorMenu(float height, int x, int i, SpectatorMenuState state) {
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, height);
+        RenderSystem.enableRescaleNormal();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, height);
         this.client.getTextureManager().bindTexture(WIDGETS_TEX);
         this.blit(x - 91, i, 0, 0, 182, 22);
         if (state.getSelectedSlot() >= 0) {
             this.blit(x - 91 - 1 + state.getSelectedSlot() * 20, i - 1, 0, 22, 24, 22);
         }
-        DiffuseLighting.enableForItems();
         for (int j = 0; j < 9; ++j) {
-            this.renderSpectatorCommand(j, this.client.window.getScaledWidth() / 2 - 90 + j * 20 + 2, i + 3, height, state.getCommand(j));
+            this.renderSpectatorCommand(j, this.client.getWindow().getScaledWidth() / 2 - 90 + j * 20 + 2, i + 3, height, state.getCommand(j));
         }
-        DiffuseLighting.disable();
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.disableBlend();
+        RenderSystem.disableRescaleNormal();
+        RenderSystem.disableBlend();
     }
 
     private void renderSpectatorCommand(int slot, int x, float y, float alpha, SpectatorMenuCommand command) {
         this.client.getTextureManager().bindTexture(SPECTATOR_TEX);
         if (command != SpectatorMenu.BLANK_COMMAND) {
             int i = (int)(alpha * 255.0f);
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(x, y, 0.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.translatef(x, y, 0.0f);
             float f = command.isEnabled() ? 1.0f : 0.25f;
-            GlStateManager.color4f(f, f, f, alpha);
+            RenderSystem.color4f(f, f, f, alpha);
             command.renderIcon(f, i);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
             String string = String.valueOf(this.client.options.keysHotbar[slot].getLocalizedName());
             if (i > 3 && command.isEnabled()) {
                 this.client.textRenderer.drawWithShadow(string, x + 19 - 2 - this.client.textRenderer.getStringWidth(string), y + 6.0f + 3.0f, 0xFFFFFF + (i << 24));
@@ -110,14 +107,14 @@ implements SpectatorMenuCloseCallback {
             SpectatorMenuCommand spectatorMenuCommand = this.spectatorMenu.getSelectedCommand();
             String string2 = string = spectatorMenuCommand == SpectatorMenu.BLANK_COMMAND ? this.spectatorMenu.getCurrentGroup().getPrompt().asFormattedString() : spectatorMenuCommand.getName().asFormattedString();
             if (string != null) {
-                int j = (this.client.window.getScaledWidth() - this.client.textRenderer.getStringWidth(string)) / 2;
-                int k = this.client.window.getScaledHeight() - 35;
-                GlStateManager.pushMatrix();
-                GlStateManager.enableBlend();
-                GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                int j = (this.client.getWindow().getScaledWidth() - this.client.textRenderer.getStringWidth(string)) / 2;
+                int k = this.client.getWindow().getScaledHeight() - 35;
+                RenderSystem.pushMatrix();
+                RenderSystem.enableBlend();
+                RenderSystem.defaultBlendFunc();
                 this.client.textRenderer.drawWithShadow(string, j, k, 0xFFFFFF + (i << 24));
-                GlStateManager.disableBlend();
-                GlStateManager.popMatrix();
+                RenderSystem.disableBlend();
+                RenderSystem.popMatrix();
             }
         }
     }
@@ -128,14 +125,14 @@ implements SpectatorMenuCloseCallback {
         this.lastInteractionTime = 0L;
     }
 
-    public boolean method_1980() {
+    public boolean isOpen() {
         return this.spectatorMenu != null;
     }
 
-    public void method_1976(double d) {
-        int i = this.spectatorMenu.getSelectedSlot() + (int)d;
+    public void cycleSlot(double offset) {
+        int i = this.spectatorMenu.getSelectedSlot() + (int)offset;
         while (!(i < 0 || i > 8 || this.spectatorMenu.getCommand(i) != SpectatorMenu.BLANK_COMMAND && this.spectatorMenu.getCommand(i).isEnabled())) {
-            i = (int)((double)i + d);
+            i = (int)((double)i + offset);
         }
         if (i >= 0 && i <= 8) {
             this.spectatorMenu.useCommand(i);
@@ -143,9 +140,9 @@ implements SpectatorMenuCloseCallback {
         }
     }
 
-    public void method_1983() {
+    public void useSelectedCommand() {
         this.lastInteractionTime = Util.getMeasuringTimeMs();
-        if (this.method_1980()) {
+        if (this.isOpen()) {
             int i = this.spectatorMenu.getSelectedSlot();
             if (i != -1) {
                 this.spectatorMenu.useCommand(i);

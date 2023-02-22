@@ -57,7 +57,7 @@ implements Monster {
         this.goalSelector.add(5, new FlyRandomlyGoal(this));
         this.goalSelector.add(7, new LookAtTargetGoal(this));
         this.goalSelector.add(7, new ShootFireballGoal(this));
-        this.targetSelector.add(1, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, livingEntity -> Math.abs(livingEntity.y - this.y) <= 4.0));
+        this.targetSelector.add(1, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, livingEntity -> Math.abs(livingEntity.getY() - this.getY()) <= 4.0));
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -74,11 +74,8 @@ implements Monster {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-        if (!this.world.isClient && this.world.getDifficulty() == Difficulty.PEACEFUL) {
-            this.remove();
-        }
+    protected boolean method_23734() {
+        return true;
     }
 
     @Override
@@ -131,8 +128,8 @@ implements Monster {
         return 10.0f;
     }
 
-    public static boolean method_20675(EntityType<GhastEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return iWorld.getDifficulty() != Difficulty.PEACEFUL && random.nextInt(20) == 0 && GhastEntity.method_20636(entityType, iWorld, spawnType, blockPos, random);
+    public static boolean canSpawn(EntityType<GhastEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return world.getDifficulty() != Difficulty.PEACEFUL && random.nextInt(20) == 0 && GhastEntity.canMobSpawn(type, world, spawnType, pos, random);
     }
 
     @Override
@@ -196,15 +193,13 @@ implements Monster {
                 if (this.cooldown == 20) {
                     double e = 4.0;
                     Vec3d vec3d = this.ghast.getRotationVec(1.0f);
-                    double f = livingEntity.x - (this.ghast.x + vec3d.x * 4.0);
-                    double g = livingEntity.getBoundingBox().y1 + (double)(livingEntity.getHeight() / 2.0f) - (0.5 + this.ghast.y + (double)(this.ghast.getHeight() / 2.0f));
-                    double h = livingEntity.z - (this.ghast.z + vec3d.z * 4.0);
+                    double f = livingEntity.getX() - (this.ghast.getX() + vec3d.x * 4.0);
+                    double g = livingEntity.getBodyY(0.5) - (0.5 + this.ghast.getBodyY(0.5));
+                    double h = livingEntity.getZ() - (this.ghast.getZ() + vec3d.z * 4.0);
                     world.playLevelEvent(null, 1016, new BlockPos(this.ghast), 0);
                     FireballEntity fireballEntity = new FireballEntity(world, this.ghast, f, g, h);
                     fireballEntity.explosionPower = this.ghast.getFireballStrength();
-                    fireballEntity.x = this.ghast.x + vec3d.x * 4.0;
-                    fireballEntity.y = this.ghast.y + (double)(this.ghast.getHeight() / 2.0f) + 0.5;
-                    fireballEntity.z = this.ghast.z + vec3d.z * 4.0;
+                    fireballEntity.updatePosition(this.ghast.getX() + vec3d.x * 4.0, this.ghast.getBodyY(0.5) + 0.5, fireballEntity.getZ() + vec3d.z * 4.0);
                     world.spawnEntity(fireballEntity);
                     this.cooldown = -40;
                 }
@@ -233,14 +228,14 @@ implements Monster {
         public void tick() {
             if (this.ghast.getTarget() == null) {
                 Vec3d vec3d = this.ghast.getVelocity();
-                this.ghast.field_6283 = this.ghast.yaw = -((float)MathHelper.atan2(vec3d.x, vec3d.z)) * 57.295776f;
+                this.ghast.bodyYaw = this.ghast.yaw = -((float)MathHelper.atan2(vec3d.x, vec3d.z)) * 57.295776f;
             } else {
                 LivingEntity livingEntity = this.ghast.getTarget();
                 double d = 64.0;
                 if (livingEntity.squaredDistanceTo(this.ghast) < 4096.0) {
-                    double e = livingEntity.x - this.ghast.x;
-                    double f = livingEntity.z - this.ghast.z;
-                    this.ghast.field_6283 = this.ghast.yaw = -((float)MathHelper.atan2(e, f)) * 57.295776f;
+                    double e = livingEntity.getX() - this.ghast.getX();
+                    double f = livingEntity.getZ() - this.ghast.getZ();
+                    this.ghast.bodyYaw = this.ghast.yaw = -((float)MathHelper.atan2(e, f)) * 57.295776f;
                 }
             }
         }
@@ -263,8 +258,8 @@ implements Monster {
             if (!moveControl.isMoving()) {
                 return true;
             }
-            double d = moveControl.getTargetX() - this.ghast.x;
-            double g = d * d + (e = moveControl.getTargetY() - this.ghast.y) * e + (f = moveControl.getTargetZ() - this.ghast.z) * f;
+            double d = moveControl.getTargetX() - this.ghast.getX();
+            double g = d * d + (e = moveControl.getTargetY() - this.ghast.getY()) * e + (f = moveControl.getTargetZ() - this.ghast.getZ()) * f;
             return g < 1.0 || g > 3600.0;
         }
 
@@ -276,9 +271,9 @@ implements Monster {
         @Override
         public void start() {
             Random random = this.ghast.getRandom();
-            double d = this.ghast.x + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
-            double e = this.ghast.y + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
-            double f = this.ghast.z + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
+            double d = this.ghast.getX() + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
+            double e = this.ghast.getY() + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
+            double f = this.ghast.getZ() + (double)((random.nextFloat() * 2.0f - 1.0f) * 16.0f);
             this.ghast.getMoveControl().moveTo(d, e, f, 1.0);
         }
     }
@@ -300,7 +295,7 @@ implements Monster {
             }
             if (this.field_7276-- <= 0) {
                 this.field_7276 += this.ghast.getRandom().nextInt(5) + 2;
-                Vec3d vec3d = new Vec3d(this.targetX - this.ghast.x, this.targetY - this.ghast.y, this.targetZ - this.ghast.z);
+                Vec3d vec3d = new Vec3d(this.targetX - this.ghast.getX(), this.targetY - this.ghast.getY(), this.targetZ - this.ghast.getZ());
                 double d = vec3d.length();
                 if (this.method_7051(vec3d = vec3d.normalize(), MathHelper.ceil(d))) {
                     this.ghast.setVelocity(this.ghast.getVelocity().add(vec3d.multiply(0.1)));

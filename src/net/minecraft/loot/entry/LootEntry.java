@@ -14,19 +14,15 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.LootConditionConsumingBuilder;
 import net.minecraft.loot.condition.LootConditions;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.entry.AlternativeEntry;
 import net.minecraft.loot.entry.EntryCombiner;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public abstract class LootEntry
 implements EntryCombiner {
@@ -38,9 +34,9 @@ implements EntryCombiner {
         this.conditionPredicate = LootConditions.joinAnd(conditions);
     }
 
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
+    public void check(LootTableReporter lootTableReporter) {
         for (int i = 0; i < this.conditions.length; ++i) {
-            this.conditions[i].check(reporter.makeChild(".condition[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.conditions[i].check(lootTableReporter.makeChild(".condition[" + i + "]"));
         }
     }
 
@@ -72,13 +68,13 @@ implements EntryCombiner {
 
     public static abstract class Builder<T extends Builder<T>>
     implements LootConditionConsumingBuilder<T> {
-        private final List<LootCondition> children = Lists.newArrayList();
+        private final List<LootCondition> conditions = Lists.newArrayList();
 
         protected abstract T getThisBuilder();
 
         @Override
         public T withCondition(LootCondition.Builder builder) {
-            this.children.add(builder.build());
+            this.conditions.add(builder.build());
             return this.getThisBuilder();
         }
 
@@ -88,7 +84,7 @@ implements EntryCombiner {
         }
 
         protected LootCondition[] getConditions() {
-            return this.children.toArray(new LootCondition[0]);
+            return this.conditions.toArray(new LootCondition[0]);
         }
 
         public AlternativeEntry.Builder withChild(Builder<?> builder) {

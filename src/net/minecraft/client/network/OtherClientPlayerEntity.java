@@ -45,8 +45,8 @@ extends AbstractClientPlayerEntity {
     public void tick() {
         super.tick();
         this.lastLimbDistance = this.limbDistance;
-        double d = this.x - this.prevX;
-        double e = this.z - this.prevZ;
+        double d = this.getX() - this.prevX;
+        double e = this.getZ() - this.prevZ;
         float f = MathHelper.sqrt(d * d + e * e) * 4.0f;
         if (f > 1.0f) {
             f = 1.0f;
@@ -57,19 +57,19 @@ extends AbstractClientPlayerEntity {
 
     @Override
     public void tickMovement() {
-        if (this.field_6210 > 0) {
-            double d = this.x + (this.field_6224 - this.x) / (double)this.field_6210;
-            double e = this.y + (this.field_6245 - this.y) / (double)this.field_6210;
-            double f = this.z + (this.field_6263 - this.z) / (double)this.field_6210;
-            this.yaw = (float)((double)this.yaw + MathHelper.wrapDegrees(this.field_6284 - (double)this.yaw) / (double)this.field_6210);
-            this.pitch = (float)((double)this.pitch + (this.field_6221 - (double)this.pitch) / (double)this.field_6210);
-            --this.field_6210;
+        if (this.bodyTrackingIncrements > 0) {
+            double d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
+            double e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
+            double f = this.getZ() + (this.serverZ - this.getZ()) / (double)this.bodyTrackingIncrements;
+            this.yaw = (float)((double)this.yaw + MathHelper.wrapDegrees(this.serverYaw - (double)this.yaw) / (double)this.bodyTrackingIncrements);
+            this.pitch = (float)((double)this.pitch + (this.serverPitch - (double)this.pitch) / (double)this.bodyTrackingIncrements);
+            --this.bodyTrackingIncrements;
             this.updatePosition(d, e, f);
             this.setRotation(this.yaw, this.pitch);
         }
-        if (this.field_6265 > 0) {
-            this.headYaw = (float)((double)this.headYaw + MathHelper.wrapDegrees(this.field_6242 - (double)this.headYaw) / (double)this.field_6265);
-            --this.field_6265;
+        if (this.headTrackingIncrements > 0) {
+            this.headYaw = (float)((double)this.headYaw + MathHelper.wrapDegrees(this.serverHeadYaw - (double)this.headYaw) / (double)this.headTrackingIncrements);
+            --this.headTrackingIncrements;
         }
         this.field_7505 = this.field_7483;
         this.tickHandSwing();

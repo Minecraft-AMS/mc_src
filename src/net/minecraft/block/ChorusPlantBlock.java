@@ -9,16 +9,15 @@ import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ConnectingBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
-import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class ChorusPlantBlock
 extends ConnectingBlock {
@@ -54,14 +53,14 @@ extends ConnectingBlock {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!state.canPlaceAt(world, pos)) {
             world.breakBlock(pos, true);
         }
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.down());
         boolean bl = !world.getBlockState(pos.up()).isAir() && !blockState.isAir();
         for (Direction direction : Direction.Type.HORIZONTAL) {
@@ -77,11 +76,6 @@ extends ConnectingBlock {
         }
         Block block3 = blockState.getBlock();
         return block3 == this || block3 == Blocks.END_STONE;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

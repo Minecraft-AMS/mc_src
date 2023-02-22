@@ -16,6 +16,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
+import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnType;
@@ -52,10 +53,10 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class OcelotEntity
@@ -116,17 +117,17 @@ extends AnimalEntity {
         if (this.getMoveControl().isMoving()) {
             double d = this.getMoveControl().getSpeed();
             if (d == 0.6) {
-                this.setSneaking(true);
+                this.setPose(EntityPose.CROUCHING);
                 this.setSprinting(false);
             } else if (d == 1.33) {
-                this.setSneaking(false);
+                this.setPose(EntityPose.STANDING);
                 this.setSprinting(true);
             } else {
-                this.setSneaking(false);
+                this.setPose(EntityPose.STANDING);
                 this.setSprinting(false);
             }
         } else {
-            this.setSneaking(false);
+            this.setPose(EntityPose.STANDING);
             this.setSprinting(false);
         }
     }
@@ -141,10 +142,12 @@ extends AnimalEntity {
         super.initAttributes();
         this.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(10.0);
         this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.3f);
+        this.getAttributes().register(EntityAttributes.ATTACK_DAMAGE).setBaseValue(3.0);
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -168,9 +171,13 @@ extends AnimalEntity {
         return SoundEvents.ENTITY_OCELOT_DEATH;
     }
 
+    private float method_22329() {
+        return (float)this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).getValue();
+    }
+
     @Override
     public boolean tryAttack(Entity target) {
-        return target.damage(DamageSource.mob(this), 3.0f);
+        return target.damage(DamageSource.mob(this), this.method_22329());
     }
 
     @Override
@@ -222,7 +229,7 @@ extends AnimalEntity {
             double d = this.random.nextGaussian() * 0.02;
             double e = this.random.nextGaussian() * 0.02;
             double f = this.random.nextGaussian() * 0.02;
-            this.world.addParticle(particleEffect, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 0.5 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), d, e, f);
+            this.world.addParticle(particleEffect, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
         }
     }
 
@@ -246,14 +253,14 @@ extends AnimalEntity {
         return TAMING_INGREDIENT.test(stack);
     }
 
-    public static boolean method_20666(EntityType<OcelotEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
+    public static boolean canSpawn(EntityType<OcelotEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
         return random.nextInt(3) != 0;
     }
 
     @Override
-    public boolean canSpawn(CollisionView world) {
-        if (world.intersectsEntities(this) && !world.intersectsFluid(this.getBoundingBox())) {
-            BlockPos blockPos = new BlockPos(this.x, this.getBoundingBox().y1, this.z);
+    public boolean canSpawn(WorldView world) {
+        if (world.intersectsEntities(this) && !world.containsFluid(this.getBoundingBox())) {
+            BlockPos blockPos = new BlockPos(this);
             if (blockPos.getY() < world.getSeaLevel()) {
                 return false;
             }
@@ -266,23 +273,14 @@ extends AnimalEntity {
         return false;
     }
 
-    protected void spawnKittens() {
-        for (int i = 0; i < 2; ++i) {
-            OcelotEntity ocelotEntity = EntityType.OCELOT.create(this.world);
-            ocelotEntity.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, 0.0f);
-            ocelotEntity.setBreedingAge(-24000);
-            this.world.spawnEntity(ocelotEntity);
-        }
-    }
-
     @Override
     @Nullable
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        entityData = super.initialize(world, difficulty, spawnType, entityData, entityTag);
-        if (world.getRandom().nextInt(7) == 0) {
-            this.spawnKittens();
+        if (entityData == null) {
+            entityData = new PassiveEntity.EntityData();
+            ((PassiveEntity.EntityData)entityData).setBabyChance(1.0f);
         }
-        return entityData;
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     @Override

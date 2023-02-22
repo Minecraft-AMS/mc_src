@@ -8,14 +8,13 @@
 package net.minecraft.client.render.model;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.model.ModelBakeSettings;
+import net.minecraft.client.util.math.Rotation3;
 import net.minecraft.client.util.math.Vector3f;
-import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Quaternion;
 
@@ -59,41 +58,8 @@ public enum ModelRotation implements ModelBakeSettings
     }
 
     @Override
-    public ModelRotation getRotation() {
-        return this;
-    }
-
-    public Quaternion getQuaternion() {
-        return this.quaternion;
-    }
-
-    public Direction apply(Direction direction) {
-        int i;
-        Direction direction2 = direction;
-        for (i = 0; i < this.xRotations; ++i) {
-            direction2 = direction2.rotateClockwise(Direction.Axis.X);
-        }
-        if (direction2.getAxis() != Direction.Axis.Y) {
-            for (i = 0; i < this.yRotations; ++i) {
-                direction2 = direction2.rotateClockwise(Direction.Axis.Y);
-            }
-        }
-        return direction2;
-    }
-
-    public int method_4706(Direction direction, int i) {
-        int j = i;
-        if (direction.getAxis() == Direction.Axis.X) {
-            j = (j + this.xRotations) % 4;
-        }
-        Direction direction2 = direction;
-        for (int k = 0; k < this.xRotations; ++k) {
-            direction2 = direction2.rotateClockwise(Direction.Axis.X);
-        }
-        if (direction2.getAxis() == Direction.Axis.Y) {
-            j = (j + this.yRotations) % 4;
-        }
-        return j;
+    public Rotation3 getRotation() {
+        return new Rotation3(null, this.quaternion, null, null);
     }
 
     public static ModelRotation get(int x, int y) {
@@ -101,7 +67,7 @@ public enum ModelRotation implements ModelBakeSettings
     }
 
     static {
-        BY_INDEX = Arrays.stream(ModelRotation.values()).sorted(Comparator.comparingInt(modelRotation -> modelRotation.index)).collect(Collectors.toMap(modelRotation -> modelRotation.index, modelRotation -> modelRotation));
+        BY_INDEX = Arrays.stream(ModelRotation.values()).collect(Collectors.toMap(modelRotation -> modelRotation.index, modelRotation -> modelRotation));
     }
 }
 

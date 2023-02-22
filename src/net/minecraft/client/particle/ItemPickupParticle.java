@@ -7,16 +7,16 @@
  */
 package net.minecraft.client.particle;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferBuilderStorage;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -25,23 +25,22 @@ import net.minecraft.world.World;
 @Environment(value=EnvType.CLIENT)
 public class ItemPickupParticle
 extends Particle {
+    private final BufferBuilderStorage field_20944;
     private final Entity field_3823;
     private final Entity field_3821;
     private int field_3826;
-    private final int field_3825;
-    private final float field_3822;
-    private final EntityRenderDispatcher field_3824 = MinecraftClient.getInstance().getEntityRenderManager();
+    private final EntityRenderDispatcher field_3824;
 
-    public ItemPickupParticle(World world, Entity entity, Entity entity2, float f) {
-        this(world, entity, entity2, f, entity.getVelocity());
+    public ItemPickupParticle(EntityRenderDispatcher entityRenderDispatcher, BufferBuilderStorage bufferBuilderStorage, World world, Entity entity, Entity entity2) {
+        this(entityRenderDispatcher, bufferBuilderStorage, world, entity, entity2, entity.getVelocity());
     }
 
-    private ItemPickupParticle(World world, Entity entity, Entity entity2, float f, Vec3d vec3d) {
-        super(world, entity.x, entity.y, entity.z, vec3d.x, vec3d.y, vec3d.z);
+    private ItemPickupParticle(EntityRenderDispatcher entityRenderDispatcher, BufferBuilderStorage bufferBuilderStorage, World world, Entity entity, Entity entity2, Vec3d vec3d) {
+        super(world, entity.getX(), entity.getY(), entity.getZ(), vec3d.x, vec3d.y, vec3d.z);
+        this.field_20944 = bufferBuilderStorage;
         this.field_3823 = entity;
         this.field_3821 = entity2;
-        this.field_3825 = 3;
-        this.field_3822 = f;
+        this.field_3824 = entityRenderDispatcher;
     }
 
     @Override
@@ -50,31 +49,25 @@ extends Particle {
     }
 
     @Override
-    public void buildGeometry(BufferBuilder bufferBuilder, Camera camera, float tickDelta, float f, float g, float h, float i, float j) {
-        float k = ((float)this.field_3826 + tickDelta) / (float)this.field_3825;
-        k *= k;
-        double d = this.field_3823.x;
-        double e = this.field_3823.y;
-        double l = this.field_3823.z;
-        double m = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderX, this.field_3821.x);
-        double n = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderY, this.field_3821.y) + (double)this.field_3822;
-        double o = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderZ, this.field_3821.z);
-        double p = MathHelper.lerp((double)k, d, m);
-        double q = MathHelper.lerp((double)k, e, n);
-        double r = MathHelper.lerp((double)k, l, o);
-        int s = this.getColorMultiplier(tickDelta);
-        int t = s % 65536;
-        int u = s / 65536;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, t, u);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.enableLighting();
-        this.field_3824.render(this.field_3823, p -= cameraX, q -= cameraY, r -= cameraZ, this.field_3823.yaw, tickDelta, false);
+    public void buildGeometry(VertexConsumer vertexConsumer, Camera camera, float tickDelta) {
+        float f = ((float)this.field_3826 + tickDelta) / 3.0f;
+        f *= f;
+        double d = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderX, this.field_3821.getX());
+        double e = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderY, this.field_3821.getY()) + 0.5;
+        double g = MathHelper.lerp((double)tickDelta, this.field_3821.lastRenderZ, this.field_3821.getZ());
+        double h = MathHelper.lerp((double)f, this.field_3823.getX(), d);
+        double i = MathHelper.lerp((double)f, this.field_3823.getY(), e);
+        double j = MathHelper.lerp((double)f, this.field_3823.getZ(), g);
+        VertexConsumerProvider.Immediate immediate = this.field_20944.getEntityVertexConsumers();
+        Vec3d vec3d = camera.getPos();
+        this.field_3824.render(this.field_3823, h - vec3d.getX(), i - vec3d.getY(), j - vec3d.getZ(), this.field_3823.yaw, tickDelta, new MatrixStack(), immediate, this.field_3824.getLight(this.field_3823, tickDelta));
+        immediate.draw();
     }
 
     @Override
     public void tick() {
         ++this.field_3826;
-        if (this.field_3826 == this.field_3825) {
+        if (this.field_3826 == 3) {
             this.markDead();
         }
     }

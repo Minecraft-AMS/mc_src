@@ -22,12 +22,12 @@ extends BipedEntityRenderer<ZombiePigmanEntity, ZombieEntityModel<ZombiePigmanEn
     private static final Identifier SKIN = new Identifier("textures/entity/zombie_pigman.png");
 
     public ZombiePigmanEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new ZombieEntityModel(), 0.5f);
+        super(entityRenderDispatcher, new ZombieEntityModel(0.0f, false), 0.5f);
         this.addFeature(new ArmorBipedFeatureRenderer(this, new ZombieEntityModel(0.5f, true), new ZombieEntityModel(1.0f, true)));
     }
 
     @Override
-    protected Identifier getTexture(ZombiePigmanEntity zombiePigmanEntity) {
+    public Identifier getTexture(ZombiePigmanEntity zombiePigmanEntity) {
         return SKIN;
     }
 }

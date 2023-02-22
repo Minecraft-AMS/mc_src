@@ -5,6 +5,7 @@ package net.minecraft.util;
 
 import java.util.List;
 import java.util.Random;
+import net.minecraft.util.Util;
 
 public class WeightedPicker {
     public static int getWeightSum(List<? extends Entry> list) {
@@ -19,7 +20,7 @@ public class WeightedPicker {
 
     public static <T extends Entry> T getRandom(Random random, List<T> list, int weightSum) {
         if (weightSum <= 0) {
-            throw new IllegalArgumentException();
+            throw Util.throwOrPause(new IllegalArgumentException());
         }
         int i = random.nextInt(weightSum);
         return WeightedPicker.getAt(list, i);

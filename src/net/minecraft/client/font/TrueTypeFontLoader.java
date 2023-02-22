@@ -11,6 +11,9 @@
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
+ *  org.lwjgl.stb.STBTTFontinfo
+ *  org.lwjgl.stb.STBTruetype
+ *  org.lwjgl.system.MemoryUtil
  */
 package net.minecraft.client.font;
 
@@ -18,7 +21,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.mojang.blaze3d.platform.TextureUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import net.fabricmc.api.EnvType;
@@ -26,6 +28,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.FontLoader;
 import net.minecraft.client.font.TrueTypeFont;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
@@ -33,6 +36,9 @@ import net.minecraft.util.JsonHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.stb.STBTTFontinfo;
+import org.lwjgl.stb.STBTruetype;
+import org.lwjgl.system.MemoryUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class TrueTypeFontLoader
@@ -88,16 +94,26 @@ implements FontLoader {
     @Override
     @Nullable
     public Font load(ResourceManager manager) {
+        STBTTFontinfo sTBTTFontinfo = null;
+        ByteBuffer byteBuffer = null;
         try (Resource resource = manager.getResource(new Identifier(this.filename.getNamespace(), "font/" + this.filename.getPath()));){
-            LOGGER.info("Loading font");
-            ByteBuffer byteBuffer = TextureUtil.readResource(resource.getInputStream());
+            LOGGER.debug("Loading font {}", (Object)this.filename);
+            sTBTTFontinfo = STBTTFontinfo.malloc();
+            byteBuffer = TextureUtil.readResource(resource.getInputStream());
             byteBuffer.flip();
-            LOGGER.info("Reading font");
-            TrueTypeFont trueTypeFont = new TrueTypeFont(TrueTypeFont.getSTBTTFontInfo(byteBuffer), this.size, this.oversample, this.shiftX, this.shiftY, this.excludedCharacters);
+            LOGGER.debug("Reading font {}", (Object)this.filename);
+            if (!STBTruetype.stbtt_InitFont((STBTTFontinfo)sTBTTFontinfo, (ByteBuffer)byteBuffer)) {
+                throw new IOException("Invalid ttf");
+            }
+            TrueTypeFont trueTypeFont = new TrueTypeFont(byteBuffer, sTBTTFontinfo, this.size, this.oversample, this.shiftX, this.shiftY, this.excludedCharacters);
             return trueTypeFont;
         }
-        catch (IOException iOException) {
-            LOGGER.error("Couldn't load truetype font {}", (Object)this.filename, (Object)iOException);
+        catch (Exception exception) {
+            LOGGER.error("Couldn't load truetype font {}", (Object)this.filename, (Object)exception);
+            if (sTBTTFontinfo != null) {
+                sTBTTFontinfo.free();
+            }
+            MemoryUtil.memFree(byteBuffer);
             return null;
         }
     }

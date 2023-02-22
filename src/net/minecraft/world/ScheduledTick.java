@@ -39,17 +39,7 @@ public class ScheduledTick<T> {
     }
 
     public static <T> Comparator<ScheduledTick<T>> getComparator() {
-        return (scheduledTick, scheduledTick2) -> {
-            int i = Long.compare(scheduledTick.time, scheduledTick2.time);
-            if (i != 0) {
-                return i;
-            }
-            i = scheduledTick.priority.compareTo(scheduledTick2.priority);
-            if (i != 0) {
-                return i;
-            }
-            return Long.compare(scheduledTick.id, scheduledTick2.id);
-        };
+        return Comparator.comparingLong(scheduledTick -> scheduledTick.time).thenComparing(scheduledTick -> scheduledTick.priority).thenComparingLong(scheduledTick -> scheduledTick.id);
     }
 
     public String toString() {

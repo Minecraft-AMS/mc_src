@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonElement
@@ -12,7 +11,6 @@
 package net.minecraft.advancement.criterion;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
@@ -21,12 +19,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import net.minecraft.advancement.PlayerAdvancementTracker;
+import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.Criterion;
 import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.entity.Entity;
 import net.minecraft.predicate.NumberRange;
@@ -35,39 +29,12 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
 public class KilledByCrossbowCriterion
-implements Criterion<Conditions> {
+extends AbstractCriterion<Conditions> {
     private static final Identifier ID = new Identifier("killed_by_crossbow");
-    private final Map<PlayerAdvancementTracker, Handler> handlers = Maps.newHashMap();
 
     @Override
     public Identifier getId() {
         return ID;
-    }
-
-    @Override
-    public void beginTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler == null) {
-            handler = new Handler(manager);
-            this.handlers.put(manager, handler);
-        }
-        handler.add(conditionsContainer);
-    }
-
-    @Override
-    public void endTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler != null) {
-            handler.remove(conditionsContainer);
-            if (handler.isEmpty()) {
-                this.handlers.remove(manager);
-            }
-        }
-    }
-
-    @Override
-    public void endTracking(PlayerAdvancementTracker tracker) {
-        this.handlers.remove(tracker);
     }
 
     @Override
@@ -78,52 +45,12 @@ implements Criterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, Collection<Entity> victims, int amount) {
-        Handler handler = this.handlers.get(player.getAdvancementTracker());
-        if (handler != null) {
-            handler.trigger(player, victims, amount);
-        }
+        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(player, victims, amount));
     }
 
     @Override
     public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
         return this.conditionsFromJson(obj, context);
-    }
-
-    static class Handler {
-        private final PlayerAdvancementTracker manager;
-        private final Set<Criterion.ConditionsContainer<Conditions>> conditions = Sets.newHashSet();
-
-        public Handler(PlayerAdvancementTracker manager) {
-            this.manager = manager;
-        }
-
-        public boolean isEmpty() {
-            return this.conditions.isEmpty();
-        }
-
-        public void add(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.add(conditionsContainer);
-        }
-
-        public void remove(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.remove(conditionsContainer);
-        }
-
-        public void trigger(ServerPlayerEntity player, Collection<Entity> victims, int i) {
-            List list = null;
-            for (Criterion.ConditionsContainer<Conditions> conditionsContainer : this.conditions) {
-                if (!conditionsContainer.getConditions().matches(player, victims, i)) continue;
-                if (list == null) {
-                    list = Lists.newArrayList();
-                }
-                list.add(conditionsContainer);
-            }
-            if (list != null) {
-                for (Criterion.ConditionsContainer<Conditions> conditionsContainer : list) {
-                    conditionsContainer.apply(this.manager);
-                }
-            }
-        }
     }
 
     public static class Conditions
@@ -151,7 +78,7 @@ implements Criterion<Conditions> {
             return new Conditions(entityPredicates, intRange);
         }
 
-        public boolean matches(ServerPlayerEntity player, Collection<Entity> victims, int i) {
+        public boolean matches(ServerPlayerEntity player, Collection<Entity> victims, int amount) {
             if (this.victims.length > 0) {
                 ArrayList list = Lists.newArrayList(victims);
                 for (EntityPredicate entityPredicate : this.victims) {
@@ -173,7 +100,7 @@ implements Criterion<Conditions> {
                 for (Entity entity2 : victims) {
                     set.add(entity2.getType());
                 }
-                return this.uniqueEntityTypes.test(set.size()) && this.uniqueEntityTypes.test(i);
+                return this.uniqueEntityTypes.test(set.size()) && this.uniqueEntityTypes.test(amount);
             }
             return true;
         }

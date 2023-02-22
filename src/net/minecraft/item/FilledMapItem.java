@@ -34,6 +34,7 @@ import net.minecraft.item.NetworkSyncedItem;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Packet;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -101,8 +102,8 @@ extends NetworkSyncedItem {
         int i = 1 << state.scale;
         int j = state.xCenter;
         int k = state.zCenter;
-        int l = MathHelper.floor(entity.x - (double)j) / i + 64;
-        int m = MathHelper.floor(entity.z - (double)k) / i + 64;
+        int l = MathHelper.floor(entity.getX() - (double)j) / i + 64;
+        int m = MathHelper.floor(entity.getZ() - (double)k) / i + 64;
         int n = 128 / i;
         if (world.dimension.isNether()) {
             n /= 2;
@@ -212,20 +213,27 @@ extends NetworkSyncedItem {
         return biomes[x * scale + z * scale * 128 * scale].getDepth() >= 0.0f;
     }
 
-    public static void fillExplorationMap(World world, ItemStack map) {
-        MapState mapState = FilledMapItem.getOrCreateMapState(map, world);
+    public static void fillExplorationMap(ServerWorld serverWorld, ItemStack map) {
+        int m;
+        int l;
+        MapState mapState = FilledMapItem.getOrCreateMapState(map, serverWorld);
         if (mapState == null) {
             return;
         }
-        if (world.dimension.getType() != mapState.dimension) {
+        if (serverWorld.dimension.getType() != mapState.dimension) {
             return;
         }
         int i = 1 << mapState.scale;
         int j = mapState.xCenter;
         int k = mapState.zCenter;
-        Biome[] biomes = world.getChunkManager().getChunkGenerator().getBiomeSource().sampleBiomes((j / i - 64) * i, (k / i - 64) * i, 128 * i, 128 * i, false);
-        for (int l = 0; l < 128; ++l) {
-            for (int m = 0; m < 128; ++m) {
+        Biome[] biomes = new Biome[128 * i * 128 * i];
+        for (l = 0; l < 128 * i; ++l) {
+            for (m = 0; m < 128 * i; ++m) {
+                biomes[l * 128 * i + m] = serverWorld.getBiome(new BlockPos((j / i - 64) * i + m, 0, (k / i - 64) * i + l));
+            }
+        }
+        for (l = 0; l < 128; ++l) {
+            for (m = 0; m < 128; ++m) {
                 if (l <= 0 || m <= 0 || l >= 127 || m >= 127) continue;
                 Biome biome = biomes[l * i + m * i * 128 * i];
                 int n = 8;

@@ -12,7 +12,6 @@ import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.FluidStateImpl;
 import net.minecraft.item.Item;
@@ -25,8 +24,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class Fluid {
@@ -56,9 +55,6 @@ public abstract class Fluid {
         return this.defaultState;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    protected abstract RenderLayer getRenderLayer();
-
     public abstract Item getBucketItem();
 
     @Environment(value=EnvType.CLIENT)
@@ -81,7 +77,7 @@ public abstract class Fluid {
 
     protected abstract Vec3d getVelocity(BlockView var1, BlockPos var2, FluidState var3);
 
-    public abstract int getTickRate(CollisionView var1);
+    public abstract int getTickRate(WorldView var1);
 
     protected boolean hasRandomTicks() {
         return false;
@@ -95,7 +91,7 @@ public abstract class Fluid {
 
     public abstract float getHeight(FluidState var1, BlockView var2, BlockPos var3);
 
-    public abstract float method_20784(FluidState var1);
+    public abstract float getHeight(FluidState var1);
 
     protected abstract BlockState toBlockState(FluidState var1);
 

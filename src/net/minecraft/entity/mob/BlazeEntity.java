@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.FollowTargetGoal;
@@ -94,12 +88,6 @@ extends HostileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public int getLightmapCoordinates() {
-        return 0xF000F0;
-    }
-
-    @Override
     public float getBrightnessAtEyes() {
         return 1.0f;
     }
@@ -111,10 +99,10 @@ extends HostileEntity {
         }
         if (this.world.isClient) {
             if (this.random.nextInt(24) == 0 && !this.isSilent()) {
-                this.world.playSound(this.x + 0.5, this.y + 0.5, this.z + 0.5, SoundEvents.ENTITY_BLAZE_BURN, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
+                this.world.playSound(this.getX() + 0.5, this.getY() + 0.5, this.getZ() + 0.5, SoundEvents.ENTITY_BLAZE_BURN, this.getSoundCategory(), 1.0f + this.random.nextFloat(), this.random.nextFloat() * 0.7f + 0.3f, false);
             }
             for (int i = 0; i < 2; ++i) {
-                this.world.addParticle(ParticleTypes.LARGE_SMOKE, this.x + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.y + this.random.nextDouble() * (double)this.getHeight(), this.z + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), 0.0, 0.0, 0.0);
+                this.world.addParticle(ParticleTypes.LARGE_SMOKE, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), 0.0, 0.0, 0.0);
             }
         }
         super.tickMovement();
@@ -131,7 +119,7 @@ extends HostileEntity {
             this.field_7215 = 100;
             this.field_7214 = 0.5f + (float)this.random.nextGaussian() * 3.0f;
         }
-        if ((livingEntity = this.getTarget()) != null && livingEntity.y + (double)livingEntity.getStandingEyeHeight() > this.y + (double)this.getStandingEyeHeight() + (double)this.field_7214 && this.canTarget(livingEntity)) {
+        if ((livingEntity = this.getTarget()) != null && livingEntity.getEyeY() > this.getEyeY() + (double)this.field_7214 && this.canTarget(livingEntity)) {
             Vec3d vec3d = this.getVelocity();
             this.setVelocity(this.getVelocity().add(0.0, ((double)0.3f - vec3d.y) * (double)0.3f, 0.0));
             this.velocityDirty = true;
@@ -140,7 +128,8 @@ extends HostileEntity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -205,11 +194,11 @@ extends HostileEntity {
                     this.field_7217 = 20;
                     this.blaze.tryAttack(livingEntity);
                 }
-                this.blaze.getMoveControl().moveTo(livingEntity.x, livingEntity.y, livingEntity.z, 1.0);
+                this.blaze.getMoveControl().moveTo(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ(), 1.0);
             } else if (d < this.method_6995() * this.method_6995() && bl) {
-                double e = livingEntity.x - this.blaze.x;
-                double f = livingEntity.getBoundingBox().y1 + (double)(livingEntity.getHeight() / 2.0f) - (this.blaze.y + (double)(this.blaze.getHeight() / 2.0f));
-                double g = livingEntity.z - this.blaze.z;
+                double e = livingEntity.getX() - this.blaze.getX();
+                double f = livingEntity.getBodyY(0.5) - this.blaze.getBodyY(0.5);
+                double g = livingEntity.getZ() - this.blaze.getZ();
                 if (this.field_7217 <= 0) {
                     ++this.field_7218;
                     if (this.field_7218 == 1) {
@@ -227,14 +216,14 @@ extends HostileEntity {
                         this.blaze.world.playLevelEvent(null, 1018, new BlockPos(this.blaze), 0);
                         for (int i = 0; i < 1; ++i) {
                             SmallFireballEntity smallFireballEntity = new SmallFireballEntity(this.blaze.world, this.blaze, e + this.blaze.getRandom().nextGaussian() * (double)h, f, g + this.blaze.getRandom().nextGaussian() * (double)h);
-                            smallFireballEntity.y = this.blaze.y + (double)(this.blaze.getHeight() / 2.0f) + 0.5;
+                            smallFireballEntity.updatePosition(smallFireballEntity.getX(), this.blaze.getBodyY(0.5) + 0.5, smallFireballEntity.getZ());
                             this.blaze.world.spawnEntity(smallFireballEntity);
                         }
                     }
                 }
                 this.blaze.getLookControl().lookAt(livingEntity, 10.0f, 10.0f);
             } else if (this.field_19420 < 5) {
-                this.blaze.getMoveControl().moveTo(livingEntity.x, livingEntity.y, livingEntity.z, 1.0);
+                this.blaze.getMoveControl().moveTo(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ(), 1.0);
             }
             super.tick();
         }

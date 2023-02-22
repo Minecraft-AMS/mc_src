@@ -7,14 +7,17 @@
  */
 package net.minecraft.client.gui;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.Rotation3;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
@@ -22,7 +25,7 @@ public abstract class DrawableHelper {
     public static final Identifier BACKGROUND_LOCATION = new Identifier("textures/gui/options_background.png");
     public static final Identifier STATS_ICON_LOCATION = new Identifier("textures/gui/container/stats_icons.png");
     public static final Identifier GUI_ICONS_LOCATION = new Identifier("textures/gui/icons.png");
-    protected int blitOffset;
+    private int blitOffset;
 
     protected void hLine(int i, int j, int k, int l) {
         if (j < i) {
@@ -43,6 +46,10 @@ public abstract class DrawableHelper {
     }
 
     public static void fill(int x1, int y1, int x2, int y2, int color) {
+        DrawableHelper.fill(Rotation3.identity().getMatrix(), x1, y1, x2, y2, color);
+    }
+
+    public static void fill(Matrix4f matrix4f, int x1, int y1, int x2, int y2, int color) {
         int i;
         if (x1 < x2) {
             i = x1;
@@ -58,20 +65,19 @@ public abstract class DrawableHelper {
         float g = (float)(color >> 16 & 0xFF) / 255.0f;
         float h = (float)(color >> 8 & 0xFF) / 255.0f;
         float j = (float)(color & 0xFF) / 255.0f;
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GlStateManager.enableBlend();
-        GlStateManager.disableTexture();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.color4f(g, h, j, f);
-        bufferBuilder.begin(7, VertexFormats.POSITION);
-        bufferBuilder.vertex(x1, y2, 0.0).next();
-        bufferBuilder.vertex(x2, y2, 0.0).next();
-        bufferBuilder.vertex(x2, y1, 0.0).next();
-        bufferBuilder.vertex(x1, y1, 0.0).next();
-        tessellator.draw();
-        GlStateManager.enableTexture();
-        GlStateManager.disableBlend();
+        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
+        RenderSystem.enableBlend();
+        RenderSystem.disableTexture();
+        RenderSystem.defaultBlendFunc();
+        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+        bufferBuilder.vertex(matrix4f, x1, y2, 0.0f).color(g, h, j, f).next();
+        bufferBuilder.vertex(matrix4f, x2, y2, 0.0f).color(g, h, j, f).next();
+        bufferBuilder.vertex(matrix4f, x2, y1, 0.0f).color(g, h, j, f).next();
+        bufferBuilder.vertex(matrix4f, x1, y1, 0.0f).color(g, h, j, f).next();
+        bufferBuilder.end();
+        BufferRenderer.draw(bufferBuilder);
+        RenderSystem.enableTexture();
+        RenderSystem.disableBlend();
     }
 
     protected void fillGradient(int top, int left, int right, int bottom, int color1, int color2) {
@@ -83,11 +89,11 @@ public abstract class DrawableHelper {
         float k = (float)(color2 >> 16 & 0xFF) / 255.0f;
         float l = (float)(color2 >> 8 & 0xFF) / 255.0f;
         float m = (float)(color2 & 0xFF) / 255.0f;
-        GlStateManager.disableTexture();
-        GlStateManager.enableBlend();
-        GlStateManager.disableAlphaTest();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.shadeModel(7425);
+        RenderSystem.disableTexture();
+        RenderSystem.enableBlend();
+        RenderSystem.disableAlphaTest();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.shadeModel(7425);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
@@ -96,10 +102,10 @@ public abstract class DrawableHelper {
         bufferBuilder.vertex(top, bottom, this.blitOffset).color(k, l, m, j).next();
         bufferBuilder.vertex(right, bottom, this.blitOffset).color(k, l, m, j).next();
         tessellator.draw();
-        GlStateManager.shadeModel(7424);
-        GlStateManager.disableBlend();
-        GlStateManager.enableAlphaTest();
-        GlStateManager.enableTexture();
+        RenderSystem.shadeModel(7424);
+        RenderSystem.disableBlend();
+        RenderSystem.enableAlphaTest();
+        RenderSystem.enableTexture();
     }
 
     public void drawCenteredString(TextRenderer textRenderer, String str, int centerX, int y, int color) {
@@ -139,14 +145,23 @@ public abstract class DrawableHelper {
     }
 
     protected static void innerBlit(int xStart, int xEnd, int yStart, int yEnd, int z, float uStart, float uEnd, float vStart, float vEnd) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
+        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
         bufferBuilder.vertex(xStart, yEnd, z).texture(uStart, vEnd).next();
         bufferBuilder.vertex(xEnd, yEnd, z).texture(uEnd, vEnd).next();
         bufferBuilder.vertex(xEnd, yStart, z).texture(uEnd, vStart).next();
         bufferBuilder.vertex(xStart, yStart, z).texture(uStart, vStart).next();
-        tessellator.draw();
+        bufferBuilder.end();
+        RenderSystem.enableAlphaTest();
+        BufferRenderer.draw(bufferBuilder);
+    }
+
+    public int getBlitOffset() {
+        return this.blitOffset;
+    }
+
+    public void setBlitOffset(int i) {
+        this.blitOffset = i;
     }
 }
 

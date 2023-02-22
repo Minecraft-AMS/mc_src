@@ -34,6 +34,7 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.ParsableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -109,6 +110,53 @@ implements ParsableText {
             }).reduce((a, b) -> a.append(", ").append((Text)b)).orElse(new LiteralText(""));
         }
         return new LiteralText(Joiner.on((String)", ").join(stream.iterator()));
+    }
+
+    public static class StorageNbtText
+    extends NbtText {
+        private final Identifier id;
+
+        public StorageNbtText(String rawPath, boolean interpret, Identifier id) {
+            super(rawPath, interpret);
+            this.id = id;
+        }
+
+        public StorageNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath nbtPath, boolean interpret, Identifier id) {
+            super(rawPath, nbtPath, interpret);
+            this.id = id;
+        }
+
+        public Identifier method_23728() {
+            return this.id;
+        }
+
+        @Override
+        public Text copy() {
+            return new StorageNbtText(this.rawPath, this.path, this.interpret, this.id);
+        }
+
+        @Override
+        protected Stream<CompoundTag> toNbt(ServerCommandSource source) {
+            CompoundTag compoundTag = source.getMinecraftServer().getDataCommandStorage().get(this.id);
+            return Stream.of(compoundTag);
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (object instanceof StorageNbtText) {
+                StorageNbtText storageNbtText = (StorageNbtText)object;
+                return Objects.equals(this.id, storageNbtText.id) && Objects.equals(this.rawPath, storageNbtText.rawPath) && super.equals(object);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return "StorageNbtComponent{id='" + this.id + '\'' + "path='" + this.rawPath + '\'' + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+        }
     }
 
     public static class BlockNbtText

@@ -32,7 +32,7 @@ extends MobEntityRenderer<EndermiteEntity, EndermiteEntityModel<EndermiteEntity>
     }
 
     @Override
-    protected Identifier getTexture(EndermiteEntity endermiteEntity) {
+    public Identifier getTexture(EndermiteEntity endermiteEntity) {
         return SKIN;
     }
 
@@ -42,7 +42,7 @@ extends MobEntityRenderer<EndermiteEntity, EndermiteEntityModel<EndermiteEntity>
     }
 
     @Override
-    protected /* synthetic */ Identifier getTexture(Entity entity) {
+    public /* synthetic */ Identifier getTexture(Entity entity) {
         return this.getTexture((EndermiteEntity)entity);
     }
 }

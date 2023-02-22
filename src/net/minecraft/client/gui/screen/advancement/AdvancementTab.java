@@ -10,7 +10,7 @@
 package net.minecraft.client.gui.screen.advancement;
 
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -32,71 +32,77 @@ import org.jetbrains.annotations.Nullable;
 public class AdvancementTab
 extends DrawableHelper {
     private final MinecraftClient client;
-    private final AdvancementsScreen field_2687;
+    private final AdvancementsScreen screen;
     private final AdvancementTabType type;
-    private final int field_2681;
+    private final int index;
     private final Advancement root;
-    private final AdvancementDisplay field_2695;
-    private final ItemStack field_2697;
-    private final String field_2686;
-    private final AdvancementWidget field_2696;
+    private final AdvancementDisplay display;
+    private final ItemStack icon;
+    private final String title;
+    private final AdvancementWidget rootWidget;
     private final Map<Advancement, AdvancementWidget> widgets = Maps.newLinkedHashMap();
-    private double field_2690;
-    private double field_2689;
-    private int field_2694 = Integer.MAX_VALUE;
-    private int field_2693 = Integer.MAX_VALUE;
-    private int field_2692 = Integer.MIN_VALUE;
-    private int field_2691 = Integer.MIN_VALUE;
-    private float field_2688;
-    private boolean field_2683;
+    private double originX;
+    private double originY;
+    private int minPanX = Integer.MAX_VALUE;
+    private int minPanY = Integer.MAX_VALUE;
+    private int maxPanX = Integer.MIN_VALUE;
+    private int maxPanY = Integer.MIN_VALUE;
+    private float alpha;
+    private boolean initialized;
 
     public AdvancementTab(MinecraftClient client, AdvancementsScreen screen, AdvancementTabType type, int index, Advancement root, AdvancementDisplay display) {
         this.client = client;
-        this.field_2687 = screen;
+        this.screen = screen;
         this.type = type;
-        this.field_2681 = index;
+        this.index = index;
         this.root = root;
-        this.field_2695 = display;
-        this.field_2697 = display.getIcon();
-        this.field_2686 = display.getTitle().asFormattedString();
-        this.field_2696 = new AdvancementWidget(this, client, root, display);
-        this.method_2319(this.field_2696, root);
+        this.display = display;
+        this.icon = display.getIcon();
+        this.title = display.getTitle().asFormattedString();
+        this.rootWidget = new AdvancementWidget(this, client, root, display);
+        this.addWidget(this.rootWidget, root);
     }
 
-    public Advancement method_2307() {
+    public Advancement getRoot() {
         return this.root;
     }
 
-    public String method_2309() {
-        return this.field_2686;
+    public String getTitle() {
+        return this.title;
     }
 
     public void drawBackground(int x, int y, boolean selected) {
-        this.type.drawBackground(this, x, y, selected, this.field_2681);
+        this.type.drawBackground(this, x, y, selected, this.index);
     }
 
     public void drawIcon(int x, int y, ItemRenderer itemRenderer) {
-        this.type.drawIcon(x, y, this.field_2681, itemRenderer, this.field_2697);
+        this.type.drawIcon(x, y, this.index, itemRenderer, this.icon);
     }
 
-    public void method_2310() {
-        if (!this.field_2683) {
-            this.field_2690 = 117 - (this.field_2692 + this.field_2694) / 2;
-            this.field_2689 = 56 - (this.field_2691 + this.field_2693) / 2;
-            this.field_2683 = true;
+    public void render() {
+        if (!this.initialized) {
+            this.originX = 117 - (this.maxPanX + this.minPanX) / 2;
+            this.originY = 56 - (this.maxPanY + this.minPanY) / 2;
+            this.initialized = true;
         }
-        GlStateManager.depthFunc(518);
-        AdvancementTab.fill(0, 0, 234, 113, -16777216);
-        GlStateManager.depthFunc(515);
-        Identifier identifier = this.field_2695.getBackground();
+        RenderSystem.pushMatrix();
+        RenderSystem.enableDepthTest();
+        RenderSystem.translatef(0.0f, 0.0f, 950.0f);
+        RenderSystem.colorMask(false, false, false, false);
+        AdvancementTab.fill(4680, 2260, -4680, -2260, -16777216);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.translatef(0.0f, 0.0f, -950.0f);
+        RenderSystem.depthFunc(518);
+        AdvancementTab.fill(234, 113, 0, 0, -16777216);
+        RenderSystem.depthFunc(515);
+        Identifier identifier = this.display.getBackground();
         if (identifier != null) {
             this.client.getTextureManager().bindTexture(identifier);
         } else {
             this.client.getTextureManager().bindTexture(TextureManager.MISSING_IDENTIFIER);
         }
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        int i = MathHelper.floor(this.field_2690);
-        int j = MathHelper.floor(this.field_2689);
+        int i = MathHelper.floor(this.originX);
+        int j = MathHelper.floor(this.originY);
         int k = i % 16;
         int l = j % 16;
         for (int m = -1; m <= 15; ++m) {
@@ -104,32 +110,40 @@ extends DrawableHelper {
                 AdvancementTab.blit(k + 16 * m, l + 16 * n, 0.0f, 0.0f, 16, 16, 16, 16);
             }
         }
-        this.field_2696.method_2323(i, j, true);
-        this.field_2696.method_2323(i, j, false);
-        this.field_2696.method_2325(i, j);
+        this.rootWidget.renderLines(i, j, true);
+        this.rootWidget.renderLines(i, j, false);
+        this.rootWidget.renderWidgets(i, j);
+        RenderSystem.depthFunc(518);
+        RenderSystem.translatef(0.0f, 0.0f, -950.0f);
+        RenderSystem.colorMask(false, false, false, false);
+        AdvancementTab.fill(4680, 2260, -4680, -2260, -16777216);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.translatef(0.0f, 0.0f, 950.0f);
+        RenderSystem.depthFunc(515);
+        RenderSystem.popMatrix();
     }
 
-    public void method_2314(int i, int j, int k, int l) {
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(0.0f, 0.0f, 200.0f);
-        AdvancementTab.fill(0, 0, 234, 113, MathHelper.floor(this.field_2688 * 255.0f) << 24);
+    public void drawWidgetTooltip(int mouseX, int mouseY, int x, int y) {
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(0.0f, 0.0f, 200.0f);
+        AdvancementTab.fill(0, 0, 234, 113, MathHelper.floor(this.alpha * 255.0f) << 24);
         boolean bl = false;
-        int m = MathHelper.floor(this.field_2690);
-        int n = MathHelper.floor(this.field_2689);
-        if (i > 0 && i < 234 && j > 0 && j < 113) {
+        int i = MathHelper.floor(this.originX);
+        int j = MathHelper.floor(this.originY);
+        if (mouseX > 0 && mouseX < 234 && mouseY > 0 && mouseY < 113) {
             for (AdvancementWidget advancementWidget : this.widgets.values()) {
-                if (!advancementWidget.method_2329(m, n, i, j)) continue;
+                if (!advancementWidget.shouldRender(i, j, mouseX, mouseY)) continue;
                 bl = true;
-                advancementWidget.method_2331(m, n, this.field_2688, k, l);
+                advancementWidget.drawTooltip(i, j, this.alpha, x, y);
                 break;
             }
         }
-        GlStateManager.popMatrix();
-        this.field_2688 = bl ? MathHelper.clamp(this.field_2688 + 0.02f, 0.0f, 0.3f) : MathHelper.clamp(this.field_2688 - 0.04f, 0.0f, 1.0f);
+        RenderSystem.popMatrix();
+        this.alpha = bl ? MathHelper.clamp(this.alpha + 0.02f, 0.0f, 0.3f) : MathHelper.clamp(this.alpha - 0.04f, 0.0f, 1.0f);
     }
 
-    public boolean method_2316(int i, int j, double d, double e) {
-        return this.type.method_2303(i, j, this.field_2681, d, e);
+    public boolean isClickOnTab(int screenX, int screenY, double mouseX, double mouseY) {
+        return this.type.isClickOnTab(screenX, screenY, this.index, mouseX, mouseY);
     }
 
     @Nullable
@@ -138,8 +152,8 @@ extends DrawableHelper {
             return null;
         }
         for (AdvancementTabType advancementTabType : AdvancementTabType.values()) {
-            if (index >= advancementTabType.method_2304()) {
-                index -= advancementTabType.method_2304();
+            if (index >= advancementTabType.getTabCount()) {
+                index -= advancementTabType.getTabCount();
                 continue;
             }
             return new AdvancementTab(minecraft, screen, advancementTabType, index, root, root.getDisplay());
@@ -147,35 +161,35 @@ extends DrawableHelper {
         return null;
     }
 
-    public void method_2313(double d, double e) {
-        if (this.field_2692 - this.field_2694 > 234) {
-            this.field_2690 = MathHelper.clamp(this.field_2690 + d, (double)(-(this.field_2692 - 234)), 0.0);
+    public void move(double offsetX, double offsetY) {
+        if (this.maxPanX - this.minPanX > 234) {
+            this.originX = MathHelper.clamp(this.originX + offsetX, (double)(-(this.maxPanX - 234)), 0.0);
         }
-        if (this.field_2691 - this.field_2693 > 113) {
-            this.field_2689 = MathHelper.clamp(this.field_2689 + e, (double)(-(this.field_2691 - 113)), 0.0);
+        if (this.maxPanY - this.minPanY > 113) {
+            this.originY = MathHelper.clamp(this.originY + offsetY, (double)(-(this.maxPanY - 113)), 0.0);
         }
     }
 
-    public void method_2318(Advancement advancement) {
+    public void addAdvancement(Advancement advancement) {
         if (advancement.getDisplay() == null) {
             return;
         }
         AdvancementWidget advancementWidget = new AdvancementWidget(this, this.client, advancement, advancement.getDisplay());
-        this.method_2319(advancementWidget, advancement);
+        this.addWidget(advancementWidget, advancement);
     }
 
-    private void method_2319(AdvancementWidget advancementWidget, Advancement advancement) {
-        this.widgets.put(advancement, advancementWidget);
-        int i = advancementWidget.method_2327();
+    private void addWidget(AdvancementWidget widget, Advancement advancement) {
+        this.widgets.put(advancement, widget);
+        int i = widget.getX();
         int j = i + 28;
-        int k = advancementWidget.method_2326();
+        int k = widget.getY();
         int l = k + 27;
-        this.field_2694 = Math.min(this.field_2694, i);
-        this.field_2692 = Math.max(this.field_2692, j);
-        this.field_2693 = Math.min(this.field_2693, k);
-        this.field_2691 = Math.max(this.field_2691, l);
-        for (AdvancementWidget advancementWidget2 : this.widgets.values()) {
-            advancementWidget2.method_2332();
+        this.minPanX = Math.min(this.minPanX, i);
+        this.maxPanX = Math.max(this.maxPanX, j);
+        this.minPanY = Math.min(this.minPanY, k);
+        this.maxPanY = Math.max(this.maxPanY, l);
+        for (AdvancementWidget advancementWidget : this.widgets.values()) {
+            advancementWidget.addToTree();
         }
     }
 
@@ -184,8 +198,8 @@ extends DrawableHelper {
         return this.widgets.get(advancement);
     }
 
-    public AdvancementsScreen method_2312() {
-        return this.field_2687;
+    public AdvancementsScreen getScreen() {
+        return this.screen;
     }
 }
 

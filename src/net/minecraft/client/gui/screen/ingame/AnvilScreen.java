@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -43,7 +43,7 @@ implements ContainerListener {
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;
         this.nameField = new TextFieldWidget(this.font, i + 62, j + 24, 103, 12, I18n.translate("container.repair", new Object[0]));
-        this.nameField.method_1856(false);
+        this.nameField.setFocusUnlocked(false);
         this.nameField.changeFocus(true);
         this.nameField.setEditableColor(-1);
         this.nameField.setUneditableColor(-1);
@@ -74,7 +74,7 @@ implements ContainerListener {
         if (keyCode == 256) {
             this.minecraft.player.closeContainer();
         }
-        if (this.nameField.keyPressed(keyCode, scanCode, modifiers) || this.nameField.method_20315()) {
+        if (this.nameField.keyPressed(keyCode, scanCode, modifiers) || this.nameField.isActive()) {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -82,8 +82,7 @@ implements ContainerListener {
 
     @Override
     protected void drawForeground(int mouseX, int mouseY) {
-        GlStateManager.disableLighting();
-        GlStateManager.disableBlend();
+        RenderSystem.disableBlend();
         this.font.draw(this.title.asFormattedString(), 60.0f, 6.0f, 0x404040);
         int i = ((AnvilContainer)this.container).getLevelCost();
         if (i > 0) {
@@ -105,7 +104,6 @@ implements ContainerListener {
                 this.font.drawWithShadow(string, k, 69.0f, j);
             }
         }
-        GlStateManager.enableLighting();
     }
 
     private void onRenamed(String name) {
@@ -125,15 +123,14 @@ implements ContainerListener {
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         super.render(mouseX, mouseY, delta);
-        this.drawMouseoverTooltip(mouseX, mouseY);
-        GlStateManager.disableLighting();
-        GlStateManager.disableBlend();
+        RenderSystem.disableBlend();
         this.nameField.render(mouseX, mouseY, delta);
+        this.drawMouseoverTooltip(mouseX, mouseY);
     }
 
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(BG_TEX);
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;

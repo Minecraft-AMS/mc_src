@@ -7,14 +7,14 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.WolfCollarFeatureRenderer;
 import net.minecraft.client.render.entity.model.WolfEntityModel;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.util.Identifier;
 
@@ -36,16 +36,19 @@ extends MobEntityRenderer<WolfEntity, WolfEntityModel<WolfEntity>> {
     }
 
     @Override
-    public void render(WolfEntity wolfEntity, double d, double e, double f, float g, float h) {
+    public void render(WolfEntity wolfEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         if (wolfEntity.isFurWet()) {
-            float i = wolfEntity.getBrightnessAtEyes() * wolfEntity.getFurWetBrightnessMultiplier(h);
-            GlStateManager.color3f(i, i, i);
+            float h = wolfEntity.getBrightnessAtEyes() * wolfEntity.getFurWetBrightnessMultiplier(g);
+            ((WolfEntityModel)this.model).setColorMultiplier(h, h, h);
         }
-        super.render(wolfEntity, d, e, f, g, h);
+        super.render(wolfEntity, f, g, matrixStack, vertexConsumerProvider, i);
+        if (wolfEntity.isFurWet()) {
+            ((WolfEntityModel)this.model).setColorMultiplier(1.0f, 1.0f, 1.0f);
+        }
     }
 
     @Override
-    protected Identifier getTexture(WolfEntity wolfEntity) {
+    public Identifier getTexture(WolfEntity wolfEntity) {
         if (wolfEntity.isTamed()) {
             return TAMED_SKIN;
         }
@@ -53,11 +56,6 @@ extends MobEntityRenderer<WolfEntity, WolfEntityModel<WolfEntity>> {
             return ANGRY_SKIN;
         }
         return WILD_SKIN;
-    }
-
-    @Override
-    protected /* synthetic */ float getAnimationProgress(LivingEntity entity, float tickDelta) {
-        return this.getAnimationProgress((WolfEntity)entity, tickDelta);
     }
 }
 

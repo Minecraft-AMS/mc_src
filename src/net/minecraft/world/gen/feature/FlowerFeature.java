@@ -14,28 +14,34 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.FeatureConfig;
 
-public abstract class FlowerFeature
-extends Feature<DefaultFeatureConfig> {
-    public FlowerFeature(Function<Dynamic<?>, ? extends DefaultFeatureConfig> configFactory) {
-        super(configFactory, false);
+public abstract class FlowerFeature<U extends FeatureConfig>
+extends Feature<U> {
+    public FlowerFeature(Function<Dynamic<?>, ? extends U> function) {
+        super(function);
     }
 
     @Override
-    public boolean generate(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, BlockPos blockPos, DefaultFeatureConfig defaultFeatureConfig) {
-        BlockState blockState = this.getFlowerToPlace(random, blockPos);
+    public boolean generate(IWorld world, ChunkGenerator<? extends ChunkGeneratorConfig> generator, Random random, BlockPos pos, U config) {
+        BlockState blockState = this.getFlowerToPlace(random, pos, config);
         int i = 0;
-        for (int j = 0; j < 64; ++j) {
-            BlockPos blockPos2 = blockPos.add(random.nextInt(8) - random.nextInt(8), random.nextInt(4) - random.nextInt(4), random.nextInt(8) - random.nextInt(8));
-            if (!iWorld.isAir(blockPos2) || blockPos2.getY() >= 255 || !blockState.canPlaceAt(iWorld, blockPos2)) continue;
-            iWorld.setBlockState(blockPos2, blockState, 2);
+        for (int j = 0; j < this.method_23370(config); ++j) {
+            BlockPos blockPos = this.method_23371(random, pos, config);
+            if (!world.isAir(blockPos) || blockPos.getY() >= 255 || !blockState.canPlaceAt(world, blockPos) || !this.method_23369(world, blockPos, config)) continue;
+            world.setBlockState(blockPos, blockState, 2);
             ++i;
         }
         return i > 0;
     }
 
-    public abstract BlockState getFlowerToPlace(Random var1, BlockPos var2);
+    public abstract boolean method_23369(IWorld var1, BlockPos var2, U var3);
+
+    public abstract int method_23370(U var1);
+
+    public abstract BlockPos method_23371(Random var1, BlockPos var2, U var3);
+
+    public abstract BlockState getFlowerToPlace(Random var1, BlockPos var2, U var3);
 }
 

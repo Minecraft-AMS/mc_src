@@ -1,4 +1,4 @@
-Summary for ./1.14.4.jar
+Summary for ./1.15.2.jar
 Decompiled with CFR 0.152
 
 
@@ -9,10 +9,32 @@ create()
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 4 blocks at once
 
 
+net.minecraft.client.texture.NativeImage
+----------------------------
+
+getBytes()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
 net.minecraft.client.util.RawTextureDataLoader
 ----------------------------
 
 loadRawTextureData(net.minecraft.resource.ResourceManager net.minecraft.util.Identifier )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.client.resource.Format4ResourcePack
+----------------------------
+
+openCroppedStream(java.io.InputStream java.io.InputStream int int int int int )
+  Loose catch block
+method_24199(java.io.InputStream )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+cropLeftChestTexture(java.io.InputStream )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+cropRightChestTexture(java.io.InputStream )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+cropSingleChestTexture(java.io.InputStream )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
 
 

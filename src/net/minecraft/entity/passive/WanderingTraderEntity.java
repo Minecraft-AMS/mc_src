@@ -76,7 +76,7 @@ extends AbstractTraderEntity {
         this.goalSelector.add(1, new EscapeDangerGoal(this, 0.5));
         this.goalSelector.add(1, new LookAtCustomerGoal(this));
         this.goalSelector.add(2, new WanderToTargetGoal(this, 2.0, 0.35));
-        this.goalSelector.add(4, new GoToWalkTargetGoal(this, 1.0));
+        this.goalSelector.add(4, new GoToWalkTargetGoal(this, 0.35));
         this.goalSelector.add(8, new WanderAroundFarGoal(this, 0.35));
         this.goalSelector.add(9, new GoToEntityGoal(this, PlayerEntity.class, 3.0f, 1.0f));
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
@@ -165,7 +165,7 @@ extends AbstractTraderEntity {
     protected void afterUsing(TradeOffer offer) {
         if (offer.shouldRewardPlayerExperience()) {
             int i = 3 + this.random.nextInt(4);
-            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.x, this.y + 0.5, this.z, i));
+            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.getX(), this.getY() + 0.5, this.getZ(), i));
         }
     }
 
@@ -202,7 +202,7 @@ extends AbstractTraderEntity {
     }
 
     @Override
-    public SoundEvent method_18010() {
+    public SoundEvent getYesSound() {
         return SoundEvents.ENTITY_WANDERING_TRADER_YES;
     }
 
@@ -267,8 +267,8 @@ extends AbstractTraderEntity {
             BlockPos blockPos = this.trader.getWanderTarget();
             if (blockPos != null && WanderingTraderEntity.this.navigation.isIdle()) {
                 if (this.isTooFarFrom(blockPos, 10.0)) {
-                    Vec3d vec3d = new Vec3d((double)blockPos.getX() - this.trader.x, (double)blockPos.getY() - this.trader.y, (double)blockPos.getZ() - this.trader.z).normalize();
-                    Vec3d vec3d2 = vec3d.multiply(10.0).add(this.trader.x, this.trader.y, this.trader.z);
+                    Vec3d vec3d = new Vec3d((double)blockPos.getX() - this.trader.getX(), (double)blockPos.getY() - this.trader.getY(), (double)blockPos.getZ() - this.trader.getZ()).normalize();
+                    Vec3d vec3d2 = vec3d.multiply(10.0).add(this.trader.getX(), this.trader.getY(), this.trader.getZ());
                     WanderingTraderEntity.this.navigation.startMovingTo(vec3d2.x, vec3d2.y, vec3d2.z, this.speed);
                 } else {
                     WanderingTraderEntity.this.navigation.startMovingTo(blockPos.getX(), blockPos.getY(), blockPos.getZ(), this.speed);

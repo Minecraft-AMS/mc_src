@@ -2,12 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.storage;
 
-import com.google.common.collect.Lists;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -16,110 +16,196 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.List;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.InflaterInputStream;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.storage.ChunkStreamVersion;
+import net.minecraft.world.storage.SectorMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class RegionFile
 implements AutoCloseable {
-    private static final byte[] EMPTY_SECTOR = new byte[4096];
-    private final RandomAccessFile file;
-    private final int[] offsets = new int[1024];
-    private final int[] chunkTimestamps = new int[1024];
-    private final List<Boolean> sectorFree;
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static final ByteBuffer ZERO = ByteBuffer.allocateDirect(1);
+    private final FileChannel channel;
+    private final Path directory;
+    private final ChunkStreamVersion outputChunkStreamVersion;
+    private final ByteBuffer header = ByteBuffer.allocateDirect(8192);
+    private final IntBuffer sectorData;
+    private final IntBuffer saveTimes;
+    private final SectorMap sectors = new SectorMap();
 
-    public RegionFile(File file) throws IOException {
-        int k;
-        int j;
-        int i;
-        this.file = new RandomAccessFile(file, "rw");
-        if (this.file.length() < 4096L) {
-            this.file.write(EMPTY_SECTOR);
-            this.file.write(EMPTY_SECTOR);
+    public RegionFile(File file, File directory) throws IOException {
+        this(file.toPath(), directory.toPath(), ChunkStreamVersion.DEFLATE);
+    }
+
+    public RegionFile(Path file, Path directory, ChunkStreamVersion chunkStreamVersion) throws IOException {
+        this.outputChunkStreamVersion = chunkStreamVersion;
+        if (!Files.isDirectory(directory, new LinkOption[0])) {
+            throw new IllegalArgumentException("Expected directory, got " + directory.toAbsolutePath());
         }
-        if ((this.file.length() & 0xFFFL) != 0L) {
-            i = 0;
-            while ((long)i < (this.file.length() & 0xFFFL)) {
-                this.file.write(0);
-                ++i;
+        this.directory = directory;
+        this.sectorData = this.header.asIntBuffer();
+        this.sectorData.limit(1024);
+        this.header.position(4096);
+        this.saveTimes = this.header.asIntBuffer();
+        this.channel = FileChannel.open(file, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        this.sectors.allocate(0, 2);
+        this.header.position(0);
+        int i = this.channel.read(this.header, 0L);
+        if (i != -1) {
+            if (i != 8192) {
+                LOGGER.warn("Region file {} has truncated header: {}", (Object)file, (Object)i);
+            }
+            for (int j = 0; j < 1024; ++j) {
+                int k = this.sectorData.get(j);
+                if (k == 0) continue;
+                int l = RegionFile.getOffset(k);
+                int m = RegionFile.getSize(k);
+                this.sectors.allocate(l, m);
             }
         }
-        i = (int)this.file.length() / 4096;
-        this.sectorFree = Lists.newArrayListWithCapacity((int)i);
-        for (j = 0; j < i; ++j) {
-            this.sectorFree.add(true);
-        }
-        this.sectorFree.set(0, false);
-        this.sectorFree.set(1, false);
-        this.file.seek(0L);
-        for (j = 0; j < 1024; ++j) {
-            this.offsets[j] = k = this.file.readInt();
-            if (k == 0 || (k >> 8) + (k & 0xFF) > this.sectorFree.size()) continue;
-            for (int l = 0; l < (k & 0xFF); ++l) {
-                this.sectorFree.set((k >> 8) + l, false);
-            }
-        }
-        for (j = 0; j < 1024; ++j) {
-            this.chunkTimestamps[j] = k = this.file.readInt();
-        }
+    }
+
+    private Path getExternalChunkPath(ChunkPos chunkPos) {
+        String string = "c." + chunkPos.x + "." + chunkPos.z + ".mcc";
+        return this.directory.resolve(string);
     }
 
     @Nullable
-    public synchronized DataInputStream getChunkDataInputStream(ChunkPos pos) throws IOException {
+    public synchronized DataInputStream getChunkInputStream(ChunkPos pos) throws IOException {
         int i = this.getSectorData(pos);
         if (i == 0) {
             return null;
         }
-        int j = i >> 8;
-        int k = i & 0xFF;
-        if (j + k > this.sectorFree.size()) {
+        int j = RegionFile.getOffset(i);
+        int k = RegionFile.getSize(i);
+        int l = k * 4096;
+        ByteBuffer byteBuffer = ByteBuffer.allocate(l);
+        this.channel.read(byteBuffer, j * 4096);
+        byteBuffer.flip();
+        if (byteBuffer.remaining() < 5) {
+            LOGGER.error("Chunk {} header is truncated: expected {} but read {}", (Object)pos, (Object)l, (Object)byteBuffer.remaining());
             return null;
         }
-        this.file.seek(j * 4096);
-        int l = this.file.readInt();
-        if (l > 4096 * k) {
+        int m = byteBuffer.getInt();
+        byte b = byteBuffer.get();
+        if (m == 0) {
+            LOGGER.warn("Chunk {} is allocated, but stream is missing", (Object)pos);
             return null;
         }
-        if (l <= 0) {
+        int n = m - 1;
+        if (RegionFile.hasChunkStreamVersionId(b)) {
+            if (n != 0) {
+                LOGGER.warn("Chunk has both internal and external streams");
+            }
+            return this.method_22408(pos, RegionFile.getChunkStreamVersionId(b));
+        }
+        if (n > byteBuffer.remaining()) {
+            LOGGER.error("Chunk {} stream is truncated: expected {} but read {}", (Object)pos, (Object)n, (Object)byteBuffer.remaining());
             return null;
         }
-        byte b = this.file.readByte();
-        if (b == 1) {
-            byte[] bs = new byte[l - 1];
-            this.file.read(bs);
-            return new DataInputStream(new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(bs))));
+        if (n < 0) {
+            LOGGER.error("Declared size {} of chunk {} is negative", (Object)m, (Object)pos);
+            return null;
         }
-        if (b == 2) {
-            byte[] bs = new byte[l - 1];
-            this.file.read(bs);
-            return new DataInputStream(new BufferedInputStream(new InflaterInputStream(new ByteArrayInputStream(bs))));
-        }
-        return null;
+        return this.method_22409(pos, b, RegionFile.getInputStream(byteBuffer, n));
     }
 
-    public boolean isChunkPresent(ChunkPos pos) {
+    private static boolean hasChunkStreamVersionId(byte b) {
+        return (b & 0x80) != 0;
+    }
+
+    private static byte getChunkStreamVersionId(byte b) {
+        return (byte)(b & 0xFFFFFF7F);
+    }
+
+    @Nullable
+    private DataInputStream method_22409(ChunkPos chunkPos, byte b, InputStream inputStream) throws IOException {
+        ChunkStreamVersion chunkStreamVersion = ChunkStreamVersion.get(b);
+        if (chunkStreamVersion == null) {
+            LOGGER.error("Chunk {} has invalid chunk stream version {}", (Object)chunkPos, (Object)b);
+            return null;
+        }
+        return new DataInputStream(new BufferedInputStream(chunkStreamVersion.wrap(inputStream)));
+    }
+
+    @Nullable
+    private DataInputStream method_22408(ChunkPos chunkPos, byte b) throws IOException {
+        Path path = this.getExternalChunkPath(chunkPos);
+        if (!Files.isRegularFile(path, new LinkOption[0])) {
+            LOGGER.error("External chunk path {} is not file", (Object)path);
+            return null;
+        }
+        return this.method_22409(chunkPos, b, Files.newInputStream(path, new OpenOption[0]));
+    }
+
+    private static ByteArrayInputStream getInputStream(ByteBuffer buffer, int length) {
+        return new ByteArrayInputStream(buffer.array(), buffer.position(), length);
+    }
+
+    private int packSectorData(int offset, int size) {
+        return offset << 8 | size;
+    }
+
+    private static int getSize(int sectorData) {
+        return sectorData & 0xFF;
+    }
+
+    private static int getOffset(int sectorData) {
+        return sectorData >> 8;
+    }
+
+    private static int getSectorCount(int byteCount) {
+        return (byteCount + 4096 - 1) / 4096;
+    }
+
+    public boolean isChunkValid(ChunkPos pos) {
         int i = this.getSectorData(pos);
         if (i == 0) {
             return false;
         }
-        int j = i >> 8;
-        int k = i & 0xFF;
-        if (j + k > this.sectorFree.size()) {
-            return false;
-        }
+        int j = RegionFile.getOffset(i);
+        int k = RegionFile.getSize(i);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(5);
         try {
-            this.file.seek(j * 4096);
-            int l = this.file.readInt();
-            if (l > 4096 * k) {
+            this.channel.read(byteBuffer, j * 4096);
+            byteBuffer.flip();
+            if (byteBuffer.remaining() != 5) {
                 return false;
             }
-            if (l <= 0) {
-                return false;
+            int l = byteBuffer.getInt();
+            byte b = byteBuffer.get();
+            if (RegionFile.hasChunkStreamVersionId(b)) {
+                if (!ChunkStreamVersion.exists(RegionFile.getChunkStreamVersionId(b))) {
+                    return false;
+                }
+                if (!Files.isRegularFile(this.getExternalChunkPath(pos), new LinkOption[0])) {
+                    return false;
+                }
+            } else {
+                if (!ChunkStreamVersion.exists(b)) {
+                    return false;
+                }
+                if (l == 0) {
+                    return false;
+                }
+                int m = l - 1;
+                if (m < 0 || m > 4096 * k) {
+                    return false;
+                }
             }
         }
         catch (IOException iOException) {
@@ -128,96 +214,111 @@ implements AutoCloseable {
         return true;
     }
 
-    public DataOutputStream getChunkDataOutputStream(ChunkPos chunkPos) {
-        return new DataOutputStream(new BufferedOutputStream(new DeflaterOutputStream(new ChunkBuffer(chunkPos))));
+    public DataOutputStream getChunkOutputStream(ChunkPos pos) throws IOException {
+        return new DataOutputStream(new BufferedOutputStream(this.outputChunkStreamVersion.wrap(new ChunkBuffer(pos))));
     }
 
-    protected synchronized void write(ChunkPos chunkPos, byte[] bs, int i) throws IOException {
-        int j = this.getSectorData(chunkPos);
-        int k = j >> 8;
-        int l = j & 0xFF;
-        int m = (i + 5) / 4096 + 1;
-        if (m >= 256) {
-            throw new RuntimeException(String.format("Too big to save, %d > 1048576", i));
-        }
-        if (k != 0 && l == m) {
-            this.write(k, bs, i);
+    protected synchronized void writeChunk(ChunkPos pos, ByteBuffer byteBuffer) throws IOException {
+        OutputAction outputAction;
+        int o;
+        int i = RegionFile.getIndex(pos);
+        int j = this.sectorData.get(i);
+        int k = RegionFile.getOffset(j);
+        int l = RegionFile.getSize(j);
+        int m = byteBuffer.remaining();
+        int n = RegionFile.getSectorCount(m);
+        if (n >= 256) {
+            Path path = this.getExternalChunkPath(pos);
+            LOGGER.warn("Saving oversized chunk {} ({} bytes} to external file {}", (Object)pos, (Object)m, (Object)path);
+            n = 1;
+            o = this.sectors.allocate(n);
+            outputAction = this.writeSafely(path, byteBuffer);
+            ByteBuffer byteBuffer2 = this.method_22406();
+            this.channel.write(byteBuffer2, o * 4096);
         } else {
-            int p;
-            int n;
-            for (n = 0; n < l; ++n) {
-                this.sectorFree.set(k + n, true);
-            }
-            n = this.sectorFree.indexOf(true);
-            int o = 0;
-            if (n != -1) {
-                for (p = n; p < this.sectorFree.size(); ++p) {
-                    if (o != 0) {
-                        o = this.sectorFree.get(p).booleanValue() ? ++o : 0;
-                    } else if (this.sectorFree.get(p).booleanValue()) {
-                        n = p;
-                        o = 1;
-                    }
-                    if (o >= m) break;
-                }
-            }
-            if (o >= m) {
-                k = n;
-                this.setOffset(chunkPos, k << 8 | m);
-                for (p = 0; p < m; ++p) {
-                    this.sectorFree.set(k + p, false);
-                }
-                this.write(k, bs, i);
-            } else {
-                this.file.seek(this.file.length());
-                k = this.sectorFree.size();
-                for (p = 0; p < m; ++p) {
-                    this.file.write(EMPTY_SECTOR);
-                    this.sectorFree.add(false);
-                }
-                this.write(k, bs, i);
-                this.setOffset(chunkPos, k << 8 | m);
-            }
+            o = this.sectors.allocate(n);
+            outputAction = () -> Files.deleteIfExists(this.getExternalChunkPath(pos));
+            this.channel.write(byteBuffer, o * 4096);
         }
-        this.setTimestamp(chunkPos, (int)(Util.getEpochTimeMs() / 1000L));
+        int p = (int)(Util.getEpochTimeMs() / 1000L);
+        this.sectorData.put(i, this.packSectorData(o, n));
+        this.saveTimes.put(i, p);
+        this.writeHeader();
+        outputAction.run();
+        if (k != 0) {
+            this.sectors.free(k, l);
+        }
     }
 
-    private void write(int sectorNumber, byte[] data, int i) throws IOException {
-        this.file.seek(sectorNumber * 4096);
-        this.file.writeInt(i + 1);
-        this.file.writeByte(2);
-        this.file.write(data, 0, i);
+    private ByteBuffer method_22406() {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(5);
+        byteBuffer.putInt(1);
+        byteBuffer.put((byte)(this.outputChunkStreamVersion.getId() | 0x80));
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
+    private OutputAction writeSafely(Path path, ByteBuffer byteBuffer) throws IOException {
+        Path path2 = Files.createTempFile(this.directory, "tmp", null, new FileAttribute[0]);
+        try (FileChannel fileChannel = FileChannel.open(path2, StandardOpenOption.CREATE, StandardOpenOption.WRITE);){
+            byteBuffer.position(5);
+            fileChannel.write(byteBuffer);
+        }
+        return () -> Files.move(path2, path, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private void writeHeader() throws IOException {
+        this.header.position(0);
+        this.channel.write(this.header, 0L);
     }
 
     private int getSectorData(ChunkPos pos) {
-        return this.offsets[this.getIndex(pos)];
+        return this.sectorData.get(RegionFile.getIndex(pos));
     }
 
     public boolean hasChunk(ChunkPos pos) {
         return this.getSectorData(pos) != 0;
     }
 
-    private void setOffset(ChunkPos chunkPos, int i) throws IOException {
-        int j = this.getIndex(chunkPos);
-        this.offsets[j] = i;
-        this.file.seek(j * 4);
-        this.file.writeInt(i);
-    }
-
-    private int getIndex(ChunkPos pos) {
+    private static int getIndex(ChunkPos pos) {
         return pos.getRegionRelativeX() + pos.getRegionRelativeZ() * 32;
     }
 
-    private void setTimestamp(ChunkPos chunkPos, int i) throws IOException {
-        int j = this.getIndex(chunkPos);
-        this.chunkTimestamps[j] = i;
-        this.file.seek(4096 + j * 4);
-        this.file.writeInt(i);
-    }
-
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     @Override
     public void close() throws IOException {
-        this.file.close();
+        try {
+            this.fillLastSector();
+        }
+        finally {
+            try {
+                this.writeHeader();
+            }
+            finally {
+                try {
+                    this.channel.force(true);
+                }
+                finally {
+                    this.channel.close();
+                }
+            }
+        }
+    }
+
+    private void fillLastSector() throws IOException {
+        int j;
+        int i = (int)this.channel.size();
+        if (i != (j = RegionFile.getSectorCount(i) * 4096)) {
+            ByteBuffer byteBuffer = ZERO.duplicate();
+            byteBuffer.position(0);
+            this.channel.write(byteBuffer, j - 1);
+        }
+    }
+
+    static interface OutputAction {
+        public void run() throws IOException;
     }
 
     class ChunkBuffer
@@ -226,12 +327,19 @@ implements AutoCloseable {
 
         public ChunkBuffer(ChunkPos chunkPos) {
             super(8096);
+            super.write(0);
+            super.write(0);
+            super.write(0);
+            super.write(0);
+            super.write(RegionFile.this.outputChunkStreamVersion.getId());
             this.pos = chunkPos;
         }
 
         @Override
         public void close() throws IOException {
-            RegionFile.this.write(this.pos, this.buf, this.count);
+            ByteBuffer byteBuffer = ByteBuffer.wrap(this.buf, 0, this.count);
+            byteBuffer.putInt(0, this.count - 5 + 1);
+            RegionFile.this.writeChunk(this.pos, byteBuffer);
         }
     }
 }

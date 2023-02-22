@@ -168,7 +168,7 @@ NameableContainerFactory {
     }
 
     @Override
-    protected void method_7525() {
+    protected void applySlowdown() {
         float f = 0.98f;
         if (this.lootTableId == null) {
             int i = 15 - Container.calculateComparatorOutput(this);

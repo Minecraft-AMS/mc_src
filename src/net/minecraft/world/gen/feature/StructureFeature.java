@@ -26,11 +26,13 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import org.apache.logging.log4j.LogManager;
@@ -42,7 +44,12 @@ extends Feature<C> {
     private static final Logger LOGGER = LogManager.getLogger();
 
     public StructureFeature(Function<Dynamic<?>, ? extends C> configFactory) {
-        super(configFactory, false);
+        super(configFactory);
+    }
+
+    @Override
+    public ConfiguredFeature<C, ? extends StructureFeature<C>> configure(C config) {
+        return new ConfiguredFeature<C, StructureFeature>(this, config);
     }
 
     @Override
@@ -59,7 +66,7 @@ extends Feature<C> {
             ChunkPos chunkPos = new ChunkPos(long_);
             StructureStart structureStart = world.getChunk(chunkPos.x, chunkPos.z).getStructureStart(this.getName());
             if (structureStart == null || structureStart == StructureStart.DEFAULT) continue;
-            structureStart.generateStructure(world, random, new BlockBox(k, l, k + 15, l + 15), new ChunkPos(i, j));
+            structureStart.generateStructure(world, generator, random, new BlockBox(k, l, k + 15, l + 15), new ChunkPos(i, j));
             bl = true;
         }
         return bl;
@@ -140,7 +147,7 @@ extends Feature<C> {
         return new ChunkPos(i + k, j + l);
     }
 
-    public abstract boolean shouldStartAt(ChunkGenerator<?> var1, Random var2, int var3, int var4);
+    public abstract boolean shouldStartAt(BiomeAccess var1, ChunkGenerator<?> var2, Random var3, int var4, int var5, Biome var6);
 
     public abstract StructureStartFactory getStructureStartFactory();
 
@@ -149,7 +156,7 @@ extends Feature<C> {
     public abstract int getRadius();
 
     public static interface StructureStartFactory {
-        public StructureStart create(StructureFeature<?> var1, int var2, int var3, Biome var4, BlockBox var5, int var6, long var7);
+        public StructureStart create(StructureFeature<?> var1, int var2, int var3, BlockBox var4, int var5, long var6);
     }
 }
 

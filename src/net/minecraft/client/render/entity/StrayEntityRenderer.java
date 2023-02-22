@@ -27,7 +27,7 @@ extends SkeletonEntityRenderer {
     }
 
     @Override
-    protected Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
+    public Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
         return SKIN;
     }
 }

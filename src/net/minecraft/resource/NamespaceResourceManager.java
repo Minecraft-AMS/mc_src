@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -10,9 +11,11 @@
  */
 package net.minecraft.resource;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -38,12 +41,13 @@ implements ResourceManager {
     private static final Logger LOGGER = LogManager.getLogger();
     protected final List<ResourcePack> packList = Lists.newArrayList();
     private final ResourceType type;
+    private final String namespace;
 
-    public NamespaceResourceManager(ResourceType type) {
+    public NamespaceResourceManager(ResourceType type, String namespace) {
         this.type = type;
+        this.namespace = namespace;
     }
 
-    @Override
     public void addPack(ResourcePack pack) {
         this.packList.add(pack);
     }
@@ -51,7 +55,7 @@ implements ResourceManager {
     @Override
     @Environment(value=EnvType.CLIENT)
     public Set<String> getAllNamespaces() {
-        return Collections.emptySet();
+        return ImmutableSet.of((Object)this.namespace);
     }
 
     @Override
@@ -123,7 +127,7 @@ implements ResourceManager {
     public Collection<Identifier> findResources(String resourceType, Predicate<String> pathPredicate) {
         ArrayList list = Lists.newArrayList();
         for (ResourcePack resourcePack : this.packList) {
-            list.addAll(resourcePack.findResources(this.type, resourceType, Integer.MAX_VALUE, pathPredicate));
+            list.addAll(resourcePack.findResources(this.type, this.namespace, resourceType, Integer.MAX_VALUE, pathPredicate));
         }
         Collections.sort(list);
         return list;
@@ -134,13 +138,12 @@ implements ResourceManager {
     }
 
     static class DebugInputStream
-    extends InputStream {
-        private final InputStream parent;
+    extends FilterInputStream {
         private final String leakMessage;
         private boolean closed;
 
         public DebugInputStream(InputStream parent, Identifier id, String packName) {
-            this.parent = parent;
+            super(parent);
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             new Exception().printStackTrace(new PrintStream(byteArrayOutputStream));
             this.leakMessage = "Leaked resource: '" + id + "' loaded from pack: '" + packName + "'\n" + byteArrayOutputStream;
@@ -148,7 +151,7 @@ implements ResourceManager {
 
         @Override
         public void close() throws IOException {
-            this.parent.close();
+            super.close();
             this.closed = true;
         }
 
@@ -157,11 +160,6 @@ implements ResourceManager {
                 LOGGER.warn(this.leakMessage);
             }
             super.finalize();
-        }
-
-        @Override
-        public int read() throws IOException {
-            return this.parent.read();
         }
     }
 }

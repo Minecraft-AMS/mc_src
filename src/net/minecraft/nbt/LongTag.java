@@ -9,18 +9,51 @@ import java.io.IOException;
 import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 public class LongTag
 extends AbstractNumberTag {
-    private long value;
+    public static final TagReader<LongTag> READER = new TagReader<LongTag>(){
 
-    LongTag() {
+        @Override
+        public LongTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(128L);
+            return LongTag.of(dataInput.readLong());
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "LONG";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Long";
+        }
+
+        @Override
+        public boolean isImmutable() {
+            return true;
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    private final long value;
+
+    private LongTag(long value) {
+        this.value = value;
     }
 
-    public LongTag(long l) {
-        this.value = l;
+    public static LongTag of(long value) {
+        if (value >= -128L && value <= 1024L) {
+            return Cache.VALUES[(int)value + 128];
+        }
+        return new LongTag(value);
     }
 
     @Override
@@ -29,14 +62,12 @@ extends AbstractNumberTag {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(128L);
-        this.value = input.readLong();
-    }
-
-    @Override
     public byte getType() {
         return 4;
+    }
+
+    public TagReader<LongTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -46,7 +77,7 @@ extends AbstractNumberTag {
 
     @Override
     public LongTag copy() {
-        return new LongTag(this.value);
+        return this;
     }
 
     public boolean equals(Object o) {
@@ -104,6 +135,16 @@ extends AbstractNumberTag {
     @Override
     public /* synthetic */ Tag copy() {
         return this.copy();
+    }
+
+    static class Cache {
+        static final LongTag[] VALUES = new LongTag[1153];
+
+        static {
+            for (int i = 0; i < VALUES.length; ++i) {
+                Cache.VALUES[i] = new LongTag(-128 + i);
+            }
+        }
     }
 }
 

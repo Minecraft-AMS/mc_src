@@ -24,7 +24,7 @@ extends AbstractZombieModel<GiantEntity> {
     }
 
     @Override
-    public boolean method_17790(GiantEntity giantEntity) {
+    public boolean isAttacking(GiantEntity giantEntity) {
         return false;
     }
 }

@@ -26,7 +26,6 @@ import net.minecraft.potion.Potions;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
@@ -51,9 +50,6 @@ extends Item {
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
         PlayerEntity playerEntity;
         PlayerEntity playerEntity2 = playerEntity = user instanceof PlayerEntity ? (PlayerEntity)user : null;
-        if (playerEntity == null || !playerEntity.abilities.creativeMode) {
-            stack.decrement(1);
-        }
         if (playerEntity instanceof ServerPlayerEntity) {
             Criterions.CONSUME_ITEM.trigger((ServerPlayerEntity)playerEntity, stack);
         }
@@ -69,6 +65,9 @@ extends Item {
         }
         if (playerEntity != null) {
             playerEntity.incrementStat(Stats.USED.getOrCreateStat(this));
+            if (!playerEntity.abilities.creativeMode) {
+                stack.decrement(1);
+            }
         }
         if (playerEntity == null || !playerEntity.abilities.creativeMode) {
             if (stack.isEmpty()) {
@@ -94,7 +93,7 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         user.setCurrentHand(hand);
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, user.getStackInHand(hand));
+        return TypedActionResult.success(user.getStackInHand(hand));
     }
 
     @Override
@@ -109,7 +108,6 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint(ItemStack stack) {
         return super.hasEnchantmentGlint(stack) || !PotionUtil.getPotionEffects(stack).isEmpty();
     }

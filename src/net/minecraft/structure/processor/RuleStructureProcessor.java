@@ -25,7 +25,7 @@ import net.minecraft.structure.processor.StructureProcessorRule;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class RuleStructureProcessor
@@ -42,9 +42,9 @@ extends StructureProcessor {
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(CollisionView world, BlockPos pos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData placementData) {
+    public Structure.StructureBlockInfo process(WorldView worldView, BlockPos pos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData placementData) {
         Random random = new Random(MathHelper.hashCode(structureBlockInfo2.pos));
-        BlockState blockState = world.getBlockState(structureBlockInfo2.pos);
+        BlockState blockState = worldView.getBlockState(structureBlockInfo2.pos);
         for (StructureProcessorRule structureProcessorRule : this.rules) {
             if (!structureProcessorRule.test(structureBlockInfo2.state, blockState, random)) continue;
             return new Structure.StructureBlockInfo(structureBlockInfo2.pos, structureProcessorRule.getOutputState(), structureProcessorRule.getTag());

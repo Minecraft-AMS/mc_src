@@ -23,8 +23,8 @@ implements Tag {
     public abstract boolean addTag(int var1, Tag var2);
 
     @Override
-    public /* synthetic */ Object remove(int i) {
-        return this.remove(i);
+    public /* synthetic */ Object remove(int index) {
+        return this.remove(index);
     }
 
     @Override

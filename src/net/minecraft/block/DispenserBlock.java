@@ -27,11 +27,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -45,8 +47,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.PositionImpl;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class DispenserBlock
 extends BlockWithEntity {
@@ -64,14 +66,14 @@ extends BlockWithEntity {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 4;
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof DispenserBlockEntity) {
@@ -82,7 +84,7 @@ extends BlockWithEntity {
                 player.incrementStat(Stats.INSPECT_DISPENSER);
             }
         }
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     protected void dispense(World world, BlockPos pos) {
@@ -117,10 +119,8 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (!world.isClient) {
-            this.dispense(world, pos);
-        }
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        this.dispense(world, pos);
     }
 
     @Override

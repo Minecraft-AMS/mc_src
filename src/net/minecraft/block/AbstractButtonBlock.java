@@ -16,20 +16,22 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractButtonBlock
@@ -60,7 +62,7 @@ extends WallMountedBlock {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return this.wooden ? 30 : 20;
     }
 
@@ -97,15 +99,19 @@ extends WallMountedBlock {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (state.get(POWERED).booleanValue()) {
-            return true;
+            return ActionResult.CONSUME;
         }
-        world.setBlockState(pos, (BlockState)state.with(POWERED, true), 3);
+        this.method_21845(state, world, pos);
         this.playClickSound(player, world, pos, true);
-        this.updateNeighbors(state, world, pos);
-        world.getBlockTickScheduler().schedule(pos, this, this.getTickRate(world));
-        return true;
+        return ActionResult.SUCCESS;
+    }
+
+    public void method_21845(BlockState blockState, World world, BlockPos blockPos) {
+        world.setBlockState(blockPos, (BlockState)blockState.with(POWERED, true), 3);
+        this.updateNeighbors(blockState, world, blockPos);
+        world.getBlockTickScheduler().schedule(blockPos, this, this.getTickRate(world));
     }
 
     protected void playClickSound(@Nullable PlayerEntity player, IWorld world, BlockPos pos, boolean powered) {
@@ -144,8 +150,8 @@ extends WallMountedBlock {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (world.isClient || !state.get(POWERED).booleanValue()) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        if (!state.get(POWERED).booleanValue()) {
             return;
         }
         if (this.wooden) {

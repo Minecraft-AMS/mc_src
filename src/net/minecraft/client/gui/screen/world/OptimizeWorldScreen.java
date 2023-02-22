@@ -28,7 +28,7 @@ import net.minecraft.world.updater.WorldUpdater;
 @Environment(value=EnvType.CLIENT)
 public class OptimizeWorldScreen
 extends Screen {
-    private static final Object2IntMap<DimensionType> field_3232 = (Object2IntMap)Util.make(new Object2IntOpenCustomHashMap(Util.identityHashStrategy()), object2IntOpenCustomHashMap -> {
+    private static final Object2IntMap<DimensionType> DIMENSION_COLORS = (Object2IntMap)Util.make(new Object2IntOpenCustomHashMap(Util.identityHashStrategy()), object2IntOpenCustomHashMap -> {
         object2IntOpenCustomHashMap.put((Object)DimensionType.OVERWORLD, -13408734);
         object2IntOpenCustomHashMap.put((Object)DimensionType.THE_NETHER, -10075085);
         object2IntOpenCustomHashMap.put((Object)DimensionType.THE_END, -8943531);
@@ -37,9 +37,9 @@ extends Screen {
     private final BooleanConsumer callback;
     private final WorldUpdater updater;
 
-    public OptimizeWorldScreen(BooleanConsumer booleanConsumer, String string, LevelStorage levelStorage, boolean bl) {
+    public OptimizeWorldScreen(BooleanConsumer callback, String string, LevelStorage levelStorage, boolean bl) {
         super(new TranslatableText("optimizeWorld.title", levelStorage.getLevelProperties(string).getLevelName()));
-        this.callback = booleanConsumer;
+        this.callback = callback;
         this.updater = new WorldUpdater(string, levelStorage, levelStorage.getLevelProperties(string), bl);
     }
 
@@ -81,7 +81,7 @@ extends Screen {
             int m = 0;
             for (DimensionType dimensionType : DimensionType.getAll()) {
                 int n = MathHelper.floor(this.updater.getProgress(dimensionType) * (float)(j - i));
-                OptimizeWorldScreen.fill(i + m, k, i + m + n, l, field_3232.getInt((Object)dimensionType));
+                OptimizeWorldScreen.fill(i + m, k, i + m + n, l, DIMENSION_COLORS.getInt((Object)dimensionType));
                 m += n;
             }
             int o = this.updater.getUpgradedChunkCount() + this.updater.getSkippedChunkCount();

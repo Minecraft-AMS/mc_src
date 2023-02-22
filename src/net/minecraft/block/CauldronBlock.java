@@ -27,6 +27,7 @@ import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BooleanBiFunction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -54,11 +55,6 @@ extends Block {
     }
 
     @Override
-    public boolean isOpaque(BlockState state) {
-        return false;
-    }
-
-    @Override
     public VoxelShape getRayTraceShape(BlockState state, BlockView view, BlockPos pos) {
         return RAY_TRACE_SHAPE;
     }
@@ -67,18 +63,18 @@ extends Block {
     public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         int i = state.get(LEVEL);
         float f = (float)pos.getY() + (6.0f + (float)(3 * i)) / 16.0f;
-        if (!world.isClient && entity.isOnFire() && i > 0 && entity.getBoundingBox().y1 <= (double)f) {
+        if (!world.isClient && entity.isOnFire() && i > 0 && entity.getY() <= (double)f) {
             entity.extinguish();
             this.setLevel(world, pos, state, i - 1);
         }
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         DyeableItem dyeableItem;
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.isEmpty()) {
-            return true;
+            return ActionResult.PASS;
         }
         int i = state.get(LEVEL);
         Item item = itemStack.getItem();
@@ -91,7 +87,7 @@ extends Block {
                 this.setLevel(world, pos, state, 3);
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (item == Items.BUCKET) {
             if (i == 3 && !world.isClient) {
@@ -107,7 +103,7 @@ extends Block {
                 this.setLevel(world, pos, state, 0);
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0f, 1.0f);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (item == Items.GLASS_BOTTLE) {
             if (i > 0 && !world.isClient) {
@@ -126,7 +122,7 @@ extends Block {
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 this.setLevel(world, pos, state, i - 1);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (item == Items.POTION && PotionUtil.getPotion(itemStack) == Potions.WATER) {
             if (i < 3 && !world.isClient) {
@@ -141,13 +137,13 @@ extends Block {
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 this.setLevel(world, pos, state, i + 1);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (i > 0 && item instanceof DyeableItem && (dyeableItem = (DyeableItem)((Object)item)).hasColor(itemStack) && !world.isClient) {
             dyeableItem.removeColor(itemStack);
             this.setLevel(world, pos, state, i - 1);
             player.incrementStat(Stats.CLEAN_ARMOR);
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (i > 0 && item instanceof BannerItem) {
             if (BannerBlockEntity.getPatternCount(itemStack) > 0 && !world.isClient) {
@@ -167,7 +163,7 @@ extends Block {
                     ((ServerPlayerEntity)player).openContainer(player.playerContainer);
                 }
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (i > 0 && item instanceof BlockItem) {
             Block block = ((BlockItem)item).getBlock();
@@ -179,10 +175,11 @@ extends Block {
                 player.setStackInHand(hand, itemStack3);
                 this.setLevel(world, pos, state, i - 1);
                 player.incrementStat(Stats.CLEAN_SHULKER_BOX);
+                return ActionResult.SUCCESS;
             }
-            return true;
+            return ActionResult.CONSUME;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     public void setLevel(World world, BlockPos pos, BlockState state, int level) {

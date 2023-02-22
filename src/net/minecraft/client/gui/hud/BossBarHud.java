@@ -9,7 +9,7 @@
 package net.minecraft.client.gui.hud;
 
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
@@ -36,12 +36,12 @@ extends DrawableHelper {
         if (this.bossBars.isEmpty()) {
             return;
         }
-        int i = this.client.window.getScaledWidth();
+        int i = this.client.getWindow().getScaledWidth();
         int j = 12;
         for (ClientBossBar clientBossBar : this.bossBars.values()) {
             int k = i / 2 - 91;
             int l = j;
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             this.client.getTextureManager().bindTexture(BAR_TEX);
             this.renderBossBar(k, l, clientBossBar);
             String string = clientBossBar.getName().asFormattedString();
@@ -49,7 +49,7 @@ extends DrawableHelper {
             int n = i / 2 - m / 2;
             int o = l - 9;
             this.client.textRenderer.drawWithShadow(string, n, o, 0xFFFFFF);
-            if ((j += 10 + this.client.textRenderer.fontHeight) < this.client.window.getScaledHeight() / 3) continue;
+            if ((j += 10 + this.client.textRenderer.fontHeight) < this.client.getWindow().getScaledHeight() / 3) continue;
             break;
         }
     }

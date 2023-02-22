@@ -3,10 +3,10 @@
  */
 package net.minecraft.loot.entry;
 
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.entry.CombinedEntry;
 import net.minecraft.loot.entry.EntryCombiner;
 import net.minecraft.loot.entry.LootEntry;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class GroupEntry
 extends CombinedEntry {

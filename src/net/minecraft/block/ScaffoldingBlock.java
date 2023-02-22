@@ -8,12 +8,12 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Waterloggable;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
@@ -23,9 +23,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class ScaffoldingBlock
 extends Block
@@ -62,11 +62,6 @@ implements Waterloggable {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
-    }
-
-    @Override
     public boolean canReplace(BlockState state, ItemPlacementContext ctx) {
         return ctx.getStack().getItem() == this.asItem();
     }
@@ -98,7 +93,7 @@ implements Waterloggable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         int i = ScaffoldingBlock.calculateDistance(world, pos);
         BlockState blockState = (BlockState)((BlockState)state.with(DISTANCE, i)).with(BOTTOM, this.shouldBeBottom(world, pos, i));
         if (blockState.get(DISTANCE) == 7) {
@@ -113,7 +108,7 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return ScaffoldingBlock.calculateDistance(world, pos) < 7;
     }
 

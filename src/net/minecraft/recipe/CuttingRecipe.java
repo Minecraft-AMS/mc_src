@@ -89,10 +89,10 @@ implements Recipe<Inventory> {
 
     public static class Serializer<T extends CuttingRecipe>
     implements RecipeSerializer<T> {
-        final class_3974<T> field_17648;
+        final RecipeFactory<T> recipeFactory;
 
-        protected Serializer(class_3974<T> arg) {
-            this.field_17648 = arg;
+        protected Serializer(RecipeFactory<T> recipeFactory) {
+            this.recipeFactory = recipeFactory;
         }
 
         @Override
@@ -102,7 +102,7 @@ implements Recipe<Inventory> {
             String string2 = JsonHelper.getString(jsonObject, "result");
             int i = JsonHelper.getInt(jsonObject, "count");
             ItemStack itemStack = new ItemStack(Registry.ITEM.get(new Identifier(string2)), i);
-            return this.field_17648.create(identifier, string, ingredient, itemStack);
+            return this.recipeFactory.create(identifier, string, ingredient, itemStack);
         }
 
         @Override
@@ -110,7 +110,7 @@ implements Recipe<Inventory> {
             String string = packetByteBuf.readString(Short.MAX_VALUE);
             Ingredient ingredient = Ingredient.fromPacket(packetByteBuf);
             ItemStack itemStack = packetByteBuf.readItemStack();
-            return this.field_17648.create(identifier, string, ingredient, itemStack);
+            return this.recipeFactory.create(identifier, string, ingredient, itemStack);
         }
 
         @Override
@@ -130,7 +130,7 @@ implements Recipe<Inventory> {
             return this.read(id, json);
         }
 
-        static interface class_3974<T extends CuttingRecipe> {
+        static interface RecipeFactory<T extends CuttingRecipe> {
             public T create(Identifier var1, String var2, Ingredient var3, ItemStack var4);
         }
     }

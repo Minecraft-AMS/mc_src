@@ -29,10 +29,10 @@ extends Decorator<HeightmapRangeDecoratorConfig> {
     public Stream<BlockPos> getPositions(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, HeightmapRangeDecoratorConfig heightmapRangeDecoratorConfig, BlockPos blockPos) {
         int i2 = random.nextInt(heightmapRangeDecoratorConfig.max - heightmapRangeDecoratorConfig.min) + heightmapRangeDecoratorConfig.min;
         return IntStream.range(0, i2).mapToObj(i -> {
-            int j = random.nextInt(16);
-            int k = random.nextInt(16);
-            int l = iWorld.getTop(Heightmap.Type.OCEAN_FLOOR_WG, blockPos.getX() + j, blockPos.getZ() + k);
-            return new BlockPos(blockPos.getX() + j, l, blockPos.getZ() + k);
+            int j = random.nextInt(16) + blockPos.getX();
+            int k = random.nextInt(16) + blockPos.getZ();
+            int l = iWorld.getTopY(Heightmap.Type.OCEAN_FLOOR_WG, j, k);
+            return new BlockPos(j, l, k);
         });
     }
 }

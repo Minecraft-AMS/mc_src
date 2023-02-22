@@ -4,21 +4,17 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.util.PacketByteBuf;
-import org.jetbrains.annotations.Nullable;
 
 public class PlayerSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -29,8 +25,6 @@ implements Packet<ClientPlayPacketListener> {
     private double z;
     private byte yaw;
     private byte pitch;
-    private DataTracker dataTracker;
-    private List<DataTracker.Entry<?>> trackedValues;
 
     public PlayerSpawnS2CPacket() {
     }
@@ -38,12 +32,11 @@ implements Packet<ClientPlayPacketListener> {
     public PlayerSpawnS2CPacket(PlayerEntity player) {
         this.id = player.getEntityId();
         this.uuid = player.getGameProfile().getId();
-        this.x = player.x;
-        this.y = player.y;
-        this.z = player.z;
+        this.x = player.getX();
+        this.y = player.getY();
+        this.z = player.getZ();
         this.yaw = (byte)(player.yaw * 256.0f / 360.0f);
         this.pitch = (byte)(player.pitch * 256.0f / 360.0f);
-        this.dataTracker = player.getDataTracker();
     }
 
     @Override
@@ -55,7 +48,6 @@ implements Packet<ClientPlayPacketListener> {
         this.z = buf.readDouble();
         this.yaw = buf.readByte();
         this.pitch = buf.readByte();
-        this.trackedValues = DataTracker.deserializePacket(buf);
     }
 
     @Override
@@ -67,18 +59,11 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeDouble(this.z);
         buf.writeByte(this.yaw);
         buf.writeByte(this.pitch);
-        this.dataTracker.toPacketByteBuf(buf);
     }
 
     @Override
     public void apply(ClientPlayPacketListener clientPlayPacketListener) {
         clientPlayPacketListener.onPlayerSpawn(this);
-    }
-
-    @Nullable
-    @Environment(value=EnvType.CLIENT)
-    public List<DataTracker.Entry<?>> getTrackedValues() {
-        return this.trackedValues;
     }
 
     @Environment(value=EnvType.CLIENT)

@@ -9,7 +9,7 @@
 package net.minecraft.client.gui.screen.recipebook;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -21,7 +21,6 @@ import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.AbstractButtonWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.container.AbstractFurnaceContainer;
 import net.minecraft.container.CraftingContainer;
 import net.minecraft.item.ItemStack;
@@ -37,7 +36,7 @@ extends DrawableHelper
 implements Drawable,
 Element {
     private static final Identifier BG_TEX = new Identifier("textures/gui/recipe_book.png");
-    private final List<AlternateButtonWidget> alternativeButtons = Lists.newArrayList();
+    private final List<AlternativeButtonWidget> alternativeButtons = Lists.newArrayList();
     private boolean visible;
     private int buttonX;
     private int buttonY;
@@ -86,10 +85,10 @@ Element {
             int r = this.buttonX + 4 + 25 * (q % k);
             int s = this.buttonY + 5 + 25 * (q / k);
             if (this.furnace) {
-                this.alternativeButtons.add(new class_511(r, s, recipe, bl2));
+                this.alternativeButtons.add(new FurnaceAlternativeButtonWidget(r, s, recipe, bl2));
                 continue;
             }
-            this.alternativeButtons.add(new AlternateButtonWidget(r, s, recipe, bl2));
+            this.alternativeButtons.add(new AlternativeButtonWidget(r, s, recipe, bl2));
         }
         this.lastClickedRecipe = null;
     }
@@ -112,9 +111,9 @@ Element {
         if (button != 0) {
             return false;
         }
-        for (AlternateButtonWidget alternateButtonWidget : this.alternativeButtons) {
-            if (!alternateButtonWidget.mouseClicked(mouseX, mouseY, button)) continue;
-            this.lastClickedRecipe = alternateButtonWidget.recipe;
+        for (AlternativeButtonWidget alternativeButtonWidget : this.alternativeButtons) {
+            if (!alternativeButtonWidget.mouseClicked(mouseX, mouseY, button)) continue;
+            this.lastClickedRecipe = alternativeButtonWidget.recipe;
             return true;
         }
         return false;
@@ -131,12 +130,11 @@ Element {
             return;
         }
         this.time += delta;
-        DiffuseLighting.enableForItems();
-        GlStateManager.enableBlend();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableBlend();
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.client.getTextureManager().bindTexture(BG_TEX);
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(0.0f, 0.0f, 170.0f);
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(0.0f, 0.0f, 170.0f);
         int i = this.alternativeButtons.size() <= 16 ? 4 : 5;
         int j = Math.min(this.alternativeButtons.size(), i);
         int k = MathHelper.ceil((float)this.alternativeButtons.size() / (float)i);
@@ -144,38 +142,37 @@ Element {
         int m = 4;
         int n = 82;
         int o = 208;
-        this.method_2618(j, k, 24, 4, 82, 208);
-        GlStateManager.disableBlend();
-        DiffuseLighting.disable();
-        for (AlternateButtonWidget alternateButtonWidget : this.alternativeButtons) {
-            alternateButtonWidget.render(mouseX, mouseY, delta);
+        this.renderGrid(j, k, 24, 4, 82, 208);
+        RenderSystem.disableBlend();
+        for (AlternativeButtonWidget alternativeButtonWidget : this.alternativeButtons) {
+            alternativeButtonWidget.render(mouseX, mouseY, delta);
         }
-        GlStateManager.popMatrix();
+        RenderSystem.popMatrix();
     }
 
-    private void method_2618(int i, int j, int k, int l, int m, int n) {
-        this.blit(this.buttonX, this.buttonY, m, n, l, l);
-        this.blit(this.buttonX + l * 2 + i * k, this.buttonY, m + k + l, n, l, l);
-        this.blit(this.buttonX, this.buttonY + l * 2 + j * k, m, n + k + l, l, l);
-        this.blit(this.buttonX + l * 2 + i * k, this.buttonY + l * 2 + j * k, m + k + l, n + k + l, l, l);
-        for (int o = 0; o < i; ++o) {
-            this.blit(this.buttonX + l + o * k, this.buttonY, m + l, n, k, l);
-            this.blit(this.buttonX + l + (o + 1) * k, this.buttonY, m + l, n, l, l);
-            for (int p = 0; p < j; ++p) {
-                if (o == 0) {
-                    this.blit(this.buttonX, this.buttonY + l + p * k, m, n + l, l, k);
-                    this.blit(this.buttonX, this.buttonY + l + (p + 1) * k, m, n + l, l, l);
+    private void renderGrid(int columns, int rows, int squareSize, int borderSize, int u, int v) {
+        this.blit(this.buttonX, this.buttonY, u, v, borderSize, borderSize);
+        this.blit(this.buttonX + borderSize * 2 + columns * squareSize, this.buttonY, u + squareSize + borderSize, v, borderSize, borderSize);
+        this.blit(this.buttonX, this.buttonY + borderSize * 2 + rows * squareSize, u, v + squareSize + borderSize, borderSize, borderSize);
+        this.blit(this.buttonX + borderSize * 2 + columns * squareSize, this.buttonY + borderSize * 2 + rows * squareSize, u + squareSize + borderSize, v + squareSize + borderSize, borderSize, borderSize);
+        for (int i = 0; i < columns; ++i) {
+            this.blit(this.buttonX + borderSize + i * squareSize, this.buttonY, u + borderSize, v, squareSize, borderSize);
+            this.blit(this.buttonX + borderSize + (i + 1) * squareSize, this.buttonY, u + borderSize, v, borderSize, borderSize);
+            for (int j = 0; j < rows; ++j) {
+                if (i == 0) {
+                    this.blit(this.buttonX, this.buttonY + borderSize + j * squareSize, u, v + borderSize, borderSize, squareSize);
+                    this.blit(this.buttonX, this.buttonY + borderSize + (j + 1) * squareSize, u, v + borderSize, borderSize, borderSize);
                 }
-                this.blit(this.buttonX + l + o * k, this.buttonY + l + p * k, m + l, n + l, k, k);
-                this.blit(this.buttonX + l + (o + 1) * k, this.buttonY + l + p * k, m + l, n + l, l, k);
-                this.blit(this.buttonX + l + o * k, this.buttonY + l + (p + 1) * k, m + l, n + l, k, l);
-                this.blit(this.buttonX + l + (o + 1) * k - 1, this.buttonY + l + (p + 1) * k - 1, m + l, n + l, l + 1, l + 1);
-                if (o != i - 1) continue;
-                this.blit(this.buttonX + l * 2 + i * k, this.buttonY + l + p * k, m + k + l, n + l, l, k);
-                this.blit(this.buttonX + l * 2 + i * k, this.buttonY + l + (p + 1) * k, m + k + l, n + l, l, l);
+                this.blit(this.buttonX + borderSize + i * squareSize, this.buttonY + borderSize + j * squareSize, u + borderSize, v + borderSize, squareSize, squareSize);
+                this.blit(this.buttonX + borderSize + (i + 1) * squareSize, this.buttonY + borderSize + j * squareSize, u + borderSize, v + borderSize, borderSize, squareSize);
+                this.blit(this.buttonX + borderSize + i * squareSize, this.buttonY + borderSize + (j + 1) * squareSize, u + borderSize, v + borderSize, squareSize, borderSize);
+                this.blit(this.buttonX + borderSize + (i + 1) * squareSize - 1, this.buttonY + borderSize + (j + 1) * squareSize - 1, u + borderSize, v + borderSize, borderSize + 1, borderSize + 1);
+                if (i != columns - 1) continue;
+                this.blit(this.buttonX + borderSize * 2 + columns * squareSize, this.buttonY + borderSize + j * squareSize, u + squareSize + borderSize, v + borderSize, borderSize, squareSize);
+                this.blit(this.buttonX + borderSize * 2 + columns * squareSize, this.buttonY + borderSize + (j + 1) * squareSize, u + squareSize + borderSize, v + borderSize, borderSize, borderSize);
             }
-            this.blit(this.buttonX + l + o * k, this.buttonY + l * 2 + j * k, m + l, n + k + l, k, l);
-            this.blit(this.buttonX + l + (o + 1) * k, this.buttonY + l * 2 + j * k, m + l, n + k + l, l, l);
+            this.blit(this.buttonX + borderSize + i * squareSize, this.buttonY + borderSize * 2 + rows * squareSize, u + borderSize, v + squareSize + borderSize, squareSize, borderSize);
+            this.blit(this.buttonX + borderSize + (i + 1) * squareSize, this.buttonY + borderSize * 2 + rows * squareSize, u + borderSize, v + squareSize + borderSize, borderSize, borderSize);
         }
     }
 
@@ -188,14 +185,14 @@ Element {
     }
 
     @Environment(value=EnvType.CLIENT)
-    class AlternateButtonWidget
+    class AlternativeButtonWidget
     extends AbstractButtonWidget
     implements RecipeGridAligner<Ingredient> {
         private final Recipe<?> recipe;
         private final boolean isCraftable;
         protected final List<InputSlot> slots;
 
-        public AlternateButtonWidget(int x, int y, Recipe<?> recipe, boolean isCraftable) {
+        public AlternativeButtonWidget(int x, int y, Recipe<?> recipe, boolean isCraftable) {
             super(x, y, 200, 20, "");
             this.slots = Lists.newArrayList();
             this.width = 24;
@@ -220,8 +217,7 @@ Element {
         @Override
         public void renderButton(int mouseX, int mouseY, float delta) {
             int j;
-            DiffuseLighting.enableForItems();
-            GlStateManager.enableAlphaTest();
+            RenderSystem.enableAlphaTest();
             RecipeAlternativesWidget.this.client.getTextureManager().bindTexture(BG_TEX);
             int i = 152;
             if (!this.isCraftable) {
@@ -233,45 +229,42 @@ Element {
             }
             this.blit(this.x, this.y, i, j, this.width, this.height);
             for (InputSlot inputSlot : this.slots) {
-                GlStateManager.pushMatrix();
+                RenderSystem.pushMatrix();
                 float f = 0.42f;
-                int k = (int)((float)(this.x + inputSlot.field_3119) / 0.42f - 3.0f);
-                int l = (int)((float)(this.y + inputSlot.field_3118) / 0.42f - 3.0f);
-                GlStateManager.scalef(0.42f, 0.42f, 1.0f);
-                GlStateManager.enableLighting();
-                RecipeAlternativesWidget.this.client.getItemRenderer().renderGuiItem(inputSlot.field_3120[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.field_3120.length], k, l);
-                GlStateManager.disableLighting();
-                GlStateManager.popMatrix();
+                int k = (int)((float)(this.x + inputSlot.y) / 0.42f - 3.0f);
+                int l = (int)((float)(this.y + inputSlot.x) / 0.42f - 3.0f);
+                RenderSystem.scalef(0.42f, 0.42f, 1.0f);
+                RecipeAlternativesWidget.this.client.getItemRenderer().renderGuiItem(inputSlot.stacks[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.stacks.length], k, l);
+                RenderSystem.popMatrix();
             }
-            GlStateManager.disableAlphaTest();
-            DiffuseLighting.disable();
+            RenderSystem.disableAlphaTest();
         }
 
         @Environment(value=EnvType.CLIENT)
         public class InputSlot {
-            public final ItemStack[] field_3120;
-            public final int field_3119;
-            public final int field_3118;
+            public final ItemStack[] stacks;
+            public final int y;
+            public final int x;
 
-            public InputSlot(int i, int j, ItemStack[] itemStacks) {
-                this.field_3119 = i;
-                this.field_3118 = j;
-                this.field_3120 = itemStacks;
+            public InputSlot(int y, int x, ItemStack[] stacks) {
+                this.y = y;
+                this.x = x;
+                this.stacks = stacks;
             }
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    class class_511
-    extends AlternateButtonWidget {
-        public class_511(int x, int y, Recipe<?> recipe, boolean isCraftable) {
+    class FurnaceAlternativeButtonWidget
+    extends AlternativeButtonWidget {
+        public FurnaceAlternativeButtonWidget(int x, int y, Recipe<?> recipe, boolean isCraftable) {
             super(x, y, recipe, isCraftable);
         }
 
         @Override
         protected void alignRecipe(Recipe<?> recipe) {
             ItemStack[] itemStacks = recipe.getPreviewInputs().get(0).getMatchingStacksClient();
-            this.slots.add(new AlternateButtonWidget.InputSlot(10, 10, itemStacks));
+            this.slots.add(new AlternativeButtonWidget.InputSlot(10, 10, itemStacks));
         }
     }
 }

@@ -36,6 +36,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.command.arguments.NbtPathArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
@@ -47,7 +48,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class CopyNbtLootFunction
 extends ConditionalLootFunction {
@@ -171,7 +171,7 @@ extends ConditionalLootFunction {
 
             @Override
             public void merge(Tag itemTag, NbtPathArgumentType.NbtPath tragetPath, List<Tag> sourceTags) throws CommandSyntaxException {
-                List<Tag> list = tragetPath.putIfAbsent(itemTag, ListTag::new);
+                List<Tag> list = tragetPath.getOrInit(itemTag, ListTag::new);
                 list.forEach(foundTag -> {
                     if (foundTag instanceof ListTag) {
                         sourceTags.forEach(listTag -> ((ListTag)foundTag).add(listTag.copy()));
@@ -184,7 +184,7 @@ extends ConditionalLootFunction {
 
             @Override
             public void merge(Tag itemTag, NbtPathArgumentType.NbtPath tragetPath, List<Tag> sourceTags) throws CommandSyntaxException {
-                List<Tag> list = tragetPath.putIfAbsent(itemTag, CompoundTag::new);
+                List<Tag> list = tragetPath.getOrInit(itemTag, CompoundTag::new);
                 list.forEach(foundTag -> {
                     if (foundTag instanceof CompoundTag) {
                         sourceTags.forEach(compoundTag -> {

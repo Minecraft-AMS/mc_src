@@ -20,7 +20,6 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.enums.DoorHinge;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,6 +30,7 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -41,9 +41,9 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class DoorBlock
@@ -112,7 +112,7 @@ extends Block {
             world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 35);
             world.playLevelEvent(player, 2001, blockPos, Block.getRawIdFromState(blockState));
             ItemStack itemStack = player.getMainHandStack();
-            if (!world.isClient && !player.isCreative()) {
+            if (!world.isClient && !player.isCreative() && player.isUsingEffectiveTool(blockState)) {
                 Block.dropStacks(state, world, pos, null, player, itemStack);
                 Block.dropStacks(blockState, world, blockPos, null, player, itemStack);
             }
@@ -177,7 +177,7 @@ extends Block {
         BlockState blockState3 = blockView.getBlockState(blockPos5);
         BlockPos blockPos6 = blockPos2.offset(direction3);
         BlockState blockState4 = blockView.getBlockState(blockPos6);
-        int i = (blockState.method_21743(blockView, blockPos3) ? -1 : 0) + (blockState2.method_21743(blockView, blockPos4) ? -1 : 0) + (blockState3.method_21743(blockView, blockPos5) ? 1 : 0) + (blockState4.method_21743(blockView, blockPos6) ? 1 : 0);
+        int i = (blockState.isFullCube(blockView, blockPos3) ? -1 : 0) + (blockState2.isFullCube(blockView, blockPos4) ? -1 : 0) + (blockState3.isFullCube(blockView, blockPos5) ? 1 : 0) + (blockState4.isFullCube(blockView, blockPos6) ? 1 : 0);
         boolean bl = blockState.getBlock() == this && blockState.get(HALF) == DoubleBlockHalf.LOWER;
         boolean bl3 = bl2 = blockState3.getBlock() == this && blockState3.get(HALF) == DoubleBlockHalf.LOWER;
         if (bl && !bl2 || i > 0) {
@@ -195,14 +195,14 @@ extends Block {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (this.material == Material.METAL) {
-            return false;
+            return ActionResult.PASS;
         }
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 10);
         world.playLevelEvent(player, state.get(OPEN) != false ? this.getCloseSoundEventId() : this.getOpenSoundEventId(), pos, 0);
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     public void setOpen(World world, BlockPos pos, boolean open) {
@@ -227,7 +227,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockPos blockPos = pos.down();
         BlockState blockState = world.getBlockState(blockPos);
         if (state.get(HALF) == DoubleBlockHalf.LOWER) {
@@ -243,11 +243,6 @@ extends Block {
     @Override
     public PistonBehavior getPistonBehavior(BlockState state) {
         return PistonBehavior.DESTROY;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

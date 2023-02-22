@@ -26,6 +26,7 @@ public class CartographyTableContainer
 extends Container {
     private final BlockContext context;
     private boolean currentlyTakingItem;
+    private long lastTakeResultTime;
     public final Inventory inventory = new BasicInventory(2){
 
         @Override
@@ -48,7 +49,7 @@ extends Container {
     }
 
     public CartographyTableContainer(int syncId, PlayerInventory inventory, final BlockContext context) {
-        super(ContainerType.CARTOGRAPHY, syncId);
+        super(ContainerType.CARTOGRAPHY_TABLE, syncId);
         int i;
         this.context = context;
         this.addSlot(new Slot(this.inventory, 0, 15, 15){
@@ -98,7 +99,13 @@ extends Container {
             @Override
             public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
                 stack.getItem().onCraft(stack, player.world, player);
-                context.run((world, blockPos) -> world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f));
+                context.run((world, blockPos) -> {
+                    long l = world.getTime();
+                    if (CartographyTableContainer.this.lastTakeResultTime != l) {
+                        world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                        CartographyTableContainer.this.lastTakeResultTime = l;
+                    }
+                });
                 return super.onTakeItem(player, stack);
             }
         });
@@ -164,7 +171,7 @@ extends Container {
 
     @Override
     public boolean canInsertIntoSlot(ItemStack stack, Slot slot) {
-        return false;
+        return slot.inventory != this.resultSlot && super.canInsertIntoSlot(stack, slot);
     }
 
     @Override

@@ -82,6 +82,12 @@ extends LockableContainerBlockEntity {
     }
 
     @Override
+    public boolean isInvEmpty() {
+        this.checkLootInteraction(null);
+        return this.getInvStackList().stream().allMatch(ItemStack::isEmpty);
+    }
+
+    @Override
     public ItemStack getInvStack(int slot) {
         this.checkLootInteraction(null);
         return this.getInvStackList().get(slot);

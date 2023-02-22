@@ -15,15 +15,15 @@ import net.minecraft.client.texture.Sprite;
 @Environment(value=EnvType.CLIENT)
 public class TextureStitcherCannotFitException
 extends RuntimeException {
-    private final Collection<Sprite> field_20311;
+    private final Collection<Sprite.Info> sprites;
 
-    public TextureStitcherCannotFitException(Sprite sprite, Collection<Sprite> collection) {
+    public TextureStitcherCannotFitException(Sprite.Info sprite, Collection<Sprite.Info> sprites) {
         super(String.format("Unable to fit: %s - size: %dx%d - Maybe try a lower resolution resourcepack?", sprite.getId(), sprite.getWidth(), sprite.getHeight()));
-        this.field_20311 = collection;
+        this.sprites = sprites;
     }
 
-    public Collection<Sprite> method_21687() {
-        return this.field_20311;
+    public Collection<Sprite.Info> getSprites() {
+        return this.sprites;
     }
 }
 

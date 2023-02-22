@@ -2,51 +2,84 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.gl;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.datafixers.util.Pair;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.VertexFormat;
+import net.minecraft.client.util.math.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
-public class VertexBuffer {
+public class VertexBuffer
+implements AutoCloseable {
     private int id;
     private final VertexFormat format;
     private int vertexCount;
 
     public VertexBuffer(VertexFormat format) {
         this.format = format;
-        this.id = GLX.glGenBuffers();
+        RenderSystem.glGenBuffers(integer -> {
+            this.id = integer;
+        });
     }
 
     public void bind() {
-        GLX.glBindBuffer(GLX.GL_ARRAY_BUFFER, this.id);
+        RenderSystem.glBindBuffer(34962, () -> this.id);
     }
 
-    public void set(ByteBuffer buffer) {
+    public void upload(BufferBuilder buffer) {
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(() -> this.uploadInternal(buffer));
+        } else {
+            this.uploadInternal(buffer);
+        }
+    }
+
+    public CompletableFuture<Void> submitUpload(BufferBuilder buffer) {
+        if (!RenderSystem.isOnRenderThread()) {
+            return CompletableFuture.runAsync(() -> this.uploadInternal(buffer), runnable -> RenderSystem.recordRenderCall(runnable::run));
+        }
+        this.uploadInternal(buffer);
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private void uploadInternal(BufferBuilder buffer) {
+        Pair<BufferBuilder.DrawArrayParameters, ByteBuffer> pair = buffer.popData();
+        if (this.id == -1) {
+            return;
+        }
+        ByteBuffer byteBuffer = (ByteBuffer)pair.getSecond();
+        this.vertexCount = byteBuffer.remaining() / this.format.getVertexSize();
         this.bind();
-        GLX.glBufferData(GLX.GL_ARRAY_BUFFER, buffer, 35044);
+        RenderSystem.glBufferData(34962, byteBuffer, 35044);
         VertexBuffer.unbind();
-        this.vertexCount = buffer.limit() / this.format.getVertexSize();
     }
 
-    public void draw(int mode) {
-        GlStateManager.drawArrays(mode, 0, this.vertexCount);
+    public void draw(Matrix4f matrix, int mode) {
+        RenderSystem.pushMatrix();
+        RenderSystem.loadIdentity();
+        RenderSystem.multMatrix(matrix);
+        RenderSystem.drawArrays(mode, 0, this.vertexCount);
+        RenderSystem.popMatrix();
     }
 
     public static void unbind() {
-        GLX.glBindBuffer(GLX.GL_ARRAY_BUFFER, 0);
+        RenderSystem.glBindBuffer(34962, () -> 0);
     }
 
-    public void delete() {
+    @Override
+    public void close() {
         if (this.id >= 0) {
-            GLX.glDeleteBuffers(this.id);
+            RenderSystem.glDeleteBuffers(this.id);
             this.id = -1;
         }
     }

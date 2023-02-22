@@ -15,6 +15,7 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -29,13 +30,13 @@ extends HorizontalFacingBlock {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         player.openContainer(state.createContainerFactory(world, pos));
         player.incrementStat(Stats.INTERACT_WITH_LOOM);
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override

@@ -27,7 +27,7 @@ extends MobEntityRenderer<SnowGolemEntity, SnowmanEntityModel<SnowGolemEntity>> 
     }
 
     @Override
-    protected Identifier getTexture(SnowGolemEntity snowGolemEntity) {
+    public Identifier getTexture(SnowGolemEntity snowGolemEntity) {
         return SKIN;
     }
 }

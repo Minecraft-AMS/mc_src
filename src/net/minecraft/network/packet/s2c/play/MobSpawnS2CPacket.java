@@ -4,24 +4,20 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.util.PacketByteBuf;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import org.jetbrains.annotations.Nullable;
 
 public class MobSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -37,8 +33,6 @@ implements Packet<ClientPlayPacketListener> {
     private byte yaw;
     private byte pitch;
     private byte headYaw;
-    private DataTracker dataTracker;
-    private List<DataTracker.Entry<?>> trackedValues;
 
     public MobSpawnS2CPacket() {
     }
@@ -47,9 +41,9 @@ implements Packet<ClientPlayPacketListener> {
         this.id = entity.getEntityId();
         this.uuid = entity.getUuid();
         this.entityTypeId = Registry.ENTITY_TYPE.getRawId(entity.getType());
-        this.x = entity.x;
-        this.y = entity.y;
-        this.z = entity.z;
+        this.x = entity.getX();
+        this.y = entity.getY();
+        this.z = entity.getZ();
         this.yaw = (byte)(entity.yaw * 256.0f / 360.0f);
         this.pitch = (byte)(entity.pitch * 256.0f / 360.0f);
         this.headYaw = (byte)(entity.headYaw * 256.0f / 360.0f);
@@ -61,7 +55,6 @@ implements Packet<ClientPlayPacketListener> {
         this.velocityX = (int)(e * 8000.0);
         this.velocityY = (int)(f * 8000.0);
         this.velocityZ = (int)(g * 8000.0);
-        this.dataTracker = entity.getDataTracker();
     }
 
     @Override
@@ -78,7 +71,6 @@ implements Packet<ClientPlayPacketListener> {
         this.velocityX = buf.readShort();
         this.velocityY = buf.readShort();
         this.velocityZ = buf.readShort();
-        this.trackedValues = DataTracker.deserializePacket(buf);
     }
 
     @Override
@@ -95,18 +87,11 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeShort(this.velocityX);
         buf.writeShort(this.velocityY);
         buf.writeShort(this.velocityZ);
-        this.dataTracker.toPacketByteBuf(buf);
     }
 
     @Override
     public void apply(ClientPlayPacketListener clientPlayPacketListener) {
         clientPlayPacketListener.onMobSpawn(this);
-    }
-
-    @Nullable
-    @Environment(value=EnvType.CLIENT)
-    public List<DataTracker.Entry<?>> getTrackedValues() {
-        return this.trackedValues;
     }
 
     @Environment(value=EnvType.CLIENT)

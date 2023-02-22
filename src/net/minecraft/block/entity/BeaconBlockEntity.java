@@ -59,7 +59,7 @@ Tickable {
     private static final Set<StatusEffect> EFFECTS = Arrays.stream(EFFECTS_BY_LEVEL).flatMap(Arrays::stream).collect(Collectors.toSet());
     private List<BeamSegment> beamSegments = Lists.newArrayList();
     private List<BeamSegment> field_19178 = Lists.newArrayList();
-    private int level = 0;
+    private int level;
     private int field_19179 = -1;
     @Nullable
     private StatusEffect primary;
@@ -131,7 +131,7 @@ Tickable {
             blockPos = new BlockPos(i, this.field_19179 + 1, k);
         }
         BeamSegment beamSegment = this.field_19178.isEmpty() ? null : this.field_19178.get(this.field_19178.size() - 1);
-        int l = this.world.getTop(Heightmap.Type.WORLD_SURFACE, i, k);
+        int l = this.world.getTopY(Heightmap.Type.WORLD_SURFACE, i, k);
         for (m = 0; m < 10 && blockPos.getY() <= l; ++m) {
             block18: {
                 Block block;

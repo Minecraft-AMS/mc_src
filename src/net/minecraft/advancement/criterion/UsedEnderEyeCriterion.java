@@ -2,25 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
- *  com.google.common.collect.Sets
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import net.minecraft.advancement.PlayerAdvancementTracker;
+import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.Criterion;
 import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.predicate.NumberRange;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -28,39 +18,12 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 public class UsedEnderEyeCriterion
-implements Criterion<Conditions> {
+extends AbstractCriterion<Conditions> {
     private static final Identifier id = new Identifier("used_ender_eye");
-    private final Map<PlayerAdvancementTracker, Handler> handlers = Maps.newHashMap();
 
     @Override
     public Identifier getId() {
         return id;
-    }
-
-    @Override
-    public void beginTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler == null) {
-            handler = new Handler(manager);
-            this.handlers.put(manager, handler);
-        }
-        handler.addCondition(conditionsContainer);
-    }
-
-    @Override
-    public void endTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler != null) {
-            handler.removeCondition(conditionsContainer);
-            if (handler.isEmpty()) {
-                this.handlers.remove(manager);
-            }
-        }
-    }
-
-    @Override
-    public void endTracking(PlayerAdvancementTracker tracker) {
-        this.handlers.remove(tracker);
     }
 
     @Override
@@ -70,54 +33,15 @@ implements Criterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, BlockPos strongholdPos) {
-        Handler handler = this.handlers.get(player.getAdvancementTracker());
-        if (handler != null) {
-            double d = player.x - (double)strongholdPos.getX();
-            double e = player.z - (double)strongholdPos.getZ();
-            handler.handle(d * d + e * e);
-        }
+        double d = player.getX() - (double)strongholdPos.getX();
+        double e = player.getZ() - (double)strongholdPos.getZ();
+        double f = d * d + e * e;
+        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(f));
     }
 
     @Override
     public /* synthetic */ CriterionConditions conditionsFromJson(JsonObject obj, JsonDeserializationContext context) {
         return this.conditionsFromJson(obj, context);
-    }
-
-    static class Handler {
-        private final PlayerAdvancementTracker manager;
-        private final Set<Criterion.ConditionsContainer<Conditions>> conditions = Sets.newHashSet();
-
-        public Handler(PlayerAdvancementTracker playerAdvancementTracker) {
-            this.manager = playerAdvancementTracker;
-        }
-
-        public boolean isEmpty() {
-            return this.conditions.isEmpty();
-        }
-
-        public void addCondition(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.add(conditionsContainer);
-        }
-
-        public void removeCondition(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.remove(conditionsContainer);
-        }
-
-        public void handle(double d) {
-            List list = null;
-            for (Criterion.ConditionsContainer<Conditions> conditionsContainer : this.conditions) {
-                if (!conditionsContainer.getConditions().matches(d)) continue;
-                if (list == null) {
-                    list = Lists.newArrayList();
-                }
-                list.add(conditionsContainer);
-            }
-            if (list != null) {
-                for (Criterion.ConditionsContainer<Conditions> conditionsContainer : list) {
-                    conditionsContainer.apply(this.manager);
-                }
-            }
-        }
     }
 
     public static class Conditions
@@ -129,8 +53,8 @@ implements Criterion<Conditions> {
             this.distance = floatRange;
         }
 
-        public boolean matches(double d) {
-            return this.distance.matchesSquared(d);
+        public boolean matches(double distance) {
+            return this.distance.testSqrt(distance);
         }
     }
 }

@@ -24,16 +24,16 @@ public class SelectionManager {
     private final TextRenderer fontRenderer;
     private final Supplier<String> stringGetter;
     private final Consumer<String> stringSetter;
-    private final int field_16455;
+    private final int maxLength;
     private int selectionStart;
     private int selectionEnd;
 
-    public SelectionManager(MinecraftClient minecraftClient, Supplier<String> supplier, Consumer<String> consumer, int i) {
-        this.client = minecraftClient;
-        this.fontRenderer = minecraftClient.textRenderer;
-        this.stringGetter = supplier;
-        this.stringSetter = consumer;
-        this.field_16455 = i;
+    public SelectionManager(MinecraftClient client, Supplier<String> getter, Consumer<String> setter, int maxLength) {
+        this.client = client;
+        this.fontRenderer = client.textRenderer;
+        this.stringGetter = getter;
+        this.stringSetter = setter;
+        this.maxLength = maxLength;
         this.moveCaretToEnd();
     }
 
@@ -51,7 +51,7 @@ public class SelectionManager {
         String string2 = this.stringGetter.get();
         this.selectionStart = MathHelper.clamp(this.selectionStart, 0, string2.length());
         String string3 = new StringBuilder(string2).insert(this.selectionStart, string).toString();
-        if (this.fontRenderer.getStringWidth(string3) <= this.field_16455) {
+        if (this.fontRenderer.getStringWidth(string3) <= this.maxLength) {
             this.stringSetter.accept(string3);
             this.selectionEnd = this.selectionStart = Math.min(string3.length(), this.selectionStart + string.length());
         }

@@ -33,15 +33,15 @@ public class Path {
     @Environment(value=EnvType.CLIENT)
     private Set<TargetPathNode> field_20300;
     private int currentNodeIndex;
-    private final BlockPos field_20301;
-    private final float field_20302;
-    private final boolean field_20303;
+    private final BlockPos target;
+    private final float manhattanDistanceFromTarget;
+    private final boolean reachesTarget;
 
-    public Path(List<PathNode> list, BlockPos blockPos, boolean bl) {
-        this.nodes = list;
-        this.field_20301 = blockPos;
-        this.field_20302 = list.isEmpty() ? Float.MAX_VALUE : this.nodes.get(this.nodes.size() - 1).method_21654(this.field_20301);
-        this.field_20303 = bl;
+    public Path(List<PathNode> nodes, BlockPos target, boolean reachesTarget) {
+        this.nodes = nodes;
+        this.target = target;
+        this.manhattanDistanceFromTarget = nodes.isEmpty() ? Float.MAX_VALUE : this.nodes.get(this.nodes.size() - 1).getManhattanDistance(this.target);
+        this.reachesTarget = reachesTarget;
     }
 
     public void next() {
@@ -123,17 +123,17 @@ public class Path {
         return true;
     }
 
-    public boolean method_21655() {
-        return this.field_20303;
+    public boolean reachesTarget() {
+        return this.reachesTarget;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public PathNode[] method_43() {
+    public PathNode[] method_22880() {
         return this.field_57;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public PathNode[] method_37() {
+    public PathNode[] method_22881() {
         return this.field_55;
     }
 
@@ -172,12 +172,12 @@ public class Path {
         return "Path(length=" + this.nodes.size() + ")";
     }
 
-    public BlockPos method_48() {
-        return this.field_20301;
+    public BlockPos getTarget() {
+        return this.target;
     }
 
-    public float method_21656() {
-        return this.field_20302;
+    public float getManhattanDistanceFromTarget() {
+        return this.manhattanDistanceFromTarget;
     }
 }
 

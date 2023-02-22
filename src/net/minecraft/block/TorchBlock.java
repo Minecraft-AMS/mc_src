@@ -13,16 +13,15 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class TorchBlock
 extends Block {
@@ -46,8 +45,8 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
-        return TorchBlock.isSolidSmallSquare(world, pos.down(), Direction.UP);
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
+        return TorchBlock.sideCoversSmallSquare(world, pos.down(), Direction.UP);
     }
 
     @Override
@@ -58,11 +57,6 @@ extends Block {
         double f = (double)pos.getZ() + 0.5;
         world.addParticle(ParticleTypes.SMOKE, d, e, f, 0.0, 0.0, 0.0);
         world.addParticle(ParticleTypes.FLAME, d, e, f, 0.0, 0.0, 0.0);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 }
 

@@ -29,7 +29,7 @@ extends BipedEntityRenderer<AbstractSkeletonEntity, SkeletonEntityModel<Abstract
     }
 
     @Override
-    protected Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
+    public Identifier getTexture(AbstractSkeletonEntity abstractSkeletonEntity) {
         return SKIN;
     }
 }

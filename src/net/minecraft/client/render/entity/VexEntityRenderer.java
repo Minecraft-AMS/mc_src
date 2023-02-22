@@ -7,12 +7,12 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.BipedEntityRenderer;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.model.VexEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.VexEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,7 +27,12 @@ extends BipedEntityRenderer<VexEntity, VexEntityModel> {
     }
 
     @Override
-    protected Identifier getTexture(VexEntity vexEntity) {
+    protected int getBlockLight(VexEntity vexEntity, float f) {
+        return 15;
+    }
+
+    @Override
+    public Identifier getTexture(VexEntity vexEntity) {
         if (vexEntity.isCharging()) {
             return CHARGING_TEXTURE;
         }
@@ -35,8 +40,8 @@ extends BipedEntityRenderer<VexEntity, VexEntityModel> {
     }
 
     @Override
-    protected void scale(VexEntity vexEntity, float f) {
-        GlStateManager.scalef(0.4f, 0.4f, 0.4f);
+    protected void scale(VexEntity vexEntity, MatrixStack matrixStack, float f) {
+        matrixStack.scale(0.4f, 0.4f, 0.4f);
     }
 }
 

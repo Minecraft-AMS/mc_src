@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 public abstract class AbstractDecorationEntity
 extends Entity {
     protected static final Predicate<Entity> PREDICATE = entity -> entity instanceof AbstractDecorationEntity;
-    private int field_7097;
+    private int obstructionCheckCounter;
     protected BlockPos attachmentPos;
     protected Direction facing = Direction.SOUTH;
 
@@ -55,10 +55,10 @@ extends Entity {
         Validate.isTrue((boolean)facing.getAxis().isHorizontal());
         this.facing = facing;
         this.prevYaw = this.yaw = (float)(this.facing.getHorizontal() * 90);
-        this.method_6895();
+        this.updateAttachmentPosition();
     }
 
-    protected void method_6895() {
+    protected void updateAttachmentPosition() {
         if (this.facing == null) {
             return;
         }
@@ -71,9 +71,7 @@ extends Entity {
         d -= (double)this.facing.getOffsetX() * 0.46875;
         f -= (double)this.facing.getOffsetZ() * 0.46875;
         Direction direction = this.facing.rotateYCounterclockwise();
-        this.x = d += h * (double)direction.getOffsetX();
-        this.y = e += i;
-        this.z = f += h * (double)direction.getOffsetZ();
+        this.setPos(d += h * (double)direction.getOffsetX(), e += i, f += h * (double)direction.getOffsetZ());
         double j = this.getWidthPixels();
         double k = this.getHeightPixels();
         double l = this.getWidthPixels();
@@ -91,19 +89,16 @@ extends Entity {
 
     @Override
     public void tick() {
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
-        if (this.field_7097++ == 100 && !this.world.isClient) {
-            this.field_7097 = 0;
-            if (!this.removed && !this.method_6888()) {
+        if (this.obstructionCheckCounter++ == 100 && !this.world.isClient) {
+            this.obstructionCheckCounter = 0;
+            if (!this.removed && !this.canStayAttached()) {
                 this.remove();
                 this.onBreak(null);
             }
         }
     }
 
-    public boolean method_6888() {
+    public boolean canStayAttached() {
         if (!this.world.doesNotCollide(this)) {
             return false;
         }
@@ -133,7 +128,11 @@ extends Entity {
     @Override
     public boolean handleAttack(Entity attacker) {
         if (attacker instanceof PlayerEntity) {
-            return this.damage(DamageSource.player((PlayerEntity)attacker), 0.0f);
+            PlayerEntity playerEntity = (PlayerEntity)attacker;
+            if (!this.world.canPlayerModifyAt(playerEntity, this.attachmentPos)) {
+                return true;
+            }
+            return this.damage(DamageSource.player(playerEntity), 0.0f);
         }
         return false;
     }
@@ -197,7 +196,7 @@ extends Entity {
 
     @Override
     public ItemEntity dropStack(ItemStack stack, float yOffset) {
-        ItemEntity itemEntity = new ItemEntity(this.world, this.x + (double)((float)this.facing.getOffsetX() * 0.15f), this.y + (double)yOffset, this.z + (double)((float)this.facing.getOffsetZ() * 0.15f), stack);
+        ItemEntity itemEntity = new ItemEntity(this.world, this.getX() + (double)((float)this.facing.getOffsetX() * 0.15f), this.getY() + (double)yOffset, this.getZ() + (double)((float)this.facing.getOffsetZ() * 0.15f), stack);
         itemEntity.setToDefaultPickupDelay();
         this.world.spawnEntity(itemEntity);
         return itemEntity;
@@ -211,7 +210,7 @@ extends Entity {
     @Override
     public void updatePosition(double x, double y, double z) {
         this.attachmentPos = new BlockPos(x, y, z);
-        this.method_6895();
+        this.updateAttachmentPosition();
         this.velocityDirty = true;
     }
 

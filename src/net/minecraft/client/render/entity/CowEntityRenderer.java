@@ -25,7 +25,7 @@ extends MobEntityRenderer<CowEntity, CowEntityModel<CowEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(CowEntity cowEntity) {
+    public Identifier getTexture(CowEntity cowEntity) {
         return SKIN;
     }
 }

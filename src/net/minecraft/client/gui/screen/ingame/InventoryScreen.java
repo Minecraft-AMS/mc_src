@@ -7,8 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -17,8 +16,10 @@ import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.container.CraftingContainer;
 import net.minecraft.container.PlayerContainer;
 import net.minecraft.container.Slot;
@@ -27,6 +28,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Quaternion;
 
 @Environment(value=EnvType.CLIENT)
 public class InventoryScreen
@@ -102,7 +104,7 @@ implements RecipeBookProvider {
 
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(BACKGROUND_TEXTURE);
         int i = this.x;
         int j = this.y;
@@ -111,42 +113,42 @@ implements RecipeBookProvider {
     }
 
     public static void drawEntity(int x, int y, int size, float mouseX, float mouseY, LivingEntity entity) {
-        GlStateManager.enableColorMaterial();
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(x, y, 50.0f);
-        GlStateManager.scalef(-size, size, size);
-        GlStateManager.rotatef(180.0f, 0.0f, 0.0f, 1.0f);
-        float f = entity.field_6283;
-        float g = entity.yaw;
-        float h = entity.pitch;
-        float i = entity.prevHeadYaw;
-        float j = entity.headYaw;
-        GlStateManager.rotatef(135.0f, 0.0f, 1.0f, 0.0f);
-        DiffuseLighting.enable();
-        GlStateManager.rotatef(-135.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(-((float)Math.atan(mouseY / 40.0f)) * 20.0f, 1.0f, 0.0f, 0.0f);
-        entity.field_6283 = (float)Math.atan(mouseX / 40.0f) * 20.0f;
-        entity.yaw = (float)Math.atan(mouseX / 40.0f) * 40.0f;
-        entity.pitch = -((float)Math.atan(mouseY / 40.0f)) * 20.0f;
+        float f = (float)Math.atan(mouseX / 40.0f);
+        float g = (float)Math.atan(mouseY / 40.0f);
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(x, y, 1050.0f);
+        RenderSystem.scalef(1.0f, 1.0f, -1.0f);
+        MatrixStack matrixStack = new MatrixStack();
+        matrixStack.translate(0.0, 0.0, 1000.0);
+        matrixStack.scale(size, size, size);
+        Quaternion quaternion = Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f);
+        Quaternion quaternion2 = Vector3f.POSITIVE_X.getDegreesQuaternion(g * 20.0f);
+        quaternion.hamiltonProduct(quaternion2);
+        matrixStack.multiply(quaternion);
+        float h = entity.bodyYaw;
+        float i = entity.yaw;
+        float j = entity.pitch;
+        float k = entity.prevHeadYaw;
+        float l = entity.headYaw;
+        entity.bodyYaw = 180.0f + f * 20.0f;
+        entity.yaw = 180.0f + f * 40.0f;
+        entity.pitch = -g * 20.0f;
         entity.headYaw = entity.yaw;
         entity.prevHeadYaw = entity.yaw;
-        GlStateManager.translatef(0.0f, 0.0f, 0.0f);
         EntityRenderDispatcher entityRenderDispatcher = MinecraftClient.getInstance().getEntityRenderManager();
-        entityRenderDispatcher.method_3945(180.0f);
+        quaternion2.conjugate();
+        entityRenderDispatcher.setRotation(quaternion2);
         entityRenderDispatcher.setRenderShadows(false);
-        entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, false);
+        VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+        entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, matrixStack, immediate, 0xF000F0);
+        immediate.draw();
         entityRenderDispatcher.setRenderShadows(true);
-        entity.field_6283 = f;
-        entity.yaw = g;
-        entity.pitch = h;
-        entity.prevHeadYaw = i;
-        entity.headYaw = j;
-        GlStateManager.popMatrix();
-        DiffuseLighting.disable();
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.activeTexture(GLX.GL_TEXTURE1);
-        GlStateManager.disableTexture();
-        GlStateManager.activeTexture(GLX.GL_TEXTURE0);
+        entity.bodyYaw = h;
+        entity.yaw = i;
+        entity.pitch = j;
+        entity.prevHeadYaw = k;
+        entity.headYaw = l;
+        RenderSystem.popMatrix();
     }
 
     @Override

@@ -11,9 +11,9 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public abstract class MobEntityWithAi
 extends MobEntity {
@@ -25,13 +25,13 @@ extends MobEntity {
         return this.getPathfindingFavor(pos, this.world);
     }
 
-    public float getPathfindingFavor(BlockPos pos, CollisionView world) {
+    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
         return 0.0f;
     }
 
     @Override
     public boolean canSpawn(IWorld world, SpawnType spawnType) {
-        return this.getPathfindingFavor(new BlockPos(this.x, this.getBoundingBox().y1, this.z), world) >= 0.0f;
+        return this.getPathfindingFavor(new BlockPos(this), world) >= 0.0f;
     }
 
     public boolean isNavigating() {
@@ -56,15 +56,15 @@ extends MobEntity {
                 this.detachLeash(true, true);
                 this.goalSelector.disableControl(Goal.Control.MOVE);
             } else if (f > 6.0f) {
-                double d = (entity.x - this.x) / (double)f;
-                double e = (entity.y - this.y) / (double)f;
-                double g = (entity.z - this.z) / (double)f;
+                double d = (entity.getX() - this.getX()) / (double)f;
+                double e = (entity.getY() - this.getY()) / (double)f;
+                double g = (entity.getZ() - this.getZ()) / (double)f;
                 this.setVelocity(this.getVelocity().add(Math.copySign(d * d * 0.4, d), Math.copySign(e * e * 0.4, e), Math.copySign(g * g * 0.4, g)));
             } else {
                 this.goalSelector.enableControl(Goal.Control.MOVE);
                 float h = 2.0f;
-                Vec3d vec3d = new Vec3d(entity.x - this.x, entity.y - this.y, entity.z - this.z).normalize().multiply(Math.max(f - 2.0f, 0.0f));
-                this.getNavigation().startMovingTo(this.x + vec3d.x, this.y + vec3d.y, this.z + vec3d.z, this.getRunFromLeashSpeed());
+                Vec3d vec3d = new Vec3d(entity.getX() - this.getX(), entity.getY() - this.getY(), entity.getZ() - this.getZ()).normalize().multiply(Math.max(f - 2.0f, 0.0f));
+                this.getNavigation().startMovingTo(this.getX() + vec3d.x, this.getY() + vec3d.y, this.getZ() + vec3d.z, this.getRunFromLeashSpeed());
             }
         }
     }

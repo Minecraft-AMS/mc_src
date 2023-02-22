@@ -2,32 +2,31 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.Dynamic
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.sapling;
 
-import com.mojang.datafixers.Dynamic;
 import java.util.Random;
-import java.util.function.Function;
 import net.minecraft.block.sapling.LargeTreeSaplingGenerator;
-import net.minecraft.world.gen.feature.AbstractTreeFeature;
-import net.minecraft.world.gen.feature.DarkOakTreeFeature;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
+import net.minecraft.world.biome.DefaultBiomeFeatures;
+import net.minecraft.world.gen.feature.BranchedTreeFeatureConfig;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.MegaTreeFeatureConfig;
 import org.jetbrains.annotations.Nullable;
 
 public class DarkOakSaplingGenerator
 extends LargeTreeSaplingGenerator {
     @Override
     @Nullable
-    protected AbstractTreeFeature<DefaultFeatureConfig> createTreeFeature(Random random) {
+    protected ConfiguredFeature<BranchedTreeFeatureConfig, ?> createTreeFeature(Random random, boolean bl) {
         return null;
     }
 
     @Override
     @Nullable
-    protected AbstractTreeFeature<DefaultFeatureConfig> createLargeTreeFeature(Random random) {
-        return new DarkOakTreeFeature((Function<Dynamic<?>, ? extends DefaultFeatureConfig>)((Function<Dynamic<?>, DefaultFeatureConfig>)DefaultFeatureConfig::deserialize), true);
+    protected ConfiguredFeature<MegaTreeFeatureConfig, ?> createLargeTreeFeature(Random random) {
+        return Feature.DARK_OAK_TREE.configure(DefaultBiomeFeatures.DARK_OAK_TREE_CONFIG);
     }
 }
 

@@ -1,21 +1,27 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BubbleColumnBlock;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.EntityType;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class SoulSandBlock
 extends Block {
@@ -31,12 +37,7 @@ extends Block {
     }
 
     @Override
-    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
-        entity.setVelocity(entity.getVelocity().multiply(0.4, 1.0, 0.4));
-    }
-
-    @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         BubbleColumnBlock.update(world, pos.up(), false);
     }
 
@@ -51,7 +52,7 @@ extends Block {
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 20;
     }
 
@@ -67,6 +68,12 @@ extends Block {
 
     @Override
     public boolean allowsSpawning(BlockState state, BlockView view, BlockPos pos, EntityType<?> type) {
+        return true;
+    }
+
+    @Override
+    @Environment(value=EnvType.CLIENT)
+    public boolean hasInWallOverlay(BlockState state, BlockView view, BlockPos pos) {
         return true;
     }
 }

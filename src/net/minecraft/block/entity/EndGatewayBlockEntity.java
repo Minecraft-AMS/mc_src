@@ -23,6 +23,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Tickable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -48,6 +49,7 @@ implements Tickable {
     private static final Logger LOGGER = LogManager.getLogger();
     private long age;
     private int teleportCooldown;
+    @Nullable
     private BlockPos exitPortalPos;
     private boolean exactTeleport;
 
@@ -94,7 +96,7 @@ implements Tickable {
         } else if (!this.world.isClient) {
             List<Entity> list = this.world.getNonSpectatingEntities(Entity.class, new Box(this.getPos()));
             if (!list.isEmpty()) {
-                this.tryTeleportingEntity(list.get(0));
+                this.tryTeleportingEntity(list.get(0).getRootVehicle());
             }
             if (this.age % 2400L == 0L) {
                 this.startTeleportCooldown();
@@ -152,12 +154,12 @@ implements Tickable {
     }
 
     public void tryTeleportingEntity(Entity entity) {
-        if (this.world.isClient || this.needsCooldownBeforeTeleporting()) {
+        if (!(this.world instanceof ServerWorld) || this.needsCooldownBeforeTeleporting()) {
             return;
         }
         this.teleportCooldown = 100;
         if (this.exitPortalPos == null && this.world.dimension instanceof TheEndDimension) {
-            this.createPortal();
+            this.createPortal((ServerWorld)this.world);
         }
         if (this.exitPortalPos != null) {
             BlockPos blockPos = this.exactTeleport ? this.exitPortalPos : this.findBestPortalExitPos();
@@ -172,33 +174,33 @@ implements Tickable {
         return blockPos.up();
     }
 
-    private void createPortal() {
+    private void createPortal(ServerWorld serverWorld) {
         Vec3d vec3d = new Vec3d(this.getPos().getX(), 0.0, this.getPos().getZ()).normalize();
         Vec3d vec3d2 = vec3d.multiply(1024.0);
         int i = 16;
-        while (EndGatewayBlockEntity.getChunk(this.world, vec3d2).getHighestNonEmptySectionYOffset() > 0 && i-- > 0) {
+        while (EndGatewayBlockEntity.getChunk(serverWorld, vec3d2).getHighestNonEmptySectionYOffset() > 0 && i-- > 0) {
             LOGGER.debug("Skipping backwards past nonempty chunk at {}", (Object)vec3d2);
             vec3d2 = vec3d2.add(vec3d.multiply(-16.0));
         }
         i = 16;
-        while (EndGatewayBlockEntity.getChunk(this.world, vec3d2).getHighestNonEmptySectionYOffset() == 0 && i-- > 0) {
+        while (EndGatewayBlockEntity.getChunk(serverWorld, vec3d2).getHighestNonEmptySectionYOffset() == 0 && i-- > 0) {
             LOGGER.debug("Skipping forward past empty chunk at {}", (Object)vec3d2);
             vec3d2 = vec3d2.add(vec3d.multiply(16.0));
         }
         LOGGER.debug("Found chunk at {}", (Object)vec3d2);
-        WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(this.world, vec3d2);
+        WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(serverWorld, vec3d2);
         this.exitPortalPos = EndGatewayBlockEntity.findPortalPosition(worldChunk);
         if (this.exitPortalPos == null) {
             this.exitPortalPos = new BlockPos(vec3d2.x + 0.5, 75.0, vec3d2.z + 0.5);
             LOGGER.debug("Failed to find suitable block, settling on {}", (Object)this.exitPortalPos);
-            Feature.END_ISLAND.generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(this.exitPortalPos.asLong()), this.exitPortalPos, FeatureConfig.DEFAULT);
+            Feature.END_ISLAND.configure(FeatureConfig.DEFAULT).generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), new Random(this.exitPortalPos.asLong()), this.exitPortalPos);
         } else {
             LOGGER.debug("Found block at {}", (Object)this.exitPortalPos);
         }
-        this.exitPortalPos = EndGatewayBlockEntity.findExitPortalPos(this.world, this.exitPortalPos, 16, true);
+        this.exitPortalPos = EndGatewayBlockEntity.findExitPortalPos(serverWorld, this.exitPortalPos, 16, true);
         LOGGER.debug("Creating portal at {}", (Object)this.exitPortalPos);
         this.exitPortalPos = this.exitPortalPos.up(10);
-        this.createPortal(this.exitPortalPos);
+        this.createPortal(serverWorld, this.exitPortalPos);
         this.markDirty();
     }
 
@@ -210,7 +212,7 @@ implements Tickable {
                 for (int k = 255; k > (blockPos == null ? 0 : blockPos.getY()); --k) {
                     BlockPos blockPos2 = new BlockPos(pos.getX() + i, k, pos.getZ() + j);
                     BlockState blockState = world.getBlockState(blockPos2);
-                    if (!blockState.method_21743(world, blockPos2) || !bl && blockState.getBlock() == Blocks.BEDROCK) continue;
+                    if (!blockState.isFullCube(world, blockPos2) || !bl && blockState.getBlock() == Blocks.BEDROCK) continue;
                     blockPos = blockPos2;
                     continue block1;
                 }
@@ -235,7 +237,7 @@ implements Tickable {
             BlockState blockState = worldChunk.getBlockState(blockPos4);
             BlockPos blockPos5 = blockPos4.up();
             BlockPos blockPos6 = blockPos4.up(2);
-            if (blockState.getBlock() != Blocks.END_STONE || worldChunk.getBlockState(blockPos5).method_21743(worldChunk, blockPos5) || worldChunk.getBlockState(blockPos6).method_21743(worldChunk, blockPos6)) continue;
+            if (blockState.getBlock() != Blocks.END_STONE || worldChunk.getBlockState(blockPos5).isFullCube(worldChunk, blockPos5) || worldChunk.getBlockState(blockPos6).isFullCube(worldChunk, blockPos6)) continue;
             double e = blockPos4.getSquaredDistance(0.0, 0.0, 0.0, true);
             if (blockPos3 != null && !(e < d)) continue;
             blockPos3 = blockPos4;
@@ -244,8 +246,8 @@ implements Tickable {
         return blockPos3;
     }
 
-    private void createPortal(BlockPos blockPos) {
-        Feature.END_GATEWAY.generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), blockPos, EndGatewayFeatureConfig.createConfig(this.getPos(), false));
+    private void createPortal(ServerWorld serverWorld, BlockPos blockPos) {
+        Feature.END_GATEWAY.configure(EndGatewayFeatureConfig.createConfig(this.getPos(), false)).generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), new Random(), blockPos);
     }
 
     @Override

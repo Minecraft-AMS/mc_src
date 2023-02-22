@@ -23,7 +23,9 @@ import net.minecraft.item.DyeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.SignType;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -37,9 +39,11 @@ extends BlockWithEntity
 implements Waterloggable {
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 16.0, 12.0);
+    private final SignType type;
 
-    protected AbstractSignBlock(Block.Settings settings) {
+    protected AbstractSignBlock(Block.Settings settings, SignType type) {
         super(settings);
+        this.type = type;
     }
 
     @Override
@@ -56,12 +60,6 @@ implements Waterloggable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasBlockEntityBreakingRender(BlockState state) {
-        return true;
-    }
-
-    @Override
     public boolean canMobSpawnInside() {
         return true;
     }
@@ -72,21 +70,23 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        boolean bl;
+        ItemStack itemStack = player.getStackInHand(hand);
+        boolean bl2 = bl = itemStack.getItem() instanceof DyeItem && player.abilities.allowModifyWorld;
         if (world.isClient) {
-            return true;
+            return bl ? ActionResult.SUCCESS : ActionResult.CONSUME;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof SignBlockEntity) {
-            boolean bl;
+            boolean bl22;
             SignBlockEntity signBlockEntity = (SignBlockEntity)blockEntity;
-            ItemStack itemStack = player.getStackInHand(hand);
-            if (itemStack.getItem() instanceof DyeItem && player.abilities.allowModifyWorld && (bl = signBlockEntity.setTextColor(((DyeItem)itemStack.getItem()).getColor())) && !player.isCreative()) {
+            if (bl && (bl22 = signBlockEntity.setTextColor(((DyeItem)itemStack.getItem()).getColor())) && !player.isCreative()) {
                 itemStack.decrement(1);
             }
-            return signBlockEntity.onActivate(player);
+            return signBlockEntity.onActivate(player) ? ActionResult.SUCCESS : ActionResult.PASS;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     @Override
@@ -95,6 +95,11 @@ implements Waterloggable {
             return Fluids.WATER.getStill(false);
         }
         return super.getFluidState(state);
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public SignType getSignType() {
+        return this.type;
     }
 }
 

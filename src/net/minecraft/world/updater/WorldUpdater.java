@@ -81,6 +81,7 @@ public class WorldUpdater {
         this.updateThread.setUncaughtExceptionHandler((thread, throwable) -> {
             LOGGER.error("Error upgrading world", throwable);
             this.status = new TranslatableText("optimizeWorld.stage.failed", new Object[0]);
+            this.isDone = true;
         });
         this.updateThread.start();
     }
@@ -128,14 +129,18 @@ public class WorldUpdater {
                     ChunkPos chunkPos = (ChunkPos)listIterator.next();
                     boolean bl2 = false;
                     try {
-                        CompoundTag compoundTag = versionedChunkStorage.getTagAt(chunkPos);
+                        CompoundTag compoundTag = versionedChunkStorage.getNbt(chunkPos);
                         if (compoundTag != null) {
                             boolean bl3;
                             int i = VersionedChunkStorage.getDataVersion(compoundTag);
                             CompoundTag compoundTag2 = versionedChunkStorage.updateChunkTag(dimensionType3, () -> this.persistentStateManager, compoundTag);
+                            CompoundTag compoundTag3 = compoundTag2.getCompound("Level");
+                            ChunkPos chunkPos2 = new ChunkPos(compoundTag3.getInt("xPos"), compoundTag3.getInt("zPos"));
+                            if (!chunkPos2.equals(chunkPos)) {
+                                LOGGER.warn("Chunk {} has invalid position {}", (Object)chunkPos, (Object)chunkPos2);
+                            }
                             boolean bl4 = bl3 = i < SharedConstants.getGameVersion().getWorldVersion();
                             if (this.eraseCache) {
-                                CompoundTag compoundTag3 = compoundTag2.getCompound("Level");
                                 bl3 = bl3 || compoundTag3.contains("Heightmaps");
                                 compoundTag3.remove("Heightmaps");
                                 bl3 = bl3 || compoundTag3.contains("isLightOn");
@@ -200,11 +205,11 @@ public class WorldUpdater {
             if (!matcher.matches()) continue;
             int i = Integer.parseInt(matcher.group(1)) << 5;
             int j = Integer.parseInt(matcher.group(2)) << 5;
-            try (RegionFile regionFile = new RegionFile(file3);){
+            try (RegionFile regionFile = new RegionFile(file3, file22);){
                 for (int k = 0; k < 32; ++k) {
                     for (int l = 0; l < 32; ++l) {
                         ChunkPos chunkPos = new ChunkPos(k + i, l + j);
-                        if (!regionFile.isChunkPresent(chunkPos)) continue;
+                        if (!regionFile.isChunkValid(chunkPos)) continue;
                         list.add(chunkPos);
                     }
                 }

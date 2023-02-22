@@ -20,14 +20,14 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.chunk.ChunkCache;
 import org.jetbrains.annotations.Nullable;
 
 public class BirdPathNodeMaker
 extends LandPathNodeMaker {
     @Override
-    public void init(CollisionView collisionView, MobEntity mobEntity) {
-        super.init(collisionView, mobEntity);
+    public void init(ChunkCache chunkCache, MobEntity mobEntity) {
+        super.init(chunkCache, mobEntity);
         this.waterPathNodeTypeWeight = mobEntity.getPathfindingPenalty(PathNodeType.WATER);
     }
 
@@ -43,15 +43,15 @@ extends LandPathNodeMaker {
         PathNodeType pathNodeType;
         int i;
         if (this.canSwim() && this.entity.isTouchingWater()) {
-            i = MathHelper.floor(this.entity.getBoundingBox().y1);
-            BlockPos.Mutable mutable = new BlockPos.Mutable(this.entity.x, (double)i, this.entity.z);
-            Block block = this.blockView.getBlockState(mutable).getBlock();
+            i = MathHelper.floor(this.entity.getY());
+            BlockPos.Mutable mutable = new BlockPos.Mutable(this.entity.getX(), (double)i, this.entity.getZ());
+            Block block = this.field_20622.getBlockState(mutable).getBlock();
             while (block == Blocks.WATER) {
-                mutable.set(this.entity.x, (double)(++i), this.entity.z);
-                block = this.blockView.getBlockState(mutable).getBlock();
+                mutable.set(this.entity.getX(), (double)(++i), this.entity.getZ());
+                block = this.field_20622.getBlockState(mutable).getBlock();
             }
         } else {
-            i = MathHelper.floor(this.entity.getBoundingBox().y1 + 0.5);
+            i = MathHelper.floor(this.entity.getY() + 0.5);
         }
         if (this.entity.getPathfindingPenalty(pathNodeType = this.method_9(this.entity, (blockPos = new BlockPos(this.entity)).getX(), i, blockPos.getZ())) < 0.0f) {
             HashSet set = Sets.newHashSet();
@@ -75,76 +75,120 @@ extends LandPathNodeMaker {
 
     @Override
     public int getSuccessors(PathNode[] successors, PathNode node) {
+        PathNode pathNode26;
+        PathNode pathNode25;
+        PathNode pathNode24;
+        PathNode pathNode23;
+        PathNode pathNode22;
+        PathNode pathNode21;
+        PathNode pathNode20;
+        PathNode pathNode19;
+        PathNode pathNode18;
+        PathNode pathNode17;
+        PathNode pathNode16;
+        PathNode pathNode15;
+        PathNode pathNode14;
+        PathNode pathNode13;
+        PathNode pathNode12;
+        PathNode pathNode11;
+        PathNode pathNode10;
+        PathNode pathNode9;
+        PathNode pathNode8;
         PathNode pathNode7;
-        boolean bl6;
+        PathNode pathNode6;
+        PathNode pathNode5;
+        PathNode pathNode4;
+        PathNode pathNode3;
+        PathNode pathNode2;
         int i = 0;
         PathNode pathNode = this.getNode(node.x, node.y, node.z + 1);
-        PathNode pathNode2 = this.getNode(node.x - 1, node.y, node.z);
-        PathNode pathNode3 = this.getNode(node.x + 1, node.y, node.z);
-        PathNode pathNode4 = this.getNode(node.x, node.y, node.z - 1);
-        PathNode pathNode5 = this.getNode(node.x, node.y + 1, node.z);
-        PathNode pathNode6 = this.getNode(node.x, node.y - 1, node.z);
-        if (pathNode != null && !pathNode.field_42) {
+        if (this.method_22878(pathNode)) {
             successors[i++] = pathNode;
         }
-        if (pathNode2 != null && !pathNode2.field_42) {
+        if (this.method_22878(pathNode2 = this.getNode(node.x - 1, node.y, node.z))) {
             successors[i++] = pathNode2;
         }
-        if (pathNode3 != null && !pathNode3.field_42) {
+        if (this.method_22878(pathNode3 = this.getNode(node.x + 1, node.y, node.z))) {
             successors[i++] = pathNode3;
         }
-        if (pathNode4 != null && !pathNode4.field_42) {
+        if (this.method_22878(pathNode4 = this.getNode(node.x, node.y, node.z - 1))) {
             successors[i++] = pathNode4;
         }
-        if (pathNode5 != null && !pathNode5.field_42) {
+        if (this.method_22878(pathNode5 = this.getNode(node.x, node.y + 1, node.z))) {
             successors[i++] = pathNode5;
         }
-        if (pathNode6 != null && !pathNode6.field_42) {
+        if (this.method_22878(pathNode6 = this.getNode(node.x, node.y - 1, node.z))) {
             successors[i++] = pathNode6;
         }
-        boolean bl = pathNode4 == null || pathNode4.field_43 != 0.0f;
-        boolean bl2 = pathNode == null || pathNode.field_43 != 0.0f;
-        boolean bl3 = pathNode3 == null || pathNode3.field_43 != 0.0f;
-        boolean bl4 = pathNode2 == null || pathNode2.field_43 != 0.0f;
-        boolean bl5 = pathNode5 == null || pathNode5.field_43 != 0.0f;
-        boolean bl7 = bl6 = pathNode6 == null || pathNode6.field_43 != 0.0f;
-        if (bl && bl4 && (pathNode7 = this.getNode(node.x - 1, node.y, node.z - 1)) != null && !pathNode7.field_42) {
+        if (this.method_22878(pathNode7 = this.getNode(node.x, node.y + 1, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode5)) {
             successors[i++] = pathNode7;
         }
-        if (bl && bl3 && (pathNode7 = this.getNode(node.x + 1, node.y, node.z - 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode8 = this.getNode(node.x - 1, node.y + 1, node.z)) && this.method_22877(pathNode2) && this.method_22877(pathNode5)) {
+            successors[i++] = pathNode8;
         }
-        if (bl2 && bl4 && (pathNode7 = this.getNode(node.x - 1, node.y, node.z + 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode9 = this.getNode(node.x + 1, node.y + 1, node.z)) && this.method_22877(pathNode3) && this.method_22877(pathNode5)) {
+            successors[i++] = pathNode9;
         }
-        if (bl2 && bl3 && (pathNode7 = this.getNode(node.x + 1, node.y, node.z + 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode10 = this.getNode(node.x, node.y + 1, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode5)) {
+            successors[i++] = pathNode10;
         }
-        if (bl && bl5 && (pathNode7 = this.getNode(node.x, node.y + 1, node.z - 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode11 = this.getNode(node.x, node.y - 1, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode6)) {
+            successors[i++] = pathNode11;
         }
-        if (bl2 && bl5 && (pathNode7 = this.getNode(node.x, node.y + 1, node.z + 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode12 = this.getNode(node.x - 1, node.y - 1, node.z)) && this.method_22877(pathNode2) && this.method_22877(pathNode6)) {
+            successors[i++] = pathNode12;
         }
-        if (bl3 && bl5 && (pathNode7 = this.getNode(node.x + 1, node.y + 1, node.z)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode13 = this.getNode(node.x + 1, node.y - 1, node.z)) && this.method_22877(pathNode3) && this.method_22877(pathNode6)) {
+            successors[i++] = pathNode13;
         }
-        if (bl4 && bl5 && (pathNode7 = this.getNode(node.x - 1, node.y + 1, node.z)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode14 = this.getNode(node.x, node.y - 1, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode6)) {
+            successors[i++] = pathNode14;
         }
-        if (bl && bl6 && (pathNode7 = this.getNode(node.x, node.y - 1, node.z - 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode15 = this.getNode(node.x + 1, node.y, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode3)) {
+            successors[i++] = pathNode15;
         }
-        if (bl2 && bl6 && (pathNode7 = this.getNode(node.x, node.y - 1, node.z + 1)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode16 = this.getNode(node.x + 1, node.y, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode3)) {
+            successors[i++] = pathNode16;
         }
-        if (bl3 && bl6 && (pathNode7 = this.getNode(node.x + 1, node.y - 1, node.z)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode17 = this.getNode(node.x - 1, node.y, node.z - 1)) && this.method_22877(pathNode4) && this.method_22877(pathNode2)) {
+            successors[i++] = pathNode17;
         }
-        if (bl4 && bl6 && (pathNode7 = this.getNode(node.x - 1, node.y - 1, node.z)) != null && !pathNode7.field_42) {
-            successors[i++] = pathNode7;
+        if (this.method_22878(pathNode18 = this.getNode(node.x - 1, node.y, node.z + 1)) && this.method_22877(pathNode) && this.method_22877(pathNode2)) {
+            successors[i++] = pathNode18;
+        }
+        if (this.method_22878(pathNode19 = this.getNode(node.x + 1, node.y + 1, node.z - 1)) && this.method_22877(pathNode15) && this.method_22877(pathNode10) && this.method_22877(pathNode9)) {
+            successors[i++] = pathNode19;
+        }
+        if (this.method_22878(pathNode20 = this.getNode(node.x + 1, node.y + 1, node.z + 1)) && this.method_22877(pathNode16) && this.method_22877(pathNode7) && this.method_22877(pathNode9)) {
+            successors[i++] = pathNode20;
+        }
+        if (this.method_22878(pathNode21 = this.getNode(node.x - 1, node.y + 1, node.z - 1)) && this.method_22877(pathNode17) && this.method_22877(pathNode10) && this.method_22877(pathNode8)) {
+            successors[i++] = pathNode21;
+        }
+        if (this.method_22878(pathNode22 = this.getNode(node.x - 1, node.y + 1, node.z + 1)) && this.method_22877(pathNode18) && this.method_22877(pathNode7) && this.method_22877(pathNode8)) {
+            successors[i++] = pathNode22;
+        }
+        if (this.method_22878(pathNode23 = this.getNode(node.x + 1, node.y - 1, node.z - 1)) && this.method_22877(pathNode15) && this.method_22877(pathNode14) && this.method_22877(pathNode13)) {
+            successors[i++] = pathNode23;
+        }
+        if (this.method_22878(pathNode24 = this.getNode(node.x + 1, node.y - 1, node.z + 1)) && this.method_22877(pathNode16) && this.method_22877(pathNode11) && this.method_22877(pathNode13)) {
+            successors[i++] = pathNode24;
+        }
+        if (this.method_22878(pathNode25 = this.getNode(node.x - 1, node.y - 1, node.z - 1)) && this.method_22877(pathNode17) && this.method_22877(pathNode14) && this.method_22877(pathNode12)) {
+            successors[i++] = pathNode25;
+        }
+        if (this.method_22878(pathNode26 = this.getNode(node.x - 1, node.y - 1, node.z + 1)) && this.method_22877(pathNode18) && this.method_22877(pathNode11) && this.method_22877(pathNode12)) {
+            successors[i++] = pathNode26;
         }
         return i;
+    }
+
+    private boolean method_22877(@Nullable PathNode pathNode) {
+        return pathNode != null && pathNode.penalty >= 0.0f;
+    }
+
+    private boolean method_22878(@Nullable PathNode pathNode) {
+        return pathNode != null && !pathNode.visited;
     }
 
     @Override
@@ -156,9 +200,9 @@ extends LandPathNodeMaker {
         if (f >= 0.0f) {
             pathNode = super.getNode(x, y, z);
             pathNode.type = pathNodeType;
-            pathNode.field_43 = Math.max(pathNode.field_43, f);
+            pathNode.penalty = Math.max(pathNode.penalty, f);
             if (pathNodeType == PathNodeType.WALKABLE) {
-                pathNode.field_43 += 1.0f;
+                pathNode.penalty += 1.0f;
             }
         }
         if (pathNodeType == PathNodeType.OPEN || pathNodeType == PathNodeType.WALKABLE) {
@@ -172,7 +216,7 @@ extends LandPathNodeMaker {
         EnumSet<PathNodeType> enumSet = EnumSet.noneOf(PathNodeType.class);
         PathNodeType pathNodeType = PathNodeType.BLOCKED;
         BlockPos blockPos = new BlockPos(mob);
-        pathNodeType = this.method_64(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
+        pathNodeType = this.getNodeType(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
         if (enumSet.contains((Object)PathNodeType.FENCE)) {
             return PathNodeType.FENCE;
         }
@@ -192,13 +236,27 @@ extends LandPathNodeMaker {
 
     @Override
     public PathNodeType getNodeType(BlockView world, int x, int y, int z) {
-        PathNodeType pathNodeType = this.getBasicPathNodeType(world, x, y, z);
+        PathNodeType pathNodeType = BirdPathNodeMaker.getBasicPathNodeType(world, x, y, z);
         if (pathNodeType == PathNodeType.OPEN && y >= 1) {
             Block block = world.getBlockState(new BlockPos(x, y - 1, z)).getBlock();
-            PathNodeType pathNodeType2 = this.getBasicPathNodeType(world, x, y - 1, z);
-            pathNodeType = pathNodeType2 == PathNodeType.DAMAGE_FIRE || block == Blocks.MAGMA_BLOCK || pathNodeType2 == PathNodeType.LAVA || block == Blocks.CAMPFIRE ? PathNodeType.DAMAGE_FIRE : (pathNodeType2 == PathNodeType.DAMAGE_CACTUS ? PathNodeType.DAMAGE_CACTUS : (pathNodeType2 == PathNodeType.DAMAGE_OTHER ? PathNodeType.DAMAGE_OTHER : (pathNodeType2 == PathNodeType.WALKABLE || pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WATER ? PathNodeType.OPEN : PathNodeType.WALKABLE)));
+            PathNodeType pathNodeType2 = BirdPathNodeMaker.getBasicPathNodeType(world, x, y - 1, z);
+            if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || block == Blocks.MAGMA_BLOCK || pathNodeType2 == PathNodeType.LAVA || block == Blocks.CAMPFIRE) {
+                pathNodeType = PathNodeType.DAMAGE_FIRE;
+            } else if (pathNodeType2 == PathNodeType.DAMAGE_CACTUS) {
+                pathNodeType = PathNodeType.DAMAGE_CACTUS;
+            } else if (pathNodeType2 == PathNodeType.DAMAGE_OTHER) {
+                pathNodeType = PathNodeType.DAMAGE_OTHER;
+            } else if (pathNodeType2 == PathNodeType.COCOA) {
+                pathNodeType = PathNodeType.COCOA;
+            } else if (pathNodeType2 == PathNodeType.FENCE) {
+                pathNodeType = PathNodeType.FENCE;
+            } else {
+                PathNodeType pathNodeType3 = pathNodeType = pathNodeType2 == PathNodeType.WALKABLE || pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WATER ? PathNodeType.OPEN : PathNodeType.WALKABLE;
+            }
         }
-        pathNodeType = this.method_59(world, x, y, z, pathNodeType);
+        if (pathNodeType == PathNodeType.WALKABLE || pathNodeType == PathNodeType.OPEN) {
+            pathNodeType = BirdPathNodeMaker.method_59(world, x, y, z, pathNodeType);
+        }
         return pathNodeType;
     }
 
@@ -207,7 +265,7 @@ extends LandPathNodeMaker {
     }
 
     private PathNodeType method_9(MobEntity mobEntity, int i, int j, int k) {
-        return this.getNodeType(this.blockView, i, j, k, mobEntity, this.field_31, this.field_30, this.field_28, this.canOpenDoors(), this.canEnterOpenDoors());
+        return this.getNodeType(this.field_20622, i, j, k, mobEntity, this.field_31, this.field_30, this.field_28, this.canOpenDoors(), this.canEnterOpenDoors());
     }
 }
 

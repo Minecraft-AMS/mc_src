@@ -12,9 +12,9 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ConnectingBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.util.BlockMirror;
@@ -25,9 +25,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
-import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class VineBlock
@@ -71,7 +70,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return this.hasAdjacentBlocks(this.getPlacementShape(state, world, pos));
     }
 
@@ -143,14 +142,11 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         BlockState blockState5;
         BlockState blockState4;
         BlockPos blockPos2;
         BlockState blockState2;
-        if (world.isClient) {
-            return;
-        }
         BlockState blockState = this.getPlacementShape(state, world, pos);
         if (blockState != state) {
             if (this.hasAdjacentBlocks(blockState)) {
@@ -271,11 +267,6 @@ extends Block {
             return (BlockState)blockState2.with(booleanProperty, true);
         }
         return bl ? blockState2 : null;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

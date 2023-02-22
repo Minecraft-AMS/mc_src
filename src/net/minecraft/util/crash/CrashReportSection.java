@@ -139,8 +139,8 @@ public class CrashReportSection {
         return true;
     }
 
-    public void method_580(int i) {
-        StackTraceElement[] stackTraceElements = new StackTraceElement[this.stackTrace.length - i];
+    public void trimStackTraceEnd(int callCount) {
+        StackTraceElement[] stackTraceElements = new StackTraceElement[this.stackTrace.length - callCount];
         System.arraycopy(this.stackTrace, 0, stackTraceElements, 0, stackTraceElements.length);
         this.stackTrace = stackTraceElements;
     }

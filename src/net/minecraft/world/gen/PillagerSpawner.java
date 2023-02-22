@@ -4,13 +4,16 @@
 package net.minecraft.world.gen;
 
 import java.util.Random;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.mob.PatrolEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
+import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -18,7 +21,11 @@ public class PillagerSpawner {
     private int ticksUntilNextSpawn;
 
     public int spawn(ServerWorld serverWorld, boolean spawnMonsters, boolean spawnAnimals) {
+        int k;
         if (!spawnMonsters) {
+            return 0;
+        }
+        if (!serverWorld.getGameRules().getBoolean(GameRules.DO_PATROL_SPAWNING)) {
             return 0;
         }
         Random random = serverWorld.random;
@@ -46,10 +53,8 @@ public class PillagerSpawner {
             return 0;
         }
         int j = (24 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
-        int k = (24 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        mutable.set(playerEntity.x, playerEntity.y, playerEntity.z).setOffset(j, 0, k);
-        if (!serverWorld.isAreaLoaded(mutable.getX() - 10, mutable.getY() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getY() + 10, mutable.getZ() + 10)) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable(playerEntity).setOffset(j, 0, k = (24 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1));
+        if (!serverWorld.isRegionLoaded(mutable.getX() - 10, mutable.getY() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getY() + 10, mutable.getZ() + 10)) {
             return 0;
         }
         Biome biome = serverWorld.getBiome(mutable);
@@ -76,7 +81,11 @@ public class PillagerSpawner {
     }
 
     private boolean spawnOneEntity(World world, BlockPos blockPos, Random random, boolean bl) {
-        if (!PatrolEntity.method_20739(EntityType.PILLAGER, world, SpawnType.PATROL, blockPos, random)) {
+        BlockState blockState = world.getBlockState(blockPos);
+        if (!SpawnHelper.isClearForSpawn(world, blockPos, blockState, blockState.getFluidState())) {
+            return false;
+        }
+        if (!PatrolEntity.canSpawn(EntityType.PILLAGER, world, SpawnType.PATROL, blockPos, random)) {
             return false;
         }
         PatrolEntity patrolEntity = EntityType.PILLAGER.create(world);

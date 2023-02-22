@@ -104,11 +104,6 @@ extends SpellcastingIllagerEntity {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-    }
-
-    @Override
     public boolean isTeammate(Entity other) {
         if (other == null) {
             return false;
@@ -163,12 +158,7 @@ extends SpellcastingIllagerEntity {
 
     public class WololoGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate purpleSheepPredicate;
-
-        public WololoGoal() {
-            super(EvokerEntity.this);
-            this.purpleSheepPredicate = new TargetPredicate().setBaseMaxDistance(16.0).includeInvulnerable().setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
-        }
+        private final TargetPredicate purpleSheepPredicate = new TargetPredicate().setBaseMaxDistance(16.0).includeInvulnerable().setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
 
         @Override
         public boolean canStart() {
@@ -239,11 +229,9 @@ extends SpellcastingIllagerEntity {
 
     class SummonVexGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate closeVexPredicate;
+        private final TargetPredicate closeVexPredicate = new TargetPredicate().setBaseMaxDistance(16.0).includeHidden().ignoreDistanceScalingFactor().includeInvulnerable().includeTeammates();
 
         private SummonVexGoal() {
-            super(EvokerEntity.this);
-            this.closeVexPredicate = new TargetPredicate().setBaseMaxDistance(16.0).includeHidden().ignoreDistanceScalingFactor().includeInvulnerable().includeTeammates();
         }
 
         @Override
@@ -293,7 +281,6 @@ extends SpellcastingIllagerEntity {
     class ConjureFangsGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
         private ConjureFangsGoal() {
-            super(EvokerEntity.this);
         }
 
         @Override
@@ -309,25 +296,25 @@ extends SpellcastingIllagerEntity {
         @Override
         protected void castSpell() {
             LivingEntity livingEntity = EvokerEntity.this.getTarget();
-            double d = Math.min(livingEntity.y, EvokerEntity.this.y);
-            double e = Math.max(livingEntity.y, EvokerEntity.this.y) + 1.0;
-            float f = (float)MathHelper.atan2(livingEntity.z - EvokerEntity.this.z, livingEntity.x - EvokerEntity.this.x);
+            double d = Math.min(livingEntity.getY(), EvokerEntity.this.getY());
+            double e = Math.max(livingEntity.getY(), EvokerEntity.this.getY()) + 1.0;
+            float f = (float)MathHelper.atan2(livingEntity.getZ() - EvokerEntity.this.getZ(), livingEntity.getX() - EvokerEntity.this.getX());
             if (EvokerEntity.this.squaredDistanceTo(livingEntity) < 9.0) {
                 float g;
                 int i;
                 for (i = 0; i < 5; ++i) {
                     g = f + (float)i * (float)Math.PI * 0.4f;
-                    this.conjureFangs(EvokerEntity.this.x + (double)MathHelper.cos(g) * 1.5, EvokerEntity.this.z + (double)MathHelper.sin(g) * 1.5, d, e, g, 0);
+                    this.conjureFangs(EvokerEntity.this.getX() + (double)MathHelper.cos(g) * 1.5, EvokerEntity.this.getZ() + (double)MathHelper.sin(g) * 1.5, d, e, g, 0);
                 }
                 for (i = 0; i < 8; ++i) {
                     g = f + (float)i * (float)Math.PI * 2.0f / 8.0f + 1.2566371f;
-                    this.conjureFangs(EvokerEntity.this.x + (double)MathHelper.cos(g) * 2.5, EvokerEntity.this.z + (double)MathHelper.sin(g) * 2.5, d, e, g, 3);
+                    this.conjureFangs(EvokerEntity.this.getX() + (double)MathHelper.cos(g) * 2.5, EvokerEntity.this.getZ() + (double)MathHelper.sin(g) * 2.5, d, e, g, 3);
                 }
             } else {
                 for (int i = 0; i < 16; ++i) {
                     double h = 1.25 * (double)(i + 1);
                     int j = 1 * i;
-                    this.conjureFangs(EvokerEntity.this.x + (double)MathHelper.cos(f) * h, EvokerEntity.this.z + (double)MathHelper.sin(f) * h, d, e, f, j);
+                    this.conjureFangs(EvokerEntity.this.getX() + (double)MathHelper.cos(f) * h, EvokerEntity.this.getZ() + (double)MathHelper.sin(f) * h, d, e, f, j);
                 }
             }
         }
@@ -367,15 +354,14 @@ extends SpellcastingIllagerEntity {
     class LookAtTargetOrWololoTarget
     extends SpellcastingIllagerEntity.LookAtTargetGoal {
         private LookAtTargetOrWololoTarget() {
-            super(EvokerEntity.this);
         }
 
         @Override
         public void tick() {
             if (EvokerEntity.this.getTarget() != null) {
-                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getTarget(), EvokerEntity.this.method_5986(), EvokerEntity.this.getLookPitchSpeed());
+                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getTarget(), EvokerEntity.this.getBodyYawSpeed(), EvokerEntity.this.getLookPitchSpeed());
             } else if (EvokerEntity.this.getWololoTarget() != null) {
-                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getWololoTarget(), EvokerEntity.this.method_5986(), EvokerEntity.this.getLookPitchSpeed());
+                EvokerEntity.this.getLookControl().lookAt(EvokerEntity.this.getWololoTarget(), EvokerEntity.this.getBodyYawSpeed(), EvokerEntity.this.getLookPitchSpeed());
             }
         }
     }

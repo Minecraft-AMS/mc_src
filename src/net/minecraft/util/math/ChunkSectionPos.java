@@ -34,7 +34,7 @@ extends Vec3i {
     }
 
     public static ChunkSectionPos from(Entity entity) {
-        return new ChunkSectionPos(ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.x)), ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.y)), ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.z)));
+        return new ChunkSectionPos(ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.getX())), ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.getY())), ChunkSectionPos.getSectionCoord(MathHelper.floor(entity.getZ())));
     }
 
     public static ChunkSectionPos from(long packed) {
@@ -157,6 +157,12 @@ extends Vec3i {
         int j = center.getSectionY();
         int k = center.getSectionZ();
         return ChunkSectionPos.stream(i - radius, j - radius, k - radius, i + radius, j + radius, k + radius);
+    }
+
+    public static Stream<ChunkSectionPos> stream(ChunkPos center, int radius) {
+        int i = center.x;
+        int j = center.z;
+        return ChunkSectionPos.stream(i - radius, 0, j - radius, i + radius, 15, j + radius);
     }
 
     public static Stream<ChunkSectionPos> stream(final int minX, final int minY, final int minZ, final int maxX, final int maxY, final int maxZ) {

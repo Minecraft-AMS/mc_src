@@ -12,7 +12,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
@@ -21,6 +24,15 @@ public class WetSpongeBlock
 extends Block {
     protected WetSpongeBlock(Block.Settings settings) {
         super(settings);
+    }
+
+    @Override
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
+        if (world.getDimension().doesWaterVaporize()) {
+            world.setBlockState(pos, Blocks.SPONGE.getDefaultState(), 3);
+            world.playLevelEvent(2009, pos, 0);
+            world.playSound(null, pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 1.0f, (1.0f + world.getRandom().nextFloat() * 0.2f) * 0.7f);
+        }
     }
 
     @Override

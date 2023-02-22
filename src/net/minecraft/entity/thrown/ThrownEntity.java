@@ -55,7 +55,7 @@ implements Projectile {
     }
 
     protected ThrownEntity(EntityType<? extends ThrownEntity> type, LivingEntity owner, World world) {
-        this(type, owner.x, owner.y + (double)owner.getStandingEyeHeight() - (double)0.1f, owner.z, world);
+        this(type, owner.getX(), owner.getEyeY() - (double)0.1f, owner.getZ(), world);
         this.owner = owner;
         this.ownerUuid = owner.getUuid();
     }
@@ -105,10 +105,7 @@ implements Projectile {
 
     @Override
     public void tick() {
-        float h;
-        this.lastRenderX = this.x;
-        this.lastRenderY = this.y;
-        this.lastRenderZ = this.z;
+        float j;
         super.tick();
         if (this.shake > 0) {
             --this.shake;
@@ -140,12 +137,12 @@ implements Projectile {
             }
         }
         Vec3d vec3d = this.getVelocity();
-        this.x += vec3d.x;
-        this.y += vec3d.y;
-        this.z += vec3d.z;
-        float f = MathHelper.sqrt(ThrownEntity.squaredHorizontalLength(vec3d));
+        double d = this.getX() + vec3d.x;
+        double e = this.getY() + vec3d.y;
+        double f = this.getZ() + vec3d.z;
+        float g = MathHelper.sqrt(ThrownEntity.squaredHorizontalLength(vec3d));
         this.yaw = (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875);
-        this.pitch = (float)(MathHelper.atan2(vec3d.y, f) * 57.2957763671875);
+        this.pitch = (float)(MathHelper.atan2(vec3d.y, g) * 57.2957763671875);
         while (this.pitch - this.prevPitch < -180.0f) {
             this.prevPitch -= 360.0f;
         }
@@ -162,19 +159,19 @@ implements Projectile {
         this.yaw = MathHelper.lerp(0.2f, this.prevYaw, this.yaw);
         if (this.isTouchingWater()) {
             for (int i = 0; i < 4; ++i) {
-                float g = 0.25f;
-                this.world.addParticle(ParticleTypes.BUBBLE, this.x - vec3d.x * 0.25, this.y - vec3d.y * 0.25, this.z - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
+                float h = 0.25f;
+                this.world.addParticle(ParticleTypes.BUBBLE, d - vec3d.x * 0.25, e - vec3d.y * 0.25, f - vec3d.z * 0.25, vec3d.x, vec3d.y, vec3d.z);
             }
-            h = 0.8f;
+            j = 0.8f;
         } else {
-            h = 0.99f;
+            j = 0.99f;
         }
-        this.setVelocity(vec3d.multiply(h));
+        this.setVelocity(vec3d.multiply(j));
         if (!this.hasNoGravity()) {
             Vec3d vec3d2 = this.getVelocity();
             this.setVelocity(vec3d2.x, vec3d2.y - (double)this.getGravity(), vec3d2.z);
         }
-        this.updatePosition(this.x, this.y, this.z);
+        this.updatePosition(d, e, f);
     }
 
     protected float getGravity() {
@@ -189,7 +186,7 @@ implements Projectile {
         tag.putInt("yTile", this.blockY);
         tag.putInt("zTile", this.blockZ);
         tag.putByte("shake", (byte)this.shake);
-        tag.putByte("inGround", (byte)(this.inGround ? 1 : 0));
+        tag.putBoolean("inGround", this.inGround);
         if (this.ownerUuid != null) {
             tag.put("owner", NbtHelper.fromUuid(this.ownerUuid));
         }
@@ -201,7 +198,7 @@ implements Projectile {
         this.blockY = tag.getInt("yTile");
         this.blockZ = tag.getInt("zTile");
         this.shake = tag.getByte("shake") & 0xFF;
-        this.inGround = tag.getByte("inGround") == 1;
+        this.inGround = tag.getBoolean("inGround");
         this.owner = null;
         if (tag.contains("owner", 10)) {
             this.ownerUuid = NbtHelper.toUuid(tag.getCompound("owner"));
@@ -210,13 +207,9 @@ implements Projectile {
 
     @Nullable
     public LivingEntity getOwner() {
-        if (this.owner == null && this.ownerUuid != null && this.world instanceof ServerWorld) {
+        if ((this.owner == null || this.owner.removed) && this.ownerUuid != null && this.world instanceof ServerWorld) {
             Entity entity = ((ServerWorld)this.world).getEntity(this.ownerUuid);
-            if (entity instanceof LivingEntity) {
-                this.owner = (LivingEntity)entity;
-            } else {
-                this.ownerUuid = null;
-            }
+            this.owner = entity instanceof LivingEntity ? (LivingEntity)entity : null;
         }
         return this.owner;
     }

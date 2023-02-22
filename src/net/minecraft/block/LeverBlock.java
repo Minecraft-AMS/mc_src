@@ -22,6 +22,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -83,20 +84,25 @@ extends WallMountedBlock {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        state = (BlockState)state.cycle(POWERED);
-        boolean bl = state.get(POWERED);
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            if (bl) {
-                LeverBlock.spawnParticles(state, world, pos, 1.0f);
+            BlockState blockState = (BlockState)state.cycle(POWERED);
+            if (blockState.get(POWERED).booleanValue()) {
+                LeverBlock.spawnParticles(blockState, world, pos, 1.0f);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
-        world.setBlockState(pos, state, 3);
-        float f = bl ? 0.6f : 0.5f;
+        BlockState blockState = this.method_21846(state, world, pos);
+        float f = blockState.get(POWERED) != false ? 0.6f : 0.5f;
         world.playSound(null, pos, SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.BLOCKS, 0.3f, f);
-        this.updateNeighbors(state, world, pos);
-        return true;
+        return ActionResult.SUCCESS;
+    }
+
+    public BlockState method_21846(BlockState blockState, World world, BlockPos blockPos) {
+        blockState = (BlockState)blockState.cycle(POWERED);
+        world.setBlockState(blockPos, blockState, 3);
+        this.updateNeighbors(blockState, world, blockPos);
+        return blockState;
     }
 
     private static void spawnParticles(BlockState state, IWorld world, BlockPos pos, float alpha) {

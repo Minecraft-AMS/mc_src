@@ -11,7 +11,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityCategory;
 import net.minecraft.entity.EntityType;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.DefaultBiomeFeatures;
 import net.minecraft.world.gen.GenerationStep;
@@ -28,8 +27,8 @@ public final class SwampBiome
 extends Biome {
     protected SwampBiome() {
         super(new Biome.Settings().configureSurfaceBuilder(SurfaceBuilder.SWAMP, SurfaceBuilder.GRASS_CONFIG).precipitation(Biome.Precipitation.RAIN).category(Biome.Category.SWAMP).depth(-0.2f).scale(0.1f).temperature(0.8f).downfall(0.9f).waterColor(6388580).waterFogColor(2302743).parent(null));
-        this.addStructureFeature(Feature.SWAMP_HUT, FeatureConfig.DEFAULT);
-        this.addStructureFeature(Feature.MINESHAFT, new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.NORMAL));
+        this.addStructureFeature(Feature.SWAMP_HUT.configure(FeatureConfig.DEFAULT));
+        this.addStructureFeature(Feature.MINESHAFT.configure(new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.NORMAL)));
         DefaultBiomeFeatures.addLandCarvers(this);
         DefaultBiomeFeatures.addDefaultStructures(this);
         DefaultBiomeFeatures.addDefaultLakes(this);
@@ -41,7 +40,7 @@ extends Biome {
         DefaultBiomeFeatures.addDefaultMushrooms(this);
         DefaultBiomeFeatures.addSwampVegetation(this);
         DefaultBiomeFeatures.addSprings(this);
-        this.addFeature(GenerationStep.Feature.VEGETAL_DECORATION, SwampBiome.configureFeature(Feature.SEAGRASS, new SeagrassFeatureConfig(64, 0.6), Decorator.TOP_SOLID_HEIGHTMAP, DecoratorConfig.DEFAULT));
+        this.addFeature(GenerationStep.Feature.VEGETAL_DECORATION, Feature.SEAGRASS.configure(new SeagrassFeatureConfig(64, 0.6)).createDecoratedFeature(Decorator.TOP_SOLID_HEIGHTMAP.configure(DecoratorConfig.DEFAULT)));
         DefaultBiomeFeatures.addFossils(this);
         DefaultBiomeFeatures.addFrozenTopLayer(this);
         this.addSpawn(EntityCategory.CREATURE, new Biome.SpawnEntry(EntityType.SHEEP, 12, 4, 4));
@@ -62,8 +61,8 @@ extends Biome {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getGrassColorAt(BlockPos blockPos) {
-        double d = FOLIAGE_NOISE.sample((double)blockPos.getX() * 0.0225, (double)blockPos.getZ() * 0.0225);
+    public int getGrassColorAt(double x, double z) {
+        double d = FOLIAGE_NOISE.sample(x * 0.0225, z * 0.0225, false);
         if (d < -0.1) {
             return 5011004;
         }
@@ -72,7 +71,7 @@ extends Biome {
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getFoliageColorAt(BlockPos blockPos) {
+    public int getFoliageColor() {
         return 6975545;
     }
 }

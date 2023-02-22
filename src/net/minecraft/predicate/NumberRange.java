@@ -91,7 +91,7 @@ public abstract class NumberRange<T extends Number> {
         return factory.create(number2, number3);
     }
 
-    protected static <T extends Number, R extends NumberRange<T>> R parse(StringReader commandReader, class_2098<T, R> arg, Function<String, T> converter, Supplier<DynamicCommandExceptionType> exceptionTypeSupplier, Function<T, T> mapper) throws CommandSyntaxException {
+    protected static <T extends Number, R extends NumberRange<T>> R parse(StringReader commandReader, CommandFactory<T, R> commandFactory, Function<String, T> converter, Supplier<DynamicCommandExceptionType> exceptionTypeSupplier, Function<T, T> mapper) throws CommandSyntaxException {
         if (!commandReader.canRead()) {
             throw EXCEPTION_EMPTY.createWithContext((ImmutableStringReader)commandReader);
         }
@@ -112,7 +112,7 @@ public abstract class NumberRange<T extends Number> {
             if (number == null && number2 == null) {
                 throw EXCEPTION_EMPTY.createWithContext((ImmutableStringReader)commandReader);
             }
-            return arg.create(commandReader, number, number2);
+            return commandFactory.create(commandReader, number, number2);
         }
         catch (CommandSyntaxException commandSyntaxException) {
             commandReader.setCursor(i);
@@ -155,7 +155,7 @@ public abstract class NumberRange<T extends Number> {
     }
 
     @FunctionalInterface
-    public static interface class_2098<T extends Number, R extends NumberRange<T>> {
+    public static interface CommandFactory<T extends Number, R extends NumberRange<T>> {
         public R create(StringReader var1, @Nullable T var2, @Nullable T var3) throws CommandSyntaxException;
     }
 
@@ -167,8 +167,8 @@ public abstract class NumberRange<T extends Number> {
     public static class FloatRange
     extends NumberRange<Float> {
         public static final FloatRange ANY = new FloatRange(null, null);
-        private final Double minSquared;
-        private final Double maxSquared;
+        private final Double squaredMin;
+        private final Double squaredMax;
 
         private static FloatRange create(StringReader reader, @Nullable Float min, @Nullable Float max) throws CommandSyntaxException {
             if (min != null && max != null && min.floatValue() > max.floatValue()) {
@@ -178,32 +178,32 @@ public abstract class NumberRange<T extends Number> {
         }
 
         @Nullable
-        private static Double squared(@Nullable Float value) {
+        private static Double square(@Nullable Float value) {
             return value == null ? null : Double.valueOf(value.doubleValue() * value.doubleValue());
         }
 
-        private FloatRange(@Nullable Float max, @Nullable Float float_) {
-            super(max, float_);
-            this.minSquared = FloatRange.squared(max);
-            this.maxSquared = FloatRange.squared(float_);
+        private FloatRange(@Nullable Float min, @Nullable Float max) {
+            super(min, max);
+            this.squaredMin = FloatRange.square(min);
+            this.squaredMax = FloatRange.square(max);
         }
 
         public static FloatRange atLeast(float value) {
             return new FloatRange(Float.valueOf(value), null);
         }
 
-        public boolean matches(float f) {
-            if (this.min != null && ((Float)this.min).floatValue() > f) {
+        public boolean test(float value) {
+            if (this.min != null && ((Float)this.min).floatValue() > value) {
                 return false;
             }
-            return this.max == null || !(((Float)this.max).floatValue() < f);
+            return this.max == null || !(((Float)this.max).floatValue() < value);
         }
 
-        public boolean matchesSquared(double d) {
-            if (this.minSquared != null && this.minSquared > d) {
+        public boolean testSqrt(double value) {
+            if (this.squaredMin != null && this.squaredMin > value) {
                 return false;
             }
-            return this.maxSquared == null || !(this.maxSquared < d);
+            return this.squaredMax == null || !(this.squaredMax < value);
         }
 
         public static FloatRange fromJson(@Nullable JsonElement element) {
@@ -214,8 +214,8 @@ public abstract class NumberRange<T extends Number> {
             return FloatRange.parse(reader, float_ -> float_);
         }
 
-        public static FloatRange parse(StringReader reader, Function<Float, Float> function) throws CommandSyntaxException {
-            return FloatRange.parse(reader, FloatRange::create, Float::parseFloat, () -> ((BuiltInExceptionProvider)CommandSyntaxException.BUILT_IN_EXCEPTIONS).readerInvalidFloat(), function);
+        public static FloatRange parse(StringReader reader, Function<Float, Float> mapper) throws CommandSyntaxException {
+            return FloatRange.parse(reader, FloatRange::create, Float::parseFloat, () -> ((BuiltInExceptionProvider)CommandSyntaxException.BUILT_IN_EXCEPTIONS).readerInvalidFloat(), mapper);
         }
     }
 
@@ -225,9 +225,9 @@ public abstract class NumberRange<T extends Number> {
         private final Long minSquared;
         private final Long maxSquared;
 
-        private static IntRange method_9055(StringReader stringReader, @Nullable Integer min, @Nullable Integer max) throws CommandSyntaxException {
+        private static IntRange parse(StringReader reader, @Nullable Integer min, @Nullable Integer max) throws CommandSyntaxException {
             if (min != null && max != null && min > max) {
-                throw EXCEPTION_SWAPPED.createWithContext((ImmutableStringReader)stringReader);
+                throw EXCEPTION_SWAPPED.createWithContext((ImmutableStringReader)reader);
             }
             return new IntRange(min, max);
         }
@@ -237,10 +237,10 @@ public abstract class NumberRange<T extends Number> {
             return value == null ? null : Long.valueOf(value.longValue() * value.longValue());
         }
 
-        private IntRange(@Nullable Integer max, @Nullable Integer integer) {
-            super(max, integer);
-            this.minSquared = IntRange.squared(max);
-            this.maxSquared = IntRange.squared(integer);
+        private IntRange(@Nullable Integer min, @Nullable Integer max) {
+            super(min, max);
+            this.minSquared = IntRange.squared(min);
+            this.maxSquared = IntRange.squared(max);
         }
 
         public static IntRange exactly(int value) {
@@ -251,23 +251,23 @@ public abstract class NumberRange<T extends Number> {
             return new IntRange(value, null);
         }
 
-        public boolean test(int i) {
-            if (this.min != null && (Integer)this.min > i) {
+        public boolean test(int value) {
+            if (this.min != null && (Integer)this.min > value) {
                 return false;
             }
-            return this.max == null || (Integer)this.max >= i;
+            return this.max == null || (Integer)this.max >= value;
         }
 
         public static IntRange fromJson(@Nullable JsonElement element) {
             return IntRange.fromJson(element, ANY, JsonHelper::asInt, IntRange::new);
         }
 
-        public static IntRange parse(StringReader stringReader) throws CommandSyntaxException {
-            return IntRange.fromStringReader(stringReader, integer -> integer);
+        public static IntRange parse(StringReader reader) throws CommandSyntaxException {
+            return IntRange.fromStringReader(reader, integer -> integer);
         }
 
-        public static IntRange fromStringReader(StringReader stringReader, Function<Integer, Integer> function) throws CommandSyntaxException {
-            return IntRange.parse(stringReader, IntRange::method_9055, Integer::parseInt, () -> ((BuiltInExceptionProvider)CommandSyntaxException.BUILT_IN_EXCEPTIONS).readerInvalidInt(), function);
+        public static IntRange fromStringReader(StringReader reader, Function<Integer, Integer> converter) throws CommandSyntaxException {
+            return IntRange.parse(reader, IntRange::parse, Integer::parseInt, () -> ((BuiltInExceptionProvider)CommandSyntaxException.BUILT_IN_EXCEPTIONS).readerInvalidInt(), converter);
         }
     }
 }

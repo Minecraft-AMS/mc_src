@@ -34,16 +34,19 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.context.LootContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.state.AbstractState;
 import net.minecraft.state.State;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.tag.Tag;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -55,12 +58,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.EmptyBlockView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockState
@@ -110,14 +112,14 @@ implements State<BlockState> {
     }
 
     public VoxelShape getCullingFace(BlockView view, BlockPos pos, Direction facing) {
-        if (this.shapeCache != null && this.shapeCache.shapes != null) {
-            return this.shapeCache.shapes[facing.ordinal()];
+        if (this.shapeCache != null && this.shapeCache.extrudedFaces != null) {
+            return this.shapeCache.extrudedFaces[facing.ordinal()];
         }
-        return VoxelShapes.method_16344(this.getCullingShape(view, pos), facing);
+        return VoxelShapes.extrudeFace(this.getCullingShape(view, pos), facing);
     }
 
-    public boolean method_17900() {
-        return this.shapeCache == null || this.shapeCache.field_17651;
+    public boolean exceedsCube() {
+        return this.shapeCache == null || this.shapeCache.exceedsCube;
     }
 
     public boolean hasSidedTransparency() {
@@ -144,18 +146,13 @@ implements State<BlockState> {
         return this.getBlock().mirror(this, mirror);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasBlockEntityBreakingRender() {
-        return this.getBlock().hasBlockEntityBreakingRender(this);
-    }
-
     public BlockRenderType getRenderType() {
         return this.getBlock().getRenderType(this);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public int getBlockBrightness(BlockRenderView view, BlockPos pos) {
-        return this.getBlock().getBlockBrightness(this, view, pos);
+    public boolean hasEmissiveLighting() {
+        return this.getBlock().hasEmissiveLighting(this);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -277,12 +274,12 @@ implements State<BlockState> {
         this.getBlock().onBlockRemoved(this, world, pos, newState, moved);
     }
 
-    public void scheduledTick(World world, BlockPos pos, Random rnd) {
-        this.getBlock().onScheduledTick(this, world, pos, rnd);
+    public void scheduledTick(ServerWorld world, BlockPos pos, Random random) {
+        this.getBlock().scheduledTick(this, world, pos, random);
     }
 
-    public void onRandomTick(World world, BlockPos pos, Random rnd) {
-        this.getBlock().onRandomTick(this, world, pos, rnd);
+    public void randomTick(ServerWorld world, BlockPos pos, Random random) {
+        this.getBlock().randomTick(this, world, pos, random);
     }
 
     public void onEntityCollision(World world, BlockPos pos, Entity entity) {
@@ -297,8 +294,8 @@ implements State<BlockState> {
         return this.getBlock().getDroppedStacks(this, builder);
     }
 
-    public boolean activate(World world, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        return this.getBlock().activate(this, world, hit.getBlockPos(), player, hand, hit);
+    public ActionResult onUse(World world, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        return this.getBlock().onUse(this, world, hit.getBlockPos(), player, hand, hit);
     }
 
     public void onBlockBreakStart(World world, BlockPos pos, PlayerEntity player) {
@@ -307,6 +304,11 @@ implements State<BlockState> {
 
     public boolean canSuffocate(BlockView view, BlockPos pos) {
         return this.getBlock().canSuffocate(this, view, pos);
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public boolean hasInWallOverlay(BlockView view, BlockPos pos) {
+        return this.getBlock().hasInWallOverlay(this, view, pos);
     }
 
     public BlockState getStateForNeighborUpdate(Direction facing, BlockState neighborState, IWorld world, BlockPos pos, BlockPos neighborPos) {
@@ -321,7 +323,11 @@ implements State<BlockState> {
         return this.getBlock().canReplace(this, ctx);
     }
 
-    public boolean canPlaceAt(CollisionView world, BlockPos pos) {
+    public boolean canBucketPlace(Fluid fluid) {
+        return this.getBlock().canBucketPlace(this, fluid);
+    }
+
+    public boolean canPlaceAt(WorldView world, BlockPos pos) {
         return this.getBlock().canPlaceAt(this, world, pos);
     }
 
@@ -366,11 +372,11 @@ implements State<BlockState> {
         return Block.isSideSolidFullSquare(this, world, pos, direction);
     }
 
-    public boolean method_21743(BlockView blockView, BlockPos blockPos) {
+    public boolean isFullCube(BlockView world, BlockPos pos) {
         if (this.shapeCache != null) {
-            return this.shapeCache.shapeIsFullCube;
+            return this.shapeCache.isFullCube;
         }
-        return Block.isShapeFullCube(this.getCollisionShape(blockView, blockPos));
+        return Block.isShapeFullCube(this.getCollisionShape(world, pos));
     }
 
     public static <T> Dynamic<T> serialize(DynamicOps<T> ops, BlockState state) {
@@ -399,11 +405,11 @@ implements State<BlockState> {
         private final boolean fullOpaque;
         private final boolean translucent;
         private final int lightSubtracted;
-        private final VoxelShape[] shapes;
+        private final VoxelShape[] extrudedFaces;
         private final VoxelShape collisionShape;
-        private final boolean field_17651;
+        private final boolean exceedsCube;
         private final boolean[] solidFullSquare;
-        private final boolean shapeIsFullCube;
+        private final boolean isFullCube;
 
         private ShapeCache(BlockState state) {
             Block block = state.getBlock();
@@ -412,24 +418,24 @@ implements State<BlockState> {
             this.translucent = block.isTranslucent(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN);
             this.lightSubtracted = block.getOpacity(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN);
             if (!state.isOpaque()) {
-                this.shapes = null;
+                this.extrudedFaces = null;
             } else {
-                this.shapes = new VoxelShape[DIRECTIONS.length];
+                this.extrudedFaces = new VoxelShape[DIRECTIONS.length];
                 VoxelShape voxelShape = block.getCullingShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN);
                 Direction[] directionArray = DIRECTIONS;
                 int n = directionArray.length;
                 for (int i = 0; i < n; ++i) {
                     Direction direction = directionArray[i];
-                    this.shapes[direction.ordinal()] = VoxelShapes.method_16344(voxelShape, direction);
+                    this.extrudedFaces[direction.ordinal()] = VoxelShapes.extrudeFace(voxelShape, direction);
                 }
             }
             this.collisionShape = block.getCollisionShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, EntityContext.absent());
-            this.field_17651 = Arrays.stream(Direction.Axis.values()).anyMatch(axis -> this.collisionShape.getMinimum((Direction.Axis)axis) < 0.0 || this.collisionShape.getMaximum((Direction.Axis)axis) > 1.0);
+            this.exceedsCube = Arrays.stream(Direction.Axis.values()).anyMatch(axis -> this.collisionShape.getMinimum((Direction.Axis)axis) < 0.0 || this.collisionShape.getMaximum((Direction.Axis)axis) > 1.0);
             this.solidFullSquare = new boolean[6];
             for (Direction direction2 : DIRECTIONS) {
                 this.solidFullSquare[direction2.ordinal()] = Block.isSideSolidFullSquare(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, direction2);
             }
-            this.shapeIsFullCube = Block.isShapeFullCube(state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN));
+            this.isFullCube = Block.isShapeFullCube(state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN));
         }
     }
 }

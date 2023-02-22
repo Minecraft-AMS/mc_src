@@ -105,7 +105,7 @@ extends HostileEntity {
 
     @Override
     public void tick() {
-        this.field_6283 = this.yaw;
+        this.bodyYaw = this.yaw;
         super.tick();
     }
 
@@ -133,7 +133,7 @@ extends HostileEntity {
         super.tickMovement();
         if (this.world.isClient) {
             for (int i = 0; i < 2; ++i) {
-                this.world.addParticle(ParticleTypes.PORTAL, this.x + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.y + this.random.nextDouble() * (double)this.getHeight(), this.z + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
+                this.world.addParticle(ParticleTypes.PORTAL, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
             }
         } else {
             if (!this.isPersistent()) {
@@ -145,9 +145,9 @@ extends HostileEntity {
         }
     }
 
-    public static boolean method_20674(EntityType<EndermiteEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        if (EndermiteEntity.method_20681(entityType, iWorld, spawnType, blockPos, random)) {
-            PlayerEntity playerEntity = iWorld.getClosestPlayer((double)blockPos.getX() + 0.5, (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5, 5.0, true);
+    public static boolean canSpawn(EntityType<EndermiteEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        if (EndermiteEntity.canSpawnIgnoreLightLevel(type, world, spawnType, pos, random)) {
+            PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 5.0, true);
             return playerEntity == null;
         }
         return false;

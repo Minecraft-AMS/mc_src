@@ -45,7 +45,7 @@ public class PersistentStateManager {
     }
 
     public <T extends PersistentState> T getOrCreate(Supplier<T> factory, String id) {
-        T persistentState = this.method_20786(factory, id);
+        T persistentState = this.get(factory, id);
         if (persistentState != null) {
             return persistentState;
         }
@@ -55,11 +55,11 @@ public class PersistentStateManager {
     }
 
     @Nullable
-    public <T extends PersistentState> T method_20786(Supplier<T> supplier, String string) {
-        PersistentState persistentState = this.loadedStates.get(string);
-        if (persistentState == null && !this.loadedStates.containsKey(string)) {
-            persistentState = this.readFromFile(supplier, string);
-            this.loadedStates.put(string, persistentState);
+    public <T extends PersistentState> T get(Supplier<T> factory, String id) {
+        PersistentState persistentState = this.loadedStates.get(id);
+        if (persistentState == null && !this.loadedStates.containsKey(id)) {
+            persistentState = this.readFromFile(factory, id);
+            this.loadedStates.put(id, persistentState);
         }
         return (T)persistentState;
     }
@@ -70,7 +70,7 @@ public class PersistentStateManager {
             File file = this.getFile(id);
             if (file.exists()) {
                 PersistentState persistentState = (PersistentState)factory.get();
-                CompoundTag compoundTag = this.method_17923(id, SharedConstants.getGameVersion().getWorldVersion());
+                CompoundTag compoundTag = this.readTag(id, SharedConstants.getGameVersion().getWorldVersion());
                 persistentState.fromTag(compoundTag.getCompound("data"));
                 return (T)persistentState;
             }
@@ -85,12 +85,12 @@ public class PersistentStateManager {
         this.loadedStates.put(state.getId(), state);
     }
 
-    public CompoundTag method_17923(String string, int i) throws IOException {
-        File file = this.getFile(string);
+    public CompoundTag readTag(String id, int dataVersion) throws IOException {
+        File file = this.getFile(id);
         try (PushbackInputStream pushbackInputStream = new PushbackInputStream(new FileInputStream(file), 2);){
             Object object;
             CompoundTag compoundTag;
-            if (this.method_17921(pushbackInputStream)) {
+            if (this.isCompressed(pushbackInputStream)) {
                 compoundTag = NbtIo.readCompressed(pushbackInputStream);
             } else {
                 DataInputStream dataInputStream = new DataInputStream(pushbackInputStream);
@@ -117,13 +117,13 @@ public class PersistentStateManager {
                     }
                 }
             }
-            int j = compoundTag.contains("DataVersion", 99) ? compoundTag.getInt("DataVersion") : 1343;
-            object = NbtHelper.update(this.dataFixer, DataFixTypes.SAVED_DATA, compoundTag, j, i);
+            int i = compoundTag.contains("DataVersion", 99) ? compoundTag.getInt("DataVersion") : 1343;
+            object = NbtHelper.update(this.dataFixer, DataFixTypes.SAVED_DATA, compoundTag, i, dataVersion);
             return object;
         }
     }
 
-    private boolean method_17921(PushbackInputStream pushbackInputStream) throws IOException {
+    private boolean isCompressed(PushbackInputStream pushbackInputStream) throws IOException {
         int j;
         byte[] bs = new byte[2];
         boolean bl = false;

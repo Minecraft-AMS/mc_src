@@ -45,7 +45,7 @@ import net.minecraft.world.ChunkTickScheduler;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.TickScheduler;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
@@ -62,7 +62,8 @@ implements Chunk {
     private static final Logger LOGGER = LogManager.getLogger();
     private final ChunkPos pos;
     private volatile boolean shouldSave;
-    private Biome[] biomeArray;
+    @Nullable
+    private BiomeArray field_20656;
     @Nullable
     private volatile LightingProvider lightingProvider;
     private final Map<Heightmap.Type, Heightmap> heightmaps = Maps.newEnumMap(Heightmap.Type.class);
@@ -232,14 +233,14 @@ implements Chunk {
         return this.entities;
     }
 
-    @Override
-    public void setBiomeArray(Biome[] biomeArray) {
-        this.biomeArray = biomeArray;
+    public void method_22405(BiomeArray biomeArray) {
+        this.field_20656 = biomeArray;
     }
 
     @Override
-    public Biome[] getBiomeArray() {
-        return this.biomeArray;
+    @Nullable
+    public BiomeArray getBiomeArray() {
+        return this.field_20656;
     }
 
     @Override
@@ -267,7 +268,6 @@ implements Chunk {
         return this.sections;
     }
 
-    @Override
     @Nullable
     public LightingProvider getLightingProvider() {
         return this.lightingProvider;
@@ -450,7 +450,6 @@ implements Chunk {
         this.carvingMasks.put(carver, mask);
     }
 
-    @Override
     public void setLightingProvider(LightingProvider lightingProvider) {
         this.lightingProvider = lightingProvider;
     }

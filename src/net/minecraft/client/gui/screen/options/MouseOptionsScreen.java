@@ -12,8 +12,10 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.options.GameOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.options.Option;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.InputUtil;
@@ -21,34 +23,27 @@ import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class MouseOptionsScreen
-extends Screen {
-    private final Screen parent;
+extends GameOptionsScreen {
     private ButtonListWidget buttonList;
     private static final Option[] OPTIONS = new Option[]{Option.SENSITIVITY, Option.INVERT_MOUSE, Option.MOUSE_WHEEL_SENSITIVITY, Option.DISCRETE_MOUSE_SCROLL, Option.TOUCHSCREEN};
 
-    public MouseOptionsScreen(Screen parent) {
-        super(new TranslatableText("options.mouse_settings.title", new Object[0]));
-        this.parent = parent;
+    public MouseOptionsScreen(Screen parent, GameOptions gameOptions) {
+        super(parent, gameOptions, new TranslatableText("options.mouse_settings.title", new Object[0]));
     }
 
     @Override
     protected void init() {
         this.buttonList = new ButtonListWidget(this.minecraft, this.width, this.height, 32, this.height - 32, 25);
-        if (InputUtil.method_21735()) {
+        if (InputUtil.isRawMouseMotionSupported()) {
             this.buttonList.addAll((Option[])Stream.concat(Arrays.stream(OPTIONS), Stream.of(Option.RAW_MOUSE_INPUT)).toArray(Option[]::new));
         } else {
             this.buttonList.addAll(OPTIONS);
         }
         this.children.add(this.buttonList);
         this.addButton(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, I18n.translate("gui.done", new Object[0]), buttonWidget -> {
-            this.minecraft.options.write();
+            this.gameOptions.write();
             this.minecraft.openScreen(this.parent);
         }));
-    }
-
-    @Override
-    public void removed() {
-        this.minecraft.options.write();
     }
 
     @Override

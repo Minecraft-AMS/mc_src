@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
@@ -30,12 +30,12 @@ implements RecipeBookProvider {
     private static final Identifier RECIPE_BUTTON_TEXTURE = new Identifier("textures/gui/recipe_button.png");
     public final AbstractFurnaceRecipeBookScreen recipeBook;
     private boolean narrow;
-    private final Identifier field_18975;
+    private final Identifier background;
 
     public AbstractFurnaceScreen(T container, AbstractFurnaceRecipeBookScreen recipeBook, PlayerInventory inventory, Text title, Identifier background) {
         super(container, inventory, title);
         this.recipeBook = recipeBook;
-        this.field_18975 = background;
+        this.background = background;
     }
 
     @Override
@@ -83,8 +83,8 @@ implements RecipeBookProvider {
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
         int k;
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.minecraft.getTextureManager().bindTexture(this.field_18975);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        this.minecraft.getTextureManager().bindTexture(this.background);
         int i = this.x;
         int j = this.y;
         this.blit(i, j, 0, 0, this.containerWidth, this.containerHeight);

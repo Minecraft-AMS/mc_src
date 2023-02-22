@@ -3,11 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.MoreObjects
+ *  net.fabricmc.api.EnvType
+ *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Unmodifiable
  */
 package net.minecraft.util.math;
 
 import com.google.common.base.MoreObjects;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
 import org.jetbrains.annotations.Unmodifiable;
@@ -16,8 +21,11 @@ import org.jetbrains.annotations.Unmodifiable;
 public class Vec3i
 implements Comparable<Vec3i> {
     public static final Vec3i ZERO = new Vec3i(0, 0, 0);
+    @Deprecated
     private final int x;
+    @Deprecated
     private final int y;
+    @Deprecated
     private final int z;
 
     public Vec3i(int x, int y, int z) {
@@ -74,12 +82,27 @@ implements Comparable<Vec3i> {
         return this.z;
     }
 
+    public Vec3i down() {
+        return this.down(1);
+    }
+
+    public Vec3i down(int i) {
+        return this.offset(Direction.DOWN, i);
+    }
+
+    public Vec3i offset(Direction direction, int i) {
+        if (i == 0) {
+            return this;
+        }
+        return new Vec3i(this.getX() + direction.getOffsetX() * i, this.getY() + direction.getOffsetY() * i, this.getZ() + direction.getOffsetZ() * i);
+    }
+
     public Vec3i crossProduct(Vec3i vec) {
         return new Vec3i(this.getY() * vec.getZ() - this.getZ() * vec.getY(), this.getZ() * vec.getX() - this.getX() * vec.getZ(), this.getX() * vec.getY() - this.getY() * vec.getX());
     }
 
     public boolean isWithinDistance(Vec3i vec, double distance) {
-        return this.getSquaredDistance(vec.x, vec.y, vec.z, false) < distance * distance;
+        return this.getSquaredDistance(vec.getX(), vec.getY(), vec.getZ(), false) < distance * distance;
     }
 
     public boolean isWithinDistance(Position pos, double distance) {
@@ -103,14 +126,19 @@ implements Comparable<Vec3i> {
     }
 
     public int getManhattanDistance(Vec3i vec) {
-        float f = Math.abs(vec.getX() - this.x);
-        float g = Math.abs(vec.getY() - this.y);
-        float h = Math.abs(vec.getZ() - this.z);
+        float f = Math.abs(vec.getX() - this.getX());
+        float g = Math.abs(vec.getY() - this.getY());
+        float h = Math.abs(vec.getZ() - this.getZ());
         return (int)(f + g + h);
     }
 
     public String toString() {
         return MoreObjects.toStringHelper((Object)this).add("x", this.getX()).add("y", this.getY()).add("z", this.getZ()).toString();
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public String toShortString() {
+        return "" + this.getX() + ", " + this.getY() + ", " + this.getZ();
     }
 
     @Override

@@ -103,11 +103,11 @@ extends Goal {
         this.animal.resetLoveTicks();
         this.mate.resetLoveTicks();
         passiveEntity.setBreedingAge(-24000);
-        passiveEntity.refreshPositionAndAngles(this.animal.x, this.animal.y, this.animal.z, 0.0f, 0.0f);
+        passiveEntity.refreshPositionAndAngles(this.animal.getX(), this.animal.getY(), this.animal.getZ(), 0.0f, 0.0f);
         this.world.spawnEntity(passiveEntity);
         this.world.sendEntityStatus(this.animal, (byte)18);
         if (this.world.getGameRules().getBoolean(GameRules.DO_MOB_LOOT)) {
-            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.animal.x, this.animal.y, this.animal.z, this.animal.getRandom().nextInt(7) + 1));
+            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.animal.getX(), this.animal.getY(), this.animal.getZ(), this.animal.getRandom().nextInt(7) + 1));
         }
     }
 }

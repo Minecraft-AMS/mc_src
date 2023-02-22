@@ -87,7 +87,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public boolean method_20722() {
+    public boolean isRefreshable() {
         return this.refreshable;
     }
 }

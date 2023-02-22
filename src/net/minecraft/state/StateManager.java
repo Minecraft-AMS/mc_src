@@ -90,17 +90,17 @@ public class StateManager<O, S extends State<S>> {
     }
 
     public static class Builder<O, S extends State<S>> {
-        private final O baseObject;
-        private final Map<String, Property<?>> propertyMap = Maps.newHashMap();
+        private final O owner;
+        private final Map<String, Property<?>> namedProperties = Maps.newHashMap();
 
-        public Builder(O object) {
-            this.baseObject = object;
+        public Builder(O owner) {
+            this.owner = owner;
         }
 
-        public Builder<O, S> add(Property<?> ... propertys) {
-            for (Property<?> property : propertys) {
+        public Builder<O, S> add(Property<?> ... properties) {
+            for (Property<?> property : properties) {
                 this.validate(property);
-                this.propertyMap.put(property.getName(), property);
+                this.namedProperties.put(property.getName(), property);
             }
             return this;
         }
@@ -108,24 +108,24 @@ public class StateManager<O, S extends State<S>> {
         private <T extends Comparable<T>> void validate(Property<T> property) {
             String string = property.getName();
             if (!VALID_NAME_PATTERN.matcher(string).matches()) {
-                throw new IllegalArgumentException(this.baseObject + " has invalidly named property: " + string);
+                throw new IllegalArgumentException(this.owner + " has invalidly named property: " + string);
             }
             Collection<T> collection = property.getValues();
             if (collection.size() <= 1) {
-                throw new IllegalArgumentException(this.baseObject + " attempted use property " + string + " with <= 1 possible values");
+                throw new IllegalArgumentException(this.owner + " attempted use property " + string + " with <= 1 possible values");
             }
             for (Comparable comparable : collection) {
                 String string2 = property.name(comparable);
                 if (VALID_NAME_PATTERN.matcher(string2).matches()) continue;
-                throw new IllegalArgumentException(this.baseObject + " has property: " + string + " with invalidly named value: " + string2);
+                throw new IllegalArgumentException(this.owner + " has property: " + string + " with invalidly named value: " + string2);
             }
-            if (this.propertyMap.containsKey(string)) {
-                throw new IllegalArgumentException(this.baseObject + " has duplicate property: " + string);
+            if (this.namedProperties.containsKey(string)) {
+                throw new IllegalArgumentException(this.owner + " has duplicate property: " + string);
             }
         }
 
         public <A extends AbstractState<O, S>> StateManager<O, S> build(Factory<O, S, A> factory) {
-            return new StateManager<O, S>(this.baseObject, factory, this.propertyMap);
+            return new StateManager<O, S>(this.owner, factory, this.namedProperties);
         }
     }
 

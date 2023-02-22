@@ -16,7 +16,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.fluid.BaseFluid;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
@@ -32,9 +31,9 @@ import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class WaterFluid
@@ -50,12 +49,6 @@ extends BaseFluid {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.TRANSLUCENT;
-    }
-
-    @Override
     public Item getBucketItem() {
         return Items.WATER_BUCKET;
     }
@@ -68,7 +61,7 @@ extends BaseFluid {
                 world.playSound((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, SoundEvents.BLOCK_WATER_AMBIENT, SoundCategory.BLOCKS, random.nextFloat() * 0.25f + 0.75f, random.nextFloat() + 0.5f, false);
             }
         } else if (random.nextInt(10) == 0) {
-            world.addParticle(ParticleTypes.UNDERWATER, (float)pos.getX() + random.nextFloat(), (float)pos.getY() + random.nextFloat(), (float)pos.getZ() + random.nextFloat(), 0.0, 0.0, 0.0);
+            world.addParticle(ParticleTypes.UNDERWATER, (double)pos.getX() + (double)random.nextFloat(), (double)pos.getY() + (double)random.nextFloat(), (double)pos.getZ() + (double)random.nextFloat(), 0.0, 0.0, 0.0);
         }
     }
 
@@ -91,7 +84,7 @@ extends BaseFluid {
     }
 
     @Override
-    public int method_15733(CollisionView collisionView) {
+    public int method_15733(WorldView worldView) {
         return 4;
     }
 
@@ -106,12 +99,12 @@ extends BaseFluid {
     }
 
     @Override
-    public int getLevelDecreasePerBlock(CollisionView world) {
+    public int getLevelDecreasePerBlock(WorldView world) {
         return 1;
     }
 
     @Override
-    public int getTickRate(CollisionView collisionView) {
+    public int getTickRate(WorldView world) {
         return 5;
     }
 

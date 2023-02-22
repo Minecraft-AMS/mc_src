@@ -10,7 +10,7 @@
  */
 package net.minecraft.client.gui.screen;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.Dynamic;
 import com.mojang.datafixers.types.DynamicOps;
 import java.util.List;
@@ -26,7 +26,6 @@ import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.EntryListWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.datafixer.NbtOps;
@@ -52,23 +51,23 @@ extends Screen {
     public CustomizeFlatLevelScreen(CreateWorldScreen parent, CompoundTag generatorOptions) {
         super(new TranslatableText("createWorld.customize.flat.title", new Object[0]));
         this.parent = parent;
-        this.method_2144(generatorOptions);
+        this.setConfigTag(generatorOptions);
     }
 
     public String getConfigString() {
         return this.config.toString();
     }
 
-    public CompoundTag method_2140() {
+    public CompoundTag getConfigTag() {
         return (CompoundTag)this.config.toDynamic(NbtOps.INSTANCE).getValue();
     }
 
-    public void method_2139(String string) {
-        this.config = FlatChunkGeneratorConfig.fromString(string);
+    public void setConfigString(String config) {
+        this.config = FlatChunkGeneratorConfig.fromString(config);
     }
 
-    public void method_2144(CompoundTag compoundTag) {
-        this.config = FlatChunkGeneratorConfig.fromDynamic(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)compoundTag));
+    public void setConfigTag(CompoundTag config) {
+        this.config = FlatChunkGeneratorConfig.fromDynamic(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)config));
     }
 
     @Override
@@ -95,7 +94,7 @@ extends Screen {
             this.method_2145();
         }));
         this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, I18n.translate("gui.done", new Object[0]), buttonWidget -> {
-            this.parent.generatorOptionsTag = this.method_2140();
+            this.parent.generatorOptionsTag = this.getConfigTag();
             this.minecraft.openScreen(this.parent);
             this.config.updateLayerBlocks();
             this.method_2145();
@@ -116,6 +115,11 @@ extends Screen {
 
     private boolean method_2147() {
         return this.layers.getSelected() != null;
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.openScreen(this.parent);
     }
 
     @Override
@@ -219,21 +223,19 @@ extends Screen {
                 return false;
             }
 
-            private void method_19375(int i, int j, ItemStack itemStack) {
-                this.method_19373(i + 1, j + 1);
-                GlStateManager.enableRescaleNormal();
+            private void method_19375(int x, int y, ItemStack itemStack) {
+                this.method_19373(x + 1, y + 1);
+                RenderSystem.enableRescaleNormal();
                 if (!itemStack.isEmpty()) {
-                    DiffuseLighting.enableForItems();
-                    CustomizeFlatLevelScreen.this.itemRenderer.renderGuiItemIcon(itemStack, i + 2, j + 2);
-                    DiffuseLighting.disable();
+                    CustomizeFlatLevelScreen.this.itemRenderer.renderGuiItemIcon(itemStack, x + 2, y + 2);
                 }
-                GlStateManager.disableRescaleNormal();
+                RenderSystem.disableRescaleNormal();
             }
 
-            private void method_19373(int i, int j) {
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            private void method_19373(int x, int y) {
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 SuperflatLayersListWidget.this.minecraft.getTextureManager().bindTexture(DrawableHelper.STATS_ICON_LOCATION);
-                DrawableHelper.blit(i, j, CustomizeFlatLevelScreen.this.blitOffset, 0.0f, 0.0f, 18, 18, 128, 128);
+                DrawableHelper.blit(x, y, CustomizeFlatLevelScreen.this.getBlitOffset(), 0.0f, 0.0f, 18, 18, 128, 128);
             }
         }
     }

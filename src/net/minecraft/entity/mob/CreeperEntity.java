@@ -4,12 +4,17 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  net.fabricmc.api.EnvironmentInterface
+ *  net.fabricmc.api.EnvironmentInterfaces
  */
 package net.minecraft.entity.mob;
 
 import java.util.Collection;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvironmentInterface;
+import net.fabricmc.api.EnvironmentInterfaces;
+import net.minecraft.client.render.entity.feature.SkinOverlayOwner;
 import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -45,8 +50,10 @@ import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.explosion.Explosion;
 
+@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=SkinOverlayOwner.class)})
 public class CreeperEntity
-extends HostileEntity {
+extends HostileEntity
+implements SkinOverlayOwner {
     private static final TrackedData<Integer> FUSE_SPEED = DataTracker.registerData(CreeperEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> CHARGED = DataTracker.registerData(CreeperEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> IGNITED = DataTracker.registerData(CreeperEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -89,12 +96,13 @@ extends HostileEntity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
-        super.handleFallDamage(fallDistance, damageMultiplier);
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        boolean bl = super.handleFallDamage(fallDistance, damageMultiplier);
         this.currentFuseTime = (int)((float)this.currentFuseTime + fallDistance * 1.5f);
         if (this.currentFuseTime > this.fuseTime - 5) {
             this.currentFuseTime = this.fuseTime - 5;
         }
+        return bl;
     }
 
     @Override
@@ -180,7 +188,8 @@ extends HostileEntity {
         return true;
     }
 
-    public boolean isCharged() {
+    @Override
+    public boolean shouldRenderOverlay() {
         return this.dataTracker.get(CHARGED);
     }
 
@@ -207,13 +216,12 @@ extends HostileEntity {
     protected boolean interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.getItem() == Items.FLINT_AND_STEEL) {
-            this.world.playSound(player, this.x, this.y, this.z, SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
-            player.swingHand(hand);
+            this.world.playSound(player, this.getX(), this.getY(), this.getZ(), SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
             if (!this.world.isClient) {
                 this.setIgnited();
                 itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
-                return true;
             }
+            return true;
         }
         return super.interactMob(player, hand);
     }
@@ -221,9 +229,9 @@ extends HostileEntity {
     private void explode() {
         if (!this.world.isClient) {
             Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
-            float f = this.isCharged() ? 2.0f : 1.0f;
+            float f = this.shouldRenderOverlay() ? 2.0f : 1.0f;
             this.dead = true;
-            this.world.createExplosion(this, this.x, this.y, this.z, (float)this.explosionRadius * f, destructionType);
+            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, destructionType);
             this.remove();
             this.spawnEffectsCloud();
         }
@@ -232,7 +240,7 @@ extends HostileEntity {
     private void spawnEffectsCloud() {
         Collection<StatusEffectInstance> collection = this.getStatusEffects();
         if (!collection.isEmpty()) {
-            AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.x, this.y, this.z);
+            AreaEffectCloudEntity areaEffectCloudEntity = new AreaEffectCloudEntity(this.world, this.getX(), this.getY(), this.getZ());
             areaEffectCloudEntity.setRadius(2.5f);
             areaEffectCloudEntity.setRadiusOnUse(-0.5f);
             areaEffectCloudEntity.setWaitTime(10);
@@ -254,7 +262,7 @@ extends HostileEntity {
     }
 
     public boolean shouldDropHead() {
-        return this.isCharged() && this.headsDropped < 1;
+        return this.shouldRenderOverlay() && this.headsDropped < 1;
     }
 
     public void onHeadDropped() {

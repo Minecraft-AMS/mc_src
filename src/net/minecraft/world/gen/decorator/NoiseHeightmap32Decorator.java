@@ -29,17 +29,16 @@ extends Decorator<NoiseHeightmapDecoratorConfig> {
 
     @Override
     public Stream<BlockPos> getPositions(IWorld iWorld, ChunkGenerator<? extends ChunkGeneratorConfig> chunkGenerator, Random random, NoiseHeightmapDecoratorConfig noiseHeightmapDecoratorConfig, BlockPos blockPos) {
-        double d = Biome.FOLIAGE_NOISE.sample((double)blockPos.getX() / 200.0, (double)blockPos.getZ() / 200.0);
+        double d = Biome.FOLIAGE_NOISE.sample((double)blockPos.getX() / 200.0, (double)blockPos.getZ() / 200.0, false);
         int i2 = d < noiseHeightmapDecoratorConfig.noiseLevel ? noiseHeightmapDecoratorConfig.belowNoise : noiseHeightmapDecoratorConfig.aboveNoise;
         return IntStream.range(0, i2).mapToObj(i -> {
             int k;
-            int j = random.nextInt(16);
-            int l = iWorld.getTopPosition(Heightmap.Type.MOTION_BLOCKING, blockPos.add(j, 0, k = random.nextInt(16))).getY() + 32;
+            int j = random.nextInt(16) + blockPos.getX();
+            int l = iWorld.getTopY(Heightmap.Type.MOTION_BLOCKING, j, k = random.nextInt(16) + blockPos.getZ()) + 32;
             if (l <= 0) {
                 return null;
             }
-            int m = random.nextInt(l);
-            return blockPos.add(j, m, k);
+            return new BlockPos(j, random.nextInt(l), k);
         }).filter(Objects::nonNull);
     }
 }

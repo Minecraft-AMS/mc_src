@@ -27,6 +27,7 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 
 public class ListPoolElement
 extends StructurePoolElement {
@@ -71,9 +72,9 @@ extends StructurePoolElement {
     }
 
     @Override
-    public boolean generate(StructureManager structureManager, IWorld world, BlockPos pos, BlockRotation rotation, BlockBox boundingBox, Random random) {
+    public boolean generate(StructureManager structureManager, IWorld world, ChunkGenerator<?> chunkGenerator, BlockPos blockPos, BlockRotation blockRotation, BlockBox blockBox, Random random) {
         for (StructurePoolElement structurePoolElement : this.elements) {
-            if (structurePoolElement.generate(structureManager, world, pos, rotation, boundingBox, random)) continue;
+            if (structurePoolElement.generate(structureManager, world, chunkGenerator, blockPos, blockRotation, blockBox, random)) continue;
             return false;
         }
         return true;

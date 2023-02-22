@@ -24,13 +24,13 @@ import java.util.Map;
 import java.util.Set;
 import net.minecraft.entity.Entity;
 import net.minecraft.loot.UniformLootTableRange;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class EntityScoresLootCondition
 implements LootCondition {
@@ -44,12 +44,12 @@ implements LootCondition {
 
     @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
-        return ImmutableSet.of(this.target.getIdentifier());
+        return ImmutableSet.of(this.target.getParameter());
     }
 
     @Override
     public boolean test(LootContext lootContext) {
-        Entity entity = lootContext.get(this.target.getIdentifier());
+        Entity entity = lootContext.get(this.target.getParameter());
         if (entity == null) {
             return false;
         }

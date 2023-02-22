@@ -14,17 +14,13 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.LootConditions;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class AlternativeLootCondition
 implements LootCondition {
@@ -42,10 +38,10 @@ implements LootCondition {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        LootCondition.super.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter reporter) {
+        LootCondition.super.check(reporter);
         for (int i = 0; i < this.terms.length; ++i) {
-            this.terms[i].check(reporter.makeChild(".term[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.terms[i].check(reporter.makeChild(".term[" + i + "]"));
         }
     }
 

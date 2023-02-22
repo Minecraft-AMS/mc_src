@@ -8,14 +8,15 @@
  */
 package net.minecraft.client.font;
 
-import com.mojang.blaze3d.platform.TextureUtil;
 import java.io.Closeable;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -25,6 +26,8 @@ public class GlyphAtlasTexture
 extends AbstractTexture
 implements Closeable {
     private final Identifier id;
+    private final RenderLayer field_21690;
+    private final RenderLayer field_21691;
     private final boolean hasColor;
     private final Slot rootSlot;
 
@@ -33,10 +36,12 @@ implements Closeable {
         this.hasColor = hasColor;
         this.rootSlot = new Slot(0, 0, 256, 256);
         TextureUtil.prepareImage(hasColor ? NativeImage.GLFormat.RGBA : NativeImage.GLFormat.INTENSITY, this.getGlId(), 256, 256);
+        this.field_21690 = RenderLayer.getText(id);
+        this.field_21691 = RenderLayer.getTextSeeThrough(id);
     }
 
     @Override
-    public void load(ResourceManager resourceManager) {
+    public void load(ResourceManager manager) {
     }
 
     @Override
@@ -56,7 +61,7 @@ implements Closeable {
             float f = 256.0f;
             float g = 256.0f;
             float h = 0.01f;
-            return new GlyphRenderer(this.id, ((float)slot.x + 0.01f) / 256.0f, ((float)slot.x - 0.01f + (float)glyph.getWidth()) / 256.0f, ((float)slot.y + 0.01f) / 256.0f, ((float)slot.y - 0.01f + (float)glyph.getHeight()) / 256.0f, glyph.getXMin(), glyph.getXMax(), glyph.getYMin(), glyph.getYMax());
+            return new GlyphRenderer(this.field_21690, this.field_21691, ((float)slot.x + 0.01f) / 256.0f, ((float)slot.x - 0.01f + (float)glyph.getWidth()) / 256.0f, ((float)slot.y + 0.01f) / 256.0f, ((float)slot.y - 0.01f + (float)glyph.getHeight()) / 256.0f, glyph.getXMin(), glyph.getXMax(), glyph.getYMin(), glyph.getYMax());
         }
         return null;
     }
@@ -75,11 +80,11 @@ implements Closeable {
         private Slot subSlot2;
         private boolean isOccupied;
 
-        private Slot(int i, int j, int k, int l) {
-            this.x = i;
-            this.y = j;
-            this.width = k;
-            this.height = l;
+        private Slot(int x, int y, int width, int height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
         }
 
         @Nullable

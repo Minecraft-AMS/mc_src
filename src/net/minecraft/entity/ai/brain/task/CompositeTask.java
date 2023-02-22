@@ -47,7 +47,7 @@ extends Task<E> {
     @Override
     protected void run(ServerWorld world, E entity, long time) {
         this.order.apply(this.tasks);
-        this.runMode.method_19559(this.tasks, world, entity, time);
+        this.runMode.run(this.tasks, world, entity, time);
     }
 
     @Override
@@ -71,35 +71,35 @@ extends Task<E> {
         RUN_ONE{
 
             @Override
-            public <E extends LivingEntity> void method_19559(WeightedList<Task<? super E>> weightedList, ServerWorld serverWorld, E livingEntity, long l) {
-                weightedList.stream().filter(task -> task.getStatus() == Task.Status.STOPPED).filter(task -> task.tryStarting(serverWorld, livingEntity, l)).findFirst();
+            public <E extends LivingEntity> void run(WeightedList<Task<? super E>> tasks, ServerWorld world, E entity, long time) {
+                tasks.stream().filter(task -> task.getStatus() == Task.Status.STOPPED).filter(task -> task.tryStarting(world, entity, time)).findFirst();
             }
         }
         ,
         TRY_ALL{
 
             @Override
-            public <E extends LivingEntity> void method_19559(WeightedList<Task<? super E>> weightedList, ServerWorld serverWorld, E livingEntity, long l) {
-                weightedList.stream().filter(task -> task.getStatus() == Task.Status.STOPPED).forEach(task -> task.tryStarting(serverWorld, livingEntity, l));
+            public <E extends LivingEntity> void run(WeightedList<Task<? super E>> tasks, ServerWorld world, E entity, long time) {
+                tasks.stream().filter(task -> task.getStatus() == Task.Status.STOPPED).forEach(task -> task.tryStarting(world, entity, time));
             }
         };
 
 
-        public abstract <E extends LivingEntity> void method_19559(WeightedList<Task<? super E>> var1, ServerWorld var2, E var3, long var4);
+        public abstract <E extends LivingEntity> void run(WeightedList<Task<? super E>> var1, ServerWorld var2, E var3, long var4);
     }
 
     static enum Order {
         ORDERED(weightedList -> {}),
         SHUFFLED(WeightedList::shuffle);
 
-        private final Consumer<WeightedList<?>> consumer;
+        private final Consumer<WeightedList<?>> listModifier;
 
-        private Order(Consumer<WeightedList<?>> consumer) {
-            this.consumer = consumer;
+        private Order(Consumer<WeightedList<?>> listModifier) {
+            this.listModifier = listModifier;
         }
 
         public void apply(WeightedList<?> list) {
-            this.consumer.accept(list);
+            this.listModifier.accept(list);
         }
     }
 }

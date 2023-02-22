@@ -45,7 +45,7 @@ extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         user.openEditBookScreen(itemStack, hand);
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.success(itemStack);
     }
 
     public static boolean isValid(@Nullable CompoundTag tag) {

@@ -12,8 +12,9 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.particle.ParticleTextureSheet;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.util.ReusableStream;
@@ -40,6 +41,7 @@ public abstract class Particle {
     private Box boundingBox = EMPTY_BOUNDING_BOX;
     protected boolean onGround;
     protected boolean collidesWithWorld = true;
+    private boolean field_21507;
     protected boolean dead;
     protected float spacingXZ = 0.6f;
     protected float spacingY = 1.8f;
@@ -53,9 +55,6 @@ public abstract class Particle {
     protected float colorAlpha = 1.0f;
     protected float angle;
     protected float prevAngle;
-    public static double cameraX;
-    public static double cameraY;
-    public static double cameraZ;
 
     protected Particle(World world, double x, double y, double z) {
         this.world = world;
@@ -86,8 +85,8 @@ public abstract class Particle {
         return this;
     }
 
-    public Particle method_3087(float f) {
-        this.setBoundingBoxSpacing(0.2f * f, 0.2f * f);
+    public Particle scale(float scale) {
+        this.setBoundingBoxSpacing(0.2f * scale, 0.2f * scale);
         return this;
     }
 
@@ -128,7 +127,7 @@ public abstract class Particle {
         }
     }
 
-    public abstract void buildGeometry(BufferBuilder var1, Camera var2, float var3, float var4, float var5, float var6, float var7, float var8);
+    public abstract void buildGeometry(VertexConsumer var1, Camera var2, float var3);
 
     public abstract ParticleTextureSheet getType();
 
@@ -161,6 +160,9 @@ public abstract class Particle {
     }
 
     public void move(double dx, double dy, double dz) {
+        if (this.field_21507) {
+            return;
+        }
         double d = dx;
         double e = dy;
         double f = dz;
@@ -173,6 +175,9 @@ public abstract class Particle {
         if (dx != 0.0 || dy != 0.0 || dz != 0.0) {
             this.setBoundingBox(this.getBoundingBox().offset(dx, dy, dz));
             this.repositionFromBoundingBox();
+        }
+        if (Math.abs(e) >= (double)1.0E-5f && Math.abs(dy) < (double)1.0E-5f) {
+            this.field_21507 = true;
         }
         boolean bl = this.onGround = e != dy && e < 0.0;
         if (d != dx) {
@@ -192,8 +197,8 @@ public abstract class Particle {
 
     protected int getColorMultiplier(float tint) {
         BlockPos blockPos = new BlockPos(this.x, this.y, this.z);
-        if (this.world.isBlockLoaded(blockPos)) {
-            return this.world.getLightmapIndex(blockPos, 0);
+        if (this.world.isChunkLoaded(blockPos)) {
+            return WorldRenderer.getLightmapCoordinates(this.world, blockPos);
         }
         return 0;
     }

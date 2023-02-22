@@ -26,5 +26,9 @@ public interface Profiler {
 
     @Environment(value=EnvType.CLIENT)
     public void swap(Supplier<String> var1);
+
+    public void visit(String var1);
+
+    public void visit(Supplier<String> var1);
 }
 

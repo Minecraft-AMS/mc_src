@@ -7,12 +7,12 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.HorseEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.HorseBaseEntity;
 
 @Environment(value=EnvType.CLIENT)
@@ -26,9 +26,9 @@ extends MobEntityRenderer<T, M> {
     }
 
     @Override
-    protected void scale(T horseBaseEntity, float f) {
-        GlStateManager.scalef(this.scale, this.scale, this.scale);
-        super.scale(horseBaseEntity, f);
+    protected void scale(T horseBaseEntity, MatrixStack matrixStack, float f) {
+        matrixStack.scale(this.scale, this.scale, this.scale);
+        super.scale(horseBaseEntity, matrixStack, f);
     }
 }
 

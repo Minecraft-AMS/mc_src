@@ -13,28 +13,22 @@ import net.minecraft.world.biome.layer.util.CachingLayerSampler;
 import net.minecraft.world.biome.layer.util.LayerOperator;
 import net.minecraft.world.biome.layer.util.LayerSampleContext;
 import net.minecraft.world.biome.layer.util.LayerSampler;
+import net.minecraft.world.biome.source.SeedMixer;
 
 public class CachingLayerContext
 implements LayerSampleContext<CachingLayerSampler> {
     private final Long2IntLinkedOpenHashMap cache;
     private final int cacheCapacity;
-    protected long initSeed;
-    protected PerlinNoiseSampler noiseSampler;
-    private long worldSeed;
+    private final PerlinNoiseSampler noiseSampler;
+    private final long worldSeed;
     private long localSeed;
 
     public CachingLayerContext(int cacheCapacity, long seed, long salt) {
-        this.initSeed = salt;
-        this.initSeed *= this.initSeed * 6364136223846793005L + 1442695040888963407L;
-        this.initSeed += salt;
-        this.initSeed *= this.initSeed * 6364136223846793005L + 1442695040888963407L;
-        this.initSeed += salt;
-        this.initSeed *= this.initSeed * 6364136223846793005L + 1442695040888963407L;
-        this.initSeed += salt;
+        this.worldSeed = CachingLayerContext.addSalt(seed, salt);
+        this.noiseSampler = new PerlinNoiseSampler(new Random(seed));
         this.cache = new Long2IntLinkedOpenHashMap(16, 0.25f);
         this.cache.defaultReturnValue(Integer.MIN_VALUE);
         this.cacheCapacity = cacheCapacity;
-        this.initWorldSeed(seed);
     }
 
     @Override
@@ -52,44 +46,37 @@ implements LayerSampleContext<CachingLayerSampler> {
         return new CachingLayerSampler(this.cache, Math.min(1024, Math.max(cachingLayerSampler.getCapacity(), cachingLayerSampler2.getCapacity()) * 4), layerOperator);
     }
 
-    public void initWorldSeed(long seed) {
-        this.worldSeed = seed;
-        this.worldSeed *= this.worldSeed * 6364136223846793005L + 1442695040888963407L;
-        this.worldSeed += this.initSeed;
-        this.worldSeed *= this.worldSeed * 6364136223846793005L + 1442695040888963407L;
-        this.worldSeed += this.initSeed;
-        this.worldSeed *= this.worldSeed * 6364136223846793005L + 1442695040888963407L;
-        this.worldSeed += this.initSeed;
-        this.noiseSampler = new PerlinNoiseSampler(new Random(seed));
-    }
-
     @Override
     public void initSeed(long x, long y) {
-        this.localSeed = this.worldSeed;
-        this.localSeed *= this.localSeed * 6364136223846793005L + 1442695040888963407L;
-        this.localSeed += x;
-        this.localSeed *= this.localSeed * 6364136223846793005L + 1442695040888963407L;
-        this.localSeed += y;
-        this.localSeed *= this.localSeed * 6364136223846793005L + 1442695040888963407L;
-        this.localSeed += x;
-        this.localSeed *= this.localSeed * 6364136223846793005L + 1442695040888963407L;
-        this.localSeed += y;
+        long l = this.worldSeed;
+        l = SeedMixer.mixSeed(l, x);
+        l = SeedMixer.mixSeed(l, y);
+        l = SeedMixer.mixSeed(l, x);
+        this.localSeed = l = SeedMixer.mixSeed(l, y);
     }
 
     @Override
     public int nextInt(int bound) {
-        int i = (int)((this.localSeed >> 24) % (long)bound);
-        if (i < 0) {
-            i += bound;
-        }
-        this.localSeed *= this.localSeed * 6364136223846793005L + 1442695040888963407L;
-        this.localSeed += this.worldSeed;
+        int i = (int)Math.floorMod(this.localSeed >> 24, (long)bound);
+        this.localSeed = SeedMixer.mixSeed(this.localSeed, this.worldSeed);
         return i;
     }
 
     @Override
     public PerlinNoiseSampler getNoiseSampler() {
         return this.noiseSampler;
+    }
+
+    private static long addSalt(long seed, long salt) {
+        long l = salt;
+        l = SeedMixer.mixSeed(l, salt);
+        l = SeedMixer.mixSeed(l, salt);
+        l = SeedMixer.mixSeed(l, salt);
+        long m = seed;
+        m = SeedMixer.mixSeed(m, l);
+        m = SeedMixer.mixSeed(m, l);
+        m = SeedMixer.mixSeed(m, l);
+        return m;
     }
 
     @Override

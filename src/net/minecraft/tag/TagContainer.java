@@ -187,11 +187,11 @@ public class TagContainer<T> {
             break;
         }
         preparedBuilders.forEach((identifier, builder) -> map.put(identifier, builder.build((Identifier)identifier)));
-        this.method_20735(map);
+        this.setEntries(map);
     }
 
-    protected void method_20735(Map<Identifier, Tag<T>> map) {
-        this.entries = ImmutableMap.copyOf(map);
+    protected void setEntries(Map<Identifier, Tag<T>> entries) {
+        this.entries = ImmutableMap.copyOf(entries);
     }
 
     public Map<Identifier, Tag<T>> getEntries() {

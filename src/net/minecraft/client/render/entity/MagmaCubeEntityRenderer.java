@@ -7,12 +7,12 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.MagmaCubeEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.MagmaCubeEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -27,16 +27,21 @@ extends MobEntityRenderer<MagmaCubeEntity, MagmaCubeEntityModel<MagmaCubeEntity>
     }
 
     @Override
-    protected Identifier getTexture(MagmaCubeEntity magmaCubeEntity) {
+    protected int getBlockLight(MagmaCubeEntity magmaCubeEntity, float f) {
+        return 15;
+    }
+
+    @Override
+    public Identifier getTexture(MagmaCubeEntity magmaCubeEntity) {
         return SKIN;
     }
 
     @Override
-    protected void scale(MagmaCubeEntity magmaCubeEntity, float f) {
+    protected void scale(MagmaCubeEntity magmaCubeEntity, MatrixStack matrixStack, float f) {
         int i = magmaCubeEntity.getSize();
         float g = MathHelper.lerp(f, magmaCubeEntity.lastStretch, magmaCubeEntity.stretch) / ((float)i * 0.5f + 1.0f);
         float h = 1.0f / (g + 1.0f);
-        GlStateManager.scalef(h * (float)i, 1.0f / h * (float)i, h * (float)i);
+        matrixStack.scale(h * (float)i, 1.0f / h * (float)i, h * (float)i);
     }
 }
 

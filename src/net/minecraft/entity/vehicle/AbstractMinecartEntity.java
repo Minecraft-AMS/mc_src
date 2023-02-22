@@ -2,13 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Maps
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.vehicle;
 
+import com.google.common.collect.Maps;
+import com.mojang.datafixers.util.Pair;
 import java.util.List;
+import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractRailBlock;
@@ -41,11 +46,13 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.tag.BlockTags;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -59,19 +66,38 @@ extends Entity {
     private static final TrackedData<Integer> CUSTOM_BLOCK_OFFSET = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> CUSTOM_BLOCK_PRESENT = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private boolean field_7660;
-    private static final int[][][] field_7664 = new int[][][]{new int[][]{{0, 0, -1}, {0, 0, 1}}, new int[][]{{-1, 0, 0}, {1, 0, 0}}, new int[][]{{-1, -1, 0}, {1, 0, 0}}, new int[][]{{-1, 0, 0}, {1, -1, 0}}, new int[][]{{0, 0, -1}, {0, -1, 1}}, new int[][]{{0, -1, -1}, {0, 0, 1}}, new int[][]{{0, 0, 1}, {1, 0, 0}}, new int[][]{{0, 0, 1}, {-1, 0, 0}}, new int[][]{{0, 0, -1}, {-1, 0, 0}}, new int[][]{{0, 0, -1}, {1, 0, 0}}};
-    private int field_7669;
-    private double field_7665;
-    private double field_7666;
-    private double field_7662;
-    private double field_7659;
-    private double field_7657;
+    private static final Map<RailShape, Pair<Vec3i, Vec3i>> field_7664 = Util.make(Maps.newEnumMap(RailShape.class), enumMap -> {
+        Vec3i vec3i = Direction.WEST.getVector();
+        Vec3i vec3i2 = Direction.EAST.getVector();
+        Vec3i vec3i3 = Direction.NORTH.getVector();
+        Vec3i vec3i4 = Direction.SOUTH.getVector();
+        Vec3i vec3i5 = vec3i.down();
+        Vec3i vec3i6 = vec3i2.down();
+        Vec3i vec3i7 = vec3i3.down();
+        Vec3i vec3i8 = vec3i4.down();
+        enumMap.put(RailShape.NORTH_SOUTH, Pair.of((Object)vec3i3, (Object)vec3i4));
+        enumMap.put(RailShape.EAST_WEST, Pair.of((Object)vec3i, (Object)vec3i2));
+        enumMap.put(RailShape.ASCENDING_EAST, Pair.of((Object)vec3i5, (Object)vec3i2));
+        enumMap.put(RailShape.ASCENDING_WEST, Pair.of((Object)vec3i, (Object)vec3i6));
+        enumMap.put(RailShape.ASCENDING_NORTH, Pair.of((Object)vec3i3, (Object)vec3i8));
+        enumMap.put(RailShape.ASCENDING_SOUTH, Pair.of((Object)vec3i7, (Object)vec3i4));
+        enumMap.put(RailShape.SOUTH_EAST, Pair.of((Object)vec3i4, (Object)vec3i2));
+        enumMap.put(RailShape.SOUTH_WEST, Pair.of((Object)vec3i4, (Object)vec3i));
+        enumMap.put(RailShape.NORTH_WEST, Pair.of((Object)vec3i3, (Object)vec3i));
+        enumMap.put(RailShape.NORTH_EAST, Pair.of((Object)vec3i3, (Object)vec3i2));
+    });
+    private int clientInterpolationSteps;
+    private double clientX;
+    private double clientY;
+    private double clientZ;
+    private double clientYaw;
+    private double clientPitch;
     @Environment(value=EnvType.CLIENT)
-    private double field_7658;
+    private double clientXVelocity;
     @Environment(value=EnvType.CLIENT)
-    private double field_7655;
+    private double clientYVelocity;
     @Environment(value=EnvType.CLIENT)
-    private double field_7656;
+    private double clientZVelocity;
 
     protected AbstractMinecartEntity(EntityType<?> type, World world) {
         super(type, world);
@@ -192,6 +218,10 @@ extends Entity {
         return !this.removed;
     }
 
+    private static Pair<Vec3i, Vec3i> method_22864(RailShape railShape) {
+        return field_7664.get(railShape);
+    }
+
     @Override
     public Direction getMovementDirection() {
         return this.field_7660 ? this.getHorizontalFacing().getOpposite().rotateYClockwise() : this.getHorizontalFacing().rotateYClockwise();
@@ -211,48 +241,45 @@ extends Entity {
         if (this.getDamageWobbleStrength() > 0.0f) {
             this.setDamageWobbleStrength(this.getDamageWobbleStrength() - 1.0f);
         }
-        if (this.y < -64.0) {
+        if (this.getY() < -64.0) {
             this.destroy();
         }
         this.tickNetherPortal();
         if (this.world.isClient) {
-            if (this.field_7669 > 0) {
-                double d = this.x + (this.field_7665 - this.x) / (double)this.field_7669;
-                double e = this.y + (this.field_7666 - this.y) / (double)this.field_7669;
-                double f = this.z + (this.field_7662 - this.z) / (double)this.field_7669;
-                double g = MathHelper.wrapDegrees(this.field_7659 - (double)this.yaw);
-                this.yaw = (float)((double)this.yaw + g / (double)this.field_7669);
-                this.pitch = (float)((double)this.pitch + (this.field_7657 - (double)this.pitch) / (double)this.field_7669);
-                --this.field_7669;
+            if (this.clientInterpolationSteps > 0) {
+                double d = this.getX() + (this.clientX - this.getX()) / (double)this.clientInterpolationSteps;
+                double e = this.getY() + (this.clientY - this.getY()) / (double)this.clientInterpolationSteps;
+                double f = this.getZ() + (this.clientZ - this.getZ()) / (double)this.clientInterpolationSteps;
+                double g = MathHelper.wrapDegrees(this.clientYaw - (double)this.yaw);
+                this.yaw = (float)((double)this.yaw + g / (double)this.clientInterpolationSteps);
+                this.pitch = (float)((double)this.pitch + (this.clientPitch - (double)this.pitch) / (double)this.clientInterpolationSteps);
+                --this.clientInterpolationSteps;
                 this.updatePosition(d, e, f);
                 this.setRotation(this.yaw, this.pitch);
             } else {
-                this.updatePosition(this.x, this.y, this.z);
+                this.refreshPosition();
                 this.setRotation(this.yaw, this.pitch);
             }
             return;
         }
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
         if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
-        if (this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.x), (j = MathHelper.floor(this.y)) - 1, k = MathHelper.floor(this.z))).matches(BlockTags.RAILS)) {
+        if (this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), (j = MathHelper.floor(this.getY())) - 1, k = MathHelper.floor(this.getZ()))).matches(BlockTags.RAILS)) {
             --j;
         }
         if ((blockState = this.world.getBlockState(blockPos = new BlockPos(i, j, k))).matches(BlockTags.RAILS)) {
-            this.method_7513(blockPos, blockState);
+            this.moveOnRail(blockPos, blockState);
             if (blockState.getBlock() == Blocks.ACTIVATOR_RAIL) {
                 this.onActivatorRail(i, j, k, blockState.get(PoweredRailBlock.POWERED));
             }
         } else {
-            this.method_7512();
+            this.moveOffRail();
         }
         this.checkBlockCollision();
         this.pitch = 0.0f;
-        double h = this.prevX - this.x;
-        double l = this.prevZ - this.z;
+        double h = this.prevX - this.getX();
+        double l = this.prevZ - this.getZ();
         if (h * h + l * l > 0.001) {
             this.yaw = (float)(MathHelper.atan2(l, h) * 180.0 / Math.PI);
             if (this.field_7660) {
@@ -285,15 +312,15 @@ extends Entity {
         this.checkWaterState();
     }
 
-    protected double method_7504() {
+    protected double getMaxOffRailSpeed() {
         return 0.4;
     }
 
     public void onActivatorRail(int x, int y, int z, boolean powered) {
     }
 
-    protected void method_7512() {
-        double d = this.method_7504();
+    protected void moveOffRail() {
+        double d = this.getMaxOffRailSpeed();
         Vec3d vec3d = this.getVelocity();
         this.setVelocity(MathHelper.clamp(vec3d.x, -d, d), vec3d.y, MathHelper.clamp(vec3d.z, -d, d));
         if (this.onGround) {
@@ -305,160 +332,163 @@ extends Entity {
         }
     }
 
-    protected void method_7513(BlockPos blockPos, BlockState blockState) {
-        double t;
+    protected void moveOnRail(BlockPos pos, BlockState state) {
+        double w;
         Vec3d vec3d5;
-        double r;
-        double q;
-        double p;
+        double u;
+        double t;
+        double s;
         Entity entity;
         this.fallDistance = 0.0f;
-        Vec3d vec3d = this.method_7508(this.x, this.y, this.z);
-        this.y = blockPos.getY();
+        double d = this.getX();
+        double e = this.getY();
+        double f = this.getZ();
+        Vec3d vec3d = this.method_7508(d, e, f);
+        e = pos.getY();
         boolean bl = false;
         boolean bl2 = false;
-        AbstractRailBlock abstractRailBlock = (AbstractRailBlock)blockState.getBlock();
+        AbstractRailBlock abstractRailBlock = (AbstractRailBlock)state.getBlock();
         if (abstractRailBlock == Blocks.POWERED_RAIL) {
-            bl = blockState.get(PoweredRailBlock.POWERED);
+            bl = state.get(PoweredRailBlock.POWERED);
             bl2 = !bl;
         }
-        double d = 0.0078125;
+        double g = 0.0078125;
         Vec3d vec3d2 = this.getVelocity();
-        RailShape railShape = blockState.get(abstractRailBlock.getShapeProperty());
+        RailShape railShape = state.get(abstractRailBlock.getShapeProperty());
         switch (railShape) {
             case ASCENDING_EAST: {
                 this.setVelocity(vec3d2.add(-0.0078125, 0.0, 0.0));
-                this.y += 1.0;
+                e += 1.0;
                 break;
             }
             case ASCENDING_WEST: {
                 this.setVelocity(vec3d2.add(0.0078125, 0.0, 0.0));
-                this.y += 1.0;
+                e += 1.0;
                 break;
             }
             case ASCENDING_NORTH: {
                 this.setVelocity(vec3d2.add(0.0, 0.0, 0.0078125));
-                this.y += 1.0;
+                e += 1.0;
                 break;
             }
             case ASCENDING_SOUTH: {
                 this.setVelocity(vec3d2.add(0.0, 0.0, -0.0078125));
-                this.y += 1.0;
+                e += 1.0;
             }
         }
         vec3d2 = this.getVelocity();
-        int[][] is = field_7664[railShape.getId()];
-        double e = is[1][0] - is[0][0];
-        double f = is[1][2] - is[0][2];
-        double g = Math.sqrt(e * e + f * f);
-        double h = vec3d2.x * e + vec3d2.z * f;
-        if (h < 0.0) {
-            e = -e;
-            f = -f;
+        Pair<Vec3i, Vec3i> pair = AbstractMinecartEntity.method_22864(railShape);
+        Vec3i vec3i = (Vec3i)pair.getFirst();
+        Vec3i vec3i2 = (Vec3i)pair.getSecond();
+        double h = vec3i2.getX() - vec3i.getX();
+        double i = vec3i2.getZ() - vec3i.getZ();
+        double j = Math.sqrt(h * h + i * i);
+        double k = vec3d2.x * h + vec3d2.z * i;
+        if (k < 0.0) {
+            h = -h;
+            i = -i;
         }
-        double i = Math.min(2.0, Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d2)));
-        vec3d2 = new Vec3d(i * e / g, vec3d2.y, i * f / g);
+        double l = Math.min(2.0, Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d2)));
+        vec3d2 = new Vec3d(l * h / j, vec3d2.y, l * i / j);
         this.setVelocity(vec3d2);
         Entity entity2 = entity = this.getPassengerList().isEmpty() ? null : this.getPassengerList().get(0);
         if (entity instanceof PlayerEntity) {
             Vec3d vec3d3 = entity.getVelocity();
-            double j = AbstractMinecartEntity.squaredHorizontalLength(vec3d3);
-            double k = AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity());
-            if (j > 1.0E-4 && k < 0.01) {
+            double m = AbstractMinecartEntity.squaredHorizontalLength(vec3d3);
+            double n = AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity());
+            if (m > 1.0E-4 && n < 0.01) {
                 this.setVelocity(this.getVelocity().add(vec3d3.x * 0.1, 0.0, vec3d3.z * 0.1));
                 bl2 = false;
             }
         }
         if (bl2) {
-            double l = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity()));
-            if (l < 0.03) {
+            double o = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity()));
+            if (o < 0.03) {
                 this.setVelocity(Vec3d.ZERO);
             } else {
                 this.setVelocity(this.getVelocity().multiply(0.5, 0.0, 0.5));
             }
         }
-        double l = (double)blockPos.getX() + 0.5 + (double)is[0][0] * 0.5;
-        double m = (double)blockPos.getZ() + 0.5 + (double)is[0][2] * 0.5;
-        double n = (double)blockPos.getX() + 0.5 + (double)is[1][0] * 0.5;
-        double o = (double)blockPos.getZ() + 0.5 + (double)is[1][2] * 0.5;
-        e = n - l;
-        f = o - m;
-        if (e == 0.0) {
-            this.x = (double)blockPos.getX() + 0.5;
-            p = this.z - (double)blockPos.getZ();
-        } else if (f == 0.0) {
-            this.z = (double)blockPos.getZ() + 0.5;
-            p = this.x - (double)blockPos.getX();
+        double o = (double)pos.getX() + 0.5 + (double)vec3i.getX() * 0.5;
+        double p = (double)pos.getZ() + 0.5 + (double)vec3i.getZ() * 0.5;
+        double q = (double)pos.getX() + 0.5 + (double)vec3i2.getX() * 0.5;
+        double r = (double)pos.getZ() + 0.5 + (double)vec3i2.getZ() * 0.5;
+        h = q - o;
+        i = r - p;
+        if (h == 0.0) {
+            s = f - (double)pos.getZ();
+        } else if (i == 0.0) {
+            s = d - (double)pos.getX();
         } else {
-            q = this.x - l;
-            r = this.z - m;
-            p = (q * e + r * f) * 2.0;
+            t = d - o;
+            u = f - p;
+            s = (t * h + u * i) * 2.0;
         }
-        this.x = l + e * p;
-        this.z = m + f * p;
-        this.updatePosition(this.x, this.y, this.z);
-        q = this.hasPassengers() ? 0.75 : 1.0;
-        r = this.method_7504();
+        d = o + h * s;
+        f = p + i * s;
+        this.updatePosition(d, e, f);
+        t = this.hasPassengers() ? 0.75 : 1.0;
+        u = this.getMaxOffRailSpeed();
         vec3d2 = this.getVelocity();
-        this.move(MovementType.SELF, new Vec3d(MathHelper.clamp(q * vec3d2.x, -r, r), 0.0, MathHelper.clamp(q * vec3d2.z, -r, r)));
-        if (is[0][1] != 0 && MathHelper.floor(this.x) - blockPos.getX() == is[0][0] && MathHelper.floor(this.z) - blockPos.getZ() == is[0][2]) {
-            this.updatePosition(this.x, this.y + (double)is[0][1], this.z);
-        } else if (is[1][1] != 0 && MathHelper.floor(this.x) - blockPos.getX() == is[1][0] && MathHelper.floor(this.z) - blockPos.getZ() == is[1][2]) {
-            this.updatePosition(this.x, this.y + (double)is[1][1], this.z);
+        this.move(MovementType.SELF, new Vec3d(MathHelper.clamp(t * vec3d2.x, -u, u), 0.0, MathHelper.clamp(t * vec3d2.z, -u, u)));
+        if (vec3i.getY() != 0 && MathHelper.floor(this.getX()) - pos.getX() == vec3i.getX() && MathHelper.floor(this.getZ()) - pos.getZ() == vec3i.getZ()) {
+            this.updatePosition(this.getX(), this.getY() + (double)vec3i.getY(), this.getZ());
+        } else if (vec3i2.getY() != 0 && MathHelper.floor(this.getX()) - pos.getX() == vec3i2.getX() && MathHelper.floor(this.getZ()) - pos.getZ() == vec3i2.getZ()) {
+            this.updatePosition(this.getX(), this.getY() + (double)vec3i2.getY(), this.getZ());
         }
-        this.method_7525();
-        Vec3d vec3d4 = this.method_7508(this.x, this.y, this.z);
+        this.applySlowdown();
+        Vec3d vec3d4 = this.method_7508(this.getX(), this.getY(), this.getZ());
         if (vec3d4 != null && vec3d != null) {
-            double s = (vec3d.y - vec3d4.y) * 0.05;
+            double v = (vec3d.y - vec3d4.y) * 0.05;
             vec3d5 = this.getVelocity();
-            t = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
-            if (t > 0.0) {
-                this.setVelocity(vec3d5.multiply((t + s) / t, 1.0, (t + s) / t));
+            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            if (w > 0.0) {
+                this.setVelocity(vec3d5.multiply((w + v) / w, 1.0, (w + v) / w));
             }
-            this.updatePosition(this.x, vec3d4.y, this.z);
+            this.updatePosition(this.getX(), vec3d4.y, this.getZ());
         }
-        int u = MathHelper.floor(this.x);
-        int v = MathHelper.floor(this.z);
-        if (u != blockPos.getX() || v != blockPos.getZ()) {
+        int x = MathHelper.floor(this.getX());
+        int y = MathHelper.floor(this.getZ());
+        if (x != pos.getX() || y != pos.getZ()) {
             vec3d5 = this.getVelocity();
-            t = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
-            this.setVelocity(t * (double)(u - blockPos.getX()), vec3d5.y, t * (double)(v - blockPos.getZ()));
+            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            this.setVelocity(w * (double)(x - pos.getX()), vec3d5.y, w * (double)(y - pos.getZ()));
         }
         if (bl) {
             vec3d5 = this.getVelocity();
-            t = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
-            if (t > 0.01) {
-                double w = 0.06;
-                this.setVelocity(vec3d5.add(vec3d5.x / t * 0.06, 0.0, vec3d5.z / t * 0.06));
+            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            if (w > 0.01) {
+                double z = 0.06;
+                this.setVelocity(vec3d5.add(vec3d5.x / w * 0.06, 0.0, vec3d5.z / w * 0.06));
             } else {
                 Vec3d vec3d6 = this.getVelocity();
-                double x = vec3d6.x;
-                double y = vec3d6.z;
+                double aa = vec3d6.x;
+                double ab = vec3d6.z;
                 if (railShape == RailShape.EAST_WEST) {
-                    if (this.method_18803(blockPos.west())) {
-                        x = 0.02;
-                    } else if (this.method_18803(blockPos.east())) {
-                        x = -0.02;
+                    if (this.willHitBlockAt(pos.west())) {
+                        aa = 0.02;
+                    } else if (this.willHitBlockAt(pos.east())) {
+                        aa = -0.02;
                     }
                 } else if (railShape == RailShape.NORTH_SOUTH) {
-                    if (this.method_18803(blockPos.north())) {
-                        y = 0.02;
-                    } else if (this.method_18803(blockPos.south())) {
-                        y = -0.02;
+                    if (this.willHitBlockAt(pos.north())) {
+                        ab = 0.02;
+                    } else if (this.willHitBlockAt(pos.south())) {
+                        ab = -0.02;
                     }
                 } else {
                     return;
                 }
-                this.setVelocity(x, vec3d6.y, y);
+                this.setVelocity(aa, vec3d6.y, ab);
             }
         }
     }
 
-    private boolean method_18803(BlockPos blockPos) {
-        return this.world.getBlockState(blockPos).isSimpleFullBlock(this.world, blockPos);
+    private boolean willHitBlockAt(BlockPos pos) {
+        return this.world.getBlockState(pos).isSimpleFullBlock(this.world, pos);
     }
 
-    protected void method_7525() {
+    protected void applySlowdown() {
         double d = this.hasPassengers() ? 0.997 : 0.96;
         this.setVelocity(this.getVelocity().multiply(d, 0.0, d));
     }
@@ -479,14 +509,16 @@ extends Entity {
             if (railShape.isAscending()) {
                 e = j + 1;
             }
-            int[][] is = field_7664[railShape.getId()];
-            double h = is[1][0] - is[0][0];
-            double l = is[1][2] - is[0][2];
+            Pair<Vec3i, Vec3i> pair = AbstractMinecartEntity.method_22864(railShape);
+            Vec3i vec3i = (Vec3i)pair.getFirst();
+            Vec3i vec3i2 = (Vec3i)pair.getSecond();
+            double h = vec3i2.getX() - vec3i.getX();
+            double l = vec3i2.getZ() - vec3i.getZ();
             double m = Math.sqrt(h * h + l * l);
-            if (is[0][1] != 0 && MathHelper.floor(d += (h /= m) * g) - i == is[0][0] && MathHelper.floor(f += (l /= m) * g) - k == is[0][2]) {
-                e += (double)is[0][1];
-            } else if (is[1][1] != 0 && MathHelper.floor(d) - i == is[1][0] && MathHelper.floor(f) - k == is[1][2]) {
-                e += (double)is[1][1];
+            if (vec3i.getY() != 0 && MathHelper.floor(d += (h /= m) * g) - i == vec3i.getX() && MathHelper.floor(f += (l /= m) * g) - k == vec3i.getZ()) {
+                e += (double)vec3i.getY();
+            } else if (vec3i2.getY() != 0 && MathHelper.floor(d) - i == vec3i2.getX() && MathHelper.floor(f) - k == vec3i2.getZ()) {
+                e += (double)vec3i2.getY();
             }
             return this.method_7508(d, e, f);
         }
@@ -505,13 +537,15 @@ extends Entity {
         if ((blockState = this.world.getBlockState(new BlockPos(i, j, k))).matches(BlockTags.RAILS)) {
             double s;
             RailShape railShape = blockState.get(((AbstractRailBlock)blockState.getBlock()).getShapeProperty());
-            int[][] is = field_7664[railShape.getId()];
-            double g = (double)i + 0.5 + (double)is[0][0] * 0.5;
-            double h = (double)j + 0.0625 + (double)is[0][1] * 0.5;
-            double l = (double)k + 0.5 + (double)is[0][2] * 0.5;
-            double m = (double)i + 0.5 + (double)is[1][0] * 0.5;
-            double n = (double)j + 0.0625 + (double)is[1][1] * 0.5;
-            double o = (double)k + 0.5 + (double)is[1][2] * 0.5;
+            Pair<Vec3i, Vec3i> pair = AbstractMinecartEntity.method_22864(railShape);
+            Vec3i vec3i = (Vec3i)pair.getFirst();
+            Vec3i vec3i2 = (Vec3i)pair.getSecond();
+            double g = (double)i + 0.5 + (double)vec3i.getX() * 0.5;
+            double h = (double)j + 0.0625 + (double)vec3i.getY() * 0.5;
+            double l = (double)k + 0.5 + (double)vec3i.getZ() * 0.5;
+            double m = (double)i + 0.5 + (double)vec3i2.getX() * 0.5;
+            double n = (double)j + 0.0625 + (double)vec3i2.getY() * 0.5;
+            double o = (double)k + 0.5 + (double)vec3i2.getZ() * 0.5;
             double p = m - g;
             double q = (n - h) * 2.0;
             double r = o - l;
@@ -529,8 +563,7 @@ extends Entity {
             f = l + r * s;
             if (q < 0.0) {
                 e += 1.0;
-            }
-            if (q > 0.0) {
+            } else if (q > 0.0) {
                 e += 0.5;
             }
             return new Vec3d(d, e, f);
@@ -567,6 +600,7 @@ extends Entity {
 
     @Override
     public void pushAwayFrom(Entity entity) {
+        double e;
         if (this.world.isClient) {
             return;
         }
@@ -576,9 +610,8 @@ extends Entity {
         if (this.hasPassenger(entity)) {
             return;
         }
-        double d = entity.x - this.x;
-        double e = entity.z - this.z;
-        double f = d * d + e * e;
+        double d = entity.getX() - this.getX();
+        double f = d * d + (e = entity.getZ() - this.getZ()) * e;
         if (f >= (double)1.0E-4f) {
             f = MathHelper.sqrt(f);
             d /= f;
@@ -597,9 +630,9 @@ extends Entity {
             e *= 0.5;
             if (entity instanceof AbstractMinecartEntity) {
                 Vec3d vec3d2;
-                double h = entity.x - this.x;
-                double i = entity.z - this.z;
-                Vec3d vec3d = new Vec3d(h, 0.0, i).normalize();
+                double i;
+                double h = entity.getX() - this.getX();
+                Vec3d vec3d = new Vec3d(h, 0.0, i = entity.getZ() - this.getZ()).normalize();
                 double j = Math.abs(vec3d.dotProduct(vec3d2 = new Vec3d(MathHelper.cos(this.yaw * ((float)Math.PI / 180)), 0.0, MathHelper.sin(this.yaw * ((float)Math.PI / 180))).normalize()));
                 if (j < (double)0.8f) {
                     return;
@@ -632,22 +665,22 @@ extends Entity {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
-        this.field_7665 = x;
-        this.field_7666 = y;
-        this.field_7662 = z;
-        this.field_7659 = yaw;
-        this.field_7657 = pitch;
-        this.field_7669 = interpolationSteps + 2;
-        this.setVelocity(this.field_7658, this.field_7655, this.field_7656);
+        this.clientX = x;
+        this.clientY = y;
+        this.clientZ = z;
+        this.clientYaw = yaw;
+        this.clientPitch = pitch;
+        this.clientInterpolationSteps = interpolationSteps + 2;
+        this.setVelocity(this.clientXVelocity, this.clientYVelocity, this.clientZVelocity);
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
     public void setVelocityClient(double x, double y, double z) {
-        this.field_7658 = x;
-        this.field_7655 = y;
-        this.field_7656 = z;
-        this.setVelocity(this.field_7658, this.field_7655, this.field_7656);
+        this.clientXVelocity = x;
+        this.clientYVelocity = y;
+        this.clientZVelocity = z;
+        this.setVelocity(this.clientXVelocity, this.clientYVelocity, this.clientZVelocity);
     }
 
     public void setDamageWobbleStrength(float f) {

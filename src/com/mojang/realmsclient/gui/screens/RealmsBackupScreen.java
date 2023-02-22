@@ -9,7 +9,7 @@
  */
 package com.mojang.realmsclient.gui.screens;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.realmsclient.client.RealmsClient;
 import com.mojang.realmsclient.dto.Backup;
 import com.mojang.realmsclient.dto.RealmsServer;
@@ -288,7 +288,7 @@ extends RealmsScreen {
         private void renderBackupItem(Backup backup, int x, int y, int mouseX, int mouseY) {
             int i = backup.isUploadedVersion() ? -8388737 : 0xFFFFFF;
             RealmsBackupScreen.this.drawString("Backup (" + RealmsUtil.convertToAgePresentation(System.currentTimeMillis() - backup.lastModifiedDate.getTime()) + ")", x + 40, y + 1, i);
-            RealmsBackupScreen.this.drawString(this.getMediumDatePresentation(backup.lastModifiedDate), x + 40, y + 12, 0x4C4C4C);
+            RealmsBackupScreen.this.drawString(this.getMediumDatePresentation(backup.lastModifiedDate), x + 40, y + 12, 0x808080);
             int j = RealmsBackupScreen.this.width() - 175;
             int k = -3;
             int l = j - 10;
@@ -308,11 +308,11 @@ extends RealmsScreen {
         private void drawRestore(int x, int y, int xm, int ym) {
             boolean bl = xm >= x && xm <= x + 12 && ym >= y && ym <= y + 14 && ym < RealmsBackupScreen.this.height() - 15 && ym > 32;
             RealmsScreen.bind("realms:textures/gui/realms/restore_icon.png");
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            GlStateManager.pushMatrix();
-            GlStateManager.scalef(0.5f, 0.5f, 0.5f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.scalef(0.5f, 0.5f, 0.5f);
             RealmsScreen.blit(x * 2, y * 2, 0.0f, bl ? 28.0f : 0.0f, 23, 28, 23, 56);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
             if (bl) {
                 RealmsBackupScreen.this.toolTip = RealmsScreen.getLocalizedString("mco.backup.button.restore");
             }
@@ -321,11 +321,11 @@ extends RealmsScreen {
         private void drawInfo(int x, int y, int xm, int ym) {
             boolean bl = xm >= x && xm <= x + 8 && ym >= y && ym <= y + 8 && ym < RealmsBackupScreen.this.height() - 15 && ym > 32;
             RealmsScreen.bind("realms:textures/gui/realms/plus_icon.png");
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            GlStateManager.pushMatrix();
-            GlStateManager.scalef(0.5f, 0.5f, 0.5f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.pushMatrix();
+            RenderSystem.scalef(0.5f, 0.5f, 0.5f);
             RealmsScreen.blit(x * 2, y * 2, 0.0f, bl ? 15.0f : 0.0f, 15, 15, 15, 30);
-            GlStateManager.popMatrix();
+            RenderSystem.popMatrix();
             if (bl) {
                 RealmsBackupScreen.this.toolTip = RealmsScreen.getLocalizedString("mco.backup.changes.tooltip");
             }

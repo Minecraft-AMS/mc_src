@@ -5,8 +5,8 @@ package net.minecraft.world.level.storage;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.level.storage.AlphaChunkDataArray;
@@ -35,7 +35,6 @@ public class AlphaChunkIo {
     }
 
     public static void convertAlphaChunk(AlphaChunk alphaChunk, CompoundTag tag, BiomeSource biomeSource) {
-        int k;
         tag.putInt("xPos", alphaChunk.x);
         tag.putInt("zPos", alphaChunk.z);
         tag.putLong("LastUpdate", alphaChunk.lastUpdate);
@@ -49,7 +48,7 @@ public class AlphaChunkIo {
         for (int j = 0; j < 8; ++j) {
             int o;
             boolean bl = true;
-            for (k = 0; k < 16 && bl; ++k) {
+            for (int k = 0; k < 16 && bl; ++k) {
                 block3: for (int l = 0; l < 16 && bl; ++l) {
                     for (int m = 0; m < 16; ++m) {
                         int n = k << 11 | m << 7 | l + (j << 4);
@@ -86,15 +85,7 @@ public class AlphaChunkIo {
             listTag.add(compoundTag);
         }
         tag.put("Sections", listTag);
-        byte[] cs = new byte[256];
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (k = 0; k < 16; ++k) {
-            for (int l = 0; l < 16; ++l) {
-                mutable.set(alphaChunk.x << 4 | k, 0, alphaChunk.z << 4 | l);
-                cs[l << 4 | k] = (byte)(Registry.BIOME.getRawId(biomeSource.getBiome(mutable)) & 0xFF);
-            }
-        }
-        tag.putByteArray("Biomes", cs);
+        tag.putIntArray("Biomes", new BiomeArray(new ChunkPos(alphaChunk.x, alphaChunk.z), biomeSource).toIntArray());
         tag.put("Entities", alphaChunk.entities);
         tag.put("TileEntities", alphaChunk.blockEntities);
         if (alphaChunk.blockTicks != null) {

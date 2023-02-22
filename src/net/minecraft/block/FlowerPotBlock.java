@@ -16,13 +16,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -55,7 +55,7 @@ extends Block {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         boolean bl2;
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
@@ -78,8 +78,9 @@ extends Block {
                 }
                 world.setBlockState(pos, Blocks.FLOWER_POT.getDefaultState(), 3);
             }
+            return ActionResult.SUCCESS;
         }
-        return true;
+        return ActionResult.CONSUME;
     }
 
     @Override
@@ -97,11 +98,6 @@ extends Block {
             return Blocks.AIR.getDefaultState();
         }
         return super.getStateForNeighborUpdate(state, facing, neighborState, world, pos, neighborPos);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     public Block getContent() {

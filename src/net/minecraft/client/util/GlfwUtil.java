@@ -16,7 +16,7 @@ import org.lwjgl.system.MemoryUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class GlfwUtil {
-    public static void method_15973() {
+    public static void makeJvmCrash() {
         MemoryUtil.memSet((long)0L, (int)0, (long)1L);
     }
 

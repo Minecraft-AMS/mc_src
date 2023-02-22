@@ -10,14 +10,16 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.Fertilizable;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.entity.EntityContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
+import net.minecraft.world.biome.DefaultBiomeFeatures;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.PlantedFeatureConfig;
+import net.minecraft.world.gen.feature.HugeMushroomFeatureConfig;
 
 public class MushroomPlantBlock
 extends PlantBlock
@@ -34,7 +36,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (random.nextInt(25) == 0) {
             int i = 5;
             int j = 4;
@@ -61,28 +63,31 @@ implements Fertilizable {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockPos blockPos = pos.down();
         BlockState blockState = world.getBlockState(blockPos);
         Block block = blockState.getBlock();
         if (block == Blocks.MYCELIUM || block == Blocks.PODZOL) {
             return true;
         }
-        return world.getLightLevel(pos, 0) < 13 && this.canPlantOnTop(blockState, world, blockPos);
+        return world.getBaseLightLevel(pos, 0) < 13 && this.canPlantOnTop(blockState, world, blockPos);
     }
 
-    public boolean trySpawningBigMushroom(IWorld world, BlockPos pos, BlockState state, Random random) {
-        world.removeBlock(pos, false);
-        Feature<PlantedFeatureConfig> feature = null;
+    public boolean trySpawningBigMushroom(ServerWorld serverWorld, BlockPos pos, BlockState state, Random random) {
+        ConfiguredFeature<HugeMushroomFeatureConfig, ?> configuredFeature;
+        serverWorld.removeBlock(pos, false);
         if (this == Blocks.BROWN_MUSHROOM) {
-            feature = Feature.HUGE_BROWN_MUSHROOM;
+            configuredFeature = Feature.HUGE_BROWN_MUSHROOM.configure(DefaultBiomeFeatures.HUGE_BROWN_MUSHROOM_CONFIG);
         } else if (this == Blocks.RED_MUSHROOM) {
-            feature = Feature.HUGE_RED_MUSHROOM;
+            configuredFeature = Feature.HUGE_RED_MUSHROOM.configure(DefaultBiomeFeatures.HUGE_RED_MUSHROOM_CONFIG);
+        } else {
+            serverWorld.setBlockState(pos, state, 3);
+            return false;
         }
-        if (feature != null && feature.generate(world, world.getChunkManager().getChunkGenerator(), random, pos, new PlantedFeatureConfig(true))) {
+        if (configuredFeature.generate(serverWorld, serverWorld.getChunkManager().getChunkGenerator(), random, pos)) {
             return true;
         }
-        world.setBlockState(pos, state, 3);
+        serverWorld.setBlockState(pos, state, 3);
         return false;
     }
 
@@ -97,7 +102,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void grow(World world, Random random, BlockPos pos, BlockState state) {
+    public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
         this.trySpawningBigMushroom(world, pos, state, random);
     }
 

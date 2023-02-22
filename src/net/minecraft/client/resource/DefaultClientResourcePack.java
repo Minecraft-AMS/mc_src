@@ -14,7 +14,6 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.ResourceIndex;
@@ -73,9 +72,9 @@ extends DefaultResourcePack {
     }
 
     @Override
-    public Collection<Identifier> findResources(ResourceType type, String namespace, int maxDepth, Predicate<String> pathFilter) {
-        Collection<Identifier> collection = super.findResources(type, namespace, maxDepth, pathFilter);
-        collection.addAll(this.index.getFilesRecursively(namespace, maxDepth, pathFilter).stream().map(Identifier::new).collect(Collectors.toList()));
+    public Collection<Identifier> findResources(ResourceType type, String namespace, String prefix, int maxDepth, Predicate<String> pathFilter) {
+        Collection<Identifier> collection = super.findResources(type, namespace, prefix, maxDepth, pathFilter);
+        collection.addAll(this.index.getFilesRecursively(prefix, namespace, maxDepth, pathFilter));
         return collection;
     }
 }

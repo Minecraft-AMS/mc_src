@@ -51,7 +51,7 @@ extends RealmsScreen {
     String[] gameModes;
     String[][] gameModeHints;
     private RealmsLabel titleLabel;
-    private RealmsLabel field_20108 = null;
+    private RealmsLabel field_20502;
 
     public RealmsSlotOptionsScreen(RealmsConfigureWorldScreen realmsConfigureWorldScreen, RealmsWorldOptions options, RealmsServer.WorldType worldType, int activeSlot) {
         this.parent = realmsConfigureWorldScreen;
@@ -99,7 +99,7 @@ extends RealmsScreen {
             this.commandBlocks = this.options.commandBlocks;
         } else {
             String string = this.worldType.equals((Object)RealmsServer.WorldType.ADVENTUREMAP) ? RealmsSlotOptionsScreen.getLocalizedString("mco.configure.world.edit.subscreen.adventuremap") : (this.worldType.equals((Object)RealmsServer.WorldType.INSPIRATION) ? RealmsSlotOptionsScreen.getLocalizedString("mco.configure.world.edit.subscreen.inspiration") : RealmsSlotOptionsScreen.getLocalizedString("mco.configure.world.edit.subscreen.experience"));
-            this.field_20108 = new RealmsLabel(string, this.width() / 2, 26, 0xFF0000);
+            this.field_20502 = new RealmsLabel(string, this.width() / 2, 26, 0xFF0000);
             this.pvp = true;
             this.spawnProtection = 0;
             this.forceGameMode = false;
@@ -218,8 +218,8 @@ extends RealmsScreen {
         this.addWidget(this.nameEdit);
         this.titleLabel = new RealmsLabel(RealmsSlotOptionsScreen.getLocalizedString("mco.configure.world.buttons.options"), this.width() / 2, 17, 0xFFFFFF);
         this.addWidget(this.titleLabel);
-        if (this.field_20108 != null) {
-            this.addWidget(this.field_20108);
+        if (this.field_20502 != null) {
+            this.addWidget(this.field_20502);
         }
         this.narrateLabels();
     }
@@ -273,8 +273,8 @@ extends RealmsScreen {
         String string = RealmsSlotOptionsScreen.getLocalizedString("mco.configure.world.edit.slot.name");
         this.drawString(string, this.column1_x + this.column_width / 2 - this.fontWidth(string) / 2, RealmsConstants.row(0) - 5, 0xFFFFFF);
         this.titleLabel.render(this);
-        if (this.field_20108 != null) {
-            this.field_20108.render(this);
+        if (this.field_20502 != null) {
+            this.field_20502.render(this);
         }
         this.nameEdit.render(xm, ym, a);
         super.render(xm, ym, a);

@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap$Entry
+ *  it.unimi.dsi.fastutil.longs.Long2ObjectMaps
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.longs.LongIterator
  *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
@@ -14,6 +15,7 @@
 package net.minecraft.world.chunk.light;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -36,14 +38,14 @@ extends SectionDistanceLevelPropagator {
     private static final Direction[] DIRECTIONS = Direction.values();
     private final LightType lightType;
     private final ChunkProvider chunkProvider;
-    protected final LongSet field_15808 = new LongOpenHashSet();
+    protected final LongSet nonEmptySections = new LongOpenHashSet();
     protected final LongSet field_15797 = new LongOpenHashSet();
     protected final LongSet field_15804 = new LongOpenHashSet();
     protected volatile M uncachedLightArrays;
     protected final M lightArrays;
     protected final LongSet field_15802 = new LongOpenHashSet();
     protected final LongSet dirtySections = new LongOpenHashSet();
-    protected final Long2ObjectMap<ChunkNibbleArray> lightArraysToAdd = new Long2ObjectOpenHashMap();
+    protected final Long2ObjectMap<ChunkNibbleArray> lightArraysToAdd = Long2ObjectMaps.synchronize((Long2ObjectMap)new Long2ObjectOpenHashMap());
     private final LongSet field_19342 = new LongOpenHashSet();
     private final LongSet lightArraysToRemove = new LongOpenHashSet();
     protected volatile boolean hasLightUpdates;
@@ -72,12 +74,12 @@ extends SectionDistanceLevelPropagator {
     }
 
     @Nullable
-    public ChunkNibbleArray method_20533(long l) {
-        ChunkNibbleArray chunkNibbleArray = (ChunkNibbleArray)this.lightArraysToAdd.get(l);
+    public ChunkNibbleArray getLightArray(long sectionPos) {
+        ChunkNibbleArray chunkNibbleArray = (ChunkNibbleArray)this.lightArraysToAdd.get(sectionPos);
         if (chunkNibbleArray != null) {
             return chunkNibbleArray;
         }
-        return this.getLightArray(l, false);
+        return this.getLightArray(sectionPos, false);
     }
 
     protected abstract int getLight(long var1);
@@ -109,7 +111,7 @@ extends SectionDistanceLevelPropagator {
         if (id == Long.MAX_VALUE) {
             return 2;
         }
-        if (this.field_15808.contains(id)) {
+        if (this.nonEmptySections.contains(id)) {
             return 0;
         }
         if (!this.lightArraysToRemove.contains(id) && ((ChunkToNibbleArrayMap)this.lightArrays).containsKey(id)) {
@@ -123,7 +125,7 @@ extends SectionDistanceLevelPropagator {
         if (this.field_15797.contains(id)) {
             return 2;
         }
-        if (this.field_15808.contains(id) || this.field_15804.contains(id)) {
+        if (this.nonEmptySections.contains(id) || this.field_15804.contains(id)) {
             return 0;
         }
         return 2;
@@ -133,11 +135,11 @@ extends SectionDistanceLevelPropagator {
     protected void setLevel(long id, int level) {
         int i = this.getLevel(id);
         if (i != 0 && level == 0) {
-            this.field_15808.add(id);
+            this.nonEmptySections.add(id);
             this.field_15804.remove(id);
         }
         if (i == 0 && level != 0) {
-            this.field_15808.remove(id);
+            this.nonEmptySections.remove(id);
             this.field_15797.remove(id);
         }
         if (i >= 2 && level != 2) {
@@ -171,13 +173,17 @@ extends SectionDistanceLevelPropagator {
     }
 
     protected void removeChunkData(ChunkLightProvider<?, ?> storage, long blockChunkPos) {
+        if (storage.method_24208() < 8192) {
+            storage.method_24206(m -> ChunkSectionPos.fromGlobalPos(m) == blockChunkPos);
+            return;
+        }
         int i = ChunkSectionPos.getWorldCoord(ChunkSectionPos.getX(blockChunkPos));
         int j = ChunkSectionPos.getWorldCoord(ChunkSectionPos.getY(blockChunkPos));
         int k = ChunkSectionPos.getWorldCoord(ChunkSectionPos.getZ(blockChunkPos));
         for (int l = 0; l < 16; ++l) {
-            for (int m = 0; m < 16; ++m) {
+            for (int m2 = 0; m2 < 16; ++m2) {
                 for (int n = 0; n < 16; ++n) {
-                    long o = BlockPos.asLong(i + l, j + m, k + n);
+                    long o = BlockPos.asLong(i + l, j + m2, k + n);
                     storage.removePendingUpdate(o);
                 }
             }
@@ -295,10 +301,10 @@ extends SectionDistanceLevelPropagator {
     protected void onChunkRemoved(long l) {
     }
 
-    protected void method_15535(long l, boolean bl) {
+    protected void setLightEnabled(long l, boolean bl) {
     }
 
-    public void method_20600(long l, boolean bl) {
+    public void setRetainData(long l, boolean bl) {
         if (bl) {
             this.field_19342.add(l);
         } else {
@@ -315,7 +321,7 @@ extends SectionDistanceLevelPropagator {
     }
 
     protected void updateSectionStatus(long pos, boolean empty) {
-        boolean bl = this.field_15808.contains(pos);
+        boolean bl = this.nonEmptySections.contains(pos);
         if (!bl && !empty) {
             this.field_15804.add(pos);
             this.updateLevel(Long.MAX_VALUE, pos, 0, true);

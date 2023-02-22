@@ -12,7 +12,7 @@ package net.minecraft.client.gui.hud.spectator;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -53,7 +53,7 @@ implements SpectatorMenuCommand {
     @Override
     public void renderIcon(float brightness, int alpha) {
         MinecraftClient.getInstance().getTextureManager().bindTexture(this.skinId);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, (float)alpha / 255.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, (float)alpha / 255.0f);
         DrawableHelper.blit(2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
         DrawableHelper.blit(2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
     }

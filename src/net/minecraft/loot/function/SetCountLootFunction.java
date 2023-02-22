@@ -14,10 +14,10 @@ import com.google.gson.JsonSerializationContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootTableRange;
 import net.minecraft.loot.LootTableRanges;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class SetCountLootFunction
 extends ConditionalLootFunction {

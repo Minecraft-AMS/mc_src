@@ -19,8 +19,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -54,9 +56,13 @@ extends Block {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (world.isClient) {
+            RedstoneOreBlock.spawnParticles(world, pos);
+            return ActionResult.SUCCESS;
+        }
         RedstoneOreBlock.light(state, world, pos);
-        return super.activate(state, world, pos, player, hand, hit);
+        return ActionResult.PASS;
     }
 
     private static void light(BlockState state, World world, BlockPos pos) {
@@ -67,7 +73,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (state.get(LIT).booleanValue()) {
             world.setBlockState(pos, (BlockState)state.with(LIT, false), 3);
         }

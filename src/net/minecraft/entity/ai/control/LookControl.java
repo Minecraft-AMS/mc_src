@@ -18,8 +18,8 @@ public class LookControl {
     protected double lookY;
     protected double lookZ;
 
-    public LookControl(MobEntity mobEntity) {
-        this.entity = mobEntity;
+    public LookControl(MobEntity entity) {
+        this.entity = entity;
     }
 
     public void lookAt(Vec3d direction) {
@@ -27,7 +27,7 @@ public class LookControl {
     }
 
     public void lookAt(Entity entity, float yawSpeed, float pitchSpeed) {
-        this.lookAt(entity.x, LookControl.getLookingHeightFor(entity), entity.z, yawSpeed, pitchSpeed);
+        this.lookAt(entity.getX(), LookControl.getLookingHeightFor(entity), entity.getZ(), yawSpeed, pitchSpeed);
     }
 
     public void lookAt(double x, double y, double z) {
@@ -44,7 +44,7 @@ public class LookControl {
     }
 
     public void tick() {
-        if (this.method_20433()) {
+        if (this.shouldStayHorizontal()) {
             this.entity.pitch = 0.0f;
         }
         if (this.active) {
@@ -52,14 +52,14 @@ public class LookControl {
             this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.getTargetYaw(), this.yawSpeed);
             this.entity.pitch = this.changeAngle(this.entity.pitch, this.getTargetPitch(), this.pitchSpeed);
         } else {
-            this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.entity.field_6283, 10.0f);
+            this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.entity.bodyYaw, 10.0f);
         }
         if (!this.entity.getNavigation().isIdle()) {
-            this.entity.headYaw = MathHelper.capRotation(this.entity.headYaw, this.entity.field_6283, this.entity.method_5986());
+            this.entity.headYaw = MathHelper.capRotation(this.entity.headYaw, this.entity.bodyYaw, this.entity.getBodyYawSpeed());
         }
     }
 
-    protected boolean method_20433() {
+    protected boolean shouldStayHorizontal() {
         return true;
     }
 
@@ -80,16 +80,16 @@ public class LookControl {
     }
 
     protected float getTargetPitch() {
-        double d = this.lookX - this.entity.x;
-        double e = this.lookY - (this.entity.y + (double)this.entity.getStandingEyeHeight());
-        double f = this.lookZ - this.entity.z;
+        double d = this.lookX - this.entity.getX();
+        double e = this.lookY - this.entity.getEyeY();
+        double f = this.lookZ - this.entity.getZ();
         double g = MathHelper.sqrt(d * d + f * f);
         return (float)(-(MathHelper.atan2(e, g) * 57.2957763671875));
     }
 
     protected float getTargetYaw() {
-        double d = this.lookX - this.entity.x;
-        double e = this.lookZ - this.entity.z;
+        double d = this.lookX - this.entity.getX();
+        double e = this.lookZ - this.entity.getZ();
         return (float)(MathHelper.atan2(e, d) * 57.2957763671875) - 90.0f;
     }
 
@@ -101,7 +101,7 @@ public class LookControl {
 
     private static double getLookingHeightFor(Entity entity) {
         if (entity instanceof LivingEntity) {
-            return entity.y + (double)entity.getStandingEyeHeight();
+            return entity.getEyeY();
         }
         return (entity.getBoundingBox().y1 + entity.getBoundingBox().y2) / 2.0;
     }

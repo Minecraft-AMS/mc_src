@@ -9,19 +9,53 @@ import java.io.IOException;
 import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 public class DoubleTag
 extends AbstractNumberTag {
-    private double value;
+    public static final DoubleTag ZERO = new DoubleTag(0.0);
+    public static final TagReader<DoubleTag> READER = new TagReader<DoubleTag>(){
 
-    DoubleTag() {
+        @Override
+        public DoubleTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(128L);
+            return DoubleTag.of(dataInput.readDouble());
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "DOUBLE";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Double";
+        }
+
+        @Override
+        public boolean isImmutable() {
+            return true;
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    private final double value;
+
+    private DoubleTag(double value) {
+        this.value = value;
     }
 
-    public DoubleTag(double d) {
-        this.value = d;
+    public static DoubleTag of(double value) {
+        if (value == 0.0) {
+            return ZERO;
+        }
+        return new DoubleTag(value);
     }
 
     @Override
@@ -30,14 +64,12 @@ extends AbstractNumberTag {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(128L);
-        this.value = input.readDouble();
-    }
-
-    @Override
     public byte getType() {
         return 6;
+    }
+
+    public TagReader<DoubleTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -47,7 +79,7 @@ extends AbstractNumberTag {
 
     @Override
     public DoubleTag copy() {
-        return new DoubleTag(this.value);
+        return this;
     }
 
     public boolean equals(Object o) {

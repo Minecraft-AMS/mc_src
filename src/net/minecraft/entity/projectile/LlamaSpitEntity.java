@@ -42,7 +42,7 @@ implements Projectile {
     public LlamaSpitEntity(World world, LlamaEntity owner) {
         this((EntityType<? extends LlamaSpitEntity>)EntityType.LLAMA_SPIT, world);
         this.owner = owner;
-        this.updatePosition(owner.x - (double)(owner.getWidth() + 1.0f) * 0.5 * (double)MathHelper.sin(owner.field_6283 * ((float)Math.PI / 180)), owner.y + (double)owner.getStandingEyeHeight() - (double)0.1f, owner.z + (double)(owner.getWidth() + 1.0f) * 0.5 * (double)MathHelper.cos(owner.field_6283 * ((float)Math.PI / 180)));
+        this.updatePosition(owner.getX() - (double)(owner.getWidth() + 1.0f) * 0.5 * (double)MathHelper.sin(owner.bodyYaw * ((float)Math.PI / 180)), owner.getEyeY() - (double)0.1f, owner.getZ() + (double)(owner.getWidth() + 1.0f) * 0.5 * (double)MathHelper.cos(owner.bodyYaw * ((float)Math.PI / 180)));
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -67,12 +67,12 @@ implements Projectile {
         if (hitResult != null) {
             this.method_7481(hitResult);
         }
-        this.x += vec3d.x;
-        this.y += vec3d.y;
-        this.z += vec3d.z;
-        float f = MathHelper.sqrt(LlamaSpitEntity.squaredHorizontalLength(vec3d));
+        double d = this.getX() + vec3d.x;
+        double e = this.getY() + vec3d.y;
+        double f = this.getZ() + vec3d.z;
+        float g = MathHelper.sqrt(LlamaSpitEntity.squaredHorizontalLength(vec3d));
         this.yaw = (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875);
-        this.pitch = (float)(MathHelper.atan2(vec3d.y, f) * 57.2957763671875);
+        this.pitch = (float)(MathHelper.atan2(vec3d.y, g) * 57.2957763671875);
         while (this.pitch - this.prevPitch < -180.0f) {
             this.prevPitch -= 360.0f;
         }
@@ -87,8 +87,8 @@ implements Projectile {
         }
         this.pitch = MathHelper.lerp(0.2f, this.prevPitch, this.pitch);
         this.yaw = MathHelper.lerp(0.2f, this.prevYaw, this.yaw);
-        float g = 0.99f;
-        float h = 0.06f;
+        float h = 0.99f;
+        float i = 0.06f;
         if (!this.world.containsBlockWithMaterial(this.getBoundingBox(), Material.AIR)) {
             this.remove();
             return;
@@ -101,7 +101,7 @@ implements Projectile {
         if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.06f, 0.0));
         }
-        this.updatePosition(this.x, this.y, this.z);
+        this.updatePosition(d, e, f);
     }
 
     @Override
@@ -114,7 +114,7 @@ implements Projectile {
             this.yaw = (float)(MathHelper.atan2(x, z) * 57.2957763671875);
             this.prevPitch = this.pitch;
             this.prevYaw = this.yaw;
-            this.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, this.pitch);
+            this.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
         }
     }
 

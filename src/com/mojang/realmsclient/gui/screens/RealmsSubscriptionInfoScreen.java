@@ -47,7 +47,7 @@ extends RealmsScreen {
     private int daysLeft;
     private String startDate;
     private Subscription.SubscriptionType type;
-    private final String PURCHASE_LINK = "https://account.mojang.com/buy/realms";
+    private final String PURCHASE_LINK = "https://aka.ms/ExtendJavaRealms";
 
     public RealmsSubscriptionInfoScreen(RealmsScreen lastScreen, RealmsServer serverData, RealmsScreen mainScreen) {
         this.lastScreen = lastScreen;
@@ -68,7 +68,7 @@ extends RealmsScreen {
 
             @Override
             public void onPress() {
-                String string = "https://account.mojang.com/buy/realms?sid=" + ((RealmsSubscriptionInfoScreen)RealmsSubscriptionInfoScreen.this).serverData.remoteSubscriptionId + "&pid=" + Realms.getUUID();
+                String string = "https://aka.ms/ExtendJavaRealms?subscriptionId=" + ((RealmsSubscriptionInfoScreen)RealmsSubscriptionInfoScreen.this).serverData.remoteSubscriptionId + "&profileId=" + Realms.getUUID();
                 Realms.setClipboard(string);
                 RealmsUtil.browseTo(string);
             }

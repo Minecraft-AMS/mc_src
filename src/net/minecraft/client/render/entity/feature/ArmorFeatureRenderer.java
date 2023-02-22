@@ -10,18 +10,19 @@
 package net.minecraft.client.render.entity.feature;
 
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Map;
-import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
+import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ArmorItem;
@@ -33,14 +34,8 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public abstract class ArmorFeatureRenderer<T extends LivingEntity, M extends BipedEntityModel<T>, A extends BipedEntityModel<T>>
 extends FeatureRenderer<T, M> {
-    protected static final Identifier SKIN = new Identifier("textures/misc/enchanted_item_glint.png");
     protected final A modelLeggings;
     protected final A modelBody;
-    private float alpha = 1.0f;
-    private float red = 1.0f;
-    private float green = 1.0f;
-    private float blue = 1.0f;
-    private boolean ignoreGlint;
     private static final Map<String, Identifier> ARMOR_TEXTURE_CACHE = Maps.newHashMap();
 
     protected ArmorFeatureRenderer(FeatureRendererContext<T, M> featureRendererContext, A bipedEntityModel, A bipedEntityModel2) {
@@ -50,19 +45,14 @@ extends FeatureRenderer<T, M> {
     }
 
     @Override
-    public void render(T livingEntity, float f, float g, float h, float i, float j, float k, float l) {
-        this.renderArmor(livingEntity, f, g, h, i, j, k, l, EquipmentSlot.CHEST);
-        this.renderArmor(livingEntity, f, g, h, i, j, k, l, EquipmentSlot.LEGS);
-        this.renderArmor(livingEntity, f, g, h, i, j, k, l, EquipmentSlot.FEET);
-        this.renderArmor(livingEntity, f, g, h, i, j, k, l, EquipmentSlot.HEAD);
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T livingEntity, float f, float g, float h, float j, float k, float l) {
+        this.renderArmor(matrixStack, vertexConsumerProvider, livingEntity, f, g, h, j, k, l, EquipmentSlot.CHEST, i);
+        this.renderArmor(matrixStack, vertexConsumerProvider, livingEntity, f, g, h, j, k, l, EquipmentSlot.LEGS, i);
+        this.renderArmor(matrixStack, vertexConsumerProvider, livingEntity, f, g, h, j, k, l, EquipmentSlot.FEET, i);
+        this.renderArmor(matrixStack, vertexConsumerProvider, livingEntity, f, g, h, j, k, l, EquipmentSlot.HEAD, i);
     }
 
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
-    }
-
-    private void renderArmor(T livingEntity, float f, float g, float h, float i, float j, float k, float l, EquipmentSlot equipmentSlot) {
+    private void renderArmor(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, T livingEntity, float f, float g, float h, float i, float j, float k, EquipmentSlot equipmentSlot, int l) {
         ItemStack itemStack = ((LivingEntity)livingEntity).getEquippedStack(equipmentSlot);
         if (!(itemStack.getItem() instanceof ArmorItem)) {
             return;
@@ -74,23 +64,25 @@ extends FeatureRenderer<T, M> {
         A bipedEntityModel = this.getArmor(equipmentSlot);
         ((BipedEntityModel)this.getContextModel()).setAttributes(bipedEntityModel);
         ((BipedEntityModel)bipedEntityModel).animateModel(livingEntity, f, g, h);
-        this.method_4170(bipedEntityModel, equipmentSlot);
+        this.setVisible(bipedEntityModel, equipmentSlot);
+        ((BipedEntityModel)bipedEntityModel).setAngles(livingEntity, f, g, i, j, k);
         boolean bl = this.isLegs(equipmentSlot);
-        this.bindTexture(this.getArmorTexture(armorItem, bl));
+        boolean bl2 = itemStack.hasEnchantmentGlint();
         if (armorItem instanceof DyeableArmorItem) {
             int m = ((DyeableArmorItem)armorItem).getColor(itemStack);
             float n = (float)(m >> 16 & 0xFF) / 255.0f;
             float o = (float)(m >> 8 & 0xFF) / 255.0f;
             float p = (float)(m & 0xFF) / 255.0f;
-            GlStateManager.color4f(this.red * n, this.green * o, this.blue * p, this.alpha);
-            ((BipedEntityModel)bipedEntityModel).render(livingEntity, f, g, i, j, k, l);
-            this.bindTexture(this.method_4174(armorItem, bl, "overlay"));
+            this.renderArmorParts(matrixStack, vertexConsumerProvider, l, armorItem, bl2, bipedEntityModel, bl, n, o, p, null);
+            this.renderArmorParts(matrixStack, vertexConsumerProvider, l, armorItem, bl2, bipedEntityModel, bl, 1.0f, 1.0f, 1.0f, "overlay");
+        } else {
+            this.renderArmorParts(matrixStack, vertexConsumerProvider, l, armorItem, bl2, bipedEntityModel, bl, 1.0f, 1.0f, 1.0f, null);
         }
-        GlStateManager.color4f(this.red, this.green, this.blue, this.alpha);
-        ((BipedEntityModel)bipedEntityModel).render(livingEntity, f, g, i, j, k, l);
-        if (!this.ignoreGlint && itemStack.hasEnchantments()) {
-            ArmorFeatureRenderer.renderEnchantedGlint(this::bindTexture, livingEntity, bipedEntityModel, f, g, h, i, j, k, l);
-        }
+    }
+
+    private void renderArmorParts(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, ArmorItem armorItem, boolean renderGlint, A bipedEntityModel, boolean lowerParts, float r, float g, float b, @Nullable String textureSuffix) {
+        VertexConsumer vertexConsumer = ItemRenderer.getArmorVertexConsumer(vertexConsumerProvider, RenderLayer.getEntityCutoutNoCull(this.getArmorTexture(armorItem, lowerParts, textureSuffix)), false, renderGlint);
+        ((AnimalModel)bipedEntityModel).render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, r, g, b, 1.0f);
     }
 
     public A getArmor(EquipmentSlot equipmentSlot) {
@@ -101,52 +93,13 @@ extends FeatureRenderer<T, M> {
         return equipmentSlot == EquipmentSlot.LEGS;
     }
 
-    public static <T extends Entity> void renderEnchantedGlint(Consumer<Identifier> consumer, T entity, EntityModel<T> entityModel, float f, float g, float h, float i, float j, float k, float l) {
-        float m = (float)entity.age + h;
-        consumer.accept(SKIN);
-        GameRenderer gameRenderer = MinecraftClient.getInstance().gameRenderer;
-        gameRenderer.setFogBlack(true);
-        GlStateManager.enableBlend();
-        GlStateManager.depthFunc(514);
-        GlStateManager.depthMask(false);
-        float n = 0.5f;
-        GlStateManager.color4f(0.5f, 0.5f, 0.5f, 1.0f);
-        for (int o = 0; o < 2; ++o) {
-            GlStateManager.disableLighting();
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_COLOR, GlStateManager.DestFactor.ONE);
-            float p = 0.76f;
-            GlStateManager.color4f(0.38f, 0.19f, 0.608f, 1.0f);
-            GlStateManager.matrixMode(5890);
-            GlStateManager.loadIdentity();
-            float q = 0.33333334f;
-            GlStateManager.scalef(0.33333334f, 0.33333334f, 0.33333334f);
-            GlStateManager.rotatef(30.0f - (float)o * 60.0f, 0.0f, 0.0f, 1.0f);
-            GlStateManager.translatef(0.0f, m * (0.001f + (float)o * 0.003f) * 20.0f, 0.0f);
-            GlStateManager.matrixMode(5888);
-            entityModel.render(entity, f, g, i, j, k, l);
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        }
-        GlStateManager.matrixMode(5890);
-        GlStateManager.loadIdentity();
-        GlStateManager.matrixMode(5888);
-        GlStateManager.enableLighting();
-        GlStateManager.depthMask(true);
-        GlStateManager.depthFunc(515);
-        GlStateManager.disableBlend();
-        gameRenderer.setFogBlack(false);
+    private Identifier getArmorTexture(ArmorItem armorItem, boolean lowerParts, @Nullable String suffix) {
+        String string = "textures/models/armor/" + armorItem.getMaterial().getName() + "_layer_" + (lowerParts ? 2 : 1) + (suffix == null ? "" : "_" + suffix) + ".png";
+        return ARMOR_TEXTURE_CACHE.computeIfAbsent(string, Identifier::new);
     }
 
-    private Identifier getArmorTexture(ArmorItem armor, boolean bl) {
-        return this.method_4174(armor, bl, null);
-    }
+    protected abstract void setVisible(A var1, EquipmentSlot var2);
 
-    private Identifier method_4174(ArmorItem armorItem, boolean bl, @Nullable String string) {
-        String string2 = "textures/models/armor/" + armorItem.getMaterial().getName() + "_layer_" + (bl ? 2 : 1) + (string == null ? "" : "_" + string) + ".png";
-        return ARMOR_TEXTURE_CACHE.computeIfAbsent(string2, Identifier::new);
-    }
-
-    protected abstract void method_4170(A var1, EquipmentSlot var2);
-
-    protected abstract void method_4190(A var1);
+    protected abstract void setInvisible(A var1);
 }
 

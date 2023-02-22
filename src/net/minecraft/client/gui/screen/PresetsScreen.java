@@ -12,7 +12,7 @@ package net.minecraft.client.gui.screen;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,7 +27,6 @@ import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.EntryListWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.item.Item;
@@ -70,7 +69,7 @@ extends Screen {
         this.listWidget = new SuperflatPresetsListWidget();
         this.children.add(this.listWidget);
         this.selectPresetButton = this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, I18n.translate("createWorld.customize.presets.select", new Object[0]), buttonWidget -> {
-            this.parent.method_2139(this.customPresetField.getText());
+            this.parent.setConfigString(this.customPresetField.getText());
             this.minecraft.openScreen(this.parent);
         }));
         this.addButton(new ButtonWidget(this.width / 2 + 5, this.height - 28, 150, 20, I18n.translate("gui.cancel", new Object[0]), buttonWidget -> this.minecraft.openScreen(this.parent)));
@@ -90,6 +89,11 @@ extends Screen {
     }
 
     @Override
+    public void onClose() {
+        this.minecraft.openScreen(this.parent);
+    }
+
+    @Override
     public void removed() {
         this.minecraft.keyboard.enableRepeatEvents(false);
     }
@@ -98,9 +102,12 @@ extends Screen {
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         this.listWidget.render(mouseX, mouseY, delta);
+        RenderSystem.pushMatrix();
+        RenderSystem.translatef(0.0f, 0.0f, 400.0f);
         this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 8, 0xFFFFFF);
         this.drawString(this.font, this.shareText, 50, 30, 0xA0A0A0);
         this.drawString(this.font, this.listText, 50, 70, 0xA0A0A0);
+        RenderSystem.popMatrix();
         this.customPresetField.render(mouseX, mouseY, delta);
         super.render(mouseX, mouseY, delta);
     }
@@ -220,22 +227,20 @@ extends Screen {
                 SuperflatPresetsListWidget.this.setSelected(this);
                 PresetsScreen.this.updateSelectButton(true);
                 PresetsScreen.this.customPresetField.setText(((SuperflatPreset)presets.get((int)SuperflatPresetsListWidget.this.children().indexOf((Object)this))).config);
-                PresetsScreen.this.customPresetField.method_1870();
+                PresetsScreen.this.customPresetField.setCursorToStart();
             }
 
             private void method_2200(int i, int j, Item item) {
                 this.method_2198(i + 1, j + 1);
-                GlStateManager.enableRescaleNormal();
-                DiffuseLighting.enableForItems();
+                RenderSystem.enableRescaleNormal();
                 PresetsScreen.this.itemRenderer.renderGuiItemIcon(new ItemStack(item), i + 2, j + 2);
-                DiffuseLighting.disable();
-                GlStateManager.disableRescaleNormal();
+                RenderSystem.disableRescaleNormal();
             }
 
             private void method_2198(int i, int j) {
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 SuperflatPresetsListWidget.this.minecraft.getTextureManager().bindTexture(DrawableHelper.STATS_ICON_LOCATION);
-                DrawableHelper.blit(i, j, PresetsScreen.this.blitOffset, 0.0f, 0.0f, 18, 18, 128, 128);
+                DrawableHelper.blit(i, j, PresetsScreen.this.getBlitOffset(), 0.0f, 0.0f, 18, 18, 128, 128);
             }
         }
     }

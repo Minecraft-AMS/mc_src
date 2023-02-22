@@ -7,11 +7,11 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.ZombieEntityRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.util.Identifier;
 
@@ -25,14 +25,14 @@ extends ZombieEntityRenderer {
     }
 
     @Override
-    protected void scale(ZombieEntity zombieEntity, float f) {
+    protected void scale(ZombieEntity zombieEntity, MatrixStack matrixStack, float f) {
         float g = 1.0625f;
-        GlStateManager.scalef(1.0625f, 1.0625f, 1.0625f);
-        super.scale(zombieEntity, f);
+        matrixStack.scale(1.0625f, 1.0625f, 1.0625f);
+        super.scale(zombieEntity, matrixStack, f);
     }
 
     @Override
-    protected Identifier getTexture(ZombieEntity zombieEntity) {
+    public Identifier getTexture(ZombieEntity zombieEntity) {
         return SKIN;
     }
 }

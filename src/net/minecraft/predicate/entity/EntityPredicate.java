@@ -18,12 +18,14 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.predicate.NbtPredicate;
+import net.minecraft.predicate.PlayerPredicate;
 import net.minecraft.predicate.entity.DistancePredicate;
 import net.minecraft.predicate.entity.EntityEffectPredicate;
 import net.minecraft.predicate.entity.EntityEquipmentPredicate;
 import net.minecraft.predicate.entity.EntityFlagsPredicate;
 import net.minecraft.predicate.entity.EntityTypePredicate;
 import net.minecraft.predicate.entity.LocationPredicate;
+import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.Tag;
@@ -33,7 +35,7 @@ import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class EntityPredicate {
-    public static final EntityPredicate ANY = new EntityPredicate(EntityTypePredicate.ANY, DistancePredicate.ANY, LocationPredicate.ANY, EntityEffectPredicate.EMPTY, NbtPredicate.ANY, EntityFlagsPredicate.ANY, EntityEquipmentPredicate.ANY, null);
+    public static final EntityPredicate ANY = new EntityPredicate(EntityTypePredicate.ANY, DistancePredicate.ANY, LocationPredicate.ANY, EntityEffectPredicate.EMPTY, NbtPredicate.ANY, EntityFlagsPredicate.ANY, EntityEquipmentPredicate.ANY, PlayerPredicate.ANY, null, null);
     public static final EntityPredicate[] EMPTY = new EntityPredicate[0];
     private final EntityTypePredicate type;
     private final DistancePredicate distance;
@@ -42,9 +44,13 @@ public class EntityPredicate {
     private final NbtPredicate nbt;
     private final EntityFlagsPredicate flags;
     private final EntityEquipmentPredicate equipment;
+    private final PlayerPredicate player;
+    @Nullable
+    private final String team;
+    @Nullable
     private final Identifier catType;
 
-    private EntityPredicate(EntityTypePredicate type, DistancePredicate distance, LocationPredicate location, EntityEffectPredicate effects, NbtPredicate nbt, EntityFlagsPredicate flags, EntityEquipmentPredicate equipment, @Nullable Identifier identifier) {
+    private EntityPredicate(EntityTypePredicate type, DistancePredicate distance, LocationPredicate location, EntityEffectPredicate effects, NbtPredicate nbt, EntityFlagsPredicate flags, EntityEquipmentPredicate equipment, PlayerPredicate player, @Nullable String team, @Nullable Identifier catType) {
         this.type = type;
         this.distance = distance;
         this.location = location;
@@ -52,14 +58,17 @@ public class EntityPredicate {
         this.nbt = nbt;
         this.flags = flags;
         this.equipment = equipment;
-        this.catType = identifier;
+        this.player = player;
+        this.team = team;
+        this.catType = catType;
     }
 
     public boolean test(ServerPlayerEntity player, @Nullable Entity entity) {
-        return this.test(player.getServerWorld(), new Vec3d(player.x, player.y, player.z), entity);
+        return this.test(player.getServerWorld(), player.getPos(), entity);
     }
 
-    public boolean test(ServerWorld world, Vec3d pos, @Nullable Entity entity) {
+    public boolean test(ServerWorld world, @Nullable Vec3d pos, @Nullable Entity entity) {
+        AbstractTeam abstractTeam;
         if (this == ANY) {
             return true;
         }
@@ -69,10 +78,10 @@ public class EntityPredicate {
         if (!this.type.matches(entity.getType())) {
             return false;
         }
-        if (!this.distance.test(pos.x, pos.y, pos.z, entity.x, entity.y, entity.z)) {
+        if (pos == null ? this.distance != DistancePredicate.ANY : !this.distance.test(pos.x, pos.y, pos.z, entity.getX(), entity.getY(), entity.getZ())) {
             return false;
         }
-        if (!this.location.test(world, entity.x, entity.y, entity.z)) {
+        if (!this.location.test(world, entity.getX(), entity.getY(), entity.getZ())) {
             return false;
         }
         if (!this.effects.test(entity)) {
@@ -85,6 +94,12 @@ public class EntityPredicate {
             return false;
         }
         if (!this.equipment.test(entity)) {
+            return false;
+        }
+        if (!this.player.test(entity)) {
+            return false;
+        }
+        if (!(this.team == null || (abstractTeam = entity.getScoreboardTeam()) != null && this.team.equals(abstractTeam.getName()))) {
             return false;
         }
         return this.catType == null || entity instanceof CatEntity && ((CatEntity)entity).getTexture().equals(this.catType);
@@ -102,8 +117,10 @@ public class EntityPredicate {
         NbtPredicate nbtPredicate = NbtPredicate.fromJson(jsonObject.get("nbt"));
         EntityFlagsPredicate entityFlagsPredicate = EntityFlagsPredicate.deserialize(jsonObject.get("flags"));
         EntityEquipmentPredicate entityEquipmentPredicate = EntityEquipmentPredicate.deserialize(jsonObject.get("equipment"));
+        PlayerPredicate playerPredicate = PlayerPredicate.fromJson(jsonObject.get("player"));
+        String string = JsonHelper.getString(jsonObject, "team", null);
         Identifier identifier = jsonObject.has("catType") ? new Identifier(JsonHelper.getString(jsonObject, "catType")) : null;
-        return new Builder().type(entityTypePredicate).distance(distancePredicate).location(locationPredicate).effects(entityEffectPredicate).nbt(nbtPredicate).flags(entityFlagsPredicate).equipment(entityEquipmentPredicate).catType(identifier).build();
+        return new Builder().type(entityTypePredicate).distance(distancePredicate).location(locationPredicate).effects(entityEffectPredicate).nbt(nbtPredicate).flags(entityFlagsPredicate).equipment(entityEquipmentPredicate).player(playerPredicate).team(string).catType(identifier).build();
     }
 
     public static EntityPredicate[] fromJsonArray(@Nullable JsonElement element) {
@@ -130,6 +147,8 @@ public class EntityPredicate {
         jsonObject.add("nbt", this.nbt.toJson());
         jsonObject.add("flags", this.flags.serialize());
         jsonObject.add("equipment", this.equipment.serialize());
+        jsonObject.add("player", this.player.toJson());
+        jsonObject.addProperty("team", this.team);
         if (this.catType != null) {
             jsonObject.addProperty("catType", this.catType.toString());
         }
@@ -157,7 +176,8 @@ public class EntityPredicate {
         private NbtPredicate nbt = NbtPredicate.ANY;
         private EntityFlagsPredicate flags = EntityFlagsPredicate.ANY;
         private EntityEquipmentPredicate equipment = EntityEquipmentPredicate.ANY;
-        @Nullable
+        private PlayerPredicate player = PlayerPredicate.ANY;
+        private String team;
         private Identifier catType;
 
         public static Builder create() {
@@ -214,13 +234,23 @@ public class EntityPredicate {
             return this;
         }
 
+        public Builder player(PlayerPredicate playerPredicate) {
+            this.player = playerPredicate;
+            return this;
+        }
+
+        public Builder team(@Nullable String string) {
+            this.team = string;
+            return this;
+        }
+
         public Builder catType(@Nullable Identifier identifier) {
             this.catType = identifier;
             return this;
         }
 
         public EntityPredicate build() {
-            return new EntityPredicate(this.type, this.distance, this.location, this.effects, this.nbt, this.flags, this.equipment, this.catType);
+            return new EntityPredicate(this.type, this.distance, this.location, this.effects, this.nbt, this.flags, this.equipment, this.player, this.team, this.catType);
         }
     }
 }

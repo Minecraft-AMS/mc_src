@@ -46,7 +46,7 @@ implements LightingView {
 
     public void addLightSource(BlockPos pos, int level) {
         if (this.blockLightProvider != null) {
-            this.blockLightProvider.method_15514(pos, level);
+            this.blockLightProvider.addLightSource(pos, level);
         }
     }
 
@@ -89,10 +89,10 @@ implements LightingView {
 
     public void setLightEnabled(ChunkPos pos, boolean lightEnabled) {
         if (this.blockLightProvider != null) {
-            this.blockLightProvider.method_15512(pos, lightEnabled);
+            this.blockLightProvider.setLightEnabled(pos, lightEnabled);
         }
         if (this.skyLightProvider != null) {
-            this.skyLightProvider.method_15512(pos, lightEnabled);
+            this.skyLightProvider.setLightEnabled(pos, lightEnabled);
         }
     }
 
@@ -110,13 +110,13 @@ implements LightingView {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public String method_15564(LightType lightType, ChunkSectionPos chunkSectionPos) {
+    public String method_22876(LightType lightType, ChunkSectionPos chunkSectionPos) {
         if (lightType == LightType.BLOCK) {
             if (this.blockLightProvider != null) {
-                return this.blockLightProvider.method_15520(chunkSectionPos.asLong());
+                return this.blockLightProvider.method_22875(chunkSectionPos.asLong());
             }
         } else if (this.skyLightProvider != null) {
-            return this.skyLightProvider.method_15520(chunkSectionPos.asLong());
+            return this.skyLightProvider.method_22875(chunkSectionPos.asLong());
         }
         return "n/a";
     }
@@ -131,13 +131,19 @@ implements LightingView {
         }
     }
 
-    public void method_20601(ChunkPos chunkPos, boolean bl) {
+    public void setRetainData(ChunkPos pos, boolean retainData) {
         if (this.blockLightProvider != null) {
-            this.blockLightProvider.method_20599(chunkPos, bl);
+            this.blockLightProvider.setRetainData(pos, retainData);
         }
         if (this.skyLightProvider != null) {
-            this.skyLightProvider.method_20599(chunkPos, bl);
+            this.skyLightProvider.setRetainData(pos, retainData);
         }
+    }
+
+    public int getLight(BlockPos pos, int ambientDarkness) {
+        int i = this.skyLightProvider == null ? 0 : this.skyLightProvider.getLightLevel(pos) - ambientDarkness;
+        int j = this.blockLightProvider == null ? 0 : this.blockLightProvider.getLightLevel(pos);
+        return Math.max(j, i);
     }
 }
 

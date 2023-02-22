@@ -157,7 +157,7 @@ Tickable {
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.WOODEN_AXE, 200);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.WOODEN_PICKAXE, 200);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_DOORS, 200);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.BOATS, 200);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.BOATS, 1200);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOOL, 100);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_BUTTONS, 100);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.STICK, 100);
@@ -168,7 +168,7 @@ Tickable {
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.CROSSBOW, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BAMBOO, 50);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.DEAD_BUSH, 100);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.SCAFFOLDING, 50);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.SCAFFOLDING, 400);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.LOOM, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BARREL, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.CARTOGRAPHY_TABLE, 300);
@@ -467,7 +467,7 @@ Tickable {
         while (totalExperience > 0) {
             i = ExperienceOrbEntity.roundToOrbSize(totalExperience);
             totalExperience -= i;
-            player.world.spawnEntity(new ExperienceOrbEntity(player.world, player.x, player.y + 0.5, player.z + 0.5, i));
+            player.world.spawnEntity(new ExperienceOrbEntity(player.world, player.getX(), player.getY() + 0.5, player.getZ() + 0.5, i));
         }
     }
 

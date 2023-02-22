@@ -17,23 +17,23 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.HorseBaseEntityRenderer;
 import net.minecraft.client.render.entity.model.DonkeyEntityModel;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
-import net.minecraft.entity.passive.DonkeyEntity;
-import net.minecraft.entity.passive.MuleEntity;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public class DonkeyEntityRenderer<T extends AbstractDonkeyEntity>
 extends HorseBaseEntityRenderer<T, DonkeyEntityModel<T>> {
-    private static final Map<Class<?>, Identifier> TEXTURES = Maps.newHashMap((Map)ImmutableMap.of(DonkeyEntity.class, (Object)new Identifier("textures/entity/horse/donkey.png"), MuleEntity.class, (Object)new Identifier("textures/entity/horse/mule.png")));
+    private static final Map<EntityType<?>, Identifier> TEXTURES = Maps.newHashMap((Map)ImmutableMap.of(EntityType.DONKEY, (Object)new Identifier("textures/entity/horse/donkey.png"), EntityType.MULE, (Object)new Identifier("textures/entity/horse/mule.png")));
 
     public DonkeyEntityRenderer(EntityRenderDispatcher entityRenderDispatcher, float f) {
         super(entityRenderDispatcher, new DonkeyEntityModel(0.0f), f);
     }
 
     @Override
-    protected Identifier getTexture(T abstractDonkeyEntity) {
-        return TEXTURES.get(abstractDonkeyEntity.getClass());
+    public Identifier getTexture(T abstractDonkeyEntity) {
+        return TEXTURES.get(((Entity)abstractDonkeyEntity).getType());
     }
 }
 

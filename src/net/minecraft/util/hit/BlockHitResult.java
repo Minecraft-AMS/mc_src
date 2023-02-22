@@ -48,7 +48,7 @@ extends HitResult {
         return this.missed ? HitResult.Type.MISS : HitResult.Type.BLOCK;
     }
 
-    public boolean method_17781() {
+    public boolean isInsideBlock() {
         return this.insideBlock;
     }
 }

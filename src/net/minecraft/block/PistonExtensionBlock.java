@@ -29,6 +29,7 @@ import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -83,11 +84,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean isOpaque(BlockState state) {
-        return false;
-    }
-
-    @Override
     public boolean isSimpleFullBlock(BlockState state, BlockView view, BlockPos pos) {
         return false;
     }
@@ -98,12 +94,12 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (!world.isClient && world.getBlockEntity(pos) == null) {
             world.removeBlock(pos, false);
-            return true;
+            return ActionResult.CONSUME;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     @Override

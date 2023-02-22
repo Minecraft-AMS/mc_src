@@ -55,8 +55,8 @@ import org.jetbrains.annotations.Nullable;
 public class ChunkPalettedStorageFix
 extends DataFix {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final BitSet field_15842 = new BitSet(256);
-    private static final BitSet field_15854 = new BitSet(256);
+    private static final BitSet blocksNeedingSideUpdate = new BitSet(256);
+    private static final BitSet blocksNeedingInPlaceUpdate = new BitSet(256);
     private static final Dynamic<?> pumpkin = BlockStateFlattening.parseState("{Name:'minecraft:pumpkin'}");
     private static final Dynamic<?> podzol = BlockStateFlattening.parseState("{Name:'minecraft:podzol',Properties:{snowy:'true'}}");
     private static final Dynamic<?> snowyGrass = BlockStateFlattening.parseState("{Name:'minecraft:grass_block',Properties:{snowy:'true'}}");
@@ -282,81 +282,81 @@ extends DataFix {
         return this.writeFixAndRead("ChunkPalettedStorageFix", type, type2, this::fixChunk);
     }
 
-    public static int method_15615(boolean bl, boolean bl2, boolean bl3, boolean bl4) {
+    public static int getSideToUpgradeFlag(boolean west, boolean east, boolean north, boolean south) {
         int i = 0;
-        if (bl3) {
-            i = bl2 ? (i |= 2) : (bl ? (i |= 0x80) : (i |= 1));
-        } else if (bl4) {
-            i = bl ? (i |= 0x20) : (bl2 ? (i |= 8) : (i |= 0x10));
-        } else if (bl2) {
+        if (north) {
+            i = east ? (i |= 2) : (west ? (i |= 0x80) : (i |= 1));
+        } else if (south) {
+            i = west ? (i |= 0x20) : (east ? (i |= 8) : (i |= 0x10));
+        } else if (east) {
             i |= 4;
-        } else if (bl) {
+        } else if (west) {
             i |= 0x40;
         }
         return i;
     }
 
     static {
-        field_15854.set(2);
-        field_15854.set(3);
-        field_15854.set(110);
-        field_15854.set(140);
-        field_15854.set(144);
-        field_15854.set(25);
-        field_15854.set(86);
-        field_15854.set(26);
-        field_15854.set(176);
-        field_15854.set(177);
-        field_15854.set(175);
-        field_15854.set(64);
-        field_15854.set(71);
-        field_15854.set(193);
-        field_15854.set(194);
-        field_15854.set(195);
-        field_15854.set(196);
-        field_15854.set(197);
-        field_15842.set(54);
-        field_15842.set(146);
-        field_15842.set(25);
-        field_15842.set(26);
-        field_15842.set(51);
-        field_15842.set(53);
-        field_15842.set(67);
-        field_15842.set(108);
-        field_15842.set(109);
-        field_15842.set(114);
-        field_15842.set(128);
-        field_15842.set(134);
-        field_15842.set(135);
-        field_15842.set(136);
-        field_15842.set(156);
-        field_15842.set(163);
-        field_15842.set(164);
-        field_15842.set(180);
-        field_15842.set(203);
-        field_15842.set(55);
-        field_15842.set(85);
-        field_15842.set(113);
-        field_15842.set(188);
-        field_15842.set(189);
-        field_15842.set(190);
-        field_15842.set(191);
-        field_15842.set(192);
-        field_15842.set(93);
-        field_15842.set(94);
-        field_15842.set(101);
-        field_15842.set(102);
-        field_15842.set(160);
-        field_15842.set(106);
-        field_15842.set(107);
-        field_15842.set(183);
-        field_15842.set(184);
-        field_15842.set(185);
-        field_15842.set(186);
-        field_15842.set(187);
-        field_15842.set(132);
-        field_15842.set(139);
-        field_15842.set(199);
+        blocksNeedingInPlaceUpdate.set(2);
+        blocksNeedingInPlaceUpdate.set(3);
+        blocksNeedingInPlaceUpdate.set(110);
+        blocksNeedingInPlaceUpdate.set(140);
+        blocksNeedingInPlaceUpdate.set(144);
+        blocksNeedingInPlaceUpdate.set(25);
+        blocksNeedingInPlaceUpdate.set(86);
+        blocksNeedingInPlaceUpdate.set(26);
+        blocksNeedingInPlaceUpdate.set(176);
+        blocksNeedingInPlaceUpdate.set(177);
+        blocksNeedingInPlaceUpdate.set(175);
+        blocksNeedingInPlaceUpdate.set(64);
+        blocksNeedingInPlaceUpdate.set(71);
+        blocksNeedingInPlaceUpdate.set(193);
+        blocksNeedingInPlaceUpdate.set(194);
+        blocksNeedingInPlaceUpdate.set(195);
+        blocksNeedingInPlaceUpdate.set(196);
+        blocksNeedingInPlaceUpdate.set(197);
+        blocksNeedingSideUpdate.set(54);
+        blocksNeedingSideUpdate.set(146);
+        blocksNeedingSideUpdate.set(25);
+        blocksNeedingSideUpdate.set(26);
+        blocksNeedingSideUpdate.set(51);
+        blocksNeedingSideUpdate.set(53);
+        blocksNeedingSideUpdate.set(67);
+        blocksNeedingSideUpdate.set(108);
+        blocksNeedingSideUpdate.set(109);
+        blocksNeedingSideUpdate.set(114);
+        blocksNeedingSideUpdate.set(128);
+        blocksNeedingSideUpdate.set(134);
+        blocksNeedingSideUpdate.set(135);
+        blocksNeedingSideUpdate.set(136);
+        blocksNeedingSideUpdate.set(156);
+        blocksNeedingSideUpdate.set(163);
+        blocksNeedingSideUpdate.set(164);
+        blocksNeedingSideUpdate.set(180);
+        blocksNeedingSideUpdate.set(203);
+        blocksNeedingSideUpdate.set(55);
+        blocksNeedingSideUpdate.set(85);
+        blocksNeedingSideUpdate.set(113);
+        blocksNeedingSideUpdate.set(188);
+        blocksNeedingSideUpdate.set(189);
+        blocksNeedingSideUpdate.set(190);
+        blocksNeedingSideUpdate.set(191);
+        blocksNeedingSideUpdate.set(192);
+        blocksNeedingSideUpdate.set(93);
+        blocksNeedingSideUpdate.set(94);
+        blocksNeedingSideUpdate.set(101);
+        blocksNeedingSideUpdate.set(102);
+        blocksNeedingSideUpdate.set(160);
+        blocksNeedingSideUpdate.set(106);
+        blocksNeedingSideUpdate.set(107);
+        blocksNeedingSideUpdate.set(183);
+        blocksNeedingSideUpdate.set(184);
+        blocksNeedingSideUpdate.set(185);
+        blocksNeedingSideUpdate.set(186);
+        blocksNeedingSideUpdate.set(187);
+        blocksNeedingSideUpdate.set(132);
+        blocksNeedingSideUpdate.set(139);
+        blocksNeedingSideUpdate.set(199);
         air = BlockStateFlattening.lookupState(0);
     }
 
@@ -422,24 +422,24 @@ extends DataFix {
         }
 
         public int get(int x, int y, int i) {
-            int j = this.method_15642(y << 8 | i << 4 | x);
-            if (this.method_15641(y << 8 | i << 4 | x)) {
+            int j = this.getRawIndex(y << 8 | i << 4 | x);
+            if (this.usesLowNibble(y << 8 | i << 4 | x)) {
                 return this.contents[j] & 0xF;
             }
             return this.contents[j] >> 4 & 0xF;
         }
 
-        private boolean method_15641(int i) {
-            return (i & 1) == 0;
+        private boolean usesLowNibble(int index) {
+            return (index & 1) == 0;
         }
 
-        private int method_15642(int i) {
-            return i >> 1;
+        private int getRawIndex(int index) {
+            return index >> 1;
         }
     }
 
     static final class Level {
-        private int sides;
+        private int sidesToUpgrade;
         private final Section[] sections = new Section[16];
         private final Dynamic<?> level;
         private final int xPos;
@@ -462,12 +462,12 @@ extends DataFix {
             boolean bl = dynamic.get("convertedFromAlphaFormat").asBoolean(false);
             dynamic.get("Sections").asStreamOpt().ifPresent(stream -> stream.forEach(dynamic -> {
                 Section section = new Section((Dynamic<?>)dynamic);
-                this.sides = section.visit(this.sides);
+                this.sidesToUpgrade = section.visit(this.sidesToUpgrade);
                 this.sections[section.y] = section;
             }));
             for (Section section : this.sections) {
                 if (section == null) continue;
-                block14: for (Map.Entry entry : section.seenIds.entrySet()) {
+                block14: for (Map.Entry entry : section.inPlaceUpdates.entrySet()) {
                     int i = section.y << 12;
                     switch ((Integer)entry.getKey()) {
                         case 2: {
@@ -743,7 +743,7 @@ extends DataFix {
                 dynamic2 = dynamic2.set(String.valueOf(section.y), dynamic2.createIntList(Arrays.stream(section.innerPositions.toIntArray())));
             }
             Dynamic dynamic4 = dynamic.emptyMap();
-            dynamic4 = dynamic4.set("Sides", dynamic4.createByte((byte)this.sides));
+            dynamic4 = dynamic4.set("Sides", dynamic4.createByte((byte)this.sidesToUpgrade));
             dynamic4 = dynamic4.set("Indices", dynamic2);
             return dynamic.set("UpgradeData", dynamic4).set("Sections", dynamic3);
         }
@@ -754,7 +754,7 @@ extends DataFix {
         private Dynamic<?> paletteData;
         private final Dynamic<?> section;
         private final boolean hasBlocks;
-        private final Int2ObjectMap<IntList> seenIds = new Int2ObjectLinkedOpenHashMap();
+        private final Int2ObjectMap<IntList> inPlaceUpdates = new Int2ObjectLinkedOpenHashMap();
         private final IntList innerPositions = new IntArrayList();
         public final int y;
         private final Set<Dynamic<?>> seenStates = Sets.newIdentityHashSet();
@@ -767,11 +767,11 @@ extends DataFix {
             this.hasBlocks = dynamic.get("Blocks").get().isPresent();
         }
 
-        public Dynamic<?> getBlock(int i) {
-            if (i < 0 || i > 4095) {
+        public Dynamic<?> getBlock(int index) {
+            if (index < 0 || index > 4095) {
                 return air;
             }
-            Dynamic<?> dynamic = this.paletteMap.get(this.states[i]);
+            Dynamic<?> dynamic = this.paletteMap.get(this.states[index]);
             return dynamic == null ? air : dynamic;
         }
 
@@ -782,9 +782,9 @@ extends DataFix {
             this.states[pos] = ChunkPalettedStorageFix.addTo(this.paletteMap, dynamic);
         }
 
-        public int visit(int i) {
+        public int visit(int sidesToUpgrade) {
             if (!this.hasBlocks) {
-                return i;
+                return sidesToUpgrade;
             }
             ByteBuffer byteBuffer2 = (ByteBuffer)this.section.get("Blocks").asByteBufferOpt().get();
             ChunkNibbleArray chunkNibbleArray = this.section.get("Data").asByteBufferOpt().map(byteBuffer -> new ChunkNibbleArray(DataFixUtils.toArray((ByteBuffer)byteBuffer))).orElseGet(ChunkNibbleArray::new);
@@ -792,34 +792,34 @@ extends DataFix {
             this.seenStates.add(air);
             ChunkPalettedStorageFix.addTo(this.paletteMap, air);
             this.paletteData = this.paletteData.merge(air);
-            for (int j = 0; j < 4096; ++j) {
-                int k = j & 0xF;
-                int l = j >> 8 & 0xF;
-                int m = j >> 4 & 0xF;
-                int n = chunkNibbleArray2.get(k, l, m) << 12 | (byteBuffer2.get(j) & 0xFF) << 4 | chunkNibbleArray.get(k, l, m);
-                if (field_15854.get(n >> 4)) {
-                    this.addBlockAt(n >> 4, j);
+            for (int i = 0; i < 4096; ++i) {
+                int j = i & 0xF;
+                int k = i >> 8 & 0xF;
+                int l = i >> 4 & 0xF;
+                int m = chunkNibbleArray2.get(j, k, l) << 12 | (byteBuffer2.get(i) & 0xFF) << 4 | chunkNibbleArray.get(j, k, l);
+                if (blocksNeedingInPlaceUpdate.get(m >> 4)) {
+                    this.addInPlaceUpdate(m >> 4, i);
                 }
-                if (field_15842.get(n >> 4)) {
-                    int o = ChunkPalettedStorageFix.method_15615(k == 0, k == 15, m == 0, m == 15);
-                    if (o == 0) {
-                        this.innerPositions.add(j);
+                if (blocksNeedingSideUpdate.get(m >> 4)) {
+                    int n = ChunkPalettedStorageFix.getSideToUpgradeFlag(j == 0, j == 15, l == 0, l == 15);
+                    if (n == 0) {
+                        this.innerPositions.add(i);
                     } else {
-                        i |= o;
+                        sidesToUpgrade |= n;
                     }
                 }
-                this.setBlock(j, BlockStateFlattening.lookupState(n));
+                this.setBlock(i, BlockStateFlattening.lookupState(m));
             }
-            return i;
+            return sidesToUpgrade;
         }
 
-        private void addBlockAt(int i, int j) {
-            IntList intList = (IntList)this.seenIds.get(i);
+        private void addInPlaceUpdate(int section, int index) {
+            IntList intList = (IntList)this.inPlaceUpdates.get(section);
             if (intList == null) {
                 intList = new IntArrayList();
-                this.seenIds.put(i, (Object)intList);
+                this.inPlaceUpdates.put(section, (Object)intList);
             }
-            intList.add(j);
+            intList.add(index);
         }
 
         public Dynamic<?> transform() {

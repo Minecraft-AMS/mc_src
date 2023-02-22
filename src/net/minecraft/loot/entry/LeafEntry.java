@@ -15,16 +15,13 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.List;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootChoice;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.entry.LootEntry;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionConsumingBuilder;
@@ -32,7 +29,6 @@ import net.minecraft.loot.function.LootFunctions;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.commons.lang3.ArrayUtils;
 
 public abstract class LeafEntry
@@ -58,10 +54,10 @@ extends LootEntry {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        super.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter lootTableReporter) {
+        super.check(lootTableReporter);
         for (int i = 0; i < this.functions.length; ++i) {
-            this.functions[i].check(reporter.makeChild(".functions[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.functions[i].check(lootTableReporter.makeChild(".functions[" + i + "]"));
         }
     }
 

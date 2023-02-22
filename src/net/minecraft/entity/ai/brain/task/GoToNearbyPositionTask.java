@@ -22,15 +22,15 @@ import net.minecraft.util.GlobalPos;
 public class GoToNearbyPositionTask
 extends Task<MobEntityWithAi> {
     private final MemoryModuleType<GlobalPos> memoryModuleType;
-    private final int field_18863;
+    private final int completionRange;
     private final int maxDistance;
     private long nextRunTime;
 
-    public GoToNearbyPositionTask(MemoryModuleType<GlobalPos> memoryModuleType, int i, int j) {
+    public GoToNearbyPositionTask(MemoryModuleType<GlobalPos> memoryModuleType, int completionRange, int maxDistance) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), memoryModuleType, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
         this.memoryModuleType = memoryModuleType;
-        this.field_18863 = i;
-        this.maxDistance = j;
+        this.completionRange = completionRange;
+        this.maxDistance = maxDistance;
     }
 
     @Override
@@ -44,7 +44,7 @@ extends Task<MobEntityWithAi> {
         if (l > this.nextRunTime) {
             Brain<?> brain = mobEntityWithAi.getBrain();
             Optional<GlobalPos> optional = brain.getOptionalMemory(this.memoryModuleType);
-            optional.ifPresent(globalPos -> brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), 0.4f, this.field_18863)));
+            optional.ifPresent(globalPos -> brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), 0.4f, this.completionRange)));
             this.nextRunTime = l + 80L;
         }
     }

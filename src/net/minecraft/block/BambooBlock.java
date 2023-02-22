@@ -13,12 +13,12 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Fertilizable;
 import net.minecraft.block.enums.BambooLeaves;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.SwordItem;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.IntProperty;
@@ -29,9 +29,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class BambooBlock
@@ -105,7 +105,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         int i;
         if (!state.canPlaceAt(world, pos)) {
             world.breakBlock(pos, true);
@@ -114,13 +114,13 @@ implements Fertilizable {
         if (state.get(STAGE) != 0) {
             return;
         }
-        if (random.nextInt(3) == 0 && world.isAir(pos.up()) && world.getLightLevel(pos.up(), 0) >= 9 && (i = this.countBambooBelow(world, pos) + 1) < 16) {
+        if (random.nextInt(3) == 0 && world.isAir(pos.up()) && world.getBaseLightLevel(pos.up(), 0) >= 9 && (i = this.countBambooBelow(world, pos) + 1) < 16) {
             this.updateLeaves(state, world, pos, random, i);
         }
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return world.getBlockState(pos.down()).matches(BlockTags.BAMBOO_PLANTABLE_ON);
     }
 
@@ -148,7 +148,7 @@ implements Fertilizable {
     }
 
     @Override
-    public void grow(World world, Random random, BlockPos pos, BlockState state) {
+    public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
         int i = this.countBambooAbove(world, pos);
         int j = this.countBambooBelow(world, pos);
         int k = i + j + 1;
@@ -171,11 +171,6 @@ implements Fertilizable {
             return 1.0f;
         }
         return super.calcBlockBreakingDelta(state, player, world, pos);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     protected void updateLeaves(BlockState state, World world, BlockPos pos, Random random, int height) {

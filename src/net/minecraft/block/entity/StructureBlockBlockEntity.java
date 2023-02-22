@@ -166,6 +166,10 @@ extends BlockEntity {
         return this.structureName == null ? "" : this.structureName.toString();
     }
 
+    public String getStructurePath() {
+        return this.structureName == null ? "" : this.structureName.getPath();
+    }
+
     public boolean hasStructureName() {
         return this.structureName != null;
     }
@@ -182,7 +186,6 @@ extends BlockEntity {
         this.author = livingEntity.getName().getString();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockPos getOffset() {
         return this.offset;
     }
@@ -191,7 +194,6 @@ extends BlockEntity {
         this.offset = blockPos;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockPos getSize() {
         return this.size;
     }
@@ -401,14 +403,10 @@ extends BlockEntity {
     }
 
     public boolean loadStructure(boolean resizeDisabled) {
-        BlockPos blockPos3;
-        boolean bl;
         Structure structure;
         if (this.mode != StructureBlockMode.LOAD || this.world.isClient || this.structureName == null) {
             return false;
         }
-        BlockPos blockPos = this.getPos();
-        BlockPos blockPos2 = blockPos.add(this.offset);
         ServerWorld serverWorld = (ServerWorld)this.world;
         StructureManager structureManager = serverWorld.getStructureManager();
         try {
@@ -420,11 +418,18 @@ extends BlockEntity {
         if (structure == null) {
             return false;
         }
+        return this.place(resizeDisabled, structure);
+    }
+
+    public boolean place(boolean resizeDisabled, Structure structure) {
+        BlockPos blockPos2;
+        boolean bl;
+        BlockPos blockPos = this.getPos();
         if (!ChatUtil.isEmpty(structure.getAuthor())) {
             this.author = structure.getAuthor();
         }
-        if (!(bl = this.size.equals(blockPos3 = structure.getSize()))) {
-            this.size = blockPos3;
+        if (!(bl = this.size.equals(blockPos2 = structure.getSize()))) {
+            this.size = blockPos2;
             this.markDirty();
             BlockState blockState = this.world.getBlockState(blockPos);
             this.world.updateListeners(blockPos, blockState, blockState, 3);
@@ -434,7 +439,8 @@ extends BlockEntity {
             if (this.integrity < 1.0f) {
                 structurePlacementData.clearProcessors().addProcessor(new BlockRotStructureProcessor(MathHelper.clamp(this.integrity, 0.0f, 1.0f))).setRandom(StructureBlockBlockEntity.createRandom(this.seed));
             }
-            structure.place(this.world, blockPos2, structurePlacementData);
+            BlockPos blockPos3 = blockPos.add(this.offset);
+            structure.place(this.world, blockPos3, structurePlacementData);
             return true;
         }
         return false;

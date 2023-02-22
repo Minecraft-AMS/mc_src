@@ -24,6 +24,7 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import net.fabricmc.api.EnvType;
@@ -59,7 +60,7 @@ extends MinecraftServer {
     private static final Logger LOGGER = LogManager.getLogger();
     private final MinecraftClient client;
     private final LevelInfo levelInfo;
-    private boolean field_5524;
+    private boolean paused;
     private int lanPort = -1;
     private LanServerPinger lanPinger;
     private UUID localPlayerUuid;
@@ -87,6 +88,7 @@ extends MinecraftServer {
         } else {
             levelProperties.setLevelName(serverName);
         }
+        levelProperties.method_24285(this.getServerModName(), this.method_24307().isPresent());
         this.loadWorldDataPacks(worldSaveHandler.getWorldDir(), levelProperties);
         WorldGenerationProgressListener worldGenerationProgressListener = this.worldGenerationProgressListenerFactory.create(11);
         this.createWorlds(worldSaveHandler, levelProperties, this.levelInfo, worldGenerationProgressListener);
@@ -112,22 +114,22 @@ extends MinecraftServer {
     }
 
     @Override
-    public void tick(BooleanSupplier booleanSupplier) {
-        boolean bl = this.field_5524;
-        this.field_5524 = MinecraftClient.getInstance().getNetworkHandler() != null && MinecraftClient.getInstance().isPaused();
+    public void tick(BooleanSupplier shouldKeepTicking) {
+        boolean bl = this.paused;
+        this.paused = MinecraftClient.getInstance().getNetworkHandler() != null && MinecraftClient.getInstance().isPaused();
         DisableableProfiler disableableProfiler = this.getProfiler();
-        if (!bl && this.field_5524) {
+        if (!bl && this.paused) {
             disableableProfiler.push("autoSave");
             LOGGER.info("Saving and pausing game...");
             this.getPlayerManager().saveAllPlayerData();
             this.save(false, false, false);
             disableableProfiler.pop();
         }
-        if (this.field_5524) {
+        if (this.paused) {
             return;
         }
-        super.tick(booleanSupplier);
-        int i = Math.max(2, this.client.options.viewDistance + -2);
+        super.tick(shouldKeepTicking);
+        int i = Math.max(2, this.client.options.viewDistance + -1);
         if (i != this.getPlayerManager().getViewDistance()) {
             LOGGER.info("Changing view distance to {}, from {}", (Object)i, (Object)this.getPlayerManager().getViewDistance());
             this.getPlayerManager().setViewDistance(i);
@@ -188,21 +190,24 @@ extends MinecraftServer {
     public CrashReport populateCrashReport(CrashReport crashReport) {
         crashReport = super.populateCrashReport(crashReport);
         crashReport.getSystemDetailsSection().add("Type", "Integrated Server (map_client.txt)");
-        crashReport.getSystemDetailsSection().add("Is Modded", () -> {
-            String string = ClientBrandRetriever.getClientModName();
-            if (!string.equals("vanilla")) {
-                return "Definitely; Client brand changed to '" + string + "'";
-            }
-            string = this.getServerModName();
-            if (!"vanilla".equals(string)) {
-                return "Definitely; Server brand changed to '" + string + "'";
-            }
-            if (MinecraftClient.class.getSigners() == null) {
-                return "Very likely; Jar signature invalidated";
-            }
-            return "Probably not. Jar signature remains and both client + server brands are untouched.";
-        });
+        crashReport.getSystemDetailsSection().add("Is Modded", () -> this.method_24307().orElse("Probably not. Jar signature remains and both client + server brands are untouched."));
         return crashReport;
+    }
+
+    @Override
+    public Optional<String> method_24307() {
+        String string = ClientBrandRetriever.getClientModName();
+        if (!string.equals("vanilla")) {
+            return Optional.of("Definitely; Client brand changed to '" + string + "'");
+        }
+        string = this.getServerModName();
+        if (!"vanilla".equals(string)) {
+            return Optional.of("Definitely; Server brand changed to '" + string + "'");
+        }
+        if (MinecraftClient.class.getSigners() == null) {
+            return Optional.of("Very likely; Jar signature invalidated");
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -285,7 +290,7 @@ extends MinecraftServer {
     }
 
     @Override
-    public int method_21714() {
+    public int getFunctionPermissionLevel() {
         return 2;
     }
 

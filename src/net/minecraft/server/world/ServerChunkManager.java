@@ -41,6 +41,7 @@ import net.minecraft.server.world.ServerLightingProvider;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.structure.StructureManager;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -131,16 +132,19 @@ extends ChunkManager {
         if (Thread.currentThread() != this.serverThread) {
             return CompletableFuture.supplyAsync(() -> this.getChunk(x, z, leastStatus, create), this.mainThreadExecutor).join();
         }
+        Profiler profiler = this.world.getProfiler();
+        profiler.visit("getChunk");
         long l = ChunkPos.toLong(x, z);
         for (int i = 0; i < 4; ++i) {
             if (l != this.chunkPosCache[i] || leastStatus != this.chunkStatusCache[i] || (chunk2 = this.chunkCache[i]) == null && create) continue;
             return chunk2;
         }
+        profiler.visit("getChunkCacheMiss");
         CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = this.getChunkFuture(x, z, leastStatus, create);
         this.mainThreadExecutor.runTasks(completableFuture::isDone);
         chunk2 = (Chunk)completableFuture.join().map(chunk -> chunk, unloaded -> {
             if (create) {
-                throw new IllegalStateException("Chunk not there when requested: " + unloaded);
+                throw Util.throwOrPause(new IllegalStateException("Chunk not there when requested: " + unloaded));
             }
             return null;
         });
@@ -150,14 +154,15 @@ extends ChunkManager {
 
     @Override
     @Nullable
-    public WorldChunk method_21730(int i, int j) {
+    public WorldChunk getWorldChunk(int chunkX, int chunkZ) {
         if (Thread.currentThread() != this.serverThread) {
             return null;
         }
-        long l = ChunkPos.toLong(i, j);
-        for (int k = 0; k < 4; ++k) {
-            if (l != this.chunkPosCache[k] || this.chunkStatusCache[k] != ChunkStatus.FULL) continue;
-            Chunk chunk = this.chunkCache[k];
+        this.world.getProfiler().visit("getChunkNow");
+        long l = ChunkPos.toLong(chunkX, chunkZ);
+        for (int i = 0; i < 4; ++i) {
+            if (l != this.chunkPosCache[i] || this.chunkStatusCache[i] != ChunkStatus.FULL) continue;
+            Chunk chunk = this.chunkCache[i];
             return chunk instanceof WorldChunk ? (WorldChunk)chunk : null;
         }
         ChunkHolder chunkHolder = this.getChunkHolder(l);
@@ -212,7 +217,7 @@ extends ChunkManager {
                 chunkHolder = this.getChunkHolder(l);
                 profiler.pop();
                 if (this.isMissingForLevel(chunkHolder, i)) {
-                    throw new IllegalStateException("No chunk holder after ticket has been added");
+                    throw Util.throwOrPause(new IllegalStateException("No chunk holder after ticket has been added"));
                 }
             }
         }
@@ -274,7 +279,7 @@ extends ChunkManager {
 
     @Override
     public boolean shouldTickEntity(Entity entity) {
-        long l = ChunkPos.toLong(MathHelper.floor(entity.x) >> 4, MathHelper.floor(entity.z) >> 4);
+        long l = ChunkPos.toLong(MathHelper.floor(entity.getX()) >> 4, MathHelper.floor(entity.getZ()) >> 4);
         return this.method_20585(l, ChunkHolder::getEntityTickingFuture);
     }
 
@@ -290,7 +295,7 @@ extends ChunkManager {
     }
 
     public boolean method_20727(Entity entity) {
-        long l = ChunkPos.toLong(MathHelper.floor(entity.x) >> 4, MathHelper.floor(entity.z) >> 4);
+        long l = ChunkPos.toLong(MathHelper.floor(entity.getX()) >> 4, MathHelper.floor(entity.getZ()) >> 4);
         return this.method_20585(l, ChunkHolder::method_20725);
     }
 
@@ -388,10 +393,9 @@ extends ChunkManager {
 
     @VisibleForTesting
     public int method_21694() {
-        return this.mainThreadExecutor.method_21684();
+        return this.mainThreadExecutor.getTaskCount();
     }
 
-    @Override
     public ChunkGenerator<?> getChunkGenerator() {
         return this.chunkGenerator;
     }
@@ -463,8 +467,8 @@ extends ChunkManager {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public String getDebugString(ChunkPos pos) {
-        return this.threadedAnvilChunkStorage.getDebugString(pos);
+    public String method_23273(ChunkPos chunkPos) {
+        return this.threadedAnvilChunkStorage.method_23272(chunkPos);
     }
 
     public PersistentStateManager getPersistentStateManager() {
@@ -488,7 +492,7 @@ extends ChunkManager {
     final class MainThreadExecutor
     extends ThreadExecutor<Runnable> {
         private MainThreadExecutor(World world) {
-            super("Chunk source main thread executor for " + Registry.DIMENSION.getId(world.getDimension().getType()));
+            super("Chunk source main thread executor for " + Registry.DIMENSION_TYPE.getId(world.getDimension().getType()));
         }
 
         @Override
@@ -509,6 +513,12 @@ extends ChunkManager {
         @Override
         protected Thread getThread() {
             return ServerChunkManager.this.serverThread;
+        }
+
+        @Override
+        protected void executeTask(Runnable task) {
+            ServerChunkManager.this.world.getProfiler().visit("runTask");
+            super.executeTask(task);
         }
 
         @Override

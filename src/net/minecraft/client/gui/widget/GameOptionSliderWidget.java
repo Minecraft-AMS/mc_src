@@ -19,14 +19,14 @@ extends SliderWidget {
     private final DoubleOption option;
 
     public GameOptionSliderWidget(GameOptions gameOptions, int x, int y, int width, int height, DoubleOption option) {
-        super(gameOptions, x, y, width, height, (float)option.method_18611(option.get(gameOptions)));
+        super(gameOptions, x, y, width, height, (float)option.getRatio(option.get(gameOptions)));
         this.option = option;
         this.updateMessage();
     }
 
     @Override
     protected void applyValue() {
-        this.option.set(this.options, this.option.method_18616(this.value));
+        this.option.set(this.options, this.option.getValue(this.value));
         this.options.write();
     }
 

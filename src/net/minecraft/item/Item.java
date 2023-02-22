@@ -36,6 +36,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.Tag;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -152,11 +154,11 @@ implements ItemConvertible {
             ItemStack itemStack = user.getStackInHand(hand);
             if (user.canConsume(this.getFoodComponent().isAlwaysEdible())) {
                 user.setCurrentHand(hand);
-                return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+                return TypedActionResult.consume(itemStack);
             }
-            return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+            return TypedActionResult.fail(itemStack);
         }
-        return new TypedActionResult<ItemStack>(ActionResult.PASS, user.getStackInHand(hand));
+        return TypedActionResult.pass(user.getStackInHand(hand));
     }
 
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
@@ -263,7 +265,6 @@ implements ItemConvertible {
         return new TranslatableText(this.getTranslationKey(stack), new Object[0]);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint(ItemStack stack) {
         return stack.hasEnchantments();
     }
@@ -352,6 +353,14 @@ implements ItemConvertible {
     @Nullable
     public FoodComponent getFoodComponent() {
         return this.foodComponent;
+    }
+
+    public SoundEvent getDrinkSound() {
+        return SoundEvents.ENTITY_GENERIC_DRINK;
+    }
+
+    public SoundEvent getEatSound() {
+        return SoundEvents.ENTITY_GENERIC_EAT;
     }
 
     public static class Settings {

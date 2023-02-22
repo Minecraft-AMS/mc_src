@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.Collection;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
@@ -40,7 +36,6 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean hasEnchantmentGlint(ItemStack stack) {
         return true;
     }
@@ -83,11 +78,11 @@ extends Item {
             if (property == null) {
                 property = collection.iterator().next();
             }
-            BlockState blockState = DebugStickItem.cycle(state, property, player.isSneaking());
+            BlockState blockState = DebugStickItem.cycle(state, property, player.shouldCancelInteraction());
             world.setBlockState(pos, blockState, 18);
             DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".update", property.getName(), DebugStickItem.getValueString(blockState, property)));
         } else {
-            property = DebugStickItem.cycle(collection, property, player.isSneaking());
+            property = DebugStickItem.cycle(collection, property, player.shouldCancelInteraction());
             String string3 = property.getName();
             compoundTag.putString(string, string3);
             DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".select", string3, DebugStickItem.getValueString(state, property)));

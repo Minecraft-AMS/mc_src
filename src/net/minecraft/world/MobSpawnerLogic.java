@@ -48,6 +48,7 @@ public abstract class MobSpawnerLogic {
     private int minSpawnDelay = 200;
     private int maxSpawnDelay = 800;
     private int spawnCount = 4;
+    @Nullable
     private Entity renderedEntity;
     private int maxNearbyEntities = 6;
     private int requiredPlayerRange = 16;
@@ -83,9 +84,9 @@ public abstract class MobSpawnerLogic {
         World world = this.getWorld();
         BlockPos blockPos = this.getPos();
         if (world.isClient) {
-            double d = (float)blockPos.getX() + world.random.nextFloat();
-            double e = (float)blockPos.getY() + world.random.nextFloat();
-            double f = (float)blockPos.getZ() + world.random.nextFloat();
+            double d = (double)blockPos.getX() + (double)world.random.nextFloat();
+            double e = (double)blockPos.getY() + (double)world.random.nextFloat();
+            double f = (double)blockPos.getZ() + (double)world.random.nextFloat();
             world.addParticle(ParticleTypes.SMOKE, d, e, f, 0.0, 0.0, 0.0);
             world.addParticle(ParticleTypes.FLAME, d, e, f, 0.0, 0.0, 0.0);
             if (this.spawnDelay > 0) {
@@ -115,7 +116,7 @@ public abstract class MobSpawnerLogic {
                 double g = j >= 1 ? listTag.getDouble(0) : (double)blockPos.getX() + (world.random.nextDouble() - world.random.nextDouble()) * (double)this.spawnRange + 0.5;
                 double h = j >= 2 ? listTag.getDouble(1) : (double)(blockPos.getY() + world.random.nextInt(3) - 1);
                 double d = k = j >= 3 ? listTag.getDouble(2) : (double)blockPos.getZ() + (world.random.nextDouble() - world.random.nextDouble()) * (double)this.spawnRange + 0.5;
-                if (!world.doesNotCollide(optional.get().createSimpleBoundingBox(g, h, k)) || !SpawnRestriction.method_20638(optional.get(), world.getWorld(), SpawnType.SPAWNER, new BlockPos(g, h, k), world.getRandom())) continue;
+                if (!world.doesNotCollide(optional.get().createSimpleBoundingBox(g, h, k)) || !SpawnRestriction.canSpawn(optional.get(), world.getWorld(), SpawnType.SPAWNER, new BlockPos(g, h, k), world.getRandom())) continue;
                 Entity entity2 = EntityType.loadEntityWithPassengers(compoundTag, world, entity -> {
                     entity.refreshPositionAndAngles(g, h, k, entity.yaw, entity.pitch);
                     return entity;
@@ -129,7 +130,7 @@ public abstract class MobSpawnerLogic {
                     this.updateSpawns();
                     return;
                 }
-                entity2.refreshPositionAndAngles(entity2.x, entity2.y, entity2.z, world.random.nextFloat() * 360.0f, 0.0f);
+                entity2.refreshPositionAndAngles(entity2.getX(), entity2.getY(), entity2.getZ(), world.random.nextFloat() * 360.0f, 0.0f);
                 if (entity2 instanceof MobEntity) {
                     MobEntity mobEntity = (MobEntity)entity2;
                     if (!mobEntity.canSpawn(world, SpawnType.SPAWNER) || !mobEntity.canSpawn(world)) continue;
@@ -223,6 +224,7 @@ public abstract class MobSpawnerLogic {
         return compoundTag;
     }
 
+    @Nullable
     @Environment(value=EnvType.CLIENT)
     public Entity getRenderedEntity() {
         if (this.renderedEntity == null) {

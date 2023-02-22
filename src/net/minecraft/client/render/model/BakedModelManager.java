@@ -17,7 +17,9 @@ import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.render.block.BlockModels;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.ModelLoader;
+import net.minecraft.client.render.model.SpriteAtlasManager;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.ModelIdentifier;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.resource.ResourceManager;
@@ -27,17 +29,21 @@ import net.minecraft.util.profiler.Profiler;
 
 @Environment(value=EnvType.CLIENT)
 public class BakedModelManager
-extends SinglePreparationResourceReloadListener<ModelLoader> {
+extends SinglePreparationResourceReloadListener<ModelLoader>
+implements AutoCloseable {
     private Map<Identifier, BakedModel> models;
-    private final SpriteAtlasTexture spriteAtlas;
+    private SpriteAtlasManager atlasManager;
     private final BlockModels blockModelCache;
+    private final TextureManager textureManager;
     private final BlockColors colorMap;
+    private int mipmap;
     private BakedModel missingModel;
-    private Object2IntMap<BlockState> field_20278;
+    private Object2IntMap<BlockState> stateLookup;
 
-    public BakedModelManager(SpriteAtlasTexture spriteAtlas, BlockColors colorMap) {
-        this.spriteAtlas = spriteAtlas;
+    public BakedModelManager(TextureManager textureManager, BlockColors colorMap, int mipmap) {
+        this.textureManager = textureManager;
         this.colorMap = colorMap;
+        this.mipmap = mipmap;
         this.blockModelCache = new BlockModels(this);
     }
 
@@ -56,7 +62,7 @@ extends SinglePreparationResourceReloadListener<ModelLoader> {
     @Override
     protected ModelLoader prepare(ResourceManager resourceManager, Profiler profiler) {
         profiler.startTick();
-        ModelLoader modelLoader = new ModelLoader(resourceManager, this.spriteAtlas, this.colorMap, profiler);
+        ModelLoader modelLoader = new ModelLoader(resourceManager, this.colorMap, profiler, this.mipmap);
         profiler.endTick();
         return modelLoader;
     }
@@ -65,9 +71,12 @@ extends SinglePreparationResourceReloadListener<ModelLoader> {
     protected void apply(ModelLoader modelLoader, ResourceManager resourceManager, Profiler profiler) {
         profiler.startTick();
         profiler.push("upload");
-        modelLoader.upload(profiler);
+        if (this.atlasManager != null) {
+            this.atlasManager.close();
+        }
+        this.atlasManager = modelLoader.upload(this.textureManager, profiler);
         this.models = modelLoader.getBakedModelMap();
-        this.field_20278 = modelLoader.method_21605();
+        this.stateLookup = modelLoader.getStateLookup();
         this.missingModel = this.models.get(ModelLoader.MISSING);
         profiler.swap("cache");
         this.blockModelCache.reload();
@@ -75,18 +84,31 @@ extends SinglePreparationResourceReloadListener<ModelLoader> {
         profiler.endTick();
     }
 
-    public boolean method_21611(BlockState blockState, BlockState blockState2) {
+    public boolean shouldRerender(BlockState from, BlockState to) {
         int j;
-        if (blockState == blockState2) {
+        if (from == to) {
             return false;
         }
-        int i = this.field_20278.getInt((Object)blockState);
-        if (i != -1 && i == (j = this.field_20278.getInt((Object)blockState2))) {
+        int i = this.stateLookup.getInt((Object)from);
+        if (i != -1 && i == (j = this.stateLookup.getInt((Object)to))) {
             FluidState fluidState2;
-            FluidState fluidState = blockState.getFluidState();
-            return fluidState != (fluidState2 = blockState2.getFluidState());
+            FluidState fluidState = from.getFluidState();
+            return fluidState != (fluidState2 = to.getFluidState());
         }
         return true;
+    }
+
+    public SpriteAtlasTexture method_24153(Identifier identifier) {
+        return this.atlasManager.getAtlas(identifier);
+    }
+
+    @Override
+    public void close() {
+        this.atlasManager.close();
+    }
+
+    public void resetMipmapLevels(int i) {
+        this.mipmap = i;
     }
 
     @Override

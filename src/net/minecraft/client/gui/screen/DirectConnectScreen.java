@@ -26,10 +26,12 @@ extends Screen {
     private final ServerInfo serverEntry;
     private TextFieldWidget addressField;
     private final BooleanConsumer callback;
+    private final Screen parent;
 
-    public DirectConnectScreen(BooleanConsumer callback, ServerInfo serverEntry) {
+    public DirectConnectScreen(Screen parent, BooleanConsumer callback, ServerInfo server) {
         super(new TranslatableText("selectServer.direct", new Object[0]));
-        this.serverEntry = serverEntry;
+        this.parent = parent;
+        this.serverEntry = server;
         this.callback = callback;
     }
 
@@ -54,7 +56,7 @@ extends Screen {
         this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20, I18n.translate("gui.cancel", new Object[0]), buttonWidget -> this.callback.accept(false)));
         this.addressField = new TextFieldWidget(this.font, this.width / 2 - 100, 116, 200, 20, I18n.translate("addServer.enterIp", new Object[0]));
         this.addressField.setMaxLength(128);
-        this.addressField.method_1876(true);
+        this.addressField.setSelected(true);
         this.addressField.setText(this.minecraft.options.lastServer);
         this.addressField.setChangedListener(text -> this.onAddressFieldChanged());
         this.children.add(this.addressField);
@@ -75,6 +77,11 @@ extends Screen {
     }
 
     @Override
+    public void onClose() {
+        this.minecraft.openScreen(this.parent);
+    }
+
+    @Override
     public void removed() {
         this.minecraft.keyboard.enableRepeatEvents(false);
         this.minecraft.options.lastServer = this.addressField.getText();
@@ -82,7 +89,8 @@ extends Screen {
     }
 
     private void onAddressFieldChanged() {
-        this.selectServerButton.active = !this.addressField.getText().isEmpty() && this.addressField.getText().split(":").length > 0;
+        String string = this.addressField.getText();
+        this.selectServerButton.active = !string.isEmpty() && string.split(":").length > 0 && string.indexOf(32) == -1;
     }
 
     @Override

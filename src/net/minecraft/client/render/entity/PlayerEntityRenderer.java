@@ -7,10 +7,13 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.PlayerModelPart;
@@ -22,9 +25,12 @@ import net.minecraft.client.render.entity.feature.HeadFeatureRenderer;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.feature.ShoulderParrotFeatureRenderer;
 import net.minecraft.client.render.entity.feature.StuckArrowsFeatureRenderer;
+import net.minecraft.client.render.entity.feature.StuckStingersFeatureRenderer;
 import net.minecraft.client.render.entity.feature.TridentRiptideFeatureRenderer;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -57,21 +63,21 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         this.addFeature(new ElytraFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(this));
         this.addFeature(new ShoulderParrotFeatureRenderer<AbstractClientPlayerEntity>(this));
         this.addFeature(new TridentRiptideFeatureRenderer<AbstractClientPlayerEntity>(this));
+        this.addFeature(new StuckStingersFeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>>(this));
     }
 
     @Override
-    public void render(AbstractClientPlayerEntity abstractClientPlayerEntity, double d, double e, double f, float g, float h) {
-        if (abstractClientPlayerEntity.isMainPlayer() && this.renderManager.camera.getFocusedEntity() != abstractClientPlayerEntity) {
-            return;
-        }
-        double i = e;
-        if (abstractClientPlayerEntity.isInSneakingPose()) {
-            i -= 0.125;
-        }
+    public void render(AbstractClientPlayerEntity abstractClientPlayerEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         this.setModelPose(abstractClientPlayerEntity);
-        GlStateManager.setProfile(GlStateManager.RenderMode.PLAYER_SKIN);
-        super.render(abstractClientPlayerEntity, d, i, f, g, h);
-        GlStateManager.unsetProfile(GlStateManager.RenderMode.PLAYER_SKIN);
+        super.render(abstractClientPlayerEntity, f, g, matrixStack, vertexConsumerProvider, i);
+    }
+
+    @Override
+    public Vec3d getPositionOffset(AbstractClientPlayerEntity abstractClientPlayerEntity, float f) {
+        if (abstractClientPlayerEntity.isInSneakingPose()) {
+            return new Vec3d(0.0, -0.125, 0.0);
+        }
+        return super.getPositionOffset(abstractClientPlayerEntity, f);
     }
 
     private void setModelPose(AbstractClientPlayerEntity abstractClientPlayerEntity) {
@@ -91,8 +97,8 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
             playerEntityModel.leftSleeve.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.LEFT_SLEEVE);
             playerEntityModel.rightSleeve.visible = abstractClientPlayerEntity.isPartVisible(PlayerModelPart.RIGHT_SLEEVE);
             playerEntityModel.isSneaking = abstractClientPlayerEntity.isInSneakingPose();
-            BipedEntityModel.ArmPose armPose = this.method_4210(abstractClientPlayerEntity, itemStack, itemStack2, Hand.MAIN_HAND);
-            BipedEntityModel.ArmPose armPose2 = this.method_4210(abstractClientPlayerEntity, itemStack, itemStack2, Hand.OFF_HAND);
+            BipedEntityModel.ArmPose armPose = this.getArmPose(abstractClientPlayerEntity, itemStack, itemStack2, Hand.MAIN_HAND);
+            BipedEntityModel.ArmPose armPose2 = this.getArmPose(abstractClientPlayerEntity, itemStack, itemStack2, Hand.OFF_HAND);
             if (abstractClientPlayerEntity.getMainArm() == Arm.RIGHT) {
                 playerEntityModel.rightArmPose = armPose;
                 playerEntityModel.leftArmPose = armPose2;
@@ -103,7 +109,7 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
         }
     }
 
-    private BipedEntityModel.ArmPose method_4210(AbstractClientPlayerEntity abstractClientPlayerEntity, ItemStack itemStack, ItemStack itemStack2, Hand hand) {
+    private BipedEntityModel.ArmPose getArmPose(AbstractClientPlayerEntity abstractClientPlayerEntity, ItemStack itemStack, ItemStack itemStack2, Hand hand) {
         ItemStack itemStack3;
         BipedEntityModel.ArmPose armPose = BipedEntityModel.ArmPose.EMPTY;
         ItemStack itemStack4 = itemStack3 = hand == Hand.MAIN_HAND ? itemStack : itemStack2;
@@ -142,69 +148,57 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
     }
 
     @Override
-    protected void scale(AbstractClientPlayerEntity abstractClientPlayerEntity, float f) {
+    protected void scale(AbstractClientPlayerEntity abstractClientPlayerEntity, MatrixStack matrixStack, float f) {
         float g = 0.9375f;
-        GlStateManager.scalef(0.9375f, 0.9375f, 0.9375f);
+        matrixStack.scale(0.9375f, 0.9375f, 0.9375f);
     }
 
     @Override
-    protected void renderLabel(AbstractClientPlayerEntity abstractClientPlayerEntity, double d, double e, double f, String string, double g) {
+    protected void renderLabelIfPresent(AbstractClientPlayerEntity abstractClientPlayerEntity, String string, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         Scoreboard scoreboard;
         ScoreboardObjective scoreboardObjective;
-        if (g < 100.0 && (scoreboardObjective = (scoreboard = abstractClientPlayerEntity.getScoreboard()).getObjectiveForSlot(2)) != null) {
+        double d = this.renderManager.getSquaredDistanceToCamera(abstractClientPlayerEntity);
+        matrixStack.push();
+        if (d < 100.0 && (scoreboardObjective = (scoreboard = abstractClientPlayerEntity.getScoreboard()).getObjectiveForSlot(2)) != null) {
             ScoreboardPlayerScore scoreboardPlayerScore = scoreboard.getPlayerScore(abstractClientPlayerEntity.getEntityName(), scoreboardObjective);
-            this.renderLabel(abstractClientPlayerEntity, scoreboardPlayerScore.getScore() + " " + scoreboardObjective.getDisplayName().asFormattedString(), d, e, f, 64);
+            super.renderLabelIfPresent(abstractClientPlayerEntity, scoreboardPlayerScore.getScore() + " " + scoreboardObjective.getDisplayName().asFormattedString(), matrixStack, vertexConsumerProvider, i);
             this.getFontRenderer().getClass();
-            e += (double)(9.0f * 1.15f * 0.025f);
+            matrixStack.translate(0.0, 9.0f * 1.15f * 0.025f, 0.0);
         }
-        super.renderLabel(abstractClientPlayerEntity, d, e, f, string, g);
+        super.renderLabelIfPresent(abstractClientPlayerEntity, string, matrixStack, vertexConsumerProvider, i);
+        matrixStack.pop();
     }
 
-    public void renderRightArm(AbstractClientPlayerEntity abstractClientPlayerEntity) {
-        float f = 1.0f;
-        GlStateManager.color3f(1.0f, 1.0f, 1.0f);
-        float g = 0.0625f;
+    public void renderRightArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, AbstractClientPlayerEntity player) {
+        this.renderArm(matrices, vertexConsumers, light, player, ((PlayerEntityModel)this.model).rightArm, ((PlayerEntityModel)this.model).rightSleeve);
+    }
+
+    public void renderLeftArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, AbstractClientPlayerEntity player) {
+        this.renderArm(matrices, vertexConsumers, light, player, ((PlayerEntityModel)this.model).leftArm, ((PlayerEntityModel)this.model).leftSleeve);
+    }
+
+    private void renderArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, AbstractClientPlayerEntity player, ModelPart arm, ModelPart sleeve) {
         PlayerEntityModel playerEntityModel = (PlayerEntityModel)this.getModel();
-        this.setModelPose(abstractClientPlayerEntity);
-        GlStateManager.enableBlend();
+        this.setModelPose(player);
         playerEntityModel.handSwingProgress = 0.0f;
         playerEntityModel.isSneaking = false;
         playerEntityModel.field_3396 = 0.0f;
-        playerEntityModel.setAngles(abstractClientPlayerEntity, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0625f);
-        playerEntityModel.rightArm.pitch = 0.0f;
-        playerEntityModel.rightArm.render(0.0625f);
-        playerEntityModel.rightSleeve.pitch = 0.0f;
-        playerEntityModel.rightSleeve.render(0.0625f);
-        GlStateManager.disableBlend();
-    }
-
-    public void renderLeftArm(AbstractClientPlayerEntity abstractClientPlayerEntity) {
-        float f = 1.0f;
-        GlStateManager.color3f(1.0f, 1.0f, 1.0f);
-        float g = 0.0625f;
-        PlayerEntityModel playerEntityModel = (PlayerEntityModel)this.getModel();
-        this.setModelPose(abstractClientPlayerEntity);
-        GlStateManager.enableBlend();
-        playerEntityModel.isSneaking = false;
-        playerEntityModel.handSwingProgress = 0.0f;
-        playerEntityModel.field_3396 = 0.0f;
-        playerEntityModel.setAngles(abstractClientPlayerEntity, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0625f);
-        playerEntityModel.leftArm.pitch = 0.0f;
-        playerEntityModel.leftArm.render(0.0625f);
-        playerEntityModel.leftSleeve.pitch = 0.0f;
-        playerEntityModel.leftSleeve.render(0.0625f);
-        GlStateManager.disableBlend();
+        playerEntityModel.setAngles(player, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        arm.pitch = 0.0f;
+        arm.render(matrices, vertexConsumers.getBuffer(RenderLayer.getEntitySolid(player.getSkinTexture())), light, OverlayTexture.DEFAULT_UV);
+        sleeve.pitch = 0.0f;
+        sleeve.render(matrices, vertexConsumers.getBuffer(RenderLayer.getEntityTranslucent(player.getSkinTexture())), light, OverlayTexture.DEFAULT_UV);
     }
 
     @Override
-    protected void setupTransforms(AbstractClientPlayerEntity abstractClientPlayerEntity, float f, float g, float h) {
-        float i = abstractClientPlayerEntity.method_6024(h);
+    protected void setupTransforms(AbstractClientPlayerEntity abstractClientPlayerEntity, MatrixStack matrixStack, float f, float g, float h) {
+        float i = abstractClientPlayerEntity.getLeaningPitch(h);
         if (abstractClientPlayerEntity.isFallFlying()) {
-            super.setupTransforms(abstractClientPlayerEntity, f, g, h);
-            float j = (float)abstractClientPlayerEntity.method_6003() + h;
+            super.setupTransforms(abstractClientPlayerEntity, matrixStack, f, g, h);
+            float j = (float)abstractClientPlayerEntity.getRoll() + h;
             float k = MathHelper.clamp(j * j / 100.0f, 0.0f, 1.0f);
             if (!abstractClientPlayerEntity.isUsingRiptide()) {
-                GlStateManager.rotatef(k * (-90.0f - abstractClientPlayerEntity.pitch), 1.0f, 0.0f, 0.0f);
+                matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(k * (-90.0f - abstractClientPlayerEntity.pitch)));
             }
             Vec3d vec3d = abstractClientPlayerEntity.getRotationVec(h);
             Vec3d vec3d2 = abstractClientPlayerEntity.getVelocity();
@@ -213,19 +207,24 @@ extends LivingEntityRenderer<AbstractClientPlayerEntity, PlayerEntityModel<Abstr
             if (d > 0.0 && e > 0.0) {
                 double l = (vec3d2.x * vec3d.x + vec3d2.z * vec3d.z) / (Math.sqrt(d) * Math.sqrt(e));
                 double m = vec3d2.x * vec3d.z - vec3d2.z * vec3d.x;
-                GlStateManager.rotatef((float)(Math.signum(m) * Math.acos(l)) * 180.0f / (float)Math.PI, 0.0f, 1.0f, 0.0f);
+                matrixStack.multiply(Vector3f.POSITIVE_Y.getRadialQuaternion((float)(Math.signum(m) * Math.acos(l))));
             }
         } else if (i > 0.0f) {
-            super.setupTransforms(abstractClientPlayerEntity, f, g, h);
+            super.setupTransforms(abstractClientPlayerEntity, matrixStack, f, g, h);
             float j = abstractClientPlayerEntity.isTouchingWater() ? -90.0f - abstractClientPlayerEntity.pitch : -90.0f;
             float k = MathHelper.lerp(i, 0.0f, j);
-            GlStateManager.rotatef(k, 1.0f, 0.0f, 0.0f);
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(k));
             if (abstractClientPlayerEntity.isInSwimmingPose()) {
-                GlStateManager.translatef(0.0f, -1.0f, 0.3f);
+                matrixStack.translate(0.0, -1.0, 0.3f);
             }
         } else {
-            super.setupTransforms(abstractClientPlayerEntity, f, g, h);
+            super.setupTransforms(abstractClientPlayerEntity, matrixStack, f, g, h);
         }
+    }
+
+    @Override
+    public /* synthetic */ Vec3d getPositionOffset(Entity entity, float tickDelta) {
+        return this.getPositionOffset((AbstractClientPlayerEntity)entity, tickDelta);
     }
 }
 

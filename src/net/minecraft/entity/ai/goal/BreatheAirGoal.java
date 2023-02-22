@@ -14,7 +14,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 
 public class BreatheAirGoal
 extends Goal {
@@ -46,7 +46,7 @@ extends Goal {
     }
 
     private void moveToAir() {
-        Iterable<BlockPos> iterable = BlockPos.iterate(MathHelper.floor(this.mob.x - 1.0), MathHelper.floor(this.mob.y), MathHelper.floor(this.mob.z - 1.0), MathHelper.floor(this.mob.x + 1.0), MathHelper.floor(this.mob.y + 8.0), MathHelper.floor(this.mob.z + 1.0));
+        Iterable<BlockPos> iterable = BlockPos.iterate(MathHelper.floor(this.mob.getX() - 1.0), MathHelper.floor(this.mob.getY()), MathHelper.floor(this.mob.getZ() - 1.0), MathHelper.floor(this.mob.getX() + 1.0), MathHelper.floor(this.mob.getY() + 8.0), MathHelper.floor(this.mob.getZ() + 1.0));
         Vec3i blockPos = null;
         for (BlockPos blockPos2 : iterable) {
             if (!this.isAirPos(this.mob.world, blockPos2)) continue;
@@ -54,7 +54,7 @@ extends Goal {
             break;
         }
         if (blockPos == null) {
-            blockPos = new BlockPos(this.mob.x, this.mob.y + 8.0, this.mob.z);
+            blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 8.0, this.mob.getZ());
         }
         this.mob.getNavigation().startMovingTo(blockPos.getX(), blockPos.getY() + 1, blockPos.getZ(), 1.0);
     }
@@ -66,7 +66,7 @@ extends Goal {
         this.mob.move(MovementType.SELF, this.mob.getVelocity());
     }
 
-    private boolean isAirPos(CollisionView world, BlockPos pos) {
+    private boolean isAirPos(WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
         return (world.getFluidState(pos).isEmpty() || blockState.getBlock() == Blocks.BUBBLE_COLUMN) && blockState.canPlaceAtSide(world, pos, BlockPlacementEnvironment.LAND);
     }

@@ -7,12 +7,13 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.WolfEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.util.Identifier;
 
@@ -26,19 +27,12 @@ extends FeatureRenderer<WolfEntity, WolfEntityModel<WolfEntity>> {
     }
 
     @Override
-    public void render(WolfEntity wolfEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, WolfEntity wolfEntity, float f, float g, float h, float j, float k, float l) {
         if (!wolfEntity.isTamed() || wolfEntity.isInvisible()) {
             return;
         }
-        this.bindTexture(SKIN);
         float[] fs = wolfEntity.getCollarColor().getColorComponents();
-        GlStateManager.color3f(fs[0], fs[1], fs[2]);
-        ((WolfEntityModel)this.getContextModel()).render(wolfEntity, f, g, i, j, k, l);
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return true;
+        WolfCollarFeatureRenderer.renderModel(this.getContextModel(), SKIN, matrixStack, vertexConsumerProvider, i, wolfEntity, fs[0], fs[1], fs[2]);
     }
 }
 

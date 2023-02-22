@@ -135,7 +135,7 @@ implements ResourcePackProvider {
                 Map<String, String> map = ClientBuiltinResourcePackProvider.getDownloadHeaders();
                 MinecraftClient minecraftClient = MinecraftClient.getInstance();
                 minecraftClient.submitAndJoin(() -> minecraftClient.openScreen(progressScreen));
-                completableFuture = NetworkUtils.download(file, string, map, 0x3200000, progressScreen, minecraftClient.getNetworkProxy());
+                completableFuture = NetworkUtils.download(file, string, map, 0x6400000, progressScreen, minecraftClient.getNetworkProxy());
             }
             CompletableFuture<?> completableFuture2 = this.downloadTask = ((CompletableFuture)completableFuture.thenCompose(object -> {
                 if (!this.verifyFile(string4, file)) {
@@ -145,7 +145,7 @@ implements ResourcePackProvider {
             })).whenComplete((void_, throwable) -> {
                 if (throwable != null) {
                     LOGGER.warn("Pack application failed: {}, deleting file {}", (Object)throwable.getMessage(), (Object)file);
-                    ClientBuiltinResourcePackProvider.method_19437(file);
+                    ClientBuiltinResourcePackProvider.delete(file);
                 }
             });
             return completableFuture2;
@@ -155,7 +155,7 @@ implements ResourcePackProvider {
         }
     }
 
-    private static void method_19437(File file) {
+    private static void delete(File file) {
         try {
             Files.delete(file.toPath());
         }

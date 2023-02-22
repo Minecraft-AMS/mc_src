@@ -17,7 +17,7 @@ package net.minecraft.client.gui.screen;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonSyntaxException;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.io.File;
 import java.net.URI;
@@ -38,11 +38,13 @@ import net.minecraft.client.gui.screen.ConfirmChatLinkScreen;
 import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.StringNbtReader;
@@ -148,10 +150,8 @@ implements Drawable {
         if (text.isEmpty()) {
             return;
         }
-        GlStateManager.disableRescaleNormal();
-        DiffuseLighting.disable();
-        GlStateManager.disableLighting();
-        GlStateManager.disableDepthTest();
+        RenderSystem.disableRescaleNormal();
+        RenderSystem.disableDepthTest();
         int i = 0;
         for (String string : text) {
             j = this.font.getStringWidth(string);
@@ -171,7 +171,7 @@ implements Drawable {
         if (l + m + 6 > this.height) {
             l = this.height - m - 6;
         }
-        this.blitOffset = 300;
+        this.setBlitOffset(300);
         this.itemRenderer.zOffset = 300.0f;
         int n = -267386864;
         this.fillGradient(k - 3, l - 4, k + j + 3, l - 3, -267386864, -267386864);
@@ -185,20 +185,25 @@ implements Drawable {
         this.fillGradient(k + j + 2, l - 3 + 1, k + j + 3, l + m + 3 - 1, 0x505000FF, 1344798847);
         this.fillGradient(k - 3, l - 3, k + j + 3, l - 3 + 1, 0x505000FF, 0x505000FF);
         this.fillGradient(k - 3, l + m + 2, k + j + 3, l + m + 3, 1344798847, 1344798847);
+        MatrixStack matrixStack = new MatrixStack();
+        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
+        matrixStack.translate(0.0, 0.0, this.itemRenderer.zOffset);
+        Matrix4f matrix4f = matrixStack.peek().getModel();
         for (int q = 0; q < text.size(); ++q) {
             String string2 = text.get(q);
-            this.font.drawWithShadow(string2, k, l, -1);
+            if (string2 != null) {
+                this.font.draw(string2, k, l, -1, true, matrix4f, immediate, false, 0, 0xF000F0);
+            }
             if (q == 0) {
                 l += 2;
             }
             l += 10;
         }
-        this.blitOffset = 0;
+        immediate.draw();
+        this.setBlitOffset(0);
         this.itemRenderer.zOffset = 0.0f;
-        GlStateManager.enableLighting();
-        GlStateManager.enableDepthTest();
-        DiffuseLighting.enable();
-        GlStateManager.enableRescaleNormal();
+        RenderSystem.enableDepthTest();
+        RenderSystem.enableRescaleNormal();
     }
 
     protected void renderComponentHoverEffect(Text component, int x, int y) {
@@ -245,7 +250,6 @@ implements Drawable {
         } else if (hoverEvent.getAction() == HoverEvent.Action.SHOW_TEXT) {
             this.renderTooltip(this.minecraft.textRenderer.wrapStringToWidthAsList(hoverEvent.getValue().asFormattedString(), Math.max(this.width / 2, 200)), x, y);
         }
-        GlStateManager.disableLighting();
     }
 
     protected void insertText(String text, boolean override) {
@@ -261,7 +265,7 @@ implements Drawable {
                 this.insertText(text.getStyle().getInsertion(), false);
             }
         } else if (clickEvent != null) {
-            block19: {
+            block21: {
                 if (clickEvent.getAction() == ClickEvent.Action.OPEN_URL) {
                     if (!this.minecraft.options.chatLinks) {
                         return false;
@@ -278,7 +282,7 @@ implements Drawable {
                         if (this.minecraft.options.chatLinksPrompt) {
                             this.clickedLink = uRI;
                             this.minecraft.openScreen(new ConfirmChatLinkScreen(this::confirmLink, clickEvent.getValue(), false));
-                            break block19;
+                            break block21;
                         }
                         this.openLink(uRI);
                     }
@@ -292,6 +296,8 @@ implements Drawable {
                     this.insertText(clickEvent.getValue(), true);
                 } else if (clickEvent.getAction() == ClickEvent.Action.RUN_COMMAND) {
                     this.sendMessage(clickEvent.getValue(), false);
+                } else if (clickEvent.getAction() == ClickEvent.Action.COPY_TO_CLIPBOARD) {
+                    this.minecraft.keyboard.setClipboard(clickEvent.getValue());
                 } else {
                     LOGGER.error("Don't know how to handle {}", (Object)clickEvent);
                 }
@@ -356,18 +362,16 @@ implements Drawable {
     }
 
     public void renderDirtBackground(int alpha) {
-        GlStateManager.disableLighting();
-        GlStateManager.disableFog();
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         this.minecraft.getTextureManager().bindTexture(BACKGROUND_LOCATION);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         float f = 32.0f;
         bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(0.0, this.height, 0.0).texture(0.0, (float)this.height / 32.0f + (float)alpha).color(64, 64, 64, 255).next();
+        bufferBuilder.vertex(0.0, this.height, 0.0).texture(0.0f, (float)this.height / 32.0f + (float)alpha).color(64, 64, 64, 255).next();
         bufferBuilder.vertex(this.width, this.height, 0.0).texture((float)this.width / 32.0f, (float)this.height / 32.0f + (float)alpha).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(this.width, 0.0, 0.0).texture((float)this.width / 32.0f, (double)alpha).color(64, 64, 64, 255).next();
-        bufferBuilder.vertex(0.0, 0.0, 0.0).texture(0.0, (double)alpha).color(64, 64, 64, 255).next();
+        bufferBuilder.vertex(this.width, 0.0, 0.0).texture((float)this.width / 32.0f, alpha).color(64, 64, 64, 255).next();
+        bufferBuilder.vertex(0.0, 0.0, 0.0).texture(0.0f, alpha).color(64, 64, 64, 255).next();
         tessellator.draw();
     }
 
@@ -389,17 +393,17 @@ implements Drawable {
 
     public static boolean hasControlDown() {
         if (MinecraftClient.IS_SYSTEM_MAC) {
-            return InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 343) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 347);
+            return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 343) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 347);
         }
-        return InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 341) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 345);
+        return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 341) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 345);
     }
 
     public static boolean hasShiftDown() {
-        return InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 344);
+        return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 340) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 344);
     }
 
     public static boolean hasAltDown() {
-        return InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 342) || InputUtil.isKeyPressed(MinecraftClient.getInstance().window.getHandle(), 346);
+        return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 342) || InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), 346);
     }
 
     public static boolean isCut(int code) {

@@ -74,7 +74,7 @@ implements ArgumentType<ItemPredicateArgument> {
         catch (CommandSyntaxException commandSyntaxException) {
             // empty catch block
         }
-        return itemStringReader.method_9793(builder);
+        return itemStringReader.getSuggestions(builder);
     }
 
     public Collection<String> getExamples() {

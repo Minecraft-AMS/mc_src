@@ -7,14 +7,13 @@
  */
 package net.minecraft.client.toast;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.AdvancementDisplay;
 import net.minecraft.advancement.AdvancementFrame;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.toast.Toast;
@@ -35,7 +34,7 @@ implements Toast {
     @Override
     public Toast.Visibility draw(ToastManager manager, long currentTime) {
         manager.getGame().getTextureManager().bindTexture(TOASTS_TEX);
-        GlStateManager.color3f(1.0f, 1.0f, 1.0f);
+        RenderSystem.color3f(1.0f, 1.0f, 1.0f);
         AdvancementDisplay advancementDisplay = this.advancement.getDisplay();
         manager.blit(0, 0, 0, 0, 160, 32);
         if (advancementDisplay != null) {
@@ -66,7 +65,6 @@ implements Toast {
                     manager.getGame().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f));
                 }
             }
-            DiffuseLighting.enableForItems();
             manager.getGame().getItemRenderer().renderGuiItem(null, advancementDisplay.getIcon(), 8, 8);
             return currentTime >= 5000L ? Toast.Visibility.HIDE : Toast.Visibility.SHOW;
         }

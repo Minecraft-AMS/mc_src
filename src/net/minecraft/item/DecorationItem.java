@@ -49,14 +49,15 @@ extends Item {
         if (compoundTag != null) {
             EntityType.loadFromEntityTag(world, playerEntity, abstractDecorationEntity, compoundTag);
         }
-        if (abstractDecorationEntity.method_6888()) {
+        if (abstractDecorationEntity.canStayAttached()) {
             if (!world.isClient) {
                 abstractDecorationEntity.onPlace();
                 world.spawnEntity(abstractDecorationEntity);
             }
             itemStack.decrement(1);
+            return ActionResult.SUCCESS;
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.CONSUME;
     }
 
     protected boolean canPlaceOn(PlayerEntity player, Direction side, ItemStack stack, BlockPos pos) {

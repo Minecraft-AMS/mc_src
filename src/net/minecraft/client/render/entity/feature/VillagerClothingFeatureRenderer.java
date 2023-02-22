@@ -18,11 +18,13 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.feature.VillagerResourceMetadata;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.ModelWithHat;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.resource.ReloadableResourceManager;
@@ -63,7 +65,7 @@ implements SynchronousResourceReloadListener {
     }
 
     @Override
-    public void render(T livingEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T livingEntity, float f, float g, float h, float j, float k, float l) {
         if (((Entity)livingEntity).isInvisible()) {
             return;
         }
@@ -73,21 +75,18 @@ implements SynchronousResourceReloadListener {
         VillagerResourceMetadata.HatType hatType = this.getHatType(this.villagerTypeToHat, "type", Registry.VILLAGER_TYPE, villagerType);
         VillagerResourceMetadata.HatType hatType2 = this.getHatType(this.professionToHat, "profession", Registry.VILLAGER_PROFESSION, villagerProfession);
         Object entityModel = this.getContextModel();
-        this.bindTexture(this.findTexture("type", Registry.VILLAGER_TYPE.getId(villagerType)));
         ((ModelWithHat)entityModel).setHatVisible(hatType2 == VillagerResourceMetadata.HatType.NONE || hatType2 == VillagerResourceMetadata.HatType.PARTIAL && hatType != VillagerResourceMetadata.HatType.FULL);
-        ((EntityModel)entityModel).render(livingEntity, f, g, i, j, k, l);
+        Identifier identifier = this.findTexture("type", Registry.VILLAGER_TYPE.getId(villagerType));
+        VillagerClothingFeatureRenderer.renderModel(entityModel, identifier, matrixStack, vertexConsumerProvider, i, livingEntity, 1.0f, 1.0f, 1.0f);
         ((ModelWithHat)entityModel).setHatVisible(true);
         if (villagerProfession != VillagerProfession.NONE && !((LivingEntity)livingEntity).isBaby()) {
-            this.bindTexture(this.findTexture("profession", Registry.VILLAGER_PROFESSION.getId(villagerProfession)));
-            ((EntityModel)entityModel).render(livingEntity, f, g, i, j, k, l);
-            this.bindTexture(this.findTexture("profession_level", (Identifier)LEVEL_TO_ID.get(MathHelper.clamp(villagerData.getLevel(), 1, LEVEL_TO_ID.size()))));
-            ((EntityModel)entityModel).render(livingEntity, f, g, i, j, k, l);
+            Identifier identifier2 = this.findTexture("profession", Registry.VILLAGER_PROFESSION.getId(villagerProfession));
+            VillagerClothingFeatureRenderer.renderModel(entityModel, identifier2, matrixStack, vertexConsumerProvider, i, livingEntity, 1.0f, 1.0f, 1.0f);
+            if (villagerProfession != VillagerProfession.NITWIT) {
+                Identifier identifier3 = this.findTexture("profession_level", (Identifier)LEVEL_TO_ID.get(MathHelper.clamp(villagerData.getLevel(), 1, LEVEL_TO_ID.size())));
+                VillagerClothingFeatureRenderer.renderModel(entityModel, identifier3, matrixStack, vertexConsumerProvider, i, livingEntity, 1.0f, 1.0f, 1.0f);
+            }
         }
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return true;
     }
 
     private Identifier findTexture(String keyType, Identifier keyId) {

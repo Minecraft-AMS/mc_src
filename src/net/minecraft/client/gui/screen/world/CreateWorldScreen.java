@@ -9,6 +9,7 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen.world;
 
@@ -34,6 +35,7 @@ import net.minecraft.world.level.LevelGeneratorType;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class CreateWorldScreen
@@ -41,16 +43,17 @@ extends Screen {
     private final Screen parent;
     private TextFieldWidget levelNameField;
     private TextFieldWidget seedField;
-    private String field_3196;
-    private String gameMode = "survival";
-    private String field_3185;
+    private String saveDirectoryName;
+    private Mode currentMode = Mode.SURVIVAL;
+    @Nullable
+    private Mode lastMode;
     private boolean structures = true;
     private boolean cheatsEnabled;
-    private boolean field_3179;
+    private boolean tweakedCheats;
     private boolean bonusChest;
-    private boolean field_3178;
+    private boolean hardcore;
     private boolean creatingLevel;
-    private boolean field_3202;
+    private boolean moreOptionsOpen;
     private ButtonWidget createLevelButton;
     private ButtonWidget gameModeSwitchButton;
     private ButtonWidget moreOptionsButton;
@@ -59,8 +62,8 @@ extends Screen {
     private ButtonWidget mapTypeSwitchButton;
     private ButtonWidget enableCheatsButton;
     private ButtonWidget customizeTypeButton;
-    private String field_3194;
-    private String field_3199;
+    private String firstGameModeDescriptionLine;
+    private String secondGameModeDescriptionLine;
     private String seed;
     private String levelName;
     private int generatorType;
@@ -82,47 +85,47 @@ extends Screen {
     @Override
     protected void init() {
         this.minecraft.keyboard.enableRepeatEvents(true);
-        this.levelNameField = new TextFieldWidget(this.font, this.width / 2 - 100, 60, 200, 20, I18n.translate("selectWorld.enterName", new Object[0]));
+        this.levelNameField = new TextFieldWidget(this.font, this.width / 2 - 100, 60, 200, 20, I18n.translate("selectWorld.enterName", new Object[0])){
+
+            @Override
+            protected String getNarrationMessage() {
+                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.resultFolder", new Object[0]) + " " + CreateWorldScreen.this.saveDirectoryName;
+            }
+        };
         this.levelNameField.setText(this.levelName);
         this.levelNameField.setChangedListener(string -> {
             this.levelName = string;
             this.createLevelButton.active = !this.levelNameField.getText().isEmpty();
-            this.method_2727();
+            this.updateSaveFolderName();
         });
         this.children.add(this.levelNameField);
         this.gameModeSwitchButton = this.addButton(new ButtonWidget(this.width / 2 - 75, 115, 150, 20, I18n.translate("selectWorld.gameMode", new Object[0]), buttonWidget -> {
-            if ("survival".equals(this.gameMode)) {
-                if (!this.field_3179) {
-                    this.cheatsEnabled = false;
+            switch (this.currentMode) {
+                case SURVIVAL: {
+                    this.tweakDefaultsTo(Mode.HARDCORE);
+                    break;
                 }
-                this.field_3178 = false;
-                this.gameMode = "hardcore";
-                this.field_3178 = true;
-                this.enableCheatsButton.active = false;
-                this.generateBonusChestButton.active = false;
-                this.method_2722();
-            } else if ("hardcore".equals(this.gameMode)) {
-                if (!this.field_3179) {
-                    this.cheatsEnabled = true;
+                case HARDCORE: {
+                    this.tweakDefaultsTo(Mode.CREATIVE);
+                    break;
                 }
-                this.field_3178 = false;
-                this.gameMode = "creative";
-                this.method_2722();
-                this.field_3178 = false;
-                this.enableCheatsButton.active = true;
-                this.generateBonusChestButton.active = true;
-            } else {
-                if (!this.field_3179) {
-                    this.cheatsEnabled = false;
+                case CREATIVE: {
+                    this.tweakDefaultsTo(Mode.SURVIVAL);
                 }
-                this.gameMode = "survival";
-                this.method_2722();
-                this.enableCheatsButton.active = true;
-                this.generateBonusChestButton.active = true;
-                this.field_3178 = false;
             }
-            this.method_2722();
-        }));
+            buttonWidget.queueNarration(250);
+        }){
+
+            @Override
+            public String getMessage() {
+                return I18n.translate("selectWorld.gameMode", new Object[0]) + ": " + I18n.translate("selectWorld.gameMode." + CreateWorldScreen.this.currentMode.translationSuffix, new Object[0]);
+            }
+
+            @Override
+            protected String getNarrationMessage() {
+                return super.getNarrationMessage() + ". " + CreateWorldScreen.this.firstGameModeDescriptionLine + " " + CreateWorldScreen.this.secondGameModeDescriptionLine;
+            }
+        });
         this.seedField = new TextFieldWidget(this.font, this.width / 2 - 100, 60, 200, 20, I18n.translate("selectWorld.enterSeed", new Object[0]));
         this.seedField.setText(this.seed);
         this.seedField.setChangedListener(string -> {
@@ -131,23 +134,49 @@ extends Screen {
         this.children.add(this.seedField);
         this.generateStructuresButton = this.addButton(new ButtonWidget(this.width / 2 - 155, 100, 150, 20, I18n.translate("selectWorld.mapFeatures", new Object[0]), buttonWidget -> {
             this.structures = !this.structures;
-            this.method_2722();
-        }));
+            buttonWidget.queueNarration(250);
+        }){
+
+            @Override
+            public String getMessage() {
+                return I18n.translate("selectWorld.mapFeatures", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.structures ? "options.on" : "options.off", new Object[0]);
+            }
+
+            @Override
+            protected String getNarrationMessage() {
+                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.mapFeatures.info", new Object[0]);
+            }
+        });
         this.generateStructuresButton.visible = false;
         this.mapTypeSwitchButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 100, 150, 20, I18n.translate("selectWorld.mapType", new Object[0]), buttonWidget -> {
             ++this.generatorType;
             if (this.generatorType >= LevelGeneratorType.TYPES.length) {
                 this.generatorType = 0;
             }
-            while (!this.method_2723()) {
+            while (!this.isGeneratorTypeValid()) {
                 ++this.generatorType;
                 if (this.generatorType < LevelGeneratorType.TYPES.length) continue;
                 this.generatorType = 0;
             }
             this.generatorOptionsTag = new CompoundTag();
-            this.method_2722();
-            this.method_2710(this.field_3202);
-        }));
+            this.setMoreOptionsOpen(this.moreOptionsOpen);
+            buttonWidget.queueNarration(250);
+        }){
+
+            @Override
+            public String getMessage() {
+                return I18n.translate("selectWorld.mapType", new Object[0]) + ' ' + I18n.translate(LevelGeneratorType.TYPES[CreateWorldScreen.this.generatorType].getTranslationKey(), new Object[0]);
+            }
+
+            @Override
+            protected String getNarrationMessage() {
+                LevelGeneratorType levelGeneratorType = LevelGeneratorType.TYPES[CreateWorldScreen.this.generatorType];
+                if (levelGeneratorType.hasInfo()) {
+                    return super.getNarrationMessage() + ". " + I18n.translate(levelGeneratorType.getInfoTranslationKey(), new Object[0]);
+                }
+                return super.getNarrationMessage();
+            }
+        });
         this.mapTypeSwitchButton.visible = false;
         this.customizeTypeButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 120, 150, 20, I18n.translate("selectWorld.customizeType", new Object[0]), buttonWidget -> {
             if (LevelGeneratorType.TYPES[this.generatorType] == LevelGeneratorType.FLAT) {
@@ -159,52 +188,65 @@ extends Screen {
         }));
         this.customizeTypeButton.visible = false;
         this.enableCheatsButton = this.addButton(new ButtonWidget(this.width / 2 - 155, 151, 150, 20, I18n.translate("selectWorld.allowCommands", new Object[0]), buttonWidget -> {
-            this.field_3179 = true;
+            this.tweakedCheats = true;
             this.cheatsEnabled = !this.cheatsEnabled;
-            this.method_2722();
-        }));
+            buttonWidget.queueNarration(250);
+        }){
+
+            @Override
+            public String getMessage() {
+                return I18n.translate("selectWorld.allowCommands", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.cheatsEnabled && !CreateWorldScreen.this.hardcore ? "options.on" : "options.off", new Object[0]);
+            }
+
+            @Override
+            protected String getNarrationMessage() {
+                return super.getNarrationMessage() + ". " + I18n.translate("selectWorld.allowCommands.info", new Object[0]);
+            }
+        });
         this.enableCheatsButton.visible = false;
         this.generateBonusChestButton = this.addButton(new ButtonWidget(this.width / 2 + 5, 151, 150, 20, I18n.translate("selectWorld.bonusItems", new Object[0]), buttonWidget -> {
             this.bonusChest = !this.bonusChest;
-            this.method_2722();
-        }));
+            buttonWidget.queueNarration(250);
+        }){
+
+            @Override
+            public String getMessage() {
+                return I18n.translate("selectWorld.bonusItems", new Object[0]) + ' ' + I18n.translate(CreateWorldScreen.this.bonusChest && !CreateWorldScreen.this.hardcore ? "options.on" : "options.off", new Object[0]);
+            }
+        });
         this.generateBonusChestButton.visible = false;
-        this.moreOptionsButton = this.addButton(new ButtonWidget(this.width / 2 - 75, 187, 150, 20, I18n.translate("selectWorld.moreWorldOptions", new Object[0]), buttonWidget -> this.method_2721()));
+        this.moreOptionsButton = this.addButton(new ButtonWidget(this.width / 2 - 75, 187, 150, 20, I18n.translate("selectWorld.moreWorldOptions", new Object[0]), buttonWidget -> this.toggleMoreOptions()));
         this.createLevelButton = this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, I18n.translate("selectWorld.create", new Object[0]), buttonWidget -> this.createLevel()));
+        this.createLevelButton.active = !this.levelName.isEmpty();
         this.addButton(new ButtonWidget(this.width / 2 + 5, this.height - 28, 150, 20, I18n.translate("gui.cancel", new Object[0]), buttonWidget -> this.minecraft.openScreen(this.parent)));
-        this.method_2710(this.field_3202);
+        this.setMoreOptionsOpen(this.moreOptionsOpen);
         this.setInitialFocus(this.levelNameField);
-        this.method_2727();
-        this.method_2722();
+        this.tweakDefaultsTo(this.currentMode);
+        this.updateSaveFolderName();
     }
 
-    private void method_2727() {
-        this.field_3196 = this.levelNameField.getText().trim();
-        if (this.field_3196.length() == 0) {
-            this.field_3196 = "World";
+    private void updateSettingsLabels() {
+        this.firstGameModeDescriptionLine = I18n.translate("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line1", new Object[0]);
+        this.secondGameModeDescriptionLine = I18n.translate("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line2", new Object[0]);
+    }
+
+    private void updateSaveFolderName() {
+        this.saveDirectoryName = this.levelNameField.getText().trim();
+        if (this.saveDirectoryName.isEmpty()) {
+            this.saveDirectoryName = "World";
         }
         try {
-            this.field_3196 = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.field_3196, "");
+            this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
         }
         catch (Exception exception) {
-            this.field_3196 = "World";
+            this.saveDirectoryName = "World";
             try {
-                this.field_3196 = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.field_3196, "");
+                this.saveDirectoryName = FileNameUtil.getNextUniqueName(this.minecraft.getLevelStorage().getSavesDirectory(), this.saveDirectoryName, "");
             }
             catch (Exception exception2) {
                 throw new RuntimeException("Could not create save folder", exception2);
             }
         }
-    }
-
-    private void method_2722() {
-        this.gameModeSwitchButton.setMessage(I18n.translate("selectWorld.gameMode", new Object[0]) + ": " + I18n.translate("selectWorld.gameMode." + this.gameMode, new Object[0]));
-        this.field_3194 = I18n.translate("selectWorld.gameMode." + this.gameMode + ".line1", new Object[0]);
-        this.field_3199 = I18n.translate("selectWorld.gameMode." + this.gameMode + ".line2", new Object[0]);
-        this.generateStructuresButton.setMessage(I18n.translate("selectWorld.mapFeatures", new Object[0]) + ' ' + I18n.translate(this.structures ? "options.on" : "options.off", new Object[0]));
-        this.generateBonusChestButton.setMessage(I18n.translate("selectWorld.bonusItems", new Object[0]) + ' ' + I18n.translate(this.bonusChest && !this.field_3178 ? "options.on" : "options.off", new Object[0]));
-        this.mapTypeSwitchButton.setMessage(I18n.translate("selectWorld.mapType", new Object[0]) + ' ' + I18n.translate(LevelGeneratorType.TYPES[this.generatorType].getTranslationKey(), new Object[0]));
-        this.enableCheatsButton.setMessage(I18n.translate("selectWorld.allowCommands", new Object[0]) + ' ' + I18n.translate(this.cheatsEnabled && !this.field_3178 ? "options.on" : "options.off", new Object[0]));
     }
 
     @Override
@@ -231,18 +273,18 @@ extends Screen {
                 l = string.hashCode();
             }
         }
-        LevelInfo levelInfo = new LevelInfo(l, GameMode.byName(this.gameMode), this.structures, this.field_3178, LevelGeneratorType.TYPES[this.generatorType]);
+        LevelInfo levelInfo = new LevelInfo(l, this.currentMode.defaultGameMode, this.structures, this.hardcore, LevelGeneratorType.TYPES[this.generatorType]);
         levelInfo.setGeneratorOptions((JsonElement)Dynamic.convert((DynamicOps)NbtOps.INSTANCE, (DynamicOps)JsonOps.INSTANCE, (Object)this.generatorOptionsTag));
-        if (this.bonusChest && !this.field_3178) {
+        if (this.bonusChest && !this.hardcore) {
             levelInfo.setBonusChest();
         }
-        if (this.cheatsEnabled && !this.field_3178) {
+        if (this.cheatsEnabled && !this.hardcore) {
             levelInfo.enableCommands();
         }
-        this.minecraft.startIntegratedServer(this.field_3196, this.levelNameField.getText().trim(), levelInfo);
+        this.minecraft.startIntegratedServer(this.saveDirectoryName, this.levelNameField.getText().trim(), levelInfo);
     }
 
-    private boolean method_2723() {
+    private boolean isGeneratorTypeValid() {
         LevelGeneratorType levelGeneratorType = LevelGeneratorType.TYPES[this.generatorType];
         if (levelGeneratorType == null || !levelGeneratorType.isVisible()) {
             return false;
@@ -253,41 +295,54 @@ extends Screen {
         return true;
     }
 
-    private void method_2721() {
-        this.method_2710(!this.field_3202);
+    private void toggleMoreOptions() {
+        this.setMoreOptionsOpen(!this.moreOptionsOpen);
     }
 
-    private void method_2710(boolean bl) {
-        this.field_3202 = bl;
+    private void tweakDefaultsTo(Mode mode) {
+        if (!this.tweakedCheats) {
+            boolean bl = this.cheatsEnabled = mode == Mode.CREATIVE;
+        }
+        if (mode == Mode.HARDCORE) {
+            this.hardcore = true;
+            this.enableCheatsButton.active = false;
+            this.generateBonusChestButton.active = false;
+        } else {
+            this.hardcore = false;
+            this.enableCheatsButton.active = true;
+            this.generateBonusChestButton.active = true;
+        }
+        this.currentMode = mode;
+        this.updateSettingsLabels();
+    }
+
+    private void setMoreOptionsOpen(boolean moreOptionsOpen) {
+        this.moreOptionsOpen = moreOptionsOpen;
+        this.gameModeSwitchButton.visible = !this.moreOptionsOpen;
+        this.mapTypeSwitchButton.visible = this.moreOptionsOpen;
         if (LevelGeneratorType.TYPES[this.generatorType] == LevelGeneratorType.DEBUG_ALL_BLOCK_STATES) {
-            this.gameModeSwitchButton.visible = !this.field_3202;
             this.gameModeSwitchButton.active = false;
-            if (this.field_3185 == null) {
-                this.field_3185 = this.gameMode;
+            if (this.lastMode == null) {
+                this.lastMode = this.currentMode;
             }
-            this.gameMode = "spectator";
+            this.tweakDefaultsTo(Mode.DEBUG);
             this.generateStructuresButton.visible = false;
             this.generateBonusChestButton.visible = false;
-            this.mapTypeSwitchButton.visible = this.field_3202;
             this.enableCheatsButton.visible = false;
             this.customizeTypeButton.visible = false;
         } else {
-            this.gameModeSwitchButton.visible = !this.field_3202;
             this.gameModeSwitchButton.active = true;
-            if (this.field_3185 != null) {
-                this.gameMode = this.field_3185;
-                this.field_3185 = null;
+            if (this.lastMode != null) {
+                this.tweakDefaultsTo(this.lastMode);
             }
-            this.generateStructuresButton.visible = this.field_3202 && LevelGeneratorType.TYPES[this.generatorType] != LevelGeneratorType.CUSTOMIZED;
-            this.generateBonusChestButton.visible = this.field_3202;
-            this.mapTypeSwitchButton.visible = this.field_3202;
-            this.enableCheatsButton.visible = this.field_3202;
-            this.customizeTypeButton.visible = this.field_3202 && LevelGeneratorType.TYPES[this.generatorType].isCustomizable();
+            this.generateStructuresButton.visible = this.moreOptionsOpen && LevelGeneratorType.TYPES[this.generatorType] != LevelGeneratorType.CUSTOMIZED;
+            this.generateBonusChestButton.visible = this.moreOptionsOpen;
+            this.enableCheatsButton.visible = this.moreOptionsOpen;
+            this.customizeTypeButton.visible = this.moreOptionsOpen && LevelGeneratorType.TYPES[this.generatorType].isCustomizable();
         }
-        this.method_2722();
-        this.seedField.setVisible(this.field_3202);
-        this.levelNameField.setVisible(!this.field_3202);
-        if (this.field_3202) {
+        this.seedField.setVisible(this.moreOptionsOpen);
+        this.levelNameField.setVisible(!this.moreOptionsOpen);
+        if (this.moreOptionsOpen) {
             this.moreOptionsButton.setMessage(I18n.translate("gui.done", new Object[0]));
         } else {
             this.moreOptionsButton.setMessage(I18n.translate("selectWorld.moreWorldOptions", new Object[0]));
@@ -307,10 +362,19 @@ extends Screen {
     }
 
     @Override
+    public void onClose() {
+        if (this.moreOptionsOpen) {
+            this.setMoreOptionsOpen(false);
+        } else {
+            this.minecraft.openScreen(this.parent);
+        }
+    }
+
+    @Override
     public void render(int mouseX, int mouseY, float delta) {
         this.renderBackground();
         this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 20, -1);
-        if (this.field_3202) {
+        if (this.moreOptionsOpen) {
             this.drawString(this.font, I18n.translate("selectWorld.enterSeed", new Object[0]), this.width / 2 - 100, 47, -6250336);
             this.drawString(this.font, I18n.translate("selectWorld.seedInfo", new Object[0]), this.width / 2 - 100, 85, -6250336);
             if (this.generateStructuresButton.visible) {
@@ -325,28 +389,44 @@ extends Screen {
             }
         } else {
             this.drawString(this.font, I18n.translate("selectWorld.enterName", new Object[0]), this.width / 2 - 100, 47, -6250336);
-            this.drawString(this.font, I18n.translate("selectWorld.resultFolder", new Object[0]) + " " + this.field_3196, this.width / 2 - 100, 85, -6250336);
+            this.drawString(this.font, I18n.translate("selectWorld.resultFolder", new Object[0]) + " " + this.saveDirectoryName, this.width / 2 - 100, 85, -6250336);
             this.levelNameField.render(mouseX, mouseY, delta);
-            this.drawCenteredString(this.font, this.field_3194, this.width / 2, 137, -6250336);
-            this.drawCenteredString(this.font, this.field_3199, this.width / 2, 149, -6250336);
+            this.drawCenteredString(this.font, this.firstGameModeDescriptionLine, this.width / 2, 137, -6250336);
+            this.drawCenteredString(this.font, this.secondGameModeDescriptionLine, this.width / 2, 149, -6250336);
         }
         super.render(mouseX, mouseY, delta);
     }
 
     public void recreateLevel(LevelProperties levelProperties) {
         this.levelName = levelProperties.getLevelName();
-        this.seed = levelProperties.getSeed() + "";
+        this.seed = Long.toString(levelProperties.getSeed());
         LevelGeneratorType levelGeneratorType = levelProperties.getGeneratorType() == LevelGeneratorType.CUSTOMIZED ? LevelGeneratorType.DEFAULT : levelProperties.getGeneratorType();
         this.generatorType = levelGeneratorType.getId();
         this.generatorOptionsTag = levelProperties.getGeneratorOptions();
         this.structures = levelProperties.hasStructures();
         this.cheatsEnabled = levelProperties.areCommandsAllowed();
         if (levelProperties.isHardcore()) {
-            this.gameMode = "hardcore";
+            this.currentMode = Mode.HARDCORE;
         } else if (levelProperties.getGameMode().isSurvivalLike()) {
-            this.gameMode = "survival";
+            this.currentMode = Mode.SURVIVAL;
         } else if (levelProperties.getGameMode().isCreative()) {
-            this.gameMode = "creative";
+            this.currentMode = Mode.CREATIVE;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static enum Mode {
+        SURVIVAL("survival", GameMode.SURVIVAL),
+        HARDCORE("hardcore", GameMode.SURVIVAL),
+        CREATIVE("creative", GameMode.CREATIVE),
+        DEBUG("spectator", GameMode.SPECTATOR);
+
+        private final String translationSuffix;
+        private final GameMode defaultGameMode;
+
+        private Mode(String translationSuffix, GameMode defaultGameMode) {
+            this.translationSuffix = translationSuffix;
+            this.defaultGameMode = defaultGameMode;
         }
     }
 }

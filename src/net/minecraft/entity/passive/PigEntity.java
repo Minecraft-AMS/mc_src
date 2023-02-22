@@ -157,11 +157,7 @@ extends AnimalEntity {
                 }
                 return true;
             }
-            if (itemStack.getItem() == Items.SADDLE) {
-                itemStack.useOnEntity(player, this, hand);
-                return true;
-            }
-            return false;
+            return itemStack.getItem() == Items.SADDLE && itemStack.useOnEntity(player, this, hand);
         }
         return true;
     }
@@ -190,7 +186,7 @@ extends AnimalEntity {
     public void onStruckByLightning(LightningEntity lightning) {
         ZombiePigmanEntity zombiePigmanEntity = EntityType.ZOMBIE_PIGMAN.create(this.world);
         zombiePigmanEntity.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_SWORD));
-        zombiePigmanEntity.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, this.pitch);
+        zombiePigmanEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
         zombiePigmanEntity.setAiDisabled(this.isAiDisabled());
         if (this.hasCustomName()) {
             zombiePigmanEntity.setCustomName(this.getCustomName());
@@ -209,17 +205,17 @@ extends AnimalEntity {
         Entity entity2 = entity = this.getPassengerList().isEmpty() ? null : this.getPassengerList().get(0);
         if (!this.hasPassengers() || !this.canBeControlledByRider()) {
             this.stepHeight = 0.5f;
-            this.field_6281 = 0.02f;
+            this.flyingSpeed = 0.02f;
             super.travel(movementInput);
             return;
         }
         this.prevYaw = this.yaw = entity.yaw;
         this.pitch = entity.pitch * 0.5f;
         this.setRotation(this.yaw, this.pitch);
-        this.field_6283 = this.yaw;
+        this.bodyYaw = this.yaw;
         this.headYaw = this.yaw;
         this.stepHeight = 1.0f;
-        this.field_6281 = this.getMovementSpeed() * 0.1f;
+        this.flyingSpeed = this.getMovementSpeed() * 0.1f;
         if (this.field_6814 && this.field_6812++ > this.field_6813) {
             this.field_6814 = false;
         }
@@ -230,12 +226,13 @@ extends AnimalEntity {
             }
             this.setMovementSpeed(f);
             super.travel(new Vec3d(0.0, 0.0, 1.0));
+            this.bodyTrackingIncrements = 0;
         } else {
             this.setVelocity(Vec3d.ZERO);
         }
         this.lastLimbDistance = this.limbDistance;
-        double d = this.x - this.prevX;
-        double e = this.z - this.prevZ;
+        double d = this.getX() - this.prevX;
+        double e = this.getZ() - this.prevZ;
         float g = MathHelper.sqrt(d * d + e * e) * 4.0f;
         if (g > 1.0f) {
             g = 1.0f;

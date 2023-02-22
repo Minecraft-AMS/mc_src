@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.resourcepack;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -62,47 +62,51 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
 
     public void add(ResourcePackEntry entry) {
         this.addEntry(entry);
-        entry.widget = this;
+        entry.resourcePackList = this;
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class ResourcePackEntry
     extends AlwaysSelectedEntryListWidget.Entry<ResourcePackEntry> {
-        private ResourcePackListWidget widget;
+        private ResourcePackListWidget resourcePackList;
         protected final MinecraftClient client;
         protected final ResourcePackOptionsScreen screen;
-        private final ClientResourcePackProfile packContainer;
+        private final ClientResourcePackProfile pack;
 
-        public ResourcePackEntry(ResourcePackListWidget listWidget, ResourcePackOptionsScreen screen, ClientResourcePackProfile packContainer) {
+        public ResourcePackEntry(ResourcePackListWidget listWidget, ResourcePackOptionsScreen screen, ClientResourcePackProfile pack) {
             this.screen = screen;
             this.client = MinecraftClient.getInstance();
-            this.packContainer = packContainer;
-            this.widget = listWidget;
+            this.pack = pack;
+            this.resourcePackList = listWidget;
         }
 
-        public void method_20145(SelectedResourcePackListWidget widget) {
-            this.getPackContainer().getInitialPosition().insert(widget.children(), this, ResourcePackEntry::getPackContainer, true);
-            this.widget = widget;
+        public void enable(SelectedResourcePackListWidget list) {
+            this.getPack().getInitialPosition().insert(list.children(), this, ResourcePackEntry::getPack, true);
+            this.method_24232(list);
+        }
+
+        public void method_24232(SelectedResourcePackListWidget selectedResourcePackListWidget) {
+            this.resourcePackList = selectedResourcePackListWidget;
         }
 
         protected void drawIcon() {
-            this.packContainer.drawIcon(this.client.getTextureManager());
+            this.pack.drawIcon(this.client.getTextureManager());
         }
 
         protected ResourcePackCompatibility getCompatibility() {
-            return this.packContainer.getCompatibility();
+            return this.pack.getCompatibility();
         }
 
         protected String getDescription() {
-            return this.packContainer.getDescription().asFormattedString();
+            return this.pack.getDescription().asFormattedString();
         }
 
         protected String getDisplayName() {
-            return this.packContainer.getDisplayName().asFormattedString();
+            return this.pack.getDisplayName().asFormattedString();
         }
 
-        public ClientResourcePackProfile getPackContainer() {
-            return this.packContainer;
+        public ClientResourcePackProfile getPack() {
+            return this.pack;
         }
 
         @Override
@@ -110,46 +114,46 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
             int p;
             ResourcePackCompatibility resourcePackCompatibility = this.getCompatibility();
             if (!resourcePackCompatibility.isCompatible()) {
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 DrawableHelper.fill(k - 1, j - 1, k + l - 9, j + m + 1, -8978432);
             }
             this.drawIcon();
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             DrawableHelper.blit(k, j, 0.0f, 0.0f, 32, 32, 32, 32);
             String string = this.getDisplayName();
             String string2 = this.getDescription();
-            if (this.method_20151() && (this.client.options.touchscreen || bl)) {
+            if (this.isMoveable() && (this.client.options.touchscreen || bl)) {
                 this.client.getTextureManager().bindTexture(RESOURCE_PACKS_LOCATION);
                 DrawableHelper.fill(k, j, k + 32, j + 32, -1601138544);
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 p = n - k;
                 int q = o - j;
                 if (!resourcePackCompatibility.isCompatible()) {
                     string = INCOMPATIBLE.asFormattedString();
                     string2 = resourcePackCompatibility.getNotification().asFormattedString();
                 }
-                if (this.method_20152()) {
+                if (this.isSelectable()) {
                     if (p < 32) {
                         DrawableHelper.blit(k, j, 0.0f, 32.0f, 32, 32, 256, 256);
                     } else {
                         DrawableHelper.blit(k, j, 0.0f, 0.0f, 32, 32, 256, 256);
                     }
                 } else {
-                    if (this.method_20153()) {
+                    if (this.isRemovable()) {
                         if (p < 16) {
                             DrawableHelper.blit(k, j, 32.0f, 32.0f, 32, 32, 256, 256);
                         } else {
                             DrawableHelper.blit(k, j, 32.0f, 0.0f, 32, 32, 256, 256);
                         }
                     }
-                    if (this.canSortUp()) {
+                    if (this.canMoveUp()) {
                         if (p < 32 && p > 16 && q < 16) {
                             DrawableHelper.blit(k, j, 96.0f, 32.0f, 32, 32, 256, 256);
                         } else {
                             DrawableHelper.blit(k, j, 96.0f, 0.0f, 32, 32, 256, 256);
                         }
                     }
-                    if (this.canSortDown()) {
+                    if (this.canMoveDown()) {
                         if (p < 32 && p > 16 && q > 16) {
                             DrawableHelper.blit(k, j, 64.0f, 32.0f, 32, 32, 256, 256);
                         } else {
@@ -168,36 +172,36 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
             }
         }
 
-        protected boolean method_20151() {
-            return !this.packContainer.isPinned() || !this.packContainer.isAlwaysEnabled();
+        protected boolean isMoveable() {
+            return !this.pack.isPinned() || !this.pack.isAlwaysEnabled();
         }
 
-        protected boolean method_20152() {
-            return !this.screen.method_2669(this);
+        protected boolean isSelectable() {
+            return !this.screen.isEnabled(this);
         }
 
-        protected boolean method_20153() {
-            return this.screen.method_2669(this) && !this.packContainer.isAlwaysEnabled();
+        protected boolean isRemovable() {
+            return this.screen.isEnabled(this) && !this.pack.isAlwaysEnabled();
         }
 
-        protected boolean canSortUp() {
-            List list = this.widget.children();
+        protected boolean canMoveUp() {
+            List list = this.resourcePackList.children();
             int i = list.indexOf(this);
-            return i > 0 && !((ResourcePackEntry)list.get((int)(i - 1))).packContainer.isPinned();
+            return i > 0 && !((ResourcePackEntry)list.get((int)(i - 1))).pack.isPinned();
         }
 
-        protected boolean canSortDown() {
-            List list = this.widget.children();
+        protected boolean canMoveDown() {
+            List list = this.resourcePackList.children();
             int i = list.indexOf(this);
-            return i >= 0 && i < list.size() - 1 && !((ResourcePackEntry)list.get((int)(i + 1))).packContainer.isPinned();
+            return i >= 0 && i < list.size() - 1 && !((ResourcePackEntry)list.get((int)(i + 1))).pack.isPinned();
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            double d = mouseX - (double)this.widget.getRowLeft();
-            double e = mouseY - (double)this.widget.getRowTop(this.widget.children().indexOf(this));
-            if (this.method_20151() && d <= 32.0) {
-                if (this.method_20152()) {
+            double d = mouseX - (double)this.resourcePackList.getRowLeft();
+            double e = mouseY - (double)this.resourcePackList.getRowTop(this.resourcePackList.children().indexOf(this));
+            if (this.isMoveable() && d <= 32.0) {
+                if (this.isSelectable()) {
                     this.getScreen().markDirty();
                     ResourcePackCompatibility resourcePackCompatibility = this.getCompatibility();
                     if (resourcePackCompatibility.isCompatible()) {
@@ -213,22 +217,22 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
                     }
                     return true;
                 }
-                if (d < 16.0 && this.method_20153()) {
+                if (d < 16.0 && this.isRemovable()) {
                     this.getScreen().disable(this);
                     return true;
                 }
-                if (d > 16.0 && e < 16.0 && this.canSortUp()) {
-                    List<ResourcePackEntry> list = this.widget.children();
+                if (d > 16.0 && e < 16.0 && this.canMoveUp()) {
+                    List<ResourcePackEntry> list = this.resourcePackList.children();
                     int i = list.indexOf(this);
-                    list.remove(this);
+                    list.remove(i);
                     list.add(i - 1, this);
                     this.getScreen().markDirty();
                     return true;
                 }
-                if (d > 16.0 && e > 16.0 && this.canSortDown()) {
-                    List<ResourcePackEntry> list = this.widget.children();
+                if (d > 16.0 && e > 16.0 && this.canMoveDown()) {
+                    List<ResourcePackEntry> list = this.resourcePackList.children();
                     int i = list.indexOf(this);
-                    list.remove(this);
+                    list.remove(i);
                     list.add(i + 1, this);
                     this.getScreen().markDirty();
                     return true;

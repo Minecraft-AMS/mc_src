@@ -38,7 +38,7 @@ public abstract class BlockEntity {
     protected boolean removed;
     @Nullable
     private BlockState cachedState;
-    private boolean markedInvalid;
+    private boolean invalid;
 
     public BlockEntity(BlockEntityType<?> type) {
         this.type = type;
@@ -49,8 +49,9 @@ public abstract class BlockEntity {
         return this.world;
     }
 
-    public void setWorld(World world) {
+    public void setLocation(World world, BlockPos pos) {
         this.world = world;
+        this.pos = pos.toImmutable();
     }
 
     public boolean hasWorld() {
@@ -80,7 +81,7 @@ public abstract class BlockEntity {
     @Nullable
     public static BlockEntity createFromTag(CompoundTag compoundTag) {
         String string = compoundTag.getString("id");
-        return Registry.BLOCK_ENTITY.getOrEmpty(new Identifier(string)).map(blockEntityType -> {
+        return Registry.BLOCK_ENTITY_TYPE.getOrEmpty(new Identifier(string)).map(blockEntityType -> {
             try {
                 return blockEntityType.instantiate();
             }
@@ -167,7 +168,7 @@ public abstract class BlockEntity {
     }
 
     public void populateCrashReport(CrashReportSection crashReportSection) {
-        crashReportSection.add("Name", () -> Registry.BLOCK_ENTITY.getId(this.getType()) + " // " + this.getClass().getCanonicalName());
+        crashReportSection.add("Name", () -> Registry.BLOCK_ENTITY_TYPE.getId(this.getType()) + " // " + this.getClass().getCanonicalName());
         if (this.world == null) {
             return;
         }
@@ -194,11 +195,11 @@ public abstract class BlockEntity {
     }
 
     public void markInvalid() {
-        if (this.markedInvalid) {
+        if (this.invalid) {
             return;
         }
-        this.markedInvalid = true;
-        LOGGER.warn("Block entity invalid: {} @ {}", new Supplier[]{() -> Registry.BLOCK_ENTITY.getId(this.getType()), this::getPos});
+        this.invalid = true;
+        LOGGER.warn("Block entity invalid: {} @ {}", new Supplier[]{() -> Registry.BLOCK_ENTITY_TYPE.getId(this.getType()), this::getPos});
     }
 }
 

@@ -24,6 +24,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import java.util.Map;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.entry.AlternativeEntry;
 import net.minecraft.loot.entry.CombinedEntry;
 import net.minecraft.loot.entry.DynamicEntry;
@@ -36,7 +37,6 @@ import net.minecraft.loot.entry.SequenceEntry;
 import net.minecraft.loot.entry.TagEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class LootEntries {

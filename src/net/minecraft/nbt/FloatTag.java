@@ -9,19 +9,53 @@ import java.io.IOException;
 import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 public class FloatTag
 extends AbstractNumberTag {
-    private float value;
+    public static final FloatTag ZERO = new FloatTag(0.0f);
+    public static final TagReader<FloatTag> READER = new TagReader<FloatTag>(){
 
-    FloatTag() {
+        @Override
+        public FloatTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(96L);
+            return FloatTag.of(dataInput.readFloat());
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "FLOAT";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Float";
+        }
+
+        @Override
+        public boolean isImmutable() {
+            return true;
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
+    private final float value;
+
+    private FloatTag(float value) {
+        this.value = value;
     }
 
-    public FloatTag(float f) {
-        this.value = f;
+    public static FloatTag of(float value) {
+        if (value == 0.0f) {
+            return ZERO;
+        }
+        return new FloatTag(value);
     }
 
     @Override
@@ -30,14 +64,12 @@ extends AbstractNumberTag {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(96L);
-        this.value = input.readFloat();
-    }
-
-    @Override
     public byte getType() {
         return 5;
+    }
+
+    public TagReader<FloatTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -47,7 +79,7 @@ extends AbstractNumberTag {
 
     @Override
     public FloatTag copy() {
-        return new FloatTag(this.value);
+        return this;
     }
 
     public boolean equals(Object o) {

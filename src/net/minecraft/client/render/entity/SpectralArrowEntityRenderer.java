@@ -24,7 +24,7 @@ extends ProjectileEntityRenderer<SpectralArrowEntity> {
     }
 
     @Override
-    protected Identifier getTexture(SpectralArrowEntity spectralArrowEntity) {
+    public Identifier getTexture(SpectralArrowEntity spectralArrowEntity) {
         return SKIN;
     }
 }

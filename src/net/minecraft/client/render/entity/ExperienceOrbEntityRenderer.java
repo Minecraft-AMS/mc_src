@@ -7,17 +7,18 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.util.math.Matrix3f;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -26,61 +27,58 @@ import net.minecraft.util.math.MathHelper;
 public class ExperienceOrbEntityRenderer
 extends EntityRenderer<ExperienceOrbEntity> {
     private static final Identifier SKIN = new Identifier("textures/entity/experience_orb.png");
+    private static final RenderLayer TEXTURE_LAYER = RenderLayer.getEntityTranslucent(SKIN);
 
     public ExperienceOrbEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher);
-        this.field_4673 = 0.15f;
-        this.field_4672 = 0.75f;
+        this.shadowSize = 0.15f;
+        this.shadowDarkness = 0.75f;
     }
 
     @Override
-    public void render(ExperienceOrbEntity experienceOrbEntity, double d, double e, double f, float g, float h) {
-        if (this.renderOutlines || MinecraftClient.getInstance().getEntityRenderManager().gameOptions == null) {
-            return;
-        }
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef((float)d, (float)e, (float)f);
-        this.bindEntityTexture(experienceOrbEntity);
-        DiffuseLighting.enable();
-        int i = experienceOrbEntity.getOrbSize();
-        float j = (float)(i % 4 * 16 + 0) / 64.0f;
-        float k = (float)(i % 4 * 16 + 16) / 64.0f;
-        float l = (float)(i / 4 * 16 + 0) / 64.0f;
-        float m = (float)(i / 4 * 16 + 16) / 64.0f;
+    protected int getBlockLight(ExperienceOrbEntity experienceOrbEntity, float f) {
+        return MathHelper.clamp(super.getBlockLight(experienceOrbEntity, f) + 7, 0, 15);
+    }
+
+    @Override
+    public void render(ExperienceOrbEntity experienceOrbEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        matrixStack.push();
+        int j = experienceOrbEntity.getOrbSize();
+        float h = (float)(j % 4 * 16 + 0) / 64.0f;
+        float k = (float)(j % 4 * 16 + 16) / 64.0f;
+        float l = (float)(j / 4 * 16 + 0) / 64.0f;
+        float m = (float)(j / 4 * 16 + 16) / 64.0f;
         float n = 1.0f;
         float o = 0.5f;
         float p = 0.25f;
-        int q = experienceOrbEntity.getLightmapCoordinates();
-        int r = q % 65536;
-        int s = q / 65536;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, r, s);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        float t = 255.0f;
-        float u = ((float)experienceOrbEntity.renderTicks + h) / 2.0f;
-        int v = (int)((MathHelper.sin(u + 0.0f) + 1.0f) * 0.5f * 255.0f);
-        int w = 255;
-        int x = (int)((MathHelper.sin(u + 4.1887903f) + 1.0f) * 0.1f * 255.0f);
-        GlStateManager.translatef(0.0f, 0.1f, 0.0f);
-        GlStateManager.rotatef(180.0f - this.renderManager.cameraYaw, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef((float)(this.renderManager.gameOptions.perspective == 2 ? -1 : 1) * -this.renderManager.cameraPitch, 1.0f, 0.0f, 0.0f);
-        float y = 0.3f;
-        GlStateManager.scalef(0.3f, 0.3f, 0.3f);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR_NORMAL);
-        bufferBuilder.vertex(-0.5, -0.25, 0.0).texture(j, m).color(v, 255, x, 128).normal(0.0f, 1.0f, 0.0f).next();
-        bufferBuilder.vertex(0.5, -0.25, 0.0).texture(k, m).color(v, 255, x, 128).normal(0.0f, 1.0f, 0.0f).next();
-        bufferBuilder.vertex(0.5, 0.75, 0.0).texture(k, l).color(v, 255, x, 128).normal(0.0f, 1.0f, 0.0f).next();
-        bufferBuilder.vertex(-0.5, 0.75, 0.0).texture(j, l).color(v, 255, x, 128).normal(0.0f, 1.0f, 0.0f).next();
-        tessellator.draw();
-        GlStateManager.disableBlend();
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.popMatrix();
-        super.render(experienceOrbEntity, d, e, f, g, h);
+        float q = 255.0f;
+        float r = ((float)experienceOrbEntity.renderTicks + g) / 2.0f;
+        int s = (int)((MathHelper.sin(r + 0.0f) + 1.0f) * 0.5f * 255.0f);
+        int t = 255;
+        int u = (int)((MathHelper.sin(r + 4.1887903f) + 1.0f) * 0.1f * 255.0f);
+        matrixStack.translate(0.0, 0.1f, 0.0);
+        matrixStack.multiply(this.renderManager.getRotation());
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
+        float v = 0.3f;
+        matrixStack.scale(0.3f, 0.3f, 0.3f);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(TEXTURE_LAYER);
+        MatrixStack.Entry entry = matrixStack.peek();
+        Matrix4f matrix4f = entry.getModel();
+        Matrix3f matrix3f = entry.getNormal();
+        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, -0.5f, -0.25f, s, 255, u, h, m, i);
+        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, 0.5f, -0.25f, s, 255, u, k, m, i);
+        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, 0.5f, 0.75f, s, 255, u, k, l, i);
+        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, -0.5f, 0.75f, s, 255, u, h, l, i);
+        matrixStack.pop();
+        super.render(experienceOrbEntity, f, g, matrixStack, vertexConsumerProvider, i);
+    }
+
+    private static void method_23171(VertexConsumer vertexConsumer, Matrix4f matrix4f, Matrix3f matrix3f, float f, float g, int i, int j, int k, float h, float l, int m) {
+        vertexConsumer.vertex(matrix4f, f, g, 0.0f).color(i, j, k, 128).texture(h, l).overlay(OverlayTexture.DEFAULT_UV).light(m).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
     }
 
     @Override
-    protected Identifier getTexture(ExperienceOrbEntity experienceOrbEntity) {
+    public Identifier getTexture(ExperienceOrbEntity experienceOrbEntity) {
         return SKIN;
     }
 }

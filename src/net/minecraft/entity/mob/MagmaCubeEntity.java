@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.mob;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -26,10 +20,10 @@ import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class MagmaCubeEntity
 extends SlimeEntity {
@@ -43,25 +37,19 @@ extends SlimeEntity {
         this.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED).setBaseValue(0.2f);
     }
 
-    public static boolean method_20678(EntityType<MagmaCubeEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return iWorld.getDifficulty() != Difficulty.PEACEFUL;
+    public static boolean canMagmaCubeSpawn(EntityType<MagmaCubeEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return world.getDifficulty() != Difficulty.PEACEFUL;
     }
 
     @Override
-    public boolean canSpawn(CollisionView world) {
-        return world.intersectsEntities(this) && !world.intersectsFluid(this.getBoundingBox());
+    public boolean canSpawn(WorldView world) {
+        return world.intersectsEntities(this) && !world.containsFluid(this.getBoundingBox());
     }
 
     @Override
     protected void setSize(int size, boolean heal) {
         super.setSize(size, heal);
         this.getAttributeInstance(EntityAttributes.ARMOR).setBaseValue(size * 3);
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public int getLightmapCoordinates() {
-        return 0xF000F0;
     }
 
     @Override
@@ -97,7 +85,7 @@ extends SlimeEntity {
     @Override
     protected void jump() {
         Vec3d vec3d = this.getVelocity();
-        this.setVelocity(vec3d.x, 0.42f + (float)this.getSize() * 0.1f, vec3d.z);
+        this.setVelocity(vec3d.x, this.getJumpVelocity() + (float)this.getSize() * 0.1f, vec3d.z);
         this.velocityDirty = true;
     }
 
@@ -113,7 +101,8 @@ extends SlimeEntity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -122,8 +111,8 @@ extends SlimeEntity {
     }
 
     @Override
-    protected int getDamageAmount() {
-        return super.getDamageAmount() + 2;
+    protected float getDamageAmount() {
+        return super.getDamageAmount() + 2.0f;
     }
 
     @Override

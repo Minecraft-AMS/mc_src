@@ -2,70 +2,68 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class ShulkerEntityModel<T extends ShulkerEntity>
-extends EntityModel<T> {
-    private final ModelPart field_3553;
-    private final ModelPart field_3555;
-    private final ModelPart field_3554;
+extends CompositeEntityModel<T> {
+    private final ModelPart bottomShell;
+    private final ModelPart topShell = new ModelPart(64, 64, 0, 0);
+    private final ModelPart head;
 
     public ShulkerEntityModel() {
-        this.textureHeight = 64;
-        this.textureWidth = 64;
-        this.field_3555 = new ModelPart(this);
-        this.field_3553 = new ModelPart(this);
-        this.field_3554 = new ModelPart(this);
-        this.field_3555.setTextureOffset(0, 0).addCuboid(-8.0f, -16.0f, -8.0f, 16, 12, 16);
-        this.field_3555.setPivot(0.0f, 24.0f, 0.0f);
-        this.field_3553.setTextureOffset(0, 28).addCuboid(-8.0f, -8.0f, -8.0f, 16, 8, 16);
-        this.field_3553.setPivot(0.0f, 24.0f, 0.0f);
-        this.field_3554.setTextureOffset(0, 52).addCuboid(-3.0f, 0.0f, -3.0f, 6, 6, 6);
-        this.field_3554.setPivot(0.0f, 12.0f, 0.0f);
+        this.bottomShell = new ModelPart(64, 64, 0, 28);
+        this.head = new ModelPart(64, 64, 0, 52);
+        this.topShell.addCuboid(-8.0f, -16.0f, -8.0f, 16.0f, 12.0f, 16.0f);
+        this.topShell.setPivot(0.0f, 24.0f, 0.0f);
+        this.bottomShell.addCuboid(-8.0f, -8.0f, -8.0f, 16.0f, 8.0f, 16.0f);
+        this.bottomShell.setPivot(0.0f, 24.0f, 0.0f);
+        this.head.addCuboid(-3.0f, 0.0f, -3.0f, 6.0f, 6.0f, 6.0f);
+        this.head.setPivot(0.0f, 12.0f, 0.0f);
     }
 
     @Override
-    public void setAngles(T shulkerEntity, float f, float g, float h, float i, float j, float k) {
-        float l = h - (float)((ShulkerEntity)shulkerEntity).age;
-        float m = (0.5f + ((ShulkerEntity)shulkerEntity).method_7116(l)) * (float)Math.PI;
-        float n = -1.0f + MathHelper.sin(m);
-        float o = 0.0f;
-        if (m > (float)Math.PI) {
-            o = MathHelper.sin(h * 0.1f) * 0.7f;
+    public void setAngles(T shulkerEntity, float f, float g, float h, float i, float j) {
+        float k = h - (float)((ShulkerEntity)shulkerEntity).age;
+        float l = (0.5f + ((ShulkerEntity)shulkerEntity).method_7116(k)) * (float)Math.PI;
+        float m = -1.0f + MathHelper.sin(l);
+        float n = 0.0f;
+        if (l > (float)Math.PI) {
+            n = MathHelper.sin(h * 0.1f) * 0.7f;
         }
-        this.field_3555.setPivot(0.0f, 16.0f + MathHelper.sin(m) * 8.0f + o, 0.0f);
-        this.field_3555.yaw = ((ShulkerEntity)shulkerEntity).method_7116(l) > 0.3f ? n * n * n * n * (float)Math.PI * 0.125f : 0.0f;
-        this.field_3554.pitch = j * ((float)Math.PI / 180);
-        this.field_3554.yaw = i * ((float)Math.PI / 180);
+        this.topShell.setPivot(0.0f, 16.0f + MathHelper.sin(l) * 8.0f + n, 0.0f);
+        this.topShell.yaw = ((ShulkerEntity)shulkerEntity).method_7116(k) > 0.3f ? m * m * m * m * (float)Math.PI * 0.125f : 0.0f;
+        this.head.pitch = j * ((float)Math.PI / 180);
+        this.head.yaw = i * ((float)Math.PI / 180);
     }
 
     @Override
-    public void render(T shulkerEntity, float f, float g, float h, float i, float j, float k) {
-        this.field_3553.render(k);
-        this.field_3555.render(k);
+    public Iterable<ModelPart> getParts() {
+        return ImmutableList.of((Object)this.bottomShell, (Object)this.topShell);
     }
 
-    public ModelPart method_2831() {
-        return this.field_3553;
+    public ModelPart getBottomShell() {
+        return this.bottomShell;
     }
 
-    public ModelPart method_2829() {
-        return this.field_3555;
+    public ModelPart getTopShell() {
+        return this.topShell;
     }
 
-    public ModelPart method_2830() {
-        return this.field_3554;
+    public ModelPart getHead() {
+        return this.head;
     }
 }
 

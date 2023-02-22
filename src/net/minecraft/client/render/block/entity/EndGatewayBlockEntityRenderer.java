@@ -7,39 +7,40 @@
  */
 package net.minecraft.client.render.block.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.EndGatewayBlockEntity;
-import net.minecraft.block.entity.EndPortalBlockEntity;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BeaconBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.EndPortalBlockEntityRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class EndGatewayBlockEntityRenderer
-extends EndPortalBlockEntityRenderer {
+extends EndPortalBlockEntityRenderer<EndGatewayBlockEntity> {
     private static final Identifier BEAM_TEXTURE = new Identifier("textures/entity/end_gateway_beam.png");
 
+    public EndGatewayBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
+        super(blockEntityRenderDispatcher);
+    }
+
     @Override
-    public void render(EndPortalBlockEntity endPortalBlockEntity, double d, double e, double f, float g, int i) {
-        GlStateManager.disableFog();
-        EndGatewayBlockEntity endGatewayBlockEntity = (EndGatewayBlockEntity)endPortalBlockEntity;
+    public void render(EndGatewayBlockEntity endGatewayBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
         if (endGatewayBlockEntity.isRecentlyGenerated() || endGatewayBlockEntity.needsCooldownBeforeTeleporting()) {
-            GlStateManager.alphaFunc(516, 0.1f);
-            this.bindTexture(BEAM_TEXTURE);
-            float h = endGatewayBlockEntity.isRecentlyGenerated() ? endGatewayBlockEntity.getRecentlyGeneratedBeamHeight(g) : endGatewayBlockEntity.getCooldownBeamHeight(g);
-            double j = endGatewayBlockEntity.isRecentlyGenerated() ? 256.0 - e : 50.0;
-            h = MathHelper.sin(h * (float)Math.PI);
-            int k = MathHelper.floor((double)h * j);
+            float g = endGatewayBlockEntity.isRecentlyGenerated() ? endGatewayBlockEntity.getRecentlyGeneratedBeamHeight(f) : endGatewayBlockEntity.getCooldownBeamHeight(f);
+            double d = endGatewayBlockEntity.isRecentlyGenerated() ? 256.0 : 50.0;
+            g = MathHelper.sin(g * (float)Math.PI);
+            int k = MathHelper.floor((double)g * d);
             float[] fs = endGatewayBlockEntity.isRecentlyGenerated() ? DyeColor.MAGENTA.getColorComponents() : DyeColor.PURPLE.getColorComponents();
-            BeaconBlockEntityRenderer.renderLightBeam(d, e, f, g, h, endGatewayBlockEntity.getWorld().getTime(), 0, k, fs, 0.15, 0.175);
-            BeaconBlockEntityRenderer.renderLightBeam(d, e, f, g, h, endGatewayBlockEntity.getWorld().getTime(), 0, -k, fs, 0.15, 0.175);
+            long l = endGatewayBlockEntity.getWorld().getTime();
+            BeaconBlockEntityRenderer.renderLightBeam(matrixStack, vertexConsumerProvider, BEAM_TEXTURE, f, g, l, 0, k, fs, 0.15f, 0.175f);
+            BeaconBlockEntityRenderer.renderLightBeam(matrixStack, vertexConsumerProvider, BEAM_TEXTURE, f, g, l, 0, -k, fs, 0.15f, 0.175f);
         }
-        super.render(endPortalBlockEntity, d, e, f, g, i);
-        GlStateManager.enableFog();
+        super.render(endGatewayBlockEntity, f, matrixStack, vertexConsumerProvider, i, j);
     }
 
     @Override

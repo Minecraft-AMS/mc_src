@@ -67,7 +67,7 @@ public class CloneCommand {
             throw TOOBIG_EXCEPTION.create((Object)32768, (Object)i);
         }
         ServerWorld serverWorld = source.getWorld();
-        if (!serverWorld.isAreaLoaded(begin, end) || !serverWorld.isAreaLoaded(destination, blockPos)) {
+        if (!serverWorld.isRegionLoaded(begin, end) || !serverWorld.isRegionLoaded(destination, blockPos)) {
             throw BlockPosArgumentType.UNLOADED_EXCEPTION.create();
         }
         ArrayList list = Lists.newArrayList();
@@ -90,7 +90,7 @@ public class CloneCommand {
                         deque.addLast(blockPos3);
                         continue;
                     }
-                    if (blockState.isFullOpaque(serverWorld, blockPos3) || blockState.method_21743(serverWorld, blockPos3)) {
+                    if (blockState.isFullOpaque(serverWorld, blockPos3) || blockState.isFullCube(serverWorld, blockPos3)) {
                         list.add(new BlockInfo(blockPos4, blockState, null));
                         deque.addLast(blockPos3);
                         continue;

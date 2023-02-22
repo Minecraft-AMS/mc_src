@@ -18,7 +18,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.pattern.BlockPattern;
 import net.minecraft.block.pattern.CachedBlockPosition;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.EntityType;
@@ -26,6 +25,7 @@ import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.mob.ZombiePigmanEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
@@ -63,7 +63,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (world.dimension.hasVisibleSky() && world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && random.nextInt(2000) < world.getDifficulty().getId()) {
             ZombiePigmanEntity entity;
             while (world.getBlockState(pos).getBlock() == this) {
@@ -110,11 +110,6 @@ extends Block {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.TRANSLUCENT;
-    }
-
-    @Override
     public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         if (!entity.hasVehicle() && !entity.hasPassengers() && entity.canUsePortals()) {
             entity.setInNetherPortal(pos);
@@ -128,9 +123,9 @@ extends Block {
             world.playSound((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, SoundEvents.BLOCK_PORTAL_AMBIENT, SoundCategory.BLOCKS, 0.5f, random.nextFloat() * 0.4f + 0.8f, false);
         }
         for (int i = 0; i < 4; ++i) {
-            double d = (float)pos.getX() + random.nextFloat();
-            double e = (float)pos.getY() + random.nextFloat();
-            double f = (float)pos.getZ() + random.nextFloat();
+            double d = (double)pos.getX() + (double)random.nextFloat();
+            double e = (double)pos.getY() + (double)random.nextFloat();
+            double f = (double)pos.getZ() + (double)random.nextFloat();
             double g = ((double)random.nextFloat() - 0.5) * 0.5;
             double h = ((double)random.nextFloat() - 0.5) * 0.5;
             double j = ((double)random.nextFloat() - 0.5) * 0.5;
@@ -176,16 +171,16 @@ extends Block {
         builder.add(AXIS);
     }
 
-    public BlockPattern.Result findPortal(IWorld world, BlockPos pos) {
+    public static BlockPattern.Result findPortal(IWorld iWorld, BlockPos world) {
         Direction.Axis axis = Direction.Axis.Z;
-        AreaHelper areaHelper = new AreaHelper(world, pos, Direction.Axis.X);
-        LoadingCache<BlockPos, CachedBlockPosition> loadingCache = BlockPattern.makeCache(world, true);
+        AreaHelper areaHelper = new AreaHelper(iWorld, world, Direction.Axis.X);
+        LoadingCache<BlockPos, CachedBlockPosition> loadingCache = BlockPattern.makeCache(iWorld, true);
         if (!areaHelper.isValid()) {
             axis = Direction.Axis.X;
-            areaHelper = new AreaHelper(world, pos, Direction.Axis.Z);
+            areaHelper = new AreaHelper(iWorld, world, Direction.Axis.Z);
         }
         if (!areaHelper.isValid()) {
-            return new BlockPattern.Result(pos, Direction.NORTH, Direction.UP, loadingCache, 1, 1, 1);
+            return new BlockPattern.Result(world, Direction.NORTH, Direction.UP, loadingCache, 1, 1, 1);
         }
         int[] is = new int[Direction.AxisDirection.values().length];
         Direction direction = areaHelper.negativeDir.rotateYCounterclockwise();

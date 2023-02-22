@@ -7,6 +7,7 @@
 package net.minecraft.entity.passive;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.SpawnType;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -18,6 +19,8 @@ import net.minecraft.item.SpawnEggItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.Hand;
+import net.minecraft.world.IWorld;
+import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,6 +33,19 @@ extends MobEntityWithAi {
 
     protected PassiveEntity(EntityType<? extends PassiveEntity> type, World world) {
         super((EntityType<? extends MobEntityWithAi>)type, world);
+    }
+
+    @Override
+    public net.minecraft.entity.EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable net.minecraft.entity.EntityData entityData, @Nullable CompoundTag entityTag) {
+        EntityData entityData2;
+        if (entityData == null) {
+            entityData = new EntityData();
+        }
+        if ((entityData2 = (EntityData)entityData).canSpawnBaby() && entityData2.getSpawnedCount() > 0 && this.random.nextFloat() <= entityData2.getBabyChance()) {
+            this.setBreedingAge(-24000);
+        }
+        entityData2.countSpawned();
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     @Nullable
@@ -46,7 +62,7 @@ extends MobEntityWithAi {
             PassiveEntity passiveEntity;
             if (!this.world.isClient && (passiveEntity = this.createChild(this)) != null) {
                 passiveEntity.setBreedingAge(-24000);
-                passiveEntity.refreshPositionAndAngles(this.x, this.y, this.z, 0.0f, 0.0f);
+                passiveEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), 0.0f, 0.0f);
                 this.world.spawnEntity(passiveEntity);
                 if (itemStack.hasCustomName()) {
                     passiveEntity.setCustomName(itemStack.getName());
@@ -134,7 +150,7 @@ extends MobEntityWithAi {
         if (this.world.isClient) {
             if (this.happyTicksRemaining > 0) {
                 if (this.happyTicksRemaining % 4 == 0) {
-                    this.world.addParticle(ParticleTypes.HAPPY_VILLAGER, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 0.5 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), 0.0, 0.0, 0.0);
+                    this.world.addParticle(ParticleTypes.HAPPY_VILLAGER, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), 0.0, 0.0, 0.0);
                 }
                 --this.happyTicksRemaining;
             }
@@ -154,6 +170,37 @@ extends MobEntityWithAi {
     @Override
     public boolean isBaby() {
         return this.getBreedingAge() < 0;
+    }
+
+    public static class EntityData
+    implements net.minecraft.entity.EntityData {
+        private int spawnCount;
+        private boolean babyAllowed = true;
+        private float babyChance = 0.05f;
+
+        public int getSpawnedCount() {
+            return this.spawnCount;
+        }
+
+        public void countSpawned() {
+            ++this.spawnCount;
+        }
+
+        public boolean canSpawnBaby() {
+            return this.babyAllowed;
+        }
+
+        public void setBabyAllowed(boolean babyAllowed) {
+            this.babyAllowed = babyAllowed;
+        }
+
+        public float getBabyChance() {
+            return this.babyChance;
+        }
+
+        public void setBabyChance(float babyChance) {
+            this.babyChance = babyChance;
+        }
     }
 }
 

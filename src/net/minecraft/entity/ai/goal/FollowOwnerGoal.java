@@ -5,37 +5,39 @@ package net.minecraft.entity.ai.goal;
 
 import java.util.EnumSet;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.LeavesBlock;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
+import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 
 public class FollowOwnerGoal
 extends Goal {
-    protected final TameableEntity tameable;
+    private final TameableEntity tameable;
     private LivingEntity owner;
-    protected final CollisionView world;
-    private final double field_6442;
+    private final WorldView world;
+    private final double speed;
     private final EntityNavigation navigation;
-    private int field_6443;
+    private int updateCountdownTicks;
     private final float maxDistance;
     private final float minDistance;
-    private float field_6447;
+    private float oldWaterPathfindingPenalty;
+    private final boolean leavesAllowed;
 
-    public FollowOwnerGoal(TameableEntity tameable, double speed, float minDistance, float maxDistance) {
+    public FollowOwnerGoal(TameableEntity tameable, double speed, float minDistance, float maxDistance, boolean leavesAllowed) {
         this.tameable = tameable;
         this.world = tameable.world;
-        this.field_6442 = speed;
+        this.speed = speed;
         this.navigation = tameable.getNavigation();
         this.minDistance = minDistance;
         this.maxDistance = maxDistance;
+        this.leavesAllowed = leavesAllowed;
         this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
         if (!(tameable.getNavigation() instanceof MobNavigation) && !(tameable.getNavigation() instanceof BirdNavigation)) {
             throw new IllegalArgumentException("Unsupported mob type for FollowOwnerGoal");
@@ -48,7 +50,7 @@ extends Goal {
         if (livingEntity == null) {
             return false;
         }
-        if (livingEntity instanceof PlayerEntity && ((PlayerEntity)livingEntity).isSpectator()) {
+        if (livingEntity.isSpectator()) {
             return false;
         }
         if (this.tameable.isSitting()) {
@@ -63,13 +65,19 @@ extends Goal {
 
     @Override
     public boolean shouldContinue() {
-        return !this.navigation.isIdle() && this.tameable.squaredDistanceTo(this.owner) > (double)(this.maxDistance * this.maxDistance) && !this.tameable.isSitting();
+        if (this.navigation.isIdle()) {
+            return false;
+        }
+        if (this.tameable.isSitting()) {
+            return false;
+        }
+        return !(this.tameable.squaredDistanceTo(this.owner) <= (double)(this.maxDistance * this.maxDistance));
     }
 
     @Override
     public void start() {
-        this.field_6443 = 0;
-        this.field_6447 = this.tameable.getPathfindingPenalty(PathNodeType.WATER);
+        this.updateCountdownTicks = 0;
+        this.oldWaterPathfindingPenalty = this.tameable.getPathfindingPenalty(PathNodeType.WATER);
         this.tameable.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
     }
 
@@ -77,44 +85,65 @@ extends Goal {
     public void stop() {
         this.owner = null;
         this.navigation.stop();
-        this.tameable.setPathfindingPenalty(PathNodeType.WATER, this.field_6447);
+        this.tameable.setPathfindingPenalty(PathNodeType.WATER, this.oldWaterPathfindingPenalty);
     }
 
     @Override
     public void tick() {
         this.tameable.getLookControl().lookAt(this.owner, 10.0f, this.tameable.getLookPitchSpeed());
-        if (this.tameable.isSitting()) {
+        if (--this.updateCountdownTicks > 0) {
             return;
         }
-        if (--this.field_6443 > 0) {
-            return;
-        }
-        this.field_6443 = 10;
-        if (this.navigation.startMovingTo(this.owner, this.field_6442)) {
-            return;
-        }
+        this.updateCountdownTicks = 10;
         if (this.tameable.isLeashed() || this.tameable.hasVehicle()) {
             return;
         }
-        if (this.tameable.squaredDistanceTo(this.owner) < 144.0) {
-            return;
-        }
-        int i = MathHelper.floor(this.owner.x) - 2;
-        int j = MathHelper.floor(this.owner.z) - 2;
-        int k = MathHelper.floor(this.owner.getBoundingBox().y1);
-        for (int l = 0; l <= 4; ++l) {
-            for (int m = 0; m <= 4; ++m) {
-                if (l >= 1 && m >= 1 && l <= 3 && m <= 3 || !this.method_6263(new BlockPos(i + l, k - 1, j + m))) continue;
-                this.tameable.refreshPositionAndAngles((float)(i + l) + 0.5f, k, (float)(j + m) + 0.5f, this.tameable.yaw, this.tameable.pitch);
-                this.navigation.stop();
-                return;
-            }
+        if (this.tameable.squaredDistanceTo(this.owner) >= 144.0) {
+            this.tryTeleport();
+        } else {
+            this.navigation.startMovingTo(this.owner, this.speed);
         }
     }
 
-    protected boolean method_6263(BlockPos pos) {
-        BlockState blockState = this.world.getBlockState(pos);
-        return blockState.allowsSpawning(this.world, pos, this.tameable.getType()) && this.world.isAir(pos.up()) && this.world.isAir(pos.up(2));
+    private void tryTeleport() {
+        BlockPos blockPos = new BlockPos(this.owner);
+        for (int i = 0; i < 10; ++i) {
+            int j = this.getRandomInt(-3, 3);
+            int k = this.getRandomInt(-1, 1);
+            int l = this.getRandomInt(-3, 3);
+            boolean bl = this.tryTeleportTo(blockPos.getX() + j, blockPos.getY() + k, blockPos.getZ() + l);
+            if (!bl) continue;
+            return;
+        }
+    }
+
+    private boolean tryTeleportTo(int x, int y, int z) {
+        if (Math.abs((double)x - this.owner.getX()) < 2.0 && Math.abs((double)z - this.owner.getZ()) < 2.0) {
+            return false;
+        }
+        if (!this.canTeleportTo(new BlockPos(x, y, z))) {
+            return false;
+        }
+        this.tameable.refreshPositionAndAngles((float)x + 0.5f, y, (float)z + 0.5f, this.tameable.yaw, this.tameable.pitch);
+        this.navigation.stop();
+        return true;
+    }
+
+    private boolean canTeleportTo(BlockPos pos) {
+        PathNodeType pathNodeType = LandPathNodeMaker.getPathNodeType(this.world, pos.getX(), pos.getY(), pos.getZ());
+        if (pathNodeType != PathNodeType.WALKABLE) {
+            return false;
+        }
+        BlockState blockState = this.world.getBlockState(pos.down());
+        if (!this.leavesAllowed && blockState.getBlock() instanceof LeavesBlock) {
+            return false;
+        }
+        BlockPos blockPos = pos.subtract(new BlockPos(this.tameable));
+        return this.world.doesNotCollide(this.tameable, this.tameable.getBoundingBox().offset(blockPos));
+    }
+
+    private int getRandomInt(int min, int max) {
+        return this.tameable.getRandom().nextInt(max - min + 1) + min;
     }
 }
 

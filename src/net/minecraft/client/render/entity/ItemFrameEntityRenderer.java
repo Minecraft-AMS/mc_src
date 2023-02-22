@@ -4,15 +4,15 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.TexturedRenderLayers;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
@@ -21,19 +21,21 @@ import net.minecraft.client.render.model.BakedModelManager;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.ModelIdentifier;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.map.MapState;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 
 @Environment(value=EnvType.CLIENT)
 public class ItemFrameEntityRenderer
 extends EntityRenderer<ItemFrameEntity> {
-    private static final Identifier MAP_BACKGROUND_TEX = new Identifier("textures/map/map_background.png");
     private static final ModelIdentifier NORMAL_FRAME = new ModelIdentifier("item_frame", "map=false");
     private static final ModelIdentifier MAP_FRAME = new ModelIdentifier("item_frame", "map=true");
     private final MinecraftClient client = MinecraftClient.getInstance();
@@ -45,94 +47,75 @@ extends EntityRenderer<ItemFrameEntity> {
     }
 
     @Override
-    public void render(ItemFrameEntity itemFrameEntity, double d, double e, double f, float g, float h) {
-        GlStateManager.pushMatrix();
-        BlockPos blockPos = itemFrameEntity.getDecorationBlockPos();
-        double i = (double)blockPos.getX() - itemFrameEntity.x + d;
-        double j = (double)blockPos.getY() - itemFrameEntity.y + e;
-        double k = (double)blockPos.getZ() - itemFrameEntity.z + f;
-        GlStateManager.translated(i + 0.5, j + 0.5, k + 0.5);
-        GlStateManager.rotatef(itemFrameEntity.pitch, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(180.0f - itemFrameEntity.yaw, 0.0f, 1.0f, 0.0f);
-        this.renderManager.textureManager.bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
+    public void render(ItemFrameEntity itemFrameEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        super.render(itemFrameEntity, f, g, matrixStack, vertexConsumerProvider, i);
+        matrixStack.push();
+        Direction direction = itemFrameEntity.getHorizontalFacing();
+        Vec3d vec3d = this.getPositionOffset(itemFrameEntity, g);
+        matrixStack.translate(-vec3d.getX(), -vec3d.getY(), -vec3d.getZ());
+        double d = 0.46875;
+        matrixStack.translate((double)direction.getOffsetX() * 0.46875, (double)direction.getOffsetY() * 0.46875, (double)direction.getOffsetZ() * 0.46875);
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(itemFrameEntity.pitch));
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f - itemFrameEntity.yaw));
         BlockRenderManager blockRenderManager = this.client.getBlockRenderManager();
         BakedModelManager bakedModelManager = blockRenderManager.getModels().getModelManager();
         ModelIdentifier modelIdentifier = itemFrameEntity.getHeldItemStack().getItem() == Items.FILLED_MAP ? MAP_FRAME : NORMAL_FRAME;
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(-0.5f, -0.5f, -0.5f);
-        if (this.renderOutlines) {
-            GlStateManager.enableColorMaterial();
-            GlStateManager.setupSolidRenderingTextureCombine(this.getOutlineColor(itemFrameEntity));
-        }
-        blockRenderManager.getModelRenderer().render(bakedModelManager.getModel(modelIdentifier), 1.0f, 1.0f, 1.0f, 1.0f);
-        if (this.renderOutlines) {
-            GlStateManager.tearDownSolidRenderingTextureCombine();
-            GlStateManager.disableColorMaterial();
-        }
-        GlStateManager.popMatrix();
-        GlStateManager.enableLighting();
-        if (itemFrameEntity.getHeldItemStack().getItem() == Items.FILLED_MAP) {
-            GlStateManager.pushLightingAttributes();
-            DiffuseLighting.enable();
-        }
-        GlStateManager.translatef(0.0f, 0.0f, 0.4375f);
-        this.renderItem(itemFrameEntity);
-        if (itemFrameEntity.getHeldItemStack().getItem() == Items.FILLED_MAP) {
-            DiffuseLighting.disable();
-            GlStateManager.popAttributes();
-        }
-        GlStateManager.enableLighting();
-        GlStateManager.popMatrix();
-        this.renderLabelIfPresent(itemFrameEntity, d + (double)((float)itemFrameEntity.getHorizontalFacing().getOffsetX() * 0.3f), e - 0.25, f + (double)((float)itemFrameEntity.getHorizontalFacing().getOffsetZ() * 0.3f));
-    }
-
-    @Override
-    @Nullable
-    protected Identifier getTexture(ItemFrameEntity itemFrameEntity) {
-        return null;
-    }
-
-    private void renderItem(ItemFrameEntity itemFrameEntity) {
+        matrixStack.push();
+        matrixStack.translate(-0.5, -0.5, -0.5);
+        blockRenderManager.getModelRenderer().render(matrixStack.peek(), vertexConsumerProvider.getBuffer(TexturedRenderLayers.getEntitySolid()), null, bakedModelManager.getModel(modelIdentifier), 1.0f, 1.0f, 1.0f, i, OverlayTexture.DEFAULT_UV);
+        matrixStack.pop();
         ItemStack itemStack = itemFrameEntity.getHeldItemStack();
-        if (itemStack.isEmpty()) {
-            return;
-        }
-        GlStateManager.pushMatrix();
-        boolean bl = itemStack.getItem() == Items.FILLED_MAP;
-        int i = bl ? itemFrameEntity.getRotation() % 4 * 2 : itemFrameEntity.getRotation();
-        GlStateManager.rotatef((float)i * 360.0f / 8.0f, 0.0f, 0.0f, 1.0f);
-        if (bl) {
-            GlStateManager.disableLighting();
-            this.renderManager.textureManager.bindTexture(MAP_BACKGROUND_TEX);
-            GlStateManager.rotatef(180.0f, 0.0f, 0.0f, 1.0f);
-            float f = 0.0078125f;
-            GlStateManager.scalef(0.0078125f, 0.0078125f, 0.0078125f);
-            GlStateManager.translatef(-64.0f, -64.0f, 0.0f);
-            MapState mapState = FilledMapItem.getOrCreateMapState(itemStack, itemFrameEntity.world);
-            GlStateManager.translatef(0.0f, 0.0f, -1.0f);
-            if (mapState != null) {
-                this.client.gameRenderer.getMapRenderer().draw(mapState, true);
+        if (!itemStack.isEmpty()) {
+            boolean bl = itemStack.getItem() == Items.FILLED_MAP;
+            matrixStack.translate(0.0, 0.0, 0.4375);
+            int j = bl ? itemFrameEntity.getRotation() % 4 * 2 : itemFrameEntity.getRotation();
+            matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)j * 360.0f / 8.0f));
+            if (bl) {
+                matrixStack.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+                float h = 0.0078125f;
+                matrixStack.scale(0.0078125f, 0.0078125f, 0.0078125f);
+                matrixStack.translate(-64.0, -64.0, 0.0);
+                MapState mapState = FilledMapItem.getOrCreateMapState(itemStack, itemFrameEntity.world);
+                matrixStack.translate(0.0, 0.0, -1.0);
+                if (mapState != null) {
+                    this.client.gameRenderer.getMapRenderer().draw(matrixStack, vertexConsumerProvider, mapState, true, i);
+                }
+            } else {
+                matrixStack.scale(0.5f, 0.5f, 0.5f);
+                this.itemRenderer.renderItem(itemStack, ModelTransformation.Mode.FIXED, i, OverlayTexture.DEFAULT_UV, matrixStack, vertexConsumerProvider);
             }
-        } else {
-            GlStateManager.scalef(0.5f, 0.5f, 0.5f);
-            this.itemRenderer.renderItem(itemStack, ModelTransformation.Type.FIXED);
         }
-        GlStateManager.popMatrix();
+        matrixStack.pop();
     }
 
     @Override
-    protected void renderLabelIfPresent(ItemFrameEntity itemFrameEntity, double d, double e, double f) {
-        float h;
+    public Vec3d getPositionOffset(ItemFrameEntity itemFrameEntity, float f) {
+        return new Vec3d((float)itemFrameEntity.getHorizontalFacing().getOffsetX() * 0.3f, -0.25, (float)itemFrameEntity.getHorizontalFacing().getOffsetZ() * 0.3f);
+    }
+
+    @Override
+    public Identifier getTexture(ItemFrameEntity itemFrameEntity) {
+        return SpriteAtlasTexture.BLOCK_ATLAS_TEX;
+    }
+
+    @Override
+    protected boolean hasLabel(ItemFrameEntity itemFrameEntity) {
         if (!MinecraftClient.isHudEnabled() || itemFrameEntity.getHeldItemStack().isEmpty() || !itemFrameEntity.getHeldItemStack().hasCustomName() || this.renderManager.targetedEntity != itemFrameEntity) {
-            return;
+            return false;
         }
-        double g = itemFrameEntity.squaredDistanceTo(this.renderManager.camera.getPos());
-        float f2 = h = itemFrameEntity.isInSneakingPose() ? 32.0f : 64.0f;
-        if (g >= (double)(h * h)) {
-            return;
-        }
-        String string = itemFrameEntity.getHeldItemStack().getName().asFormattedString();
-        this.renderLabel(itemFrameEntity, string, d, e, f, 64);
+        double d = this.renderManager.getSquaredDistanceToCamera(itemFrameEntity);
+        float f = itemFrameEntity.isSneaky() ? 32.0f : 64.0f;
+        return d < (double)(f * f);
+    }
+
+    @Override
+    protected void renderLabelIfPresent(ItemFrameEntity itemFrameEntity, String string, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        super.renderLabelIfPresent(itemFrameEntity, itemFrameEntity.getHeldItemStack().getName().asFormattedString(), matrixStack, vertexConsumerProvider, i);
+    }
+
+    @Override
+    public /* synthetic */ Vec3d getPositionOffset(Entity entity, float tickDelta) {
+        return this.getPositionOffset((ItemFrameEntity)entity, tickDelta);
     }
 }
 

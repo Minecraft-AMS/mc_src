@@ -27,7 +27,7 @@ public class RecipeResultCollection {
     private final Set<Recipe<?>> craftableRecipes = Sets.newHashSet();
     private final Set<Recipe<?>> fittingRecipes = Sets.newHashSet();
     private final Set<Recipe<?>> unlockedRecipes = Sets.newHashSet();
-    private boolean field_3148 = true;
+    private boolean singleOutput = true;
 
     public boolean isInitialized() {
         return !this.unlockedRecipes.isEmpty();
@@ -95,15 +95,15 @@ public class RecipeResultCollection {
 
     public void addRecipe(Recipe<?> recipe) {
         this.recipes.add(recipe);
-        if (this.field_3148) {
+        if (this.singleOutput) {
             ItemStack itemStack2;
             ItemStack itemStack = this.recipes.get(0).getOutput();
-            this.field_3148 = ItemStack.areItemsEqualIgnoreDamage(itemStack, itemStack2 = recipe.getOutput()) && ItemStack.areTagsEqual(itemStack, itemStack2);
+            this.singleOutput = ItemStack.areItemsEqualIgnoreDamage(itemStack, itemStack2 = recipe.getOutput()) && ItemStack.areTagsEqual(itemStack, itemStack2);
         }
     }
 
-    public boolean method_2656() {
-        return this.field_3148;
+    public boolean hasSingleOutput() {
+        return this.singleOutput;
     }
 }
 

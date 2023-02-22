@@ -2,28 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
- *  com.google.common.collect.Sets
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import net.minecraft.advancement.PlayerAdvancementTracker;
+import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
-import net.minecraft.advancement.criterion.Criterion;
 import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.projectile.FishingBobberEntity;
@@ -34,39 +24,12 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
 public class FishingRodHookedCriterion
-implements Criterion<Conditions> {
+extends AbstractCriterion<Conditions> {
     private static final Identifier ID = new Identifier("fishing_rod_hooked");
-    private final Map<PlayerAdvancementTracker, Handler> handlers = Maps.newHashMap();
 
     @Override
     public Identifier getId() {
         return ID;
-    }
-
-    @Override
-    public void beginTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler == null) {
-            handler = new Handler(manager);
-            this.handlers.put(manager, handler);
-        }
-        handler.addCondition(conditionsContainer);
-    }
-
-    @Override
-    public void endTrackingCondition(PlayerAdvancementTracker manager, Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-        Handler handler = this.handlers.get(manager);
-        if (handler != null) {
-            handler.removeCondition(conditionsContainer);
-            if (handler.isEmpty()) {
-                this.handlers.remove(manager);
-            }
-        }
-    }
-
-    @Override
-    public void endTracking(PlayerAdvancementTracker tracker) {
-        this.handlers.remove(tracker);
     }
 
     @Override
@@ -78,10 +41,7 @@ implements Criterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack rodStack, FishingBobberEntity bobber, Collection<ItemStack> fishingLoots) {
-        Handler handler = this.handlers.get(player.getAdvancementTracker());
-        if (handler != null) {
-            handler.handle(player, rodStack, bobber, fishingLoots);
-        }
+        this.test(player.getAdvancementTracker(), conditions -> conditions.matches(player, rodStack, bobber, fishingLoots));
     }
 
     @Override
@@ -89,75 +49,38 @@ implements Criterion<Conditions> {
         return this.conditionsFromJson(obj, context);
     }
 
-    static class Handler {
-        private final PlayerAdvancementTracker manager;
-        private final Set<Criterion.ConditionsContainer<Conditions>> conditions = Sets.newHashSet();
-
-        public Handler(PlayerAdvancementTracker manager) {
-            this.manager = manager;
-        }
-
-        public boolean isEmpty() {
-            return this.conditions.isEmpty();
-        }
-
-        public void addCondition(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.add(conditionsContainer);
-        }
-
-        public void removeCondition(Criterion.ConditionsContainer<Conditions> conditionsContainer) {
-            this.conditions.remove(conditionsContainer);
-        }
-
-        public void handle(ServerPlayerEntity player, ItemStack rodStack, FishingBobberEntity entity, Collection<ItemStack> collection) {
-            List list = null;
-            for (Criterion.ConditionsContainer<Conditions> conditionsContainer : this.conditions) {
-                if (!conditionsContainer.getConditions().matches(player, rodStack, entity, collection)) continue;
-                if (list == null) {
-                    list = Lists.newArrayList();
-                }
-                list.add(conditionsContainer);
-            }
-            if (list != null) {
-                for (Criterion.ConditionsContainer<Conditions> conditionsContainer : list) {
-                    conditionsContainer.apply(this.manager);
-                }
-            }
-        }
-    }
-
     public static class Conditions
     extends AbstractCriterionConditions {
         private final ItemPredicate rod;
-        private final EntityPredicate bobber;
-        private final ItemPredicate item;
+        private final EntityPredicate hookedEntity;
+        private final ItemPredicate caughtItem;
 
         public Conditions(ItemPredicate rod, EntityPredicate bobber, ItemPredicate item) {
             super(ID);
             this.rod = rod;
-            this.bobber = bobber;
-            this.item = item;
+            this.hookedEntity = bobber;
+            this.caughtItem = item;
         }
 
         public static Conditions create(ItemPredicate rod, EntityPredicate bobber, ItemPredicate item) {
             return new Conditions(rod, bobber, item);
         }
 
-        public boolean matches(ServerPlayerEntity player, ItemStack rodStack, FishingBobberEntity bobber, Collection<ItemStack> collection) {
+        public boolean matches(ServerPlayerEntity player, ItemStack rodStack, FishingBobberEntity bobber, Collection<ItemStack> fishingLoots) {
             if (!this.rod.test(rodStack)) {
                 return false;
             }
-            if (!this.bobber.test(player, bobber.hookedEntity)) {
+            if (!this.hookedEntity.test(player, bobber.hookedEntity)) {
                 return false;
             }
-            if (this.item != ItemPredicate.ANY) {
+            if (this.caughtItem != ItemPredicate.ANY) {
                 ItemEntity itemEntity;
                 boolean bl = false;
-                if (bobber.hookedEntity instanceof ItemEntity && this.item.test((itemEntity = (ItemEntity)bobber.hookedEntity).getStack())) {
+                if (bobber.hookedEntity instanceof ItemEntity && this.caughtItem.test((itemEntity = (ItemEntity)bobber.hookedEntity).getStack())) {
                     bl = true;
                 }
-                for (ItemStack itemStack : collection) {
-                    if (!this.item.test(itemStack)) continue;
+                for (ItemStack itemStack : fishingLoots) {
+                    if (!this.caughtItem.test(itemStack)) continue;
                     bl = true;
                     break;
                 }
@@ -172,8 +95,8 @@ implements Criterion<Conditions> {
         public JsonElement toJson() {
             JsonObject jsonObject = new JsonObject();
             jsonObject.add("rod", this.rod.toJson());
-            jsonObject.add("entity", this.bobber.serialize());
-            jsonObject.add("item", this.item.toJson());
+            jsonObject.add("entity", this.hookedEntity.serialize());
+            jsonObject.add("item", this.caughtItem.toJson());
             return jsonObject;
         }
     }

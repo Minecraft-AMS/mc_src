@@ -25,7 +25,7 @@ extends MobEntityRenderer<OcelotEntity, OcelotEntityModel<OcelotEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(OcelotEntity ocelotEntity) {
+    public Identifier getTexture(OcelotEntity ocelotEntity) {
         return SKIN;
     }
 }

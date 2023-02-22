@@ -24,22 +24,25 @@ extends Item {
     @Override
     public ActionResult useOnBlock(ItemUsageContext context) {
         World world = context.getWorld();
-        if (world.isClient) {
-            return ActionResult.SUCCESS;
-        }
         BlockPos blockPos = context.getBlockPos();
         BlockState blockState = world.getBlockState(blockPos);
+        boolean bl = false;
         if (blockState.getBlock() == Blocks.CAMPFIRE) {
             if (!blockState.get(CampfireBlock.LIT).booleanValue() && !blockState.get(CampfireBlock.WATERLOGGED).booleanValue()) {
                 this.playUseSound(world, blockPos);
                 world.setBlockState(blockPos, (BlockState)blockState.with(CampfireBlock.LIT, true));
+                bl = true;
             }
         } else if (world.getBlockState(blockPos = blockPos.offset(context.getSide())).isAir()) {
             this.playUseSound(world, blockPos);
             world.setBlockState(blockPos, ((FireBlock)Blocks.FIRE).getStateForPosition(world, blockPos));
+            bl = true;
         }
-        context.getStack().decrement(1);
-        return ActionResult.SUCCESS;
+        if (bl) {
+            context.getStack().decrement(1);
+            return ActionResult.SUCCESS;
+        }
+        return ActionResult.FAIL;
     }
 
     private void playUseSound(World world, BlockPos pos) {

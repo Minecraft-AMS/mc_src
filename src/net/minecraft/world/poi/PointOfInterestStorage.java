@@ -3,14 +3,20 @@
  * 
  * Could not load the following classes:
  *  com.mojang.datafixers.DataFixer
+ *  com.mojang.datafixers.util.Pair
  *  it.unimi.dsi.fastutil.longs.Long2ByteMap
  *  it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap
+ *  it.unimi.dsi.fastutil.longs.LongOpenHashSet
+ *  it.unimi.dsi.fastutil.longs.LongSet
  */
 package net.minecraft.world.poi;
 
 import com.mojang.datafixers.DataFixer;
+import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.longs.Long2ByteMap;
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,7 +36,9 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.chunk.ChunkSection;
+import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestSet;
 import net.minecraft.world.poi.PointOfInterestType;
@@ -38,10 +46,12 @@ import net.minecraft.world.storage.SerializingRegionBasedStorage;
 
 public class PointOfInterestStorage
 extends SerializingRegionBasedStorage<PointOfInterestSet> {
-    private final PointOfInterestDistanceTracker pointOfInterestDistanceTracker = new PointOfInterestDistanceTracker();
+    private final PointOfInterestDistanceTracker pointOfInterestDistanceTracker;
+    private final LongSet field_20688 = new LongOpenHashSet();
 
     public PointOfInterestStorage(File file, DataFixer dataFixer) {
         super(file, PointOfInterestSet::new, PointOfInterestSet::new, dataFixer, DataFixTypes.POI_CHUNK);
+        this.pointOfInterestDistanceTracker = new PointOfInterestDistanceTracker();
     }
 
     public void add(BlockPos pos, PointOfInterestType type) {
@@ -56,9 +66,13 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
         return this.get(typePredicate, pos, radius, occupationStatus).count();
     }
 
+    public Stream<PointOfInterest> method_22383(Predicate<PointOfInterestType> predicate, BlockPos blockPos, int i, OccupationStatus occupationStatus) {
+        return ChunkPos.stream(new ChunkPos(blockPos), Math.floorDiv(i, 16)).flatMap(chunkPos -> this.get(predicate, (ChunkPos)chunkPos, occupationStatus));
+    }
+
     public Stream<PointOfInterest> get(Predicate<PointOfInterestType> typePredicate, BlockPos pos, int radius, OccupationStatus occupationStatus) {
         int i = radius * radius;
-        return ChunkPos.stream(new ChunkPos(pos), Math.floorDiv(radius, 16)).flatMap(chunkPos -> this.get(typePredicate, (ChunkPos)chunkPos, occupationStatus).filter(pointOfInterest -> pointOfInterest.getPos().getSquaredDistance(pos) <= (double)i));
+        return this.method_22383(typePredicate, pos, radius, occupationStatus).filter(pointOfInterest -> pointOfInterest.getPos().getSquaredDistance(pos) <= (double)i);
     }
 
     public Stream<PointOfInterest> get(Predicate<PointOfInterestType> typePredicate, ChunkPos pos, OccupationStatus occupationStatus) {
@@ -69,12 +83,12 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
         return this.get(pos).map(pointOfInterestSet -> pointOfInterestSet.get(typePredicate, occupationStatus)).orElseGet(Stream::empty);
     }
 
-    public Stream<BlockPos> method_21647(Predicate<PointOfInterestType> predicate, Predicate<BlockPos> predicate2, BlockPos blockPos, int i, OccupationStatus occupationStatus) {
-        return this.get(predicate, blockPos, i, occupationStatus).map(PointOfInterest::getPos).filter(predicate2);
+    public Stream<BlockPos> getPositions(Predicate<PointOfInterestType> typePredicate, Predicate<BlockPos> posPredicate, BlockPos pos, int radius, OccupationStatus occupationStatus) {
+        return this.get(typePredicate, pos, radius, occupationStatus).map(PointOfInterest::getPos).filter(posPredicate);
     }
 
     public Optional<BlockPos> getPosition(Predicate<PointOfInterestType> typePredicate, Predicate<BlockPos> posPredicate, BlockPos pos, int radius, OccupationStatus occupationStatus) {
-        return this.method_21647(typePredicate, posPredicate, pos, radius, occupationStatus).findFirst();
+        return this.getPositions(typePredicate, posPredicate, pos, radius, occupationStatus).findFirst();
     }
 
     public Optional<BlockPos> getNearestPosition(Predicate<PointOfInterestType> typePredicate, Predicate<BlockPos> blockPosPredicate, BlockPos pos, int radius, OccupationStatus occupationStatus) {
@@ -160,6 +174,10 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
             BlockState blockState = chunkSection.getBlockState(ChunkSectionPos.getLocalCoord(blockPos.getX()), ChunkSectionPos.getLocalCoord(blockPos.getY()), ChunkSectionPos.getLocalCoord(blockPos.getZ()));
             PointOfInterestType.from(blockState).ifPresent(pointOfInterestType -> biConsumer.accept((BlockPos)blockPos, (PointOfInterestType)pointOfInterestType));
         });
+    }
+
+    public void method_22439(WorldView worldView, BlockPos blockPos, int i) {
+        ChunkSectionPos.stream(new ChunkPos(blockPos), Math.floorDiv(i, 16)).map(chunkSectionPos -> Pair.of((Object)chunkSectionPos, this.get(chunkSectionPos.asLong()))).filter(pair -> ((Optional)pair.getSecond()).map(PointOfInterestSet::isValid).orElse(false) == false).map(pair -> ((ChunkSectionPos)pair.getFirst()).toChunkPos()).filter(chunkPos -> this.field_20688.add(chunkPos.toLong())).forEach(chunkPos -> worldView.getChunk(chunkPos.x, chunkPos.z, ChunkStatus.EMPTY));
     }
 
     final class PointOfInterestDistanceTracker

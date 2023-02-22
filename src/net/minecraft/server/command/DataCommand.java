@@ -39,6 +39,7 @@ import java.util.function.Function;
 import net.minecraft.command.BlockDataObject;
 import net.minecraft.command.DataCommandObject;
 import net.minecraft.command.EntityDataObject;
+import net.minecraft.command.StorageDataObject;
 import net.minecraft.command.arguments.NbtCompoundTagArgumentType;
 import net.minecraft.command.arguments.NbtPathArgumentType;
 import net.minecraft.command.arguments.NbtTagArgumentType;
@@ -61,7 +62,7 @@ public class DataCommand {
     private static final DynamicCommandExceptionType MODIFY_EXPECTED_LIST_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.expected_list", object));
     private static final DynamicCommandExceptionType MODIFY_EXPECTED_OBJECT_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.expected_object", object));
     private static final DynamicCommandExceptionType MODIFY_INVALID_INDEX_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.invalid_index", object));
-    public static final List<Function<String, ObjectType>> OBJECT_TYPE_FACTORIES = ImmutableList.of(EntityDataObject.field_13800, BlockDataObject.field_13786);
+    public static final List<Function<String, ObjectType>> OBJECT_TYPE_FACTORIES = ImmutableList.of(EntityDataObject.TYPE_FACTORY, BlockDataObject.TYPE_FACTORY, StorageDataObject.TYPE_FACTORY);
     public static final List<ObjectType> TARGET_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(function -> (ObjectType)function.apply("target")).collect(ImmutableList.toImmutableList());
     public static final List<ObjectType> SOURCE_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(function -> (ObjectType)function.apply("source")).collect(ImmutableList.toImmutableList());
 
@@ -72,7 +73,7 @@ public class DataCommand {
                 int i = IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"index");
                 return DataCommand.executeInsert(i, compoundTag, nbtPath, list);
             })))).then(CommandManager.literal("prepend").then(modifyArgumentCreator.create((commandContext, compoundTag, nbtPath, list) -> DataCommand.executeInsert(0, compoundTag, nbtPath, list)))).then(CommandManager.literal("append").then(modifyArgumentCreator.create((commandContext, compoundTag, nbtPath, list) -> DataCommand.executeInsert(-1, compoundTag, nbtPath, list)))).then(CommandManager.literal("set").then(modifyArgumentCreator.create((commandContext, compoundTag, nbtPath, list) -> nbtPath.put(compoundTag, ((Tag)Iterables.getLast((Iterable)list))::copy)))).then(CommandManager.literal("merge").then(modifyArgumentCreator.create((commandContext, compoundTag, nbtPath, list) -> {
-                List<Tag> collection = nbtPath.putIfAbsent(compoundTag, CompoundTag::new);
+                List<Tag> collection = nbtPath.getOrInit(compoundTag, CompoundTag::new);
                 int i = 0;
                 for (Tag tag : collection) {
                     if (!(tag instanceof CompoundTag)) {
@@ -95,7 +96,7 @@ public class DataCommand {
     }
 
     private static int executeInsert(int integer, CompoundTag sourceTag, NbtPathArgumentType.NbtPath path, List<Tag> tags) throws CommandSyntaxException {
-        List<Tag> collection = path.putIfAbsent(sourceTag, ListTag::new);
+        List<Tag> collection = path.getOrInit(sourceTag, ListTag::new);
         int i = 0;
         for (Tag tag : collection) {
             if (!(tag instanceof AbstractListTag)) {

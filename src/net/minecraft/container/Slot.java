@@ -2,25 +2,28 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.container;
 
+import com.mojang.datafixers.util.Pair;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 public class Slot {
     private final int invSlot;
     public final Inventory inventory;
     public int id;
-    public int xPosition;
-    public int yPosition;
+    public final int xPosition;
+    public final int yPosition;
 
     public Slot(Inventory inventory, int invSlot, int xPosition, int yPosition) {
         this.inventory = inventory;
@@ -81,7 +84,7 @@ public class Slot {
 
     @Nullable
     @Environment(value=EnvType.CLIENT)
-    public String getBackgroundSprite() {
+    public Pair<Identifier, Identifier> getBackgroundSprite() {
         return null;
     }
 

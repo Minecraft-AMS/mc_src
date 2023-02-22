@@ -4,22 +4,21 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.ZombieBaseEntityRenderer;
 import net.minecraft.client.render.entity.feature.DrownedOverlayFeatureRenderer;
 import net.minecraft.client.render.entity.model.DrownedEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.mob.DrownedEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class DrownedEntityRenderer
@@ -32,17 +31,16 @@ extends ZombieBaseEntityRenderer<DrownedEntity, DrownedEntityModel<DrownedEntity
     }
 
     @Override
-    @Nullable
-    protected Identifier getTexture(ZombieEntity zombieEntity) {
+    public Identifier getTexture(ZombieEntity zombieEntity) {
         return SKIN;
     }
 
     @Override
-    protected void setupTransforms(DrownedEntity drownedEntity, float f, float g, float h) {
-        float i = drownedEntity.method_6024(h);
-        super.setupTransforms(drownedEntity, f, g, h);
+    protected void setupTransforms(DrownedEntity drownedEntity, MatrixStack matrixStack, float f, float g, float h) {
+        super.setupTransforms(drownedEntity, matrixStack, f, g, h);
+        float i = drownedEntity.getLeaningPitch(h);
         if (i > 0.0f) {
-            GlStateManager.rotatef(MathHelper.lerp(i, drownedEntity.pitch, -10.0f - drownedEntity.pitch), 1.0f, 0.0f, 0.0f);
+            matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(MathHelper.lerp(i, drownedEntity.pitch, -10.0f - drownedEntity.pitch)));
         }
     }
 }

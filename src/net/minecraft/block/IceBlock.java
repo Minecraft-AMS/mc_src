@@ -14,12 +14,12 @@ import net.minecraft.block.Material;
 import net.minecraft.block.TransparentBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.LightType;
@@ -30,11 +30,6 @@ public class IceBlock
 extends TransparentBlock {
     public IceBlock(Block.Settings settings) {
         super(settings);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.TRANSLUCENT;
     }
 
     @Override
@@ -53,7 +48,7 @@ extends TransparentBlock {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (world.getLightLevel(LightType.BLOCK, pos) > 11 - state.getOpacity(world, pos)) {
             this.melt(state, world, pos);
         }

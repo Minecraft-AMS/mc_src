@@ -21,7 +21,6 @@ import net.minecraft.world.chunk.ChunkProvider;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ChunkManager
@@ -33,8 +32,8 @@ AutoCloseable {
     }
 
     @Nullable
-    public WorldChunk method_21730(int i, int j) {
-        return this.getWorldChunk(i, j, false);
+    public WorldChunk getWorldChunk(int chunkX, int chunkZ) {
+        return this.getWorldChunk(chunkX, chunkZ, false);
     }
 
     @Override
@@ -54,8 +53,6 @@ AutoCloseable {
     public abstract void tick(BooleanSupplier var1);
 
     public abstract String getDebugString();
-
-    public abstract ChunkGenerator<?> getChunkGenerator();
 
     @Override
     public void close() throws IOException {

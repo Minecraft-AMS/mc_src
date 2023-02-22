@@ -16,7 +16,7 @@ package net.minecraft.client.gui.screen.multiplayer;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -57,7 +57,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     private final MultiplayerScreen screen;
     private final List<ServerEntry> servers = Lists.newArrayList();
     private final Entry scanningEntry = new ScanningEntry();
-    private final List<LanServerListEntry> lanServers = Lists.newArrayList();
+    private final List<LanServerEntry> lanServers = Lists.newArrayList();
 
     public MultiplayerServerListWidget(MultiplayerScreen screen, MinecraftClient client, int width, int height, int top, int bottom, int entryHeight) {
         super(client, width, height, top, bottom, entryHeight);
@@ -80,21 +80,21 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     }
 
     @Override
+    public boolean keyPressed(int i, int j, int k) {
+        Entry entry = (Entry)this.getSelected();
+        return entry != null && entry.keyPressed(i, j, k) || super.keyPressed(i, j, k);
+    }
+
+    @Override
     protected void moveSelection(int i) {
         int j = this.children().indexOf(this.getSelected());
         int k = MathHelper.clamp(j + i, 0, this.getItemCount() - 1);
         Entry entry = (Entry)this.children().get(k);
-        super.setSelected(entry);
         if (entry instanceof ScanningEntry) {
-            if (i > 0 && k == this.getItemCount() - 1) {
-                return;
-            }
-            if (i < 0 && k == 0) {
-                return;
-            }
-            this.moveSelection(i);
-            return;
+            k = MathHelper.clamp(k + (i > 0 ? 1 : -1), 0, this.getItemCount() - 1);
+            entry = (Entry)this.children().get(k);
         }
+        super.setSelected(entry);
         this.ensureVisible(entry);
         this.screen.updateButtonActivationStates();
     }
@@ -110,7 +110,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     public void setLanServers(List<LanServerInfo> lanServers) {
         this.lanServers.clear();
         for (LanServerInfo lanServerInfo : lanServers) {
-            this.lanServers.add(new LanServerListEntry(this.screen, lanServerInfo));
+            this.lanServers.add(new LanServerEntry(this.screen, lanServerInfo));
         }
         this.updateEntries();
     }
@@ -165,7 +165,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 this.server.playerCountLabel = "";
                 SERVER_PINGER_THREAD_POOL.submit(() -> {
                     try {
-                        this.screen.method_2538().add(this.server);
+                        this.screen.getServerListPinger().add(this.server);
                     }
                     catch (UnknownHostException unknownHostException) {
                         this.server.ping = -1L;
@@ -210,7 +210,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 }
                 string3 = I18n.translate("multiplayer.status.pinging", new Object[0]);
             }
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
             this.client.getTextureManager().bindTexture(DrawableHelper.GUI_ICONS_LOCATION);
             DrawableHelper.blit(k + l - 15, j, r * 10, 176 + s * 8, 10, 8, 256, 256);
             if (this.server.getIcon() != null && !this.server.getIcon().equals(this.iconUri)) {
@@ -233,7 +233,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             if (this.client.options.touchscreen || bl) {
                 this.client.getTextureManager().bindTexture(SERVER_SELECTION_TEXTURE);
                 DrawableHelper.fill(k, j, k + 32, j + 32, -1601138544);
-                GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+                RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 int v = n - k;
                 int w = o - j;
                 if (this.method_20136()) {
@@ -262,9 +262,9 @@ extends AlwaysSelectedEntryListWidget<Entry> {
 
         protected void draw(int x, int y, Identifier textureId) {
             this.client.getTextureManager().bindTexture(textureId);
-            GlStateManager.enableBlend();
+            RenderSystem.enableBlend();
             DrawableHelper.blit(x, y, 0.0f, 0.0f, 32, 32, 32, 32);
-            GlStateManager.disableBlend();
+            RenderSystem.disableBlend();
         }
 
         private boolean method_20136() {
@@ -300,6 +300,27 @@ extends AlwaysSelectedEntryListWidget<Entry> {
         }
 
         @Override
+        public boolean keyPressed(int i, int j, int k) {
+            if (Screen.hasShiftDown()) {
+                MultiplayerServerListWidget multiplayerServerListWidget = this.screen.serverListWidget;
+                int l = multiplayerServerListWidget.children().indexOf(this);
+                if (i == 264 && l < this.screen.getServerList().size() - 1 || i == 265 && l > 0) {
+                    this.swapEntries(l, i == 264 ? l + 1 : l - 1);
+                    return true;
+                }
+            }
+            return super.keyPressed(i, j, k);
+        }
+
+        private void swapEntries(int i, int j) {
+            this.screen.getServerList().swapEntries(i, j);
+            this.screen.serverListWidget.setServers(this.screen.getServerList());
+            Entry entry = (Entry)this.screen.serverListWidget.children().get(j);
+            this.screen.serverListWidget.setSelected(entry);
+            MultiplayerServerListWidget.this.ensureVisible(entry);
+        }
+
+        @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             double d = mouseX - (double)MultiplayerServerListWidget.this.getRowLeft();
             double e = mouseY - (double)MultiplayerServerListWidget.this.getRowTop(MultiplayerServerListWidget.this.children().indexOf(this));
@@ -311,22 +332,11 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 }
                 int i = this.screen.serverListWidget.children().indexOf(this);
                 if (d < 16.0 && e < 16.0 && i > 0) {
-                    int j = Screen.hasShiftDown() ? 0 : i - 1;
-                    this.screen.getServerList().swapEntries(i, j);
-                    if (this.screen.serverListWidget.getSelected() == this) {
-                        this.screen.select(this);
-                    }
-                    this.screen.serverListWidget.setServers(this.screen.getServerList());
+                    this.swapEntries(i, i - 1);
                     return true;
                 }
                 if (d < 16.0 && e > 16.0 && i < this.screen.getServerList().size() - 1) {
-                    ServerList serverList = this.screen.getServerList();
-                    int k = Screen.hasShiftDown() ? serverList.size() - 1 : i + 1;
-                    serverList.swapEntries(i, k);
-                    if (this.screen.serverListWidget.getSelected() == this) {
-                        this.screen.select(this);
-                    }
-                    this.screen.serverListWidget.setServers(serverList);
+                    this.swapEntries(i, i + 1);
                     return true;
                 }
             }
@@ -344,14 +354,14 @@ extends AlwaysSelectedEntryListWidget<Entry> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class LanServerListEntry
+    public static class LanServerEntry
     extends Entry {
         private final MultiplayerScreen screen;
         protected final MinecraftClient client;
         protected final LanServerInfo server;
         private long time;
 
-        protected LanServerListEntry(MultiplayerScreen screen, LanServerInfo server) {
+        protected LanServerEntry(MultiplayerScreen screen, LanServerInfo server) {
             this.screen = screen;
             this.server = server;
             this.client = MinecraftClient.getInstance();

@@ -20,7 +20,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.CollisionView;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockPattern {
@@ -67,8 +67,8 @@ public class BlockPattern {
     }
 
     @Nullable
-    public Result searchAround(CollisionView world, BlockPos blockPos) {
-        LoadingCache<BlockPos, CachedBlockPosition> loadingCache = BlockPattern.makeCache(world, false);
+    public Result searchAround(WorldView worldView, BlockPos blockPos) {
+        LoadingCache<BlockPos, CachedBlockPosition> loadingCache = BlockPattern.makeCache(worldView, false);
         int i = Math.max(Math.max(this.width, this.height), this.depth);
         for (BlockPos blockPos2 : BlockPos.iterate(blockPos, blockPos.add(i - 1, i - 1, i - 1))) {
             for (Direction direction : Direction.values()) {
@@ -82,8 +82,8 @@ public class BlockPattern {
         return null;
     }
 
-    public static LoadingCache<BlockPos, CachedBlockPosition> makeCache(CollisionView world, boolean forceLoad) {
-        return CacheBuilder.newBuilder().build((CacheLoader)new BlockStateCacheLoader(world, forceLoad));
+    public static LoadingCache<BlockPos, CachedBlockPosition> makeCache(WorldView worldView, boolean bl) {
+        return CacheBuilder.newBuilder().build((CacheLoader)new BlockStateCacheLoader(worldView, bl));
     }
 
     protected static BlockPos translate(BlockPos pos, Direction forwards, Direction up, int offsetLeft, int offsetDown, int offsetForwards) {
@@ -155,7 +155,7 @@ public class BlockPattern {
             return MoreObjects.toStringHelper((Object)this).add("up", (Object)this.up).add("forwards", (Object)this.forwards).add("frontTopLeft", (Object)this.frontTopLeft).toString();
         }
 
-        public TeleportTarget method_18478(Direction direction, BlockPos blockPos, double d, Vec3d vec3d, double e) {
+        public TeleportTarget getTeleportTarget(Direction direction, BlockPos blockPos, double d, Vec3d vec3d, double e) {
             double j;
             double i;
             double h;
@@ -196,11 +196,11 @@ public class BlockPattern {
 
     static class BlockStateCacheLoader
     extends CacheLoader<BlockPos, CachedBlockPosition> {
-        private final CollisionView world;
+        private final WorldView world;
         private final boolean forceLoad;
 
-        public BlockStateCacheLoader(CollisionView collisionView, boolean bl) {
-            this.world = collisionView;
+        public BlockStateCacheLoader(WorldView worldView, boolean bl) {
+            this.world = worldView;
             this.forceLoad = bl;
         }
 

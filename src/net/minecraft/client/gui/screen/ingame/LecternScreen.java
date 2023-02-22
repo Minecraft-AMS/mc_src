@@ -46,8 +46,8 @@ implements ContainerProvider<LecternContainer> {
         }
     };
 
-    public LecternScreen(LecternContainer lecternContainer, PlayerInventory playerInventory, Text text) {
-        this.container = lecternContainer;
+    public LecternScreen(LecternContainer container, PlayerInventory inventory, Text title) {
+        this.container = container;
     }
 
     @Override

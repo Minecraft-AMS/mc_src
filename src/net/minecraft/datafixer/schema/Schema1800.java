@@ -24,13 +24,13 @@ extends IdentifierNormalizingSchema {
     }
 
     protected static void method_5285(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> Schema100.method_5196(schema));
+        schema.register(map, string, () -> Schema100.targetItems(schema));
     }
 
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
         Schema1800.method_5285(schema, map, "minecraft:panda");
-        schema.register(map, "minecraft:pillager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (TypeTemplate)Schema100.method_5196(schema)));
+        schema.register(map, "minecraft:pillager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (TypeTemplate)Schema100.targetItems(schema)));
         return map;
     }
 }

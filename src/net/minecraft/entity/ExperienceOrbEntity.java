@@ -25,7 +25,6 @@ import net.minecraft.network.packet.s2c.play.ExperienceOrbSpawnS2CPacket;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -37,7 +36,7 @@ extends Entity {
     private int health = 5;
     private int amount;
     private PlayerEntity target;
-    private int field_6160;
+    private int lastTargetUpdateTick;
 
     public ExperienceOrbEntity(World world, double x, double y, double z, int amount) {
         this((EntityType<? extends ExperienceOrbEntity>)EntityType.EXPERIENCE_ORB, world);
@@ -61,20 +60,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public int getLightmapCoordinates() {
-        float f = 0.5f;
-        f = MathHelper.clamp(f, 0.0f, 1.0f);
-        int i = super.getLightmapCoordinates();
-        int j = i & 0xFF;
-        int k = i >> 16 & 0xFF;
-        if ((j += (int)(f * 15.0f * 16.0f)) > 240) {
-            j = 240;
-        }
-        return j | k << 16;
-    }
-
-    @Override
     public void tick() {
         Vec3d vec3d;
         double e;
@@ -82,9 +67,9 @@ extends Entity {
         if (this.pickupDelay > 0) {
             --this.pickupDelay;
         }
-        this.prevX = this.x;
-        this.prevY = this.y;
-        this.prevZ = this.z;
+        this.prevX = this.getX();
+        this.prevY = this.getY();
+        this.prevZ = this.getZ();
         if (this.isInFluid(FluidTags.WATER)) {
             this.applyWaterMovement();
         } else if (!this.hasNoGravity()) {
@@ -95,26 +80,26 @@ extends Entity {
             this.playSound(SoundEvents.ENTITY_GENERIC_BURN, 0.4f, 2.0f + this.random.nextFloat() * 0.4f);
         }
         if (!this.world.doesNotCollide(this.getBoundingBox())) {
-            this.pushOutOfBlocks(this.x, (this.getBoundingBox().y1 + this.getBoundingBox().y2) / 2.0, this.z);
+            this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().y1 + this.getBoundingBox().y2) / 2.0, this.getZ());
         }
         double d = 8.0;
-        if (this.field_6160 < this.renderTicks - 20 + this.getEntityId() % 100) {
+        if (this.lastTargetUpdateTick < this.renderTicks - 20 + this.getEntityId() % 100) {
             if (this.target == null || this.target.squaredDistanceTo(this) > 64.0) {
                 this.target = this.world.getClosestPlayer(this, 8.0);
             }
-            this.field_6160 = this.renderTicks;
+            this.lastTargetUpdateTick = this.renderTicks;
         }
         if (this.target != null && this.target.isSpectator()) {
             this.target = null;
         }
-        if (this.target != null && (e = (vec3d = new Vec3d(this.target.x - this.x, this.target.y + (double)this.target.getStandingEyeHeight() / 2.0 - this.y, this.target.z - this.z)).lengthSquared()) < 64.0) {
+        if (this.target != null && (e = (vec3d = new Vec3d(this.target.getX() - this.getX(), this.target.getY() + (double)this.target.getStandingEyeHeight() / 2.0 - this.getY(), this.target.getZ() - this.getZ())).lengthSquared()) < 64.0) {
             double f = 1.0 - Math.sqrt(e) / 8.0;
             this.setVelocity(this.getVelocity().add(vec3d.normalize().multiply(f * f * 0.1)));
         }
         this.move(MovementType.SELF, this.getVelocity());
         float g = 0.98f;
         if (this.onGround) {
-            g = this.world.getBlockState(new BlockPos(this.x, this.getBoundingBox().y1 - 1.0, this.z)).getBlock().getSlipperiness() * 0.98f;
+            g = this.world.getBlockState(new BlockPos(this.getX(), this.getY() - 1.0, this.getZ())).getBlock().getSlipperiness() * 0.98f;
         }
         this.setVelocity(this.getVelocity().multiply(g, 0.98, g));
         if (this.onGround) {

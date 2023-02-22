@@ -34,13 +34,14 @@ import org.jetbrains.annotations.Nullable;
 public abstract class CommandBlockExecutor
 implements CommandOutput {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
+    private static final Text field_21515 = new LiteralText("@");
     private long lastExecution = -1L;
     private boolean updateLastExecution = true;
     private int successCount;
     private boolean trackOutput = true;
     private Text lastOutput;
     private String command = "";
-    private Text customName = new LiteralText("@");
+    private Text customName = field_21515;
 
     public int getSuccessCount() {
         return this.successCount;
@@ -73,7 +74,7 @@ implements CommandOutput {
         this.command = compoundTag.getString("Command");
         this.successCount = compoundTag.getInt("SuccessCount");
         if (compoundTag.contains("CustomName", 8)) {
-            this.customName = Text.Serializer.fromJson(compoundTag.getString("CustomName"));
+            this.setCustomName(Text.Serializer.fromJson(compoundTag.getString("CustomName")));
         }
         if (compoundTag.contains("TrackOutput", 1)) {
             this.trackOutput = compoundTag.getBoolean("TrackOutput");
@@ -140,8 +141,8 @@ implements CommandOutput {
         return this.customName;
     }
 
-    public void setCustomName(Text customName) {
-        this.customName = customName;
+    public void setCustomName(@Nullable Text text) {
+        this.customName = text != null ? text : field_21515;
     }
 
     @Override

@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
@@ -27,9 +27,9 @@ extends ContainerScreen<HorseContainer> {
     private float mouseX;
     private float mouseY;
 
-    public HorseScreen(HorseContainer horseContainer, PlayerInventory playerInventory, HorseBaseEntity horseBaseEntity) {
-        super(horseContainer, playerInventory, horseBaseEntity.getDisplayName());
-        this.entity = horseBaseEntity;
+    public HorseScreen(HorseContainer container, PlayerInventory inventory, HorseBaseEntity entity) {
+        super(container, inventory, entity.getDisplayName());
+        this.entity = entity;
         this.passEvents = false;
     }
 
@@ -42,7 +42,7 @@ extends ContainerScreen<HorseContainer> {
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
         AbstractDonkeyEntity abstractDonkeyEntity;
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(TEXTURE);
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;

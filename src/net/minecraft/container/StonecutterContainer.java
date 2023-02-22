@@ -2,14 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.container;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -27,7 +25,6 @@ import net.minecraft.inventory.CraftingResultInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.StonecuttingRecipe;
 import net.minecraft.sound.SoundCategory;
@@ -37,7 +34,6 @@ import net.minecraft.world.World;
 
 public class StonecutterContainer
 extends Container {
-    static final ImmutableList<Item> INGREDIENTS = ImmutableList.of((Object)Items.STONE, (Object)Items.SANDSTONE, (Object)Items.RED_SANDSTONE, (Object)Items.QUARTZ_BLOCK, (Object)Items.COBBLESTONE, (Object)Items.STONE_BRICKS, (Object)Items.BRICKS, (Object)Items.NETHER_BRICKS, (Object)Items.RED_NETHER_BRICKS, (Object)Items.PURPUR_BLOCK, (Object)Items.PRISMARINE, (Object)Items.PRISMARINE_BRICKS, (Object[])new Item[]{Items.DARK_PRISMARINE, Items.ANDESITE, Items.POLISHED_ANDESITE, Items.GRANITE, Items.POLISHED_GRANITE, Items.DIORITE, Items.POLISHED_DIORITE, Items.MOSSY_STONE_BRICKS, Items.MOSSY_COBBLESTONE, Items.SMOOTH_SANDSTONE, Items.SMOOTH_RED_SANDSTONE, Items.SMOOTH_QUARTZ, Items.END_STONE, Items.END_STONE_BRICKS, Items.SMOOTH_STONE, Items.CUT_SANDSTONE, Items.CUT_RED_SANDSTONE});
     private final BlockContext context;
     private final Property selectedRecipe = Property.create();
     private final World world;
@@ -177,7 +173,7 @@ extends Container {
 
     @Override
     public boolean canInsertIntoSlot(ItemStack stack, Slot slot) {
-        return false;
+        return slot.inventory != this.field_19173 && super.canInsertIntoSlot(stack, slot);
     }
 
     @Override
@@ -194,7 +190,7 @@ extends Container {
                     return ItemStack.EMPTY;
                 }
                 slot.onStackChanged(itemStack2, itemStack);
-            } else if (invSlot == 0 ? !this.insertItem(itemStack2, 2, 38, false) : (INGREDIENTS.contains((Object)item) ? !this.insertItem(itemStack2, 0, 1, false) : (invSlot >= 2 && invSlot < 29 ? !this.insertItem(itemStack2, 29, 38, false) : invSlot >= 29 && invSlot < 38 && !this.insertItem(itemStack2, 2, 29, false)))) {
+            } else if (invSlot == 0 ? !this.insertItem(itemStack2, 2, 38, false) : (this.world.getRecipeManager().getFirstMatch(RecipeType.STONECUTTING, new BasicInventory(itemStack2), this.world).isPresent() ? !this.insertItem(itemStack2, 0, 1, false) : (invSlot >= 2 && invSlot < 29 ? !this.insertItem(itemStack2, 29, 38, false) : invSlot >= 29 && invSlot < 38 && !this.insertItem(itemStack2, 2, 29, false)))) {
                 return ItemStack.EMPTY;
             }
             if (itemStack2.isEmpty()) {

@@ -123,7 +123,7 @@ extends CraftingContainer<CraftingInventory> {
                     return ItemStack.EMPTY;
                 }
                 slot.onStackChanged(itemStack2, itemStack);
-            } else if (invSlot >= 10 && invSlot < 37 ? !this.insertItem(itemStack2, 37, 46, false) : (invSlot >= 37 && invSlot < 46 ? !this.insertItem(itemStack2, 10, 37, false) : !this.insertItem(itemStack2, 10, 46, false))) {
+            } else if (invSlot >= 10 && invSlot < 46 ? !this.insertItem(itemStack2, 1, 10, false) && (invSlot < 37 ? !this.insertItem(itemStack2, 37, 46, false) : !this.insertItem(itemStack2, 10, 37, false)) : !this.insertItem(itemStack2, 10, 46, false)) {
                 return ItemStack.EMPTY;
             }
             if (itemStack2.isEmpty()) {

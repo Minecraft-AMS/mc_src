@@ -40,6 +40,7 @@ import net.minecraft.state.property.EnumProperty;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.DefaultedList;
@@ -81,23 +82,17 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasBlockEntityBreakingRender(BlockState state) {
-        return true;
-    }
-
-    @Override
     public BlockRenderType getRenderType(BlockState state) {
         return BlockRenderType.ENTITYBLOCK_ANIMATED;
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         if (player.isSpectator()) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof ShulkerBoxBlockEntity) {
@@ -114,9 +109,9 @@ extends BlockWithEntity {
                 player.openContainer(shulkerBoxBlockEntity);
                 player.incrementStat(Stats.OPEN_SHULKER_BOX);
             }
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     @Override
@@ -229,11 +224,6 @@ extends BlockWithEntity {
             return VoxelShapes.cuboid(((ShulkerBoxBlockEntity)blockEntity).getBoundingBox(state));
         }
         return VoxelShapes.fullCube();
-    }
-
-    @Override
-    public boolean isOpaque(BlockState state) {
-        return false;
     }
 
     @Override

@@ -27,7 +27,7 @@ extends MobEntityRenderer<PigEntity, PigEntityModel<PigEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(PigEntity pigEntity) {
+    public Identifier getTexture(PigEntity pigEntity) {
         return SKIN;
     }
 }

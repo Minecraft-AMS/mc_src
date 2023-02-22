@@ -59,12 +59,12 @@ implements Comparable<Identifier> {
         }
     }
 
-    public Identifier(String string) {
-        this(Identifier.split(string, ':'));
+    public Identifier(String id) {
+        this(Identifier.split(id, ':'));
     }
 
-    public Identifier(String string, String string2) {
-        this(new String[]{string, string2});
+    public Identifier(String namespace, String path) {
+        this(new String[]{namespace, path});
     }
 
     public static Identifier splitOn(String id, char delimiter) {

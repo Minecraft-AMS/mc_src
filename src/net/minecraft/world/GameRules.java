@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
+import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -69,7 +70,18 @@ public class GameRules {
     public static final RuleKey<IntRule> MAX_COMMAND_CHAIN_LENGTH = GameRules.register("maxCommandChainLength", IntRule.method_20764(65536));
     public static final RuleKey<BooleanRule> ANNOUNCE_ADVANCEMENTS = GameRules.register("announceAdvancements", BooleanRule.method_20755(true));
     public static final RuleKey<BooleanRule> DISABLE_RAIDS = GameRules.register("disableRaids", BooleanRule.method_20755(false));
-    private final Map<RuleKey<?>, Rule<?>> rules = (Map)RULE_TYPES.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> ((RuleType)e.getValue()).newRule()));
+    public static final RuleKey<BooleanRule> DO_INSOMNIA = GameRules.register("doInsomnia", BooleanRule.method_20755(true));
+    public static final RuleKey<BooleanRule> DO_IMMEDIATE_RESPAWN = GameRules.register("doImmediateRespawn", BooleanRule.method_20757(false, (server, rule) -> {
+        for (ServerPlayerEntity serverPlayerEntity : server.getPlayerManager().getPlayerList()) {
+            serverPlayerEntity.networkHandler.sendPacket(new GameStateChangeS2CPacket(11, rule.get() ? 1.0f : 0.0f));
+        }
+    }));
+    public static final RuleKey<BooleanRule> DROWNING_DAMAGE = GameRules.register("drowningDamage", BooleanRule.method_20755(true));
+    public static final RuleKey<BooleanRule> FALL_DAMAGE = GameRules.register("fallDamage", BooleanRule.method_20755(true));
+    public static final RuleKey<BooleanRule> FIRE_DAMAGE = GameRules.register("fireDamage", BooleanRule.method_20755(true));
+    public static final RuleKey<BooleanRule> DO_PATROL_SPAWNING = GameRules.register("doPatrolSpawning", BooleanRule.method_20755(true));
+    public static final RuleKey<BooleanRule> DO_TRADER_SPAWNING = GameRules.register("doTraderSpawning", BooleanRule.method_20755(true));
+    private final Map<RuleKey<?>, Rule<?>> rules = (Map)RULE_TYPES.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, e -> ((RuleType)e.getValue()).createRule()));
 
     private static <T extends Rule<T>> RuleKey<T> register(String name, RuleType<T> type) {
         RuleKey ruleKey = new RuleKey(name);
@@ -86,19 +98,23 @@ public class GameRules {
 
     public CompoundTag toNbt() {
         CompoundTag compoundTag = new CompoundTag();
-        this.rules.forEach((key, rule) -> compoundTag.putString(((RuleKey)key).name, rule.valueToString()));
+        this.rules.forEach((key, rule) -> compoundTag.putString(((RuleKey)key).name, rule.serialize()));
         return compoundTag;
     }
 
     public void load(CompoundTag nbt) {
-        this.rules.forEach((key, rule) -> rule.setFromString(nbt.getString(((RuleKey)key).name)));
+        this.rules.forEach((key, rule) -> {
+            if (nbt.contains(((RuleKey)key).name)) {
+                rule.deserialize(nbt.getString(((RuleKey)key).name));
+            }
+        });
     }
 
-    public static void forEachType(RuleConsumer action) {
+    public static void forEachType(RuleTypeConsumer action) {
         RULE_TYPES.forEach((key, type) -> GameRules.accept(action, key, type));
     }
 
-    private static <T extends Rule<T>> void accept(RuleConsumer consumer, RuleKey<?> key, RuleType<?> type) {
+    private static <T extends Rule<T>> void accept(RuleTypeConsumer consumer, RuleKey<?> key, RuleType<?> type) {
         RuleKey<?> ruleKey = key;
         RuleType<?> ruleType = type;
         consumer.accept(ruleKey, ruleType);
@@ -116,17 +132,17 @@ public class GameRules {
     extends Rule<BooleanRule> {
         private boolean value;
 
-        private static RuleType<BooleanRule> of(boolean value, BiConsumer<MinecraftServer, BooleanRule> notifier) {
-            return new RuleType<BooleanRule>(BoolArgumentType::bool, type -> new BooleanRule((RuleType<BooleanRule>)type, value), notifier);
+        private static RuleType<BooleanRule> create(boolean initialValue, BiConsumer<MinecraftServer, BooleanRule> changeCallback) {
+            return new RuleType<BooleanRule>(BoolArgumentType::bool, type -> new BooleanRule((RuleType<BooleanRule>)type, initialValue), changeCallback);
         }
 
-        private static RuleType<BooleanRule> of(boolean value) {
-            return BooleanRule.of(value, (server, rule) -> {});
+        private static RuleType<BooleanRule> create(boolean initialValue) {
+            return BooleanRule.create(initialValue, (server, rule) -> {});
         }
 
-        public BooleanRule(RuleType<BooleanRule> type, boolean value) {
+        public BooleanRule(RuleType<BooleanRule> type, boolean initialValue) {
             super(type);
-            this.value = value;
+            this.value = initialValue;
         }
 
         @Override
@@ -140,21 +156,21 @@ public class GameRules {
 
         public void set(boolean value, @Nullable MinecraftServer server) {
             this.value = value;
-            this.notify(server);
+            this.changed(server);
         }
 
         @Override
-        protected String valueToString() {
+        protected String serialize() {
             return Boolean.toString(this.value);
         }
 
         @Override
-        protected void setFromString(String value) {
+        protected void deserialize(String value) {
             this.value = Boolean.parseBoolean(value);
         }
 
         @Override
-        public int toCommandResult() {
+        public int getCommandResult() {
             return this.value ? 1 : 0;
         }
 
@@ -169,11 +185,11 @@ public class GameRules {
         }
 
         static /* synthetic */ RuleType method_20755(boolean bl) {
-            return BooleanRule.of(bl);
+            return BooleanRule.create(bl);
         }
 
         static /* synthetic */ RuleType method_20757(boolean bl, BiConsumer biConsumer) {
-            return BooleanRule.of(bl, biConsumer);
+            return BooleanRule.create(bl, biConsumer);
         }
     }
 
@@ -181,17 +197,17 @@ public class GameRules {
     extends Rule<IntRule> {
         private int value;
 
-        private static RuleType<IntRule> of(int value, BiConsumer<MinecraftServer, IntRule> notifier) {
-            return new RuleType<IntRule>(IntegerArgumentType::integer, type -> new IntRule((RuleType<IntRule>)type, value), notifier);
+        private static RuleType<IntRule> create(int initialValue, BiConsumer<MinecraftServer, IntRule> changeCallback) {
+            return new RuleType<IntRule>(IntegerArgumentType::integer, type -> new IntRule((RuleType<IntRule>)type, initialValue), changeCallback);
         }
 
-        private static RuleType<IntRule> of(int value) {
-            return IntRule.of(value, (server, rule) -> {});
+        private static RuleType<IntRule> create(int initialValue) {
+            return IntRule.create(initialValue, (server, rule) -> {});
         }
 
-        public IntRule(RuleType<IntRule> rule, int value) {
+        public IntRule(RuleType<IntRule> rule, int initialValue) {
             super(rule);
-            this.value = value;
+            this.value = initialValue;
         }
 
         @Override
@@ -204,12 +220,12 @@ public class GameRules {
         }
 
         @Override
-        protected String valueToString() {
+        protected String serialize() {
             return Integer.toString(this.value);
         }
 
         @Override
-        protected void setFromString(String value) {
+        protected void deserialize(String value) {
             this.value = IntRule.parseInt(value);
         }
 
@@ -226,7 +242,7 @@ public class GameRules {
         }
 
         @Override
-        public int toCommandResult() {
+        public int getCommandResult() {
             return this.value;
         }
 
@@ -241,7 +257,7 @@ public class GameRules {
         }
 
         static /* synthetic */ RuleType method_20764(int i) {
-            return IntRule.of(i);
+            return IntRule.create(i);
         }
     }
 
@@ -256,45 +272,45 @@ public class GameRules {
 
         public void set(CommandContext<ServerCommandSource> context, String name) {
             this.setFromArgument(context, name);
-            this.notify(((ServerCommandSource)context.getSource()).getMinecraftServer());
+            this.changed(((ServerCommandSource)context.getSource()).getMinecraftServer());
         }
 
-        protected void notify(@Nullable MinecraftServer server) {
+        protected void changed(@Nullable MinecraftServer server) {
             if (server != null) {
-                ((RuleType)this.type).notifier.accept(server, this.getThis());
+                ((RuleType)this.type).changeCallback.accept(server, this.getThis());
             }
         }
 
-        protected abstract void setFromString(String var1);
+        protected abstract void deserialize(String var1);
 
-        protected abstract String valueToString();
+        protected abstract String serialize();
 
         public String toString() {
-            return this.valueToString();
+            return this.serialize();
         }
 
-        public abstract int toCommandResult();
+        public abstract int getCommandResult();
 
         protected abstract T getThis();
     }
 
     public static class RuleType<T extends Rule<T>> {
         private final Supplier<ArgumentType<?>> argumentType;
-        private final Function<RuleType<T>, T> factory;
-        private final BiConsumer<MinecraftServer, T> notifier;
+        private final Function<RuleType<T>, T> ruleFactory;
+        private final BiConsumer<MinecraftServer, T> changeCallback;
 
-        private RuleType(Supplier<ArgumentType<?>> argumentType, Function<RuleType<T>, T> factory, BiConsumer<MinecraftServer, T> notifier) {
+        private RuleType(Supplier<ArgumentType<?>> argumentType, Function<RuleType<T>, T> ruleFactory, BiConsumer<MinecraftServer, T> changeCallback) {
             this.argumentType = argumentType;
-            this.factory = factory;
-            this.notifier = notifier;
+            this.ruleFactory = ruleFactory;
+            this.changeCallback = changeCallback;
         }
 
         public RequiredArgumentBuilder<ServerCommandSource, ?> argument(String name) {
             return CommandManager.argument(name, this.argumentType.get());
         }
 
-        public T newRule() {
-            return (T)((Rule)this.factory.apply(this));
+        public T createRule() {
+            return (T)((Rule)this.ruleFactory.apply(this));
         }
     }
 
@@ -326,7 +342,7 @@ public class GameRules {
     }
 
     @FunctionalInterface
-    public static interface RuleConsumer {
+    public static interface RuleTypeConsumer {
         public <T extends Rule<T>> void accept(RuleKey<T> var1, RuleType<T> var2);
     }
 }

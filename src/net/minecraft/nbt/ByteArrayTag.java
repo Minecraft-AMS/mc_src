@@ -16,23 +16,48 @@ import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class ByteArrayTag
 extends AbstractListTag<ByteTag> {
+    public static final TagReader<ByteArrayTag> READER = new TagReader<ByteArrayTag>(){
+
+        @Override
+        public ByteArrayTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(192L);
+            int j = dataInput.readInt();
+            positionTracker.add(8L * (long)j);
+            byte[] bs = new byte[j];
+            dataInput.readFully(bs);
+            return new ByteArrayTag(bs);
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "BYTE[]";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Byte_Array";
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
     private byte[] value;
 
-    ByteArrayTag() {
+    public ByteArrayTag(byte[] value) {
+        this.value = value;
     }
 
-    public ByteArrayTag(byte[] bs) {
-        this.value = bs;
-    }
-
-    public ByteArrayTag(List<Byte> list) {
-        this(ByteArrayTag.toArray(list));
+    public ByteArrayTag(List<Byte> value) {
+        this(ByteArrayTag.toArray(value));
     }
 
     private static byte[] toArray(List<Byte> list) {
@@ -51,17 +76,12 @@ extends AbstractListTag<ByteTag> {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(192L);
-        int i = input.readInt();
-        positionTracker.add(8 * i);
-        this.value = new byte[i];
-        input.readFully(this.value);
-    }
-
-    @Override
     public byte getType() {
         return 7;
+    }
+
+    public TagReader<ByteArrayTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -121,13 +141,13 @@ extends AbstractListTag<ByteTag> {
 
     @Override
     public ByteTag get(int i) {
-        return new ByteTag(this.value[i]);
+        return ByteTag.of(this.value[i]);
     }
 
     public ByteTag method_10606(int i, ByteTag byteTag) {
         byte b = this.value[i];
         this.value[i] = byteTag.getByte();
-        return new ByteTag(b);
+        return ByteTag.of(b);
     }
 
     @Override
@@ -157,7 +177,7 @@ extends AbstractListTag<ByteTag> {
     public ByteTag remove(int i) {
         byte b = this.value[i];
         this.value = ArrayUtils.remove((byte[])this.value, (int)i);
-        return new ByteTag(b);
+        return ByteTag.of(b);
     }
 
     @Override

@@ -63,11 +63,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class PillagerEntity
@@ -145,7 +145,7 @@ RangedAttackMob {
         if (this.isAttacking()) {
             return IllagerEntity.State.ATTACKING;
         }
-        return IllagerEntity.State.CROSSED;
+        return IllagerEntity.State.NEUTRAL;
     }
 
     @Override
@@ -161,12 +161,12 @@ RangedAttackMob {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, CollisionView world) {
-        Block block = world.getBlockState(pos.down()).getBlock();
+    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
+        Block block = worldView.getBlockState(pos.down()).getBlock();
         if (block == Blocks.GRASS_BLOCK || block == Blocks.SAND) {
             return 10.0f;
         }
-        return 0.5f - world.getBrightness(pos);
+        return 0.5f - worldView.getBrightness(pos);
     }
 
     @Override
@@ -232,10 +232,10 @@ RangedAttackMob {
     @Override
     public void shoot(LivingEntity target, ItemStack crossbow, Projectile projectile, float multiShotSpray) {
         Entity entity = (Entity)((Object)projectile);
-        double d = target.x - this.x;
-        double e = target.z - this.z;
+        double d = target.getX() - this.getX();
+        double e = target.getZ() - this.getZ();
         double f = MathHelper.sqrt(d * d + e * e);
-        double g = target.getBoundingBox().y1 + (double)(target.getHeight() / 3.0f) - entity.y + f * (double)0.2f;
+        double g = target.getBodyY(0.3333333333333333) - entity.getY() + f * (double)0.2f;
         Vector3f vector3f = this.getProjectileVelocity(new Vec3d(d, g, e), multiShotSpray);
         projectile.setVelocity(vector3f.getX(), vector3f.getY(), vector3f.getZ(), 1.6f, 14 - this.world.getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ITEM_CROSSBOW_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
@@ -249,15 +249,11 @@ RangedAttackMob {
         }
         Quaternion quaternion = new Quaternion(new Vector3f(vec3d3), 90.0f, true);
         Vector3f vector3f = new Vector3f(vec3d2);
-        vector3f.method_19262(quaternion);
+        vector3f.rotate(quaternion);
         Quaternion quaternion2 = new Quaternion(vector3f, f, true);
         Vector3f vector3f2 = new Vector3f(vec3d2);
-        vector3f2.method_19262(quaternion2);
+        vector3f2.rotate(quaternion2);
         return vector3f2;
-    }
-
-    public BasicInventory getInventory() {
-        return this.inventory;
     }
 
     @Override
@@ -315,18 +311,8 @@ RangedAttackMob {
     }
 
     @Override
-    public boolean cannotDespawn() {
-        return super.cannotDespawn() && this.getInventory().isInvEmpty();
-    }
-
-    @Override
     public SoundEvent getCelebratingSound() {
         return SoundEvents.ENTITY_PILLAGER_CELEBRATE;
-    }
-
-    @Override
-    public boolean canImmediatelyDespawn(double distanceSquared) {
-        return super.canImmediatelyDespawn(distanceSquared) && this.getInventory().isInvEmpty();
     }
 }
 

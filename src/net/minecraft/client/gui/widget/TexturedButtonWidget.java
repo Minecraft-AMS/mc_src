@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.widget;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -51,13 +51,13 @@ extends ButtonWidget {
     public void renderButton(int mouseX, int mouseY, float delta) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         minecraftClient.getTextureManager().bindTexture(this.texture);
-        GlStateManager.disableDepthTest();
+        RenderSystem.disableDepthTest();
         int i = this.v;
         if (this.isHovered()) {
             i += this.hoveredVOffset;
         }
         TexturedButtonWidget.blit(this.x, this.y, this.u, i, this.width, this.height, this.textureWidth, this.textureHeight);
-        GlStateManager.enableDepthTest();
+        RenderSystem.enableDepthTest();
     }
 }
 

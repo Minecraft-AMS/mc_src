@@ -22,10 +22,10 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.ConnectingBlock;
 import net.minecraft.block.NetherPortalBlock;
 import net.minecraft.block.TntBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
@@ -38,10 +38,10 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.dimension.TheEndDimension;
 import org.jetbrains.annotations.Nullable;
@@ -98,18 +98,18 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockPos blockPos = pos.down();
         return world.getBlockState(blockPos).isSideSolidFullSquare(world, blockPos, Direction.UP) || this.areBlocksAroundFlammable(world, pos);
     }
 
     @Override
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 30;
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         boolean bl2;
         if (!world.getGameRules().getBoolean(GameRules.DO_FIRE_TICK)) {
             return;
@@ -218,13 +218,13 @@ extends Block {
         return false;
     }
 
-    private int getBurnChance(CollisionView world, BlockPos pos) {
-        if (!world.isAir(pos)) {
+    private int getBurnChance(WorldView worldView, BlockPos pos) {
+        if (!worldView.isAir(pos)) {
             return 0;
         }
         int i = 0;
         for (Direction direction : Direction.values()) {
-            BlockState blockState = world.getBlockState(pos.offset(direction));
+            BlockState blockState = worldView.getBlockState(pos.offset(direction));
             i = Math.max(this.getBurnChance(blockState), i);
         }
         return i;
@@ -312,11 +312,6 @@ extends Block {
                 world.addParticle(ParticleTypes.LARGE_SMOKE, d, e, f, 0.0, 0.0, 0.0);
             }
         }
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override
@@ -456,6 +451,8 @@ extends Block {
         fireBlock.registerFlammableBlock(Blocks.LECTERN, 30, 20);
         fireBlock.registerFlammableBlock(Blocks.COMPOSTER, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.SWEET_BERRY_BUSH, 60, 100);
+        fireBlock.registerFlammableBlock(Blocks.BEEHIVE, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.BEE_NEST, 30, 20);
     }
 }
 

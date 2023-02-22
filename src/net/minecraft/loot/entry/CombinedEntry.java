@@ -11,19 +11,15 @@ package net.minecraft.loot.entry;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import net.minecraft.loot.LootChoice;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.entry.EntryCombiner;
 import net.minecraft.loot.entry.LootEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public abstract class CombinedEntry
 extends LootEntry {
@@ -37,13 +33,13 @@ extends LootEntry {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        super.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter lootTableReporter) {
+        super.check(lootTableReporter);
         if (this.children.length == 0) {
-            reporter.report("Empty children list");
+            lootTableReporter.report("Empty children list");
         }
         for (int i = 0; i < this.children.length; ++i) {
-            this.children[i].check(reporter.makeChild(".entry[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.children[i].check(lootTableReporter.makeChild(".entry[" + i + "]"));
         }
     }
 

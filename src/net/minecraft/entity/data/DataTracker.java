@@ -173,15 +173,6 @@ public class DataTracker {
         return list;
     }
 
-    public void toPacketByteBuf(PacketByteBuf packetByteBuf) throws IOException {
-        this.lock.readLock().lock();
-        for (Entry<?> entry : this.entries.values()) {
-            DataTracker.writeEntryToPacket(packetByteBuf, entry);
-        }
-        this.lock.readLock().unlock();
-        packetByteBuf.writeByte(255);
-    }
-
     @Nullable
     public List<Entry<?>> getAllEntries() {
         ArrayList list = null;

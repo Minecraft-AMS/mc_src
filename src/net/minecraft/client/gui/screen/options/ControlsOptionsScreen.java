@@ -11,6 +11,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.options.ControlsListWidget;
+import net.minecraft.client.gui.screen.options.GameOptionsScreen;
 import net.minecraft.client.gui.screen.options.MouseOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.options.GameOptions;
@@ -23,29 +24,24 @@ import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
 public class ControlsOptionsScreen
-extends Screen {
-    private static final Option[] OPTIONS = new Option[]{Option.INVERT_MOUSE, Option.SENSITIVITY, Option.TOUCHSCREEN, Option.AUTO_JUMP};
-    private final Screen parent;
-    private final GameOptions options;
+extends GameOptionsScreen {
     public KeyBinding focusedBinding;
     public long time;
     private ControlsListWidget keyBindingListWidget;
     private ButtonWidget resetButton;
 
     public ControlsOptionsScreen(Screen parent, GameOptions options) {
-        super(new TranslatableText("controls.title", new Object[0]));
-        this.parent = parent;
-        this.options = options;
+        super(parent, options, new TranslatableText("controls.title", new Object[0]));
     }
 
     @Override
     protected void init() {
-        this.addButton(new ButtonWidget(this.width / 2 - 155, 18, 150, 20, I18n.translate("options.mouse_settings", new Object[0]), buttonWidget -> this.minecraft.openScreen(new MouseOptionsScreen(this))));
-        this.addButton(Option.AUTO_JUMP.createButton(this.minecraft.options, this.width / 2 - 155 + 160, 18, 150));
+        this.addButton(new ButtonWidget(this.width / 2 - 155, 18, 150, 20, I18n.translate("options.mouse_settings", new Object[0]), buttonWidget -> this.minecraft.openScreen(new MouseOptionsScreen(this, this.gameOptions))));
+        this.addButton(Option.AUTO_JUMP.createButton(this.gameOptions, this.width / 2 - 155 + 160, 18, 150));
         this.keyBindingListWidget = new ControlsListWidget(this, this.minecraft);
         this.children.add(this.keyBindingListWidget);
         this.resetButton = this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, I18n.translate("controls.resetAll", new Object[0]), buttonWidget -> {
-            for (KeyBinding keyBinding : this.minecraft.options.keysAll) {
+            for (KeyBinding keyBinding : this.gameOptions.keysAll) {
                 keyBinding.setKeyCode(keyBinding.getDefaultKeyCode());
             }
             KeyBinding.updateKeysByCode();
@@ -56,7 +52,7 @@ extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (this.focusedBinding != null) {
-            this.options.setKeyCode(this.focusedBinding, InputUtil.Type.MOUSE.createFromCode(button));
+            this.gameOptions.setKeyCode(this.focusedBinding, InputUtil.Type.MOUSE.createFromCode(button));
             this.focusedBinding = null;
             KeyBinding.updateKeysByCode();
             return true;
@@ -68,9 +64,9 @@ extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.focusedBinding != null) {
             if (keyCode == 256) {
-                this.options.setKeyCode(this.focusedBinding, InputUtil.UNKNOWN_KEYCODE);
+                this.gameOptions.setKeyCode(this.focusedBinding, InputUtil.UNKNOWN_KEYCODE);
             } else {
-                this.options.setKeyCode(this.focusedBinding, InputUtil.getKeyCode(keyCode, scanCode));
+                this.gameOptions.setKeyCode(this.focusedBinding, InputUtil.getKeyCode(keyCode, scanCode));
             }
             this.focusedBinding = null;
             this.time = Util.getMeasuringTimeMs();
@@ -86,7 +82,7 @@ extends Screen {
         this.keyBindingListWidget.render(mouseX, mouseY, delta);
         this.drawCenteredString(this.font, this.title.asFormattedString(), this.width / 2, 8, 0xFFFFFF);
         boolean bl = false;
-        for (KeyBinding keyBinding : this.options.keysAll) {
+        for (KeyBinding keyBinding : this.gameOptions.keysAll) {
             if (keyBinding.isDefault()) continue;
             bl = true;
             break;

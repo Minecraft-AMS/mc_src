@@ -8,6 +8,7 @@
 package net.minecraft.client.gui.widget;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -75,7 +76,15 @@ Element {
         }
         boolean bl = this.isHovered = mouseX >= this.x && mouseY >= this.y && mouseX < this.x + this.width && mouseY < this.y + this.height;
         if (this.wasHovered != this.isHovered()) {
-            this.nextNarration = this.isHovered() ? (this.focused ? Util.getMeasuringTimeMs() + 200L : Util.getMeasuringTimeMs() + 750L) : Long.MAX_VALUE;
+            if (this.isHovered()) {
+                if (this.focused) {
+                    this.queueNarration(200);
+                } else {
+                    this.queueNarration(750);
+                }
+            } else {
+                this.nextNarration = Long.MAX_VALUE;
+            }
         }
         if (this.visible) {
             this.renderButton(mouseX, mouseY, delta);
@@ -93,7 +102,7 @@ Element {
     }
 
     protected String getNarrationMessage() {
-        if (this.message.isEmpty()) {
+        if (this.getMessage().isEmpty()) {
             return "";
         }
         return I18n.translate("gui.narrate.button", this.getMessage());
@@ -103,21 +112,16 @@ Element {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         TextRenderer textRenderer = minecraftClient.textRenderer;
         minecraftClient.getTextureManager().bindTexture(WIDGETS_LOCATION);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, this.alpha);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, this.alpha);
         int i = this.getYImage(this.isHovered());
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
         this.blit(this.x, this.y, 0, 46 + i * 20, this.width / 2, this.height);
         this.blit(this.x + this.width / 2, this.y, 200 - this.width / 2, 46 + i * 20, this.width / 2, this.height);
         this.renderBg(minecraftClient, mouseX, mouseY);
-        int j = 0xE0E0E0;
-        if (!this.active) {
-            j = 0xA0A0A0;
-        } else if (this.isHovered()) {
-            j = 0xFFFFA0;
-        }
-        this.drawCenteredString(textRenderer, this.message, this.x + this.width / 2, this.y + (this.height - 8) / 2, j | MathHelper.ceil(this.alpha * 255.0f) << 24);
+        int j = this.active ? 0xFFFFFF : 0xA0A0A0;
+        this.drawCenteredString(textRenderer, this.getMessage(), this.x + this.width / 2, this.y + (this.height - 8) / 2, j | MathHelper.ceil(this.alpha * 255.0f) << 24);
     }
 
     protected void renderBg(MinecraftClient client, int mouseX, int mouseY) {
@@ -215,9 +219,13 @@ Element {
 
     public void setMessage(String value) {
         if (!Objects.equals(value, this.message)) {
-            this.nextNarration = Util.getMeasuringTimeMs() + 250L;
+            this.queueNarration(250);
         }
         this.message = value;
+    }
+
+    public void queueNarration(int i) {
+        this.nextNarration = Util.getMeasuringTimeMs() + (long)i;
     }
 
     public String getMessage() {
@@ -228,8 +236,8 @@ Element {
         return this.focused;
     }
 
-    protected void setFocused(boolean bl) {
-        this.focused = bl;
+    protected void setFocused(boolean focused) {
+        this.focused = focused;
     }
 }
 

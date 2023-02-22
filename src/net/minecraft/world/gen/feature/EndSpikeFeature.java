@@ -73,7 +73,7 @@ extends Feature<EndSpikeFeatureConfig> {
     private void generateSpike(IWorld world, Random random, EndSpikeFeatureConfig config, Spike spike) {
         int i = spike.getRadius();
         for (BlockPos blockPos : BlockPos.iterate(new BlockPos(spike.getCenterX() - i, 0, spike.getCenterZ() - i), new BlockPos(spike.getCenterX() + i, spike.getHeight() + 10, spike.getCenterZ() + i))) {
-            if (blockPos.isWithinDistance(new BlockPos(spike.getCenterX(), blockPos.getY(), spike.getCenterZ()), (double)i) && blockPos.getY() < spike.getHeight()) {
+            if (blockPos.getSquaredDistance(spike.getCenterX(), blockPos.getY(), spike.getCenterZ(), false) <= (double)(i * i + 1) && blockPos.getY() < spike.getHeight()) {
                 this.setBlockState(world, blockPos, Blocks.OBSIDIAN.getDefaultState());
                 continue;
             }
@@ -180,7 +180,7 @@ extends Feature<EndSpikeFeatureConfig> {
             return this.boundingBox;
         }
 
-        <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
+        public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
             ImmutableMap.Builder builder = ImmutableMap.builder();
             builder.put(dynamicOps.createString("centerX"), dynamicOps.createInt(this.centerX));
             builder.put(dynamicOps.createString("centerZ"), dynamicOps.createInt(this.centerZ));

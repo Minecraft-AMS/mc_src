@@ -9,47 +9,38 @@
 package net.minecraft.client.render.item;
 
 import com.google.common.base.MoreObjects;
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.render.model.ModelLoader;
 import net.minecraft.client.render.model.json.ModelTransformation;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.FilledMapItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.map.MapState;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class HeldItemRenderer {
-    private static final Identifier MAP_BACKGROUND_TEX = new Identifier("textures/map/map_background.png");
-    private static final Identifier UNDERWATER_TEX = new Identifier("textures/misc/underwater.png");
+    private static final RenderLayer MAP_BACKGROUND = RenderLayer.getText(new Identifier("textures/map/map_background.png"));
+    private static final RenderLayer MAP_BACKGROUND_CHECKERBOARD = RenderLayer.getText(new Identifier("textures/map/map_background_checkerboard.png"));
     private final MinecraftClient client;
     private ItemStack mainHand = ItemStack.EMPTY;
     private ItemStack offHand = ItemStack.EMPTY;
@@ -66,51 +57,11 @@ public class HeldItemRenderer {
         this.itemRenderer = client.getItemRenderer();
     }
 
-    public void renderItem(LivingEntity holder, ItemStack stack, ModelTransformation.Type type) {
-        this.renderItemFromSide(holder, stack, type, false);
-    }
-
-    public void renderItemFromSide(LivingEntity holder, ItemStack stack, ModelTransformation.Type transformation, boolean bl) {
-        boolean bl2;
+    public void renderItem(LivingEntity entity, ItemStack stack, ModelTransformation.Mode renderMode, boolean leftHanded, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
         if (stack.isEmpty()) {
             return;
         }
-        Item item = stack.getItem();
-        Block block = Block.getBlockFromItem(item);
-        GlStateManager.pushMatrix();
-        boolean bl3 = bl2 = this.itemRenderer.hasDepthInGui(stack) && block.getRenderLayer() == RenderLayer.TRANSLUCENT;
-        if (bl2) {
-            GlStateManager.depthMask(false);
-        }
-        this.itemRenderer.renderHeldItem(stack, holder, transformation, bl);
-        if (bl2) {
-            GlStateManager.depthMask(true);
-        }
-        GlStateManager.popMatrix();
-    }
-
-    private void rotate(float pitch, float yaw) {
-        GlStateManager.pushMatrix();
-        GlStateManager.rotatef(pitch, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(yaw, 0.0f, 1.0f, 0.0f);
-        DiffuseLighting.enable();
-        GlStateManager.popMatrix();
-    }
-
-    private void applyLightmap() {
-        ClientPlayerEntity abstractClientPlayerEntity = this.client.player;
-        int i = this.client.world.getLightmapIndex(new BlockPos(abstractClientPlayerEntity.x, abstractClientPlayerEntity.y + (double)abstractClientPlayerEntity.getStandingEyeHeight(), abstractClientPlayerEntity.z), 0);
-        float f = i & 0xFFFF;
-        float g = i >> 16;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, f, g);
-    }
-
-    private void applyCameraAngles(float tickDelta) {
-        ClientPlayerEntity clientPlayerEntity = this.client.player;
-        float f = MathHelper.lerp(tickDelta, clientPlayerEntity.lastRenderPitch, clientPlayerEntity.renderPitch);
-        float g = MathHelper.lerp(tickDelta, clientPlayerEntity.lastRenderYaw, clientPlayerEntity.renderYaw);
-        GlStateManager.rotatef((clientPlayerEntity.getPitch(tickDelta) - f) * 0.1f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef((clientPlayerEntity.getYaw(tickDelta) - g) * 0.1f, 0.0f, 1.0f, 0.0f);
+        this.itemRenderer.renderItem(entity, stack, renderMode, leftHanded, matrices, vertexConsumers, entity.world, light, OverlayTexture.DEFAULT_UV);
     }
 
     private float getMapAngle(float tickDelta) {
@@ -120,182 +71,166 @@ public class HeldItemRenderer {
         return f;
     }
 
-    private void renderArms() {
-        if (this.client.player.isInvisible()) {
-            return;
-        }
-        GlStateManager.disableCull();
-        GlStateManager.pushMatrix();
-        GlStateManager.rotatef(90.0f, 0.0f, 1.0f, 0.0f);
-        this.renderArm(Arm.RIGHT);
-        this.renderArm(Arm.LEFT);
-        GlStateManager.popMatrix();
-        GlStateManager.enableCull();
-    }
-
-    private void renderArm(Arm arm) {
+    private void renderArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, Arm arm) {
         this.client.getTextureManager().bindTexture(this.client.player.getSkinTexture());
-        Object entityRenderer = this.renderManager.getRenderer(this.client.player);
-        PlayerEntityRenderer playerEntityRenderer = (PlayerEntityRenderer)entityRenderer;
-        GlStateManager.pushMatrix();
+        PlayerEntityRenderer playerEntityRenderer = (PlayerEntityRenderer)this.renderManager.getRenderer(this.client.player);
+        matrices.push();
         float f = arm == Arm.RIGHT ? 1.0f : -1.0f;
-        GlStateManager.rotatef(92.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(45.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(f * -41.0f, 0.0f, 0.0f, 1.0f);
-        GlStateManager.translatef(f * 0.3f, -1.1f, 0.45f);
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(92.0f));
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(45.0f));
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(f * -41.0f));
+        matrices.translate(f * 0.3f, -1.1f, 0.45f);
         if (arm == Arm.RIGHT) {
-            playerEntityRenderer.renderRightArm(this.client.player);
+            playerEntityRenderer.renderRightArm(matrices, vertexConsumers, light, this.client.player);
         } else {
-            playerEntityRenderer.renderLeftArm(this.client.player);
+            playerEntityRenderer.renderLeftArm(matrices, vertexConsumers, light, this.client.player);
         }
-        GlStateManager.popMatrix();
+        matrices.pop();
     }
 
-    private void renderMapInOneHand(float equipProgress, Arm hand, float f, ItemStack item) {
-        float g = hand == Arm.RIGHT ? 1.0f : -1.0f;
-        GlStateManager.translatef(g * 0.125f, -0.125f, 0.0f);
+    private void renderMapInOneHand(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float equipProgress, Arm arm, float swingProgress, ItemStack stack) {
+        float f = arm == Arm.RIGHT ? 1.0f : -1.0f;
+        matrices.translate(f * 0.125f, -0.125, 0.0);
         if (!this.client.player.isInvisible()) {
-            GlStateManager.pushMatrix();
-            GlStateManager.rotatef(g * 10.0f, 0.0f, 0.0f, 1.0f);
-            this.renderArmHoldingItem(equipProgress, f, hand);
-            GlStateManager.popMatrix();
+            matrices.push();
+            matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(f * 10.0f));
+            this.renderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, swingProgress, arm);
+            matrices.pop();
         }
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(g * 0.51f, -0.08f + equipProgress * -1.2f, -0.75f);
-        float h = MathHelper.sqrt(f);
-        float i = MathHelper.sin(h * (float)Math.PI);
-        float j = -0.5f * i;
-        float k = 0.4f * MathHelper.sin(h * ((float)Math.PI * 2));
-        float l = -0.3f * MathHelper.sin(f * (float)Math.PI);
-        GlStateManager.translatef(g * j, k - 0.3f * i, l);
-        GlStateManager.rotatef(i * -45.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(g * i * -30.0f, 0.0f, 1.0f, 0.0f);
-        this.renderFirstPersonMap(item);
-        GlStateManager.popMatrix();
+        matrices.push();
+        matrices.translate(f * 0.51f, -0.08f + equipProgress * -1.2f, -0.75);
+        float g = MathHelper.sqrt(swingProgress);
+        float h = MathHelper.sin(g * (float)Math.PI);
+        float i = -0.5f * h;
+        float j = 0.4f * MathHelper.sin(g * ((float)Math.PI * 2));
+        float k = -0.3f * MathHelper.sin(swingProgress * (float)Math.PI);
+        matrices.translate(f * i, j - 0.3f * h, k);
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(h * -45.0f));
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(f * h * -30.0f));
+        this.renderFirstPersonMap(matrices, vertexConsumers, light, stack);
+        matrices.pop();
     }
 
-    private void renderMapInBothHands(float pitch, float equipProgress, float f) {
-        float g = MathHelper.sqrt(f);
-        float h = -0.2f * MathHelper.sin(f * (float)Math.PI);
-        float i = -0.4f * MathHelper.sin(g * (float)Math.PI);
-        GlStateManager.translatef(0.0f, -h / 2.0f, i);
-        float j = this.getMapAngle(pitch);
-        GlStateManager.translatef(0.0f, 0.04f + equipProgress * -1.2f + j * -0.5f, -0.72f);
-        GlStateManager.rotatef(j * -85.0f, 1.0f, 0.0f, 0.0f);
-        this.renderArms();
-        float k = MathHelper.sin(g * (float)Math.PI);
-        GlStateManager.rotatef(k * 20.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.scalef(2.0f, 2.0f, 2.0f);
-        this.renderFirstPersonMap(this.mainHand);
+    private void renderMapInBothHands(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float pitch, float equipProgress, float swingProgress) {
+        float f = MathHelper.sqrt(swingProgress);
+        float g = -0.2f * MathHelper.sin(swingProgress * (float)Math.PI);
+        float h = -0.4f * MathHelper.sin(f * (float)Math.PI);
+        matrices.translate(0.0, -g / 2.0f, h);
+        float i = this.getMapAngle(pitch);
+        matrices.translate(0.0, 0.04f + equipProgress * -1.2f + i * -0.5f, -0.72f);
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(i * -85.0f));
+        if (!this.client.player.isInvisible()) {
+            matrices.push();
+            matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f));
+            this.renderArm(matrices, vertexConsumers, light, Arm.RIGHT);
+            this.renderArm(matrices, vertexConsumers, light, Arm.LEFT);
+            matrices.pop();
+        }
+        float j = MathHelper.sin(f * (float)Math.PI);
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(j * 20.0f));
+        matrices.scale(2.0f, 2.0f, 2.0f);
+        this.renderFirstPersonMap(matrices, vertexConsumers, light, this.mainHand);
     }
 
-    private void renderFirstPersonMap(ItemStack map) {
-        GlStateManager.rotatef(180.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(180.0f, 0.0f, 0.0f, 1.0f);
-        GlStateManager.scalef(0.38f, 0.38f, 0.38f);
-        GlStateManager.disableLighting();
-        this.client.getTextureManager().bindTexture(MAP_BACKGROUND_TEX);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GlStateManager.translatef(-0.5f, -0.5f, 0.0f);
-        GlStateManager.scalef(0.0078125f, 0.0078125f, 0.0078125f);
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(-7.0, 135.0, 0.0).texture(0.0, 1.0).next();
-        bufferBuilder.vertex(135.0, 135.0, 0.0).texture(1.0, 1.0).next();
-        bufferBuilder.vertex(135.0, -7.0, 0.0).texture(1.0, 0.0).next();
-        bufferBuilder.vertex(-7.0, -7.0, 0.0).texture(0.0, 0.0).next();
-        tessellator.draw();
-        MapState mapState = FilledMapItem.getOrCreateMapState(map, this.client.world);
+    private void renderFirstPersonMap(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int swingProgress, ItemStack stack) {
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+        matrices.scale(0.38f, 0.38f, 0.38f);
+        matrices.translate(-0.5, -0.5, 0.0);
+        matrices.scale(0.0078125f, 0.0078125f, 0.0078125f);
+        MapState mapState = FilledMapItem.getOrCreateMapState(stack, this.client.world);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(mapState == null ? MAP_BACKGROUND : MAP_BACKGROUND_CHECKERBOARD);
+        Matrix4f matrix4f = matrices.peek().getModel();
+        vertexConsumer.vertex(matrix4f, -7.0f, 135.0f, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(swingProgress).next();
+        vertexConsumer.vertex(matrix4f, 135.0f, 135.0f, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(swingProgress).next();
+        vertexConsumer.vertex(matrix4f, 135.0f, -7.0f, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(swingProgress).next();
+        vertexConsumer.vertex(matrix4f, -7.0f, -7.0f, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(swingProgress).next();
         if (mapState != null) {
-            this.client.gameRenderer.getMapRenderer().draw(mapState, false);
+            this.client.gameRenderer.getMapRenderer().draw(matrices, vertexConsumers, mapState, false, swingProgress);
         }
-        GlStateManager.enableLighting();
     }
 
-    private void renderArmHoldingItem(float f, float g, Arm arm) {
+    private void renderArmHoldingItem(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float equipProgress, float swingProgress, Arm arm) {
         boolean bl = arm != Arm.LEFT;
-        float h = bl ? 1.0f : -1.0f;
-        float i = MathHelper.sqrt(g);
-        float j = -0.3f * MathHelper.sin(i * (float)Math.PI);
-        float k = 0.4f * MathHelper.sin(i * ((float)Math.PI * 2));
-        float l = -0.4f * MathHelper.sin(g * (float)Math.PI);
-        GlStateManager.translatef(h * (j + 0.64000005f), k + -0.6f + f * -0.6f, l + -0.71999997f);
-        GlStateManager.rotatef(h * 45.0f, 0.0f, 1.0f, 0.0f);
-        float m = MathHelper.sin(g * g * (float)Math.PI);
-        float n = MathHelper.sin(i * (float)Math.PI);
-        GlStateManager.rotatef(h * n * 70.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(h * m * -20.0f, 0.0f, 0.0f, 1.0f);
+        float f = bl ? 1.0f : -1.0f;
+        float g = MathHelper.sqrt(swingProgress);
+        float h = -0.3f * MathHelper.sin(g * (float)Math.PI);
+        float i = 0.4f * MathHelper.sin(g * ((float)Math.PI * 2));
+        float j = -0.4f * MathHelper.sin(swingProgress * (float)Math.PI);
+        matrices.translate(f * (h + 0.64000005f), i + -0.6f + equipProgress * -0.6f, j + -0.71999997f);
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(f * 45.0f));
+        float k = MathHelper.sin(swingProgress * swingProgress * (float)Math.PI);
+        float l = MathHelper.sin(g * (float)Math.PI);
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(f * l * 70.0f));
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(f * k * -20.0f));
         ClientPlayerEntity abstractClientPlayerEntity = this.client.player;
         this.client.getTextureManager().bindTexture(abstractClientPlayerEntity.getSkinTexture());
-        GlStateManager.translatef(h * -1.0f, 3.6f, 3.5f);
-        GlStateManager.rotatef(h * 120.0f, 0.0f, 0.0f, 1.0f);
-        GlStateManager.rotatef(200.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(h * -135.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.translatef(h * 5.6f, 0.0f, 0.0f);
+        matrices.translate(f * -1.0f, 3.6f, 3.5);
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion(f * 120.0f));
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(200.0f));
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(f * -135.0f));
+        matrices.translate(f * 5.6f, 0.0, 0.0);
         PlayerEntityRenderer playerEntityRenderer = (PlayerEntityRenderer)this.renderManager.getRenderer(abstractClientPlayerEntity);
-        GlStateManager.disableCull();
         if (bl) {
-            playerEntityRenderer.renderRightArm(abstractClientPlayerEntity);
+            playerEntityRenderer.renderRightArm(matrices, vertexConsumers, light, abstractClientPlayerEntity);
         } else {
-            playerEntityRenderer.renderLeftArm(abstractClientPlayerEntity);
+            playerEntityRenderer.renderLeftArm(matrices, vertexConsumers, light, abstractClientPlayerEntity);
         }
-        GlStateManager.enableCull();
     }
 
-    private void applyEatOrDrinkTransformation(float tickDelta, Arm hand, ItemStack item) {
+    private void applyEatOrDrinkTransformation(MatrixStack matrices, float tickDelta, Arm arm, ItemStack stack) {
         float h;
         float f = (float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f;
-        float g = f / (float)item.getMaxUseTime();
+        float g = f / (float)stack.getMaxUseTime();
         if (g < 0.8f) {
             h = MathHelper.abs(MathHelper.cos(f / 4.0f * (float)Math.PI) * 0.1f);
-            GlStateManager.translatef(0.0f, h, 0.0f);
+            matrices.translate(0.0, h, 0.0);
         }
         h = 1.0f - (float)Math.pow(g, 27.0);
-        int i = hand == Arm.RIGHT ? 1 : -1;
-        GlStateManager.translatef(h * 0.6f * (float)i, h * -0.5f, h * 0.0f);
-        GlStateManager.rotatef((float)i * h * 90.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.rotatef(h * 10.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef((float)i * h * 30.0f, 0.0f, 0.0f, 1.0f);
-    }
-
-    private void method_3217(Arm arm, float f) {
         int i = arm == Arm.RIGHT ? 1 : -1;
-        float g = MathHelper.sin(f * f * (float)Math.PI);
-        GlStateManager.rotatef((float)i * (45.0f + g * -20.0f), 0.0f, 1.0f, 0.0f);
-        float h = MathHelper.sin(MathHelper.sqrt(f) * (float)Math.PI);
-        GlStateManager.rotatef((float)i * h * -20.0f, 0.0f, 0.0f, 1.0f);
-        GlStateManager.rotatef(h * -80.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef((float)i * -45.0f, 0.0f, 1.0f, 0.0f);
+        matrices.translate(h * 0.6f * (float)i, h * -0.5f, h * 0.0f);
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)i * h * 90.0f));
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(h * 10.0f));
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)i * h * 30.0f));
     }
 
-    private void applyHandOffset(Arm hand, float f) {
-        int i = hand == Arm.RIGHT ? 1 : -1;
-        GlStateManager.translatef((float)i * 0.56f, -0.52f + f * -0.6f, -0.72f);
+    private void applySwingOffset(MatrixStack matrices, Arm arm, float swingProgress) {
+        int i = arm == Arm.RIGHT ? 1 : -1;
+        float f = MathHelper.sin(swingProgress * swingProgress * (float)Math.PI);
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)i * (45.0f + f * -20.0f)));
+        float g = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float)Math.PI);
+        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)i * g * -20.0f));
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(g * -80.0f));
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)i * -45.0f));
     }
 
-    public void renderFirstPersonItem(float tickDelta) {
+    private void applyEquipOffset(MatrixStack matrices, Arm arm, float equipProgress) {
+        int i = arm == Arm.RIGHT ? 1 : -1;
+        matrices.translate((float)i * 0.56f, -0.52f + equipProgress * -0.6f, -0.72f);
+    }
+
+    public void renderItem(float tickDelta, MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers, ClientPlayerEntity player, int light) {
+        float k;
         ItemStack itemStack;
-        ClientPlayerEntity abstractClientPlayerEntity = this.client.player;
-        float f = abstractClientPlayerEntity.getHandSwingProgress(tickDelta);
-        Hand hand = (Hand)((Object)MoreObjects.firstNonNull((Object)((Object)abstractClientPlayerEntity.preferredHand), (Object)((Object)Hand.MAIN_HAND)));
-        float g = MathHelper.lerp(tickDelta, abstractClientPlayerEntity.prevPitch, abstractClientPlayerEntity.pitch);
-        float h = MathHelper.lerp(tickDelta, abstractClientPlayerEntity.prevYaw, abstractClientPlayerEntity.yaw);
+        float f = player.getHandSwingProgress(tickDelta);
+        Hand hand = (Hand)((Object)MoreObjects.firstNonNull((Object)((Object)player.preferredHand), (Object)((Object)Hand.MAIN_HAND)));
+        float g = MathHelper.lerp(tickDelta, player.prevPitch, player.pitch);
         boolean bl = true;
         boolean bl2 = true;
-        if (((LivingEntity)abstractClientPlayerEntity).isUsingItem()) {
+        if (player.isUsingItem()) {
             ItemStack itemStack2;
             Hand hand2;
-            itemStack = abstractClientPlayerEntity.getActiveItem();
+            itemStack = player.getActiveItem();
             if (itemStack.getItem() == Items.BOW || itemStack.getItem() == Items.CROSSBOW) {
-                bl = ((LivingEntity)abstractClientPlayerEntity).getActiveHand() == Hand.MAIN_HAND;
+                bl = player.getActiveHand() == Hand.MAIN_HAND;
                 boolean bl3 = bl2 = !bl;
             }
-            if ((hand2 = ((LivingEntity)abstractClientPlayerEntity).getActiveHand()) == Hand.MAIN_HAND && (itemStack2 = abstractClientPlayerEntity.getOffHandStack()).getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack2)) {
+            if ((hand2 = player.getActiveHand()) == Hand.MAIN_HAND && (itemStack2 = player.getOffHandStack()).getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack2)) {
                 bl2 = false;
             }
         } else {
-            itemStack = abstractClientPlayerEntity.getMainHandStack();
-            ItemStack itemStack3 = abstractClientPlayerEntity.getOffHandStack();
+            itemStack = player.getMainHandStack();
+            ItemStack itemStack3 = player.getOffHandStack();
             if (itemStack.getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack)) {
                 boolean bl4 = bl2 = !bl;
             }
@@ -304,37 +239,36 @@ public class HeldItemRenderer {
                 bl2 = !bl;
             }
         }
-        this.rotate(g, h);
-        this.applyLightmap();
-        this.applyCameraAngles(tickDelta);
-        GlStateManager.enableRescaleNormal();
+        float h = MathHelper.lerp(tickDelta, player.lastRenderPitch, player.renderPitch);
+        float i = MathHelper.lerp(tickDelta, player.lastRenderYaw, player.renderYaw);
+        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion((player.getPitch(tickDelta) - h) * 0.1f));
+        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((player.getYaw(tickDelta) - i) * 0.1f));
         if (bl) {
-            float i = hand == Hand.MAIN_HAND ? f : 0.0f;
-            float j = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressMainHand, this.equipProgressMainHand);
-            this.renderFirstPersonItem(abstractClientPlayerEntity, tickDelta, g, Hand.MAIN_HAND, i, this.mainHand, j);
+            float j = hand == Hand.MAIN_HAND ? f : 0.0f;
+            k = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressMainHand, this.equipProgressMainHand);
+            this.renderFirstPersonItem(player, tickDelta, g, Hand.MAIN_HAND, j, this.mainHand, k, matrices, vertexConsumers, light);
         }
         if (bl2) {
-            float i = hand == Hand.OFF_HAND ? f : 0.0f;
-            float j = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressOffHand, this.equipProgressOffHand);
-            this.renderFirstPersonItem(abstractClientPlayerEntity, tickDelta, g, Hand.OFF_HAND, i, this.offHand, j);
+            float j = hand == Hand.OFF_HAND ? f : 0.0f;
+            k = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressOffHand, this.equipProgressOffHand);
+            this.renderFirstPersonItem(player, tickDelta, g, Hand.OFF_HAND, j, this.offHand, k, matrices, vertexConsumers, light);
         }
-        GlStateManager.disableRescaleNormal();
-        DiffuseLighting.disable();
+        vertexConsumers.draw();
     }
 
-    public void renderFirstPersonItem(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float f, ItemStack item, float equipProgress) {
+    private void renderFirstPersonItem(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
         boolean bl = hand == Hand.MAIN_HAND;
         Arm arm = bl ? player.getMainArm() : player.getMainArm().getOpposite();
-        GlStateManager.pushMatrix();
+        matrices.push();
         if (item.isEmpty()) {
             if (bl && !player.isInvisible()) {
-                this.renderArmHoldingItem(equipProgress, f, arm);
+                this.renderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, swingProgress, arm);
             }
         } else if (item.getItem() == Items.FILLED_MAP) {
             if (bl && this.offHand.isEmpty()) {
-                this.renderMapInBothHands(pitch, equipProgress, f);
+                this.renderMapInBothHands(matrices, vertexConsumers, light, pitch, equipProgress, swingProgress);
             } else {
-                this.renderMapInOneHand(equipProgress, arm, f, item);
+                this.renderMapInOneHand(matrices, vertexConsumers, light, equipProgress, arm, swingProgress, item);
             }
         } else if (item.getItem() == Items.CROSSBOW) {
             int i;
@@ -342,243 +276,122 @@ public class HeldItemRenderer {
             boolean bl3 = arm == Arm.RIGHT;
             int n = i = bl3 ? 1 : -1;
             if (player.isUsingItem() && player.getItemUseTimeLeft() > 0 && player.getActiveHand() == hand) {
-                this.applyHandOffset(arm, equipProgress);
-                GlStateManager.translatef((float)i * -0.4785682f, -0.094387f, 0.05731531f);
-                GlStateManager.rotatef(-11.935f, 1.0f, 0.0f, 0.0f);
-                GlStateManager.rotatef((float)i * 65.3f, 0.0f, 1.0f, 0.0f);
-                GlStateManager.rotatef((float)i * -9.785f, 0.0f, 0.0f, 1.0f);
-                float g = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
-                float h = g / (float)CrossbowItem.getPullTime(item);
-                if (h > 1.0f) {
-                    h = 1.0f;
+                this.applyEquipOffset(matrices, arm, equipProgress);
+                matrices.translate((float)i * -0.4785682f, -0.094387f, 0.05731530860066414);
+                matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-11.935f));
+                matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)i * 65.3f));
+                matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)i * -9.785f));
+                float f = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
+                float g = f / (float)CrossbowItem.getPullTime(item);
+                if (g > 1.0f) {
+                    g = 1.0f;
                 }
-                if (h > 0.1f) {
-                    float j = MathHelper.sin((g - 0.1f) * 1.3f);
-                    float k = h - 0.1f;
-                    float l = j * k;
-                    GlStateManager.translatef(l * 0.0f, l * 0.004f, l * 0.0f);
+                if (g > 0.1f) {
+                    float h = MathHelper.sin((f - 0.1f) * 1.3f);
+                    float j = g - 0.1f;
+                    float k = h * j;
+                    matrices.translate(k * 0.0f, k * 0.004f, k * 0.0f);
                 }
-                GlStateManager.translatef(h * 0.0f, h * 0.0f, h * 0.04f);
-                GlStateManager.scalef(1.0f, 1.0f, 1.0f + h * 0.2f);
-                GlStateManager.rotatef((float)i * 45.0f, 0.0f, -1.0f, 0.0f);
+                matrices.translate(g * 0.0f, g * 0.0f, g * 0.04f);
+                matrices.scale(1.0f, 1.0f, 1.0f + g * 0.2f);
+                matrices.multiply(Vector3f.NEGATIVE_Y.getDegreesQuaternion((float)i * 45.0f));
             } else {
-                float g = -0.4f * MathHelper.sin(MathHelper.sqrt(f) * (float)Math.PI);
-                float h = 0.2f * MathHelper.sin(MathHelper.sqrt(f) * ((float)Math.PI * 2));
-                float j = -0.2f * MathHelper.sin(f * (float)Math.PI);
-                GlStateManager.translatef((float)i * g, h, j);
-                this.applyHandOffset(arm, equipProgress);
-                this.method_3217(arm, f);
-                if (bl2 && f < 0.001f) {
-                    GlStateManager.translatef((float)i * -0.641864f, 0.0f, 0.0f);
-                    GlStateManager.rotatef((float)i * 10.0f, 0.0f, 1.0f, 0.0f);
+                float f = -0.4f * MathHelper.sin(MathHelper.sqrt(swingProgress) * (float)Math.PI);
+                float g = 0.2f * MathHelper.sin(MathHelper.sqrt(swingProgress) * ((float)Math.PI * 2));
+                float h = -0.2f * MathHelper.sin(swingProgress * (float)Math.PI);
+                matrices.translate((float)i * f, g, h);
+                this.applyEquipOffset(matrices, arm, equipProgress);
+                this.applySwingOffset(matrices, arm, swingProgress);
+                if (bl2 && swingProgress < 0.001f) {
+                    matrices.translate((float)i * -0.641864f, 0.0, 0.0);
+                    matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)i * 10.0f));
                 }
             }
-            this.renderItemFromSide(player, item, bl3 ? ModelTransformation.Type.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Type.FIRST_PERSON_LEFT_HAND, !bl3);
+            this.renderItem(player, item, bl3 ? ModelTransformation.Mode.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Mode.FIRST_PERSON_LEFT_HAND, !bl3, matrices, vertexConsumers, light);
         } else {
             boolean bl2;
             boolean bl3 = bl2 = arm == Arm.RIGHT;
             if (player.isUsingItem() && player.getItemUseTimeLeft() > 0 && player.getActiveHand() == hand) {
-                int m = bl2 ? 1 : -1;
+                int l = bl2 ? 1 : -1;
                 switch (item.getUseAction()) {
                     case NONE: {
-                        this.applyHandOffset(arm, equipProgress);
+                        this.applyEquipOffset(matrices, arm, equipProgress);
                         break;
                     }
                     case EAT: 
                     case DRINK: {
-                        this.applyEatOrDrinkTransformation(tickDelta, arm, item);
-                        this.applyHandOffset(arm, equipProgress);
+                        this.applyEatOrDrinkTransformation(matrices, tickDelta, arm, item);
+                        this.applyEquipOffset(matrices, arm, equipProgress);
                         break;
                     }
                     case BLOCK: {
-                        this.applyHandOffset(arm, equipProgress);
+                        this.applyEquipOffset(matrices, arm, equipProgress);
                         break;
                     }
                     case BOW: {
-                        this.applyHandOffset(arm, equipProgress);
-                        GlStateManager.translatef((float)m * -0.2785682f, 0.18344387f, 0.15731531f);
-                        GlStateManager.rotatef(-13.935f, 1.0f, 0.0f, 0.0f);
-                        GlStateManager.rotatef((float)m * 35.3f, 0.0f, 1.0f, 0.0f);
-                        GlStateManager.rotatef((float)m * -9.785f, 0.0f, 0.0f, 1.0f);
-                        float n = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
-                        float g = n / 20.0f;
-                        g = (g * g + g * 2.0f) / 3.0f;
-                        if (g > 1.0f) {
-                            g = 1.0f;
+                        this.applyEquipOffset(matrices, arm, equipProgress);
+                        matrices.translate((float)l * -0.2785682f, 0.18344387412071228, 0.15731531381607056);
+                        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-13.935f));
+                        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)l * 35.3f));
+                        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)l * -9.785f));
+                        float m = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
+                        float f = m / 20.0f;
+                        f = (f * f + f * 2.0f) / 3.0f;
+                        if (f > 1.0f) {
+                            f = 1.0f;
                         }
-                        if (g > 0.1f) {
-                            float h = MathHelper.sin((n - 0.1f) * 1.3f);
-                            float j = g - 0.1f;
-                            float k = h * j;
-                            GlStateManager.translatef(k * 0.0f, k * 0.004f, k * 0.0f);
+                        if (f > 0.1f) {
+                            float g = MathHelper.sin((m - 0.1f) * 1.3f);
+                            float h = f - 0.1f;
+                            float j = g * h;
+                            matrices.translate(j * 0.0f, j * 0.004f, j * 0.0f);
                         }
-                        GlStateManager.translatef(g * 0.0f, g * 0.0f, g * 0.04f);
-                        GlStateManager.scalef(1.0f, 1.0f, 1.0f + g * 0.2f);
-                        GlStateManager.rotatef((float)m * 45.0f, 0.0f, -1.0f, 0.0f);
+                        matrices.translate(f * 0.0f, f * 0.0f, f * 0.04f);
+                        matrices.scale(1.0f, 1.0f, 1.0f + f * 0.2f);
+                        matrices.multiply(Vector3f.NEGATIVE_Y.getDegreesQuaternion((float)l * 45.0f));
                         break;
                     }
                     case SPEAR: {
-                        this.applyHandOffset(arm, equipProgress);
-                        GlStateManager.translatef((float)m * -0.5f, 0.7f, 0.1f);
-                        GlStateManager.rotatef(-55.0f, 1.0f, 0.0f, 0.0f);
-                        GlStateManager.rotatef((float)m * 35.3f, 0.0f, 1.0f, 0.0f);
-                        GlStateManager.rotatef((float)m * -9.785f, 0.0f, 0.0f, 1.0f);
-                        float n = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
-                        float g = n / 10.0f;
-                        if (g > 1.0f) {
-                            g = 1.0f;
+                        this.applyEquipOffset(matrices, arm, equipProgress);
+                        matrices.translate((float)l * -0.5f, 0.7f, 0.1f);
+                        matrices.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-55.0f));
+                        matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)l * 35.3f));
+                        matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)l * -9.785f));
+                        float m = (float)item.getMaxUseTime() - ((float)this.client.player.getItemUseTimeLeft() - tickDelta + 1.0f);
+                        float f = m / 10.0f;
+                        if (f > 1.0f) {
+                            f = 1.0f;
                         }
-                        if (g > 0.1f) {
-                            float h = MathHelper.sin((n - 0.1f) * 1.3f);
-                            float j = g - 0.1f;
-                            float k = h * j;
-                            GlStateManager.translatef(k * 0.0f, k * 0.004f, k * 0.0f);
+                        if (f > 0.1f) {
+                            float g = MathHelper.sin((m - 0.1f) * 1.3f);
+                            float h = f - 0.1f;
+                            float j = g * h;
+                            matrices.translate(j * 0.0f, j * 0.004f, j * 0.0f);
                         }
-                        GlStateManager.translatef(0.0f, 0.0f, g * 0.2f);
-                        GlStateManager.scalef(1.0f, 1.0f, 1.0f + g * 0.2f);
-                        GlStateManager.rotatef((float)m * 45.0f, 0.0f, -1.0f, 0.0f);
+                        matrices.translate(0.0, 0.0, f * 0.2f);
+                        matrices.scale(1.0f, 1.0f, 1.0f + f * 0.2f);
+                        matrices.multiply(Vector3f.NEGATIVE_Y.getDegreesQuaternion((float)l * 45.0f));
                         break;
                     }
                 }
             } else if (player.isUsingRiptide()) {
-                this.applyHandOffset(arm, equipProgress);
-                int m = bl2 ? 1 : -1;
-                GlStateManager.translatef((float)m * -0.4f, 0.8f, 0.3f);
-                GlStateManager.rotatef((float)m * 65.0f, 0.0f, 1.0f, 0.0f);
-                GlStateManager.rotatef((float)m * -85.0f, 0.0f, 0.0f, 1.0f);
+                this.applyEquipOffset(matrices, arm, equipProgress);
+                int l = bl2 ? 1 : -1;
+                matrices.translate((float)l * -0.4f, 0.8f, 0.3f);
+                matrices.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion((float)l * 65.0f));
+                matrices.multiply(Vector3f.POSITIVE_Z.getDegreesQuaternion((float)l * -85.0f));
             } else {
-                float o = -0.4f * MathHelper.sin(MathHelper.sqrt(f) * (float)Math.PI);
-                float n = 0.2f * MathHelper.sin(MathHelper.sqrt(f) * ((float)Math.PI * 2));
-                float g = -0.2f * MathHelper.sin(f * (float)Math.PI);
-                int p = bl2 ? 1 : -1;
-                GlStateManager.translatef((float)p * o, n, g);
-                this.applyHandOffset(arm, equipProgress);
-                this.method_3217(arm, f);
+                float n = -0.4f * MathHelper.sin(MathHelper.sqrt(swingProgress) * (float)Math.PI);
+                float m = 0.2f * MathHelper.sin(MathHelper.sqrt(swingProgress) * ((float)Math.PI * 2));
+                float f = -0.2f * MathHelper.sin(swingProgress * (float)Math.PI);
+                int o = bl2 ? 1 : -1;
+                matrices.translate((float)o * n, m, f);
+                this.applyEquipOffset(matrices, arm, equipProgress);
+                this.applySwingOffset(matrices, arm, swingProgress);
             }
-            this.renderItemFromSide(player, item, bl2 ? ModelTransformation.Type.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Type.FIRST_PERSON_LEFT_HAND, !bl2);
+            this.renderItem(player, item, bl2 ? ModelTransformation.Mode.FIRST_PERSON_RIGHT_HAND : ModelTransformation.Mode.FIRST_PERSON_LEFT_HAND, !bl2, matrices, vertexConsumers, light);
         }
-        GlStateManager.popMatrix();
-    }
-
-    public void renderOverlays(float f) {
-        GlStateManager.disableAlphaTest();
-        if (this.client.player.isInsideWall()) {
-            BlockState blockState = this.client.world.getBlockState(new BlockPos(this.client.player));
-            ClientPlayerEntity playerEntity = this.client.player;
-            for (int i = 0; i < 8; ++i) {
-                double d = playerEntity.x + (double)(((float)((i >> 0) % 2) - 0.5f) * playerEntity.getWidth() * 0.8f);
-                double e = playerEntity.y + (double)(((float)((i >> 1) % 2) - 0.5f) * 0.1f);
-                double g = playerEntity.z + (double)(((float)((i >> 2) % 2) - 0.5f) * playerEntity.getWidth() * 0.8f);
-                BlockPos blockPos = new BlockPos(d, e + (double)playerEntity.getStandingEyeHeight(), g);
-                BlockState blockState2 = this.client.world.getBlockState(blockPos);
-                if (!blockState2.canSuffocate(this.client.world, blockPos)) continue;
-                blockState = blockState2;
-            }
-            if (blockState.getRenderType() != BlockRenderType.INVISIBLE) {
-                this.renderBlock(this.client.getBlockRenderManager().getModels().getSprite(blockState));
-            }
-        }
-        if (!this.client.player.isSpectator()) {
-            if (this.client.player.isInFluid(FluidTags.WATER)) {
-                this.renderWaterOverlay(f);
-            }
-            if (this.client.player.isOnFire()) {
-                this.renderFireOverlay();
-            }
-        }
-        GlStateManager.enableAlphaTest();
-    }
-
-    private void renderBlock(Sprite sprite) {
-        this.client.getTextureManager().bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        float f = 0.1f;
-        GlStateManager.color4f(0.1f, 0.1f, 0.1f, 0.5f);
-        GlStateManager.pushMatrix();
-        float g = -1.0f;
-        float h = 1.0f;
-        float i = -1.0f;
-        float j = 1.0f;
-        float k = -0.5f;
-        float l = sprite.getMinU();
-        float m = sprite.getMaxU();
-        float n = sprite.getMinV();
-        float o = sprite.getMaxV();
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(-1.0, -1.0, -0.5).texture(m, o).next();
-        bufferBuilder.vertex(1.0, -1.0, -0.5).texture(l, o).next();
-        bufferBuilder.vertex(1.0, 1.0, -0.5).texture(l, n).next();
-        bufferBuilder.vertex(-1.0, 1.0, -0.5).texture(m, n).next();
-        tessellator.draw();
-        GlStateManager.popMatrix();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-    }
-
-    private void renderWaterOverlay(float f) {
-        this.client.getTextureManager().bindTexture(UNDERWATER_TEX);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        float g = this.client.player.getBrightnessAtEyes();
-        GlStateManager.color4f(g, g, g, 0.1f);
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.pushMatrix();
-        float h = 4.0f;
-        float i = -1.0f;
-        float j = 1.0f;
-        float k = -1.0f;
-        float l = 1.0f;
-        float m = -0.5f;
-        float n = -this.client.player.yaw / 64.0f;
-        float o = this.client.player.pitch / 64.0f;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(-1.0, -1.0, -0.5).texture(4.0f + n, 4.0f + o).next();
-        bufferBuilder.vertex(1.0, -1.0, -0.5).texture(0.0f + n, 4.0f + o).next();
-        bufferBuilder.vertex(1.0, 1.0, -0.5).texture(0.0f + n, 0.0f + o).next();
-        bufferBuilder.vertex(-1.0, 1.0, -0.5).texture(4.0f + n, 0.0f + o).next();
-        tessellator.draw();
-        GlStateManager.popMatrix();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.disableBlend();
-    }
-
-    private void renderFireOverlay() {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 0.9f);
-        GlStateManager.depthFunc(519);
-        GlStateManager.depthMask(false);
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        float f = 1.0f;
-        for (int i = 0; i < 2; ++i) {
-            GlStateManager.pushMatrix();
-            Sprite sprite = this.client.getSpriteAtlas().getSprite(ModelLoader.FIRE_1);
-            this.client.getTextureManager().bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
-            float g = sprite.getMinU();
-            float h = sprite.getMaxU();
-            float j = sprite.getMinV();
-            float k = sprite.getMaxV();
-            float l = -0.5f;
-            float m = 0.5f;
-            float n = -0.5f;
-            float o = 0.5f;
-            float p = -0.5f;
-            GlStateManager.translatef((float)(-(i * 2 - 1)) * 0.24f, -0.3f, 0.0f);
-            GlStateManager.rotatef((float)(i * 2 - 1) * 10.0f, 0.0f, 1.0f, 0.0f);
-            bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-            bufferBuilder.vertex(-0.5, -0.5, -0.5).texture(h, k).next();
-            bufferBuilder.vertex(0.5, -0.5, -0.5).texture(g, k).next();
-            bufferBuilder.vertex(0.5, 0.5, -0.5).texture(g, j).next();
-            bufferBuilder.vertex(-0.5, 0.5, -0.5).texture(h, j).next();
-            tessellator.draw();
-            GlStateManager.popMatrix();
-        }
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        GlStateManager.disableBlend();
-        GlStateManager.depthMask(true);
-        GlStateManager.depthFunc(515);
+        matrices.pop();
     }
 
     public void updateHeldItems() {

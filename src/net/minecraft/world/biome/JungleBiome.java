@@ -17,9 +17,9 @@ public final class JungleBiome
 extends Biome {
     public JungleBiome() {
         super(new Biome.Settings().configureSurfaceBuilder(SurfaceBuilder.DEFAULT, SurfaceBuilder.GRASS_CONFIG).precipitation(Biome.Precipitation.RAIN).category(Biome.Category.JUNGLE).depth(0.1f).scale(0.2f).temperature(0.95f).downfall(0.9f).waterColor(4159204).waterFogColor(329011).parent(null));
-        this.addStructureFeature(Feature.JUNGLE_TEMPLE, FeatureConfig.DEFAULT);
-        this.addStructureFeature(Feature.MINESHAFT, new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.NORMAL));
-        this.addStructureFeature(Feature.STRONGHOLD, FeatureConfig.DEFAULT);
+        this.addStructureFeature(Feature.JUNGLE_TEMPLE.configure(FeatureConfig.DEFAULT));
+        this.addStructureFeature(Feature.MINESHAFT.configure(new MineshaftFeatureConfig(0.004, MineshaftFeature.Type.NORMAL)));
+        this.addStructureFeature(Feature.STRONGHOLD.configure(FeatureConfig.DEFAULT));
         DefaultBiomeFeatures.addLandCarvers(this);
         DefaultBiomeFeatures.addDefaultStructures(this);
         DefaultBiomeFeatures.addDefaultLakes(this);
@@ -52,7 +52,7 @@ extends Biome {
         this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.SLIME, 100, 4, 4));
         this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.ENDERMAN, 10, 1, 4));
         this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.WITCH, 5, 1, 1));
-        this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.OCELOT, 2, 1, 1));
+        this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.OCELOT, 2, 1, 3));
     }
 }
 

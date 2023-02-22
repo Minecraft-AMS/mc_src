@@ -17,7 +17,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BrewingStandBlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.container.Container;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.LivingEntity;
@@ -29,6 +28,7 @@ import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.hit.BlockHitResult;
@@ -64,16 +64,16 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return true;
+            return ActionResult.SUCCESS;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof BrewingStandBlockEntity) {
             player.openContainer((BrewingStandBlockEntity)blockEntity);
             player.incrementStat(Stats.INTERACT_WITH_BREWINGSTAND);
         }
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -87,9 +87,9 @@ extends BlockWithEntity {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
-        double d = (float)pos.getX() + 0.4f + random.nextFloat() * 0.2f;
-        double e = (float)pos.getY() + 0.7f + random.nextFloat() * 0.3f;
-        double f = (float)pos.getZ() + 0.4f + random.nextFloat() * 0.2f;
+        double d = (double)pos.getX() + 0.4 + (double)random.nextFloat() * 0.2;
+        double e = (double)pos.getY() + 0.7 + (double)random.nextFloat() * 0.3;
+        double f = (double)pos.getZ() + 0.4 + (double)random.nextFloat() * 0.2;
         world.addParticle(ParticleTypes.SMOKE, d, e, f, 0.0, 0.0, 0.0);
     }
 
@@ -113,11 +113,6 @@ extends BlockWithEntity {
     @Override
     public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
         return Container.calculateComparatorOutput(world.getBlockEntity(pos));
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

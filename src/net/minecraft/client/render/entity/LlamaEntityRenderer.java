@@ -27,7 +27,7 @@ extends MobEntityRenderer<LlamaEntity, LlamaEntityModel<LlamaEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(LlamaEntity llamaEntity) {
+    public Identifier getTexture(LlamaEntity llamaEntity) {
         return TEXTURES[llamaEntity.getVariant()];
     }
 }

@@ -7,12 +7,13 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.CatEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.util.Identifier;
 
@@ -27,21 +28,12 @@ extends FeatureRenderer<CatEntity, CatEntityModel<CatEntity>> {
     }
 
     @Override
-    public void render(CatEntity catEntity, float f, float g, float h, float i, float j, float k, float l) {
-        if (!catEntity.isTamed() || catEntity.isInvisible()) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CatEntity catEntity, float f, float g, float h, float j, float k, float l) {
+        if (!catEntity.isTamed()) {
             return;
         }
-        this.bindTexture(SKIN);
         float[] fs = catEntity.getCollarColor().getColorComponents();
-        GlStateManager.color3f(fs[0], fs[1], fs[2]);
-        ((CatEntityModel)this.getContextModel()).copyStateTo(this.model);
-        this.model.animateModel(catEntity, f, g, h);
-        this.model.render(catEntity, f, g, i, j, k, l);
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return true;
+        CatCollarFeatureRenderer.render(this.getContextModel(), this.model, SKIN, matrixStack, vertexConsumerProvider, i, catEntity, f, g, j, k, l, h, fs[0], fs[1], fs[2]);
     }
 }
 

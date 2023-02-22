@@ -9,16 +9,11 @@ package net.minecraft.loot.entry;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableReporter;
-import net.minecraft.loot.context.LootContextType;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.entry.CombinedEntry;
 import net.minecraft.loot.entry.EntryCombiner;
 import net.minecraft.loot.entry.LootEntry;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class AlternativeEntry
@@ -50,11 +45,11 @@ extends CombinedEntry {
     }
 
     @Override
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
-        super.check(reporter, supplierGetter, parentLootTables, contextType);
+    public void check(LootTableReporter lootTableReporter) {
+        super.check(lootTableReporter);
         for (int i = 0; i < this.children.length - 1; ++i) {
             if (!ArrayUtils.isEmpty((Object[])this.children[i].conditions)) continue;
-            reporter.report("Unreachable entry!");
+            lootTableReporter.report("Unreachable entry!");
         }
     }
 

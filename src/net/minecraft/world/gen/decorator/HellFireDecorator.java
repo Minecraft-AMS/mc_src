@@ -27,10 +27,10 @@ extends SimpleDecorator<CountDecoratorConfig> {
     public Stream<BlockPos> getPositions(Random random, CountDecoratorConfig countDecoratorConfig, BlockPos blockPos) {
         ArrayList list = Lists.newArrayList();
         for (int i = 0; i < random.nextInt(random.nextInt(countDecoratorConfig.count) + 1) + 1; ++i) {
-            int j = random.nextInt(16);
-            int k = random.nextInt(120) + 4;
-            int l = random.nextInt(16);
-            list.add(blockPos.add(j, k, l));
+            int j = random.nextInt(16) + blockPos.getX();
+            int k = random.nextInt(16) + blockPos.getZ();
+            int l = random.nextInt(120) + 4;
+            list.add(new BlockPos(j, l, k));
         }
         return list.stream();
     }

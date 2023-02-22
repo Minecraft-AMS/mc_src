@@ -10,7 +10,9 @@ package net.minecraft.client.render.entity.model;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.entity.model.SkullEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 
 @Environment(value=EnvType.CLIENT)
 public class SkullOverlayEntityModel
@@ -19,16 +21,21 @@ extends SkullEntityModel {
 
     public SkullOverlayEntityModel() {
         super(0, 0, 64, 64);
-        this.field_3377.addCuboid(-4.0f, -8.0f, -4.0f, 8, 8, 8, 0.25f);
+        this.field_3377.addCuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, 0.25f);
         this.field_3377.setPivot(0.0f, 0.0f, 0.0f);
     }
 
     @Override
-    public void render(float limbMoveAngle, float limbMoveAmount, float age, float headYaw, float headPitch, float scale) {
-        super.render(limbMoveAngle, limbMoveAmount, age, headYaw, headPitch, scale);
+    public void render(float f, float g, float h) {
+        super.render(f, g, h);
         this.field_3377.yaw = this.skull.yaw;
         this.field_3377.pitch = this.skull.pitch;
-        this.field_3377.render(scale);
+    }
+
+    @Override
+    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
+        super.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
+        this.field_3377.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
     }
 }
 

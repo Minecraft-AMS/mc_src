@@ -33,11 +33,6 @@ extends Block {
     }
 
     @Override
-    public boolean isOpaque(BlockState state) {
-        return false;
-    }
-
-    @Override
     @Environment(value=EnvType.CLIENT)
     public float getAmbientOcclusionLightLevel(BlockState state, BlockView view, BlockPos pos) {
         return 1.0f;

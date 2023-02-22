@@ -9,9 +9,14 @@ package net.minecraft.client.render.entity.feature;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PigEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.util.Identifier;
 
@@ -26,18 +31,15 @@ extends FeatureRenderer<PigEntity, PigEntityModel<PigEntity>> {
     }
 
     @Override
-    public void render(PigEntity pigEntity, float f, float g, float h, float i, float j, float k, float l) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, PigEntity pigEntity, float f, float g, float h, float j, float k, float l) {
         if (!pigEntity.isSaddled()) {
             return;
         }
-        this.bindTexture(SKIN);
         ((PigEntityModel)this.getContextModel()).copyStateTo(this.model);
-        this.model.render(pigEntity, f, g, i, j, k, l);
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        this.model.animateModel(pigEntity, f, g, h);
+        this.model.setAngles(pigEntity, f, g, j, k, l);
+        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityCutoutNoCull(SKIN));
+        this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
 

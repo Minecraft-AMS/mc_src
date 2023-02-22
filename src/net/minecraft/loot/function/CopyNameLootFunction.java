@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import java.util.Set;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.context.LootContextParameters;
@@ -22,7 +23,6 @@ import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Nameable;
-import net.minecraft.world.loot.condition.LootCondition;
 
 public class CopyNameLootFunction
 extends ConditionalLootFunction {

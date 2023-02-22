@@ -18,27 +18,54 @@ import net.minecraft.nbt.AbstractNumberTag;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.PositionTracker;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagReader;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class LongArrayTag
 extends AbstractListTag<LongTag> {
+    public static final TagReader<LongArrayTag> READER = new TagReader<LongArrayTag>(){
+
+        @Override
+        public LongArrayTag read(DataInput dataInput, int i, PositionTracker positionTracker) throws IOException {
+            positionTracker.add(192L);
+            int j = dataInput.readInt();
+            positionTracker.add(64L * (long)j);
+            long[] ls = new long[j];
+            for (int k = 0; k < j; ++k) {
+                ls[k] = dataInput.readLong();
+            }
+            return new LongArrayTag(ls);
+        }
+
+        @Override
+        public String getCrashReportName() {
+            return "LONG[]";
+        }
+
+        @Override
+        public String getCommandFeedbackName() {
+            return "TAG_Long_Array";
+        }
+
+        @Override
+        public /* synthetic */ Tag read(DataInput input, int depth, PositionTracker tracker) throws IOException {
+            return this.read(input, depth, tracker);
+        }
+    };
     private long[] value;
 
-    LongArrayTag() {
+    public LongArrayTag(long[] value) {
+        this.value = value;
     }
 
-    public LongArrayTag(long[] ls) {
-        this.value = ls;
+    public LongArrayTag(LongSet value) {
+        this.value = value.toLongArray();
     }
 
-    public LongArrayTag(LongSet longSet) {
-        this.value = longSet.toLongArray();
-    }
-
-    public LongArrayTag(List<Long> list) {
-        this(LongArrayTag.toArray(list));
+    public LongArrayTag(List<Long> value) {
+        this(LongArrayTag.toArray(value));
     }
 
     private static long[] toArray(List<Long> list) {
@@ -59,19 +86,12 @@ extends AbstractListTag<LongTag> {
     }
 
     @Override
-    public void read(DataInput input, int depth, PositionTracker positionTracker) throws IOException {
-        positionTracker.add(192L);
-        int i = input.readInt();
-        positionTracker.add(64 * i);
-        this.value = new long[i];
-        for (int j = 0; j < i; ++j) {
-            this.value[j] = input.readLong();
-        }
-    }
-
-    @Override
     public byte getType() {
         return 12;
+    }
+
+    public TagReader<LongArrayTag> getReader() {
+        return READER;
     }
 
     @Override
@@ -131,14 +151,14 @@ extends AbstractListTag<LongTag> {
 
     @Override
     public LongTag get(int i) {
-        return new LongTag(this.value[i]);
+        return LongTag.of(this.value[i]);
     }
 
     @Override
     public LongTag set(int i, LongTag longTag) {
         long l = this.value[i];
         this.value[i] = longTag.getLong();
-        return new LongTag(l);
+        return LongTag.of(l);
     }
 
     public void method_10531(int i, LongTag longTag) {
@@ -166,7 +186,7 @@ extends AbstractListTag<LongTag> {
     public LongTag method_10536(int i) {
         long l = this.value[i];
         this.value = ArrayUtils.remove((long[])this.value, (int)i);
-        return new LongTag(l);
+        return LongTag.of(l);
     }
 
     @Override

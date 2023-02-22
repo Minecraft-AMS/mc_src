@@ -23,6 +23,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ShipwreckFeatureConfig;
 
 public class ShipwreckGenerator {
@@ -84,18 +85,26 @@ public class ShipwreckGenerator {
         }
 
         @Override
-        public boolean generate(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
+        public boolean generate(IWorld world, ChunkGenerator<?> generator, Random random, BlockBox box, ChunkPos pos) {
             int i = 256;
             int j = 0;
-            BlockPos blockPos = this.pos.add(this.structure.getSize().getX() - 1, 0, this.structure.getSize().getZ() - 1);
-            for (BlockPos blockPos2 : BlockPos.iterate(this.pos, blockPos)) {
-                int k = world.getTop(this.grounded ? Heightmap.Type.WORLD_SURFACE_WG : Heightmap.Type.OCEAN_FLOOR_WG, blockPos2.getX(), blockPos2.getZ());
-                j += k;
-                i = Math.min(i, k);
+            BlockPos blockPos = this.structure.getSize();
+            Heightmap.Type type = this.grounded ? Heightmap.Type.WORLD_SURFACE_WG : Heightmap.Type.OCEAN_FLOOR_WG;
+            int k = blockPos.getX() * blockPos.getZ();
+            if (k == 0) {
+                j = world.getTopY(type, this.pos.getX(), this.pos.getZ());
+            } else {
+                BlockPos blockPos2 = this.pos.add(blockPos.getX() - 1, 0, blockPos.getZ() - 1);
+                for (BlockPos blockPos3 : BlockPos.iterate(this.pos, blockPos2)) {
+                    int l = world.getTopY(type, blockPos3.getX(), blockPos3.getZ());
+                    j += l;
+                    i = Math.min(i, l);
+                }
+                j /= k;
             }
-            int l = this.grounded ? i - this.structure.getSize().getY() / 2 - random.nextInt(3) : (j /= this.structure.getSize().getX() * this.structure.getSize().getZ());
-            this.pos = new BlockPos(this.pos.getX(), l, this.pos.getZ());
-            return super.generate(world, random, boundingBox, pos);
+            int m = this.grounded ? i - blockPos.getY() / 2 - random.nextInt(3) : j;
+            this.pos = new BlockPos(this.pos.getX(), m, this.pos.getZ());
+            return super.generate(world, generator, random, box, pos);
         }
     }
 }

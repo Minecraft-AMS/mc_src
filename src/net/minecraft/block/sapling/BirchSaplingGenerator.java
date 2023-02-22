@@ -8,17 +8,18 @@ package net.minecraft.block.sapling;
 
 import java.util.Random;
 import net.minecraft.block.sapling.SaplingGenerator;
-import net.minecraft.world.gen.feature.AbstractTreeFeature;
-import net.minecraft.world.gen.feature.BirchTreeFeature;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
+import net.minecraft.world.biome.DefaultBiomeFeatures;
+import net.minecraft.world.gen.feature.BranchedTreeFeatureConfig;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.Feature;
 import org.jetbrains.annotations.Nullable;
 
 public class BirchSaplingGenerator
 extends SaplingGenerator {
     @Override
     @Nullable
-    protected AbstractTreeFeature<DefaultFeatureConfig> createTreeFeature(Random random) {
-        return new BirchTreeFeature(DefaultFeatureConfig::deserialize, true, false);
+    protected ConfiguredFeature<BranchedTreeFeatureConfig, ?> createTreeFeature(Random random, boolean bl) {
+        return Feature.NORMAL_TREE.configure(bl ? DefaultBiomeFeatures.BIRCH_TREE_WITH_MORE_BEEHIVES_CONFIG : DefaultBiomeFeatures.BIRCH_TREE_CONFIG);
     }
 }
 

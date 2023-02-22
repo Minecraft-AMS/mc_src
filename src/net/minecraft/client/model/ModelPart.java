@@ -2,27 +2,31 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  it.unimi.dsi.fastutil.objects.ObjectArrayList
+ *  it.unimi.dsi.fastutil.objects.ObjectList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.model;
 
-import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
-import java.util.List;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.model.Box;
 import net.minecraft.client.model.Model;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.util.GlAllocationUtils;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.util.math.Matrix3f;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
+import net.minecraft.client.util.math.Vector4f;
+import net.minecraft.util.math.Direction;
 
 @Environment(value=EnvType.CLIENT)
 public class ModelPart {
-    public float textureWidth = 64.0f;
-    public float textureHeight = 32.0f;
+    private float textureWidth = 64.0f;
+    private float textureHeight = 32.0f;
     private int textureOffsetU;
     private int textureOffsetV;
     public float pivotX;
@@ -31,30 +35,23 @@ public class ModelPart {
     public float pitch;
     public float yaw;
     public float roll;
-    private boolean compiled;
-    private int list;
     public boolean mirror;
     public boolean visible = true;
-    public boolean field_3664;
-    public final List<Box> boxes = Lists.newArrayList();
-    public List<ModelPart> children;
-    public final String name;
-    public float x;
-    public float y;
-    public float z;
-
-    public ModelPart(Model owner, String name) {
-        owner.cuboidList.add(this);
-        this.name = name;
-        this.setTextureSize(owner.textureWidth, owner.textureHeight);
-    }
+    private final ObjectList<Cuboid> cuboids = new ObjectArrayList();
+    private final ObjectList<ModelPart> children = new ObjectArrayList();
 
     public ModelPart(Model model) {
-        this(model, null);
+        model.accept(this);
+        this.setTextureSize(model.textureWidth, model.textureHeight);
     }
 
     public ModelPart(Model model, int textureOffsetU, int textureOffsetV) {
-        this(model);
+        this(model.textureWidth, model.textureHeight, textureOffsetU, textureOffsetV);
+        model.accept(this);
+    }
+
+    public ModelPart(int textureWidth, int textureHeight, int textureOffsetU, int textureOffsetV) {
+        this.setTextureSize(textureWidth, textureHeight);
         this.setTextureOffset(textureOffsetU, textureOffsetV);
     }
 
@@ -68,16 +65,7 @@ public class ModelPart {
     }
 
     public void addChild(ModelPart part) {
-        if (this.children == null) {
-            this.children = Lists.newArrayList();
-        }
-        this.children.add(part);
-    }
-
-    public void removeChild(ModelPart modelPart) {
-        if (this.children != null) {
-            this.children.remove(modelPart);
-        }
+        this.children.add((Object)part);
     }
 
     public ModelPart setTextureOffset(int textureOffsetU, int textureOffsetV) {
@@ -87,28 +75,35 @@ public class ModelPart {
     }
 
     public ModelPart addCuboid(String name, float x, float y, float z, int sizeX, int sizeY, int sizeZ, float extra, int textureOffsetU, int textureOffsetV) {
-        name = this.name + "." + name;
         this.setTextureOffset(textureOffsetU, textureOffsetV);
-        this.boxes.add(new Box(this, this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra).setName(name));
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra, extra, extra, this.mirror, false);
         return this;
     }
 
-    public ModelPart addCuboid(float x, float y, float z, int sizeX, int sizeY, int sizeZ) {
-        this.boxes.add(new Box(this, this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, 0.0f));
+    public ModelPart addCuboid(float x, float y, float z, float sizeX, float sizeY, float sizeZ) {
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, 0.0f, 0.0f, 0.0f, this.mirror, false);
         return this;
     }
 
-    public ModelPart addCuboid(float x, float y, float z, int sizeX, int sizeY, int sizeZ, boolean mirror) {
-        this.boxes.add(new Box(this, this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, 0.0f, mirror));
+    public ModelPart addCuboid(float x, float y, float z, float sizeX, float sizeY, float sizeZ, boolean mirror) {
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, 0.0f, 0.0f, 0.0f, mirror, false);
         return this;
     }
 
-    public void addCuboid(float x, float y, float z, int sizeX, int sizeY, int sizeZ, float extra) {
-        this.boxes.add(new Box(this, this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra));
+    public void addCuboid(float x, float y, float z, float sizeX, float sizeY, float sizeZ, float extra) {
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra, extra, extra, this.mirror, false);
     }
 
-    public void addCuboid(float x, float y, float z, int sizeX, int sizeY, int sizeZ, float extra, boolean mirror) {
-        this.boxes.add(new Box(this, this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra, mirror));
+    public void addCuboid(float x, float y, float z, float sizeX, float sizeY, float sizeZ, float extraX, float extraY, float extraZ) {
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extraX, extraY, extraZ, this.mirror, false);
+    }
+
+    public void addCuboid(float x, float y, float z, float sizeX, float sizeY, float sizeZ, float extra, boolean mirror) {
+        this.addCuboid(this.textureOffsetU, this.textureOffsetV, x, y, z, sizeX, sizeY, sizeZ, extra, extra, extra, mirror, false);
+    }
+
+    private void addCuboid(int u, int v, float x, float y, float z, float sizeX, float sizeY, float sizeZ, float extraX, float extraY, float extraZ, boolean mirror, boolean bl) {
+        this.cuboids.add((Object)new Cuboid(u, v, x, y, z, sizeX, sizeY, sizeZ, extraX, extraY, extraZ, mirror, this.textureWidth, this.textureHeight));
     }
 
     public void setPivot(float x, float y, float z) {
@@ -117,124 +112,177 @@ public class ModelPart {
         this.pivotZ = z;
     }
 
-    public void render(float scale) {
-        if (this.field_3664) {
-            return;
-        }
-        if (!this.visible) {
-            return;
-        }
-        if (!this.compiled) {
-            this.compile(scale);
-        }
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(this.x, this.y, this.z);
-        if (this.pitch != 0.0f || this.yaw != 0.0f || this.roll != 0.0f) {
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(this.pivotX * scale, this.pivotY * scale, this.pivotZ * scale);
-            if (this.roll != 0.0f) {
-                GlStateManager.rotatef(this.roll * 57.295776f, 0.0f, 0.0f, 1.0f);
-            }
-            if (this.yaw != 0.0f) {
-                GlStateManager.rotatef(this.yaw * 57.295776f, 0.0f, 1.0f, 0.0f);
-            }
-            if (this.pitch != 0.0f) {
-                GlStateManager.rotatef(this.pitch * 57.295776f, 1.0f, 0.0f, 0.0f);
-            }
-            GlStateManager.callList(this.list);
-            if (this.children != null) {
-                for (int i = 0; i < this.children.size(); ++i) {
-                    this.children.get(i).render(scale);
-                }
-            }
-            GlStateManager.popMatrix();
-        } else if (this.pivotX != 0.0f || this.pivotY != 0.0f || this.pivotZ != 0.0f) {
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(this.pivotX * scale, this.pivotY * scale, this.pivotZ * scale);
-            GlStateManager.callList(this.list);
-            if (this.children != null) {
-                for (int i = 0; i < this.children.size(); ++i) {
-                    this.children.get(i).render(scale);
-                }
-            }
-            GlStateManager.popMatrix();
-        } else {
-            GlStateManager.callList(this.list);
-            if (this.children != null) {
-                for (int i = 0; i < this.children.size(); ++i) {
-                    this.children.get(i).render(scale);
-                }
-            }
-        }
-        GlStateManager.popMatrix();
+    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay) {
+        this.render(matrices, vertexConsumer, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 
-    public void method_2852(float scale) {
-        if (this.field_3664) {
-            return;
-        }
+    public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
         if (!this.visible) {
             return;
         }
-        if (!this.compiled) {
-            this.compile(scale);
+        if (this.cuboids.isEmpty() && this.children.isEmpty()) {
+            return;
         }
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef(this.pivotX * scale, this.pivotY * scale, this.pivotZ * scale);
+        matrices.push();
+        this.rotate(matrices);
+        this.renderCuboids(matrices.peek(), vertexConsumer, light, overlay, red, green, blue, alpha);
+        for (ModelPart modelPart : this.children) {
+            modelPart.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
+        }
+        matrices.pop();
+    }
+
+    public void rotate(MatrixStack matrix) {
+        matrix.translate(this.pivotX / 16.0f, this.pivotY / 16.0f, this.pivotZ / 16.0f);
+        if (this.roll != 0.0f) {
+            matrix.multiply(Vector3f.POSITIVE_Z.getRadialQuaternion(this.roll));
+        }
         if (this.yaw != 0.0f) {
-            GlStateManager.rotatef(this.yaw * 57.295776f, 0.0f, 1.0f, 0.0f);
+            matrix.multiply(Vector3f.POSITIVE_Y.getRadialQuaternion(this.yaw));
         }
         if (this.pitch != 0.0f) {
-            GlStateManager.rotatef(this.pitch * 57.295776f, 1.0f, 0.0f, 0.0f);
-        }
-        if (this.roll != 0.0f) {
-            GlStateManager.rotatef(this.roll * 57.295776f, 0.0f, 0.0f, 1.0f);
-        }
-        GlStateManager.callList(this.list);
-        GlStateManager.popMatrix();
-    }
-
-    public void applyTransform(float scale) {
-        if (this.field_3664) {
-            return;
-        }
-        if (!this.visible) {
-            return;
-        }
-        if (!this.compiled) {
-            this.compile(scale);
-        }
-        if (this.pitch != 0.0f || this.yaw != 0.0f || this.roll != 0.0f) {
-            GlStateManager.translatef(this.pivotX * scale, this.pivotY * scale, this.pivotZ * scale);
-            if (this.roll != 0.0f) {
-                GlStateManager.rotatef(this.roll * 57.295776f, 0.0f, 0.0f, 1.0f);
-            }
-            if (this.yaw != 0.0f) {
-                GlStateManager.rotatef(this.yaw * 57.295776f, 0.0f, 1.0f, 0.0f);
-            }
-            if (this.pitch != 0.0f) {
-                GlStateManager.rotatef(this.pitch * 57.295776f, 1.0f, 0.0f, 0.0f);
-            }
-        } else if (this.pivotX != 0.0f || this.pivotY != 0.0f || this.pivotZ != 0.0f) {
-            GlStateManager.translatef(this.pivotX * scale, this.pivotY * scale, this.pivotZ * scale);
+            matrix.multiply(Vector3f.POSITIVE_X.getRadialQuaternion(this.pitch));
         }
     }
 
-    private void compile(float scale) {
-        this.list = GlAllocationUtils.genLists(1);
-        GlStateManager.newList(this.list, 4864);
-        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-        for (int i = 0; i < this.boxes.size(); ++i) {
-            this.boxes.get(i).render(bufferBuilder, scale);
+    private void renderCuboids(MatrixStack.Entry matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
+        Matrix4f matrix4f = matrices.getModel();
+        Matrix3f matrix3f = matrices.getNormal();
+        for (Cuboid cuboid : this.cuboids) {
+            for (Quad quad : cuboid.sides) {
+                Vector3f vector3f = quad.direction.copy();
+                vector3f.transform(matrix3f);
+                float f = vector3f.getX();
+                float g = vector3f.getY();
+                float h = vector3f.getZ();
+                for (int i = 0; i < 4; ++i) {
+                    Vertex vertex = quad.vertices[i];
+                    float j = vertex.pos.getX() / 16.0f;
+                    float k = vertex.pos.getY() / 16.0f;
+                    float l = vertex.pos.getZ() / 16.0f;
+                    Vector4f vector4f = new Vector4f(j, k, l, 1.0f);
+                    vector4f.transform(matrix4f);
+                    vertexConsumer.vertex(vector4f.getX(), vector4f.getY(), vector4f.getZ(), red, green, blue, alpha, vertex.u, vertex.v, overlay, light, f, g, h);
+                }
+            }
         }
-        GlStateManager.endList();
-        this.compiled = true;
     }
 
     public ModelPart setTextureSize(int width, int height) {
         this.textureWidth = width;
         this.textureHeight = height;
         return this;
+    }
+
+    public Cuboid getRandomCuboid(Random random) {
+        return (Cuboid)this.cuboids.get(random.nextInt(this.cuboids.size()));
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class Vertex {
+        public final Vector3f pos;
+        public final float u;
+        public final float v;
+
+        public Vertex(float x, float y, float z, float u, float v) {
+            this(new Vector3f(x, y, z), u, v);
+        }
+
+        public Vertex remap(float u, float v) {
+            return new Vertex(this.pos, u, v);
+        }
+
+        public Vertex(Vector3f vector3f, float u, float v) {
+            this.pos = vector3f;
+            this.u = u;
+            this.v = v;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class Quad {
+        public final Vertex[] vertices;
+        public final Vector3f direction;
+
+        public Quad(Vertex[] vertices, float u1, float v1, float u2, float v2, float squishU, float squishV, boolean flip, Direction direction) {
+            this.vertices = vertices;
+            float f = 0.0f / squishU;
+            float g = 0.0f / squishV;
+            vertices[0] = vertices[0].remap(u2 / squishU - f, v1 / squishV + g);
+            vertices[1] = vertices[1].remap(u1 / squishU + f, v1 / squishV + g);
+            vertices[2] = vertices[2].remap(u1 / squishU + f, v2 / squishV - g);
+            vertices[3] = vertices[3].remap(u2 / squishU - f, v2 / squishV - g);
+            if (flip) {
+                int i = vertices.length;
+                for (int j = 0; j < i / 2; ++j) {
+                    Vertex vertex = vertices[j];
+                    vertices[j] = vertices[i - 1 - j];
+                    vertices[i - 1 - j] = vertex;
+                }
+            }
+            this.direction = direction.getUnitVector();
+            if (flip) {
+                this.direction.multiplyComponentwise(-1.0f, 1.0f, 1.0f);
+            }
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static class Cuboid {
+        private final Quad[] sides;
+        public final float minX;
+        public final float minY;
+        public final float minZ;
+        public final float maxX;
+        public final float maxY;
+        public final float maxZ;
+
+        public Cuboid(int u, int v, float x, float y, float z, float sizeX, float sizeY, float sizeZ, float extraX, float extraY, float extraZ, boolean mirror, float textureWidth, float textureHeight) {
+            this.minX = x;
+            this.minY = y;
+            this.minZ = z;
+            this.maxX = x + sizeX;
+            this.maxY = y + sizeY;
+            this.maxZ = z + sizeZ;
+            this.sides = new Quad[6];
+            float f = x + sizeX;
+            float g = y + sizeY;
+            float h = z + sizeZ;
+            x -= extraX;
+            y -= extraY;
+            z -= extraZ;
+            f += extraX;
+            g += extraY;
+            h += extraZ;
+            if (mirror) {
+                float i = f;
+                f = x;
+                x = i;
+            }
+            Vertex vertex = new Vertex(x, y, z, 0.0f, 0.0f);
+            Vertex vertex2 = new Vertex(f, y, z, 0.0f, 8.0f);
+            Vertex vertex3 = new Vertex(f, g, z, 8.0f, 8.0f);
+            Vertex vertex4 = new Vertex(x, g, z, 8.0f, 0.0f);
+            Vertex vertex5 = new Vertex(x, y, h, 0.0f, 0.0f);
+            Vertex vertex6 = new Vertex(f, y, h, 0.0f, 8.0f);
+            Vertex vertex7 = new Vertex(f, g, h, 8.0f, 8.0f);
+            Vertex vertex8 = new Vertex(x, g, h, 8.0f, 0.0f);
+            float j = u;
+            float k = (float)u + sizeZ;
+            float l = (float)u + sizeZ + sizeX;
+            float m = (float)u + sizeZ + sizeX + sizeX;
+            float n = (float)u + sizeZ + sizeX + sizeZ;
+            float o = (float)u + sizeZ + sizeX + sizeZ + sizeX;
+            float p = v;
+            float q = (float)v + sizeZ;
+            float r = (float)v + sizeZ + sizeY;
+            this.sides[2] = new Quad(new Vertex[]{vertex6, vertex5, vertex, vertex2}, k, p, l, q, textureWidth, textureHeight, mirror, Direction.DOWN);
+            this.sides[3] = new Quad(new Vertex[]{vertex3, vertex4, vertex8, vertex7}, l, q, m, p, textureWidth, textureHeight, mirror, Direction.UP);
+            this.sides[1] = new Quad(new Vertex[]{vertex, vertex5, vertex8, vertex4}, j, q, k, r, textureWidth, textureHeight, mirror, Direction.WEST);
+            this.sides[4] = new Quad(new Vertex[]{vertex2, vertex, vertex4, vertex3}, k, q, l, r, textureWidth, textureHeight, mirror, Direction.NORTH);
+            this.sides[0] = new Quad(new Vertex[]{vertex6, vertex2, vertex3, vertex7}, l, q, n, r, textureWidth, textureHeight, mirror, Direction.EAST);
+            this.sides[5] = new Quad(new Vertex[]{vertex5, vertex6, vertex7, vertex8}, n, q, o, r, textureWidth, textureHeight, mirror, Direction.SOUTH);
+        }
     }
 }
 

@@ -24,14 +24,14 @@ public class EndIslandsSmallBiome
 extends Biome {
     public EndIslandsSmallBiome() {
         super(new Biome.Settings().configureSurfaceBuilder(SurfaceBuilder.DEFAULT, SurfaceBuilder.END_CONFIG).precipitation(Biome.Precipitation.NONE).category(Biome.Category.THEEND).depth(0.1f).scale(0.2f).temperature(0.5f).downfall(0.5f).waterColor(4159204).waterFogColor(329011).parent(null));
-        this.addFeature(GenerationStep.Feature.RAW_GENERATION, EndIslandsSmallBiome.configureFeature(Feature.END_ISLAND, FeatureConfig.DEFAULT, Decorator.END_ISLAND, DecoratorConfig.DEFAULT));
-        DefaultBiomeFeatures.method_20826(this);
+        this.addFeature(GenerationStep.Feature.RAW_GENERATION, Feature.END_ISLAND.configure(FeatureConfig.DEFAULT).createDecoratedFeature(Decorator.END_ISLAND.configure(DecoratorConfig.DEFAULT)));
+        DefaultBiomeFeatures.addEndCities(this);
         this.addSpawn(EntityCategory.MONSTER, new Biome.SpawnEntry(EntityType.ENDERMAN, 10, 4, 4));
     }
 
     @Override
     @Environment(value=EnvType.CLIENT)
-    public int getSkyColor(float temperature) {
+    public int getSkyColor() {
         return 0;
     }
 }

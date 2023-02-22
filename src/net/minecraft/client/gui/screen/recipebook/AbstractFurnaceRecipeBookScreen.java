@@ -8,7 +8,7 @@
  */
 package net.minecraft.client.gui.screen.recipebook;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -17,7 +17,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.container.Slot;
 import net.minecraft.item.Item;
@@ -30,11 +29,11 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public abstract class AbstractFurnaceRecipeBookScreen
 extends RecipeBookWidget {
-    private Iterator<Item> field_3153;
-    private Set<Item> field_3149;
+    private Iterator<Item> fuelIterator;
+    private Set<Item> fuels;
     private Slot outputSlot;
-    private Item field_3152;
-    private float field_3151;
+    private Item currentItem;
+    private float frameTime;
 
     @Override
     protected boolean toggleFilteringCraftable() {
@@ -92,11 +91,11 @@ extends RecipeBookWidget {
         this.ghostSlots.addSlot(Ingredient.ofStacks(itemStack), slots.get((int)2).xPosition, slots.get((int)2).yPosition);
         DefaultedList<Ingredient> defaultedList = recipe.getPreviewInputs();
         this.outputSlot = slots.get(1);
-        if (this.field_3149 == null) {
-            this.field_3149 = this.getAllowedFuels();
+        if (this.fuels == null) {
+            this.fuels = this.getAllowedFuels();
         }
-        this.field_3153 = this.field_3149.iterator();
-        this.field_3152 = null;
+        this.fuelIterator = this.fuels.iterator();
+        this.currentItem = null;
         Iterator iterator = defaultedList.iterator();
         for (int i = 0; i < 2; ++i) {
             if (!iterator.hasNext()) {
@@ -118,33 +117,29 @@ extends RecipeBookWidget {
             return;
         }
         if (!Screen.hasControlDown()) {
-            this.field_3151 += lastFrameDuration;
+            this.frameTime += lastFrameDuration;
         }
-        DiffuseLighting.enableForItems();
-        GlStateManager.disableLighting();
         int i = this.outputSlot.xPosition + left;
         int j = this.outputSlot.yPosition + top;
         DrawableHelper.fill(i, j, i + 16, j + 16, 0x30FF0000);
-        this.client.getItemRenderer().renderGuiItem(this.client.player, this.method_2658().getStackForRender(), i, j);
-        GlStateManager.depthFunc(516);
+        this.client.getItemRenderer().renderGuiItem(this.client.player, this.getItem().getStackForRender(), i, j);
+        RenderSystem.depthFunc(516);
         DrawableHelper.fill(i, j, i + 16, j + 16, 0x30FFFFFF);
-        GlStateManager.depthFunc(515);
-        GlStateManager.enableLighting();
-        DiffuseLighting.disable();
+        RenderSystem.depthFunc(515);
     }
 
-    private Item method_2658() {
-        if (this.field_3152 == null || this.field_3151 > 30.0f) {
-            this.field_3151 = 0.0f;
-            if (this.field_3153 == null || !this.field_3153.hasNext()) {
-                if (this.field_3149 == null) {
-                    this.field_3149 = this.getAllowedFuels();
+    private Item getItem() {
+        if (this.currentItem == null || this.frameTime > 30.0f) {
+            this.frameTime = 0.0f;
+            if (this.fuelIterator == null || !this.fuelIterator.hasNext()) {
+                if (this.fuels == null) {
+                    this.fuels = this.getAllowedFuels();
                 }
-                this.field_3153 = this.field_3149.iterator();
+                this.fuelIterator = this.fuels.iterator();
             }
-            this.field_3152 = this.field_3153.next();
+            this.currentItem = this.fuelIterator.next();
         }
-        return this.field_3152;
+        return this.currentItem;
     }
 }
 

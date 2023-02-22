@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.UnaryOperator;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.function.ConditionalLootFunction;
@@ -30,7 +31,6 @@ import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -50,12 +50,12 @@ extends ConditionalLootFunction {
 
     @Override
     public Set<LootContextParameter<?>> getRequiredParameters() {
-        return this.entity != null ? ImmutableSet.of(this.entity.getIdentifier()) : ImmutableSet.of();
+        return this.entity != null ? ImmutableSet.of(this.entity.getParameter()) : ImmutableSet.of();
     }
 
     public static UnaryOperator<Text> applySourceEntity(LootContext context, @Nullable LootContext.EntityTarget sourceEntity) {
         Entity entity;
-        if (sourceEntity != null && (entity = context.get(sourceEntity.getIdentifier())) != null) {
+        if (sourceEntity != null && (entity = context.get(sourceEntity.getParameter())) != null) {
             ServerCommandSource serverCommandSource = entity.getCommandSource().withLevel(2);
             return textComponent -> {
                 try {

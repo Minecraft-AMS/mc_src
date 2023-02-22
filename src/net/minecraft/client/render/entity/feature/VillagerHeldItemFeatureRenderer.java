@@ -7,57 +7,35 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.VillagerResemblingModel;
-import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.model.json.ModelTransformation;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 @Environment(value=EnvType.CLIENT)
-public class VillagerHeldItemFeatureRenderer<T extends LivingEntity>
-extends FeatureRenderer<T, VillagerResemblingModel<T>> {
-    private final ItemRenderer itemRenderer = MinecraftClient.getInstance().getItemRenderer();
-
-    public VillagerHeldItemFeatureRenderer(FeatureRendererContext<T, VillagerResemblingModel<T>> featureRendererContext) {
+public class VillagerHeldItemFeatureRenderer<T extends LivingEntity, M extends EntityModel<T>>
+extends FeatureRenderer<T, M> {
+    public VillagerHeldItemFeatureRenderer(FeatureRendererContext<T, M> featureRendererContext) {
         super(featureRendererContext);
     }
 
     @Override
-    public void render(T livingEntity, float f, float g, float h, float i, float j, float k, float l) {
-        boolean bl;
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T livingEntity, float f, float g, float h, float j, float k, float l) {
+        matrixStack.push();
+        matrixStack.translate(0.0, 0.4f, -0.4f);
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(180.0f));
         ItemStack itemStack = ((LivingEntity)livingEntity).getEquippedStack(EquipmentSlot.MAINHAND);
-        if (itemStack.isEmpty()) {
-            return;
-        }
-        Item item = itemStack.getItem();
-        Block block = Block.getBlockFromItem(item);
-        GlStateManager.pushMatrix();
-        boolean bl2 = bl = this.itemRenderer.hasDepthInGui(itemStack) && block.getRenderLayer() == RenderLayer.TRANSLUCENT;
-        if (bl) {
-            GlStateManager.depthMask(false);
-        }
-        GlStateManager.translatef(0.0f, 0.4f, -0.4f);
-        GlStateManager.rotatef(180.0f, 1.0f, 0.0f, 0.0f);
-        this.itemRenderer.renderHeldItem(itemStack, (LivingEntity)livingEntity, ModelTransformation.Type.GROUND, false);
-        if (bl) {
-            GlStateManager.depthMask(true);
-        }
-        GlStateManager.popMatrix();
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        MinecraftClient.getInstance().getHeldItemRenderer().renderItem((LivingEntity)livingEntity, itemStack, ModelTransformation.Mode.GROUND, false, matrixStack, vertexConsumerProvider, i);
+        matrixStack.pop();
     }
 }
 

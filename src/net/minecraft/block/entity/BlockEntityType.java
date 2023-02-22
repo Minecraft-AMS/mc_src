@@ -23,6 +23,7 @@ import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.block.entity.BarrelBlockEntity;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.block.entity.BedBlockEntity;
+import net.minecraft.block.entity.BeehiveBlockEntity;
 import net.minecraft.block.entity.BellBlockEntity;
 import net.minecraft.block.entity.BlastFurnaceBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
@@ -55,7 +56,9 @@ import net.minecraft.block.entity.TrappedChestBlockEntity;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.world.BlockView;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -94,30 +97,33 @@ public class BlockEntityType<T extends BlockEntity> {
     public static final BlockEntityType<BellBlockEntity> BELL = BlockEntityType.create("bell", Builder.create(BellBlockEntity::new, Blocks.BELL));
     public static final BlockEntityType<JigsawBlockEntity> JIGSAW = BlockEntityType.create("jigsaw", Builder.create(JigsawBlockEntity::new, Blocks.JIGSAW));
     public static final BlockEntityType<CampfireBlockEntity> CAMPFIRE = BlockEntityType.create("campfire", Builder.create(CampfireBlockEntity::new, Blocks.CAMPFIRE));
+    public static final BlockEntityType<BeehiveBlockEntity> BEEHIVE = BlockEntityType.create("beehive", Builder.create(BeehiveBlockEntity::new, Blocks.BEE_NEST, Blocks.BEEHIVE));
     private final Supplier<? extends T> supplier;
     private final Set<Block> blocks;
     private final Type<?> type;
 
     @Nullable
     public static Identifier getId(BlockEntityType<?> blockEntityType) {
-        return Registry.BLOCK_ENTITY.getId(blockEntityType);
+        return Registry.BLOCK_ENTITY_TYPE.getId(blockEntityType);
     }
 
     private static <T extends BlockEntity> BlockEntityType<T> create(String string, Builder<T> builder) {
-        Type type = null;
-        try {
-            type = Schemas.getFixer().getSchema(DataFixUtils.makeKey((int)SharedConstants.getGameVersion().getWorldVersion())).getChoiceType(TypeReferences.BLOCK_ENTITY, string);
-        }
-        catch (IllegalStateException illegalStateException) {
-            if (SharedConstants.isDevelopment) {
-                throw illegalStateException;
+        Type type;
+        block3: {
+            type = null;
+            try {
+                type = Schemas.getFixer().getSchema(DataFixUtils.makeKey((int)SharedConstants.getGameVersion().getWorldVersion())).getChoiceType(TypeReferences.BLOCK_ENTITY, string);
             }
-            LOGGER.warn("No data fixer registered for block entity {}", (Object)string);
+            catch (IllegalArgumentException illegalArgumentException) {
+                LOGGER.error("No data fixer registered for block entity {}", (Object)string);
+                if (!SharedConstants.isDevelopment) break block3;
+                throw illegalArgumentException;
+            }
         }
         if (((Builder)builder).blocks.isEmpty()) {
             LOGGER.warn("Block entity type {} requires at least one valid block to be defined!", (Object)string);
         }
-        return Registry.register(Registry.BLOCK_ENTITY, string, builder.build(type));
+        return Registry.register(Registry.BLOCK_ENTITY_TYPE, string, builder.build(type));
     }
 
     public BlockEntityType(Supplier<? extends T> supplier, Set<Block> blocks, Type<?> type) {
@@ -133,6 +139,15 @@ public class BlockEntityType<T extends BlockEntity> {
 
     public boolean supports(Block block) {
         return this.blocks.contains(block);
+    }
+
+    @Nullable
+    public T get(BlockView world, BlockPos pos) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity == null || blockEntity.getType() != this) {
+            return null;
+        }
+        return (T)blockEntity;
     }
 
     public static final class Builder<T extends BlockEntity> {

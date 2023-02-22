@@ -15,8 +15,8 @@ public class ContainerLock {
     public static final ContainerLock EMPTY = new ContainerLock("");
     private final String key;
 
-    public ContainerLock(String string) {
-        this.key = string;
+    public ContainerLock(String key) {
+        this.key = key;
     }
 
     public boolean canOpen(ItemStack stack) {

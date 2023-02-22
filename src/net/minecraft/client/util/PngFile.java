@@ -44,12 +44,12 @@ public class PngFile {
     public final int width;
     public final int height;
 
-    public PngFile(String string, InputStream inputStream) throws IOException {
+    public PngFile(String name, InputStream in) throws IOException {
         try (MemoryStack memoryStack = MemoryStack.stackPush();
-             class_1051 lv = PngFile.method_4542(inputStream);
-             STBIReadCallback sTBIReadCallback = STBIReadCallback.create(lv::method_4543);
-             STBISkipCallback sTBISkipCallback = STBISkipCallback.create(lv::method_4547);
-             STBIEOFCallback sTBIEOFCallback = STBIEOFCallback.create(lv::method_4546);){
+             Reader reader = PngFile.createReader(in);
+             STBIReadCallback sTBIReadCallback = STBIReadCallback.create(reader::read);
+             STBISkipCallback sTBISkipCallback = STBISkipCallback.create(reader::skip);
+             STBIEOFCallback sTBIEOFCallback = STBIEOFCallback.create(reader::eof);){
             STBIIOCallbacks sTBIIOCallbacks = STBIIOCallbacks.mallocStack((MemoryStack)memoryStack);
             sTBIIOCallbacks.read((STBIReadCallbackI)sTBIReadCallback);
             sTBIIOCallbacks.skip((STBISkipCallbackI)sTBISkipCallback);
@@ -58,153 +58,153 @@ public class PngFile {
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
             IntBuffer intBuffer3 = memoryStack.mallocInt(1);
             if (!STBImage.stbi_info_from_callbacks((STBIIOCallbacks)sTBIIOCallbacks, (long)0L, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3)) {
-                throw new IOException("Could not read info from the PNG file " + string + " " + STBImage.stbi_failure_reason());
+                throw new IOException("Could not read info from the PNG file " + name + " " + STBImage.stbi_failure_reason());
             }
             this.width = intBuffer.get(0);
             this.height = intBuffer2.get(0);
         }
     }
 
-    private static class_1051 method_4542(InputStream inputStream) {
-        if (inputStream instanceof FileInputStream) {
-            return new class_1053(((FileInputStream)inputStream).getChannel());
+    private static Reader createReader(InputStream is) {
+        if (is instanceof FileInputStream) {
+            return new SeekableChannelReader(((FileInputStream)is).getChannel());
         }
-        return new class_1052(Channels.newChannel(inputStream));
+        return new ChannelReader(Channels.newChannel(is));
     }
 
     @Environment(value=EnvType.CLIENT)
-    static class class_1052
-    extends class_1051 {
-        private final ReadableByteChannel field_5229;
-        private long field_5233 = MemoryUtil.nmemAlloc((long)128L);
-        private int field_5232 = 128;
-        private int field_5231;
-        private int field_5230;
+    static class ChannelReader
+    extends Reader {
+        private final ReadableByteChannel channel;
+        private long buffer = MemoryUtil.nmemAlloc((long)128L);
+        private int bufferSize = 128;
+        private int bufferPosition;
+        private int readPosition;
 
-        private class_1052(ReadableByteChannel readableByteChannel) {
-            this.field_5229 = readableByteChannel;
+        private ChannelReader(ReadableByteChannel readableByteChannel) {
+            this.channel = readableByteChannel;
         }
 
         /*
          * WARNING - Removed try catching itself - possible behaviour change.
          */
-        private void method_4548(int i) throws IOException {
-            ByteBuffer byteBuffer = MemoryUtil.memByteBuffer((long)this.field_5233, (int)this.field_5232);
-            if (i + this.field_5230 > this.field_5232) {
-                this.field_5232 = i + this.field_5230;
-                byteBuffer = MemoryUtil.memRealloc((ByteBuffer)byteBuffer, (int)this.field_5232);
-                this.field_5233 = MemoryUtil.memAddress((ByteBuffer)byteBuffer);
+        private void readToBuffer(int size) throws IOException {
+            ByteBuffer byteBuffer = MemoryUtil.memByteBuffer((long)this.buffer, (int)this.bufferSize);
+            if (size + this.readPosition > this.bufferSize) {
+                this.bufferSize = size + this.readPosition;
+                byteBuffer = MemoryUtil.memRealloc((ByteBuffer)byteBuffer, (int)this.bufferSize);
+                this.buffer = MemoryUtil.memAddress((ByteBuffer)byteBuffer);
             }
-            byteBuffer.position(this.field_5231);
-            while (i + this.field_5230 > this.field_5231) {
+            byteBuffer.position(this.bufferPosition);
+            while (size + this.readPosition > this.bufferPosition) {
                 try {
-                    int j = this.field_5229.read(byteBuffer);
-                    if (j != -1) continue;
+                    int i = this.channel.read(byteBuffer);
+                    if (i != -1) continue;
                     break;
                 }
                 finally {
-                    this.field_5231 = byteBuffer.position();
+                    this.bufferPosition = byteBuffer.position();
                 }
             }
         }
 
         @Override
-        public int method_4544(long l, int i) throws IOException {
-            this.method_4548(i);
-            if (i + this.field_5230 > this.field_5231) {
-                i = this.field_5231 - this.field_5230;
+        public int read(long data, int size) throws IOException {
+            this.readToBuffer(size);
+            if (size + this.readPosition > this.bufferPosition) {
+                size = this.bufferPosition - this.readPosition;
             }
-            MemoryUtil.memCopy((long)(this.field_5233 + (long)this.field_5230), (long)l, (long)i);
-            this.field_5230 += i;
-            return i;
+            MemoryUtil.memCopy((long)(this.buffer + (long)this.readPosition), (long)data, (long)size);
+            this.readPosition += size;
+            return size;
         }
 
         @Override
-        public void method_4545(int i) throws IOException {
-            if (i > 0) {
-                this.method_4548(i);
-                if (i + this.field_5230 > this.field_5231) {
+        public void skip(int n) throws IOException {
+            if (n > 0) {
+                this.readToBuffer(n);
+                if (n + this.readPosition > this.bufferPosition) {
                     throw new EOFException("Can't skip past the EOF.");
                 }
             }
-            if (this.field_5230 + i < 0) {
-                throw new IOException("Can't seek before the beginning: " + (this.field_5230 + i));
+            if (this.readPosition + n < 0) {
+                throw new IOException("Can't seek before the beginning: " + (this.readPosition + n));
             }
-            this.field_5230 += i;
+            this.readPosition += n;
         }
 
         @Override
         public void close() throws IOException {
-            MemoryUtil.nmemFree((long)this.field_5233);
-            this.field_5229.close();
+            MemoryUtil.nmemFree((long)this.buffer);
+            this.channel.close();
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    static class class_1053
-    extends class_1051 {
-        private final SeekableByteChannel field_5234;
+    static class SeekableChannelReader
+    extends Reader {
+        private final SeekableByteChannel channel;
 
-        private class_1053(SeekableByteChannel seekableByteChannel) {
-            this.field_5234 = seekableByteChannel;
+        private SeekableChannelReader(SeekableByteChannel channel) {
+            this.channel = channel;
         }
 
         @Override
-        public int method_4544(long l, int i) throws IOException {
-            ByteBuffer byteBuffer = MemoryUtil.memByteBuffer((long)l, (int)i);
-            return this.field_5234.read(byteBuffer);
+        public int read(long data, int size) throws IOException {
+            ByteBuffer byteBuffer = MemoryUtil.memByteBuffer((long)data, (int)size);
+            return this.channel.read(byteBuffer);
         }
 
         @Override
-        public void method_4545(int i) throws IOException {
-            this.field_5234.position(this.field_5234.position() + (long)i);
+        public void skip(int n) throws IOException {
+            this.channel.position(this.channel.position() + (long)n);
         }
 
         @Override
-        public int method_4546(long l) {
-            return super.method_4546(l) != 0 && this.field_5234.isOpen() ? 1 : 0;
+        public int eof(long user) {
+            return super.eof(user) != 0 && this.channel.isOpen() ? 1 : 0;
         }
 
         @Override
         public void close() throws IOException {
-            this.field_5234.close();
+            this.channel.close();
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    static abstract class class_1051
+    static abstract class Reader
     implements AutoCloseable {
-        protected boolean field_5228;
+        protected boolean errored;
 
-        private class_1051() {
+        private Reader() {
         }
 
-        int method_4543(long l, long m, int i) {
+        int read(long user, long data, int size) {
             try {
-                return this.method_4544(m, i);
+                return this.read(data, size);
             }
             catch (IOException iOException) {
-                this.field_5228 = true;
+                this.errored = true;
                 return 0;
             }
         }
 
-        void method_4547(long l, int i) {
+        void skip(long user, int n) {
             try {
-                this.method_4545(i);
+                this.skip(n);
             }
             catch (IOException iOException) {
-                this.field_5228 = true;
+                this.errored = true;
             }
         }
 
-        int method_4546(long l) {
-            return this.field_5228 ? 1 : 0;
+        int eof(long user) {
+            return this.errored ? 1 : 0;
         }
 
-        protected abstract int method_4544(long var1, int var3) throws IOException;
+        protected abstract int read(long var1, int var3) throws IOException;
 
-        protected abstract void method_4545(int var1) throws IOException;
+        protected abstract void skip(int var1) throws IOException;
 
         @Override
         public abstract void close() throws IOException;

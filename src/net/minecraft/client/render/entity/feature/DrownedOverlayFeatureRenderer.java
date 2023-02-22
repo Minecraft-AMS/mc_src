@@ -7,13 +7,13 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.DrownedEntityModel;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.util.Identifier;
 
@@ -28,20 +28,8 @@ extends FeatureRenderer<T, DrownedEntityModel<T>> {
     }
 
     @Override
-    public void render(T zombieEntity, float f, float g, float h, float i, float j, float k, float l) {
-        if (((Entity)zombieEntity).isInvisible()) {
-            return;
-        }
-        ((DrownedEntityModel)this.getContextModel()).setAttributes(this.model);
-        this.model.animateModel(zombieEntity, f, g, h);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.bindTexture(SKIN);
-        this.model.render(zombieEntity, f, g, i, j, k, l);
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return true;
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T zombieEntity, float f, float g, float h, float j, float k, float l) {
+        DrownedOverlayFeatureRenderer.render(this.getContextModel(), this.model, SKIN, matrixStack, vertexConsumerProvider, i, zombieEntity, f, g, j, k, l, h, 1.0f, 1.0f, 1.0f);
     }
 }
 

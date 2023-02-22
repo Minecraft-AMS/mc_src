@@ -5,16 +5,18 @@ package net.minecraft.entity.mob;
 
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntityWithAi;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public abstract class WaterCreatureEntity
 extends MobEntityWithAi {
     protected WaterCreatureEntity(EntityType<? extends WaterCreatureEntity> type, World world) {
         super((EntityType<? extends MobEntityWithAi>)type, world);
+        this.setPathfindingPenalty(PathNodeType.WATER, 0.0f);
     }
 
     @Override
@@ -28,7 +30,7 @@ extends MobEntityWithAi {
     }
 
     @Override
-    public boolean canSpawn(CollisionView world) {
+    public boolean canSpawn(WorldView world) {
         return world.intersectsEntities(this);
     }
 

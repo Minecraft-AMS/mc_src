@@ -40,6 +40,7 @@ extends Container {
     private final Slot dyeSlot;
     private final Slot patternSlot;
     private final Slot outputSlot;
+    private long lastTakeResultTime;
     private final Inventory inputInventory = new BasicInventory(3){
 
         @Override
@@ -101,7 +102,13 @@ extends Container {
                 if (!LoomContainer.this.bannerSlot.hasStack() || !LoomContainer.this.dyeSlot.hasStack()) {
                     LoomContainer.this.selectedPattern.set(0);
                 }
-                blockContext.run((world, blockPos) -> world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_LOOM_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f));
+                blockContext.run((world, blockPos) -> {
+                    long l = world.getTime();
+                    if (LoomContainer.this.lastTakeResultTime != l) {
+                        world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_LOOM_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                        LoomContainer.this.lastTakeResultTime = l;
+                    }
+                });
                 return super.onTakeItem(player, stack);
             }
         });
@@ -128,7 +135,7 @@ extends Container {
 
     @Override
     public boolean onButtonClick(PlayerEntity player, int id) {
-        if (id > 0 && id <= BannerPattern.field_18283) {
+        if (id > 0 && id <= BannerPattern.LOOM_APPLICABLE_COUNT) {
             this.selectedPattern.set(id);
             this.updateOutputSlot();
             return true;

@@ -7,16 +7,18 @@
  */
 package net.minecraft.client.render.entity.feature;
 
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.IronGolemEntityModel;
-import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.passive.IronGolemEntity;
 
 @Environment(value=EnvType.CLIENT)
@@ -27,31 +29,21 @@ extends FeatureRenderer<IronGolemEntity, IronGolemEntityModel<IronGolemEntity>> 
     }
 
     @Override
-    public void render(IronGolemEntity ironGolemEntity, float f, float g, float h, float i, float j, float k, float l) {
-        if (ironGolemEntity.method_6502() == 0) {
+    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, IronGolemEntity ironGolemEntity, float f, float g, float h, float j, float k, float l) {
+        if (ironGolemEntity.getLookingAtVillagerTicks() == 0) {
             return;
         }
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.pushMatrix();
-        GlStateManager.rotatef(5.0f + 180.0f * ((IronGolemEntityModel)this.getContextModel()).method_2809().pitch / (float)Math.PI, 1.0f, 0.0f, 0.0f);
-        GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-        GlStateManager.translatef(-0.9375f, -0.625f, -0.9375f);
+        matrixStack.push();
+        ModelPart modelPart = ((IronGolemEntityModel)this.getContextModel()).getRightArm();
+        modelPart.rotate(matrixStack);
+        matrixStack.translate(-1.1875, 1.0625, -0.9375);
+        matrixStack.translate(0.5, 0.5, 0.5);
         float m = 0.5f;
-        GlStateManager.scalef(0.5f, -0.5f, 0.5f);
-        int n = ironGolemEntity.getLightmapCoordinates();
-        int o = n % 65536;
-        int p = n / 65536;
-        GLX.glMultiTexCoord2f(GLX.GL_TEXTURE1, o, p);
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.bindTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEX);
-        MinecraftClient.getInstance().getBlockRenderManager().renderDynamic(Blocks.POPPY.getDefaultState(), 1.0f);
-        GlStateManager.popMatrix();
-        GlStateManager.disableRescaleNormal();
-    }
-
-    @Override
-    public boolean hasHurtOverlay() {
-        return false;
+        matrixStack.scale(0.5f, 0.5f, 0.5f);
+        matrixStack.multiply(Vector3f.POSITIVE_X.getDegreesQuaternion(-90.0f));
+        matrixStack.translate(-0.5, -0.5, -0.5);
+        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(Blocks.POPPY.getDefaultState(), matrixStack, vertexConsumerProvider, i, OverlayTexture.DEFAULT_UV);
+        matrixStack.pop();
     }
 }
 

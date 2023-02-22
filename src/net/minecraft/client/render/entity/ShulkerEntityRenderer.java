@@ -7,14 +7,16 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.VisibleRegion;
+import net.minecraft.client.render.Frustum;
+import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.ShulkerHeadFeatureRenderer;
 import net.minecraft.client.render.entity.model.ShulkerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -24,8 +26,8 @@ import net.minecraft.util.math.Vec3d;
 @Environment(value=EnvType.CLIENT)
 public class ShulkerEntityRenderer
 extends MobEntityRenderer<ShulkerEntity, ShulkerEntityModel<ShulkerEntity>> {
-    public static final Identifier SKIN = new Identifier("textures/entity/shulker/shulker.png");
-    public static final Identifier[] SKIN_COLOR = new Identifier[]{new Identifier("textures/entity/shulker/shulker_white.png"), new Identifier("textures/entity/shulker/shulker_orange.png"), new Identifier("textures/entity/shulker/shulker_magenta.png"), new Identifier("textures/entity/shulker/shulker_light_blue.png"), new Identifier("textures/entity/shulker/shulker_yellow.png"), new Identifier("textures/entity/shulker/shulker_lime.png"), new Identifier("textures/entity/shulker/shulker_pink.png"), new Identifier("textures/entity/shulker/shulker_gray.png"), new Identifier("textures/entity/shulker/shulker_light_gray.png"), new Identifier("textures/entity/shulker/shulker_cyan.png"), new Identifier("textures/entity/shulker/shulker_purple.png"), new Identifier("textures/entity/shulker/shulker_blue.png"), new Identifier("textures/entity/shulker/shulker_brown.png"), new Identifier("textures/entity/shulker/shulker_green.png"), new Identifier("textures/entity/shulker/shulker_red.png"), new Identifier("textures/entity/shulker/shulker_black.png")};
+    public static final Identifier SKIN = new Identifier("textures/" + TexturedRenderLayers.SHULKER_TEXTURE_ID.getTextureId().getPath() + ".png");
+    public static final Identifier[] SKIN_COLOR = (Identifier[])TexturedRenderLayers.COLORED_SHULKER_BOXES_TEXTURES.stream().map(spriteIdentifier -> new Identifier("textures/" + spriteIdentifier.getTextureId().getPath() + ".png")).toArray(Identifier[]::new);
 
     public ShulkerEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new ShulkerEntityModel(), 0.0f);
@@ -33,33 +35,30 @@ extends MobEntityRenderer<ShulkerEntity, ShulkerEntityModel<ShulkerEntity>> {
     }
 
     @Override
-    public void render(ShulkerEntity shulkerEntity, double d, double e, double f, float g, float h) {
+    public Vec3d getPositionOffset(ShulkerEntity shulkerEntity, float f) {
         int i = shulkerEntity.method_7113();
         if (i > 0 && shulkerEntity.method_7117()) {
             BlockPos blockPos = shulkerEntity.getAttachedBlock();
             BlockPos blockPos2 = shulkerEntity.method_7120();
-            double j = (double)((float)i - h) / 6.0;
-            j *= j;
-            double k = (double)(blockPos.getX() - blockPos2.getX()) * j;
-            double l = (double)(blockPos.getY() - blockPos2.getY()) * j;
-            double m = (double)(blockPos.getZ() - blockPos2.getZ()) * j;
-            super.render(shulkerEntity, d - k, e - l, f - m, g, h);
-        } else {
-            super.render(shulkerEntity, d, e, f, g, h);
+            double d = (double)((float)i - f) / 6.0;
+            d *= d;
+            double e = (double)(blockPos.getX() - blockPos2.getX()) * d;
+            double g = (double)(blockPos.getY() - blockPos2.getY()) * d;
+            double h = (double)(blockPos.getZ() - blockPos2.getZ()) * d;
+            return new Vec3d(-e, -g, -h);
         }
+        return super.getPositionOffset(shulkerEntity, f);
     }
 
     @Override
-    public boolean isVisible(ShulkerEntity shulkerEntity, VisibleRegion visibleRegion, double d, double e, double f) {
-        if (super.isVisible(shulkerEntity, visibleRegion, d, e, f)) {
+    public boolean shouldRender(ShulkerEntity shulkerEntity, Frustum frustum, double d, double e, double f) {
+        if (super.shouldRender(shulkerEntity, frustum, d, e, f)) {
             return true;
         }
         if (shulkerEntity.method_7113() > 0 && shulkerEntity.method_7117()) {
-            BlockPos blockPos = shulkerEntity.method_7120();
-            BlockPos blockPos2 = shulkerEntity.getAttachedBlock();
-            Vec3d vec3d = new Vec3d(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
-            Vec3d vec3d2 = new Vec3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-            if (visibleRegion.intersects(new Box(vec3d2.x, vec3d2.y, vec3d2.z, vec3d.x, vec3d.y, vec3d.z))) {
+            Vec3d vec3d = new Vec3d(shulkerEntity.getAttachedBlock());
+            Vec3d vec3d2 = new Vec3d(shulkerEntity.method_7120());
+            if (frustum.isVisible(new Box(vec3d2.x, vec3d2.y, vec3d2.z, vec3d.x, vec3d.y, vec3d.z))) {
                 return true;
             }
         }
@@ -67,7 +66,7 @@ extends MobEntityRenderer<ShulkerEntity, ShulkerEntityModel<ShulkerEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(ShulkerEntity shulkerEntity) {
+    public Identifier getTexture(ShulkerEntity shulkerEntity) {
         if (shulkerEntity.getColor() == null) {
             return SKIN;
         }
@@ -75,46 +74,22 @@ extends MobEntityRenderer<ShulkerEntity, ShulkerEntityModel<ShulkerEntity>> {
     }
 
     @Override
-    protected void setupTransforms(ShulkerEntity shulkerEntity, float f, float g, float h) {
-        super.setupTransforms(shulkerEntity, f, g, h);
-        switch (shulkerEntity.getAttachedFace()) {
-            case DOWN: {
-                break;
-            }
-            case EAST: {
-                GlStateManager.translatef(0.5f, 0.5f, 0.0f);
-                GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-                GlStateManager.rotatef(90.0f, 0.0f, 0.0f, 1.0f);
-                break;
-            }
-            case WEST: {
-                GlStateManager.translatef(-0.5f, 0.5f, 0.0f);
-                GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-                GlStateManager.rotatef(-90.0f, 0.0f, 0.0f, 1.0f);
-                break;
-            }
-            case NORTH: {
-                GlStateManager.translatef(0.0f, 0.5f, -0.5f);
-                GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-                break;
-            }
-            case SOUTH: {
-                GlStateManager.translatef(0.0f, 0.5f, 0.5f);
-                GlStateManager.rotatef(90.0f, 1.0f, 0.0f, 0.0f);
-                GlStateManager.rotatef(180.0f, 0.0f, 0.0f, 1.0f);
-                break;
-            }
-            case UP: {
-                GlStateManager.translatef(0.0f, 1.0f, 0.0f);
-                GlStateManager.rotatef(180.0f, 1.0f, 0.0f, 0.0f);
-            }
-        }
+    protected void setupTransforms(ShulkerEntity shulkerEntity, MatrixStack matrixStack, float f, float g, float h) {
+        super.setupTransforms(shulkerEntity, matrixStack, f, g, h);
+        matrixStack.translate(0.0, 0.5, 0.0);
+        matrixStack.multiply(shulkerEntity.getAttachedFace().getOpposite().getRotationQuaternion());
+        matrixStack.translate(0.0, -0.5, 0.0);
     }
 
     @Override
-    protected void scale(ShulkerEntity shulkerEntity, float f) {
+    protected void scale(ShulkerEntity shulkerEntity, MatrixStack matrixStack, float f) {
         float g = 0.999f;
-        GlStateManager.scalef(0.999f, 0.999f, 0.999f);
+        matrixStack.scale(0.999f, 0.999f, 0.999f);
+    }
+
+    @Override
+    public /* synthetic */ Vec3d getPositionOffset(Entity entity, float tickDelta) {
+        return this.getPositionOffset((ShulkerEntity)entity, tickDelta);
     }
 }
 

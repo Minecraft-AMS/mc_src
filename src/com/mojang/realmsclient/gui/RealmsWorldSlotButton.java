@@ -4,12 +4,11 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.NotNull
  *  org.jetbrains.annotations.Nullable
  */
 package com.mojang.realmsclient.gui;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.realmsclient.dto.RealmsServer;
 import com.mojang.realmsclient.dto.RealmsWorldOptions;
 import com.mojang.realmsclient.util.RealmsTextureManager;
@@ -22,7 +21,6 @@ import net.minecraft.realms.RealmsButton;
 import net.minecraft.realms.RealmsButtonProxy;
 import net.minecraft.realms.RealmsMth;
 import net.minecraft.realms.RealmsScreen;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -33,6 +31,7 @@ extends RealmsButton {
     private final Listener listener;
     private final int slotIndex;
     private int animTick;
+    @Nullable
     private State state;
 
     public RealmsWorldSlotButton(int x, int y, int width, int height, Supplier<RealmsServer> serverDataProvider, Consumer<String> toolTipSetter, int id, int slotIndex, Listener listener) {
@@ -133,19 +132,19 @@ extends RealmsButton {
         }
         if (currentlyActiveSlot) {
             float f = 0.85f + 0.15f * RealmsMth.cos((float)this.animTick * 0.2f);
-            GlStateManager.color4f(f, f, f, 1.0f);
+            RenderSystem.color4f(f, f, f, 1.0f);
         } else {
-            GlStateManager.color4f(0.56f, 0.56f, 0.56f, 1.0f);
+            RenderSystem.color4f(0.56f, 0.56f, 0.56f, 1.0f);
         }
         RealmsScreen.blit(x + 3, y + 3, 0.0f, 0.0f, 74, 74, 74, 74);
         Realms.bind("realms:textures/gui/realms/slot_frame.png");
         boolean bl3 = bl2 = bl && action != Action.NOTHING;
         if (bl2) {
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         } else if (currentlyActiveSlot) {
-            GlStateManager.color4f(0.8f, 0.8f, 0.8f, 1.0f);
+            RenderSystem.color4f(0.8f, 0.8f, 0.8f, 1.0f);
         } else {
-            GlStateManager.color4f(0.56f, 0.56f, 0.56f, 1.0f);
+            RenderSystem.color4f(0.56f, 0.56f, 0.56f, 1.0f);
         }
         RealmsScreen.blit(x, y, 0.0f, 0.0f, 80, 80, 80, 80);
         this.drawCenteredString(text, x + 40, y + 66, 0xFFFFFF);
@@ -153,7 +152,9 @@ extends RealmsButton {
 
     @Override
     public void onPress() {
-        this.listener.onSlotClick(this.slotIndex, this.state.action, this.state.minigame, this.state.empty);
+        if (this.state != null) {
+            this.listener.onSlotClick(this.slotIndex, this.state.action, this.state.minigame, this.state.empty);
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -167,7 +168,7 @@ extends RealmsButton {
         public final Action action;
         final String actionPrompt;
 
-        State(boolean isCurrentlyActiveSlot, String slotName, long imageId, @Nullable String image, boolean empty, boolean minigame, @NotNull Action action, @Nullable String actionPrompt) {
+        State(boolean isCurrentlyActiveSlot, String slotName, long imageId, @Nullable String image, boolean empty, boolean minigame, Action action, @Nullable String actionPrompt) {
             this.isCurrentlyActiveSlot = isCurrentlyActiveSlot;
             this.slotName = slotName;
             this.imageId = imageId;
@@ -189,7 +190,7 @@ extends RealmsButton {
 
     @Environment(value=EnvType.CLIENT)
     public static interface Listener {
-        public void onSlotClick(int var1, @NotNull Action var2, boolean var3, boolean var4);
+        public void onSlotClick(int var1, Action var2, boolean var3, boolean var4);
     }
 }
 

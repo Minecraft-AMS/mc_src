@@ -25,6 +25,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ProbabilityConfig;
 import net.minecraft.world.gen.carver.CarverConfig;
@@ -62,20 +63,20 @@ public abstract class Carver<C extends CarverConfig> {
         return 4;
     }
 
-    protected boolean carveRegion(Chunk chunk, long seed, int seaLevel, int mainChunkX, int mainChunkZ, double centerX, double centerY, double centerZ, double xzSize, double ySize, BitSet mask) {
+    protected boolean carveRegion(Chunk chunk, Function<BlockPos, Biome> posToBiome, long seed, int seaLevel, int chunkX, int chunkZ, double x, double y, double z, double yaw, double pitch, BitSet carvingMask) {
         int n;
         int m;
         int l;
         int k;
         int j;
-        Random random = new Random(seed + (long)mainChunkX + (long)mainChunkZ);
-        double d = mainChunkX * 16 + 8;
-        double e = mainChunkZ * 16 + 8;
-        if (centerX < d - 16.0 - xzSize * 2.0 || centerZ < e - 16.0 - xzSize * 2.0 || centerX > d + 16.0 + xzSize * 2.0 || centerZ > e + 16.0 + xzSize * 2.0) {
+        Random random = new Random(seed + (long)chunkX + (long)chunkZ);
+        double d = chunkX * 16 + 8;
+        double e = chunkZ * 16 + 8;
+        if (x < d - 16.0 - yaw * 2.0 || z < e - 16.0 - yaw * 2.0 || x > d + 16.0 + yaw * 2.0 || z > e + 16.0 + yaw * 2.0) {
             return false;
         }
-        int i = Math.max(MathHelper.floor(centerX - xzSize) - mainChunkX * 16 - 1, 0);
-        if (this.isRegionUncarvable(chunk, mainChunkX, mainChunkZ, i, j = Math.min(MathHelper.floor(centerX + xzSize) - mainChunkX * 16 + 1, 16), k = Math.max(MathHelper.floor(centerY - ySize) - 1, 1), l = Math.min(MathHelper.floor(centerY + ySize) + 1, this.heightLimit - 8), m = Math.max(MathHelper.floor(centerZ - xzSize) - mainChunkZ * 16 - 1, 0), n = Math.min(MathHelper.floor(centerZ + xzSize) - mainChunkZ * 16 + 1, 16))) {
+        int i = Math.max(MathHelper.floor(x - yaw) - chunkX * 16 - 1, 0);
+        if (this.isRegionUncarvable(chunk, chunkX, chunkZ, i, j = Math.min(MathHelper.floor(x + yaw) - chunkX * 16 + 1, 16), k = Math.max(MathHelper.floor(y - pitch) - 1, 1), l = Math.min(MathHelper.floor(y + pitch) + 1, this.heightLimit - 8), m = Math.max(MathHelper.floor(z - yaw) - chunkZ * 16 - 1, 0), n = Math.min(MathHelper.floor(z + yaw) - chunkZ * 16 + 1, 16))) {
             return false;
         }
         boolean bl = false;
@@ -83,53 +84,53 @@ public abstract class Carver<C extends CarverConfig> {
         BlockPos.Mutable mutable2 = new BlockPos.Mutable();
         BlockPos.Mutable mutable3 = new BlockPos.Mutable();
         for (int o = i; o < j; ++o) {
-            int p = o + mainChunkX * 16;
-            double f = ((double)p + 0.5 - centerX) / xzSize;
+            int p = o + chunkX * 16;
+            double f = ((double)p + 0.5 - x) / yaw;
             for (int q = m; q < n; ++q) {
-                int r = q + mainChunkZ * 16;
-                double g = ((double)r + 0.5 - centerZ) / xzSize;
+                int r = q + chunkZ * 16;
+                double g = ((double)r + 0.5 - z) / yaw;
                 if (f * f + g * g >= 1.0) continue;
                 AtomicBoolean atomicBoolean = new AtomicBoolean(false);
                 for (int s = l; s > k; --s) {
-                    double h = ((double)s - 0.5 - centerY) / ySize;
+                    double h = ((double)s - 0.5 - y) / pitch;
                     if (this.isPositionExcluded(f, h, g, s)) continue;
-                    bl |= this.carveAtPoint(chunk, mask, random, mutable, mutable2, mutable3, seaLevel, mainChunkX, mainChunkZ, p, r, o, s, q, atomicBoolean);
+                    bl |= this.carveAtPoint(chunk, posToBiome, carvingMask, random, mutable, mutable2, mutable3, seaLevel, chunkX, chunkZ, p, r, o, s, q, atomicBoolean);
                 }
             }
         }
         return bl;
     }
 
-    protected boolean carveAtPoint(Chunk chunk, BitSet mask, Random random, BlockPos.Mutable pos1, BlockPos.Mutable pos2, BlockPos.Mutable pos3, int seaLevel, int mainChunkX, int mainChunkZ, int x, int z, int relativeX, int y, int relativeZ, AtomicBoolean atomicBoolean) {
+    protected boolean carveAtPoint(Chunk chunk, Function<BlockPos, Biome> posToBiome, BitSet carvingMask, Random random, BlockPos.Mutable mutable, BlockPos.Mutable mutable2, BlockPos.Mutable mutable3, int seaLevel, int mainChunkX, int mainChunkZ, int x, int z, int relativeX, int y, int relativeZ, AtomicBoolean foundSurface) {
         int i = relativeX | relativeZ << 4 | y << 8;
-        if (mask.get(i)) {
+        if (carvingMask.get(i)) {
             return false;
         }
-        mask.set(i);
-        pos1.set(x, y, z);
-        BlockState blockState = chunk.getBlockState(pos1);
-        BlockState blockState2 = chunk.getBlockState(pos2.set(pos1).setOffset(Direction.UP));
+        carvingMask.set(i);
+        mutable.set(x, y, z);
+        BlockState blockState = chunk.getBlockState(mutable);
+        BlockState blockState2 = chunk.getBlockState(mutable2.set(mutable).setOffset(Direction.UP));
         if (blockState.getBlock() == Blocks.GRASS_BLOCK || blockState.getBlock() == Blocks.MYCELIUM) {
-            atomicBoolean.set(true);
+            foundSurface.set(true);
         }
         if (!this.canCarveBlock(blockState, blockState2)) {
             return false;
         }
         if (y < 11) {
-            chunk.setBlockState(pos1, LAVA.getBlockState(), false);
+            chunk.setBlockState(mutable, LAVA.getBlockState(), false);
         } else {
-            chunk.setBlockState(pos1, CAVE_AIR, false);
-            if (atomicBoolean.get()) {
-                pos3.set(pos1).setOffset(Direction.DOWN);
-                if (chunk.getBlockState(pos3).getBlock() == Blocks.DIRT) {
-                    chunk.setBlockState(pos3, chunk.getBiome(pos1).getSurfaceConfig().getTopMaterial(), false);
+            chunk.setBlockState(mutable, CAVE_AIR, false);
+            if (foundSurface.get()) {
+                mutable3.set(mutable).setOffset(Direction.DOWN);
+                if (chunk.getBlockState(mutable3).getBlock() == Blocks.DIRT) {
+                    chunk.setBlockState(mutable3, posToBiome.apply(mutable).getSurfaceConfig().getTopMaterial(), false);
                 }
             }
         }
         return true;
     }
 
-    public abstract boolean carve(Chunk var1, Random var2, int var3, int var4, int var5, int var6, int var7, BitSet var8, C var9);
+    public abstract boolean carve(Chunk var1, Function<BlockPos, Biome> var2, Random var3, int var4, int var5, int var6, int var7, int var8, BitSet var9, C var10);
 
     public abstract boolean shouldCarve(Random var1, int var2, int var3, C var4);
 

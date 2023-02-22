@@ -32,7 +32,7 @@ extends HorseBaseEntityRenderer<HorseEntity, HorseEntityModel<HorseEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(HorseEntity horseEntity) {
+    public Identifier getTexture(HorseEntity horseEntity) {
         String string = horseEntity.getTextureLocation();
         Identifier identifier = SKINS.get(string);
         if (identifier == null) {

@@ -15,6 +15,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
@@ -69,26 +70,27 @@ extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         HitResult hitResult = EnderEyeItem.rayTrace(world, user, RayTraceContext.FluidHandling.NONE);
         if (hitResult.getType() == HitResult.Type.BLOCK && world.getBlockState(((BlockHitResult)hitResult).getBlockPos()).getBlock() == Blocks.END_PORTAL_FRAME) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
         }
         user.setCurrentHand(hand);
-        if (!world.isClient && (blockPos = world.getChunkManager().getChunkGenerator().locateStructure(world, "Stronghold", new BlockPos(user), 100, false)) != null) {
-            EnderEyeEntity enderEyeEntity = new EnderEyeEntity(world, user.x, user.y + (double)(user.getHeight() / 2.0f), user.z);
+        if (world instanceof ServerWorld && (blockPos = ((ServerWorld)world).getChunkManager().getChunkGenerator().locateStructure(world, "Stronghold", new BlockPos(user), 100, false)) != null) {
+            EnderEyeEntity enderEyeEntity = new EnderEyeEntity(world, user.getX(), user.getBodyY(0.5), user.getZ());
             enderEyeEntity.setItem(itemStack);
             enderEyeEntity.moveTowards(blockPos);
             world.spawnEntity(enderEyeEntity);
             if (user instanceof ServerPlayerEntity) {
                 Criterions.USED_ENDER_EYE.trigger((ServerPlayerEntity)user, blockPos);
             }
-            world.playSound(null, user.x, user.y, user.z, SoundEvents.ENTITY_ENDER_EYE_LAUNCH, SoundCategory.NEUTRAL, 0.5f, 0.4f / (RANDOM.nextFloat() * 0.4f + 0.8f));
+            world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ENTITY_ENDER_EYE_LAUNCH, SoundCategory.NEUTRAL, 0.5f, 0.4f / (RANDOM.nextFloat() * 0.4f + 0.8f));
             world.playLevelEvent(null, 1003, new BlockPos(user), 0);
             if (!user.abilities.creativeMode) {
                 itemStack.decrement(1);
             }
             user.incrementStat(Stats.USED.getOrCreateStat(this));
-            return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+            user.swingHand(hand, true);
+            return TypedActionResult.success(itemStack);
         }
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.consume(itemStack);
     }
 }
 

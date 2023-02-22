@@ -90,9 +90,9 @@ implements RangedAttackMob {
     public void tickMovement() {
         super.tickMovement();
         if (!this.world.isClient) {
-            int i = MathHelper.floor(this.x);
-            int j = MathHelper.floor(this.y);
-            int k = MathHelper.floor(this.z);
+            int i = MathHelper.floor(this.getX());
+            int j = MathHelper.floor(this.getY());
+            int k = MathHelper.floor(this.getZ());
             if (this.isWet()) {
                 this.damage(DamageSource.DROWN, 1.0f);
             }
@@ -106,8 +106,8 @@ implements RangedAttackMob {
             }
             BlockState blockState = Blocks.SNOW.getDefaultState();
             for (int l = 0; l < 4; ++l) {
-                i = MathHelper.floor(this.x + (double)((float)(l % 2 * 2 - 1) * 0.25f));
-                BlockPos blockPos3 = new BlockPos(i, j = MathHelper.floor(this.y), k = MathHelper.floor(this.z + (double)((float)(l / 2 % 2 * 2 - 1) * 0.25f)));
+                i = MathHelper.floor(this.getX() + (double)((float)(l % 2 * 2 - 1) * 0.25f));
+                BlockPos blockPos3 = new BlockPos(i, j = MathHelper.floor(this.getY()), k = MathHelper.floor(this.getZ() + (double)((float)(l / 2 % 2 * 2 - 1) * 0.25f)));
                 if (!this.world.getBlockState(blockPos3).isAir() || !(this.world.getBiome(blockPos3).getTemperature(blockPos3) < 0.8f) || !blockState.canPlaceAt(this.world, blockPos3)) continue;
                 this.world.setBlockState(blockPos3, blockState);
             }
@@ -117,10 +117,10 @@ implements RangedAttackMob {
     @Override
     public void attack(LivingEntity target, float f) {
         SnowballEntity snowballEntity = new SnowballEntity(this.world, this);
-        double d = target.y + (double)target.getStandingEyeHeight() - (double)1.1f;
-        double e = target.x - this.x;
-        double g = d - snowballEntity.y;
-        double h = target.z - this.z;
+        double d = target.getEyeY() - (double)1.1f;
+        double e = target.getX() - this.getX();
+        double g = d - snowballEntity.getY();
+        double h = target.getZ() - this.getZ();
         float i = MathHelper.sqrt(e * e + h * h) * 0.2f;
         snowballEntity.setVelocity(e, g + (double)i, h, 1.6f, 12.0f);
         this.playSound(SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
@@ -135,11 +135,14 @@ implements RangedAttackMob {
     @Override
     protected boolean interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.SHEARS && this.hasPumpkin() && !this.world.isClient) {
-            this.setHasPumpkin(false);
-            itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+        if (itemStack.getItem() == Items.SHEARS && this.hasPumpkin()) {
+            if (!this.world.isClient) {
+                this.setHasPumpkin(false);
+                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+            }
+            return true;
         }
-        return super.interactMob(player, hand);
+        return false;
     }
 
     public boolean hasPumpkin() {

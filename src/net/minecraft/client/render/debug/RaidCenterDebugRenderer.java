@@ -9,13 +9,14 @@
 package net.minecraft.client.render.debug;
 
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Collection;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
 
 @Environment(value=EnvType.CLIENT)
@@ -33,39 +34,28 @@ implements DebugRenderer.Renderer {
     }
 
     @Override
-    public void render(long l) {
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.disableTexture();
-        this.drawRaidCenters();
-        GlStateManager.enableTexture();
-        GlStateManager.disableBlend();
-        GlStateManager.popMatrix();
-    }
-
-    private void drawRaidCenters() {
-        BlockPos blockPos = this.getCamera().getBlockPos();
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
+        BlockPos blockPos = this.method_23125().getBlockPos();
         for (BlockPos blockPos2 : this.raidCenters) {
             if (!blockPos.isWithinDistance(blockPos2, 160.0)) continue;
-            RaidCenterDebugRenderer.draw(blockPos2);
+            RaidCenterDebugRenderer.method_23122(blockPos2);
         }
     }
 
-    private static void draw(BlockPos blockPos) {
-        DebugRenderer.method_19697(blockPos.add(-0.5, -0.5, -0.5), blockPos.add(1.5, 1.5, 1.5), 1.0f, 0.0f, 0.0f, 0.15f);
+    private static void method_23122(BlockPos blockPos) {
+        DebugRenderer.drawBox(blockPos.add(-0.5, -0.5, -0.5), blockPos.add(1.5, 1.5, 1.5), 1.0f, 0.0f, 0.0f, 0.15f);
         int i = -65536;
-        RaidCenterDebugRenderer.showText("Raid center", blockPos, -65536);
+        RaidCenterDebugRenderer.method_23123("Raid center", blockPos, -65536);
     }
 
-    private static void showText(String string, BlockPos blockPos, int i) {
+    private static void method_23123(String string, BlockPos blockPos, int i) {
         double d = (double)blockPos.getX() + 0.5;
         double e = (double)blockPos.getY() + 1.3;
         double f = (double)blockPos.getZ() + 0.5;
-        DebugRenderer.method_3712(string, d, e, f, i, 0.04f, true, 0.0f, true);
+        DebugRenderer.drawString(string, d, e, f, i, 0.04f, true, 0.0f, true);
     }
 
-    private Camera getCamera() {
+    private Camera method_23125() {
         return this.client.gameRenderer.getCamera();
     }
 }

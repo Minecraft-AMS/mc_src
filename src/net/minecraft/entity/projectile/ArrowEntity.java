@@ -82,7 +82,11 @@ extends ProjectileEntity {
 
     private void initColor() {
         this.colorSet = false;
-        this.dataTracker.set(COLOR, PotionUtil.getColor(PotionUtil.getPotionEffects(this.potion, this.effects)));
+        if (this.potion == Potions.EMPTY && this.effects.isEmpty()) {
+            this.dataTracker.set(COLOR, -1);
+        } else {
+            this.dataTracker.set(COLOR, PotionUtil.getColor(PotionUtil.getPotionEffects(this.potion, this.effects)));
+        }
     }
 
     public void addEffect(StatusEffectInstance effect) {
@@ -124,7 +128,7 @@ extends ProjectileEntity {
         double e = (double)(j >> 8 & 0xFF) / 255.0;
         double f = (double)(j >> 0 & 0xFF) / 255.0;
         for (int k = 0; k < i; ++k) {
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.x + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.y + this.random.nextDouble() * (double)this.getHeight(), this.z + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), d, e, f);
+            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), d, e, f);
         }
     }
 
@@ -208,7 +212,7 @@ extends ProjectileEntity {
                 double e = (double)(i >> 8 & 0xFF) / 255.0;
                 double f = (double)(i >> 0 & 0xFF) / 255.0;
                 for (int j = 0; j < 20; ++j) {
-                    this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.x + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.y + this.random.nextDouble() * (double)this.getHeight(), this.z + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), d, e, f);
+                    this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getParticleX(0.5), this.getRandomBodyY(), this.getParticleZ(0.5), d, e, f);
                 }
             }
         } else {

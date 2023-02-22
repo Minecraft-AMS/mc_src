@@ -25,7 +25,12 @@ extends MobEntityRenderer<BlazeEntity, BlazeEntityModel<BlazeEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(BlazeEntity blazeEntity) {
+    protected int getBlockLight(BlazeEntity blazeEntity, float f) {
+        return 15;
+    }
+
+    @Override
+    public Identifier getTexture(BlazeEntity blazeEntity) {
         return SKIN;
     }
 }

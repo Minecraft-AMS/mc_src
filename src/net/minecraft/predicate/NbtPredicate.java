@@ -31,8 +31,8 @@ public class NbtPredicate {
     @Nullable
     private final CompoundTag tag;
 
-    public NbtPredicate(@Nullable CompoundTag compoundTag) {
-        this.tag = compoundTag;
+    public NbtPredicate(@Nullable CompoundTag tag) {
+        this.tag = tag;
     }
 
     public boolean test(ItemStack stack) {

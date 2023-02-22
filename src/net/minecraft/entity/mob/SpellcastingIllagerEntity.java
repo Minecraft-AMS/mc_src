@@ -100,11 +100,11 @@ extends IllagerEntity {
             double d = spell.particleVelocity[0];
             double e = spell.particleVelocity[1];
             double f = spell.particleVelocity[2];
-            float g = this.field_6283 * ((float)Math.PI / 180) + MathHelper.cos((float)this.age * 0.6662f) * 0.25f;
+            float g = this.bodyYaw * ((float)Math.PI / 180) + MathHelper.cos((float)this.age * 0.6662f) * 0.25f;
             float h = MathHelper.cos(g);
             float i = MathHelper.sin(g);
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.x + (double)h * 0.6, this.y + 1.8, this.z + (double)i * 0.6, d, e, f);
-            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.x - (double)h * 0.6, this.y + 1.8, this.z - (double)i * 0.6, d, e, f);
+            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() + (double)h * 0.6, this.getY() + 1.8, this.getZ() + (double)i * 0.6, d, e, f);
+            this.world.addParticle(ParticleTypes.ENTITY_EFFECT, this.getX() - (double)h * 0.6, this.getY() + 1.8, this.getZ() - (double)i * 0.6, d, e, f);
         }
     }
 
@@ -228,7 +228,7 @@ extends IllagerEntity {
         @Override
         public void tick() {
             if (SpellcastingIllagerEntity.this.getTarget() != null) {
-                SpellcastingIllagerEntity.this.getLookControl().lookAt(SpellcastingIllagerEntity.this.getTarget(), SpellcastingIllagerEntity.this.method_5986(), SpellcastingIllagerEntity.this.getLookPitchSpeed());
+                SpellcastingIllagerEntity.this.getLookControl().lookAt(SpellcastingIllagerEntity.this.getTarget(), SpellcastingIllagerEntity.this.getBodyYawSpeed(), SpellcastingIllagerEntity.this.getLookPitchSpeed());
             }
         }
     }

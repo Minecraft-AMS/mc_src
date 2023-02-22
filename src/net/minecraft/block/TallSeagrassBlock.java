@@ -28,8 +28,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class TallSeagrassBlock
@@ -70,7 +70,7 @@ implements FluidFillable {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         if (state.get(HALF) == DoubleBlockHalf.UPPER) {
             BlockState blockState = world.getBlockState(pos.down());
             return blockState.getBlock() == this && blockState.get(HALF) == DoubleBlockHalf.LOWER;

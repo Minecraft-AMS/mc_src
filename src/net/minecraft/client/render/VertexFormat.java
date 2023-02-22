@@ -2,119 +2,41 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  com.google.common.collect.ImmutableList
+ *  it.unimi.dsi.fastutil.ints.IntArrayList
+ *  it.unimi.dsi.fastutil.ints.IntList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.client.render;
 
-import com.google.common.collect.Lists;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexFormatElement;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexFormat {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private final List<VertexFormatElement> elements = Lists.newArrayList();
-    private final List<Integer> offsets = Lists.newArrayList();
-    private int size;
-    private int offsetColor = -1;
-    private final List<Integer> offsetsUv = Lists.newArrayList();
-    private int offsetNormal = -1;
+    private final ImmutableList<VertexFormatElement> elements;
+    private final IntList offsets = new IntArrayList();
+    private final int size;
 
-    public VertexFormat(VertexFormat vertexFormat) {
-        this();
-        for (int i = 0; i < vertexFormat.getElementCount(); ++i) {
-            this.add(vertexFormat.getElement(i));
+    public VertexFormat(ImmutableList<VertexFormatElement> immutableList) {
+        this.elements = immutableList;
+        int i = 0;
+        for (VertexFormatElement vertexFormatElement : immutableList) {
+            this.offsets.add(i);
+            i += vertexFormatElement.getSize();
         }
-        this.size = vertexFormat.getVertexSize();
-    }
-
-    public VertexFormat() {
-    }
-
-    public void clear() {
-        this.elements.clear();
-        this.offsets.clear();
-        this.offsetColor = -1;
-        this.offsetsUv.clear();
-        this.offsetNormal = -1;
-        this.size = 0;
-    }
-
-    public VertexFormat add(VertexFormatElement vertexFormatElement) {
-        if (vertexFormatElement.isPosition() && this.hasPositionElement()) {
-            LOGGER.warn("VertexFormat error: Trying to add a position VertexFormatElement when one already exists, ignoring.");
-            return this;
-        }
-        this.elements.add(vertexFormatElement);
-        this.offsets.add(this.size);
-        switch (vertexFormatElement.getType()) {
-            case NORMAL: {
-                this.offsetNormal = this.size;
-                break;
-            }
-            case COLOR: {
-                this.offsetColor = this.size;
-                break;
-            }
-            case UV: {
-                this.offsetsUv.add(vertexFormatElement.getIndex(), this.size);
-                break;
-            }
-        }
-        this.size += vertexFormatElement.getSize();
-        return this;
-    }
-
-    public boolean hasNormalElement() {
-        return this.offsetNormal >= 0;
-    }
-
-    public int getNormalOffset() {
-        return this.offsetNormal;
-    }
-
-    public boolean hasColorElement() {
-        return this.offsetColor >= 0;
-    }
-
-    public int getColorOffset() {
-        return this.offsetColor;
-    }
-
-    public boolean hasUvElement(int i) {
-        return this.offsetsUv.size() - 1 >= i;
-    }
-
-    public int getUvOffset(int i) {
-        return this.offsetsUv.get(i);
+        this.size = i;
     }
 
     public String toString() {
-        String string = "format: " + this.elements.size() + " elements: ";
-        for (int i = 0; i < this.elements.size(); ++i) {
-            string = string + this.elements.get(i).toString();
-            if (i == this.elements.size() - 1) continue;
-            string = string + " ";
-        }
-        return string;
-    }
-
-    private boolean hasPositionElement() {
-        int j = this.elements.size();
-        for (int i = 0; i < j; ++i) {
-            VertexFormatElement vertexFormatElement = this.elements.get(i);
-            if (!vertexFormatElement.isPosition()) continue;
-            return true;
-        }
-        return false;
+        return "format: " + this.elements.size() + " elements: " + this.elements.stream().map(Object::toString).collect(Collectors.joining(" "));
     }
 
     public int getVertexSizeInteger() {
@@ -125,20 +47,8 @@ public class VertexFormat {
         return this.size;
     }
 
-    public List<VertexFormatElement> getElements() {
+    public ImmutableList<VertexFormatElement> getElements() {
         return this.elements;
-    }
-
-    public int getElementCount() {
-        return this.elements.size();
-    }
-
-    public VertexFormatElement getElement(int index) {
-        return this.elements.get(index);
-    }
-
-    public int getElementOffset(int element) {
-        return this.offsets.get(element);
     }
 
     public boolean equals(Object o) {
@@ -152,17 +62,33 @@ public class VertexFormat {
         if (this.size != vertexFormat.size) {
             return false;
         }
-        if (!this.elements.equals(vertexFormat.elements)) {
-            return false;
-        }
-        return this.offsets.equals(vertexFormat.offsets);
+        return this.elements.equals(vertexFormat.elements);
     }
 
     public int hashCode() {
-        int i = this.elements.hashCode();
-        i = 31 * i + this.offsets.hashCode();
-        i = 31 * i + this.size;
-        return i;
+        return this.elements.hashCode();
+    }
+
+    public void startDrawing(long pointer) {
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(() -> this.startDrawing(pointer));
+            return;
+        }
+        int i = this.getVertexSize();
+        ImmutableList<VertexFormatElement> list = this.getElements();
+        for (int j = 0; j < list.size(); ++j) {
+            ((VertexFormatElement)list.get(j)).startDrawing(pointer + (long)this.offsets.getInt(j), i);
+        }
+    }
+
+    public void endDrawing() {
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(this::endDrawing);
+            return;
+        }
+        for (VertexFormatElement vertexFormatElement : this.getElements()) {
+            vertexFormatElement.endDrawing();
+        }
     }
 }
 

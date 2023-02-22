@@ -7,6 +7,7 @@
 package net.minecraft.util;
 
 import java.util.function.IntConsumer;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import org.apache.commons.lang3.Validate;
 
@@ -28,7 +29,7 @@ public class PackedIntegerArray {
         this.maxValue = (1L << elementBits) - 1L;
         int i = MathHelper.roundUp(size * elementBits, 64) / 64;
         if (storage.length != i) {
-            throw new RuntimeException("Invalid length given for storage, got: " + storage.length + " but expected: " + i);
+            throw Util.throwOrPause(new RuntimeException("Invalid length given for storage, got: " + storage.length + " but expected: " + i));
         }
     }
 
@@ -91,7 +92,7 @@ public class PackedIntegerArray {
         return this.elementBits;
     }
 
-    public void method_21739(IntConsumer intConsumer) {
+    public void forEach(IntConsumer consumer) {
         int i = this.storage.length;
         if (i == 0) {
             return;
@@ -110,11 +111,11 @@ public class PackedIntegerArray {
                 j = o;
             }
             if (o == p) {
-                intConsumer.accept((int)(l >>> q & this.maxValue));
+                consumer.accept((int)(l >>> q & this.maxValue));
                 continue;
             }
             int r = 64 - q;
-            intConsumer.accept((int)((l >>> q | m << r) & this.maxValue));
+            consumer.accept((int)((l >>> q | m << r) & this.maxValue));
         }
     }
 }

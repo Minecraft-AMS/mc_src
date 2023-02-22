@@ -2,11 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package com.mojang.realmsclient.util;
 
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,20 +33,20 @@ public class TextRenderingUtils {
 
     private static List<Line> insertLinks(List<String> lines, List<LineSegment> links) {
         int i = 0;
-        ArrayList<Line> arrayList = new ArrayList<Line>();
+        ArrayList list = Lists.newArrayList();
         for (String string : lines) {
-            ArrayList<LineSegment> list = new ArrayList<LineSegment>();
-            List<String> list2 = TextRenderingUtils.split(string, "%link");
-            for (String string2 : list2) {
+            ArrayList list2 = Lists.newArrayList();
+            List<String> list3 = TextRenderingUtils.split(string, "%link");
+            for (String string2 : list3) {
                 if (string2.equals("%link")) {
-                    list.add(links.get(i++));
+                    list2.add(links.get(i++));
                     continue;
                 }
-                list.add(LineSegment.text(string2));
+                list2.add(LineSegment.text(string2));
             }
-            arrayList.add(new Line(list));
+            list.add(new Line(list2));
         }
-        return arrayList;
+        return list;
     }
 
     public static List<String> split(String line, String delimiter) {
@@ -52,7 +54,7 @@ public class TextRenderingUtils {
         if (delimiter.isEmpty()) {
             throw new IllegalArgumentException("Delimiter cannot be the empty string");
         }
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList list = Lists.newArrayList();
         int i = 0;
         while ((j = line.indexOf(delimiter, i)) != -1) {
             if (j > i) {

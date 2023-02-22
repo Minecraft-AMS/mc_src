@@ -25,9 +25,9 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AnimalEntity
@@ -59,7 +59,7 @@ extends PassiveEntity {
                 double d = this.random.nextGaussian() * 0.02;
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
-                this.world.addParticle(ParticleTypes.HEART, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 0.5 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), d, e, f);
+                this.world.addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
             }
         }
     }
@@ -74,11 +74,11 @@ extends PassiveEntity {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, CollisionView world) {
-        if (world.getBlockState(pos.down()).getBlock() == Blocks.GRASS_BLOCK) {
+    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
+        if (worldView.getBlockState(pos.down()).getBlock() == Blocks.GRASS_BLOCK) {
             return 10.0f;
         }
-        return world.getBrightness(pos) - 0.5f;
+        return worldView.getBrightness(pos) - 0.5f;
     }
 
     @Override
@@ -102,8 +102,8 @@ extends PassiveEntity {
         this.lovingPlayer = tag.containsUuid("LoveCause") ? tag.getUuid("LoveCause") : null;
     }
 
-    public static boolean method_20663(EntityType<? extends AnimalEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return iWorld.getBlockState(blockPos.down()).getBlock() == Blocks.GRASS_BLOCK && iWorld.getLightLevel(blockPos, 0) > 8;
+    public static boolean isValidNaturalSpawn(EntityType<? extends AnimalEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).getBlock() == Blocks.GRASS_BLOCK && world.getBaseLightLevel(pos, 0) > 8;
     }
 
     @Override
@@ -129,9 +129,10 @@ extends PassiveEntity {
     public boolean interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (this.isBreedingItem(itemStack)) {
-            if (this.getBreedingAge() == 0 && this.canEat()) {
+            if (!this.world.isClient && this.getBreedingAge() == 0 && this.canEat()) {
                 this.eat(player, itemStack);
                 this.lovePlayer(player);
+                player.swingHand(hand, true);
                 return true;
             }
             if (this.isBaby()) {
@@ -203,7 +204,7 @@ extends PassiveEntity {
                 double d = this.random.nextGaussian() * 0.02;
                 double e = this.random.nextGaussian() * 0.02;
                 double f = this.random.nextGaussian() * 0.02;
-                this.world.addParticle(ParticleTypes.HEART, this.x + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), this.y + 0.5 + (double)(this.random.nextFloat() * this.getHeight()), this.z + (double)(this.random.nextFloat() * this.getWidth() * 2.0f) - (double)this.getWidth(), d, e, f);
+                this.world.addParticle(ParticleTypes.HEART, this.getParticleX(1.0), this.getRandomBodyY() + 0.5, this.getParticleZ(1.0), d, e, f);
             }
         } else {
             super.handleStatus(status);

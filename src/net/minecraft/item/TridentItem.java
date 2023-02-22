@@ -3,14 +3,10 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Multimap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.item;
 
 import com.google.common.collect.Multimap;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EquipmentSlot;
@@ -27,7 +23,6 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypedActionResult;
@@ -57,12 +52,6 @@ extends Item {
     @Override
     public int getMaxUseTime(ItemStack stack) {
         return 72000;
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
-    public boolean hasEnchantmentGlint(ItemStack stack) {
-        return false;
     }
 
     @Override
@@ -104,7 +93,7 @@ extends Item {
             float m = MathHelper.sqrt(h * h + k * k + l * l);
             float n = 3.0f * ((1.0f + (float)j) / 4.0f);
             playerEntity.addVelocity(h *= n / m, k *= n / m, l *= n / m);
-            playerEntity.method_6018(20);
+            playerEntity.setPushCooldown(20);
             if (playerEntity.onGround) {
                 float o = 1.1999999f;
                 playerEntity.move(MovementType.SELF, new Vec3d(0.0, 1.1999999284744263, 0.0));
@@ -117,14 +106,14 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        if (itemStack.getDamage() >= itemStack.getMaxDamage()) {
-            return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+        if (itemStack.getDamage() >= itemStack.getMaxDamage() - 1) {
+            return TypedActionResult.fail(itemStack);
         }
         if (EnchantmentHelper.getRiptide(itemStack) > 0 && !user.isTouchingWaterOrRain()) {
-            return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+            return TypedActionResult.fail(itemStack);
         }
         user.setCurrentHand(hand);
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.consume(itemStack);
     }
 
     @Override

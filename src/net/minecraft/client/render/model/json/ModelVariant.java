@@ -18,10 +18,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.lang.reflect.Type;
+import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.model.ModelBakeSettings;
 import net.minecraft.client.render.model.ModelRotation;
+import net.minecraft.client.util.math.Rotation3;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 
@@ -29,13 +31,13 @@ import net.minecraft.util.JsonHelper;
 public class ModelVariant
 implements ModelBakeSettings {
     private final Identifier location;
-    private final ModelRotation rotation;
+    private final Rotation3 rotation;
     private final boolean uvLock;
     private final int weight;
 
-    public ModelVariant(Identifier location, ModelRotation rotation, boolean uvLock, int weight) {
+    public ModelVariant(Identifier location, Rotation3 rotation3, boolean uvLock, int weight) {
         this.location = location;
-        this.rotation = rotation;
+        this.rotation = rotation3;
         this.uvLock = uvLock;
         this.weight = weight;
     }
@@ -45,7 +47,7 @@ implements ModelBakeSettings {
     }
 
     @Override
-    public ModelRotation getRotation() {
+    public Rotation3 getRotation() {
         return this.rotation;
     }
 
@@ -68,7 +70,7 @@ implements ModelBakeSettings {
         }
         if (o instanceof ModelVariant) {
             ModelVariant modelVariant = (ModelVariant)o;
-            return this.location.equals(modelVariant.location) && this.rotation == modelVariant.rotation && this.uvLock == modelVariant.uvLock && this.weight == modelVariant.weight;
+            return this.location.equals(modelVariant.location) && Objects.equals(this.rotation, modelVariant.rotation) && this.uvLock == modelVariant.uvLock && this.weight == modelVariant.weight;
         }
         return false;
     }
@@ -90,7 +92,7 @@ implements ModelBakeSettings {
             ModelRotation modelRotation = this.deserializeRotation(jsonObject);
             boolean bl = this.deserializeUvLock(jsonObject);
             int i = this.deserializeWeight(jsonObject);
-            return new ModelVariant(identifier, modelRotation, bl, i);
+            return new ModelVariant(identifier, modelRotation.getRotation(), bl, i);
         }
 
         private boolean deserializeUvLock(JsonObject object) {

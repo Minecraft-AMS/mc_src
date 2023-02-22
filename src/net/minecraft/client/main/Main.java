@@ -22,6 +22,8 @@ package net.minecraft.client.main;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.authlib.properties.PropertyMap;
+import com.mojang.blaze3d.systems.RenderCallStorage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.File;
 import java.net.Authenticator;
 import java.net.InetSocketAddress;
@@ -39,12 +41,14 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.RunArgs;
 import net.minecraft.client.WindowSettings;
+import net.minecraft.client.util.GlException;
 import net.minecraft.client.util.Session;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.UncaughtExceptionLogger;
 import net.minecraft.util.Util;
+import net.minecraft.util.crash.CrashReport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -53,7 +57,12 @@ import org.jetbrains.annotations.Nullable;
 public class Main {
     private static final Logger LOGGER = LogManager.getLogger();
 
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     public static void main(String[] args) {
+        Thread thread2;
+        MinecraftClient minecraftClient;
         OptionParser optionParser = new OptionParser();
         optionParser.allowsUnrecognizedOptions();
         optionParser.accepts("demo");
@@ -110,8 +119,8 @@ public class Main {
         }
         int i = (Integer)Main.getOption(optionSet, optionSpec14);
         int j = (Integer)Main.getOption(optionSet, optionSpec15);
-        OptionalInt optionalInt = Main.method_21612((Integer)Main.getOption(optionSet, optionSpec16));
-        OptionalInt optionalInt2 = Main.method_21612((Integer)Main.getOption(optionSet, optionSpec17));
+        OptionalInt optionalInt = Main.toOptional((Integer)Main.getOption(optionSet, optionSpec16));
+        OptionalInt optionalInt2 = Main.toOptional((Integer)Main.getOption(optionSet, optionSpec17));
         boolean bl = optionSet.has("fullscreen");
         boolean bl2 = optionSet.has("demo");
         String string4 = (String)Main.getOption(optionSet, optionSpec13);
@@ -126,6 +135,7 @@ public class Main {
         String string7 = optionSet.has((OptionSpec)optionSpec20) ? (String)optionSpec20.value(optionSet) : null;
         String string8 = (String)Main.getOption(optionSet, optionSpec);
         Integer integer = (Integer)Main.getOption(optionSet, optionSpec2);
+        CrashReport.method_24305();
         Session session = new Session((String)optionSpec10.value(optionSet), string6, (String)optionSpec12.value(optionSet), (String)optionSpec21.value(optionSet));
         RunArgs runArgs = new RunArgs(new RunArgs.Network(session, propertyMap, propertyMap2, proxy), new WindowSettings(i, j, optionalInt, optionalInt2, bl), new RunArgs.Directories(file, file3, file2, string7), new RunArgs.Game(bl2, string4, string5), new RunArgs.AutoConnect(string8, integer));
         Thread thread = new Thread("Client Shutdown Thread"){
@@ -144,14 +154,71 @@ public class Main {
         };
         thread.setUncaughtExceptionHandler(new UncaughtExceptionLogger(LOGGER));
         Runtime.getRuntime().addShutdownHook(thread);
-        Thread.currentThread().setName("Client thread");
-        new MinecraftClient(runArgs).run();
+        RenderCallStorage renderCallStorage = new RenderCallStorage();
+        try {
+            Thread.currentThread().setName("Render thread");
+            RenderSystem.initRenderThread();
+            RenderSystem.beginInitialization();
+            minecraftClient = new MinecraftClient(runArgs);
+            RenderSystem.finishInitialization();
+        }
+        catch (GlException glException) {
+            LOGGER.warn("Failed to create window: ", (Throwable)glException);
+            return;
+        }
+        catch (Throwable throwable) {
+            CrashReport crashReport = CrashReport.create(throwable, "Initializing game");
+            crashReport.addElement("Initialization");
+            MinecraftClient.addSystemDetailsToCrashReport(null, runArgs.game.version, null, crashReport);
+            MinecraftClient.printCrashReport(crashReport);
+            return;
+        }
+        if (minecraftClient.shouldRenderAsync()) {
+            thread2 = new Thread("Game thread"){
+
+                @Override
+                public void run() {
+                    try {
+                        RenderSystem.initGameThread(true);
+                        minecraftClient.run();
+                    }
+                    catch (Throwable throwable) {
+                        LOGGER.error("Exception in client thread", throwable);
+                    }
+                }
+            };
+            thread2.start();
+            while (minecraftClient.isRunning()) {
+            }
+        } else {
+            thread2 = null;
+            try {
+                RenderSystem.initGameThread(false);
+                minecraftClient.run();
+            }
+            catch (Throwable throwable2) {
+                LOGGER.error("Unhandled game exception", throwable2);
+            }
+        }
+        try {
+            minecraftClient.scheduleStop();
+            if (thread2 != null) {
+                thread2.join();
+            }
+        }
+        catch (InterruptedException interruptedException) {
+            LOGGER.error("Exception during client thread shutdown", (Throwable)interruptedException);
+        }
+        finally {
+            minecraftClient.stop();
+        }
     }
 
-    private static OptionalInt method_21612(@Nullable Integer integer) {
-        return integer != null ? OptionalInt.of(integer) : OptionalInt.empty();
+    private static OptionalInt toOptional(@Nullable Integer i) {
+        return i != null ? OptionalInt.of(i) : OptionalInt.empty();
     }
 
+    @Nullable
     private static <T> T getOption(OptionSet optionSet, OptionSpec<T> optionSpec) {
         try {
             return (T)optionSet.valueOf(optionSpec);
@@ -166,7 +233,7 @@ public class Main {
         }
     }
 
-    private static boolean isNotNullOrEmpty(String s) {
+    private static boolean isNotNullOrEmpty(@Nullable String s) {
         return s != null && !s.isEmpty();
     }
 

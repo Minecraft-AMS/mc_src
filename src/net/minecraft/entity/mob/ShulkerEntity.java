@@ -76,8 +76,8 @@ implements Monster {
 
     public ShulkerEntity(EntityType<? extends ShulkerEntity> entityType, World world) {
         super((EntityType<? extends GolemEntity>)entityType, world);
-        this.field_6220 = 180.0f;
-        this.field_6283 = 180.0f;
+        this.prevBodyYaw = 180.0f;
+        this.bodyYaw = 180.0f;
         this.field_7345 = null;
         this.experiencePoints = 5;
     }
@@ -85,8 +85,8 @@ implements Monster {
     @Override
     @Nullable
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        this.field_6283 = 180.0f;
-        this.field_6220 = 180.0f;
+        this.bodyYaw = 180.0f;
+        this.prevBodyYaw = 180.0f;
         this.yaw = 180.0f;
         this.prevYaw = 180.0f;
         this.headYaw = 180.0f;
@@ -202,8 +202,8 @@ implements Monster {
         if (this.hasVehicle()) {
             blockPos = null;
             this.yaw = f = this.getVehicle().yaw;
-            this.field_6283 = f;
-            this.field_6220 = f;
+            this.bodyYaw = f;
+            this.prevBodyYaw = f;
             this.field_7340 = 0;
         } else if (!this.world.isClient) {
             BlockPos blockPos3;
@@ -264,19 +264,11 @@ implements Monster {
                     this.field_7345 = blockPos;
                 }
             }
-            this.x = (double)blockPos.getX() + 0.5;
-            this.y = blockPos.getY();
-            this.z = (double)blockPos.getZ() + 0.5;
-            this.prevX = this.x;
-            this.prevY = this.y;
-            this.prevZ = this.z;
-            this.lastRenderX = this.x;
-            this.lastRenderY = this.y;
-            this.lastRenderZ = this.z;
+            this.resetPosition((double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5);
             double d = 0.5 - (double)MathHelper.sin((0.5f + this.field_7337) * (float)Math.PI) * 0.5;
             double e = 0.5 - (double)MathHelper.sin((0.5f + this.field_7339) * (float)Math.PI) * 0.5;
             Direction direction3 = this.getAttachedFace().getOpposite();
-            this.setBoundingBox(new Box(this.x - 0.5, this.y, this.z - 0.5, this.x + 0.5, this.y + 1.0, this.z + 0.5).stretch((double)direction3.getOffsetX() * d, (double)direction3.getOffsetY() * d, (double)direction3.getOffsetZ() * d));
+            this.setBoundingBox(new Box(this.getX() - 0.5, this.getY(), this.getZ() - 0.5, this.getX() + 0.5, this.getY() + 1.0, this.getZ() + 0.5).stretch((double)direction3.getOffsetX() * d, (double)direction3.getOffsetY() * d, (double)direction3.getOffsetZ() * d));
             double g = d - e;
             if (g > 0.0 && !(list = this.world.getEntities(this, this.getBoundingBox())).isEmpty()) {
                 for (Entity entity : list) {
@@ -340,8 +332,8 @@ implements Monster {
     public void tickMovement() {
         super.tickMovement();
         this.setVelocity(Vec3d.ZERO);
-        this.field_6220 = 180.0f;
-        this.field_6283 = 180.0f;
+        this.prevBodyYaw = 180.0f;
+        this.bodyYaw = 180.0f;
         this.yaw = 180.0f;
     }
 
@@ -354,15 +346,7 @@ implements Monster {
             } else {
                 this.field_7340 = 6;
             }
-            this.x = (double)blockPos.getX() + 0.5;
-            this.y = blockPos.getY();
-            this.z = (double)blockPos.getZ() + 0.5;
-            this.prevX = this.x;
-            this.prevY = this.y;
-            this.prevZ = this.z;
-            this.lastRenderX = this.x;
-            this.lastRenderY = this.y;
-            this.lastRenderZ = this.z;
+            this.resetPosition((double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5);
         }
         super.onTrackedDataSet(data);
     }
@@ -370,7 +354,7 @@ implements Monster {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
-        this.field_6210 = 0;
+        this.bodyTrackingIncrements = 0;
     }
 
     @Override
@@ -454,7 +438,7 @@ implements Monster {
     }
 
     @Override
-    public int method_5986() {
+    public int getBodyYawSpeed() {
         return 180;
     }
 

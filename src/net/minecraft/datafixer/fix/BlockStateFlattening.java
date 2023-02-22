@@ -24,17 +24,30 @@ import org.apache.logging.log4j.Logger;
 
 public class BlockStateFlattening {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Dynamic<?>[] ID_TO_NEW_STATE = new Dynamic[4095];
+    private static final Dynamic<?>[] ID_TO_NEW_STATE = new Dynamic[4096];
+    private static final Dynamic<?>[] ID_TO_NEW_BLOCK = new Dynamic[256];
     private static final Object2IntMap<Dynamic<?>> OLD_STATE_TO_ID = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> object2IntOpenHashMap.defaultReturnValue(-1));
     private static final Object2IntMap<String> OLD_BLOCK_TO_ID = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> object2IntOpenHashMap.defaultReturnValue(-1));
 
-    static void putStates(int oldId, String newStateStr, String ... oldStateStrings) {
-        BlockStateFlattening.ID_TO_NEW_STATE[oldId] = BlockStateFlattening.parseState(newStateStr);
+    private static void putStates(int oldId, String newStateStr, String ... oldStateStrings) {
+        Dynamic<?> dynamic = BlockStateFlattening.parseState(newStateStr);
+        BlockStateFlattening.ID_TO_NEW_STATE[oldId] = dynamic;
+        int i = oldId >> 4;
+        if (ID_TO_NEW_BLOCK[i] == null) {
+            BlockStateFlattening.ID_TO_NEW_BLOCK[i] = dynamic;
+        }
         for (String string : oldStateStrings) {
-            Dynamic<?> dynamic = BlockStateFlattening.parseState(string);
-            String string2 = dynamic.get("Name").asString("");
+            Dynamic<?> dynamic2 = BlockStateFlattening.parseState(string);
+            String string2 = dynamic2.get("Name").asString("");
             OLD_BLOCK_TO_ID.putIfAbsent((Object)string2, oldId);
-            OLD_STATE_TO_ID.put(dynamic, oldId);
+            OLD_STATE_TO_ID.put(dynamic2, oldId);
+        }
+    }
+
+    private static void fillEmptyStates() {
+        for (int i = 0; i < ID_TO_NEW_STATE.length; ++i) {
+            if (ID_TO_NEW_STATE[i] != null) continue;
+            BlockStateFlattening.ID_TO_NEW_STATE[i] = ID_TO_NEW_BLOCK[i >> 4];
         }
     }
 
@@ -76,14 +89,14 @@ public class BlockStateFlattening {
 
     public static Dynamic<?> lookupState(int stateId) {
         Dynamic<?> dynamic = null;
-        if (stateId > 0 && stateId < ID_TO_NEW_STATE.length) {
+        if (stateId >= 0 && stateId < ID_TO_NEW_STATE.length) {
             dynamic = ID_TO_NEW_STATE[stateId];
         }
         return dynamic == null ? ID_TO_NEW_STATE[0] : dynamic;
     }
 
     /*
-     * Opcode count of 30439 triggered aggressive code reduction.  Override with --aggressivesizethreshold.
+     * Opcode count of 30443 triggered aggressive code reduction.  Override with --aggressivesizethreshold.
      */
     static {
         OLD_STATE_TO_ID.defaultReturnValue(-1);
@@ -1782,6 +1795,7 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(4081, "{Name:'minecraft:structure_block',Properties:{mode:'load'}}", "{Name:'minecraft:structure_block',Properties:{mode:'load'}}");
         BlockStateFlattening.putStates(4082, "{Name:'minecraft:structure_block',Properties:{mode:'corner'}}", "{Name:'minecraft:structure_block',Properties:{mode:'corner'}}");
         BlockStateFlattening.putStates(4083, "{Name:'minecraft:structure_block',Properties:{mode:'data'}}", "{Name:'minecraft:structure_block',Properties:{mode:'data'}}");
+        BlockStateFlattening.fillEmptyStates();
     }
 }
 

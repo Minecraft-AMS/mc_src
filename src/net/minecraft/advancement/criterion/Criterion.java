@@ -40,8 +40,8 @@ public interface Criterion<T extends CriterionConditions> {
             return this.conditions;
         }
 
-        public void apply(PlayerAdvancementTracker playerAdvancementTracker) {
-            playerAdvancementTracker.grantCriterion(this.advancement, this.id);
+        public void grant(PlayerAdvancementTracker tracker) {
+            tracker.grantCriterion(this.advancement, this.id);
         }
 
         public boolean equals(Object o) {

@@ -43,19 +43,19 @@ extends Option {
         return new GameOptionSliderWidget(options, x, y, width, 20, this);
     }
 
-    public double method_18611(double d) {
-        return MathHelper.clamp((this.method_18618(d) - this.min) / (this.max - this.min), 0.0, 1.0);
+    public double getRatio(double value) {
+        return MathHelper.clamp((this.adjust(value) - this.min) / (this.max - this.min), 0.0, 1.0);
     }
 
-    public double method_18616(double d) {
-        return this.method_18618(MathHelper.lerp(MathHelper.clamp(d, 0.0, 1.0), this.min, this.max));
+    public double getValue(double ratio) {
+        return this.adjust(MathHelper.lerp(MathHelper.clamp(ratio, 0.0, 1.0), this.min, this.max));
     }
 
-    private double method_18618(double d) {
+    private double adjust(double value) {
         if (this.step > 0.0f) {
-            d = this.step * (float)Math.round(d / (double)this.step);
+            value = this.step * (float)Math.round(value / (double)this.step);
         }
-        return MathHelper.clamp(d, this.min, this.max);
+        return MathHelper.clamp(value, this.min, this.max);
     }
 
     public double getMin() {

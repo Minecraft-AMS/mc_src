@@ -17,6 +17,7 @@ import net.minecraft.item.MusicDiscItem;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -34,14 +35,14 @@ extends BlockWithEntity {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (state.get(HAS_RECORD).booleanValue()) {
             this.removeRecord(world, pos);
             state = (BlockState)state.with(HAS_RECORD, false);
             world.setBlockState(pos, state, 2);
-            return true;
+            return ActionResult.SUCCESS;
         }
-        return false;
+        return ActionResult.PASS;
     }
 
     public void setRecord(IWorld world, BlockPos pos, BlockState state, ItemStack stack) {

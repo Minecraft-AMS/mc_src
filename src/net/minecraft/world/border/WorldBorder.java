@@ -49,11 +49,11 @@ public class WorldBorder {
     }
 
     public double getDistanceInsideBorder(Entity entity) {
-        return this.getDistanceInsideBorder(entity.x, entity.z);
+        return this.getDistanceInsideBorder(entity.getX(), entity.getZ());
     }
 
     public VoxelShape asVoxelShape() {
-        return this.area.method_17906();
+        return this.area.asVoxelShape();
     }
 
     public double getDistanceInsideBorder(double x, double z) {
@@ -232,7 +232,7 @@ public class WorldBorder {
         private double boundNorth;
         private double boundEast;
         private double boundSouth;
-        private VoxelShape field_17653;
+        private VoxelShape shape;
 
         public StaticArea(double d) {
             this.size = d;
@@ -291,7 +291,7 @@ public class WorldBorder {
             this.boundNorth = Math.max(WorldBorder.this.getCenterZ() - this.size / 2.0, (double)(-WorldBorder.this.maxWorldBorderRadius));
             this.boundEast = Math.min(WorldBorder.this.getCenterX() + this.size / 2.0, (double)WorldBorder.this.maxWorldBorderRadius);
             this.boundSouth = Math.min(WorldBorder.this.getCenterZ() + this.size / 2.0, (double)WorldBorder.this.maxWorldBorderRadius);
-            this.field_17653 = VoxelShapes.combineAndSimplify(VoxelShapes.UNBOUNDED, VoxelShapes.cuboid(Math.floor(this.getBoundWest()), Double.NEGATIVE_INFINITY, Math.floor(this.getBoundNorth()), Math.ceil(this.getBoundEast()), Double.POSITIVE_INFINITY, Math.ceil(this.getBoundSouth())), BooleanBiFunction.ONLY_FIRST);
+            this.shape = VoxelShapes.combineAndSimplify(VoxelShapes.UNBOUNDED, VoxelShapes.cuboid(Math.floor(this.getBoundWest()), Double.NEGATIVE_INFINITY, Math.floor(this.getBoundNorth()), Math.ceil(this.getBoundEast()), Double.POSITIVE_INFINITY, Math.ceil(this.getBoundSouth())), BooleanBiFunction.ONLY_FIRST);
         }
 
         @Override
@@ -310,8 +310,8 @@ public class WorldBorder {
         }
 
         @Override
-        public VoxelShape method_17906() {
-            return this.field_17653;
+        public VoxelShape asVoxelShape() {
+            return this.shape;
         }
     }
 
@@ -323,12 +323,12 @@ public class WorldBorder {
         private final long timeStart;
         private final double timeDuration;
 
-        private MovingArea(double d, double e, long l) {
-            this.oldSize = d;
-            this.newSize = e;
-            this.timeDuration = l;
+        private MovingArea(double oldSize, double newSize, long duration) {
+            this.oldSize = oldSize;
+            this.newSize = newSize;
+            this.timeDuration = duration;
             this.timeStart = Util.getMeasuringTimeMs();
-            this.timeEnd = this.timeStart + l;
+            this.timeEnd = this.timeStart + duration;
         }
 
         @Override
@@ -396,7 +396,7 @@ public class WorldBorder {
         }
 
         @Override
-        public VoxelShape method_17906() {
+        public VoxelShape asVoxelShape() {
             return VoxelShapes.combineAndSimplify(VoxelShapes.UNBOUNDED, VoxelShapes.cuboid(Math.floor(this.getBoundWest()), Double.NEGATIVE_INFINITY, Math.floor(this.getBoundNorth()), Math.ceil(this.getBoundEast()), Double.POSITIVE_INFINITY, Math.ceil(this.getBoundSouth())), BooleanBiFunction.ONLY_FIRST);
         }
     }
@@ -428,7 +428,7 @@ public class WorldBorder {
 
         public Area getAreaInstance();
 
-        public VoxelShape method_17906();
+        public VoxelShape asVoxelShape();
     }
 }
 

@@ -53,7 +53,7 @@ implements Font {
                 if (nativeImage.getWidth() == 256 && nativeImage.getHeight() == 256) {
                     for (int j = 0; j < 256; ++j) {
                         byte b = sizes[c + j];
-                        if (b == 0 || UnicodeTextureFont.method_2043(b) <= UnicodeTextureFont.method_2044(b)) continue;
+                        if (b == 0 || UnicodeTextureFont.getStart(b) <= UnicodeTextureFont.getEnd(b)) continue;
                         sizes[c + j] = 0;
                     }
                     continue;
@@ -82,8 +82,8 @@ implements Font {
         NativeImage nativeImage;
         byte b = this.sizes[character];
         if (b != 0 && (nativeImage = this.images.computeIfAbsent(this.getImageId(character), this::getGlyphImage)) != null) {
-            int i = UnicodeTextureFont.method_2043(b);
-            return new UnicodeTextureGlyph(character % 16 * 16 + i, (character & 0xFF) / 16 * 16, UnicodeTextureFont.method_2044(b) - i, 16, nativeImage);
+            int i = UnicodeTextureFont.getStart(b);
+            return new UnicodeTextureGlyph(character % 16 * 16 + i, (character & 0xFF) / 16 * 16, UnicodeTextureFont.getEnd(b) - i, 16, nativeImage);
         }
         return null;
     }
@@ -105,12 +105,12 @@ implements Font {
         }
     }
 
-    private static int method_2043(byte b) {
-        return b >> 4 & 0xF;
+    private static int getStart(byte size) {
+        return size >> 4 & 0xF;
     }
 
-    private static int method_2044(byte b) {
-        return (b & 0xF) + 1;
+    private static int getEnd(byte size) {
+        return (size & 0xF) + 1;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -122,11 +122,11 @@ implements Font {
         private final int unpackSkipRows;
         private final NativeImage image;
 
-        private UnicodeTextureGlyph(int unpackSkipPixels, int unpackSkipRows, int width, int height, NativeImage image) {
+        private UnicodeTextureGlyph(int x, int y, int width, int height, NativeImage image) {
             this.width = width;
             this.height = height;
-            this.unpackSkipPixels = unpackSkipPixels;
-            this.unpackSkipRows = unpackSkipRows;
+            this.unpackSkipPixels = x;
+            this.unpackSkipRows = y;
             this.image = image;
         }
 
@@ -152,7 +152,7 @@ implements Font {
 
         @Override
         public void upload(int x, int y) {
-            this.image.upload(0, x, y, this.unpackSkipPixels, this.unpackSkipRows, this.width, this.height, false);
+            this.image.upload(0, x, y, this.unpackSkipPixels, this.unpackSkipRows, this.width, this.height, false, false);
         }
 
         @Override
@@ -182,8 +182,8 @@ implements Font {
             this.template = template;
         }
 
-        public static FontLoader fromJson(JsonObject jsonObject) {
-            return new Loader(new Identifier(JsonHelper.getString(jsonObject, "sizes")), JsonHelper.getString(jsonObject, "template"));
+        public static FontLoader fromJson(JsonObject json) {
+            return new Loader(new Identifier(JsonHelper.getString(json, "sizes")), JsonHelper.getString(json, "template"));
         }
 
         /*

@@ -49,7 +49,7 @@ extends AbstractDecorationEntity {
         while (iterator.hasNext()) {
             this.motive = paintingMotive = (PaintingMotive)iterator.next();
             this.setFacing(direction);
-            if (!this.method_6888()) continue;
+            if (!this.canStayAttached()) continue;
             list.add(paintingMotive);
             int j = paintingMotive.getWidth() * paintingMotive.getHeight();
             if (j <= i) continue;
@@ -130,7 +130,7 @@ extends AbstractDecorationEntity {
     @Override
     @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
-        BlockPos blockPos = this.attachmentPos.add(x - this.x, y - this.y, z - this.z);
+        BlockPos blockPos = this.attachmentPos.add(x - this.getX(), y - this.getY(), z - this.getZ());
         this.updatePosition(blockPos.getX(), blockPos.getY(), blockPos.getZ());
     }
 

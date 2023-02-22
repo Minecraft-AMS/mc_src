@@ -48,6 +48,9 @@ public class WanderingTraderManager {
     }
 
     public void tick() {
+        if (!this.world.getGameRules().getBoolean(GameRules.DO_TRADER_SPAWNING)) {
+            return;
+        }
         if (--this.field_17728 > 0) {
             return;
         }
@@ -87,7 +90,7 @@ public class WanderingTraderManager {
         Optional<BlockPos> optional = pointOfInterestStorage.getPosition(PointOfInterestType.MEETING.getCompletionCondition(), blockPos -> true, blockPos2, 48, PointOfInterestStorage.OccupationStatus.ANY);
         BlockPos blockPos22 = optional.orElse(blockPos2);
         BlockPos blockPos3 = this.method_18017(blockPos22, 48);
-        if (blockPos3 != null) {
+        if (blockPos3 != null && this.method_23279(blockPos3)) {
             if (this.world.getBiome(blockPos3) == Biomes.THE_VOID) {
                 return false;
             }
@@ -125,12 +128,20 @@ public class WanderingTraderManager {
             int l;
             int m;
             int k = blockPos.getX() + this.random.nextInt(i * 2) - i;
-            BlockPos blockPos3 = new BlockPos(k, m = this.world.getTop(Heightmap.Type.WORLD_SURFACE, k, l = blockPos.getZ() + this.random.nextInt(i * 2) - i), l);
+            BlockPos blockPos3 = new BlockPos(k, m = this.world.getTopY(Heightmap.Type.WORLD_SURFACE, k, l = blockPos.getZ() + this.random.nextInt(i * 2) - i), l);
             if (!SpawnHelper.canSpawn(SpawnRestriction.Location.ON_GROUND, this.world, blockPos3, EntityType.WANDERING_TRADER)) continue;
             blockPos2 = blockPos3;
             break;
         }
         return blockPos2;
+    }
+
+    private boolean method_23279(BlockPos blockPos) {
+        for (BlockPos blockPos2 : BlockPos.iterate(blockPos, blockPos.add(1, 2, 1))) {
+            if (this.world.getBlockState(blockPos2).getCollisionShape(this.world, blockPos2).isEmpty()) continue;
+            return false;
+        }
+        return true;
     }
 }
 

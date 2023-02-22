@@ -20,18 +20,19 @@ import net.minecraft.block.SlabBlock;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.enums.BlockHalf;
 import net.minecraft.block.enums.StairShape;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -41,9 +42,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.explosion.Explosion;
 
 public class StairsBlock
@@ -133,13 +134,8 @@ implements Waterloggable {
     }
 
     @Override
-    public RenderLayer getRenderLayer() {
-        return this.baseBlock.getRenderLayer();
-    }
-
-    @Override
-    public int getTickRate(CollisionView world) {
-        return this.baseBlock.getTickRate(world);
+    public int getTickRate(WorldView worldView) {
+        return this.baseBlock.getTickRate(worldView);
     }
 
     @Override
@@ -165,13 +161,13 @@ implements Waterloggable {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        this.baseBlock.onScheduledTick(state, world, pos, random);
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        this.baseBlock.scheduledTick(state, world, pos, random);
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        return this.baseBlockState.activate(world, player, hand, hit);
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        return this.baseBlockState.onUse(world, player, hand, hit);
     }
 
     @Override

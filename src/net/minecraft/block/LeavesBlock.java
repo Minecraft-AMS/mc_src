@@ -12,10 +12,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.EntityType;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
@@ -31,7 +31,6 @@ public class LeavesBlock
 extends Block {
     public static final IntProperty DISTANCE = Properties.DISTANCE_1_7;
     public static final BooleanProperty PERSISTENT = Properties.PERSISTENT;
-    protected static boolean fancy;
 
     public LeavesBlock(Block.Settings settings) {
         super(settings);
@@ -44,7 +43,7 @@ extends Block {
     }
 
     @Override
-    public void onRandomTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!state.get(PERSISTENT).booleanValue() && state.get(DISTANCE) == 7) {
             LeavesBlock.dropStacks(state, world, pos);
             world.removeBlock(pos, false);
@@ -52,7 +51,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         world.setBlockState(pos, LeavesBlock.updateDistanceFromLogs(state, world, pos), 3);
     }
 
@@ -111,21 +110,6 @@ extends Block {
         double e = (double)pos.getY() - 0.05;
         double f = (float)pos.getZ() + random.nextFloat();
         world.addParticle(ParticleTypes.DRIPPING_WATER, d, e, f, 0.0, 0.0, 0.0);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static void setRenderingMode(boolean fancy) {
-        LeavesBlock.fancy = fancy;
-    }
-
-    @Override
-    public boolean isOpaque(BlockState state) {
-        return false;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return fancy ? RenderLayer.CUTOUT_MIPPED : RenderLayer.SOLID;
     }
 
     @Override

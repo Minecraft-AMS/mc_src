@@ -7,15 +7,16 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.block.BlockRenderManager;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.TntMinecartEntityRenderer;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Vector3f;
 import net.minecraft.entity.TntEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -25,57 +26,31 @@ public class TntEntityRenderer
 extends EntityRenderer<TntEntity> {
     public TntEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher);
-        this.field_4673 = 0.5f;
+        this.shadowSize = 0.5f;
     }
 
     @Override
-    public void render(TntEntity tntEntity, double d, double e, double f, float g, float h) {
-        float i;
-        BlockRenderManager blockRenderManager = MinecraftClient.getInstance().getBlockRenderManager();
-        GlStateManager.pushMatrix();
-        GlStateManager.translatef((float)d, (float)e + 0.5f, (float)f);
-        if ((float)tntEntity.getFuseTimer() - h + 1.0f < 10.0f) {
-            i = 1.0f - ((float)tntEntity.getFuseTimer() - h + 1.0f) / 10.0f;
-            i = MathHelper.clamp(i, 0.0f, 1.0f);
-            i *= i;
-            i *= i;
-            float j = 1.0f + i * 0.3f;
-            GlStateManager.scalef(j, j, j);
+    public void render(TntEntity tntEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
+        matrixStack.push();
+        matrixStack.translate(0.0, 0.5, 0.0);
+        if ((float)tntEntity.getFuseTimer() - g + 1.0f < 10.0f) {
+            float h = 1.0f - ((float)tntEntity.getFuseTimer() - g + 1.0f) / 10.0f;
+            h = MathHelper.clamp(h, 0.0f, 1.0f);
+            h *= h;
+            h *= h;
+            float j = 1.0f + h * 0.3f;
+            matrixStack.scale(j, j, j);
         }
-        i = (1.0f - ((float)tntEntity.getFuseTimer() - h + 1.0f) / 100.0f) * 0.8f;
-        this.bindEntityTexture(tntEntity);
-        GlStateManager.rotatef(-90.0f, 0.0f, 1.0f, 0.0f);
-        GlStateManager.translatef(-0.5f, -0.5f, 0.5f);
-        blockRenderManager.renderDynamic(Blocks.TNT.getDefaultState(), tntEntity.getBrightnessAtEyes());
-        GlStateManager.translatef(0.0f, 0.0f, 1.0f);
-        if (this.renderOutlines) {
-            GlStateManager.enableColorMaterial();
-            GlStateManager.setupSolidRenderingTextureCombine(this.getOutlineColor(tntEntity));
-            blockRenderManager.renderDynamic(Blocks.TNT.getDefaultState(), 1.0f);
-            GlStateManager.tearDownSolidRenderingTextureCombine();
-            GlStateManager.disableColorMaterial();
-        } else if (tntEntity.getFuseTimer() / 5 % 2 == 0) {
-            GlStateManager.disableTexture();
-            GlStateManager.disableLighting();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.DST_ALPHA);
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, i);
-            GlStateManager.polygonOffset(-3.0f, -3.0f);
-            GlStateManager.enablePolygonOffset();
-            blockRenderManager.renderDynamic(Blocks.TNT.getDefaultState(), 1.0f);
-            GlStateManager.polygonOffset(0.0f, 0.0f);
-            GlStateManager.disablePolygonOffset();
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            GlStateManager.disableBlend();
-            GlStateManager.enableLighting();
-            GlStateManager.enableTexture();
-        }
-        GlStateManager.popMatrix();
-        super.render(tntEntity, d, e, f, g, h);
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(-90.0f));
+        matrixStack.translate(-0.5, -0.5, 0.5);
+        matrixStack.multiply(Vector3f.POSITIVE_Y.getDegreesQuaternion(90.0f));
+        TntMinecartEntityRenderer.method_23190(Blocks.TNT.getDefaultState(), matrixStack, vertexConsumerProvider, i, tntEntity.getFuseTimer() / 5 % 2 == 0);
+        matrixStack.pop();
+        super.render(tntEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
     @Override
-    protected Identifier getTexture(TntEntity tntEntity) {
+    public Identifier getTexture(TntEntity tntEntity) {
         return SpriteAtlasTexture.BLOCK_ATLAS_TEX;
     }
 }

@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.render.entity;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
@@ -15,6 +14,7 @@ import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.HeadFeatureRenderer;
 import net.minecraft.client.render.entity.feature.VillagerHeldItemFeatureRenderer;
 import net.minecraft.client.render.entity.model.VillagerResemblingModel;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.util.Identifier;
 
@@ -26,18 +26,18 @@ extends MobEntityRenderer<WanderingTraderEntity, VillagerResemblingModel<Wanderi
     public WanderingTraderEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new VillagerResemblingModel(0.0f), 0.5f);
         this.addFeature(new HeadFeatureRenderer<WanderingTraderEntity, VillagerResemblingModel<WanderingTraderEntity>>(this));
-        this.addFeature(new VillagerHeldItemFeatureRenderer<WanderingTraderEntity>(this));
+        this.addFeature(new VillagerHeldItemFeatureRenderer<WanderingTraderEntity, VillagerResemblingModel<WanderingTraderEntity>>(this));
     }
 
     @Override
-    protected Identifier getTexture(WanderingTraderEntity wanderingTraderEntity) {
+    public Identifier getTexture(WanderingTraderEntity wanderingTraderEntity) {
         return TEXTURE;
     }
 
     @Override
-    protected void scale(WanderingTraderEntity wanderingTraderEntity, float f) {
+    protected void scale(WanderingTraderEntity wanderingTraderEntity, MatrixStack matrixStack, float f) {
         float g = 0.9375f;
-        GlStateManager.scalef(0.9375f, 0.9375f, 0.9375f);
+        matrixStack.scale(0.9375f, 0.9375f, 0.9375f);
     }
 }
 

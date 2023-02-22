@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.resource;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +48,7 @@ implements ResourceReloadMonitor {
         this.listenerCount = listeners.size();
         this.preparingCount.incrementAndGet();
         initialStage.thenRun(this.preparedCount::incrementAndGet);
-        ArrayList<CompletableFuture<S>> list = new ArrayList<CompletableFuture<S>>();
+        ArrayList list = Lists.newArrayList();
         CompletableFuture<Unit> completableFuture = initialStage;
         this.waitingListeners = Sets.newHashSet(listeners);
         for (final ResourceReloadListener resourceReloadListener : listeners) {

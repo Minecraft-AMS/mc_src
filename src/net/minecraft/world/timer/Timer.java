@@ -2,19 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
+ *  com.google.common.collect.HashBasedTable
+ *  com.google.common.collect.Table
  *  com.google.common.primitives.UnsignedLong
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.world.timer;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.google.common.primitives.UnsignedLong;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -28,16 +32,10 @@ public class Timer<T> {
     private final TimerCallbackSerializer<T> callback;
     private final Queue<Event<T>> events = new PriorityQueue<Event<T>>(Timer.createEventComparator());
     private UnsignedLong eventCounter = UnsignedLong.ZERO;
-    private final Map<String, Event<T>> eventsByName = Maps.newHashMap();
+    private final Table<String, Long, Event<T>> eventsByName = HashBasedTable.create();
 
     private static <T> Comparator<Event<T>> createEventComparator() {
-        return (event, event2) -> {
-            int i = Long.compare(event.triggerTime, event2.triggerTime);
-            if (i != 0) {
-                return i;
-            }
-            return event.id.compareTo(event2.id);
-        };
+        return Comparator.comparingLong(event -> event.triggerTime).thenComparing(event -> event.id);
     }
 
     public Timer(TimerCallbackSerializer<T> timerCallbackSerializer) {
@@ -48,32 +46,31 @@ public class Timer<T> {
         Event<T> event;
         while ((event = this.events.peek()) != null && event.triggerTime <= time) {
             this.events.remove();
-            this.eventsByName.remove(event.name);
+            this.eventsByName.remove((Object)event.name, (Object)time);
             event.callback.call(server, this, time);
         }
     }
 
-    private void setEvent(String name, long triggerTime, TimerCallback<T> callback) {
+    public void setEvent(String name, long triggerTime, TimerCallback<T> callback) {
+        if (this.eventsByName.contains((Object)name, (Object)triggerTime)) {
+            return;
+        }
         this.eventCounter = this.eventCounter.plus(UnsignedLong.ONE);
         Event event = new Event(triggerTime, this.eventCounter, name, callback);
-        this.eventsByName.put(name, event);
+        this.eventsByName.put((Object)name, (Object)triggerTime, event);
         this.events.add(event);
     }
 
-    public boolean addEvent(String string, long l, TimerCallback<T> timerCallback) {
-        if (this.eventsByName.containsKey(string)) {
-            return false;
-        }
-        this.setEvent(string, l, timerCallback);
-        return true;
+    public int method_22593(String string) {
+        Collection collection = this.eventsByName.row((Object)string).values();
+        collection.forEach(this.events::remove);
+        int i = collection.size();
+        collection.clear();
+        return i;
     }
 
-    public void replaceEvent(String name, long triggerTime, TimerCallback<T> callback) {
-        Event<T> event = this.eventsByName.remove(name);
-        if (event != null) {
-            this.events.remove(event);
-        }
-        this.setEvent(name, triggerTime, callback);
+    public Set<String> method_22592() {
+        return Collections.unmodifiableSet(this.eventsByName.rowKeySet());
     }
 
     private void addEvent(CompoundTag tag) {
@@ -82,7 +79,7 @@ public class Timer<T> {
         if (timerCallback != null) {
             String string = tag.getString("Name");
             long l = tag.getLong("TriggerTime");
-            this.addEvent(string, l, timerCallback);
+            this.setEvent(string, l, timerCallback);
         }
     }
 

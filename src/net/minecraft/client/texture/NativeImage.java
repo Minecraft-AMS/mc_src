@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Charsets
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.stb.STBIWriteCallback
- *  org.lwjgl.stb.STBIWriteCallbackI
  *  org.lwjgl.stb.STBImage
  *  org.lwjgl.stb.STBImageResize
  *  org.lwjgl.stb.STBImageWrite
@@ -18,8 +20,9 @@
  */
 package net.minecraft.client.texture;
 
+import com.google.common.base.Charsets;
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +31,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -38,11 +40,13 @@ import java.util.EnumSet;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.client.util.Untracker;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.stb.STBIWriteCallback;
-import org.lwjgl.stb.STBIWriteCallbackI;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.stb.STBImageResize;
 import org.lwjgl.stb.STBImageWrite;
@@ -54,13 +58,14 @@ import org.lwjgl.system.MemoryUtil;
 @Environment(value=EnvType.CLIENT)
 public final class NativeImage
 implements AutoCloseable {
+    private static final Logger LOGGER = LogManager.getLogger();
     private static final Set<StandardOpenOption> WRITE_TO_FILE_OPEN_OPTIONS = EnumSet.of(StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     private final Format format;
     private final int width;
     private final int height;
     private final boolean isStbImage;
     private long pointer;
-    private final int sizeBytes;
+    private final long sizeBytes;
 
     public NativeImage(int width, int height, boolean useStb) {
         this(Format.RGBA, width, height, useStb);
@@ -70,7 +75,7 @@ implements AutoCloseable {
         this.format = format;
         this.width = width;
         this.height = height;
-        this.sizeBytes = width * height * format.getChannelCount();
+        this.sizeBytes = (long)width * (long)height * (long)format.getChannelCount();
         this.isStbImage = false;
         this.pointer = useStb ? MemoryUtil.nmemCalloc((long)1L, (long)this.sizeBytes) : MemoryUtil.nmemAlloc((long)this.sizeBytes);
     }
@@ -134,6 +139,7 @@ implements AutoCloseable {
     }
 
     private static void setTextureClamp(boolean clamp) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         if (clamp) {
             GlStateManager.texParameter(3553, 10242, 10496);
             GlStateManager.texParameter(3553, 10243, 10496);
@@ -144,6 +150,7 @@ implements AutoCloseable {
     }
 
     private static void setTextureFilter(boolean blur, boolean mipmap) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         if (blur) {
             GlStateManager.texParameter(3553, 10241, mipmap ? 9987 : 9729);
             GlStateManager.texParameter(3553, 10240, 9729);
@@ -191,7 +198,8 @@ implements AutoCloseable {
             throw new IllegalArgumentException(String.format("(%s, %s) outside of image bounds (%s, %s)", x, y, this.width, this.height));
         }
         this.checkAllocated();
-        return MemoryUtil.memIntBuffer((long)this.pointer, (int)this.sizeBytes).get(x + y * this.width);
+        long l = (x + y * this.width) * 4;
+        return MemoryUtil.memGetInt((long)(this.pointer + l));
     }
 
     public void setPixelRgba(int x, int y, int color) {
@@ -202,7 +210,8 @@ implements AutoCloseable {
             throw new IllegalArgumentException(String.format("(%s, %s) outside of image bounds (%s, %s)", x, y, this.width, this.height));
         }
         this.checkAllocated();
-        MemoryUtil.memIntBuffer((long)this.pointer, (int)this.sizeBytes).put(x + y * this.width, color);
+        long l = (x + y * this.width) * 4;
+        MemoryUtil.memPutInt((long)(this.pointer + l), (int)color);
     }
 
     public byte getPixelOpacity(int x, int y) {
@@ -212,7 +221,8 @@ implements AutoCloseable {
         if (x > this.width || y > this.height) {
             throw new IllegalArgumentException(String.format("(%s, %s) outside of image bounds (%s, %s)", x, y, this.width, this.height));
         }
-        return MemoryUtil.memByteBuffer((long)this.pointer, (int)this.sizeBytes).get((x + y * this.width) * this.format.getChannelCount() + this.format.getOpacityOffset() / 8);
+        int i = (x + y * this.width) * this.format.getChannelCount() + this.format.getOpacityOffset() / 8;
+        return MemoryUtil.memGetByte((long)(this.pointer + (long)i));
     }
 
     public void blendPixel(int x, int y, int radius) {
@@ -220,14 +230,14 @@ implements AutoCloseable {
             throw new UnsupportedOperationException("Can only call blendPixel with RGBA format");
         }
         int i = this.getPixelRgba(x, y);
-        float f = (float)(radius >> 24 & 0xFF) / 255.0f;
-        float g = (float)(radius >> 16 & 0xFF) / 255.0f;
-        float h = (float)(radius >> 8 & 0xFF) / 255.0f;
-        float j = (float)(radius >> 0 & 0xFF) / 255.0f;
-        float k = (float)(i >> 24 & 0xFF) / 255.0f;
-        float l = (float)(i >> 16 & 0xFF) / 255.0f;
-        float m = (float)(i >> 8 & 0xFF) / 255.0f;
-        float n = (float)(i >> 0 & 0xFF) / 255.0f;
+        float f = (float)NativeImage.method_24030(radius) / 255.0f;
+        float g = (float)NativeImage.method_24035(radius) / 255.0f;
+        float h = (float)NativeImage.method_24034(radius) / 255.0f;
+        float j = (float)NativeImage.method_24033(radius) / 255.0f;
+        float k = (float)NativeImage.method_24030(i) / 255.0f;
+        float l = (float)NativeImage.method_24035(i) / 255.0f;
+        float m = (float)NativeImage.method_24034(i) / 255.0f;
+        float n = (float)NativeImage.method_24033(i) / 255.0f;
         float o = f;
         float p = 1.0f - f;
         float q = f * o + k * p;
@@ -250,7 +260,7 @@ implements AutoCloseable {
         int v = (int)(r * 255.0f);
         int w = (int)(s * 255.0f);
         int z = (int)(t * 255.0f);
-        this.setPixelRgba(x, y, u << 24 | v << 16 | w << 8 | z << 0);
+        this.setPixelRgba(x, y, NativeImage.method_24031(u, v, w, z));
     }
 
     @Deprecated
@@ -264,10 +274,10 @@ implements AutoCloseable {
             for (int j = 0; j < this.getWidth(); ++j) {
                 int p;
                 int k = this.getPixelRgba(j, i);
-                int l = k >> 24 & 0xFF;
-                int m = k >> 16 & 0xFF;
-                int n = k >> 8 & 0xFF;
-                int o = k >> 0 & 0xFF;
+                int l = NativeImage.method_24030(k);
+                int m = NativeImage.method_24035(k);
+                int n = NativeImage.method_24034(k);
+                int o = NativeImage.method_24033(k);
                 is[j + i * this.getWidth()] = p = l << 24 | o << 16 | n << 8 | m;
             }
         }
@@ -275,14 +285,23 @@ implements AutoCloseable {
     }
 
     public void upload(int level, int offsetX, int offsetY, boolean mipmap) {
-        this.upload(level, offsetX, offsetY, 0, 0, this.width, this.height, mipmap);
+        this.upload(level, offsetX, offsetY, 0, 0, this.width, this.height, false, mipmap);
     }
 
-    public void upload(int level, int xOffset, int yOffset, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean mipmap) {
-        this.upload(level, xOffset, yOffset, unpackSkipPixels, unpackSkipRows, width, height, false, false, mipmap);
+    public void upload(int level, int offsetX, int offsetY, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean mipmap, boolean close) {
+        this.upload(level, offsetX, offsetY, unpackSkipPixels, unpackSkipRows, width, height, false, false, mipmap, close);
     }
 
-    public void upload(int level, int xOffset, int yOffset, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean blur, boolean clamp, boolean mipmap) {
+    public void upload(int level, int offsetX, int offsetY, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean blur, boolean clamp, boolean mipmap, boolean close) {
+        if (!RenderSystem.isOnRenderThreadOrInit()) {
+            RenderSystem.recordRenderCall(() -> this.uploadInternal(level, offsetX, offsetY, unpackSkipPixels, unpackSkipRows, width, height, blur, clamp, mipmap, close));
+        } else {
+            this.uploadInternal(level, offsetX, offsetY, unpackSkipPixels, unpackSkipRows, width, height, blur, clamp, mipmap, close);
+        }
+    }
+
+    private void uploadInternal(int level, int xOffset, int yOffset, int unpackSkipPixels, int unpackSkipRows, int width, int height, boolean blur, boolean clamp, boolean mipmap, boolean close) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
         this.checkAllocated();
         NativeImage.setTextureFilter(blur, mipmap);
         NativeImage.setTextureClamp(clamp);
@@ -295,9 +314,13 @@ implements AutoCloseable {
         GlStateManager.pixelStore(3315, unpackSkipRows);
         this.format.setUnpackAlignment();
         GlStateManager.texSubImage2D(3553, level, xOffset, yOffset, width, height, this.format.getPixelDataFormat(), 5121, this.pointer);
+        if (close) {
+            this.close();
+        }
     }
 
     public void loadFromTextureImage(int level, boolean removeAlpha) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         this.checkAllocated();
         this.format.setPackAlignment();
         GlStateManager.getTexImage(3553, level, this.format.getPixelDataFormat(), 5121, this.pointer);
@@ -308,22 +331,6 @@ implements AutoCloseable {
                 }
             }
         }
-    }
-
-    public void loadFromMemory(boolean removeAlpha) {
-        this.checkAllocated();
-        this.format.setPackAlignment();
-        if (removeAlpha) {
-            GlStateManager.pixelTransfer(3357, Float.MAX_VALUE);
-        }
-        GlStateManager.readPixels(0, 0, this.width, this.height, this.format.getPixelDataFormat(), 5121, this.pointer);
-        if (removeAlpha) {
-            GlStateManager.pixelTransfer(3357, 0.0f);
-        }
-    }
-
-    public void writeFile(String fileName) throws IOException {
-        this.writeFile(FileSystems.getDefault().getPath(fileName, new String[0]));
     }
 
     public void writeFile(File file) throws IOException {
@@ -340,25 +347,64 @@ implements AutoCloseable {
         STBTruetype.nstbtt_MakeGlyphBitmapSubpixel((long)fontInfo.address(), (long)(this.pointer + (long)startX + (long)(startY * this.getWidth())), (int)width, (int)height, (int)this.getWidth(), (float)scaleX, (float)scaleY, (float)shiftX, (float)shiftY, (int)glyphIndex);
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     public void writeFile(Path path) throws IOException {
         if (!this.format.isWriteable()) {
             throw new UnsupportedOperationException("Don't know how to write format " + (Object)((Object)this.format));
         }
         this.checkAllocated();
         try (SeekableByteChannel writableByteChannel = Files.newByteChannel(path, WRITE_TO_FILE_OPEN_OPTIONS, new FileAttribute[0]);){
-            WriteCallback writeCallback = new WriteCallback(writableByteChannel);
-            try {
-                if (!STBImageWrite.stbi_write_png_to_func((STBIWriteCallbackI)writeCallback, (long)0L, (int)this.getWidth(), (int)this.getHeight(), (int)this.format.getChannelCount(), (ByteBuffer)MemoryUtil.memByteBuffer((long)this.pointer, (int)this.sizeBytes), (int)0)) {
-                    throw new IOException("Could not write image to the PNG file \"" + path.toAbsolutePath() + "\": " + STBImage.stbi_failure_reason());
-                }
+            if (!this.method_24032(writableByteChannel)) {
+                throw new IOException("Could not write image to the PNG file \"" + path.toAbsolutePath() + "\": " + STBImage.stbi_failure_reason());
             }
-            finally {
-                writeCallback.free();
+        }
+    }
+
+    /*
+     * Exception decompiling
+     */
+    public byte[] getBytes() throws IOException {
+        /*
+         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
+         * 
+         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
+         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
+         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
+         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
+         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
+         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
+         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
+         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
+         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
+         *     at org.benf.cfr.reader.Main.main(Main.java:54)
+         */
+        throw new IllegalStateException("Decompilation failed");
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    private boolean method_24032(WritableByteChannel writableByteChannel) throws IOException {
+        WriteCallback writeCallback = new WriteCallback(writableByteChannel);
+        try {
+            int i = Math.min(this.getHeight(), Integer.MAX_VALUE / this.getWidth() / this.format.getChannelCount());
+            if (i < this.getHeight()) {
+                LOGGER.warn("Dropping image height from {} to {} to fit the size into 32-bit signed int", (Object)this.getHeight(), (Object)i);
+            }
+            if (STBImageWrite.nstbi_write_png_to_func((long)writeCallback.address(), (long)0L, (int)this.getWidth(), (int)i, (int)this.format.getChannelCount(), (long)this.pointer, (int)0) == 0) {
+                boolean bl = false;
+                return bl;
             }
             writeCallback.throwStoredException();
+            boolean bl = true;
+            return bl;
+        }
+        finally {
+            writeCallback.free();
         }
     }
 
@@ -401,7 +447,7 @@ implements AutoCloseable {
         }
     }
 
-    public void method_4319() {
+    public void mirrorVertically() {
         this.checkAllocated();
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             int i = this.format.getChannelCount();
@@ -431,15 +477,34 @@ implements AutoCloseable {
     }
 
     public static NativeImage read(String dataUri) throws IOException {
+        byte[] bs = Base64.getDecoder().decode(dataUri.replaceAll("\n", "").getBytes(Charsets.UTF_8));
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
-            ByteBuffer byteBuffer = memoryStack.UTF8((CharSequence)dataUri.replaceAll("\n", ""), false);
-            ByteBuffer byteBuffer2 = Base64.getDecoder().decode(byteBuffer);
-            ByteBuffer byteBuffer3 = memoryStack.malloc(byteBuffer2.remaining());
-            byteBuffer3.put(byteBuffer2);
-            byteBuffer3.rewind();
-            NativeImage nativeImage = NativeImage.read(byteBuffer3);
+            ByteBuffer byteBuffer = memoryStack.malloc(bs.length);
+            byteBuffer.put(bs);
+            byteBuffer.rewind();
+            NativeImage nativeImage = NativeImage.read(byteBuffer);
             return nativeImage;
         }
+    }
+
+    public static int method_24030(int i) {
+        return i >> 24 & 0xFF;
+    }
+
+    public static int method_24033(int i) {
+        return i >> 0 & 0xFF;
+    }
+
+    public static int method_24034(int i) {
+        return i >> 8 & 0xFF;
+    }
+
+    public static int method_24035(int i) {
+        return i >> 16 & 0xFF;
+    }
+
+    public static int method_24031(int i, int j, int k, int l) {
+        return (i & 0xFF) << 24 | (j & 0xFF) << 16 | (k & 0xFF) << 8 | (l & 0xFF) << 0;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -484,10 +549,12 @@ implements AutoCloseable {
         }
 
         public void setPackAlignment() {
+            RenderSystem.assertThread(RenderSystem::isOnRenderThread);
             GlStateManager.pixelStore(3333, this.getChannelCount());
         }
 
         public void setUnpackAlignment() {
+            RenderSystem.assertThread(RenderSystem::isOnRenderThreadOrInit);
             GlStateManager.pixelStore(3317, this.getChannelCount());
         }
 
@@ -545,7 +612,7 @@ implements AutoCloseable {
             this.glConstant = glConstant;
         }
 
-        public int getGlConstant() {
+        int getGlConstant() {
             return this.glConstant;
         }
     }
@@ -554,6 +621,7 @@ implements AutoCloseable {
     static class WriteCallback
     extends STBIWriteCallback {
         private final WritableByteChannel channel;
+        @Nullable
         private IOException exception;
 
         private WriteCallback(WritableByteChannel channel) {

@@ -20,7 +20,8 @@ extends MobEntityWithAi {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override

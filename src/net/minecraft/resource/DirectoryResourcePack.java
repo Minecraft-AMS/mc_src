@@ -107,12 +107,10 @@ extends AbstractFileResourcePack {
     }
 
     @Override
-    public Collection<Identifier> findResources(ResourceType type, String namespace, int maxDepth, Predicate<String> pathFilter) {
+    public Collection<Identifier> findResources(ResourceType type, String namespace, String prefix, int maxDepth, Predicate<String> pathFilter) {
         File file = new File(this.base, type.getDirectory());
         ArrayList list = Lists.newArrayList();
-        for (String string : this.getNamespaces(type)) {
-            this.findFiles(new File(new File(file, string), namespace), maxDepth, string, list, namespace + "/", pathFilter);
-        }
+        this.findFiles(new File(new File(file, namespace), prefix), maxDepth, namespace, list, prefix + "/", pathFilter);
         return list;
     }
 

@@ -7,52 +7,45 @@
  */
 package net.minecraft.client.render.debug;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.Util;
 import net.minecraft.util.shape.VoxelShape;
 
 @Environment(value=EnvType.CLIENT)
 public class CollisionDebugRenderer
 implements DebugRenderer.Renderer {
-    private final MinecraftClient field_4540;
-    private double field_4541 = Double.MIN_VALUE;
-    private List<VoxelShape> field_4542 = Collections.emptyList();
+    private final MinecraftClient client;
+    private double lastUpdateTime = Double.MIN_VALUE;
+    private List<VoxelShape> collisions = Collections.emptyList();
 
-    public CollisionDebugRenderer(MinecraftClient minecraftClient) {
-        this.field_4540 = minecraftClient;
+    public CollisionDebugRenderer(MinecraftClient client) {
+        this.client = client;
     }
 
     @Override
-    public void render(long l) {
-        Camera camera = this.field_4540.gameRenderer.getCamera();
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         double d = Util.getMeasuringTimeNano();
-        if (d - this.field_4541 > 1.0E8) {
-            this.field_4541 = d;
-            this.field_4542 = camera.getFocusedEntity().world.getCollisions(camera.getFocusedEntity(), camera.getFocusedEntity().getBoundingBox().expand(6.0), Collections.emptySet()).collect(Collectors.toList());
+        if (d - this.lastUpdateTime > 1.0E8) {
+            this.lastUpdateTime = d;
+            Entity entity = this.client.gameRenderer.getCamera().getFocusedEntity();
+            this.collisions = entity.world.getCollisions(entity, entity.getBoundingBox().expand(6.0), Collections.emptySet()).collect(Collectors.toList());
         }
-        double e = camera.getPos().x;
-        double f = camera.getPos().y;
-        double g = camera.getPos().z;
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.lineWidth(2.0f);
-        GlStateManager.disableTexture();
-        GlStateManager.depthMask(false);
-        for (VoxelShape voxelShape : this.field_4542) {
-            WorldRenderer.drawDebugShapeOutline(voxelShape, -e, -f, -g, 1.0f, 1.0f, 1.0f, 1.0f);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
+        for (VoxelShape voxelShape : this.collisions) {
+            WorldRenderer.method_22983(matrices, vertexConsumer, voxelShape, -cameraX, -cameraY, -cameraZ, 1.0f, 1.0f, 1.0f, 1.0f);
         }
-        GlStateManager.depthMask(true);
-        GlStateManager.enableTexture();
-        GlStateManager.disableBlend();
     }
 }
 

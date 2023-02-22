@@ -11,7 +11,6 @@ import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.HorizontalFacingBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.container.BlockContext;
 import net.minecraft.container.NameableContainerFactory;
 import net.minecraft.container.SimpleNamedContainerFactory;
@@ -23,6 +22,7 @@ import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
@@ -51,10 +51,13 @@ extends Block {
     }
 
     @Override
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (world.isClient) {
+            return ActionResult.SUCCESS;
+        }
         player.openContainer(state.createContainerFactory(world, pos));
         player.incrementStat(Stats.INTERACT_WITH_STONECUTTER);
-        return true;
+        return ActionResult.SUCCESS;
     }
 
     @Override
@@ -74,18 +77,8 @@ extends Block {
     }
 
     @Override
-    public boolean isOpaque(BlockState state) {
-        return true;
-    }
-
-    @Override
     public BlockRenderType getRenderType(BlockState state) {
         return BlockRenderType.MODEL;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

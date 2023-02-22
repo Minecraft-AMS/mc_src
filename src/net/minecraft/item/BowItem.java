@@ -17,7 +17,6 @@ import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypedActionResult;
@@ -74,7 +73,7 @@ extends RangedWeaponItem {
                 projectileEntity.setDamage(projectileEntity.getDamage() + (double)j * 0.5 + 0.5);
             }
             if ((k = EnchantmentHelper.getLevel(Enchantments.PUNCH, stack)) > 0) {
-                projectileEntity.method_7449(k);
+                projectileEntity.setPunch(k);
             }
             if (EnchantmentHelper.getLevel(Enchantments.FLAME, stack) > 0) {
                 projectileEntity.setOnFireFor(100);
@@ -85,7 +84,7 @@ extends RangedWeaponItem {
             }
             world.spawnEntity(projectileEntity);
         }
-        world.playSound(null, playerEntity.x, playerEntity.y, playerEntity.z, SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1.0f, 1.0f / (RANDOM.nextFloat() * 0.4f + 1.2f) + f * 0.5f);
+        world.playSound(null, playerEntity.getX(), playerEntity.getY(), playerEntity.getZ(), SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1.0f, 1.0f / (RANDOM.nextFloat() * 0.4f + 1.2f) + f * 0.5f);
         if (!bl2 && !playerEntity.abilities.creativeMode) {
             itemStack.decrement(1);
             if (itemStack.isEmpty()) {
@@ -120,12 +119,9 @@ extends RangedWeaponItem {
         boolean bl2 = bl = !user.getArrowType(itemStack).isEmpty();
         if (user.abilities.creativeMode || bl) {
             user.setCurrentHand(hand);
-            return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+            return TypedActionResult.consume(itemStack);
         }
-        if (bl) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
-        }
-        return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+        return TypedActionResult.fail(itemStack);
     }
 
     @Override

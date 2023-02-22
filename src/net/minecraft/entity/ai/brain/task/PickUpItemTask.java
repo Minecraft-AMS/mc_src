@@ -3,11 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.Lists
  */
 package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
-import java.util.ArrayList;
+import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.entity.ItemEntity;
@@ -23,7 +24,7 @@ import net.minecraft.util.math.Vec3d;
 
 public class PickUpItemTask
 extends Task<VillagerEntity> {
-    private List<ItemEntity> nearbyItems = new ArrayList<ItemEntity>();
+    private List<ItemEntity> nearbyItems = Lists.newArrayList();
 
     public PickUpItemTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)));

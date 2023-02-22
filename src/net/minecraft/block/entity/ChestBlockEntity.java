@@ -71,15 +71,6 @@ Tickable {
     }
 
     @Override
-    public boolean isInvEmpty() {
-        for (ItemStack itemStack : this.inventory) {
-            if (itemStack.isEmpty()) continue;
-            return false;
-        }
-        return true;
-    }
-
-    @Override
     protected Text getContainerName() {
         return new TranslatableText("container.chest", new Object[0]);
     }

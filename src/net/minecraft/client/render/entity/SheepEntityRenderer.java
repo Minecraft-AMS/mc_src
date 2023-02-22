@@ -27,7 +27,7 @@ extends MobEntityRenderer<SheepEntity, SheepEntityModel<SheepEntity>> {
     }
 
     @Override
-    protected Identifier getTexture(SheepEntity sheepEntity) {
+    public Identifier getTexture(SheepEntity sheepEntity) {
         return SKIN;
     }
 }

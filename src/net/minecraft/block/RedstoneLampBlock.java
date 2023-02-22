@@ -10,10 +10,13 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.RedstoneTorchBlock;
+import net.minecraft.entity.EntityType;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,10 +61,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
-        if (world.isClient) {
-            return;
-        }
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (state.get(LIT).booleanValue() && !world.isReceivingRedstonePower(pos)) {
             world.setBlockState(pos, (BlockState)state.cycle(LIT), 2);
         }
@@ -70,6 +70,11 @@ extends Block {
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(LIT);
+    }
+
+    @Override
+    public boolean allowsSpawning(BlockState state, BlockView view, BlockPos pos, EntityType<?> type) {
+        return true;
     }
 }
 

@@ -35,12 +35,12 @@ extends DataFix {
         return this.method_15476(this.name, taggedChoiceType, taggedChoiceType2);
     }
 
-    protected final <K> TypeRewriteRule method_15476(String string, TaggedChoice.TaggedChoiceType<K> taggedChoiceType, TaggedChoice.TaggedChoiceType<?> taggedChoiceType2) {
+    protected final <K> TypeRewriteRule method_15476(String name, TaggedChoice.TaggedChoiceType<K> taggedChoiceType, TaggedChoice.TaggedChoiceType<?> taggedChoiceType2) {
         if (taggedChoiceType.getKeyType() != taggedChoiceType2.getKeyType()) {
             throw new IllegalStateException("Could not inject: key type is not the same");
         }
         TaggedChoice.TaggedChoiceType<?> taggedChoiceType3 = taggedChoiceType2;
-        return this.fixTypeEverywhere(string, (Type)taggedChoiceType, (Type)taggedChoiceType3, dynamicOps -> pair -> {
+        return this.fixTypeEverywhere(name, (Type)taggedChoiceType, (Type)taggedChoiceType3, dynamicOps -> pair -> {
             if (!taggedChoiceType3.hasType(pair.getFirst())) {
                 throw new IllegalArgumentException(String.format("Unknown type %s in %s ", pair.getFirst(), this.types));
             }

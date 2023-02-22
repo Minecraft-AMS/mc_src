@@ -18,6 +18,7 @@ import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleFactory;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.SpriteBillboardParticle;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -99,8 +100,8 @@ extends SpriteBillboardParticle {
     public int getColorMultiplier(float tint) {
         int i = super.getColorMultiplier(tint);
         int j = 0;
-        if (this.world.isBlockLoaded(this.blockPos)) {
-            j = this.world.getLightmapIndex(this.blockPos, 0);
+        if (this.world.isChunkLoaded(this.blockPos)) {
+            j = WorldRenderer.getLightmapCoordinates(this.world, this.blockPos);
         }
         return i == 0 ? j : i;
     }

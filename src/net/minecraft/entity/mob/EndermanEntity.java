@@ -49,16 +49,16 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
+import net.minecraft.tag.FluidTags;
 import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.RayTraceContext;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class EndermanEntity
@@ -67,8 +67,9 @@ extends HostileEntity {
     private static final EntityAttributeModifier ATTACKING_SPEED_BOOST = new EntityAttributeModifier(ATTACKING_SPEED_BOOST_UUID, "Attacking speed boost", (double)0.15f, EntityAttributeModifier.Operation.ADDITION).setSerialize(false);
     private static final TrackedData<Optional<BlockState>> CARRIED_BLOCK = DataTracker.registerData(EndermanEntity.class, TrackedDataHandlerRegistry.OPTIONAL_BLOCK_STATE);
     private static final TrackedData<Boolean> ANGRY = DataTracker.registerData(EndermanEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> field_20618 = DataTracker.registerData(EndermanEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final Predicate<LivingEntity> PLAYER_ENDERMITE_PREDICATE = livingEntity -> livingEntity instanceof EndermiteEntity && ((EndermiteEntity)livingEntity).isPlayerSpawned();
-    private int lastAngrySoundAge;
+    private int lastAngrySoundAge = Integer.MIN_VALUE;
     private int ageWhenTargetSet;
 
     public EndermanEntity(EntityType<? extends EndermanEntity> entityType, World world) {
@@ -108,6 +109,7 @@ extends HostileEntity {
         if (target == null) {
             this.ageWhenTargetSet = 0;
             this.dataTracker.set(ANGRY, false);
+            this.dataTracker.set(field_20618, false);
             entityAttributeInstance.removeModifier(ATTACKING_SPEED_BOOST);
         } else {
             this.ageWhenTargetSet = this.age;
@@ -123,20 +125,21 @@ extends HostileEntity {
         super.initDataTracker();
         this.dataTracker.startTracking(CARRIED_BLOCK, Optional.empty());
         this.dataTracker.startTracking(ANGRY, false);
+        this.dataTracker.startTracking(field_20618, false);
     }
 
     public void playAngrySound() {
         if (this.age >= this.lastAngrySoundAge + 400) {
             this.lastAngrySoundAge = this.age;
             if (!this.isSilent()) {
-                this.world.playSound(this.x, this.y + (double)this.getStandingEyeHeight(), this.z, SoundEvents.ENTITY_ENDERMAN_STARE, this.getSoundCategory(), 2.5f, 1.0f, false);
+                this.world.playSound(this.getX(), this.getEyeY(), this.getZ(), SoundEvents.ENTITY_ENDERMAN_STARE, this.getSoundCategory(), 2.5f, 1.0f, false);
             }
         }
     }
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if (ANGRY.equals(data) && this.isAngry() && this.world.isClient) {
+        if (ANGRY.equals(data) && this.method_22330() && this.world.isClient) {
             this.playAngrySound();
         }
         super.onTrackedDataSet(data);
@@ -167,7 +170,7 @@ extends HostileEntity {
             return false;
         }
         Vec3d vec3d = player.getRotationVec(1.0f).normalize();
-        Vec3d vec3d2 = new Vec3d(this.x - player.x, this.getBoundingBox().y1 + (double)this.getStandingEyeHeight() - (player.y + (double)player.getStandingEyeHeight()), this.z - player.z);
+        Vec3d vec3d2 = new Vec3d(this.getX() - player.getX(), this.getEyeY() - player.getEyeY(), this.getZ() - player.getZ());
         double d = vec3d2.length();
         double e = vec3d.dotProduct(vec3d2 = vec3d2.normalize());
         if (e > 1.0 - 0.025 / d) {
@@ -185,7 +188,7 @@ extends HostileEntity {
     public void tickMovement() {
         if (this.world.isClient) {
             for (int i = 0; i < 2; ++i) {
-                this.world.addParticle(ParticleTypes.PORTAL, this.x + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), this.y + this.random.nextDouble() * (double)this.getHeight() - 0.25, this.z + (this.random.nextDouble() - 0.5) * (double)this.getWidth(), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
+                this.world.addParticle(ParticleTypes.PORTAL, this.getParticleX(0.5), this.getRandomBodyY() - 0.25, this.getParticleZ(0.5), (this.random.nextDouble() - 0.5) * 2.0, -this.random.nextDouble(), (this.random.nextDouble() - 0.5) * 2.0);
             }
         }
         this.jumping = false;
@@ -206,19 +209,22 @@ extends HostileEntity {
     }
 
     protected boolean teleportRandomly() {
-        double d = this.x + (this.random.nextDouble() - 0.5) * 64.0;
-        double e = this.y + (double)(this.random.nextInt(64) - 32);
-        double f = this.z + (this.random.nextDouble() - 0.5) * 64.0;
+        if (this.world.isClient() || !this.isAlive()) {
+            return false;
+        }
+        double d = this.getX() + (this.random.nextDouble() - 0.5) * 64.0;
+        double e = this.getY() + (double)(this.random.nextInt(64) - 32);
+        double f = this.getZ() + (this.random.nextDouble() - 0.5) * 64.0;
         return this.teleport(d, e, f);
     }
 
-    private boolean teleportTo(Entity targetEntity) {
-        Vec3d vec3d = new Vec3d(this.x - targetEntity.x, this.getBoundingBox().y1 + (double)(this.getHeight() / 2.0f) - targetEntity.y + (double)targetEntity.getStandingEyeHeight(), this.z - targetEntity.z);
+    private boolean teleportTo(Entity entity) {
+        Vec3d vec3d = new Vec3d(this.getX() - entity.getX(), this.getBodyY(0.5) - entity.getEyeY(), this.getZ() - entity.getZ());
         vec3d = vec3d.normalize();
         double d = 16.0;
-        double e = this.x + (this.random.nextDouble() - 0.5) * 8.0 - vec3d.x * 16.0;
-        double f = this.y + (double)(this.random.nextInt(16) - 8) - vec3d.y * 16.0;
-        double g = this.z + (this.random.nextDouble() - 0.5) * 8.0 - vec3d.z * 16.0;
+        double e = this.getX() + (this.random.nextDouble() - 0.5) * 8.0 - vec3d.x * 16.0;
+        double f = this.getY() + (double)(this.random.nextInt(16) - 8) - vec3d.y * 16.0;
+        double g = this.getZ() + (this.random.nextDouble() - 0.5) * 8.0 - vec3d.z * 16.0;
         return this.teleport(e, f, g);
     }
 
@@ -227,15 +233,18 @@ extends HostileEntity {
         while (mutable.getY() > 0 && !this.world.getBlockState(mutable).getMaterial().blocksMovement()) {
             mutable.setOffset(Direction.DOWN);
         }
-        if (!this.world.getBlockState(mutable).getMaterial().blocksMovement()) {
+        BlockState blockState = this.world.getBlockState(mutable);
+        boolean bl = blockState.getMaterial().blocksMovement();
+        boolean bl2 = blockState.getFluidState().matches(FluidTags.WATER);
+        if (!bl || bl2) {
             return false;
         }
-        boolean bl = this.teleport(x, y, z, true);
-        if (bl) {
+        boolean bl3 = this.teleport(x, y, z, true);
+        if (bl3) {
             this.world.playSound(null, this.prevX, this.prevY, this.prevZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT, this.getSoundCategory(), 1.0f, 1.0f);
             this.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
         }
-        return bl;
+        return bl3;
     }
 
     @Override
@@ -284,7 +293,7 @@ extends HostileEntity {
             return false;
         }
         boolean bl = super.damage(source, amount);
-        if (source.bypassesArmor() && this.random.nextInt(10) != 0) {
+        if (!this.world.isClient() && source.bypassesArmor() && this.random.nextInt(10) != 0) {
             this.teleportRandomly();
         }
         return bl;
@@ -292,6 +301,14 @@ extends HostileEntity {
 
     public boolean isAngry() {
         return this.dataTracker.get(ANGRY);
+    }
+
+    public boolean method_22330() {
+        return this.dataTracker.get(field_20618);
+    }
+
+    public void method_22331() {
+        this.dataTracker.set(field_20618, true);
     }
 
     static class PickUpBlockGoal
@@ -315,19 +332,18 @@ extends HostileEntity {
 
         @Override
         public void tick() {
-            boolean bl;
-            Vec3d vec3d2;
             Random random = this.enderman.getRandom();
             World world = this.enderman.world;
-            int i = MathHelper.floor(this.enderman.x - 2.0 + random.nextDouble() * 4.0);
-            int j = MathHelper.floor(this.enderman.y + random.nextDouble() * 3.0);
-            int k = MathHelper.floor(this.enderman.z - 2.0 + random.nextDouble() * 4.0);
+            int i = MathHelper.floor(this.enderman.getX() - 2.0 + random.nextDouble() * 4.0);
+            int j = MathHelper.floor(this.enderman.getY() + random.nextDouble() * 3.0);
+            int k = MathHelper.floor(this.enderman.getZ() - 2.0 + random.nextDouble() * 4.0);
             BlockPos blockPos = new BlockPos(i, j, k);
             BlockState blockState = world.getBlockState(blockPos);
             Block block = blockState.getBlock();
-            Vec3d vec3d = new Vec3d((double)MathHelper.floor(this.enderman.x) + 0.5, (double)j + 0.5, (double)MathHelper.floor(this.enderman.z) + 0.5);
-            BlockHitResult blockHitResult = world.rayTrace(new RayTraceContext(vec3d, vec3d2 = new Vec3d((double)i + 0.5, (double)j + 0.5, (double)k + 0.5), RayTraceContext.ShapeType.COLLIDER, RayTraceContext.FluidHandling.NONE, this.enderman));
-            boolean bl2 = bl = blockHitResult.getType() != HitResult.Type.MISS && blockHitResult.getBlockPos().equals(blockPos);
+            Vec3d vec3d = new Vec3d((double)MathHelper.floor(this.enderman.getX()) + 0.5, (double)j + 0.5, (double)MathHelper.floor(this.enderman.getZ()) + 0.5);
+            Vec3d vec3d2 = new Vec3d((double)i + 0.5, (double)j + 0.5, (double)k + 0.5);
+            BlockHitResult blockHitResult = world.rayTrace(new RayTraceContext(vec3d, vec3d2, RayTraceContext.ShapeType.OUTLINE, RayTraceContext.FluidHandling.NONE, this.enderman));
+            boolean bl = blockHitResult.getBlockPos().equals(blockPos);
             if (block.matches(BlockTags.ENDERMAN_HOLDABLE) && bl) {
                 this.enderman.setCarriedBlock(blockState);
                 world.removeBlock(blockPos, false);
@@ -358,9 +374,9 @@ extends HostileEntity {
         public void tick() {
             Random random = this.enderman.getRandom();
             World iWorld = this.enderman.world;
-            int i = MathHelper.floor(this.enderman.x - 1.0 + random.nextDouble() * 2.0);
-            int j = MathHelper.floor(this.enderman.y + random.nextDouble() * 2.0);
-            int k = MathHelper.floor(this.enderman.z - 1.0 + random.nextDouble() * 2.0);
+            int i = MathHelper.floor(this.enderman.getX() - 1.0 + random.nextDouble() * 2.0);
+            int j = MathHelper.floor(this.enderman.getY() + random.nextDouble() * 2.0);
+            int k = MathHelper.floor(this.enderman.getZ() - 1.0 + random.nextDouble() * 2.0);
             BlockPos blockPos = new BlockPos(i, j, k);
             BlockState blockState = iWorld.getBlockState(blockPos);
             BlockPos blockPos2 = blockPos.down();
@@ -372,14 +388,15 @@ extends HostileEntity {
             }
         }
 
-        private boolean method_7033(CollisionView collisionView, BlockPos blockPos, BlockState blockState, BlockState blockState2, BlockState blockState3, BlockPos blockPos2) {
-            return blockState2.isAir() && !blockState3.isAir() && blockState3.method_21743(collisionView, blockPos2) && blockState.canPlaceAt(collisionView, blockPos);
+        private boolean method_7033(WorldView worldView, BlockPos blockPos, BlockState blockState, BlockState blockState2, BlockState blockState3, BlockPos blockPos2) {
+            return blockState2.isAir() && !blockState3.isAir() && blockState3.isFullCube(worldView, blockPos2) && blockState.canPlaceAt(worldView, blockPos);
         }
     }
 
     static class ChasePlayerGoal
     extends Goal {
         private final EndermanEntity enderman;
+        private LivingEntity field_21513;
 
         public ChasePlayerGoal(EndermanEntity enderman) {
             this.enderman = enderman;
@@ -388,20 +405,25 @@ extends HostileEntity {
 
         @Override
         public boolean canStart() {
-            LivingEntity livingEntity = this.enderman.getTarget();
-            if (!(livingEntity instanceof PlayerEntity)) {
+            this.field_21513 = this.enderman.getTarget();
+            if (!(this.field_21513 instanceof PlayerEntity)) {
                 return false;
             }
-            double d = livingEntity.squaredDistanceTo(this.enderman);
+            double d = this.field_21513.squaredDistanceTo(this.enderman);
             if (d > 256.0) {
                 return false;
             }
-            return this.enderman.isPlayerStaring((PlayerEntity)livingEntity);
+            return this.enderman.isPlayerStaring((PlayerEntity)this.field_21513);
         }
 
         @Override
         public void start() {
             this.enderman.getNavigation().stop();
+        }
+
+        @Override
+        public void tick() {
+            this.enderman.getLookControl().lookAt(this.field_21513.getX(), this.field_21513.getEyeY(), this.field_21513.getZ());
         }
     }
 
@@ -430,6 +452,7 @@ extends HostileEntity {
         public void start() {
             this.lookAtPlayerWarmup = 5;
             this.ticksSinceUnseenTeleport = 0;
+            this.enderman.method_22331();
         }
 
         @Override

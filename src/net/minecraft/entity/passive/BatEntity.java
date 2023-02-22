@@ -115,7 +115,7 @@ extends AmbientEntity {
         super.tick();
         if (this.isRoosting()) {
             this.setVelocity(Vec3d.ZERO);
-            this.y = (double)MathHelper.floor(this.y) + 1.0 - (double)this.getHeight();
+            this.setPos(this.getX(), (double)MathHelper.floor(this.getY()) + 1.0 - (double)this.getHeight(), this.getZ());
         } else {
             this.setVelocity(this.getVelocity().multiply(1.0, 0.6, 1.0));
         }
@@ -144,11 +144,11 @@ extends AmbientEntity {
                 this.hangingPosition = null;
             }
             if (this.hangingPosition == null || this.random.nextInt(30) == 0 || this.hangingPosition.isWithinDistance(this.getPos(), 2.0)) {
-                this.hangingPosition = new BlockPos(this.x + (double)this.random.nextInt(7) - (double)this.random.nextInt(7), this.y + (double)this.random.nextInt(6) - 2.0, this.z + (double)this.random.nextInt(7) - (double)this.random.nextInt(7));
+                this.hangingPosition = new BlockPos(this.getX() + (double)this.random.nextInt(7) - (double)this.random.nextInt(7), this.getY() + (double)this.random.nextInt(6) - 2.0, this.getZ() + (double)this.random.nextInt(7) - (double)this.random.nextInt(7));
             }
-            double d = (double)this.hangingPosition.getX() + 0.5 - this.x;
-            double e = (double)this.hangingPosition.getY() + 0.1 - this.y;
-            double f = (double)this.hangingPosition.getZ() + 0.5 - this.z;
+            double d = (double)this.hangingPosition.getX() + 0.5 - this.getX();
+            double e = (double)this.hangingPosition.getY() + 0.1 - this.getY();
+            double f = (double)this.hangingPosition.getZ() + 0.5 - this.getZ();
             Vec3d vec3d = this.getVelocity();
             Vec3d vec3d2 = vec3d.add((Math.signum(d) * 0.5 - vec3d.x) * (double)0.1f, (Math.signum(e) * (double)0.7f - vec3d.y) * (double)0.1f, (Math.signum(f) * 0.5 - vec3d.z) * (double)0.1f);
             this.setVelocity(vec3d2);
@@ -168,7 +168,8 @@ extends AmbientEntity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -203,11 +204,11 @@ extends AmbientEntity {
         tag.putByte("BatFlags", this.dataTracker.get(BAT_FLAGS));
     }
 
-    public static boolean method_20661(EntityType<BatEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        if (blockPos.getY() >= iWorld.getSeaLevel()) {
+    public static boolean canSpawn(EntityType<BatEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        if (pos.getY() >= world.getSeaLevel()) {
             return false;
         }
-        int i = iWorld.getLightLevel(blockPos);
+        int i = world.getLightLevel(pos);
         int j = 4;
         if (BatEntity.isTodayAroundHalloween()) {
             j = 7;
@@ -217,7 +218,7 @@ extends AmbientEntity {
         if (i > random.nextInt(j)) {
             return false;
         }
-        return BatEntity.method_20636(entityType, iWorld, spawnType, blockPos, random);
+        return BatEntity.canMobSpawn(type, world, spawnType, pos, random);
     }
 
     private static boolean isTodayAroundHalloween() {

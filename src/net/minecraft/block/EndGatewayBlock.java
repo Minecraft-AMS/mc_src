@@ -15,6 +15,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.EndGatewayBlockEntity;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
@@ -41,9 +42,9 @@ extends BlockWithEntity {
         }
         int i = ((EndGatewayBlockEntity)blockEntity).getDrawnSidesCount();
         for (int j = 0; j < i; ++j) {
-            double d = (float)pos.getX() + random.nextFloat();
-            double e = (float)pos.getY() + random.nextFloat();
-            double f = (float)pos.getZ() + random.nextFloat();
+            double d = (double)pos.getX() + (double)random.nextFloat();
+            double e = (double)pos.getY() + (double)random.nextFloat();
+            double f = (double)pos.getZ() + (double)random.nextFloat();
             double g = ((double)random.nextFloat() - 0.5) * 0.5;
             double h = ((double)random.nextFloat() - 0.5) * 0.5;
             double k = ((double)random.nextFloat() - 0.5) * 0.5;
@@ -63,6 +64,11 @@ extends BlockWithEntity {
     @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean canBucketPlace(BlockState state, Fluid fluid) {
+        return false;
     }
 }
 

@@ -15,10 +15,10 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockRenderView;
-import net.minecraft.world.LightType;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightingProvider;
+import net.minecraft.world.level.ColorResolver;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -108,15 +108,8 @@ implements BlockRenderView {
     }
 
     @Override
-    public int getLightLevel(LightType type, BlockPos pos) {
-        return this.world.getLightLevel(type, pos);
-    }
-
-    @Override
-    public Biome getBiome(BlockPos blockPos) {
-        int i = (blockPos.getX() >> 4) - this.chunkXOffset;
-        int j = (blockPos.getZ() >> 4) - this.chunkZOffset;
-        return this.chunks[i][j].getBiome(blockPos);
+    public LightingProvider getLightingProvider() {
+        return this.world.getLightingProvider();
     }
 
     @Override
@@ -130,6 +123,11 @@ implements BlockRenderView {
         int i = (blockPos.getX() >> 4) - this.chunkXOffset;
         int j = (blockPos.getZ() >> 4) - this.chunkZOffset;
         return this.chunks[i][j].getBlockEntity(blockPos, creationType);
+    }
+
+    @Override
+    public int getColor(BlockPos pos, ColorResolver colorResolver) {
+        return this.world.getColor(pos, colorResolver);
     }
 }
 

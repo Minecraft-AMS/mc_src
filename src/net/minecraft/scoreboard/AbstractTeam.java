@@ -39,6 +39,7 @@ public abstract class AbstractTeam {
     @Environment(value=EnvType.CLIENT)
     public abstract VisibilityRule getNameTagVisibilityRule();
 
+    @Environment(value=EnvType.CLIENT)
     public abstract Formatting getColor();
 
     public abstract Collection<String> getPlayerList();

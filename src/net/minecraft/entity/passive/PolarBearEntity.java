@@ -99,12 +99,12 @@ extends AnimalEntity {
         this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(6.0);
     }
 
-    public static boolean method_20668(EntityType<PolarBearEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        Biome biome = iWorld.getBiome(blockPos);
+    public static boolean canSpawn(EntityType<PolarBearEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        Biome biome = world.getBiome(pos);
         if (biome == Biomes.FROZEN_OCEAN || biome == Biomes.DEEP_FROZEN_OCEAN) {
-            return iWorld.getLightLevel(blockPos, 0) > 8 && iWorld.getBlockState(blockPos.down()).getBlock() == Blocks.ICE;
+            return world.getBaseLightLevel(pos, 0) > 8 && world.getBlockState(pos.down()).getBlock() == Blocks.ICE;
         }
-        return PolarBearEntity.method_20663(entityType, iWorld, spawnType, blockPos, random);
+        return PolarBearEntity.isValidNaturalSpawn(type, world, spawnType, pos, random);
     }
 
     @Override
@@ -197,12 +197,11 @@ extends AnimalEntity {
 
     @Override
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        if (entityData instanceof PolarBearEntityData) {
-            this.setBreedingAge(-24000);
-        } else {
-            entityData = new PolarBearEntityData();
+        if (entityData == null) {
+            entityData = new PassiveEntity.EntityData();
+            ((PassiveEntity.EntityData)entityData).setBabyChance(1.0f);
         }
-        return entityData;
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     class PolarBearEscapeDangerGoal
@@ -307,12 +306,6 @@ extends AnimalEntity {
             if (mob instanceof PolarBearEntity && !mob.isBaby()) {
                 super.setMobEntityTarget(mob, target);
             }
-        }
-    }
-
-    static class PolarBearEntityData
-    implements EntityData {
-        private PolarBearEntityData() {
         }
     }
 }

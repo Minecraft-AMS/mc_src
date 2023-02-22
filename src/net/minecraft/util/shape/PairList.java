@@ -11,9 +11,9 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 interface PairList {
     public DoubleList getPairs();
 
-    public boolean forEachPair(SectionPairPredicate var1);
+    public boolean forEachPair(Consumer var1);
 
-    public static interface SectionPairPredicate {
+    public static interface Consumer {
         public boolean merge(int var1, int var2, int var3);
     }
 }

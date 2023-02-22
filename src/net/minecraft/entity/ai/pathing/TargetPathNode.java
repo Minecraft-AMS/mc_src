@@ -50,9 +50,9 @@ extends PathNode {
     @Environment(value=EnvType.CLIENT)
     public static TargetPathNode fromBuffer(PacketByteBuf buffer) {
         TargetPathNode targetPathNode = new TargetPathNode(buffer.readInt(), buffer.readInt(), buffer.readInt());
-        targetPathNode.field_46 = buffer.readFloat();
-        targetPathNode.field_43 = buffer.readFloat();
-        targetPathNode.field_42 = buffer.readBoolean();
+        targetPathNode.pathLength = buffer.readFloat();
+        targetPathNode.penalty = buffer.readFloat();
+        targetPathNode.visited = buffer.readBoolean();
         targetPathNode.type = PathNodeType.values()[buffer.readInt()];
         targetPathNode.heapWeight = buffer.readFloat();
         return targetPathNode;

@@ -249,6 +249,7 @@ extends AnimalEntity {
             if (!this.world.isClient) {
                 itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
             }
+            return true;
         }
         return super.interactMob(player, hand);
     }
@@ -361,9 +362,8 @@ extends AnimalEntity {
     @Override
     @Nullable
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
-        entityData = super.initialize(world, difficulty, spawnType, entityData, entityTag);
         this.setColor(SheepEntity.generateDefaultColor(world.getRandom()));
-        return entityData;
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
     private DyeColor getChildColor(AnimalEntity animalEntity, AnimalEntity animalEntity2) {

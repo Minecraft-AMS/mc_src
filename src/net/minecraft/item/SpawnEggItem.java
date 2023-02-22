@@ -89,30 +89,30 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        if (world.isClient) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
-        }
         HitResult hitResult = SpawnEggItem.rayTrace(world, user, RayTraceContext.FluidHandling.SOURCE_ONLY);
         if (hitResult.getType() != HitResult.Type.BLOCK) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
+        }
+        if (world.isClient) {
+            return TypedActionResult.success(itemStack);
         }
         BlockHitResult blockHitResult = (BlockHitResult)hitResult;
         BlockPos blockPos = blockHitResult.getBlockPos();
         if (!(world.getBlockState(blockPos).getBlock() instanceof FluidBlock)) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
         }
         if (!world.canPlayerModifyAt(user, blockPos) || !user.canPlaceOn(blockPos, blockHitResult.getSide(), itemStack)) {
-            return new TypedActionResult<ItemStack>(ActionResult.FAIL, itemStack);
+            return TypedActionResult.fail(itemStack);
         }
         EntityType<?> entityType = this.getEntityType(itemStack.getTag());
         if (entityType.spawnFromItemStack(world, itemStack, user, blockPos, SpawnType.SPAWN_EGG, false, false) == null) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
         }
         if (!user.abilities.creativeMode) {
             itemStack.decrement(1);
         }
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, itemStack);
+        return TypedActionResult.success(itemStack);
     }
 
     public boolean isOfSameEntityType(@Nullable CompoundTag tag, EntityType<?> type) {
@@ -124,6 +124,7 @@ extends Item {
         return num == 0 ? this.primaryColor : this.secondaryColor;
     }
 
+    @Nullable
     @Environment(value=EnvType.CLIENT)
     public static SpawnEggItem forEntity(@Nullable EntityType<?> type) {
         return SPAWN_EGGS.get(type);

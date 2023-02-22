@@ -4,20 +4,20 @@
 package net.minecraft.util;
 
 public class Pair<A, B> {
-    private A field_15772;
-    private B field_15773;
+    private A left;
+    private B right;
 
     public Pair(A left, B right) {
-        this.field_15772 = left;
-        this.field_15773 = right;
+        this.left = left;
+        this.right = right;
     }
 
     public A getLeft() {
-        return this.field_15772;
+        return this.left;
     }
 
     public B getRight() {
-        return this.field_15773;
+        return this.right;
     }
 }
 

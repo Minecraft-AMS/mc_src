@@ -11,7 +11,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
 import net.minecraft.entity.EntityType;
@@ -21,6 +20,7 @@ import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
@@ -81,7 +81,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (this.shouldHatchProgress(world) && this.isSand(world, pos)) {
             int i = state.get(HATCH);
             if (i < 2) {
@@ -90,15 +90,13 @@ extends Block {
             } else {
                 world.playSound(null, pos, SoundEvents.ENTITY_TURTLE_EGG_HATCH, SoundCategory.BLOCKS, 0.7f, 0.9f + random.nextFloat() * 0.2f);
                 world.removeBlock(pos, false);
-                if (!world.isClient) {
-                    for (int j = 0; j < state.get(EGGS); ++j) {
-                        world.playLevelEvent(2001, pos, Block.getRawIdFromState(state));
-                        TurtleEntity turtleEntity = EntityType.TURTLE.create(world);
-                        turtleEntity.setBreedingAge(-24000);
-                        turtleEntity.setHomePos(pos);
-                        turtleEntity.refreshPositionAndAngles((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
-                        world.spawnEntity(turtleEntity);
-                    }
+                for (int j = 0; j < state.get(EGGS); ++j) {
+                    world.playLevelEvent(2001, pos, Block.getRawIdFromState(state));
+                    TurtleEntity turtleEntity = EntityType.TURTLE.create(world);
+                    turtleEntity.setBreedingAge(-24000);
+                    turtleEntity.setHomePos(pos);
+                    turtleEntity.refreshPositionAndAngles((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
+                    world.spawnEntity(turtleEntity);
                 }
             }
         }
@@ -145,11 +143,6 @@ extends Block {
             return (BlockState)blockState.with(EGGS, Math.min(4, blockState.get(EGGS) + 1));
         }
         return super.getPlacementState(ctx);
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override

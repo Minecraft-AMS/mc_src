@@ -16,7 +16,7 @@ package net.minecraft.client.render.debug;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -29,10 +29,11 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.render.debug.NameGenerator;
 import net.minecraft.client.render.debug.PathfindingDebugRenderer;
-import net.minecraft.client.util.DebugNameGenerator;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -45,302 +46,302 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class VillageDebugRenderer
 implements DebugRenderer.Renderer {
-    private static final Logger field_18920 = LogManager.getLogger();
-    private final MinecraftClient field_18786;
-    private final Map<BlockPos, class_4233> pointsOfInterest = Maps.newHashMap();
-    private final Set<ChunkSectionPos> field_18788 = Sets.newHashSet();
-    private final Map<UUID, class_4232> field_18921 = Maps.newHashMap();
-    private UUID field_18922;
+    private static final Logger LOGGER = LogManager.getLogger();
+    private final MinecraftClient client;
+    private final Map<BlockPos, PointOfInterest> pointsOfInterest = Maps.newHashMap();
+    private final Set<ChunkSectionPos> sections = Sets.newHashSet();
+    private final Map<UUID, Brain> brains = Maps.newHashMap();
+    private UUID targetedEntity;
 
     public VillageDebugRenderer(MinecraftClient minecraftClient) {
-        this.field_18786 = minecraftClient;
+        this.client = minecraftClient;
     }
 
     @Override
-    public void method_20414() {
+    public void clear() {
         this.pointsOfInterest.clear();
-        this.field_18788.clear();
-        this.field_18921.clear();
-        this.field_18922 = null;
+        this.sections.clear();
+        this.brains.clear();
+        this.targetedEntity = null;
     }
 
-    public void method_19701(class_4233 arg) {
-        this.pointsOfInterest.put(arg.field_18931, arg);
+    public void addPointOfInterest(PointOfInterest pointOfInterest) {
+        this.pointsOfInterest.put(pointOfInterest.pos, pointOfInterest);
     }
 
     public void removePointOfInterest(BlockPos blockPos) {
         this.pointsOfInterest.remove(blockPos);
     }
 
-    public void method_19702(BlockPos blockPos, int i) {
-        class_4233 lv = this.pointsOfInterest.get(blockPos);
-        if (lv == null) {
-            field_18920.warn("Strange, setFreeTicketCount was called for an unknown POI: " + blockPos);
+    public void setFreeTicketCount(BlockPos pos, int freeTicketCount) {
+        PointOfInterest pointOfInterest = this.pointsOfInterest.get(pos);
+        if (pointOfInterest == null) {
+            LOGGER.warn("Strange, setFreeTicketCount was called for an unknown POI: " + pos);
             return;
         }
-        lv.field_18933 = i;
+        pointOfInterest.freeTicketCount = freeTicketCount;
     }
 
-    public void method_19433(ChunkSectionPos chunkSectionPos) {
-        this.field_18788.add(chunkSectionPos);
+    public void addSection(ChunkSectionPos pos) {
+        this.sections.add(pos);
     }
 
-    public void method_19435(ChunkSectionPos chunkSectionPos) {
-        this.field_18788.remove(chunkSectionPos);
+    public void removeSection(ChunkSectionPos pos) {
+        this.sections.remove(pos);
     }
 
-    public void addBrain(class_4232 brain) {
-        this.field_18921.put(brain.field_18923, brain);
+    public void addBrain(Brain brain) {
+        this.brains.put(brain.uuid, brain);
     }
 
     @Override
-    public void render(long l) {
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.disableTexture();
-        this.method_19699();
-        GlStateManager.enableTexture();
-        GlStateManager.disableBlend();
-        GlStateManager.popMatrix();
-        if (!this.field_18786.player.isSpectator()) {
-            this.method_19710();
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
+        RenderSystem.pushMatrix();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableTexture();
+        this.method_23135(cameraX, cameraY, cameraZ);
+        RenderSystem.enableTexture();
+        RenderSystem.disableBlend();
+        RenderSystem.popMatrix();
+        if (!this.client.player.isSpectator()) {
+            this.updateTargetedEntity();
         }
     }
 
-    private void method_19699() {
-        BlockPos blockPos = this.getCamera().getBlockPos();
-        this.field_18788.forEach(chunkSectionPos -> {
+    private void method_23135(double d, double e, double f) {
+        BlockPos blockPos = new BlockPos(d, e, f);
+        this.sections.forEach(chunkSectionPos -> {
             if (blockPos.isWithinDistance(chunkSectionPos.getCenterPos(), 60.0)) {
-                VillageDebugRenderer.method_19714(chunkSectionPos);
+                VillageDebugRenderer.drawSection(chunkSectionPos);
             }
         });
-        this.field_18921.values().forEach(arg -> {
-            if (this.method_19715((class_4232)arg)) {
-                this.method_20571((class_4232)arg);
+        this.brains.values().forEach(brain -> {
+            if (this.isClose((Brain)brain)) {
+                this.drawBrain((Brain)brain, d, e, f);
             }
         });
         for (BlockPos blockPos22 : this.pointsOfInterest.keySet()) {
             if (!blockPos.isWithinDistance(blockPos22, 30.0)) continue;
-            VillageDebugRenderer.method_19709(blockPos22);
+            VillageDebugRenderer.drawPointOfInterest(blockPos22);
         }
-        this.pointsOfInterest.values().forEach(arg -> {
-            if (blockPos.isWithinDistance(arg.field_18931, 30.0)) {
-                this.method_19708((class_4233)arg);
+        this.pointsOfInterest.values().forEach(pointOfInterest -> {
+            if (blockPos.isWithinDistance(pointOfInterest.pos, 30.0)) {
+                this.drawPointOfInterestInfo((PointOfInterest)pointOfInterest);
             }
         });
-        this.method_20572().forEach((blockPos2, list) -> {
+        this.getGhostPointsOfInterest().forEach((blockPos2, list) -> {
             if (blockPos.isWithinDistance((Vec3i)blockPos2, 30.0)) {
-                this.method_20567((BlockPos)blockPos2, (List<String>)list);
+                this.drawGhostPointOfInterest((BlockPos)blockPos2, (List<String>)list);
             }
         });
     }
 
-    private static void method_19714(ChunkSectionPos chunkSectionPos) {
+    private static void drawSection(ChunkSectionPos pos) {
         float f = 1.0f;
-        BlockPos blockPos = chunkSectionPos.getCenterPos();
+        BlockPos blockPos = pos.getCenterPos();
         BlockPos blockPos2 = blockPos.add(-1.0, -1.0, -1.0);
         BlockPos blockPos3 = blockPos.add(1.0, 1.0, 1.0);
-        DebugRenderer.method_19697(blockPos2, blockPos3, 0.2f, 1.0f, 0.2f, 0.15f);
+        DebugRenderer.drawBox(blockPos2, blockPos3, 0.2f, 1.0f, 0.2f, 0.15f);
     }
 
-    private static void method_19709(BlockPos blockPos) {
+    private static void drawPointOfInterest(BlockPos pos) {
         float f = 0.05f;
-        DebugRenderer.method_19696(blockPos, 0.05f, 0.2f, 0.2f, 1.0f, 0.3f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        DebugRenderer.drawBox(pos, 0.05f, 0.2f, 0.2f, 1.0f, 0.3f);
     }
 
-    private void method_20567(BlockPos blockPos, List<String> list) {
+    private void drawGhostPointOfInterest(BlockPos pos, List<String> brains) {
         float f = 0.05f;
-        DebugRenderer.method_19696(blockPos, 0.05f, 0.2f, 0.2f, 1.0f, 0.3f);
-        VillageDebugRenderer.method_20569("" + list, blockPos, 0, -256);
-        VillageDebugRenderer.method_20569("Ghost POI", blockPos, 1, -65536);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        DebugRenderer.drawBox(pos, 0.05f, 0.2f, 0.2f, 1.0f, 0.3f);
+        VillageDebugRenderer.drawString("" + brains, pos, 0, -256);
+        VillageDebugRenderer.drawString("Ghost POI", pos, 1, -65536);
     }
 
-    private void method_19708(class_4233 arg) {
+    private void drawPointOfInterestInfo(PointOfInterest pointOfInterest) {
         int i = 0;
-        if (this.method_19712(arg).size() < 4) {
-            VillageDebugRenderer.method_20568("" + this.method_19712(arg), arg, i, -256);
+        if (this.getVillagerNames(pointOfInterest).size() < 4) {
+            VillageDebugRenderer.drawString("" + this.getVillagerNames(pointOfInterest), pointOfInterest, i, -256);
         } else {
-            VillageDebugRenderer.method_20568("" + this.method_19712(arg).size() + " ticket holders", arg, i, -256);
+            VillageDebugRenderer.drawString("" + this.getVillagerNames(pointOfInterest).size() + " ticket holders", pointOfInterest, i, -256);
         }
-        VillageDebugRenderer.method_20568("Free tickets: " + arg.field_18933, arg, ++i, -256);
-        VillageDebugRenderer.method_20568(arg.field_18932, arg, ++i, -1);
+        VillageDebugRenderer.drawString("Free tickets: " + pointOfInterest.freeTicketCount, pointOfInterest, ++i, -256);
+        VillageDebugRenderer.drawString(pointOfInterest.field_18932, pointOfInterest, ++i, -1);
     }
 
-    private void method_20570(class_4232 arg) {
-        if (arg.field_19330 != null) {
-            PathfindingDebugRenderer.method_20556(this.getCamera(), arg.field_19330, 0.5f, false, false);
+    private void drawPath(Brain brain, double cameraX, double cameraY, double cameraZ) {
+        if (brain.path != null) {
+            PathfindingDebugRenderer.drawPath(brain.path, 0.5f, false, false, cameraX, cameraY, cameraZ);
         }
     }
 
-    private void method_20571(class_4232 arg) {
-        boolean bl = this.method_19711(arg);
+    private void drawBrain(Brain brain, double cameraX, double cameraY, double cameraZ) {
+        boolean bl = this.isTargeted(brain);
         int i = 0;
-        VillageDebugRenderer.method_19704(arg.field_18926, i, arg.field_19328, -1, 0.03f);
+        VillageDebugRenderer.drawString(brain.pos, i, brain.field_19328, -1, 0.03f);
         ++i;
         if (bl) {
-            VillageDebugRenderer.method_19704(arg.field_18926, i, arg.field_18925 + " " + arg.field_19329 + "xp", -1, 0.02f);
+            VillageDebugRenderer.drawString(brain.pos, i, brain.profession + " " + brain.xp + "xp", -1, 0.02f);
             ++i;
         }
-        if (bl && !arg.field_19372.equals("")) {
-            VillageDebugRenderer.method_19704(arg.field_18926, i, arg.field_19372, -98404, 0.02f);
+        if (bl && !brain.field_19372.equals("")) {
+            VillageDebugRenderer.drawString(brain.pos, i, brain.field_19372, -98404, 0.02f);
             ++i;
         }
         if (bl) {
-            for (String string : arg.field_18928) {
-                VillageDebugRenderer.method_19704(arg.field_18926, i, string, -16711681, 0.02f);
+            for (String string : brain.field_18928) {
+                VillageDebugRenderer.drawString(brain.pos, i, string, -16711681, 0.02f);
                 ++i;
             }
         }
         if (bl) {
-            for (String string : arg.field_18927) {
-                VillageDebugRenderer.method_19704(arg.field_18926, i, string, -16711936, 0.02f);
+            for (String string : brain.field_18927) {
+                VillageDebugRenderer.drawString(brain.pos, i, string, -16711936, 0.02f);
                 ++i;
             }
         }
-        if (arg.field_19373) {
-            VillageDebugRenderer.method_19704(arg.field_18926, i, "Wants Golem", -23296, 0.02f);
+        if (brain.wantsGolem) {
+            VillageDebugRenderer.drawString(brain.pos, i, "Wants Golem", -23296, 0.02f);
             ++i;
         }
         if (bl) {
-            for (String string : arg.field_19375) {
-                if (string.startsWith(arg.field_19328)) {
-                    VillageDebugRenderer.method_19704(arg.field_18926, i, string, -1, 0.02f);
+            for (String string : brain.field_19375) {
+                if (string.startsWith(brain.field_19328)) {
+                    VillageDebugRenderer.drawString(brain.pos, i, string, -1, 0.02f);
                 } else {
-                    VillageDebugRenderer.method_19704(arg.field_18926, i, string, -23296, 0.02f);
+                    VillageDebugRenderer.drawString(brain.pos, i, string, -23296, 0.02f);
                 }
                 ++i;
             }
         }
         if (bl) {
-            for (String string : Lists.reverse(arg.field_19374)) {
-                VillageDebugRenderer.method_19704(arg.field_18926, i, string, -3355444, 0.02f);
+            for (String string : Lists.reverse(brain.field_19374)) {
+                VillageDebugRenderer.drawString(brain.pos, i, string, -3355444, 0.02f);
                 ++i;
             }
         }
         if (bl) {
-            this.method_20570(arg);
+            this.drawPath(brain, cameraX, cameraY, cameraZ);
         }
     }
 
-    private static void method_20568(String string, class_4233 arg, int i, int j) {
-        BlockPos blockPos = arg.field_18931;
-        VillageDebugRenderer.method_20569(string, blockPos, i, j);
+    private static void drawString(String string, PointOfInterest pointOfInterest, int offsetY, int color) {
+        BlockPos blockPos = pointOfInterest.pos;
+        VillageDebugRenderer.drawString(string, blockPos, offsetY, color);
     }
 
-    private static void method_20569(String string, BlockPos blockPos, int i, int j) {
+    private static void drawString(String string, BlockPos pos, int offsetY, int color) {
         double d = 1.3;
         double e = 0.2;
-        double f = (double)blockPos.getX() + 0.5;
-        double g = (double)blockPos.getY() + 1.3 + (double)i * 0.2;
-        double h = (double)blockPos.getZ() + 0.5;
-        DebugRenderer.method_3712(string, f, g, h, j, 0.02f, true, 0.0f, true);
+        double f = (double)pos.getX() + 0.5;
+        double g = (double)pos.getY() + 1.3 + (double)offsetY * 0.2;
+        double h = (double)pos.getZ() + 0.5;
+        DebugRenderer.drawString(string, f, g, h, color, 0.02f, true, 0.0f, true);
     }
 
-    private static void method_19704(Position position, int i, String string, int j, float f) {
+    private static void drawString(Position pos, int offsetY, String string, int color, float size) {
         double d = 2.4;
         double e = 0.25;
-        BlockPos blockPos = new BlockPos(position);
-        double g = (double)blockPos.getX() + 0.5;
-        double h = position.getY() + 2.4 + (double)i * 0.25;
-        double k = (double)blockPos.getZ() + 0.5;
-        float l = 0.5f;
-        DebugRenderer.method_3712(string, g, h, k, j, f, false, 0.5f, true);
+        BlockPos blockPos = new BlockPos(pos);
+        double f = (double)blockPos.getX() + 0.5;
+        double g = pos.getY() + 2.4 + (double)offsetY * 0.25;
+        double h = (double)blockPos.getZ() + 0.5;
+        float i = 0.5f;
+        DebugRenderer.drawString(string, f, g, h, color, size, false, 0.5f, true);
     }
 
-    private Camera getCamera() {
-        return this.field_18786.gameRenderer.getCamera();
+    private Set<String> getVillagerNames(PointOfInterest pointOfInterest) {
+        return this.getBrains(pointOfInterest.pos).stream().map(NameGenerator::name).collect(Collectors.toSet());
     }
 
-    private Set<String> method_19712(class_4233 arg) {
-        return this.method_19713(arg.field_18931).stream().map(DebugNameGenerator::getDebugName).collect(Collectors.toSet());
+    private boolean isTargeted(Brain brain) {
+        return Objects.equals(this.targetedEntity, brain.uuid);
     }
 
-    private boolean method_19711(class_4232 arg) {
-        return Objects.equals(this.field_18922, arg.field_18923);
-    }
-
-    private boolean method_19715(class_4232 arg) {
-        ClientPlayerEntity playerEntity = this.field_18786.player;
-        BlockPos blockPos = new BlockPos(playerEntity.x, arg.field_18926.getY(), playerEntity.z);
-        BlockPos blockPos2 = new BlockPos(arg.field_18926);
+    private boolean isClose(Brain brain) {
+        ClientPlayerEntity playerEntity = this.client.player;
+        BlockPos blockPos = new BlockPos(playerEntity.getX(), brain.pos.getY(), playerEntity.getZ());
+        BlockPos blockPos2 = new BlockPos(brain.pos);
         return blockPos.isWithinDistance(blockPos2, 30.0);
     }
 
-    private Collection<UUID> method_19713(BlockPos blockPos) {
-        return this.field_18921.values().stream().filter(arg -> ((class_4232)arg).method_19718(blockPos)).map(class_4232::method_19716).collect(Collectors.toSet());
+    private Collection<UUID> getBrains(BlockPos pointOfInterest) {
+        return this.brains.values().stream().filter(brain -> ((Brain)brain).isPointOfInterest(pointOfInterest)).map(Brain::getUuid).collect(Collectors.toSet());
     }
 
-    private Map<BlockPos, List<String>> method_20572() {
+    private Map<BlockPos, List<String>> getGhostPointsOfInterest() {
         HashMap map = Maps.newHashMap();
-        for (class_4232 lv : this.field_18921.values()) {
-            for (BlockPos blockPos : lv.field_18930) {
+        for (Brain brain : this.brains.values()) {
+            for (BlockPos blockPos : brain.pointsOfInterest) {
                 if (this.pointsOfInterest.containsKey(blockPos)) continue;
                 List list = (List)map.get(blockPos);
                 if (list == null) {
                     list = Lists.newArrayList();
                     map.put(blockPos, list);
                 }
-                list.add(lv.field_19328);
+                list.add(brain.field_19328);
             }
         }
         return map;
     }
 
-    private void method_19710() {
-        DebugRenderer.method_19694(this.field_18786.getCameraEntity(), 8).ifPresent(entity -> {
-            this.field_18922 = entity.getUuid();
+    private void updateTargetedEntity() {
+        DebugRenderer.getTargetedEntity(this.client.getCameraEntity(), 8).ifPresent(entity -> {
+            this.targetedEntity = entity.getUuid();
         });
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class class_4232 {
-        public final UUID field_18923;
+    public static class Brain {
+        public final UUID uuid;
         public final int field_18924;
         public final String field_19328;
-        public final String field_18925;
-        public final int field_19329;
-        public final Position field_18926;
+        public final String profession;
+        public final int xp;
+        public final Position pos;
         public final String field_19372;
-        public final Path field_19330;
-        public final boolean field_19373;
+        public final Path path;
+        public final boolean wantsGolem;
         public final List<String> field_18927 = Lists.newArrayList();
         public final List<String> field_18928 = Lists.newArrayList();
         public final List<String> field_19374 = Lists.newArrayList();
         public final List<String> field_19375 = Lists.newArrayList();
-        public final Set<BlockPos> field_18930 = Sets.newHashSet();
+        public final Set<BlockPos> pointsOfInterest = Sets.newHashSet();
 
-        public class_4232(UUID uUID, int i, String string, String string2, int j, Position position, String string3, @Nullable Path path, boolean bl) {
-            this.field_18923 = uUID;
+        public Brain(UUID uuid, int i, String string, String profession, int xp, Position pos, String string2, @Nullable Path path, boolean wantsGolem) {
+            this.uuid = uuid;
             this.field_18924 = i;
             this.field_19328 = string;
-            this.field_18925 = string2;
-            this.field_19329 = j;
-            this.field_18926 = position;
-            this.field_19372 = string3;
-            this.field_19330 = path;
-            this.field_19373 = bl;
+            this.profession = profession;
+            this.xp = xp;
+            this.pos = pos;
+            this.field_19372 = string2;
+            this.path = path;
+            this.wantsGolem = wantsGolem;
         }
 
-        private boolean method_19718(BlockPos blockPos) {
-            return this.field_18930.stream().anyMatch(blockPos::equals);
+        private boolean isPointOfInterest(BlockPos blockPos) {
+            return this.pointsOfInterest.stream().anyMatch(blockPos::equals);
         }
 
-        public UUID method_19716() {
-            return this.field_18923;
+        public UUID getUuid() {
+            return this.uuid;
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class class_4233 {
-        public final BlockPos field_18931;
+    public static class PointOfInterest {
+        public final BlockPos pos;
         public String field_18932;
-        public int field_18933;
+        public int freeTicketCount;
 
-        public class_4233(BlockPos blockPos, String string, int i) {
-            this.field_18931 = blockPos;
+        public PointOfInterest(BlockPos blockPos, String string, int i) {
+            this.pos = blockPos;
             this.field_18932 = string;
-            this.field_18933 = i;
+            this.freeTicketCount = i;
         }
     }
 }

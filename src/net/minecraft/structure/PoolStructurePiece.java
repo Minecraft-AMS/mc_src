@@ -30,6 +30,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 
 public abstract class PoolStructurePiece
 extends StructurePiece {
@@ -79,8 +80,8 @@ extends StructurePiece {
     }
 
     @Override
-    public boolean generate(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
-        return this.poolElement.generate(this.structureManager, world, this.pos, this.rotation, boundingBox, random);
+    public boolean generate(IWorld world, ChunkGenerator<?> generator, Random random, BlockBox box, ChunkPos pos) {
+        return this.poolElement.generate(this.structureManager, world, generator, this.pos, this.rotation, box, random);
     }
 
     @Override

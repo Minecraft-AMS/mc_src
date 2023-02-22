@@ -31,9 +31,10 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.WorldView;
+import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class StructurePiece {
@@ -77,7 +78,7 @@ public abstract class StructurePiece {
     public void method_14918(StructurePiece structurePiece, List<StructurePiece> list, Random random) {
     }
 
-    public abstract boolean generate(IWorld var1, Random var2, BlockBox var3, ChunkPos var4);
+    public abstract boolean generate(IWorld var1, ChunkGenerator<?> var2, Random var3, BlockBox var4, ChunkPos var5);
 
     public BlockBox getBoundingBox() {
         return this.boundingBox;
@@ -220,7 +221,7 @@ public abstract class StructurePiece {
         return blockView.getBlockState(blockPos);
     }
 
-    protected boolean isUnderSeaLevel(CollisionView collisionView, int x, int z, int y, BlockBox blockBox) {
+    protected boolean isUnderSeaLevel(WorldView worldView, int x, int z, int y, BlockBox blockBox) {
         int k;
         int j;
         int i = this.applyXTransform(x, y);
@@ -228,7 +229,7 @@ public abstract class StructurePiece {
         if (!blockBox.contains(blockPos)) {
             return false;
         }
-        return j < collisionView.getTop(Heightmap.Type.OCEAN_FLOOR_WG, i, k);
+        return j < worldView.getTopY(Heightmap.Type.OCEAN_FLOOR_WG, i, k);
     }
 
     protected void fill(IWorld world, BlockBox bounds, int minX, int minY, int minZ, int maxX, int maxY, int i) {

@@ -35,7 +35,6 @@ import net.minecraft.block.MaterialColor;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.client.item.TooltipContext;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.container.NameableContainerFactory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityContext;
@@ -44,6 +43,7 @@ import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.BlockItem;
@@ -67,6 +67,7 @@ import net.minecraft.tag.FluidTags;
 import net.minecraft.tag.Tag;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.BooleanBiFunction;
@@ -84,12 +85,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.explosion.Explosion;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -120,10 +120,13 @@ implements ItemConvertible {
     protected final Material material;
     protected final MaterialColor materialColor;
     private final float slipperiness;
+    private final float velocityMultiplier;
+    private final float jumpVelocityMultiplier;
     protected final StateManager<Block, BlockState> stateManager;
     private BlockState defaultState;
     protected final boolean collidable;
     private final boolean dynamicBounds;
+    private final boolean opaque;
     @Nullable
     private Identifier dropTableId;
     @Nullable
@@ -131,7 +134,7 @@ implements ItemConvertible {
     @Nullable
     private Item cachedItem;
     private static final ThreadLocal<Object2ByteLinkedOpenHashMap<NeighborGroup>> FACE_CULL_MAP = ThreadLocal.withInitial(() -> {
-        Object2ByteLinkedOpenHashMap<NeighborGroup> object2ByteLinkedOpenHashMap = new Object2ByteLinkedOpenHashMap<NeighborGroup>(200){
+        Object2ByteLinkedOpenHashMap<NeighborGroup> object2ByteLinkedOpenHashMap = new Object2ByteLinkedOpenHashMap<NeighborGroup>(2048, 0.25f){
 
             protected void rehash(int i) {
             }
@@ -165,7 +168,7 @@ implements ItemConvertible {
         List<Entity> list = world.getEntities(null, voxelShape.getBoundingBox());
         for (Entity entity : list) {
             double d = VoxelShapes.calculateMaxOffset(Direction.Axis.Y, entity.getBoundingBox().offset(0.0, 1.0, 0.0), Stream.of(voxelShape), -1.0);
-            entity.requestTeleport(entity.x, entity.y + 1.0 + d, entity.z);
+            entity.requestTeleport(entity.getX(), entity.getY() + 1.0 + d, entity.getZ());
         }
         return to;
     }
@@ -268,43 +271,46 @@ implements ItemConvertible {
         this.hardness = settings.hardness;
         this.randomTicks = settings.randomTicks;
         this.slipperiness = settings.slipperiness;
+        this.velocityMultiplier = settings.slowDownMultiplier;
+        this.jumpVelocityMultiplier = settings.jumpVelocityMultiplier;
         this.dynamicBounds = settings.dynamicBounds;
         this.dropTableId = settings.dropTableId;
+        this.opaque = settings.opaque;
         this.stateManager = builder.build(BlockState::new);
         this.setDefaultState(this.stateManager.getDefaultState());
     }
 
     public static boolean cannotConnect(Block block) {
-        return block instanceof LeavesBlock || block == Blocks.BARRIER || block == Blocks.CARVED_PUMPKIN || block == Blocks.JACK_O_LANTERN || block == Blocks.MELON || block == Blocks.PUMPKIN;
+        return block instanceof LeavesBlock || block == Blocks.BARRIER || block == Blocks.CARVED_PUMPKIN || block == Blocks.JACK_O_LANTERN || block == Blocks.MELON || block == Blocks.PUMPKIN || block.matches(BlockTags.SHULKER_BOXES);
     }
 
     @Deprecated
     public boolean isSimpleFullBlock(BlockState state, BlockView view, BlockPos pos) {
-        return state.getMaterial().blocksLight() && state.method_21743(view, pos) && !state.emitsRedstonePower();
+        return state.getMaterial().blocksLight() && state.isFullCube(view, pos) && !state.emitsRedstonePower();
     }
 
     @Deprecated
     public boolean canSuffocate(BlockState state, BlockView view, BlockPos pos) {
-        return this.material.blocksMovement() && state.method_21743(view, pos);
+        return this.material.blocksMovement() && state.isFullCube(view, pos);
     }
 
     @Deprecated
     @Environment(value=EnvType.CLIENT)
-    public boolean hasBlockEntityBreakingRender(BlockState state) {
-        return false;
+    public boolean hasInWallOverlay(BlockState state, BlockView view, BlockPos pos) {
+        return state.canSuffocate(view, pos);
     }
 
     @Deprecated
     public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
         switch (env) {
             case LAND: {
-                return !world.method_21743(view, pos);
+                return !world.isFullCube(view, pos);
             }
             case WATER: {
                 return view.getFluidState(pos).matches(FluidTags.WATER);
             }
             case AIR: {
-                return !world.method_21743(view, pos);
+                return !world.isFullCube(view, pos);
             }
         }
         return false;
@@ -318,6 +324,11 @@ implements ItemConvertible {
     @Deprecated
     public boolean canReplace(BlockState state, ItemPlacementContext ctx) {
         return this.material.isReplaceable() && (ctx.getStack().isEmpty() || ctx.getStack().getItem() != this.asItem());
+    }
+
+    @Deprecated
+    public boolean canBucketPlace(BlockState state, Fluid fluid) {
+        return this.material.isReplaceable() || !this.material.isSolid();
     }
 
     @Deprecated
@@ -340,8 +351,8 @@ implements ItemConvertible {
 
     @Deprecated
     @Environment(value=EnvType.CLIENT)
-    public int getBlockBrightness(BlockState state, BlockRenderView view, BlockPos pos) {
-        return view.getLightmapIndex(pos, state.getLuminance());
+    public boolean hasEmissiveLighting(BlockState state) {
+        return false;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -361,7 +372,7 @@ implements ItemConvertible {
             VoxelShape voxelShape = state.getCullingFace(view, pos, facing);
             VoxelShape voxelShape2 = blockState.getCullingFace(view, blockPos, facing.getOpposite());
             boolean bl = VoxelShapes.matchesAnywhere(voxelShape, voxelShape2, BooleanBiFunction.ONLY_FIRST);
-            if (object2ByteLinkedOpenHashMap.size() == 200) {
+            if (object2ByteLinkedOpenHashMap.size() == 2048) {
                 object2ByteLinkedOpenHashMap.removeLastByte();
             }
             object2ByteLinkedOpenHashMap.putAndMoveToFirst((Object)neighborGroup, (byte)(bl ? 1 : 0));
@@ -371,8 +382,8 @@ implements ItemConvertible {
     }
 
     @Deprecated
-    public boolean isOpaque(BlockState state) {
-        return this.collidable && this.getRenderLayer() == RenderLayer.SOLID;
+    public final boolean isOpaque(BlockState state) {
+        return this.opaque;
     }
 
     @Deprecated
@@ -406,7 +417,7 @@ implements ItemConvertible {
         return !blockState.matches(BlockTags.LEAVES) && !VoxelShapes.matchesAnywhere(blockState.getCollisionShape(world, pos).getFace(Direction.UP), SOLID_MEDIUM_SQUARE_SHAPE, BooleanBiFunction.ONLY_SECOND);
     }
 
-    public static boolean isSolidSmallSquare(CollisionView world, BlockPos pos, Direction side) {
+    public static boolean sideCoversSmallSquare(WorldView world, BlockPos pos, Direction side) {
         BlockState blockState = world.getBlockState(pos);
         return !blockState.matches(BlockTags.LEAVES) && !VoxelShapes.matchesAnywhere(blockState.getCollisionShape(world, pos).getFace(side), SOLID_SMALL_SQUARE_SHAPE, BooleanBiFunction.ONLY_SECOND);
     }
@@ -450,12 +461,12 @@ implements ItemConvertible {
     }
 
     @Deprecated
-    public void onRandomTick(BlockState state, World world, BlockPos pos, Random random) {
-        this.onScheduledTick(state, world, pos, random);
+    public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        this.scheduledTick(state, world, pos, random);
     }
 
     @Deprecated
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -470,7 +481,7 @@ implements ItemConvertible {
         DebugInfoSender.sendNeighborUpdate(world, pos);
     }
 
-    public int getTickRate(CollisionView world) {
+    public int getTickRate(WorldView worldView) {
         return 10;
     }
 
@@ -530,16 +541,9 @@ implements ItemConvertible {
         return state.getDroppedStacks(builder);
     }
 
-    public static List<ItemStack> getDroppedStacks(BlockState state, ServerWorld world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack stack) {
-        LootContext.Builder builder = new LootContext.Builder(world).setRandom(world.random).put(LootContextParameters.POSITION, pos).put(LootContextParameters.TOOL, stack).put(LootContextParameters.THIS_ENTITY, entity).putNullable(LootContextParameters.BLOCK_ENTITY, blockEntity);
+    public static List<ItemStack> getDroppedStacks(BlockState state, ServerWorld world, BlockPos pos, @Nullable BlockEntity blockEntity, @Nullable Entity entity, ItemStack stack) {
+        LootContext.Builder builder = new LootContext.Builder(world).setRandom(world.random).put(LootContextParameters.POSITION, pos).put(LootContextParameters.TOOL, stack).putNullable(LootContextParameters.THIS_ENTITY, entity).putNullable(LootContextParameters.BLOCK_ENTITY, blockEntity);
         return state.getDroppedStacks(builder);
-    }
-
-    public static void dropStacks(BlockState state, LootContext.Builder builder) {
-        ServerWorld serverWorld = builder.getWorld();
-        BlockPos blockPos = builder.get(LootContextParameters.POSITION);
-        state.getDroppedStacks(builder).forEach(itemStack -> Block.dropStack(serverWorld, blockPos, itemStack));
-        state.onStacksDropped(serverWorld, blockPos, ItemStack.EMPTY);
     }
 
     public static void dropStacks(BlockState state, World world, BlockPos pos) {
@@ -593,18 +597,14 @@ implements ItemConvertible {
     public void onDestroyedByExplosion(World world, BlockPos pos, Explosion explosion) {
     }
 
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.SOLID;
-    }
-
     @Deprecated
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         return true;
     }
 
     @Deprecated
-    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        return false;
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        return ActionResult.PASS;
     }
 
     public void onSteppedOn(World world, BlockPos pos, Entity entity) {
@@ -676,7 +676,7 @@ implements ItemConvertible {
     @Deprecated
     @Environment(value=EnvType.CLIENT)
     public float getAmbientOcclusionLightLevel(BlockState state, BlockView view, BlockPos pos) {
-        return state.method_21743(view, pos) ? 0.2f : 1.0f;
+        return state.isFullCube(view, pos) ? 0.2f : 1.0f;
     }
 
     public void onLandedUpon(World world, BlockPos pos, Entity entity, float distance) {
@@ -703,6 +703,14 @@ implements ItemConvertible {
 
     public float getSlipperiness() {
         return this.slipperiness;
+    }
+
+    public float getVelocityMultiplier() {
+        return this.velocityMultiplier;
+    }
+
+    public float getJumpVelocityMultiplier() {
+        return this.jumpVelocityMultiplier;
     }
 
     @Deprecated
@@ -788,14 +796,6 @@ implements ItemConvertible {
     public void buildTooltip(ItemStack stack, @Nullable BlockView view, List<Text> tooltip, TooltipContext options) {
     }
 
-    public static boolean isNaturalStone(Block block) {
-        return block == Blocks.STONE || block == Blocks.GRANITE || block == Blocks.DIORITE || block == Blocks.ANDESITE;
-    }
-
-    public static boolean isNaturalDirt(Block block) {
-        return block == Blocks.DIRT || block == Blocks.COARSE_DIRT || block == Blocks.PODZOL;
-    }
-
     public static enum OffsetType {
         NONE,
         XZ,
@@ -813,7 +813,10 @@ implements ItemConvertible {
         private float hardness;
         private boolean randomTicks;
         private float slipperiness = 0.6f;
+        private float slowDownMultiplier = 1.0f;
+        private float jumpVelocityMultiplier = 1.0f;
         private Identifier dropTableId;
+        private boolean opaque = true;
         private boolean dynamicBounds;
 
         private Settings(Material material, MaterialColor materialColor) {
@@ -844,17 +847,35 @@ implements ItemConvertible {
             settings.materialColor = source.materialColor;
             settings.soundGroup = source.soundGroup;
             settings.slipperiness = source.getSlipperiness();
+            settings.slowDownMultiplier = source.getVelocityMultiplier();
             settings.dynamicBounds = source.dynamicBounds;
+            settings.opaque = source.opaque;
             return settings;
         }
 
         public Settings noCollision() {
             this.collidable = false;
+            this.opaque = false;
+            return this;
+        }
+
+        public Settings nonOpaque() {
+            this.opaque = false;
             return this;
         }
 
         public Settings slipperiness(float slipperiness) {
             this.slipperiness = slipperiness;
+            return this;
+        }
+
+        public Settings velocityMultiplier(float velocityMultiplier) {
+            this.slowDownMultiplier = velocityMultiplier;
+            return this;
+        }
+
+        public Settings jumpVelocityMultiplier(float jumpVelocityMultiplier) {
+            this.jumpVelocityMultiplier = jumpVelocityMultiplier;
             return this;
         }
 

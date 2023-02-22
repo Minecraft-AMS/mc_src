@@ -9,18 +9,18 @@
 package net.minecraft.client.render.debug;
 
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.platform.GlStateManager;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -39,27 +39,16 @@ implements DebugRenderer.Renderer {
     }
 
     @Override
-    public void render(long l) {
+    public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         Camera camera = this.field_4624.gameRenderer.getCamera();
         ClientWorld iWorld = this.field_4624.world;
         DimensionType dimensionType = iWorld.getDimension().getType();
-        double d = camera.getPos().x;
-        double e = camera.getPos().y;
-        double f = camera.getPos().z;
-        GlStateManager.pushMatrix();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.disableTexture();
-        GlStateManager.disableDepthTest();
         BlockPos blockPos = new BlockPos(camera.getPos().x, 0.0, camera.getPos().z);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(3, VertexFormats.POSITION_COLOR);
-        GlStateManager.lineWidth(1.0f);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getLines());
         if (this.field_4626.containsKey(dimensionType)) {
             for (BlockBox blockBox : this.field_4626.get(dimensionType).values()) {
-                if (!blockPos.isWithinDistance(blockBox.method_19635(), 500.0)) continue;
-                WorldRenderer.drawBox(bufferBuilder, (double)blockBox.minX - d, (double)blockBox.minY - e, (double)blockBox.minZ - f, (double)(blockBox.maxX + 1) - d, (double)(blockBox.maxY + 1) - e, (double)(blockBox.maxZ + 1) - f, 1.0f, 1.0f, 1.0f, 1.0f);
+                if (!blockPos.isWithinDistance(blockBox.method_22874(), 500.0)) continue;
+                WorldRenderer.drawBox(vertexConsumer, (double)blockBox.minX - cameraX, (double)blockBox.minY - cameraY, (double)blockBox.minZ - cameraZ, (double)(blockBox.maxX + 1) - cameraX, (double)(blockBox.maxY + 1) - cameraY, (double)(blockBox.maxZ + 1) - cameraZ, 1.0f, 1.0f, 1.0f, 1.0f);
             }
         }
         if (this.field_4627.containsKey(dimensionType)) {
@@ -67,18 +56,14 @@ implements DebugRenderer.Renderer {
                 String string = (String)entry.getKey();
                 BlockBox blockBox2 = (BlockBox)entry.getValue();
                 Boolean boolean_ = this.field_4625.get(dimensionType).get(string);
-                if (!blockPos.isWithinDistance(blockBox2.method_19635(), 500.0)) continue;
+                if (!blockPos.isWithinDistance(blockBox2.method_22874(), 500.0)) continue;
                 if (boolean_.booleanValue()) {
-                    WorldRenderer.drawBox(bufferBuilder, (double)blockBox2.minX - d, (double)blockBox2.minY - e, (double)blockBox2.minZ - f, (double)(blockBox2.maxX + 1) - d, (double)(blockBox2.maxY + 1) - e, (double)(blockBox2.maxZ + 1) - f, 0.0f, 1.0f, 0.0f, 1.0f);
+                    WorldRenderer.drawBox(vertexConsumer, (double)blockBox2.minX - cameraX, (double)blockBox2.minY - cameraY, (double)blockBox2.minZ - cameraZ, (double)(blockBox2.maxX + 1) - cameraX, (double)(blockBox2.maxY + 1) - cameraY, (double)(blockBox2.maxZ + 1) - cameraZ, 0.0f, 1.0f, 0.0f, 1.0f);
                     continue;
                 }
-                WorldRenderer.drawBox(bufferBuilder, (double)blockBox2.minX - d, (double)blockBox2.minY - e, (double)blockBox2.minZ - f, (double)(blockBox2.maxX + 1) - d, (double)(blockBox2.maxY + 1) - e, (double)(blockBox2.maxZ + 1) - f, 0.0f, 0.0f, 1.0f, 1.0f);
+                WorldRenderer.drawBox(vertexConsumer, (double)blockBox2.minX - cameraX, (double)blockBox2.minY - cameraY, (double)blockBox2.minZ - cameraZ, (double)(blockBox2.maxX + 1) - cameraX, (double)(blockBox2.maxY + 1) - cameraY, (double)(blockBox2.maxZ + 1) - cameraZ, 0.0f, 0.0f, 1.0f, 1.0f);
             }
         }
-        tessellator.draw();
-        GlStateManager.enableDepthTest();
-        GlStateManager.enableTexture();
-        GlStateManager.popMatrix();
     }
 
     public void method_3871(BlockBox blockBox, List<BlockBox> list, List<Boolean> list2, DimensionType dimensionType) {
@@ -99,7 +84,7 @@ implements DebugRenderer.Renderer {
     }
 
     @Override
-    public void method_20414() {
+    public void clear() {
         this.field_4626.clear();
         this.field_4627.clear();
         this.field_4625.clear();

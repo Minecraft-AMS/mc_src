@@ -37,13 +37,14 @@ import net.minecraft.entity.ai.control.FlightMoveControl;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.FlyOntoTreeGoal;
 import net.minecraft.entity.ai.goal.FollowMobGoal;
-import net.minecraft.entity.ai.goal.FollowOwnerFlyingGoal;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SitOnOwnerShoulderGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
+import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
@@ -59,6 +60,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -99,7 +101,6 @@ implements Flutterer {
         hashMap.put(EntityType.DROWNED, SoundEvents.ENTITY_PARROT_IMITATE_DROWNED);
         hashMap.put(EntityType.ELDER_GUARDIAN, SoundEvents.ENTITY_PARROT_IMITATE_ELDER_GUARDIAN);
         hashMap.put(EntityType.ENDER_DRAGON, SoundEvents.ENTITY_PARROT_IMITATE_ENDER_DRAGON);
-        hashMap.put(EntityType.ENDERMAN, SoundEvents.ENTITY_PARROT_IMITATE_ENDERMAN);
         hashMap.put(EntityType.ENDERMITE, SoundEvents.ENTITY_PARROT_IMITATE_ENDERMITE);
         hashMap.put(EntityType.EVOKER, SoundEvents.ENTITY_PARROT_IMITATE_EVOKER);
         hashMap.put(EntityType.GHAST, SoundEvents.ENTITY_PARROT_IMITATE_GHAST);
@@ -107,11 +108,8 @@ implements Flutterer {
         hashMap.put(EntityType.HUSK, SoundEvents.ENTITY_PARROT_IMITATE_HUSK);
         hashMap.put(EntityType.ILLUSIONER, SoundEvents.ENTITY_PARROT_IMITATE_ILLUSIONER);
         hashMap.put(EntityType.MAGMA_CUBE, SoundEvents.ENTITY_PARROT_IMITATE_MAGMA_CUBE);
-        hashMap.put(EntityType.ZOMBIE_PIGMAN, SoundEvents.ENTITY_PARROT_IMITATE_ZOMBIE_PIGMAN);
-        hashMap.put(EntityType.PANDA, SoundEvents.ENTITY_PARROT_IMITATE_PANDA);
         hashMap.put(EntityType.PHANTOM, SoundEvents.ENTITY_PARROT_IMITATE_PHANTOM);
         hashMap.put(EntityType.PILLAGER, SoundEvents.ENTITY_PARROT_IMITATE_PILLAGER);
-        hashMap.put(EntityType.POLAR_BEAR, SoundEvents.ENTITY_PARROT_IMITATE_POLAR_BEAR);
         hashMap.put(EntityType.RAVAGER, SoundEvents.ENTITY_PARROT_IMITATE_RAVAGER);
         hashMap.put(EntityType.SHULKER, SoundEvents.ENTITY_PARROT_IMITATE_SHULKER);
         hashMap.put(EntityType.SILVERFISH, SoundEvents.ENTITY_PARROT_IMITATE_SILVERFISH);
@@ -124,7 +122,6 @@ implements Flutterer {
         hashMap.put(EntityType.WITCH, SoundEvents.ENTITY_PARROT_IMITATE_WITCH);
         hashMap.put(EntityType.WITHER, SoundEvents.ENTITY_PARROT_IMITATE_WITHER);
         hashMap.put(EntityType.WITHER_SKELETON, SoundEvents.ENTITY_PARROT_IMITATE_WITHER_SKELETON);
-        hashMap.put(EntityType.WOLF, SoundEvents.ENTITY_PARROT_IMITATE_WOLF);
         hashMap.put(EntityType.ZOMBIE, SoundEvents.ENTITY_PARROT_IMITATE_ZOMBIE);
         hashMap.put(EntityType.ZOMBIE_VILLAGER, SoundEvents.ENTITY_PARROT_IMITATE_ZOMBIE_VILLAGER);
     });
@@ -132,19 +129,26 @@ implements Flutterer {
     public float field_6819;
     public float field_6827;
     public float field_6829;
-    public float field_6824 = 1.0f;
+    private float field_6824 = 1.0f;
     private boolean songPlaying;
     private BlockPos songSource;
 
     public ParrotEntity(EntityType<? extends ParrotEntity> entityType, World world) {
         super((EntityType<? extends TameableShoulderEntity>)entityType, world);
-        this.moveControl = new FlightMoveControl(this);
+        this.moveControl = new FlightMoveControl(this, 10, false);
+        this.setPathfindingPenalty(PathNodeType.DANGER_FIRE, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.DAMAGE_FIRE, -1.0f);
+        this.setPathfindingPenalty(PathNodeType.COCOA, -1.0f);
     }
 
     @Override
     @Nullable
     public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
         this.setVariant(this.random.nextInt(5));
+        if (entityData == null) {
+            entityData = new PassiveEntity.EntityData();
+            ((PassiveEntity.EntityData)entityData).setBabyAllowed(false);
+        }
         return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
@@ -155,7 +159,7 @@ implements Flutterer {
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
         this.goalSelector.add(2, this.sitGoal);
-        this.goalSelector.add(2, new FollowOwnerFlyingGoal(this, 1.0, 5.0f, 1.0f));
+        this.goalSelector.add(2, new FollowOwnerGoal(this, 1.0, 5.0f, 1.0f, true));
         this.goalSelector.add(2, new FlyOntoTreeGoal(this, 1.0));
         this.goalSelector.add(3, new SitOnOwnerShoulderGoal(this));
         this.goalSelector.add(3, new FollowMobGoal(this, 1.0, 3.0f, 7.0f));
@@ -231,7 +235,7 @@ implements Flutterer {
         List<MobEntity> list = world.getEntities(MobEntity.class, parrot.getBoundingBox().expand(20.0), CAN_IMITATE);
         if (!list.isEmpty() && !(mobEntity = list.get(world.random.nextInt(list.size()))).isSilent()) {
             SoundEvent soundEvent = ParrotEntity.getSound(mobEntity.getType());
-            world.playSound(null, parrot.x, parrot.y, parrot.z, soundEvent, parrot.getSoundCategory(), 0.7f, ParrotEntity.getSoundPitch(world.random));
+            world.playSound(null, parrot.getX(), parrot.getY(), parrot.getZ(), soundEvent, parrot.getSoundCategory(), 0.7f, ParrotEntity.getSoundPitch(world.random));
             return true;
         }
         return false;
@@ -240,20 +244,21 @@ implements Flutterer {
     @Override
     public boolean interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
+        if (itemStack.getItem() instanceof SpawnEggItem) {
+            return super.interactMob(player, hand);
+        }
         if (!this.isTamed() && TAMING_INGREDIENTS.contains(itemStack.getItem())) {
             if (!player.abilities.creativeMode) {
                 itemStack.decrement(1);
             }
             if (!this.isSilent()) {
-                this.world.playSound(null, this.x, this.y, this.z, SoundEvents.ENTITY_PARROT_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
+                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PARROT_EAT, this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
             }
             if (!this.world.isClient) {
                 if (this.random.nextInt(10) == 0) {
                     this.setOwner(player);
-                    this.showEmoteParticle(true);
                     this.world.sendEntityStatus(this, (byte)7);
                 } else {
-                    this.showEmoteParticle(false);
                     this.world.sendEntityStatus(this, (byte)6);
                 }
             }
@@ -269,8 +274,11 @@ implements Flutterer {
             }
             return true;
         }
-        if (!this.world.isClient && !this.isInAir() && this.isTamed() && this.isOwner(player)) {
-            this.sitGoal.setEnabledWithOwner(!this.isSitting());
+        if (!this.isInAir() && this.isTamed() && this.isOwner(player)) {
+            if (!this.world.isClient) {
+                this.sitGoal.setEnabledWithOwner(!this.isSitting());
+            }
+            return true;
         }
         return super.interactMob(player, hand);
     }
@@ -280,13 +288,14 @@ implements Flutterer {
         return false;
     }
 
-    public static boolean method_20667(EntityType<ParrotEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        Block block = iWorld.getBlockState(blockPos.down()).getBlock();
-        return (block.matches(BlockTags.LEAVES) || block == Blocks.GRASS_BLOCK || block instanceof LogBlock || block == Blocks.AIR) && iWorld.getLightLevel(blockPos, 0) > 8;
+    public static boolean canSpawn(EntityType<ParrotEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        Block block = world.getBlockState(pos.down()).getBlock();
+        return (block.matches(BlockTags.LEAVES) || block == Blocks.GRASS_BLOCK || block instanceof LogBlock || block == Blocks.AIR) && world.getBaseLightLevel(pos, 0) > 8;
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -306,7 +315,7 @@ implements Flutterer {
 
     public static void playMobSound(World world, Entity parrot) {
         if (!parrot.isSilent() && !ParrotEntity.imitateNearbyMob(world, parrot) && world.random.nextInt(200) == 0) {
-            world.playSound(null, parrot.x, parrot.y, parrot.z, ParrotEntity.getRandomSound(world.random), parrot.getSoundCategory(), 1.0f, ParrotEntity.getSoundPitch(world.random));
+            world.playSound(null, parrot.getX(), parrot.getY(), parrot.getZ(), ParrotEntity.getRandomSound(world.random), parrot.getSoundCategory(), 1.0f, ParrotEntity.getSoundPitch(world.random));
         }
     }
 
@@ -329,7 +338,7 @@ implements Flutterer {
         return SoundEvents.ENTITY_PARROT_AMBIENT;
     }
 
-    public static SoundEvent getSound(EntityType<?> imitate) {
+    private static SoundEvent getSound(EntityType<?> imitate) {
         return MOB_SOUNDS.getOrDefault(imitate, SoundEvents.ENTITY_PARROT_AMBIENT);
     }
 
@@ -355,7 +364,7 @@ implements Flutterer {
     }
 
     @Override
-    protected boolean method_5776() {
+    protected boolean hasWings() {
         return true;
     }
 

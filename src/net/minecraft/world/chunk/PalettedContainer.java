@@ -189,18 +189,24 @@ implements PaletteResizeListener<T> {
     public void write(CompoundTag compoundTag, String string, String string2) {
         this.lock();
         BiMapPalette<T> biMapPalette = new BiMapPalette<T>(this.idList, this.paletteSize, this.noOpPaletteResizeHandler, this.elementDeserializer, this.elementSerializer);
-        biMapPalette.getIndex(this.field_12935);
+        T object = this.field_12935;
+        int i = biMapPalette.getIndex(this.field_12935);
         int[] is = new int[4096];
-        for (int i = 0; i < 4096; ++i) {
-            is[i] = biMapPalette.getIndex(this.get(i));
+        for (int j = 0; j < 4096; ++j) {
+            T object2 = this.get(j);
+            if (object2 != object) {
+                object = object2;
+                i = biMapPalette.getIndex(object2);
+            }
+            is[j] = i;
         }
         ListTag listTag = new ListTag();
         biMapPalette.toTag(listTag);
         compoundTag.put(string, listTag);
-        int j = Math.max(4, MathHelper.log2DeBruijn(listTag.size()));
-        PackedIntegerArray packedIntegerArray = new PackedIntegerArray(j, 4096);
-        for (int k = 0; k < is.length; ++k) {
-            packedIntegerArray.set(k, is[k]);
+        int k = Math.max(4, MathHelper.log2DeBruijn(listTag.size()));
+        PackedIntegerArray packedIntegerArray = new PackedIntegerArray(k, 4096);
+        for (int l = 0; l < is.length; ++l) {
+            packedIntegerArray.set(l, is[l]);
         }
         compoundTag.putLongArray(string2, packedIntegerArray.getStorage());
         this.unlock();
@@ -214,10 +220,10 @@ implements PaletteResizeListener<T> {
         return this.palette.accepts(object);
     }
 
-    public void method_21732(class_4464<T> arg) {
+    public void count(CountConsumer<T> consumer) {
         Int2IntOpenHashMap int2IntMap = new Int2IntOpenHashMap();
-        this.data.method_21739(arg_0 -> PalettedContainer.method_21734((Int2IntMap)int2IntMap, arg_0));
-        int2IntMap.int2IntEntrySet().forEach(entry -> arg.accept(this.palette.getByIndex(entry.getIntKey()), entry.getIntValue()));
+        this.data.forEach(arg_0 -> PalettedContainer.method_21734((Int2IntMap)int2IntMap, arg_0));
+        int2IntMap.int2IntEntrySet().forEach(entry -> consumer.accept(this.palette.getByIndex(entry.getIntKey()), entry.getIntValue()));
     }
 
     private static /* synthetic */ void method_21734(Int2IntMap int2IntMap, int i) {
@@ -225,7 +231,7 @@ implements PaletteResizeListener<T> {
     }
 
     @FunctionalInterface
-    public static interface class_4464<T> {
+    public static interface CountConsumer<T> {
         public void accept(T var1, int var2);
     }
 }

@@ -7,7 +7,7 @@
  */
 package net.minecraft.client.gui.screen.ingame;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
@@ -21,10 +21,10 @@ import net.minecraft.util.math.MathHelper;
 public class BrewingStandScreen
 extends ContainerScreen<BrewingStandContainer> {
     private static final Identifier TEXTURE = new Identifier("textures/gui/container/brewing_stand.png");
-    private static final int[] field_2824 = new int[]{29, 24, 20, 16, 11, 6, 0};
+    private static final int[] BUBBLE_PROGRESS = new int[]{29, 24, 20, 16, 11, 6, 0};
 
-    public BrewingStandScreen(BrewingStandContainer brewingStandContainer, PlayerInventory playerInventory, Text text) {
-        super(brewingStandContainer, playerInventory, text);
+    public BrewingStandScreen(BrewingStandContainer container, PlayerInventory playerInventory, Text title) {
+        super(container, playerInventory, title);
     }
 
     @Override
@@ -43,7 +43,7 @@ extends ContainerScreen<BrewingStandContainer> {
     @Override
     protected void drawBackground(float delta, int mouseX, int mouseY) {
         int m;
-        GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         this.minecraft.getTextureManager().bindTexture(TEXTURE);
         int i = (this.width - this.containerWidth) / 2;
         int j = (this.height - this.containerHeight) / 2;
@@ -58,7 +58,7 @@ extends ContainerScreen<BrewingStandContainer> {
             if (n > 0) {
                 this.blit(i + 97, j + 16, 176, 0, 9, n);
             }
-            if ((n = field_2824[m / 2 % 7]) > 0) {
+            if ((n = BUBBLE_PROGRESS[m / 2 % 7]) > 0) {
                 this.blit(i + 63, j + 14 + 29 - n, 185, 29 - n, 12, n);
             }
         }

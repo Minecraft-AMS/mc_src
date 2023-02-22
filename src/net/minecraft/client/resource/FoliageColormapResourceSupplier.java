@@ -22,7 +22,7 @@ public class FoliageColormapResourceSupplier
 extends SinglePreparationResourceReloadListener<int[]> {
     private static final Identifier FOLIAGE_COLORMAP = new Identifier("textures/colormap/foliage.png");
 
-    protected int[] method_18660(ResourceManager resourceManager, Profiler profiler) {
+    protected int[] reload(ResourceManager resourceManager, Profiler profiler) {
         try {
             return RawTextureDataLoader.loadRawTextureData(resourceManager, FOLIAGE_COLORMAP);
         }
@@ -38,7 +38,7 @@ extends SinglePreparationResourceReloadListener<int[]> {
 
     @Override
     protected /* synthetic */ Object prepare(ResourceManager manager, Profiler profiler) {
-        return this.method_18660(manager, profiler);
+        return this.reload(manager, profiler);
     }
 }
 

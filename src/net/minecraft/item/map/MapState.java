@@ -155,7 +155,7 @@ extends PersistentState {
                 continue;
             }
             if (stack.isInFrame() || playerUpdateTracker2.player.dimension != this.dimension || !this.showIcons) continue;
-            this.addIcon(MapIcon.Type.PLAYER, playerUpdateTracker2.player.world, string, playerUpdateTracker2.player.x, playerUpdateTracker2.player.z, playerUpdateTracker2.player.yaw, null);
+            this.addIcon(MapIcon.Type.PLAYER, playerUpdateTracker2.player.world, string, playerUpdateTracker2.player.getX(), playerUpdateTracker2.player.getZ(), playerUpdateTracker2.player.yaw, null);
         }
         if (stack.isInFrame() && this.showIcons) {
             ItemFrameEntity itemFrameEntity = stack.getFrame();

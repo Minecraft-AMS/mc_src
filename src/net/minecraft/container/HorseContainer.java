@@ -93,7 +93,27 @@ extends Container {
         if (slot != null && slot.hasStack()) {
             ItemStack itemStack2 = slot.getStack();
             itemStack = itemStack2.copy();
-            if (invSlot < this.playerInv.getInvSize() ? !this.insertItem(itemStack2, this.playerInv.getInvSize(), this.slots.size(), true) : (this.getSlot(1).canInsert(itemStack2) && !this.getSlot(1).hasStack() ? !this.insertItem(itemStack2, 1, 2, false) : (this.getSlot(0).canInsert(itemStack2) ? !this.insertItem(itemStack2, 0, 1, false) : this.playerInv.getInvSize() <= 2 || !this.insertItem(itemStack2, 2, this.playerInv.getInvSize(), false)))) {
+            int i = this.playerInv.getInvSize();
+            if (invSlot < i) {
+                if (!this.insertItem(itemStack2, i, this.slots.size(), true)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (this.getSlot(1).canInsert(itemStack2) && !this.getSlot(1).hasStack()) {
+                if (!this.insertItem(itemStack2, 1, 2, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (this.getSlot(0).canInsert(itemStack2)) {
+                if (!this.insertItem(itemStack2, 0, 1, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (i <= 2 || !this.insertItem(itemStack2, 2, i, false)) {
+                int k;
+                int j = i;
+                int l = k = j + 27;
+                int m = l + 9;
+                if (invSlot >= l && invSlot < m ? !this.insertItem(itemStack2, j, k, false) : (invSlot >= j && invSlot < k ? !this.insertItem(itemStack2, l, m, false) : !this.insertItem(itemStack2, l, k, false))) {
+                    return ItemStack.EMPTY;
+                }
                 return ItemStack.EMPTY;
             }
             if (itemStack2.isEmpty()) {

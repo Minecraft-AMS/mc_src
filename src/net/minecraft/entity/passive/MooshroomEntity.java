@@ -37,9 +37,9 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class MooshroomEntity
@@ -54,15 +54,15 @@ extends CowEntity {
     }
 
     @Override
-    public float getPathfindingFavor(BlockPos pos, CollisionView world) {
-        if (world.getBlockState(pos.down()).getBlock() == Blocks.MYCELIUM) {
+    public float getPathfindingFavor(BlockPos pos, WorldView worldView) {
+        if (worldView.getBlockState(pos.down()).getBlock() == Blocks.MYCELIUM) {
             return 10.0f;
         }
-        return world.getBrightness(pos) - 0.5f;
+        return worldView.getBrightness(pos) - 0.5f;
     }
 
-    public static boolean method_20665(EntityType<MooshroomEntity> entityType, IWorld iWorld, SpawnType spawnType, BlockPos blockPos, Random random) {
-        return iWorld.getBlockState(blockPos.down()).getBlock() == Blocks.MYCELIUM && iWorld.getLightLevel(blockPos, 0) > 8;
+    public static boolean canSpawn(EntityType<MooshroomEntity> type, IWorld world, SpawnType spawnType, BlockPos pos, Random random) {
+        return world.getBlockState(pos.down()).getBlock() == Blocks.MYCELIUM && world.getBaseLightLevel(pos, 0) > 8;
     }
 
     @Override
@@ -84,7 +84,7 @@ extends CowEntity {
     @Override
     public boolean interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.BOWL && this.getBreedingAge() >= 0 && !player.abilities.creativeMode) {
+        if (itemStack.getItem() == Items.BOWL && !this.isBaby() && !player.abilities.creativeMode) {
             ItemStack itemStack2;
             itemStack.decrement(1);
             boolean bl = false;
@@ -106,20 +106,25 @@ extends CowEntity {
             this.playSound(soundEvent, 1.0f, 1.0f);
             return true;
         }
-        if (itemStack.getItem() == Items.SHEARS && this.getBreedingAge() >= 0) {
-            this.world.addParticle(ParticleTypes.EXPLOSION, this.x, this.y + (double)(this.getHeight() / 2.0f), this.z, 0.0, 0.0, 0.0);
+        if (itemStack.getItem() == Items.SHEARS && !this.isBaby()) {
+            this.world.addParticle(ParticleTypes.EXPLOSION, this.getX(), this.getBodyY(0.5), this.getZ(), 0.0, 0.0, 0.0);
             if (!this.world.isClient) {
                 this.remove();
                 CowEntity cowEntity = EntityType.COW.create(this.world);
-                cowEntity.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, this.pitch);
+                cowEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
                 cowEntity.setHealth(this.getHealth());
-                cowEntity.field_6283 = this.field_6283;
+                cowEntity.bodyYaw = this.bodyYaw;
                 if (this.hasCustomName()) {
                     cowEntity.setCustomName(this.getCustomName());
+                    cowEntity.setCustomNameVisible(this.isCustomNameVisible());
                 }
+                if (this.isPersistent()) {
+                    cowEntity.setPersistent();
+                }
+                cowEntity.setInvulnerable(this.isInvulnerable());
                 this.world.spawnEntity(cowEntity);
                 for (int i = 0; i < 5; ++i) {
-                    this.world.spawnEntity(new ItemEntity(this.world, this.x, this.y + (double)this.getHeight(), this.z, new ItemStack(this.getMooshroomType().mushroom.getBlock())));
+                    this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getBodyY(1.0), this.getZ(), new ItemStack(this.getMooshroomType().mushroom.getBlock())));
                 }
                 itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
                 this.playSound(SoundEvents.ENTITY_MOOSHROOM_SHEAR, 1.0f, 1.0f);
@@ -129,7 +134,7 @@ extends CowEntity {
         if (this.getMooshroomType() == Type.BROWN && itemStack.getItem().isIn(ItemTags.SMALL_FLOWERS)) {
             if (this.stewEffect != null) {
                 for (int j = 0; j < 2; ++j) {
-                    this.world.addParticle(ParticleTypes.SMOKE, this.x + (double)(this.random.nextFloat() / 2.0f), this.y + (double)(this.getHeight() / 2.0f), this.z + (double)(this.random.nextFloat() / 2.0f), 0.0, this.random.nextFloat() / 5.0f, 0.0);
+                    this.world.addParticle(ParticleTypes.SMOKE, this.getX() + (double)(this.random.nextFloat() / 2.0f), this.getBodyY(0.5), this.getZ() + (double)(this.random.nextFloat() / 2.0f), 0.0, this.random.nextFloat() / 5.0f, 0.0);
                 }
             } else {
                 Pair<StatusEffect, Integer> pair = this.getStewEffectFrom(itemStack);
@@ -137,7 +142,7 @@ extends CowEntity {
                     itemStack.decrement(1);
                 }
                 for (int i = 0; i < 4; ++i) {
-                    this.world.addParticle(ParticleTypes.EFFECT, this.x + (double)(this.random.nextFloat() / 2.0f), this.y + (double)(this.getHeight() / 2.0f), this.z + (double)(this.random.nextFloat() / 2.0f), 0.0, this.random.nextFloat() / 5.0f, 0.0);
+                    this.world.addParticle(ParticleTypes.EFFECT, this.getX() + (double)(this.random.nextFloat() / 2.0f), this.getBodyY(0.5), this.getZ() + (double)(this.random.nextFloat() / 2.0f), 0.0, this.random.nextFloat() / 5.0f, 0.0);
                 }
                 this.stewEffect = (StatusEffect)pair.getLeft();
                 this.stewEffectDuration = (Integer)pair.getRight();

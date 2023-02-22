@@ -20,39 +20,39 @@ enum AdvancementTabType {
     LEFT(0, 64, 32, 28, 5),
     RIGHT(96, 64, 32, 28, 5);
 
-    private final int field_2674;
-    private final int field_2672;
-    private final int field_2671;
-    private final int field_2670;
-    private final int field_2669;
+    private final int u;
+    private final int v;
+    private final int width;
+    private final int height;
+    private final int tabCount;
 
-    private AdvancementTabType(int j, int k, int l, int m, int n) {
-        this.field_2674 = j;
-        this.field_2672 = k;
-        this.field_2671 = l;
-        this.field_2670 = m;
-        this.field_2669 = n;
+    private AdvancementTabType(int u, int v, int width, int height, int tabCount) {
+        this.u = u;
+        this.v = v;
+        this.width = width;
+        this.height = height;
+        this.tabCount = tabCount;
     }
 
-    public int method_2304() {
-        return this.field_2669;
+    public int getTabCount() {
+        return this.tabCount;
     }
 
     public void drawBackground(DrawableHelper drawable, int x, int y, boolean selected, int index) {
-        int i = this.field_2674;
+        int i = this.u;
         if (index > 0) {
-            i += this.field_2671;
+            i += this.width;
         }
-        if (index == this.field_2669 - 1) {
-            i += this.field_2671;
+        if (index == this.tabCount - 1) {
+            i += this.width;
         }
-        int j = selected ? this.field_2672 + this.field_2670 : this.field_2672;
-        drawable.blit(x + this.method_2302(index), y + this.method_2305(index), i, j, this.field_2671, this.field_2670);
+        int j = selected ? this.v + this.height : this.v;
+        drawable.blit(x + this.getTabX(index), y + this.getTabY(index), i, j, this.width, this.height);
     }
 
     public void drawIcon(int x, int y, int index, ItemRenderer itemRenderer, ItemStack icon) {
-        int i = x + this.method_2302(index);
-        int j = y + this.method_2305(index);
+        int i = x + this.getTabX(index);
+        int j = y + this.getTabY(index);
         switch (this) {
             case ABOVE: {
                 i += 6;
@@ -77,16 +77,16 @@ enum AdvancementTabType {
         itemRenderer.renderGuiItem(null, icon, i, j);
     }
 
-    public int method_2302(int i) {
+    public int getTabX(int index) {
         switch (this) {
             case ABOVE: {
-                return (this.field_2671 + 4) * i;
+                return (this.width + 4) * index;
             }
             case BELOW: {
-                return (this.field_2671 + 4) * i;
+                return (this.width + 4) * index;
             }
             case LEFT: {
-                return -this.field_2671 + 4;
+                return -this.width + 4;
             }
             case RIGHT: {
                 return 248;
@@ -95,28 +95,28 @@ enum AdvancementTabType {
         throw new UnsupportedOperationException("Don't know what this tab type is!" + (Object)((Object)this));
     }
 
-    public int method_2305(int i) {
+    public int getTabY(int index) {
         switch (this) {
             case ABOVE: {
-                return -this.field_2670 + 4;
+                return -this.height + 4;
             }
             case BELOW: {
                 return 136;
             }
             case LEFT: {
-                return this.field_2670 * i;
+                return this.height * index;
             }
             case RIGHT: {
-                return this.field_2670 * i;
+                return this.height * index;
             }
         }
         throw new UnsupportedOperationException("Don't know what this tab type is!" + (Object)((Object)this));
     }
 
-    public boolean method_2303(int i, int j, int k, double d, double e) {
-        int l = i + this.method_2302(k);
-        int m = j + this.method_2305(k);
-        return d > (double)l && d < (double)(l + this.field_2671) && e > (double)m && e < (double)(m + this.field_2670);
+    public boolean isClickOnTab(int screenX, int screenY, int index, double mouseX, double mouseY) {
+        int i = screenX + this.getTabX(index);
+        int j = screenY + this.getTabY(index);
+        return mouseX > (double)i && mouseX < (double)(i + this.width) && mouseY > (double)j && mouseY < (double)(j + this.height);
     }
 }
 

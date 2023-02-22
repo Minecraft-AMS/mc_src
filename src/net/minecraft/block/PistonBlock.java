@@ -3,15 +3,16 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Sets
+ *  com.google.common.collect.Maps
  */
 package net.minecraft.block;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPlacementEnvironment;
 import net.minecraft.block.BlockState;
@@ -255,11 +256,10 @@ extends FacingBlock {
     }
 
     private boolean move(World world, BlockPos pos, Direction dir, boolean retract) {
+        int l;
+        BlockPos blockPos5;
+        BlockPos blockPos3;
         int k;
-        BlockState blockState2;
-        BlockState blockState;
-        BlockPos blockPos32;
-        int k2;
         PistonHandler pistonHandler;
         BlockPos blockPos = pos.offset(dir);
         if (!retract && world.getBlockState(blockPos).getBlock() == Blocks.PISTON_HEAD) {
@@ -268,53 +268,63 @@ extends FacingBlock {
         if (!(pistonHandler = new PistonHandler(world, pos, dir, retract)).calculatePush()) {
             return false;
         }
+        HashMap map = Maps.newHashMap();
         List<BlockPos> list = pistonHandler.getMovedBlocks();
         ArrayList list2 = Lists.newArrayList();
         for (int i = 0; i < list.size(); ++i) {
             BlockPos blockPos2 = list.get(i);
-            list2.add(world.getBlockState(blockPos2));
+            BlockState blockState = world.getBlockState(blockPos2);
+            list2.add(blockState);
+            map.put(blockPos2, blockState);
         }
         List<BlockPos> list3 = pistonHandler.getBrokenBlocks();
         int j = list.size() + list3.size();
         BlockState[] blockStates = new BlockState[j];
         Direction direction = retract ? dir : dir.getOpposite();
-        HashSet set = Sets.newHashSet(list);
-        for (k2 = list3.size() - 1; k2 >= 0; --k2) {
-            blockPos32 = list3.get(k2);
-            blockState = world.getBlockState(blockPos32);
-            BlockEntity blockEntity = blockState.getBlock().hasBlockEntity() ? world.getBlockEntity(blockPos32) : null;
-            PistonBlock.dropStacks(blockState, world, blockPos32, blockEntity);
-            world.setBlockState(blockPos32, Blocks.AIR.getDefaultState(), 18);
+        for (k = list3.size() - 1; k >= 0; --k) {
+            blockPos3 = list3.get(k);
+            BlockState blockState = world.getBlockState(blockPos3);
+            BlockEntity blockEntity = blockState.getBlock().hasBlockEntity() ? world.getBlockEntity(blockPos3) : null;
+            PistonBlock.dropStacks(blockState, world, blockPos3, blockEntity);
+            world.setBlockState(blockPos3, Blocks.AIR.getDefaultState(), 18);
             blockStates[--j] = blockState;
         }
-        for (k2 = list.size() - 1; k2 >= 0; --k2) {
-            blockPos32 = list.get(k2);
-            blockState = world.getBlockState(blockPos32);
-            blockPos32 = blockPos32.offset(direction);
-            set.remove(blockPos32);
-            world.setBlockState(blockPos32, (BlockState)Blocks.MOVING_PISTON.getDefaultState().with(FACING, dir), 68);
-            world.setBlockEntity(blockPos32, PistonExtensionBlock.createBlockEntityPiston((BlockState)list2.get(k2), dir, retract, false));
+        for (k = list.size() - 1; k >= 0; --k) {
+            blockPos3 = list.get(k);
+            BlockState blockState = world.getBlockState(blockPos3);
+            blockPos3 = blockPos3.offset(direction);
+            map.remove(blockPos3);
+            world.setBlockState(blockPos3, (BlockState)Blocks.MOVING_PISTON.getDefaultState().with(FACING, dir), 68);
+            world.setBlockEntity(blockPos3, PistonExtensionBlock.createBlockEntityPiston((BlockState)list2.get(k), dir, retract, false));
             blockStates[--j] = blockState;
         }
         if (retract) {
             PistonType pistonType = this.isSticky ? PistonType.STICKY : PistonType.DEFAULT;
-            blockState2 = (BlockState)((BlockState)Blocks.PISTON_HEAD.getDefaultState().with(PistonHeadBlock.FACING, dir)).with(PistonHeadBlock.TYPE, pistonType);
-            blockState = (BlockState)((BlockState)Blocks.MOVING_PISTON.getDefaultState().with(PistonExtensionBlock.FACING, dir)).with(PistonExtensionBlock.TYPE, this.isSticky ? PistonType.STICKY : PistonType.DEFAULT);
-            set.remove(blockPos);
+            BlockState blockState3 = (BlockState)((BlockState)Blocks.PISTON_HEAD.getDefaultState().with(PistonHeadBlock.FACING, dir)).with(PistonHeadBlock.TYPE, pistonType);
+            BlockState blockState = (BlockState)((BlockState)Blocks.MOVING_PISTON.getDefaultState().with(PistonExtensionBlock.FACING, dir)).with(PistonExtensionBlock.TYPE, this.isSticky ? PistonType.STICKY : PistonType.DEFAULT);
+            map.remove(blockPos);
             world.setBlockState(blockPos, blockState, 68);
-            world.setBlockEntity(blockPos, PistonExtensionBlock.createBlockEntityPiston(blockState2, dir, true, true));
+            world.setBlockEntity(blockPos, PistonExtensionBlock.createBlockEntityPiston(blockState3, dir, true, true));
         }
-        for (BlockPos blockPos32 : set) {
-            world.setBlockState(blockPos32, Blocks.AIR.getDefaultState(), 66);
+        BlockState blockState4 = Blocks.AIR.getDefaultState();
+        for (BlockPos blockPos2 : map.keySet()) {
+            world.setBlockState(blockPos2, blockState4, 82);
         }
-        for (k = list3.size() - 1; k >= 0; --k) {
-            blockState2 = blockStates[j++];
-            BlockPos blockPos4 = list3.get(k);
-            blockState2.method_11637(world, blockPos4, 2);
-            world.updateNeighborsAlways(blockPos4, blockState2.getBlock());
+        for (Map.Entry entry : map.entrySet()) {
+            blockPos5 = (BlockPos)entry.getKey();
+            BlockState blockState5 = (BlockState)entry.getValue();
+            blockState5.method_11637(world, blockPos5, 2);
+            blockState4.updateNeighborStates(world, blockPos5, 2);
+            blockState4.method_11637(world, blockPos5, 2);
         }
-        for (k = list.size() - 1; k >= 0; --k) {
-            world.updateNeighborsAlways(list.get(k), blockStates[j++].getBlock());
+        for (l = list3.size() - 1; l >= 0; --l) {
+            BlockState blockState = blockStates[j++];
+            blockPos5 = list3.get(l);
+            blockState.method_11637(world, blockPos5, 2);
+            world.updateNeighborsAlways(blockPos5, blockState.getBlock());
+        }
+        for (l = list.size() - 1; l >= 0; --l) {
+            world.updateNeighborsAlways(list.get(l), blockStates[j++].getBlock());
         }
         if (retract) {
             world.updateNeighborsAlways(blockPos, Blocks.PISTON_HEAD);

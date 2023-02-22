@@ -8,6 +8,7 @@
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap$Entry
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+ *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
  *  it.unimi.dsi.fastutil.objects.ObjectIterator
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -20,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.List;
 import java.util.Map;
@@ -31,12 +33,14 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.color.world.BiomeColors;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.particle.FireworksSparkParticle;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.sound.EntityTrackingSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.client.world.BiomeColorCache;
 import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.client.world.DummyClientTickScheduler;
 import net.minecraft.entity.Entity;
@@ -58,12 +62,16 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.RegistryTagManager;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.CuboidBlockIterator;
+import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
@@ -72,10 +80,14 @@ import net.minecraft.world.GameRules;
 import net.minecraft.world.LightType;
 import net.minecraft.world.TickScheduler;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.Biomes;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.LevelGeneratorType;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import org.jetbrains.annotations.Nullable;
@@ -92,6 +104,12 @@ extends World {
     private int ticksUntilCaveAmbientSound = this.random.nextInt(12000);
     private Scoreboard scoreboard = new Scoreboard();
     private final Map<String, MapState> mapStates = Maps.newHashMap();
+    private int lightningTicksLeft;
+    private final Object2ObjectArrayMap<ColorResolver, BiomeColorCache> colorCache = Util.make(new Object2ObjectArrayMap(3), object2ObjectArrayMap -> {
+        object2ObjectArrayMap.put((Object)BiomeColors.GRASS_COLOR, (Object)new BiomeColorCache());
+        object2ObjectArrayMap.put((Object)BiomeColors.FOLIAGE_COLOR, (Object)new BiomeColorCache());
+        object2ObjectArrayMap.put((Object)BiomeColors.WATER_COLOR, (Object)new BiomeColorCache());
+    });
 
     public ClientWorld(ClientPlayNetworkHandler clientPlayNetworkHandler, LevelInfo levelInfo, DimensionType dimensionType, int chunkLoadDistance, Profiler profiler, WorldRenderer worldRenderer) {
         super(new LevelProperties(levelInfo, "MpServer"), dimensionType, (world, dimension) -> new ClientChunkManager((ClientWorld)world, chunkLoadDistance), profiler, true);
@@ -155,9 +173,7 @@ extends World {
         if (!(entity instanceof PlayerEntity) && !this.getChunkManager().shouldTickEntity(entity)) {
             return;
         }
-        entity.lastRenderX = entity.x;
-        entity.lastRenderY = entity.y;
-        entity.lastRenderZ = entity.z;
+        entity.resetPosition(entity.getX(), entity.getY(), entity.getZ());
         entity.prevYaw = entity.yaw;
         entity.prevPitch = entity.pitch;
         if (entity.updateNeeded || entity.isSpectator()) {
@@ -182,9 +198,7 @@ extends World {
         if (!(passenger instanceof PlayerEntity) && !this.getChunkManager().shouldTickEntity(passenger)) {
             return;
         }
-        passenger.lastRenderX = passenger.x;
-        passenger.lastRenderY = passenger.y;
-        passenger.lastRenderZ = passenger.z;
+        passenger.resetPosition(passenger.getX(), passenger.getY(), passenger.getZ());
         passenger.prevYaw = passenger.yaw;
         passenger.prevPitch = passenger.pitch;
         if (passenger.updateNeeded) {
@@ -201,9 +215,9 @@ extends World {
 
     public void checkChunk(Entity entity) {
         this.getProfiler().push("chunkCheck");
-        int i = MathHelper.floor(entity.x / 16.0);
-        int j = MathHelper.floor(entity.y / 16.0);
-        int k = MathHelper.floor(entity.z / 16.0);
+        int i = MathHelper.floor(entity.getX() / 16.0);
+        int j = MathHelper.floor(entity.getY() / 16.0);
+        int k = MathHelper.floor(entity.getZ() / 16.0);
         if (!entity.updateNeeded || entity.chunkX != i || entity.chunkY != j || entity.chunkZ != k) {
             if (entity.updateNeeded && this.isChunkLoaded(entity.chunkX, entity.chunkZ)) {
                 this.getChunk(entity.chunkX, entity.chunkZ).remove(entity, entity.chunkY);
@@ -220,6 +234,14 @@ extends World {
     public void unloadBlockEntities(WorldChunk chunk) {
         this.unloadedBlockEntities.addAll(chunk.getBlockEntities().values());
         this.chunkManager.getLightingProvider().setLightEnabled(chunk.getPos(), false);
+    }
+
+    public void resetChunkColor(int i, int j) {
+        this.colorCache.forEach((colorResolver, biomeColorCache) -> biomeColorCache.reset(i, j));
+    }
+
+    public void reloadColor() {
+        this.colorCache.forEach((colorResolver, biomeColorCache) -> biomeColorCache.reset());
     }
 
     @Override
@@ -239,7 +261,7 @@ extends World {
         BlockPos blockPos = new BlockPos(this.client.player);
         BlockPos blockPos2 = blockPos.add(4 * (this.random.nextInt(3) - 1), 4 * (this.random.nextInt(3) - 1), 4 * (this.random.nextInt(3) - 1));
         double d = blockPos.getSquaredDistance(blockPos2);
-        if (d >= 4.0 && d <= 256.0 && (blockState = this.getBlockState(blockPos2)).isAir() && this.getLightLevel(blockPos2, 0) <= this.random.nextInt(8) && this.getLightLevel(LightType.SKY, blockPos2) <= 0) {
+        if (d >= 4.0 && d <= 256.0 && (blockState = this.getBlockState(blockPos2)).isAir() && this.getBaseLightLevel(blockPos2, 0) <= this.random.nextInt(8) && this.getLightLevel(LightType.SKY, blockPos2) <= 0) {
             this.playSound((double)blockPos2.getX() + 0.5, (double)blockPos2.getY() + 0.5, (double)blockPos2.getZ() + 0.5, SoundEvents.AMBIENT_CAVE, SoundCategory.AMBIENT, 0.7f, 0.8f + this.random.nextFloat() * 0.2f, false);
             this.ticksUntilCaveAmbientSound = this.random.nextInt(12000) + 6000;
         }
@@ -265,7 +287,7 @@ extends World {
     private void addEntityPrivate(int id, Entity entity) {
         this.removeEntity(id);
         this.regularEntities.put(id, (Object)entity);
-        this.getChunkManager().getChunk(MathHelper.floor(entity.x / 16.0), MathHelper.floor(entity.z / 16.0), ChunkStatus.FULL, true).addEntity(entity);
+        this.getChunkManager().getChunk(MathHelper.floor(entity.getX() / 16.0), MathHelper.floor(entity.getZ() / 16.0), ChunkStatus.FULL, true).addEntity(entity);
     }
 
     public void removeEntity(int i) {
@@ -287,8 +309,8 @@ extends World {
     public void addEntitiesToChunk(WorldChunk chunk) {
         for (Int2ObjectMap.Entry entry : this.regularEntities.int2ObjectEntrySet()) {
             Entity entity = (Entity)entry.getValue();
-            int i = MathHelper.floor(entity.x / 16.0);
-            int j = MathHelper.floor(entity.z / 16.0);
+            int i = MathHelper.floor(entity.getX() / 16.0);
+            int j = MathHelper.floor(entity.getZ() / 16.0);
             if (i != chunk.getPos().x || j != chunk.getPos().z) continue;
             chunk.addEntity(entity);
         }
@@ -312,8 +334,14 @@ extends World {
     public void doRandomBlockDisplayTicks(int xCenter, int yCenter, int i) {
         int j = 32;
         Random random = new Random();
-        ItemStack itemStack = this.client.player.getMainHandStack();
-        boolean bl = this.client.interactionManager.getCurrentGameMode() == GameMode.CREATIVE && !itemStack.isEmpty() && itemStack.getItem() == Blocks.BARRIER.asItem();
+        boolean bl = false;
+        if (this.client.interactionManager.getCurrentGameMode() == GameMode.CREATIVE) {
+            for (ItemStack itemStack : this.client.player.getItemsHand()) {
+                if (itemStack.getItem() != Blocks.BARRIER.asItem()) continue;
+                bl = true;
+                break;
+            }
+        }
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int k = 0; k < 667; ++k) {
             this.randomBlockDisplayTick(xCenter, yCenter, i, 16, random, bl, mutable);
@@ -334,12 +362,12 @@ extends World {
             ParticleEffect particleEffect = fluidState.getParticle();
             if (particleEffect != null && this.random.nextInt(10) == 0) {
                 boolean bl = blockState.isSideSolidFullSquare(this, pos, Direction.DOWN);
-                BlockPos blockPos = pos.down();
-                this.addParticle(blockPos, this.getBlockState(blockPos), particleEffect, bl);
+                Vec3i blockPos = pos.down();
+                this.addParticle((BlockPos)blockPos, this.getBlockState((BlockPos)blockPos), particleEffect, bl);
             }
         }
         if (spawnBarrierParticles && blockState.getBlock() == Blocks.BARRIER) {
-            this.addParticle(ParticleTypes.BARRIER, (float)i + 0.5f, (float)j + 0.5f, (float)k + 0.5f, 0.0, 0.0, 0.0);
+            this.addParticle(ParticleTypes.BARRIER, (double)i + 0.5, (double)j + 0.5, (double)k + 0.5, 0.0, 0.0, 0.0);
         }
     }
 
@@ -504,7 +532,7 @@ extends World {
 
     @Override
     public void checkBlockRerender(BlockPos pos, BlockState old, BlockState updated) {
-        this.worldRenderer.method_21596(pos, old, updated);
+        this.worldRenderer.checkBlockRerender(pos, old, updated);
     }
 
     public void scheduleBlockRenders(int x, int y, int z) {
@@ -559,6 +587,148 @@ extends World {
 
     public List<AbstractClientPlayerEntity> getPlayers() {
         return this.players;
+    }
+
+    @Override
+    public Biome getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
+        return Biomes.PLAINS;
+    }
+
+    public float method_23783(float f) {
+        float g = this.getSkyAngle(f);
+        float h = 1.0f - (MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.2f);
+        h = MathHelper.clamp(h, 0.0f, 1.0f);
+        h = 1.0f - h;
+        h = (float)((double)h * (1.0 - (double)(this.getRainGradient(f) * 5.0f) / 16.0));
+        h = (float)((double)h * (1.0 - (double)(this.getThunderGradient(f) * 5.0f) / 16.0));
+        return h * 0.8f + 0.2f;
+    }
+
+    public Vec3d method_23777(BlockPos blockPos, float f) {
+        float o;
+        float n;
+        float g = this.getSkyAngle(f);
+        float h = MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.5f;
+        h = MathHelper.clamp(h, 0.0f, 1.0f);
+        Biome biome = this.getBiome(blockPos);
+        int i = biome.getSkyColor();
+        float j = (float)(i >> 16 & 0xFF) / 255.0f;
+        float k = (float)(i >> 8 & 0xFF) / 255.0f;
+        float l = (float)(i & 0xFF) / 255.0f;
+        j *= h;
+        k *= h;
+        l *= h;
+        float m = this.getRainGradient(f);
+        if (m > 0.0f) {
+            n = (j * 0.3f + k * 0.59f + l * 0.11f) * 0.6f;
+            o = 1.0f - m * 0.75f;
+            j = j * o + n * (1.0f - o);
+            k = k * o + n * (1.0f - o);
+            l = l * o + n * (1.0f - o);
+        }
+        if ((n = this.getThunderGradient(f)) > 0.0f) {
+            o = (j * 0.3f + k * 0.59f + l * 0.11f) * 0.2f;
+            float p = 1.0f - n * 0.75f;
+            j = j * p + o * (1.0f - p);
+            k = k * p + o * (1.0f - p);
+            l = l * p + o * (1.0f - p);
+        }
+        if (this.lightningTicksLeft > 0) {
+            o = (float)this.lightningTicksLeft - f;
+            if (o > 1.0f) {
+                o = 1.0f;
+            }
+            j = j * (1.0f - (o *= 0.45f)) + 0.8f * o;
+            k = k * (1.0f - o) + 0.8f * o;
+            l = l * (1.0f - o) + 1.0f * o;
+        }
+        return new Vec3d(j, k, l);
+    }
+
+    public Vec3d getCloudsColor(float tickDelta) {
+        float m;
+        float l;
+        float f = this.getSkyAngle(tickDelta);
+        float g = MathHelper.cos(f * ((float)Math.PI * 2)) * 2.0f + 0.5f;
+        g = MathHelper.clamp(g, 0.0f, 1.0f);
+        float h = 1.0f;
+        float i = 1.0f;
+        float j = 1.0f;
+        float k = this.getRainGradient(tickDelta);
+        if (k > 0.0f) {
+            l = (h * 0.3f + i * 0.59f + j * 0.11f) * 0.6f;
+            m = 1.0f - k * 0.95f;
+            h = h * m + l * (1.0f - m);
+            i = i * m + l * (1.0f - m);
+            j = j * m + l * (1.0f - m);
+        }
+        h *= g * 0.9f + 0.1f;
+        i *= g * 0.9f + 0.1f;
+        j *= g * 0.85f + 0.15f;
+        l = this.getThunderGradient(tickDelta);
+        if (l > 0.0f) {
+            m = (h * 0.3f + i * 0.59f + j * 0.11f) * 0.2f;
+            float n = 1.0f - l * 0.95f;
+            h = h * n + m * (1.0f - n);
+            i = i * n + m * (1.0f - n);
+            j = j * n + m * (1.0f - n);
+        }
+        return new Vec3d(h, i, j);
+    }
+
+    public Vec3d getFogColor(float tickDelta) {
+        float f = this.getSkyAngle(tickDelta);
+        return this.dimension.getFogColor(f, tickDelta);
+    }
+
+    public float method_23787(float f) {
+        float g = this.getSkyAngle(f);
+        float h = 1.0f - (MathHelper.cos(g * ((float)Math.PI * 2)) * 2.0f + 0.25f);
+        h = MathHelper.clamp(h, 0.0f, 1.0f);
+        return h * h * 0.5f;
+    }
+
+    public double getSkyDarknessHeight() {
+        if (this.properties.getGeneratorType() == LevelGeneratorType.FLAT) {
+            return 0.0;
+        }
+        return 63.0;
+    }
+
+    public int getLightningTicksLeft() {
+        return this.lightningTicksLeft;
+    }
+
+    @Override
+    public void setLightningTicksLeft(int lightningTicksLeft) {
+        this.lightningTicksLeft = lightningTicksLeft;
+    }
+
+    @Override
+    public int getColor(BlockPos pos, ColorResolver colorResolver) {
+        BiomeColorCache biomeColorCache = (BiomeColorCache)this.colorCache.get((Object)colorResolver);
+        return biomeColorCache.getBiomeColor(pos, () -> this.calculateColor(pos, colorResolver));
+    }
+
+    public int calculateColor(BlockPos pos, ColorResolver colorResolver) {
+        int i = MinecraftClient.getInstance().options.biomeBlendRadius;
+        if (i == 0) {
+            return colorResolver.getColor(this.getBiome(pos), pos.getX(), pos.getZ());
+        }
+        int j = (i * 2 + 1) * (i * 2 + 1);
+        int k = 0;
+        int l = 0;
+        int m = 0;
+        CuboidBlockIterator cuboidBlockIterator = new CuboidBlockIterator(pos.getX() - i, pos.getY(), pos.getZ() - i, pos.getX() + i, pos.getY(), pos.getZ() + i);
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        while (cuboidBlockIterator.step()) {
+            mutable.set(cuboidBlockIterator.getX(), cuboidBlockIterator.getY(), cuboidBlockIterator.getZ());
+            int n = colorResolver.getColor(this.getBiome(mutable), mutable.getX(), mutable.getZ());
+            k += (n & 0xFF0000) >> 16;
+            l += (n & 0xFF00) >> 8;
+            m += n & 0xFF;
+        }
+        return (k / j & 0xFF) << 16 | (l / j & 0xFF) << 8 | m / j & 0xFF;
     }
 
     @Override

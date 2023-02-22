@@ -25,17 +25,17 @@ import org.apache.logging.log4j.Logger;
 
 public class DisableableProfiler
 implements Profiler {
-    private static final Logger field_19286 = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger();
     private static final long field_16268 = Duration.ofMillis(300L).toNanos();
     private final IntSupplier tickSupplier;
-    private final ProfilerControllerImpl controller = new ProfilerControllerImpl();
-    private final ProfilerControllerImpl field_16271 = new ProfilerControllerImpl();
+    private final ControllerImpl controller = new ControllerImpl();
+    private final ControllerImpl field_16271 = new ControllerImpl();
 
     public DisableableProfiler(IntSupplier tickSupplier) {
         this.tickSupplier = tickSupplier;
     }
 
-    public ProfilerController getController() {
+    public Controller getController() {
         return this.controller;
     }
 
@@ -82,11 +82,23 @@ implements Profiler {
         this.field_16271.profiler.swap(locationGetter);
     }
 
-    class ProfilerControllerImpl
-    implements ProfilerController {
+    @Override
+    public void visit(String marker) {
+        this.controller.profiler.visit(marker);
+        this.field_16271.profiler.visit(marker);
+    }
+
+    @Override
+    public void visit(Supplier<String> markerGetter) {
+        this.controller.profiler.visit(markerGetter);
+        this.field_16271.profiler.visit(markerGetter);
+    }
+
+    class ControllerImpl
+    implements Controller {
         protected ReadableProfiler profiler = DummyProfiler.INSTANCE;
 
-        private ProfilerControllerImpl() {
+        private ControllerImpl() {
         }
 
         @Override
@@ -110,12 +122,12 @@ implements Profiler {
         @Override
         public void enable() {
             if (this.profiler == DummyProfiler.INSTANCE) {
-                this.profiler = new ProfilerSystem(Util.getMeasuringTimeNano(), DisableableProfiler.this.tickSupplier);
+                this.profiler = new ProfilerSystem(Util.getMeasuringTimeNano(), DisableableProfiler.this.tickSupplier, true);
             }
         }
     }
 
-    public static interface ProfilerController {
+    public static interface Controller {
         public boolean isEnabled();
 
         public ProfileResult disable();

@@ -99,7 +99,8 @@ extends AnimalEntity {
     }
 
     @Override
-    public void handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+        return false;
     }
 
     @Override
@@ -164,13 +165,13 @@ extends AnimalEntity {
     @Override
     public void updatePassengerPosition(Entity passenger) {
         super.updatePassengerPosition(passenger);
-        float f = MathHelper.sin(this.field_6283 * ((float)Math.PI / 180));
-        float g = MathHelper.cos(this.field_6283 * ((float)Math.PI / 180));
+        float f = MathHelper.sin(this.bodyYaw * ((float)Math.PI / 180));
+        float g = MathHelper.cos(this.bodyYaw * ((float)Math.PI / 180));
         float h = 0.1f;
         float i = 0.0f;
-        passenger.updatePosition(this.x + (double)(0.1f * f), this.y + (double)(this.getHeight() * 0.5f) + passenger.getHeightOffset() + 0.0, this.z - (double)(0.1f * g));
+        passenger.updatePosition(this.getX() + (double)(0.1f * f), this.getBodyY(0.5) + passenger.getHeightOffset() + 0.0, this.getZ() - (double)(0.1f * g));
         if (passenger instanceof LivingEntity) {
-            ((LivingEntity)passenger).field_6283 = this.field_6283;
+            ((LivingEntity)passenger).bodyYaw = this.bodyYaw;
         }
     }
 

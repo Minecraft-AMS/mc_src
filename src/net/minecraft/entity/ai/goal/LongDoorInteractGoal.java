@@ -8,18 +8,18 @@ import net.minecraft.entity.mob.MobEntity;
 
 public class LongDoorInteractGoal
 extends DoorInteractGoal {
-    private final boolean field_19004;
+    private final boolean delayedClose;
     private int ticksLeft;
 
     public LongDoorInteractGoal(MobEntity mob, boolean delayedClose) {
         super(mob);
         this.mob = mob;
-        this.field_19004 = delayedClose;
+        this.delayedClose = delayedClose;
     }
 
     @Override
     public boolean shouldContinue() {
-        return this.field_19004 && this.ticksLeft > 0 && super.shouldContinue();
+        return this.delayedClose && this.ticksLeft > 0 && super.shouldContinue();
     }
 
     @Override

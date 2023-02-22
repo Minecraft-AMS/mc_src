@@ -30,10 +30,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootPool;
@@ -108,13 +106,13 @@ public class LootTable {
         return this.type;
     }
 
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
+    public void check(LootTableReporter reporter) {
         int i;
         for (i = 0; i < this.pools.length; ++i) {
-            this.pools[i].check(reporter.makeChild(".pools[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.pools[i].check(reporter.makeChild(".pools[" + i + "]"));
         }
         for (i = 0; i < this.functions.length; ++i) {
-            this.functions[i].check(reporter.makeChild(".functions[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.functions[i].check(reporter.makeChild(".functions[" + i + "]"));
         }
     }
 

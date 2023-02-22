@@ -36,14 +36,14 @@ extends Feature<DefaultFeatureConfig> {
             for (int j = 0; j < 16; ++j) {
                 int k = blockPos.getX() + i;
                 int l = blockPos.getZ() + j;
-                int m = iWorld.getTop(Heightmap.Type.MOTION_BLOCKING, k, l);
+                int m = iWorld.getTopY(Heightmap.Type.MOTION_BLOCKING, k, l);
                 mutable.set(k, m, l);
                 mutable2.set(mutable).setOffset(Direction.DOWN, 1);
                 Biome biome = iWorld.getBiome(mutable);
-                if (biome.canSetSnow(iWorld, mutable2, false)) {
+                if (biome.canSetIce(iWorld, mutable2, false)) {
                     iWorld.setBlockState(mutable2, Blocks.ICE.getDefaultState(), 2);
                 }
-                if (!biome.canSetIce(iWorld, mutable)) continue;
+                if (!biome.canSetSnow(iWorld, mutable)) continue;
                 iWorld.setBlockState(mutable, Blocks.SNOW.getDefaultState(), 2);
                 BlockState blockState = iWorld.getBlockState(mutable2);
                 if (!blockState.contains(SnowyBlock.SNOWY)) continue;

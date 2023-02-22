@@ -9,7 +9,7 @@
  */
 package com.mojang.realmsclient.gui.screens;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.realmsclient.client.RealmsClient;
 import com.mojang.realmsclient.dto.RealmsServer;
 import com.mojang.realmsclient.dto.WorldTemplate;
@@ -47,15 +47,15 @@ extends RealmsScreenWithCallback<WorldTemplate> {
     private int subtitleColor = 0xFF0000;
     private final int BUTTON_CANCEL_ID = 0;
     private final int BUTTON_FRAME_START = 100;
-    private WorldTemplatePaginatedList templates = null;
-    private WorldTemplatePaginatedList adventuremaps = null;
-    private WorldTemplatePaginatedList experiences = null;
-    private WorldTemplatePaginatedList inspirations = null;
+    private WorldTemplatePaginatedList field_20495;
+    private WorldTemplatePaginatedList field_20496;
+    private WorldTemplatePaginatedList field_20497;
+    private WorldTemplatePaginatedList field_20498;
     public int slot = -1;
     private ResetType typeToReset = ResetType.NONE;
-    private ResetWorldInfo worldInfoToReset = null;
-    private WorldTemplate worldTemplateToReset = null;
-    private String resetTitle = null;
+    private ResetWorldInfo field_20499;
+    private WorldTemplate field_20500;
+    private String field_20501;
     private int confirmationId = -1;
 
     public RealmsResetWorldScreen(RealmsScreen lastScreen, RealmsServer serverData, RealmsScreen returnScreen) {
@@ -81,7 +81,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
     }
 
     public void setResetTitle(String title) {
-        this.resetTitle = title;
+        this.field_20501 = title;
     }
 
     @Override
@@ -104,10 +104,10 @@ extends RealmsScreenWithCallback<WorldTemplate> {
                     WorldTemplatePaginatedList worldTemplatePaginatedList3 = realmsClient.fetchWorldTemplates(1, 10, RealmsServer.WorldType.EXPERIENCE);
                     WorldTemplatePaginatedList worldTemplatePaginatedList4 = realmsClient.fetchWorldTemplates(1, 10, RealmsServer.WorldType.INSPIRATION);
                     Realms.execute(() -> {
-                        RealmsResetWorldScreen.this.templates = worldTemplatePaginatedList;
-                        RealmsResetWorldScreen.this.adventuremaps = worldTemplatePaginatedList2;
-                        RealmsResetWorldScreen.this.experiences = worldTemplatePaginatedList3;
-                        RealmsResetWorldScreen.this.inspirations = worldTemplatePaginatedList4;
+                        RealmsResetWorldScreen.this.field_20495 = worldTemplatePaginatedList;
+                        RealmsResetWorldScreen.this.field_20496 = worldTemplatePaginatedList2;
+                        RealmsResetWorldScreen.this.field_20497 = worldTemplatePaginatedList3;
+                        RealmsResetWorldScreen.this.field_20498 = worldTemplatePaginatedList4;
                     });
                 }
                 catch (RealmsServiceException realmsServiceException) {
@@ -137,7 +137,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
 
             @Override
             public void onPress() {
-                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.NORMAL, RealmsResetWorldScreen.this.templates);
+                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.NORMAL, RealmsResetWorldScreen.this.field_20495);
                 realmsSelectWorldTemplateScreen.setTitle(RealmsScreen.getLocalizedString("mco.reset.world.template"));
                 Realms.setScreen(realmsSelectWorldTemplateScreen);
             }
@@ -146,7 +146,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
 
             @Override
             public void onPress() {
-                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.ADVENTUREMAP, RealmsResetWorldScreen.this.adventuremaps);
+                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.ADVENTUREMAP, RealmsResetWorldScreen.this.field_20496);
                 realmsSelectWorldTemplateScreen.setTitle(RealmsScreen.getLocalizedString("mco.reset.world.adventure"));
                 Realms.setScreen(realmsSelectWorldTemplateScreen);
             }
@@ -155,7 +155,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
 
             @Override
             public void onPress() {
-                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.EXPERIENCE, RealmsResetWorldScreen.this.experiences);
+                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.EXPERIENCE, RealmsResetWorldScreen.this.field_20497);
                 realmsSelectWorldTemplateScreen.setTitle(RealmsScreen.getLocalizedString("mco.reset.world.experience"));
                 Realms.setScreen(realmsSelectWorldTemplateScreen);
             }
@@ -164,7 +164,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
 
             @Override
             public void onPress() {
-                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.INSPIRATION, RealmsResetWorldScreen.this.inspirations);
+                RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(RealmsResetWorldScreen.this, RealmsServer.WorldType.INSPIRATION, RealmsResetWorldScreen.this.field_20498);
                 realmsSelectWorldTemplateScreen.setTitle(RealmsScreen.getLocalizedString("mco.reset.world.inspiration"));
                 Realms.setScreen(realmsSelectWorldTemplateScreen);
             }
@@ -210,16 +210,16 @@ extends RealmsScreenWithCallback<WorldTemplate> {
             RealmsTextureManager.bindWorldTemplate(String.valueOf(imageId), image);
         }
         if (hoveredOrFocused) {
-            GlStateManager.color4f(0.56f, 0.56f, 0.56f, 1.0f);
+            RenderSystem.color4f(0.56f, 0.56f, 0.56f, 1.0f);
         } else {
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         }
         RealmsScreen.blit(x + 2, y + 14, 0.0f, 0.0f, 56, 56, 56, 56);
         RealmsResetWorldScreen.bind("realms:textures/gui/realms/slot_frame.png");
         if (hoveredOrFocused) {
-            GlStateManager.color4f(0.56f, 0.56f, 0.56f, 1.0f);
+            RenderSystem.color4f(0.56f, 0.56f, 0.56f, 1.0f);
         } else {
-            GlStateManager.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
         }
         RealmsScreen.blit(x, y + 12, 0.0f, 0.0f, 60, 60, 60, 60);
         this.drawCenteredString(text, x + 30, y, hoveredOrFocused ? 0xA0A0A0 : 0xFFFFFF);
@@ -248,7 +248,7 @@ extends RealmsScreenWithCallback<WorldTemplate> {
                         this.typeToReset = ResetType.INSPIRATION;
                     }
                 }
-                this.worldTemplateToReset = worldTemplate;
+                this.field_20500 = worldTemplate;
                 this.switchSlot();
             }
         }
@@ -273,13 +273,13 @@ extends RealmsScreenWithCallback<WorldTemplate> {
                 case SURVIVAL_SPAWN: 
                 case EXPERIENCE: 
                 case INSPIRATION: {
-                    if (this.worldTemplateToReset == null) break;
-                    this.resetWorldWithTemplate(this.worldTemplateToReset);
+                    if (this.field_20500 == null) break;
+                    this.resetWorldWithTemplate(this.field_20500);
                     break;
                 }
                 case GENERATE: {
-                    if (this.worldInfoToReset == null) break;
-                    this.triggerResetWorld(this.worldInfoToReset);
+                    if (this.field_20499 == null) break;
+                    this.triggerResetWorld(this.field_20499);
                     break;
                 }
                 default: {
@@ -298,8 +298,8 @@ extends RealmsScreenWithCallback<WorldTemplate> {
 
     public void resetWorldWithTemplate(WorldTemplate template) {
         RealmsTasks.ResettingWorldTask resettingWorldTask = new RealmsTasks.ResettingWorldTask(this.serverData.id, this.returnScreen, template);
-        if (this.resetTitle != null) {
-            resettingWorldTask.setResetTitle(this.resetTitle);
+        if (this.field_20501 != null) {
+            resettingWorldTask.setResetTitle(this.field_20501);
         }
         if (this.confirmationId != -1) {
             resettingWorldTask.setConfirmationId(this.confirmationId);
@@ -314,15 +314,15 @@ extends RealmsScreenWithCallback<WorldTemplate> {
             this.triggerResetWorld(resetWorldInfo);
         } else {
             this.typeToReset = ResetType.GENERATE;
-            this.worldInfoToReset = resetWorldInfo;
+            this.field_20499 = resetWorldInfo;
             this.switchSlot();
         }
     }
 
     private void triggerResetWorld(ResetWorldInfo resetWorldInfo) {
         RealmsTasks.ResettingWorldTask resettingWorldTask = new RealmsTasks.ResettingWorldTask(this.serverData.id, this.returnScreen, resetWorldInfo.seed, resetWorldInfo.levelType, resetWorldInfo.generateStructures);
-        if (this.resetTitle != null) {
-            resettingWorldTask.setResetTitle(this.resetTitle);
+        if (this.field_20501 != null) {
+            resettingWorldTask.setResetTitle(this.field_20501);
         }
         if (this.confirmationId != -1) {
             resettingWorldTask.setConfirmationId(this.confirmationId);

@@ -37,10 +37,10 @@ implements State<S> {
                 return "<NULL>";
             }
             Property<?> property = entry.getKey();
-            return property.getName() + "=" + this.valueToString(property, entry.getValue());
+            return property.getName() + "=" + this.nameValue(property, entry.getValue());
         }
 
-        private <T extends Comparable<T>> String valueToString(Property<T> property, Comparable<?> value) {
+        private <T extends Comparable<T>> String nameValue(Property<T> property, Comparable<?> value) {
             return property.name(value);
         }
 
@@ -51,13 +51,11 @@ implements State<S> {
     };
     protected final O owner;
     private final ImmutableMap<Property<?>, Comparable<?>> entries;
-    private final int hashCode;
     private Table<Property<?>, Comparable<?>, S> withTable;
 
     protected AbstractState(O owner, ImmutableMap<Property<?>, Comparable<?>> entries) {
         this.owner = owner;
         this.entries = entries;
-        this.hashCode = entries.hashCode();
     }
 
     public <T extends Comparable<T>> S cycle(Property<T> property) {
@@ -144,14 +142,6 @@ implements State<S> {
     @Override
     public ImmutableMap<Property<?>, Comparable<?>> getEntries() {
         return this.entries;
-    }
-
-    public boolean equals(Object o) {
-        return this == o;
-    }
-
-    public int hashCode() {
-        return this.hashCode;
     }
 }
 

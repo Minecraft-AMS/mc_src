@@ -2,51 +2,36 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
- *  it.unimi.dsi.fastutil.longs.LongIterator
- *  it.unimi.dsi.fastutil.objects.Object2LongMap
- *  it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- *  org.apache.logging.log4j.util.Supplier
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
-import com.google.common.collect.Maps;
-import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.NetherPortalBlock;
 import net.minecraft.block.pattern.BlockPattern;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ColumnPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.util.Supplier;
+import net.minecraft.world.poi.PointOfInterest;
+import net.minecraft.world.poi.PointOfInterestStorage;
+import net.minecraft.world.poi.PointOfInterestType;
 import org.jetbrains.annotations.Nullable;
 
 public class PortalForcer {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final NetherPortalBlock PORTAL_BLOCK = (NetherPortalBlock)Blocks.NETHER_PORTAL;
     private final ServerWorld world;
     private final Random random;
-    private final Map<ColumnPos, TicketInfo> ticketInfos = Maps.newHashMapWithExpectedSize((int)4096);
-    private final Object2LongMap<ColumnPos> activePortals = new Object2LongOpenHashMap();
 
     public PortalForcer(ServerWorld world) {
         this.world = world;
@@ -64,68 +49,22 @@ public class PortalForcer {
         Vec3d vec3d3 = teleportTarget.velocity;
         entity.setVelocity(vec3d3);
         entity.yaw = f + (float)teleportTarget.yaw;
-        if (entity instanceof ServerPlayerEntity) {
-            ((ServerPlayerEntity)entity).networkHandler.requestTeleport(vec3d2.x, vec3d2.y, vec3d2.z, entity.yaw, entity.pitch);
-            ((ServerPlayerEntity)entity).networkHandler.syncWithPlayerPosition();
-        } else {
-            entity.refreshPositionAndAngles(vec3d2.x, vec3d2.y, vec3d2.z, entity.yaw, entity.pitch);
-        }
+        entity.positAfterTeleport(vec3d2.x, vec3d2.y, vec3d2.z);
         return true;
     }
 
     @Nullable
     public BlockPattern.TeleportTarget getPortal(BlockPos blockPos, Vec3d vec3d, Direction direction, double x, double y, boolean canActivate) {
-        int i = 128;
-        boolean bl = true;
-        BlockPos blockPos2 = null;
-        ColumnPos columnPos = new ColumnPos(blockPos);
-        if (!canActivate && this.activePortals.containsKey((Object)columnPos)) {
-            return null;
-        }
-        TicketInfo ticketInfo = this.ticketInfos.get(columnPos);
-        if (ticketInfo != null) {
-            blockPos2 = ticketInfo.pos;
-            ticketInfo.lastUsedTime = this.world.getTime();
-            bl = false;
-        } else {
-            double d = Double.MAX_VALUE;
-            for (int j = -128; j <= 128; ++j) {
-                for (int k = -128; k <= 128; ++k) {
-                    BlockPos blockPos3 = blockPos.add(j, this.world.getEffectiveHeight() - 1 - blockPos.getY(), k);
-                    while (blockPos3.getY() >= 0) {
-                        BlockPos blockPos4 = blockPos3.down();
-                        if (this.world.getBlockState(blockPos3).getBlock() == PORTAL_BLOCK) {
-                            blockPos4 = blockPos3.down();
-                            while (this.world.getBlockState(blockPos4).getBlock() == PORTAL_BLOCK) {
-                                blockPos3 = blockPos4;
-                                blockPos4 = blockPos3.down();
-                            }
-                            double e = blockPos3.getSquaredDistance(blockPos);
-                            if (d < 0.0 || e < d) {
-                                d = e;
-                                blockPos2 = blockPos3;
-                            }
-                        }
-                        blockPos3 = blockPos4;
-                    }
-                }
-            }
-        }
-        if (blockPos2 == null) {
-            long l = this.world.getTime() + 300L;
-            this.activePortals.put((Object)columnPos, l);
-            return null;
-        }
-        if (bl) {
-            this.ticketInfos.put(columnPos, new TicketInfo(blockPos2, this.world.getTime()));
-            Supplier[] supplierArray = new Supplier[2];
-            supplierArray[0] = this.world.getDimension()::getType;
-            supplierArray[1] = () -> columnPos;
-            LOGGER.debug("Adding nether portal ticket for {}:{}", supplierArray);
-            this.world.getChunkManager().addTicket(ChunkTicketType.PORTAL, new ChunkPos(blockPos2), 3, columnPos);
-        }
-        BlockPattern.Result result = PORTAL_BLOCK.findPortal(this.world, blockPos2);
-        return result.method_18478(direction, blockPos2, y, vec3d, x);
+        PointOfInterestStorage pointOfInterestStorage = this.world.getPointOfInterestStorage();
+        pointOfInterestStorage.method_22439(this.world, blockPos, 128);
+        List list = pointOfInterestStorage.method_22383(pointOfInterestType -> pointOfInterestType == PointOfInterestType.NETHER_PORTAL, blockPos, 128, PointOfInterestStorage.OccupationStatus.ANY).collect(Collectors.toList());
+        Optional<PointOfInterest> optional = list.stream().min(Comparator.comparingDouble(pointOfInterest -> pointOfInterest.getPos().getSquaredDistance(blockPos)).thenComparingInt(pointOfInterest -> pointOfInterest.getPos().getY()));
+        return optional.map(pointOfInterest -> {
+            BlockPos blockPos = pointOfInterest.getPos();
+            this.world.getChunkManager().addTicket(ChunkTicketType.PORTAL, new ChunkPos(blockPos), 3, blockPos);
+            BlockPattern.Result result = NetherPortalBlock.findPortal(this.world, blockPos);
+            return result.getTeleportTarget(direction, blockPos, y, vec3d, x);
+        }).orElse(null);
     }
 
     public boolean createPortal(Entity entity) {
@@ -143,9 +82,9 @@ public class PortalForcer {
         int r;
         int i = 16;
         double d = -1.0;
-        int j = MathHelper.floor(entity.x);
-        int k = MathHelper.floor(entity.y);
-        int l = MathHelper.floor(entity.z);
+        int j = MathHelper.floor(entity.getX());
+        int k = MathHelper.floor(entity.getY());
+        int l = MathHelper.floor(entity.getZ());
         int m = j;
         int n = k;
         int o = l;
@@ -153,9 +92,9 @@ public class PortalForcer {
         int q = this.random.nextInt(4);
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (r = j - 16; r <= j + 16; ++r) {
-            e = (double)r + 0.5 - entity.x;
+            e = (double)r + 0.5 - entity.getX();
             for (s = l - 16; s <= l + 16; ++s) {
-                f = (double)s + 0.5 - entity.z;
+                f = (double)s + 0.5 - entity.getZ();
                 block2: for (t = this.world.getEffectiveHeight() - 1; t >= 0; --t) {
                     if (!this.world.isAir(mutable.set(r, t, s))) continue;
                     while (t > 0 && this.world.isAir(mutable.set(r, t - 1, s))) {
@@ -179,7 +118,7 @@ public class PortalForcer {
                                 }
                             }
                         }
-                        double g = (double)t + 0.5 - entity.y;
+                        double g = (double)t + 0.5 - entity.getY();
                         double h = e * e + g * g + f * f;
                         if (!(d < 0.0) && !(h < d)) continue;
                         d = h;
@@ -193,9 +132,9 @@ public class PortalForcer {
         }
         if (d < 0.0) {
             for (r = j - 16; r <= j + 16; ++r) {
-                e = (double)r + 0.5 - entity.x;
+                e = (double)r + 0.5 - entity.getX();
                 for (s = l - 16; s <= l + 16; ++s) {
-                    f = (double)s + 0.5 - entity.z;
+                    f = (double)s + 0.5 - entity.getZ();
                     block10: for (t = this.world.getEffectiveHeight() - 1; t >= 0; --t) {
                         if (!this.world.isAir(mutable.set(r, t, s))) continue;
                         while (t > 0 && this.world.isAir(mutable.set(r, t - 1, s))) {
@@ -213,7 +152,7 @@ public class PortalForcer {
                                     if (y < 0 && !this.world.getBlockState(mutable).getMaterial().isSolid() || y >= 0 && !this.world.isAir(mutable)) continue block10;
                                 }
                             }
-                            double g = (double)t + 0.5 - entity.y;
+                            double g = (double)t + 0.5 - entity.getY();
                             double h = e * e + g * g + f * f;
                             if (!(d < 0.0) && !(h < d)) continue;
                             d = h;
@@ -258,7 +197,7 @@ public class PortalForcer {
                 this.world.setBlockState(mutable, Blocks.OBSIDIAN.getDefaultState(), 3);
             }
         }
-        BlockState blockState = (BlockState)PORTAL_BLOCK.getDefaultState().with(NetherPortalBlock.AXIS, af == 0 ? Direction.Axis.Z : Direction.Axis.X);
+        BlockState blockState = (BlockState)Blocks.NETHER_PORTAL.getDefaultState().with(NetherPortalBlock.AXIS, af == 0 ? Direction.Axis.Z : Direction.Axis.X);
         for (u = 0; u < 2; ++u) {
             for (v = 0; v < 3; ++v) {
                 mutable.set(ad + u * af, ae + v, s + u * ag);
@@ -266,49 +205,6 @@ public class PortalForcer {
             }
         }
         return true;
-    }
-
-    public void tick(long time) {
-        if (time % 100L == 0L) {
-            this.removeOldActivePortals(time);
-            this.removeOldTickets(time);
-        }
-    }
-
-    private void removeOldActivePortals(long time) {
-        LongIterator longIterator = this.activePortals.values().iterator();
-        while (longIterator.hasNext()) {
-            long l = longIterator.nextLong();
-            if (l > time) continue;
-            longIterator.remove();
-        }
-    }
-
-    private void removeOldTickets(long time) {
-        long l = time - 300L;
-        Iterator<Map.Entry<ColumnPos, TicketInfo>> iterator = this.ticketInfos.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<ColumnPos, TicketInfo> entry = iterator.next();
-            TicketInfo ticketInfo = entry.getValue();
-            if (ticketInfo.lastUsedTime >= l) continue;
-            ColumnPos columnPos = entry.getKey();
-            Supplier[] supplierArray = new Supplier[2];
-            supplierArray[0] = this.world.getDimension()::getType;
-            supplierArray[1] = () -> columnPos;
-            LOGGER.debug("Removing nether portal ticket for {}:{}", supplierArray);
-            this.world.getChunkManager().removeTicket(ChunkTicketType.PORTAL, new ChunkPos(ticketInfo.pos), 3, columnPos);
-            iterator.remove();
-        }
-    }
-
-    static class TicketInfo {
-        public final BlockPos pos;
-        public long lastUsedTime;
-
-        public TicketInfo(BlockPos pos, long lastUsedTime) {
-            this.pos = pos;
-            this.lastUsedTime = lastUsedTime;
-        }
     }
 }
 

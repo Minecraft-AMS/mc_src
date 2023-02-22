@@ -11,18 +11,17 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ChorusPlantBlock;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.CollisionView;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class ChorusFlowerBlock
@@ -37,7 +36,7 @@ extends Block {
     }
 
     @Override
-    public void onScheduledTick(BlockState state, World world, BlockPos pos, Random random) {
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         int j;
         if (!state.canPlaceAt(world, pos)) {
             world.breakBlock(pos, true);
@@ -111,9 +110,9 @@ extends Block {
         world.playLevelEvent(1034, pos, 0);
     }
 
-    private static boolean isSurroundedByAir(CollisionView world, BlockPos pos, @Nullable Direction exceptDirection) {
+    private static boolean isSurroundedByAir(WorldView worldView, BlockPos pos, @Nullable Direction exceptDirection) {
         for (Direction direction : Direction.Type.HORIZONTAL) {
-            if (direction == exceptDirection || world.isAir(pos.offset(direction))) continue;
+            if (direction == exceptDirection || worldView.isAir(pos.offset(direction))) continue;
             return false;
         }
         return true;
@@ -128,7 +127,7 @@ extends Block {
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, CollisionView world, BlockPos pos) {
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.down());
         Block block = blockState.getBlock();
         if (block == this.plantBlock || block == Blocks.END_STONE) {
@@ -151,11 +150,6 @@ extends Block {
             return false;
         }
         return bl;
-    }
-
-    @Override
-    public RenderLayer getRenderLayer() {
-        return RenderLayer.CUTOUT;
     }
 
     @Override
@@ -206,8 +200,7 @@ extends Block {
     @Override
     public void onProjectileHit(World world, BlockState state, BlockHitResult hitResult, Entity entity) {
         BlockPos blockPos = hitResult.getBlockPos();
-        ChorusFlowerBlock.dropStack(world, blockPos, new ItemStack(this));
-        world.breakBlock(blockPos, true);
+        world.breakBlock(blockPos, true, entity);
     }
 }
 

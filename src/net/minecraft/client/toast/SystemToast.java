@@ -8,7 +8,7 @@
  */
 package net.minecraft.client.toast;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.toast.Toast;
@@ -38,7 +38,7 @@ implements Toast {
             this.justUpdated = false;
         }
         manager.getGame().getTextureManager().bindTexture(TOASTS_TEX);
-        GlStateManager.color3f(1.0f, 1.0f, 1.0f);
+        RenderSystem.color3f(1.0f, 1.0f, 1.0f);
         manager.blit(0, 0, 0, 64, 160, 32);
         if (this.description == null) {
             manager.getGame().textRenderer.draw(this.title, 18.0f, 12.0f, -256);
@@ -77,7 +77,8 @@ implements Toast {
     public static enum Type {
         TUTORIAL_HINT,
         NARRATOR_TOGGLE,
-        WORLD_BACKUP;
+        WORLD_BACKUP,
+        PACK_LOAD_FAILURE;
 
     }
 }

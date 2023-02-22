@@ -20,14 +20,16 @@ import net.minecraft.world.level.LevelGeneratorType;
 public class PlayerRespawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
     private DimensionType dimension;
+    private long sha256Seed;
     private GameMode gameMode;
     private LevelGeneratorType generatorType;
 
     public PlayerRespawnS2CPacket() {
     }
 
-    public PlayerRespawnS2CPacket(DimensionType dimension, LevelGeneratorType generatorType, GameMode gameMode) {
+    public PlayerRespawnS2CPacket(DimensionType dimension, long sha256Seed, LevelGeneratorType generatorType, GameMode gameMode) {
         this.dimension = dimension;
+        this.sha256Seed = sha256Seed;
         this.gameMode = gameMode;
         this.generatorType = generatorType;
     }
@@ -40,6 +42,7 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void read(PacketByteBuf buf) throws IOException {
         this.dimension = DimensionType.byRawId(buf.readInt());
+        this.sha256Seed = buf.readLong();
         this.gameMode = GameMode.byId(buf.readUnsignedByte());
         this.generatorType = LevelGeneratorType.getTypeFromName(buf.readString(16));
         if (this.generatorType == null) {
@@ -50,6 +53,7 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void write(PacketByteBuf buf) throws IOException {
         buf.writeInt(this.dimension.getRawId());
+        buf.writeLong(this.sha256Seed);
         buf.writeByte(this.gameMode.getId());
         buf.writeString(this.generatorType.getName());
     }
@@ -57,6 +61,11 @@ implements Packet<ClientPlayPacketListener> {
     @Environment(value=EnvType.CLIENT)
     public DimensionType getDimension() {
         return this.dimension;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public long getSha256Seed() {
+        return this.sha256Seed;
     }
 
     @Environment(value=EnvType.CLIENT)

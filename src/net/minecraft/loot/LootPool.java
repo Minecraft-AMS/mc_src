@@ -27,30 +27,25 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootChoice;
-import net.minecraft.loot.LootTable;
 import net.minecraft.loot.LootTableRange;
 import net.minecraft.loot.LootTableRanges;
 import net.minecraft.loot.LootTableReporter;
 import net.minecraft.loot.UniformLootTableRange;
+import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.LootConditionConsumingBuilder;
 import net.minecraft.loot.condition.LootConditions;
 import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextType;
 import net.minecraft.loot.entry.LootEntry;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionConsumingBuilder;
 import net.minecraft.loot.function.LootFunctions;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.loot.condition.LootCondition;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -114,16 +109,16 @@ public class LootPool {
         }
     }
 
-    public void check(LootTableReporter reporter, Function<Identifier, LootTable> supplierGetter, Set<Identifier> parentLootTables, LootContextType contextType) {
+    public void check(LootTableReporter lootTableReporter) {
         int i;
         for (i = 0; i < this.conditions.length; ++i) {
-            this.conditions[i].check(reporter.makeChild(".condition[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.conditions[i].check(lootTableReporter.makeChild(".condition[" + i + "]"));
         }
         for (i = 0; i < this.functions.length; ++i) {
-            this.functions[i].check(reporter.makeChild(".functions[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.functions[i].check(lootTableReporter.makeChild(".functions[" + i + "]"));
         }
         for (i = 0; i < this.entries.length; ++i) {
-            this.entries[i].check(reporter.makeChild(".entries[" + i + "]"), supplierGetter, parentLootTables, contextType);
+            this.entries[i].check(lootTableReporter.makeChild(".entries[" + i + "]"));
         }
     }
 

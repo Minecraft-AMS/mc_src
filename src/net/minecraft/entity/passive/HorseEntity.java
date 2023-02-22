@@ -11,7 +11,6 @@ package net.minecraft.entity.passive;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.SpawnType;
@@ -49,6 +48,7 @@ extends HorseBaseEntity {
     private static final String[] HORSE_TEX_ID = new String[]{"hwh", "hcr", "hch", "hbr", "hbl", "hgr", "hdb"};
     private static final String[] HORSE_MARKING_TEX = new String[]{null, "textures/entity/horse/horse_markings_white.png", "textures/entity/horse/horse_markings_whitefield.png", "textures/entity/horse/horse_markings_whitedots.png", "textures/entity/horse/horse_markings_blackdots.png"};
     private static final String[] HORSE_MARKING_TEX_ID = new String[]{"", "wo_", "wmo", "wdo", "bdo"};
+    @Nullable
     private String textureLocation;
     private final String[] textureLayers = new String[2];
 
@@ -134,6 +134,7 @@ extends HorseBaseEntity {
     protected void updateSaddle() {
         super.updateSaddle();
         this.setArmorTypeFromStack(this.items.getInvStack(1));
+        this.setEquipmentDropChance(EquipmentSlot.CHEST, 0.0f);
     }
 
     private void setArmorTypeFromStack(ItemStack stack) {
@@ -215,7 +216,7 @@ extends HorseBaseEntity {
             return super.interactMob(player, hand);
         }
         if (!this.isBaby()) {
-            if (this.isTame() && player.isSneaking()) {
+            if (this.isTame() && player.shouldCancelInteraction()) {
                 this.openInventory(player);
                 return true;
             }
@@ -292,24 +293,24 @@ extends HorseBaseEntity {
 
     @Override
     @Nullable
-    public EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable EntityData entityData, @Nullable CompoundTag entityTag) {
+    public net.minecraft.entity.EntityData initialize(IWorld world, LocalDifficulty difficulty, SpawnType spawnType, @Nullable net.minecraft.entity.EntityData entityData, @Nullable CompoundTag entityTag) {
         int i;
-        if ((entityData = super.initialize(world, difficulty, spawnType, entityData, entityTag)) instanceof class_1499) {
-            i = ((class_1499)entityData).field_6994;
+        if (entityData instanceof EntityData) {
+            i = ((EntityData)entityData).variant;
         } else {
             i = this.random.nextInt(7);
-            entityData = new class_1499(i);
+            entityData = new EntityData(i);
         }
         this.setVariant(i | this.random.nextInt(5) << 8);
-        return entityData;
+        return super.initialize(world, difficulty, spawnType, entityData, entityTag);
     }
 
-    public static class class_1499
-    implements EntityData {
-        public final int field_6994;
+    public static class EntityData
+    extends PassiveEntity.EntityData {
+        public final int variant;
 
-        public class_1499(int i) {
-            this.field_6994 = i;
+        public EntityData(int i) {
+            this.variant = i;
         }
     }
 }

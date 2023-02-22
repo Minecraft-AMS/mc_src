@@ -8,12 +8,13 @@
  */
 package net.minecraft.client.texture;
 
-import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.IOException;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.ResourceManager;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,19 +24,27 @@ extends AbstractTexture
 implements AutoCloseable {
     private NativeImage image;
 
-    public NativeImageBackedTexture(NativeImage nativeImage) {
-        this.image = nativeImage;
-        TextureUtil.prepareImage(this.getGlId(), this.image.getWidth(), this.image.getHeight());
-        this.upload();
+    public NativeImageBackedTexture(NativeImage image) {
+        this.image = image;
+        if (!RenderSystem.isOnRenderThread()) {
+            RenderSystem.recordRenderCall(() -> {
+                TextureUtil.prepareImage(this.getGlId(), this.image.getWidth(), this.image.getHeight());
+                this.upload();
+            });
+        } else {
+            TextureUtil.prepareImage(this.getGlId(), this.image.getWidth(), this.image.getHeight());
+            this.upload();
+        }
     }
 
-    public NativeImageBackedTexture(int i, int j, boolean bl) {
-        this.image = new NativeImage(i, j, bl);
+    public NativeImageBackedTexture(int width, int height, boolean useStb) {
+        RenderSystem.assertThread(RenderSystem::isOnGameThreadOrInit);
+        this.image = new NativeImage(width, height, useStb);
         TextureUtil.prepareImage(this.getGlId(), this.image.getWidth(), this.image.getHeight());
     }
 
     @Override
-    public void load(ResourceManager resourceManager) throws IOException {
+    public void load(ResourceManager manager) throws IOException {
     }
 
     public void upload() {

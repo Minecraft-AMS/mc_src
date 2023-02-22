@@ -99,6 +99,17 @@ public class MathHelper {
         return value;
     }
 
+    @Environment(value=EnvType.CLIENT)
+    public static long clamp(long value, long min, long max) {
+        if (value < min) {
+            return min;
+        }
+        if (value > max) {
+            return max;
+        }
+        return value;
+    }
+
     public static float clamp(float value, float min, float max) {
         if (value < min) {
             return min;
@@ -177,8 +188,8 @@ public class MathHelper {
         return Math.abs(b - a) < 1.0E-5f;
     }
 
-    public static boolean method_20390(double d, double e) {
-        return Math.abs(e - d) < (double)1.0E-5f;
+    public static boolean approximatelyEquals(double a, double b) {
+        return Math.abs(b - a) < (double)1.0E-5f;
     }
 
     public static int floorMod(int i, int j) {
@@ -335,17 +346,8 @@ public class MathHelper {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static int multiplyColors(int first, int second) {
-        int i = (first & 0xFF0000) >> 16;
-        int j = (second & 0xFF0000) >> 16;
-        int k = (first & 0xFF00) >> 8;
-        int l = (second & 0xFF00) >> 8;
-        int m = (first & 0xFF) >> 0;
-        int n = (second & 0xFF) >> 0;
-        int o = (int)((float)i * (float)j / 255.0f);
-        int p = (int)((float)k * (float)l / 255.0f);
-        int q = (int)((float)m * (float)n / 255.0f);
-        return first & 0xFF000000 | o << 16 | p << 8 | q;
+    public static float fractionalPart(float value) {
+        return value - (float)MathHelper.floor(value);
     }
 
     public static double fractionalPart(double value) {
@@ -421,6 +423,16 @@ public class MathHelper {
         return o;
     }
 
+    @Environment(value=EnvType.CLIENT)
+    public static float fastInverseSqrt(float x) {
+        float f = 0.5f * x;
+        int i = Float.floatToIntBits(x);
+        i = 1597463007 - (i >> 1);
+        x = Float.intBitsToFloat(i);
+        x *= 1.5f - f * x * x;
+        return x;
+    }
+
     public static double fastInverseSqrt(double x) {
         double d = 0.5 * x;
         long l = Double.doubleToRawLongBits(x);
@@ -431,6 +443,15 @@ public class MathHelper {
     }
 
     @Environment(value=EnvType.CLIENT)
+    public static float fastInverseCbrt(float x) {
+        int i = Float.floatToIntBits(x);
+        i = 1419967116 - i / 3;
+        float f = Float.intBitsToFloat(i);
+        f = 0.6666667f * f + 1.0f / (3.0f * f * f * x);
+        f = 0.6666667f * f + 1.0f / (3.0f * f * f * x);
+        return f;
+    }
+
     public static int hsvToRgb(float hue, float saturation, float value) {
         float m;
         float l;
@@ -487,7 +508,7 @@ public class MathHelper {
         return n << 16 | o << 8 | p;
     }
 
-    public static int method_15354(int i) {
+    public static int idealHash(int i) {
         i ^= i >>> 16;
         i *= -2048144789;
         i ^= i >>> 13;
@@ -541,6 +562,29 @@ public class MathHelper {
     @Environment(value=EnvType.CLIENT)
     public static float lerpAngleDegrees(float delta, float first, float second) {
         return first + delta * MathHelper.wrapDegrees(second - first);
+    }
+
+    @Deprecated
+    public static float lerpAngle(float start, float end, float delta) {
+        float f;
+        for (f = end - start; f < -180.0f; f += 360.0f) {
+        }
+        while (f >= 180.0f) {
+            f -= 360.0f;
+        }
+        return start + delta * f;
+    }
+
+    @Deprecated
+    @Environment(value=EnvType.CLIENT)
+    public static float method_22860(double d) {
+        while (d >= 180.0) {
+            d -= 360.0;
+        }
+        while (d < -180.0) {
+            d += 360.0;
+        }
+        return (float)d;
     }
 
     static {

@@ -33,7 +33,7 @@ implements EntityContext {
 
     @Deprecated
     protected EntityContextImpl(Entity entity) {
-        this(entity.isSneaking(), entity.getBoundingBox().y1, entity instanceof LivingEntity ? ((LivingEntity)entity).getMainHandStack().getItem() : Items.AIR);
+        this(entity.isDescending(), entity.getY(), entity instanceof LivingEntity ? ((LivingEntity)entity).getMainHandStack().getItem() : Items.AIR);
     }
 
     @Override

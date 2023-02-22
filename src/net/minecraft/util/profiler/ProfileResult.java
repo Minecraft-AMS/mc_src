@@ -35,10 +35,8 @@ public interface ProfileResult {
         return this.getEndTick() - this.getStartTick();
     }
 
-    public String getTimingTreeString();
-
-    public static String method_21721(String string) {
-        return string.replace('\u001e', '.');
+    public static String getHumanReadableName(String path) {
+        return path.replace('\u001e', '.');
     }
 }
 

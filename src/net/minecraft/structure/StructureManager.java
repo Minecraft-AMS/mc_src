@@ -124,11 +124,15 @@ implements SynchronousResourceReloadListener {
 
     private Structure readStructure(InputStream structureInputStream) throws IOException {
         CompoundTag compoundTag = NbtIo.readCompressed(structureInputStream);
-        if (!compoundTag.contains("DataVersion", 99)) {
-            compoundTag.putInt("DataVersion", 500);
+        return this.createStructure(compoundTag);
+    }
+
+    public Structure createStructure(CompoundTag tag) {
+        if (!tag.contains("DataVersion", 99)) {
+            tag.putInt("DataVersion", 500);
         }
         Structure structure = new Structure();
-        structure.fromTag(NbtHelper.update(this.dataFixer, DataFixTypes.STRUCTURE, compoundTag, compoundTag.getInt("DataVersion")));
+        structure.fromTag(NbtHelper.update(this.dataFixer, DataFixTypes.STRUCTURE, tag, tag.getInt("DataVersion")));
         return structure;
     }
 
@@ -159,11 +163,11 @@ implements SynchronousResourceReloadListener {
         return true;
     }
 
-    private Path getStructurePath(Identifier id, String extension) {
+    public Path getStructurePath(Identifier id, String extension) {
         try {
             Path path = this.generatedPath.resolve(id.getNamespace());
             Path path2 = path.resolve("structures");
-            return FileNameUtil.method_20202(path2, id.getPath(), extension);
+            return FileNameUtil.getResourcePath(path2, id.getPath(), extension);
         }
         catch (InvalidPathException invalidPathException) {
             throw new InvalidIdentifierException("Invalid resource path: " + id, invalidPathException);

@@ -2,104 +2,83 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class ChickenEntityModel<T extends Entity>
-extends EntityModel<T> {
+extends AnimalModel<T> {
     private final ModelPart head;
-    private final ModelPart field_3346;
-    private final ModelPart field_3345;
-    private final ModelPart field_3343;
-    private final ModelPart field_3341;
-    private final ModelPart field_3347;
-    private final ModelPart field_3340;
-    private final ModelPart field_3342;
+    private final ModelPart torso;
+    private final ModelPart rightLeg;
+    private final ModelPart leftLeg;
+    private final ModelPart rightWing;
+    private final ModelPart leftWing;
+    private final ModelPart beak;
+    private final ModelPart wattle;
 
     public ChickenEntityModel() {
         int i = 16;
         this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-2.0f, -6.0f, -2.0f, 4, 6, 3, 0.0f);
+        this.head.addCuboid(-2.0f, -6.0f, -2.0f, 4.0f, 6.0f, 3.0f, 0.0f);
         this.head.setPivot(0.0f, 15.0f, -4.0f);
-        this.field_3340 = new ModelPart(this, 14, 0);
-        this.field_3340.addCuboid(-2.0f, -4.0f, -4.0f, 4, 2, 2, 0.0f);
-        this.field_3340.setPivot(0.0f, 15.0f, -4.0f);
-        this.field_3342 = new ModelPart(this, 14, 4);
-        this.field_3342.addCuboid(-1.0f, -2.0f, -3.0f, 2, 2, 2, 0.0f);
-        this.field_3342.setPivot(0.0f, 15.0f, -4.0f);
-        this.field_3346 = new ModelPart(this, 0, 9);
-        this.field_3346.addCuboid(-3.0f, -4.0f, -3.0f, 6, 8, 6, 0.0f);
-        this.field_3346.setPivot(0.0f, 16.0f, 0.0f);
-        this.field_3345 = new ModelPart(this, 26, 0);
-        this.field_3345.addCuboid(-1.0f, 0.0f, -3.0f, 3, 5, 3);
-        this.field_3345.setPivot(-2.0f, 19.0f, 1.0f);
-        this.field_3343 = new ModelPart(this, 26, 0);
-        this.field_3343.addCuboid(-1.0f, 0.0f, -3.0f, 3, 5, 3);
-        this.field_3343.setPivot(1.0f, 19.0f, 1.0f);
-        this.field_3341 = new ModelPart(this, 24, 13);
-        this.field_3341.addCuboid(0.0f, 0.0f, -3.0f, 1, 4, 6);
-        this.field_3341.setPivot(-4.0f, 13.0f, 0.0f);
-        this.field_3347 = new ModelPart(this, 24, 13);
-        this.field_3347.addCuboid(-1.0f, 0.0f, -3.0f, 1, 4, 6);
-        this.field_3347.setPivot(4.0f, 13.0f, 0.0f);
+        this.beak = new ModelPart(this, 14, 0);
+        this.beak.addCuboid(-2.0f, -4.0f, -4.0f, 4.0f, 2.0f, 2.0f, 0.0f);
+        this.beak.setPivot(0.0f, 15.0f, -4.0f);
+        this.wattle = new ModelPart(this, 14, 4);
+        this.wattle.addCuboid(-1.0f, -2.0f, -3.0f, 2.0f, 2.0f, 2.0f, 0.0f);
+        this.wattle.setPivot(0.0f, 15.0f, -4.0f);
+        this.torso = new ModelPart(this, 0, 9);
+        this.torso.addCuboid(-3.0f, -4.0f, -3.0f, 6.0f, 8.0f, 6.0f, 0.0f);
+        this.torso.setPivot(0.0f, 16.0f, 0.0f);
+        this.rightLeg = new ModelPart(this, 26, 0);
+        this.rightLeg.addCuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
+        this.rightLeg.setPivot(-2.0f, 19.0f, 1.0f);
+        this.leftLeg = new ModelPart(this, 26, 0);
+        this.leftLeg.addCuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
+        this.leftLeg.setPivot(1.0f, 19.0f, 1.0f);
+        this.rightWing = new ModelPart(this, 24, 13);
+        this.rightWing.addCuboid(0.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f);
+        this.rightWing.setPivot(-4.0f, 13.0f, 0.0f);
+        this.leftWing = new ModelPart(this, 24, 13);
+        this.leftWing.addCuboid(-1.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f);
+        this.leftWing.setPivot(4.0f, 13.0f, 0.0f);
     }
 
     @Override
-    public void render(T entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
-        this.setAngles(entity, limbAngle, limbDistance, age, headYaw, headPitch, scale);
-        if (this.child) {
-            float f = 2.0f;
-            GlStateManager.pushMatrix();
-            GlStateManager.translatef(0.0f, 5.0f * scale, 2.0f * scale);
-            this.head.render(scale);
-            this.field_3340.render(scale);
-            this.field_3342.render(scale);
-            GlStateManager.popMatrix();
-            GlStateManager.pushMatrix();
-            GlStateManager.scalef(0.5f, 0.5f, 0.5f);
-            GlStateManager.translatef(0.0f, 24.0f * scale, 0.0f);
-            this.field_3346.render(scale);
-            this.field_3345.render(scale);
-            this.field_3343.render(scale);
-            this.field_3341.render(scale);
-            this.field_3347.render(scale);
-            GlStateManager.popMatrix();
-        } else {
-            this.head.render(scale);
-            this.field_3340.render(scale);
-            this.field_3342.render(scale);
-            this.field_3346.render(scale);
-            this.field_3345.render(scale);
-            this.field_3343.render(scale);
-            this.field_3341.render(scale);
-            this.field_3347.render(scale);
-        }
+    protected Iterable<ModelPart> getHeadParts() {
+        return ImmutableList.of((Object)this.head, (Object)this.beak, (Object)this.wattle);
     }
 
     @Override
-    public void setAngles(T entity, float limbAngle, float limbDistance, float age, float headYaw, float headPitch, float scale) {
+    protected Iterable<ModelPart> getBodyParts() {
+        return ImmutableList.of((Object)this.torso, (Object)this.rightLeg, (Object)this.leftLeg, (Object)this.rightWing, (Object)this.leftWing);
+    }
+
+    @Override
+    public void setAngles(T entity, float limbAngle, float limbDistance, float customAngle, float headYaw, float headPitch) {
         this.head.pitch = headPitch * ((float)Math.PI / 180);
         this.head.yaw = headYaw * ((float)Math.PI / 180);
-        this.field_3340.pitch = this.head.pitch;
-        this.field_3340.yaw = this.head.yaw;
-        this.field_3342.pitch = this.head.pitch;
-        this.field_3342.yaw = this.head.yaw;
-        this.field_3346.pitch = 1.5707964f;
-        this.field_3345.pitch = MathHelper.cos(limbAngle * 0.6662f) * 1.4f * limbDistance;
-        this.field_3343.pitch = MathHelper.cos(limbAngle * 0.6662f + (float)Math.PI) * 1.4f * limbDistance;
-        this.field_3341.roll = age;
-        this.field_3347.roll = -age;
+        this.beak.pitch = this.head.pitch;
+        this.beak.yaw = this.head.yaw;
+        this.wattle.pitch = this.head.pitch;
+        this.wattle.yaw = this.head.yaw;
+        this.torso.pitch = 1.5707964f;
+        this.rightLeg.pitch = MathHelper.cos(limbAngle * 0.6662f) * 1.4f * limbDistance;
+        this.leftLeg.pitch = MathHelper.cos(limbAngle * 0.6662f + (float)Math.PI) * 1.4f * limbDistance;
+        this.rightWing.roll = customAngle;
+        this.leftWing.roll = -customAngle;
     }
 }
 

@@ -42,7 +42,7 @@ extends ThrownItemEntity {
         if (status == 3) {
             double d = 0.08;
             for (int i = 0; i < 8; ++i) {
-                this.world.addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, this.getStack()), this.x, this.y, this.z, ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08);
+                this.world.addParticle(new ItemStackParticleEffect(ParticleTypes.ITEM, this.getStack()), this.getX(), this.getY(), this.getZ(), ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08, ((double)this.random.nextFloat() - 0.5) * 0.08);
             }
         }
     }
@@ -61,7 +61,7 @@ extends ThrownItemEntity {
                 for (int j = 0; j < i; ++j) {
                     ChickenEntity chickenEntity = EntityType.CHICKEN.create(this.world);
                     chickenEntity.setBreedingAge(-24000);
-                    chickenEntity.refreshPositionAndAngles(this.x, this.y, this.z, this.yaw, 0.0f);
+                    chickenEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, 0.0f);
                     this.world.spawnEntity(chickenEntity);
                 }
             }

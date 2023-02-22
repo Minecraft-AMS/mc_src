@@ -44,7 +44,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.LocalDifficulty;
@@ -118,23 +117,25 @@ implements Monster {
     }
 
     @Override
+    protected boolean method_23734() {
+        return true;
+    }
+
+    @Override
     public void tick() {
         super.tick();
         if (this.world.isClient) {
             float f = MathHelper.cos((float)(this.getEntityId() * 3 + this.age) * 0.13f + (float)Math.PI);
             float g = MathHelper.cos((float)(this.getEntityId() * 3 + this.age + 1) * 0.13f + (float)Math.PI);
             if (f > 0.0f && g <= 0.0f) {
-                this.world.playSound(this.x, this.y, this.z, SoundEvents.ENTITY_PHANTOM_FLAP, this.getSoundCategory(), 0.95f + this.random.nextFloat() * 0.05f, 0.95f + this.random.nextFloat() * 0.05f, false);
+                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PHANTOM_FLAP, this.getSoundCategory(), 0.95f + this.random.nextFloat() * 0.05f, 0.95f + this.random.nextFloat() * 0.05f, false);
             }
             int i = this.getPhantomSize();
             float h = MathHelper.cos(this.yaw * ((float)Math.PI / 180)) * (1.3f + 0.21f * (float)i);
             float j = MathHelper.sin(this.yaw * ((float)Math.PI / 180)) * (1.3f + 0.21f * (float)i);
             float k = (0.3f + f * 0.45f) * ((float)i * 0.2f + 1.0f);
-            this.world.addParticle(ParticleTypes.MYCELIUM, this.x + (double)h, this.y + (double)k, this.z + (double)j, 0.0, 0.0, 0.0);
-            this.world.addParticle(ParticleTypes.MYCELIUM, this.x - (double)h, this.y + (double)k, this.z - (double)j, 0.0, 0.0, 0.0);
-        }
-        if (!this.world.isClient && this.world.getDifficulty() == Difficulty.PEACEFUL) {
-            this.remove();
+            this.world.addParticle(ParticleTypes.MYCELIUM, this.getX() + (double)h, this.getY() + (double)k, this.getZ() + (double)j, 0.0, 0.0, 0.0);
+            this.world.addParticle(ParticleTypes.MYCELIUM, this.getX() - (double)h, this.getY() + (double)k, this.getZ() - (double)j, 0.0, 0.0, 0.0);
         }
     }
 
@@ -242,7 +243,7 @@ implements Monster {
             this.delay = 60;
             List<PlayerEntity> list = PhantomEntity.this.world.getPlayers(this.PLAYERS_IN_RANGE_PREDICATE, PhantomEntity.this, PhantomEntity.this.getBoundingBox().expand(16.0, 64.0, 16.0));
             if (!list.isEmpty()) {
-                list.sort((playerEntity, playerEntity2) -> playerEntity.y > playerEntity2.y ? -1 : 1);
+                list.sort((playerEntity, playerEntity2) -> playerEntity.getY() > playerEntity2.getY() ? -1 : 1);
                 for (PlayerEntity playerEntity3 : list) {
                     if (!PhantomEntity.this.isTarget(playerEntity3, TargetPredicate.DEFAULT)) continue;
                     PhantomEntity.this.setTarget(playerEntity3);
@@ -359,7 +360,7 @@ implements Monster {
         @Override
         public void tick() {
             LivingEntity livingEntity = PhantomEntity.this.getTarget();
-            PhantomEntity.this.field_7314 = new Vec3d(livingEntity.x, livingEntity.y + (double)livingEntity.getHeight() * 0.5, livingEntity.z);
+            PhantomEntity.this.field_7314 = new Vec3d(livingEntity.getX(), livingEntity.getBodyY(0.5), livingEntity.getZ());
             if (PhantomEntity.this.getBoundingBox().expand(0.2f).intersects(livingEntity.getBoundingBox())) {
                 PhantomEntity.this.tryAttack(livingEntity);
                 PhantomEntity.this.movementType = PhantomMovementType.CIRCLE;
@@ -412,11 +413,11 @@ implements Monster {
             if (this.method_7104()) {
                 this.method_7103();
             }
-            if (((PhantomEntity)PhantomEntity.this).field_7314.y < PhantomEntity.this.y && !PhantomEntity.this.world.isAir(new BlockPos(PhantomEntity.this).down(1))) {
+            if (((PhantomEntity)PhantomEntity.this).field_7314.y < PhantomEntity.this.getY() && !PhantomEntity.this.world.isAir(new BlockPos(PhantomEntity.this).down(1))) {
                 this.field_7326 = Math.max(1.0f, this.field_7326);
                 this.method_7103();
             }
-            if (((PhantomEntity)PhantomEntity.this).field_7314.y > PhantomEntity.this.y && !PhantomEntity.this.world.isAir(new BlockPos(PhantomEntity.this).up(1))) {
+            if (((PhantomEntity)PhantomEntity.this).field_7314.y > PhantomEntity.this.getY() && !PhantomEntity.this.world.isAir(new BlockPos(PhantomEntity.this).up(1))) {
                 this.field_7326 = Math.min(-1.0f, this.field_7326);
                 this.method_7103();
             }
@@ -438,7 +439,7 @@ implements Monster {
         }
 
         protected boolean method_7104() {
-            return PhantomEntity.this.field_7314.squaredDistanceTo(PhantomEntity.this.x, PhantomEntity.this.y, PhantomEntity.this.z) < 4.0;
+            return PhantomEntity.this.field_7314.squaredDistanceTo(PhantomEntity.this.getX(), PhantomEntity.this.getY(), PhantomEntity.this.getZ()) < 4.0;
         }
     }
 
@@ -461,8 +462,8 @@ implements Monster {
 
         @Override
         public void tick() {
-            PhantomEntity.this.headYaw = PhantomEntity.this.field_6283;
-            PhantomEntity.this.field_6283 = PhantomEntity.this.yaw;
+            PhantomEntity.this.headYaw = PhantomEntity.this.bodyYaw;
+            PhantomEntity.this.bodyYaw = PhantomEntity.this.yaw;
         }
     }
 
@@ -482,9 +483,9 @@ implements Monster {
                 PhantomEntity.this.yaw += 180.0f;
                 this.field_7331 = 0.1f;
             }
-            float f = (float)(((PhantomEntity)PhantomEntity.this).field_7314.x - PhantomEntity.this.x);
-            float g = (float)(((PhantomEntity)PhantomEntity.this).field_7314.y - PhantomEntity.this.y);
-            float h = (float)(((PhantomEntity)PhantomEntity.this).field_7314.z - PhantomEntity.this.z);
+            float f = (float)(((PhantomEntity)PhantomEntity.this).field_7314.x - PhantomEntity.this.getX());
+            float g = (float)(((PhantomEntity)PhantomEntity.this).field_7314.y - PhantomEntity.this.getY());
+            float h = (float)(((PhantomEntity)PhantomEntity.this).field_7314.z - PhantomEntity.this.getZ());
             double d = MathHelper.sqrt(f * f + h * h);
             double e = 1.0 - (double)MathHelper.abs(g * 0.7f) / d;
             f = (float)((double)f * e);
@@ -495,7 +496,7 @@ implements Monster {
             float k = (float)MathHelper.atan2(h, f);
             float l = MathHelper.wrapDegrees(PhantomEntity.this.yaw + 90.0f);
             float m = MathHelper.wrapDegrees(k * 57.295776f);
-            PhantomEntity.this.field_6283 = PhantomEntity.this.yaw = MathHelper.method_15388(l, m, 4.0f) - 90.0f;
+            PhantomEntity.this.bodyYaw = PhantomEntity.this.yaw = MathHelper.method_15388(l, m, 4.0f) - 90.0f;
             this.field_7331 = MathHelper.angleBetween(j, PhantomEntity.this.yaw) < 3.0f ? MathHelper.method_15348(this.field_7331, 1.8f, 0.005f * (1.8f / this.field_7331)) : MathHelper.method_15348(this.field_7331, 0.2f, 0.025f);
             PhantomEntity.this.pitch = n = (float)(-(MathHelper.atan2(-g, d) * 57.2957763671875));
             float o = PhantomEntity.this.yaw + 90.0f;

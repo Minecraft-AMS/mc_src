@@ -16,7 +16,6 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.FluidTags;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.BlockHitResult;
@@ -38,24 +37,24 @@ extends Item {
         if (!list.isEmpty()) {
             AreaEffectCloudEntity areaEffectCloudEntity = list.get(0);
             areaEffectCloudEntity.setRadius(areaEffectCloudEntity.getRadius() - 0.5f);
-            world.playSound(null, user.x, user.y, user.z, SoundEvents.ITEM_BOTTLE_FILL_DRAGONBREATH, SoundCategory.NEUTRAL, 1.0f, 1.0f);
-            return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, this.fill(itemStack, user, new ItemStack(Items.DRAGON_BREATH)));
+            world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ITEM_BOTTLE_FILL_DRAGONBREATH, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+            return TypedActionResult.success(this.fill(itemStack, user, new ItemStack(Items.DRAGON_BREATH)));
         }
         HitResult hitResult = GlassBottleItem.rayTrace(world, user, RayTraceContext.FluidHandling.SOURCE_ONLY);
         if (hitResult.getType() == HitResult.Type.MISS) {
-            return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+            return TypedActionResult.pass(itemStack);
         }
         if (hitResult.getType() == HitResult.Type.BLOCK) {
             BlockPos blockPos = ((BlockHitResult)hitResult).getBlockPos();
             if (!world.canPlayerModifyAt(user, blockPos)) {
-                return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+                return TypedActionResult.pass(itemStack);
             }
             if (world.getFluidState(blockPos).matches(FluidTags.WATER)) {
-                world.playSound(user, user.x, user.y, user.z, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 1.0f, 1.0f);
-                return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, this.fill(itemStack, user, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.WATER)));
+                world.playSound(user, user.getX(), user.getY(), user.getZ(), SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+                return TypedActionResult.success(this.fill(itemStack, user, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.WATER)));
             }
         }
-        return new TypedActionResult<ItemStack>(ActionResult.PASS, itemStack);
+        return TypedActionResult.pass(itemStack);
     }
 
     protected ItemStack fill(ItemStack emptyBottle, PlayerEntity player, ItemStack filledBottle) {

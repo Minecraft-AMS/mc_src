@@ -15,8 +15,8 @@ package net.minecraft.client.gui.hud;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.GlDebugInfo;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.DataFixUtils;
 import it.unimi.dsi.fastutil.longs.LongSets;
 import java.util.ArrayList;
@@ -34,7 +34,14 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.ShaderEffect;
 import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferRenderer;
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.client.util.math.Rotation3;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.network.ClientConnection;
@@ -96,15 +103,15 @@ extends DrawableHelper {
 
     public void render() {
         this.client.getProfiler().push("debug");
-        GlStateManager.pushMatrix();
+        RenderSystem.pushMatrix();
         Entity entity = this.client.getCameraEntity();
         this.blockHit = entity.rayTrace(20.0, 0.0f, false);
         this.fluidHit = entity.rayTrace(20.0, 0.0f, true);
         this.renderLeftText();
         this.renderRightText();
-        GlStateManager.popMatrix();
+        RenderSystem.popMatrix();
         if (this.client.options.debugTpsEnabled) {
-            int i = this.client.window.getScaledWidth();
+            int i = this.client.getWindow().getScaledWidth();
             this.drawMetricsData(this.client.getMetricsData(), 0, i / 2, true);
             IntegratedServer integratedServer = this.client.getServer();
             if (integratedServer != null) {
@@ -139,7 +146,7 @@ extends DrawableHelper {
             if (Strings.isNullOrEmpty((String)string)) continue;
             int j = this.fontRenderer.fontHeight;
             int k = this.fontRenderer.getStringWidth(string);
-            int l = this.client.window.getScaledWidth() - 2 - k;
+            int l = this.client.getWindow().getScaledWidth() - 2 - k;
             int m = 2 + j * i;
             DebugHud.fill(l - 1, m - 1, l + k + 1, m + j - 1, -1873784752);
             this.fontRenderer.draw(string, l, m, 0xE0E0E0);
@@ -147,7 +154,6 @@ extends DrawableHelper {
     }
 
     protected List<String> getLeftText() {
-        BlockPos blockPos2;
         World world;
         String string2;
         IntegratedServer integratedServer = this.client.getServer();
@@ -155,7 +161,7 @@ extends DrawableHelper {
         float f = clientConnection.getAveragePacketsSent();
         float g = clientConnection.getAveragePacketsReceived();
         String string = integratedServer != null ? String.format("Integrated server @ %.0f ms ticks, %.0f tx, %.0f rx", Float.valueOf(integratedServer.getTickTime()), Float.valueOf(f), Float.valueOf(g)) : String.format("\"%s\" server, %.0f tx, %.0f rx", this.client.player.getServerBrand(), Float.valueOf(f), Float.valueOf(g));
-        BlockPos blockPos = new BlockPos(this.client.getCameraEntity().x, this.client.getCameraEntity().getBoundingBox().y1, this.client.getCameraEntity().z);
+        BlockPos blockPos = new BlockPos(this.client.getCameraEntity());
         if (this.client.hasReducedDebugInfo()) {
             return Lists.newArrayList((Object[])new String[]{"Minecraft " + SharedConstants.getGameVersion().getName() + " (" + this.client.getGameVersion() + "/" + ClientBrandRetriever.getClientModName() + ")", this.client.fpsDebugString, string, this.client.worldRenderer.getChunksDebugString(), this.client.worldRenderer.getEntitiesDebugString(), "P: " + this.client.particleManager.getDebugString() + ". T: " + this.client.world.getRegularEntityCount(), this.client.world.getDebugString(), "", String.format("Chunk-relative: %d %d %d", blockPos.getX() & 0xF, blockPos.getY() & 0xF, blockPos.getZ() & 0xF)});
         }
@@ -189,27 +195,32 @@ extends DrawableHelper {
         }
         LongSets.EmptySet longSet = (world = this.getWorld()) instanceof ServerWorld ? ((ServerWorld)world).getForcedChunks() : LongSets.EMPTY_SET;
         ArrayList list = Lists.newArrayList((Object[])new String[]{"Minecraft " + SharedConstants.getGameVersion().getName() + " (" + this.client.getGameVersion() + "/" + ClientBrandRetriever.getClientModName() + ("release".equalsIgnoreCase(this.client.getVersionType()) ? "" : "/" + this.client.getVersionType()) + ")", this.client.fpsDebugString, string, this.client.worldRenderer.getChunksDebugString(), this.client.worldRenderer.getEntitiesDebugString(), "P: " + this.client.particleManager.getDebugString() + ". T: " + this.client.world.getRegularEntityCount(), this.client.world.getDebugString()});
-        String string3 = this.method_20603();
+        String string3 = this.getServerWorldDebugString();
         if (string3 != null) {
             list.add(string3);
         }
         list.add(DimensionType.getId(this.client.world.dimension.getType()).toString() + " FC: " + Integer.toString(longSet.size()));
         list.add("");
-        list.add(String.format(Locale.ROOT, "XYZ: %.3f / %.5f / %.3f", this.client.getCameraEntity().x, this.client.getCameraEntity().getBoundingBox().y1, this.client.getCameraEntity().z));
+        list.add(String.format(Locale.ROOT, "XYZ: %.3f / %.5f / %.3f", this.client.getCameraEntity().getX(), this.client.getCameraEntity().getY(), this.client.getCameraEntity().getZ()));
         list.add(String.format("Block: %d %d %d", blockPos.getX(), blockPos.getY(), blockPos.getZ()));
         list.add(String.format("Chunk: %d %d %d in %d %d %d", blockPos.getX() & 0xF, blockPos.getY() & 0xF, blockPos.getZ() & 0xF, blockPos.getX() >> 4, blockPos.getY() >> 4, blockPos.getZ() >> 4));
         list.add(String.format(Locale.ROOT, "Facing: %s (%s) (%.1f / %.1f)", direction, string2, Float.valueOf(MathHelper.wrapDegrees(entity.yaw)), Float.valueOf(MathHelper.wrapDegrees(entity.pitch))));
         if (this.client.world != null) {
-            if (this.client.world.isBlockLoaded(blockPos)) {
+            if (this.client.world.isChunkLoaded(blockPos)) {
                 WorldChunk worldChunk = this.getClientChunk();
                 if (worldChunk.isEmpty()) {
                     list.add("Waiting for chunk...");
                 } else {
-                    list.add("Client Light: " + worldChunk.getLightLevel(blockPos, 0) + " (" + this.client.world.getLightLevel(LightType.SKY, blockPos) + " sky, " + this.client.world.getLightLevel(LightType.BLOCK, blockPos) + " block)");
+                    int i = this.client.world.getChunkManager().getLightingProvider().getLight(blockPos, 0);
+                    int j = this.client.world.getLightLevel(LightType.SKY, blockPos);
+                    int k = this.client.world.getLightLevel(LightType.BLOCK, blockPos);
+                    list.add("Client Light: " + i + " (" + j + " sky, " + k + " block)");
                     WorldChunk worldChunk2 = this.getChunk();
                     if (worldChunk2 != null) {
                         LightingProvider lightingProvider = world.getChunkManager().getLightingProvider();
                         list.add("Server Light: (" + lightingProvider.get(LightType.SKY).getLightLevel(blockPos) + " sky, " + lightingProvider.get(LightType.BLOCK).getLightLevel(blockPos) + " block)");
+                    } else {
+                        list.add("Server Light: (?? sky, ?? block)");
                     }
                     StringBuilder stringBuilder = new StringBuilder("CH");
                     for (Heightmap.Type type : Heightmap.Type.values()) {
@@ -217,17 +228,20 @@ extends DrawableHelper {
                         stringBuilder.append(" ").append(HEIGHT_MAP_TYPES.get((Object)type)).append(": ").append(worldChunk.sampleHeightmap(type, blockPos.getX(), blockPos.getZ()));
                     }
                     list.add(stringBuilder.toString());
-                    if (worldChunk2 != null) {
-                        stringBuilder.setLength(0);
-                        stringBuilder.append("SH");
-                        for (Heightmap.Type type : Heightmap.Type.values()) {
-                            if (!type.isStoredServerSide()) continue;
-                            stringBuilder.append(" ").append(HEIGHT_MAP_TYPES.get((Object)type)).append(": ").append(worldChunk2.sampleHeightmap(type, blockPos.getX(), blockPos.getZ()));
+                    stringBuilder.setLength(0);
+                    stringBuilder.append("SH");
+                    for (Heightmap.Type type : Heightmap.Type.values()) {
+                        if (!type.isStoredServerSide()) continue;
+                        stringBuilder.append(" ").append(HEIGHT_MAP_TYPES.get((Object)type)).append(": ");
+                        if (worldChunk2 != null) {
+                            stringBuilder.append(worldChunk2.sampleHeightmap(type, blockPos.getX(), blockPos.getZ()));
+                            continue;
                         }
-                        list.add(stringBuilder.toString());
+                        stringBuilder.append("??");
                     }
+                    list.add(stringBuilder.toString());
                     if (blockPos.getY() >= 0 && blockPos.getY() < 256) {
-                        list.add("Biome: " + Registry.BIOME.getId(worldChunk.getBiome(blockPos)));
+                        list.add("Biome: " + Registry.BIOME.getId(this.client.world.getBiome(blockPos)));
                         long l = 0L;
                         float h = 0.0f;
                         if (worldChunk2 != null) {
@@ -244,15 +258,16 @@ extends DrawableHelper {
         } else {
             list.add("Outside of world...");
         }
-        if (this.client.gameRenderer != null && this.client.gameRenderer.isShaderEnabled()) {
-            list.add("Shader: " + this.client.gameRenderer.getShader().getName());
+        ShaderEffect shaderEffect = this.client.gameRenderer.getShader();
+        if (shaderEffect != null) {
+            list.add("Shader: " + shaderEffect.getName());
         }
         if (this.blockHit.getType() == HitResult.Type.BLOCK) {
-            blockPos2 = ((BlockHitResult)this.blockHit).getBlockPos();
+            BlockPos blockPos2 = ((BlockHitResult)this.blockHit).getBlockPos();
             list.add(String.format("Looking at block: %d %d %d", blockPos2.getX(), blockPos2.getY(), blockPos2.getZ()));
         }
         if (this.fluidHit.getType() == HitResult.Type.BLOCK) {
-            blockPos2 = ((BlockHitResult)this.fluidHit).getBlockPos();
+            BlockPos blockPos2 = ((BlockHitResult)this.fluidHit).getBlockPos();
             list.add(String.format("Looking at liquid: %d %d %d", blockPos2.getX(), blockPos2.getY(), blockPos2.getZ()));
         }
         list.add(this.client.getSoundManager().getDebugString());
@@ -260,7 +275,7 @@ extends DrawableHelper {
     }
 
     @Nullable
-    private String method_20603() {
+    private String getServerWorldDebugString() {
         ServerWorld serverWorld;
         IntegratedServer integratedServer = this.client.getServer();
         if (integratedServer != null && (serverWorld = integratedServer.getWorld(this.client.world.getDimension().getType())) != null) {
@@ -302,7 +317,7 @@ extends DrawableHelper {
         long m = Runtime.getRuntime().totalMemory();
         long n = Runtime.getRuntime().freeMemory();
         long o = m - n;
-        ArrayList list = Lists.newArrayList((Object[])new String[]{String.format("Java: %s %dbit", System.getProperty("java.version"), this.client.is64Bit() ? 64 : 32), String.format("Mem: % 2d%% %03d/%03dMB", o * 100L / l, DebugHud.method_1838(o), DebugHud.method_1838(l)), String.format("Allocated: % 2d%% %03dMB", m * 100L / l, DebugHud.method_1838(m)), "", String.format("CPU: %s", GLX.getCpuInfo()), "", String.format("Display: %dx%d (%s)", MinecraftClient.getInstance().window.getFramebufferWidth(), MinecraftClient.getInstance().window.getFramebufferHeight(), GLX.getVendor()), GLX.getRenderer(), GLX.getOpenGLVersion()});
+        ArrayList list = Lists.newArrayList((Object[])new String[]{String.format("Java: %s %dbit", System.getProperty("java.version"), this.client.is64Bit() ? 64 : 32), String.format("Mem: % 2d%% %03d/%03dMB", o * 100L / l, DebugHud.toMiB(o), DebugHud.toMiB(l)), String.format("Allocated: % 2d%% %03dMB", m * 100L / l, DebugHud.toMiB(m)), "", String.format("CPU: %s", GlDebugInfo.getCpuInfo()), "", String.format("Display: %dx%d (%s)", MinecraftClient.getInstance().getWindow().getFramebufferWidth(), MinecraftClient.getInstance().getWindow().getFramebufferHeight(), GlDebugInfo.getVendor()), GlDebugInfo.getRenderer(), GlDebugInfo.getVersion()});
         if (this.client.hasReducedDebugInfo()) {
             return list;
         }
@@ -352,69 +367,85 @@ extends DrawableHelper {
         return property.getName() + ": " + string;
     }
 
-    private void drawMetricsData(MetricsData metricsData, int startY, int firstSample, boolean isClient) {
-        int s;
-        int r;
-        GlStateManager.disableDepthTest();
-        int i = metricsData.getStartIndex();
-        int j = metricsData.getCurrentIndex();
+    private void drawMetricsData(MetricsData metricsData, int i, int j, boolean bl) {
+        int t;
+        RenderSystem.disableDepthTest();
+        int k = metricsData.getStartIndex();
+        int l = metricsData.getCurrentIndex();
         long[] ls = metricsData.getSamples();
-        int k = i;
-        int l = startY;
-        int m = Math.max(0, ls.length - firstSample);
-        int n = ls.length - m;
-        k = metricsData.wrapIndex(k + m);
-        long o = 0L;
-        int p = Integer.MAX_VALUE;
-        int q = Integer.MIN_VALUE;
-        for (r = 0; r < n; ++r) {
-            s = (int)(ls[metricsData.wrapIndex(k + r)] / 1000000L);
-            p = Math.min(p, s);
-            q = Math.max(q, s);
-            o += (long)s;
+        int m = k;
+        int n = i;
+        int o = Math.max(0, ls.length - j);
+        int p = ls.length - o;
+        m = metricsData.wrapIndex(m + o);
+        long q = 0L;
+        int r = Integer.MAX_VALUE;
+        int s = Integer.MIN_VALUE;
+        for (t = 0; t < p; ++t) {
+            int u = (int)(ls[metricsData.wrapIndex(m + t)] / 1000000L);
+            r = Math.min(r, u);
+            s = Math.max(s, u);
+            q += (long)u;
         }
-        r = this.client.window.getScaledHeight();
-        DebugHud.fill(startY, r - 60, startY + n, r, -1873784752);
-        while (k != j) {
-            s = metricsData.method_15248(ls[k], isClient ? 30 : 60, isClient ? 60 : 20);
-            int t = isClient ? 100 : 60;
-            int u = this.method_1833(MathHelper.clamp(s, 0, t), 0, t / 2, t);
-            this.vLine(l, r, r - s, u);
-            ++l;
-            k = metricsData.wrapIndex(k + 1);
+        t = this.client.getWindow().getScaledHeight();
+        DebugHud.fill(i, t - 60, i + p, t, -1873784752);
+        BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
+        RenderSystem.enableBlend();
+        RenderSystem.disableTexture();
+        RenderSystem.defaultBlendFunc();
+        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+        Matrix4f matrix4f = Rotation3.identity().getMatrix();
+        while (m != l) {
+            int v = metricsData.method_15248(ls[m], bl ? 30 : 60, bl ? 60 : 20);
+            int w = bl ? 100 : 60;
+            int x = this.getMetricsLineColor(MathHelper.clamp(v, 0, w), 0, w / 2, w);
+            int y = x >> 24 & 0xFF;
+            int z = x >> 16 & 0xFF;
+            int aa = x >> 8 & 0xFF;
+            int ab = x & 0xFF;
+            bufferBuilder.vertex(matrix4f, n + 1, t, 0.0f).color(z, aa, ab, y).next();
+            bufferBuilder.vertex(matrix4f, n, t, 0.0f).color(z, aa, ab, y).next();
+            bufferBuilder.vertex(matrix4f, n, t - v + 1, 0.0f).color(z, aa, ab, y).next();
+            bufferBuilder.vertex(matrix4f, n + 1, t - v + 1, 0.0f).color(z, aa, ab, y).next();
+            ++n;
+            m = metricsData.wrapIndex(m + 1);
         }
-        if (isClient) {
-            DebugHud.fill(startY + 1, r - 30 + 1, startY + 14, r - 30 + 10, -1873784752);
-            this.fontRenderer.draw("60 FPS", startY + 2, r - 30 + 2, 0xE0E0E0);
-            this.hLine(startY, startY + n - 1, r - 30, -1);
-            DebugHud.fill(startY + 1, r - 60 + 1, startY + 14, r - 60 + 10, -1873784752);
-            this.fontRenderer.draw("30 FPS", startY + 2, r - 60 + 2, 0xE0E0E0);
-            this.hLine(startY, startY + n - 1, r - 60, -1);
+        bufferBuilder.end();
+        BufferRenderer.draw(bufferBuilder);
+        RenderSystem.enableTexture();
+        RenderSystem.disableBlend();
+        if (bl) {
+            DebugHud.fill(i + 1, t - 30 + 1, i + 14, t - 30 + 10, -1873784752);
+            this.fontRenderer.draw("60 FPS", i + 2, t - 30 + 2, 0xE0E0E0);
+            this.hLine(i, i + p - 1, t - 30, -1);
+            DebugHud.fill(i + 1, t - 60 + 1, i + 14, t - 60 + 10, -1873784752);
+            this.fontRenderer.draw("30 FPS", i + 2, t - 60 + 2, 0xE0E0E0);
+            this.hLine(i, i + p - 1, t - 60, -1);
         } else {
-            DebugHud.fill(startY + 1, r - 60 + 1, startY + 14, r - 60 + 10, -1873784752);
-            this.fontRenderer.draw("20 TPS", startY + 2, r - 60 + 2, 0xE0E0E0);
-            this.hLine(startY, startY + n - 1, r - 60, -1);
+            DebugHud.fill(i + 1, t - 60 + 1, i + 14, t - 60 + 10, -1873784752);
+            this.fontRenderer.draw("20 TPS", i + 2, t - 60 + 2, 0xE0E0E0);
+            this.hLine(i, i + p - 1, t - 60, -1);
         }
-        this.hLine(startY, startY + n - 1, r - 1, -1);
-        this.vLine(startY, r - 60, r, -1);
-        this.vLine(startY + n - 1, r - 60, r, -1);
-        if (isClient && this.client.options.maxFps > 0 && this.client.options.maxFps <= 250) {
-            this.hLine(startY, startY + n - 1, r - 1 - (int)(1800.0 / (double)this.client.options.maxFps), -16711681);
+        this.hLine(i, i + p - 1, t - 1, -1);
+        this.vLine(i, t - 60, t, -1);
+        this.vLine(i + p - 1, t - 60, t, -1);
+        if (bl && this.client.options.maxFps > 0 && this.client.options.maxFps <= 250) {
+            this.hLine(i, i + p - 1, t - 1 - (int)(1800.0 / (double)this.client.options.maxFps), -16711681);
         }
-        String string = p + " ms min";
-        String string2 = o / (long)n + " ms avg";
-        String string3 = q + " ms max";
-        this.fontRenderer.drawWithShadow(string, startY + 2, r - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
-        this.fontRenderer.drawWithShadow(string2, startY + n / 2 - this.fontRenderer.getStringWidth(string2) / 2, r - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
-        this.fontRenderer.drawWithShadow(string3, startY + n - this.fontRenderer.getStringWidth(string3), r - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
-        GlStateManager.enableDepthTest();
+        String string = r + " ms min";
+        String string2 = q / (long)p + " ms avg";
+        String string3 = s + " ms max";
+        this.fontRenderer.drawWithShadow(string, i + 2, t - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
+        this.fontRenderer.drawWithShadow(string2, i + p / 2 - this.fontRenderer.getStringWidth(string2) / 2, t - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
+        this.fontRenderer.drawWithShadow(string3, i + p - this.fontRenderer.getStringWidth(string3), t - 60 - this.fontRenderer.fontHeight, 0xE0E0E0);
+        RenderSystem.enableDepthTest();
     }
 
-    private int method_1833(int i, int j, int k, int l) {
-        if (i < k) {
-            return this.interpolateColor(-16711936, -256, (float)i / (float)k);
+    private int getMetricsLineColor(int value, int greenValue, int yellowValue, int redValue) {
+        if (value < yellowValue) {
+            return this.interpolateColor(-16711936, -256, (float)value / (float)yellowValue);
         }
-        return this.interpolateColor(-256, -65536, (float)(i - k) / (float)(l - k));
+        return this.interpolateColor(-256, -65536, (float)(value - yellowValue) / (float)(redValue - yellowValue));
     }
 
     private int interpolateColor(int color1, int color2, float dt) {
@@ -433,8 +464,8 @@ extends DrawableHelper {
         return q << 24 | r << 16 | s << 8 | t;
     }
 
-    private static long method_1838(long l) {
-        return l / 1024L / 1024L;
+    private static long toMiB(long bytes) {
+        return bytes / 1024L / 1024L;
     }
 }
 

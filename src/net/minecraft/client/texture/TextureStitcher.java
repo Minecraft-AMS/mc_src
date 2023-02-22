@@ -50,8 +50,8 @@ public class TextureStitcher {
         return this.height;
     }
 
-    public void add(Sprite sprite) {
-        Holder holder = new Holder(sprite, this.mipLevel);
+    public void add(Sprite.Info info) {
+        Holder holder = new Holder(info, this.mipLevel);
         this.holders.add(holder);
     }
 
@@ -66,17 +66,14 @@ public class TextureStitcher {
         this.height = MathHelper.smallestEncompassingPowerOfTwo(this.height);
     }
 
-    public List<Sprite> getStitchedSprites() {
-        ArrayList list = Lists.newArrayList();
+    public void getStitchedSprites(SpriteConsumer spriteConsumer) {
         for (Slot slot2 : this.slots) {
             slot2.addAllFilledSlots(slot -> {
                 Holder holder = slot.getTexture();
-                Sprite sprite = holder.sprite;
-                sprite.init(this.width, this.height, slot.getX(), slot.getY());
-                list.add(sprite);
+                Sprite.Info info = holder.sprite;
+                spriteConsumer.load(info, this.width, this.height, slot.getX(), slot.getY());
             });
         }
-        return list;
     }
 
     private static int applyMipLevel(int size, int mipLevel) {
@@ -85,13 +82,13 @@ public class TextureStitcher {
 
     private boolean fit(Holder holder) {
         for (Slot slot : this.slots) {
-            if (!slot.tryFit(holder)) continue;
+            if (!slot.fit(holder)) continue;
             return true;
         }
-        return this.method_4552(holder);
+        return this.growAndFit(holder);
     }
 
-    private boolean method_4552(Holder holder) {
+    private boolean growAndFit(Holder holder) {
         Slot slot;
         boolean bl5;
         boolean bl4;
@@ -122,7 +119,7 @@ public class TextureStitcher {
             slot = new Slot(0, this.height, this.width, holder.height);
             this.height += holder.height;
         }
-        slot.tryFit(holder);
+        slot.fit(holder);
         this.slots.add(slot);
         return true;
     }
@@ -155,7 +152,7 @@ public class TextureStitcher {
             return this.y;
         }
 
-        public boolean tryFit(Holder holder) {
+        public boolean fit(Holder holder) {
             if (this.texture != null) {
                 return false;
             }
@@ -190,7 +187,7 @@ public class TextureStitcher {
                 }
             }
             for (Slot slot : this.subSlots) {
-                if (!slot.tryFit(holder)) continue;
+                if (!slot.fit(holder)) continue;
                 return true;
             }
             return false;
@@ -213,11 +210,11 @@ public class TextureStitcher {
 
     @Environment(value=EnvType.CLIENT)
     static class Holder {
-        public final Sprite sprite;
+        public final Sprite.Info sprite;
         public final int width;
         public final int height;
 
-        public Holder(Sprite sprite, int mipLevel) {
+        public Holder(Sprite.Info sprite, int mipLevel) {
             this.sprite = sprite;
             this.width = TextureStitcher.applyMipLevel(sprite.getWidth(), mipLevel);
             this.height = TextureStitcher.applyMipLevel(sprite.getHeight(), mipLevel);
@@ -226,6 +223,11 @@ public class TextureStitcher {
         public String toString() {
             return "Holder{width=" + this.width + ", height=" + this.height + '}';
         }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static interface SpriteConsumer {
+        public void load(Sprite.Info var1, int var2, int var3, int var4, int var5);
     }
 }
 

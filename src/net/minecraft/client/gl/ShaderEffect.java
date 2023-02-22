@@ -20,7 +20,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.PostProcessShader;
 import net.minecraft.client.gl.ShaderParseException;
-import net.minecraft.client.texture.Texture;
+import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.Matrix4f;
 import net.minecraft.resource.Resource;
@@ -187,18 +187,18 @@ implements AutoCloseable {
                             }
                             IOUtils.closeQuietly((Closeable)resource);
                             textureManager.bindTexture(identifier);
-                            Texture texture = textureManager.getTexture(identifier);
+                            AbstractTexture abstractTexture = textureManager.getTexture(identifier);
                             int j = JsonHelper.getInt(jsonObject2, "width");
                             int k = JsonHelper.getInt(jsonObject2, "height");
                             boolean bl = JsonHelper.getBoolean(jsonObject2, "bilinear");
                             if (bl) {
-                                GlStateManager.texParameter(3553, 10241, 9729);
-                                GlStateManager.texParameter(3553, 10240, 9729);
+                                RenderSystem.texParameter(3553, 10241, 9729);
+                                RenderSystem.texParameter(3553, 10240, 9729);
                             } else {
-                                GlStateManager.texParameter(3553, 10241, 9728);
-                                GlStateManager.texParameter(3553, 10240, 9728);
+                                RenderSystem.texParameter(3553, 10241, 9728);
+                                RenderSystem.texParameter(3553, 10240, 9728);
                             }
-                            postProcessShader.addAuxTarget(string4, texture.getGlId(), j, k);
+                            postProcessShader.addAuxTarget(string4, abstractTexture.getGlId(), j, k);
                             break block15;
                         }
                         postProcessShader.addAuxTarget(string4, framebuffer3, framebuffer3.textureWidth, framebuffer3.textureHeight);

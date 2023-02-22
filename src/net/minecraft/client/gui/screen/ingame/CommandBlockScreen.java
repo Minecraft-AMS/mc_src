@@ -39,7 +39,7 @@ extends AbstractCommandBlockScreen {
     }
 
     @Override
-    int method_2364() {
+    int getTrackOutputButtonHeight() {
         return 135;
     }
 
@@ -65,7 +65,7 @@ extends AbstractCommandBlockScreen {
         this.redstoneTriggerButton.active = false;
     }
 
-    public void method_2457() {
+    public void updateCommandBlock() {
         CommandBlockExecutor commandBlockExecutor = this.blockEntity.getCommandExecutor();
         this.consoleCommandTextField.setText(commandBlockExecutor.getCommand());
         this.trackingOutput = commandBlockExecutor.isTrackingOutput();

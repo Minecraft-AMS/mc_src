@@ -4,6 +4,7 @@
 package net.minecraft.item;
 
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -17,7 +18,10 @@ extends Item {
 
     @Override
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
-        super.finishUsing(stack, world, user);
+        ItemStack itemStack = super.finishUsing(stack, world, user);
+        if (user instanceof PlayerEntity && ((PlayerEntity)user).abilities.creativeMode) {
+            return itemStack;
+        }
         return new ItemStack(Items.BOWL);
     }
 }

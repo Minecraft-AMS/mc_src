@@ -112,7 +112,7 @@ implements Font {
 
         @Override
         public void upload(int x, int y) {
-            this.image.upload(0, x, y, this.x, this.y, this.width, this.height, false);
+            this.image.upload(0, x, y, this.x, this.y, this.width, this.height, false, false);
         }
 
         @Override

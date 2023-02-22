@@ -25,11 +25,11 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorConfig;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
-import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class WoodlandMansionFeature
@@ -55,12 +55,12 @@ extends StructureFeature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean shouldStartAt(ChunkGenerator<?> chunkGenerator, Random random, int chunkX, int chunkZ) {
-        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkX, chunkZ, 0, 0);
-        if (chunkX == chunkPos.x && chunkZ == chunkPos.z) {
-            Set<Biome> set = chunkGenerator.getBiomeSource().getBiomesInArea(chunkX * 16 + 9, chunkZ * 16 + 9, 32);
-            for (Biome biome : set) {
-                if (chunkGenerator.hasStructure(biome, Feature.WOODLAND_MANSION)) continue;
+    public boolean shouldStartAt(BiomeAccess biomeAccess, ChunkGenerator<?> chunkGenerator, Random random, int chunkZ, int i, Biome biome) {
+        ChunkPos chunkPos = this.getStart(chunkGenerator, random, chunkZ, i, 0, 0);
+        if (chunkZ == chunkPos.x && i == chunkPos.z) {
+            Set<Biome> set = chunkGenerator.getBiomeSource().getBiomesInArea(chunkZ * 16 + 9, chunkGenerator.getSeaLevel(), i * 16 + 9, 32);
+            for (Biome biome2 : set) {
+                if (chunkGenerator.hasStructure(biome2, this)) continue;
                 return false;
             }
             return true;
@@ -85,8 +85,8 @@ extends StructureFeature<DefaultFeatureConfig> {
 
     public static class Start
     extends StructureStart {
-        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, Biome biome, BlockBox blockBox, int i, long l) {
-            super(structureFeature, chunkX, chunkZ, biome, blockBox, i, l);
+        public Start(StructureFeature<?> structureFeature, int chunkX, int chunkZ, BlockBox blockBox, int i, long l) {
+            super(structureFeature, chunkX, chunkZ, blockBox, i, l);
         }
 
         @Override
@@ -120,11 +120,11 @@ extends StructureFeature<DefaultFeatureConfig> {
         }
 
         @Override
-        public void generateStructure(IWorld world, Random random, BlockBox boundingBox, ChunkPos pos) {
-            super.generateStructure(world, random, boundingBox, pos);
+        public void generateStructure(IWorld world, ChunkGenerator<?> chunkGenerator, Random random, BlockBox blockBox, ChunkPos chunkPos) {
+            super.generateStructure(world, chunkGenerator, random, blockBox, chunkPos);
             int i = this.boundingBox.minY;
-            for (int j = boundingBox.minX; j <= boundingBox.maxX; ++j) {
-                for (int k = boundingBox.minZ; k <= boundingBox.maxZ; ++k) {
+            for (int j = blockBox.minX; j <= blockBox.maxX; ++j) {
+                for (int k = blockBox.minZ; k <= blockBox.maxZ; ++k) {
                     BlockPos blockPos2;
                     BlockPos blockPos = new BlockPos(j, i, k);
                     if (world.isAir(blockPos) || !this.boundingBox.contains(blockPos)) continue;

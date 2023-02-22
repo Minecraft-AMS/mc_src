@@ -121,7 +121,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
     private float avgPacketsReceived;
     private float avgPacketsSent;
     private int ticks;
-    private boolean field_11640;
+    private boolean errored;
 
     public ClientConnection(NetworkSide networkSide) {
         this.side = networkSide;
@@ -154,8 +154,8 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             LOGGER.debug("Skipping packet due to errors", throwable.getCause());
             return;
         }
-        boolean bl = !this.field_11640;
-        this.field_11640 = true;
+        boolean bl = !this.errored;
+        this.errored = true;
         if (!this.channel.isOpen()) {
             return;
         }

@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class BlockColors {
     private final IdList<BlockColorProvider> providers = new IdList(32);
-    private final Map<Block, Set<Property<?>>> field_20271 = Maps.newHashMap();
+    private final Map<Block, Set<Property<?>>> properties = Maps.newHashMap();
 
     public static BlockColors create() {
         BlockColors blockColors = new BlockColors();
@@ -49,7 +49,7 @@ public class BlockColors {
             }
             return BiomeColors.getGrassColor(view, state.get(ReplaceableTallPlantBlock.HALF) == DoubleBlockHalf.UPPER ? pos.down() : pos);
         }, Blocks.LARGE_FERN, Blocks.TALL_GRASS);
-        blockColors.method_21593(ReplaceableTallPlantBlock.HALF, Blocks.LARGE_FERN, Blocks.TALL_GRASS);
+        blockColors.registerColorProperty(ReplaceableTallPlantBlock.HALF, Blocks.LARGE_FERN, Blocks.TALL_GRASS);
         blockColors.registerColorProvider((state, view, pos, tintIndex) -> {
             if (view == null || pos == null) {
                 return GrassColors.getColor(0.5, 1.0);
@@ -71,7 +71,7 @@ public class BlockColors {
             return BiomeColors.getWaterColor(view, pos);
         }, Blocks.WATER, Blocks.BUBBLE_COLUMN, Blocks.CAULDRON);
         blockColors.registerColorProvider((state, view, pos, tintIndex) -> RedstoneWireBlock.getWireColor(state.get(RedstoneWireBlock.POWER)), Blocks.REDSTONE_WIRE);
-        blockColors.method_21593(RedstoneWireBlock.POWER, Blocks.REDSTONE_WIRE);
+        blockColors.registerColorProperty(RedstoneWireBlock.POWER, Blocks.REDSTONE_WIRE);
         blockColors.registerColorProvider((state, view, pos, tintIndex) -> {
             if (view == null || pos == null) {
                 return -1;
@@ -86,7 +86,7 @@ public class BlockColors {
             int l = i * 4;
             return j << 16 | k << 8 | l;
         }, Blocks.MELON_STEM, Blocks.PUMPKIN_STEM);
-        blockColors.method_21593(StemBlock.AGE, Blocks.MELON_STEM, Blocks.PUMPKIN_STEM);
+        blockColors.registerColorProperty(StemBlock.AGE, Blocks.MELON_STEM, Blocks.PUMPKIN_STEM);
         blockColors.registerColorProvider((state, view, pos, tintIndex) -> {
             if (view == null || pos == null) {
                 return 7455580;
@@ -116,18 +116,18 @@ public class BlockColors {
         }
     }
 
-    private void method_21594(Set<Property<?>> set, Block ... blocks) {
+    private void registerColorProperties(Set<Property<?>> properties, Block ... blocks) {
         for (Block block : blocks) {
-            this.field_20271.put(block, set);
+            this.properties.put(block, properties);
         }
     }
 
-    private void method_21593(Property<?> property, Block ... blocks) {
-        this.method_21594((Set<Property<?>>)ImmutableSet.of(property), blocks);
+    private void registerColorProperty(Property<?> property, Block ... blocks) {
+        this.registerColorProperties((Set<Property<?>>)ImmutableSet.of(property), blocks);
     }
 
-    public Set<Property<?>> method_21592(Block block) {
-        return (Set)this.field_20271.getOrDefault(block, (Set<Property<?>>)ImmutableSet.of());
+    public Set<Property<?>> getProperties(Block block) {
+        return (Set)this.properties.getOrDefault(block, (Set<Property<?>>)ImmutableSet.of());
     }
 }
 
