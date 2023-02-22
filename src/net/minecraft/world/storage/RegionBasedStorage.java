@@ -12,12 +12,11 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.scanner.NbtScanner;
+import net.minecraft.util.PathUtil;
 import net.minecraft.util.ThrowableDeliverer;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.storage.RegionFile;
@@ -45,7 +44,7 @@ implements AutoCloseable {
         if (this.cachedRegionFiles.size() >= 256) {
             ((RegionFile)this.cachedRegionFiles.removeLast()).close();
         }
-        Files.createDirectories(this.directory, new FileAttribute[0]);
+        PathUtil.createDirectories(this.directory);
         Path path = this.directory.resolve("r." + pos.getRegionX() + "." + pos.getRegionZ() + MCA_EXTENSION);
         RegionFile regionFile2 = new RegionFile(path, this.directory, this.dsync);
         this.cachedRegionFiles.putAndMoveToFirst(l, (Object)regionFile2);
@@ -65,11 +64,11 @@ implements AutoCloseable {
         }
     }
 
-    public void method_39802(ChunkPos chunkPos, NbtScanner nbtScanner) throws IOException {
+    public void scanChunk(ChunkPos chunkPos, NbtScanner scanner) throws IOException {
         RegionFile regionFile = this.getRegionFile(chunkPos);
         try (DataInputStream dataInputStream = regionFile.getChunkInputStream(chunkPos);){
             if (dataInputStream != null) {
-                NbtIo.scan(dataInputStream, nbtScanner);
+                NbtIo.scan(dataInputStream, scanner);
             }
         }
     }
@@ -77,7 +76,7 @@ implements AutoCloseable {
     protected void write(ChunkPos pos, @Nullable NbtCompound nbt) throws IOException {
         RegionFile regionFile = this.getRegionFile(pos);
         if (nbt == null) {
-            regionFile.method_31740(pos);
+            regionFile.delete(pos);
         } else {
             try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(pos);){
                 NbtIo.write(nbt, (DataOutput)dataOutputStream);

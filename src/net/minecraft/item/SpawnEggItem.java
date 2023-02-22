@@ -28,6 +28,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.ActionResult;
@@ -38,7 +39,6 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.MobSpawnerLogic;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -71,9 +71,9 @@ extends Item {
         Direction direction = context.getSide();
         BlockState blockState = world.getBlockState(blockPos);
         if (blockState.isOf(Blocks.SPAWNER) && (blockEntity = world.getBlockEntity(blockPos)) instanceof MobSpawnerBlockEntity) {
-            MobSpawnerLogic mobSpawnerLogic = ((MobSpawnerBlockEntity)blockEntity).getLogic();
+            MobSpawnerBlockEntity mobSpawnerBlockEntity = (MobSpawnerBlockEntity)blockEntity;
             EntityType<?> entityType = this.getEntityType(itemStack.getNbt());
-            mobSpawnerLogic.setEntityId(entityType);
+            mobSpawnerBlockEntity.setEntityType(entityType, world.getRandom());
             blockEntity.markDirty();
             world.updateListeners(blockPos, blockState, blockState, 3);
             world.emitGameEvent((Entity)context.getPlayer(), GameEvent.BLOCK_CHANGE, blockPos);
@@ -108,7 +108,7 @@ extends Item {
             return TypedActionResult.fail(itemStack);
         }
         EntityType<?> entityType = this.getEntityType(itemStack.getNbt());
-        Entity entity = entityType.spawnFromItemStack((ServerWorld)world, itemStack, user, blockPos, SpawnReason.SPAWN_EGG, false, false);
+        Object entity = entityType.spawnFromItemStack((ServerWorld)world, itemStack, user, blockPos, SpawnReason.SPAWN_EGG, false, false);
         if (entity == null) {
             return TypedActionResult.pass(itemStack);
         }
@@ -116,7 +116,7 @@ extends Item {
             itemStack.decrement(1);
         }
         user.incrementStat(Stats.USED.getOrCreateStat(this));
-        world.emitGameEvent((Entity)user, GameEvent.ENTITY_PLACE, entity.getPos());
+        world.emitGameEvent((Entity)user, GameEvent.ENTITY_PLACE, ((Entity)entity).getPos());
         return TypedActionResult.consume(itemStack);
     }
 
@@ -143,6 +143,11 @@ extends Item {
             return EntityType.get(nbtCompound.getString("id")).orElse(this.type);
         }
         return this.type;
+    }
+
+    @Override
+    public FeatureSet getRequiredFeatures() {
+        return this.type.getRequiredFeatures();
     }
 
     public Optional<MobEntity> spawnBaby(PlayerEntity user, MobEntity entity, EntityType<? extends MobEntity> entityType, ServerWorld world, Vec3d pos, ItemStack stack) {

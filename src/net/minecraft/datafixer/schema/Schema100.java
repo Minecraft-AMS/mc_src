@@ -40,7 +40,7 @@ extends Schema {
         Schema100.targetEntityItems(schema, map, "Slime");
         Schema100.targetEntityItems(schema, map, "Ghast");
         Schema100.targetEntityItems(schema, map, "PigZombie");
-        schema.register(map, "Enderman", string -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
+        schema.register(map, "Enderman", name -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema100.targetEntityItems(schema, map, "CaveSpider");
         Schema100.targetEntityItems(schema, map, "Silverfish");
         Schema100.targetEntityItems(schema, map, "Blaze");
@@ -61,9 +61,9 @@ extends Schema {
         Schema100.targetEntityItems(schema, map, "SnowMan");
         Schema100.targetEntityItems(schema, map, "Ozelot");
         Schema100.targetEntityItems(schema, map, "VillagerGolem");
-        schema.register(map, "EntityHorse", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
+        schema.register(map, "EntityHorse", name -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema100.targetItems(schema)));
         Schema100.targetEntityItems(schema, map, "Rabbit");
-        schema.register(map, "Villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema100.targetItems(schema)));
+        schema.register(map, "Villager", name -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema100.targetItems(schema)));
         Schema100.targetEntityItems(schema, map, "Shulker");
         schema.registerSimple(map, "AreaEffectCloud");
         schema.registerSimple(map, "ShulkerBullet");

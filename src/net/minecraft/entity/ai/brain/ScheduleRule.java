@@ -63,8 +63,8 @@ public class ScheduleRule {
         return f;
     }
 
-    private static /* synthetic */ void method_19228(Int2ObjectSortedMap int2ObjectSortedMap, ScheduleRuleEntry scheduleRuleEntry) {
-        int2ObjectSortedMap.put(scheduleRuleEntry.getStartTime(), (Object)scheduleRuleEntry);
+    private static /* synthetic */ void method_19228(Int2ObjectSortedMap entry, ScheduleRuleEntry scheduleRuleEntry) {
+        entry.put(scheduleRuleEntry.getStartTime(), (Object)scheduleRuleEntry);
     }
 }
 

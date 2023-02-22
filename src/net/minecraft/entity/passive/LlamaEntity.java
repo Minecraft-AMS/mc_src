@@ -2,10 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
+import com.mojang.serialization.Codec;
+import java.util.function.IntFunction;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -15,6 +18,7 @@ import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
@@ -47,11 +51,14 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.DyeColor;
+import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.Util;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -63,9 +70,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class LlamaEntity
 extends AbstractDonkeyEntity
-implements RangedAttackMob {
+implements VariantHolder<Variant>,
+RangedAttackMob {
     private static final int MAX_STRENGTH = 5;
-    private static final int VARIANTS = 4;
     private static final Ingredient TAMING_INGREDIENT = Ingredient.ofItems(Items.WHEAT, Blocks.HAY_BLOCK.asItem());
     private static final TrackedData<Integer> STRENGTH = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> CARPET_COLOR = DataTracker.registerData(LlamaEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -100,7 +107,7 @@ implements RangedAttackMob {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("Variant", this.getVariant());
+        nbt.putInt("Variant", this.getVariant().id);
         nbt.putInt("Strength", this.getStrength());
         if (!this.items.getStack(1).isEmpty()) {
             nbt.put("DecorItem", this.items.getStack(1).writeNbt(new NbtCompound()));
@@ -111,7 +118,7 @@ implements RangedAttackMob {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         this.setStrength(nbt.getInt("Strength"));
         super.readCustomDataFromNbt(nbt);
-        this.setVariant(nbt.getInt("Variant"));
+        this.setVariant(Variant.byId(nbt.getInt("Variant")));
         if (nbt.contains("DecorItem", 10)) {
             this.items.setStack(1, ItemStack.fromNbt(nbt.getCompound("DecorItem")));
         }
@@ -147,12 +154,14 @@ implements RangedAttackMob {
         this.dataTracker.startTracking(VARIANT, 0);
     }
 
-    public int getVariant() {
-        return MathHelper.clamp(this.dataTracker.get(VARIANT), 0, 3);
+    @Override
+    public Variant getVariant() {
+        return Variant.byId(this.dataTracker.get(VARIANT));
     }
 
-    public void setVariant(int variant) {
-        this.dataTracker.set(VARIANT, variant);
+    @Override
+    public void setVariant(Variant variant) {
+        this.dataTracker.set(VARIANT, variant.id);
     }
 
     @Override
@@ -234,24 +243,29 @@ implements RangedAttackMob {
     }
 
     @Override
-    protected boolean isImmobile() {
+    public boolean isImmobile() {
         return this.isDead() || this.isEatingGrass();
     }
 
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        int i;
+        Variant variant;
         Random random = world.getRandom();
         this.initializeStrength(random);
         if (entityData instanceof LlamaData) {
-            i = ((LlamaData)entityData).variant;
+            variant = ((LlamaData)entityData).variant;
         } else {
-            i = random.nextInt(4);
-            entityData = new LlamaData(i);
+            variant = Util.getRandom(Variant.values(), random);
+            entityData = new LlamaData(variant);
         }
-        this.setVariant(i);
+        this.setVariant(variant);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
+    }
+
+    @Override
+    protected boolean shouldAmbientStand() {
+        return false;
     }
 
     @Override
@@ -288,14 +302,6 @@ implements RangedAttackMob {
     @Override
     protected void playAddChestSound() {
         this.playSound(SoundEvents.ENTITY_LLAMA_CHEST, 1.0f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
-    }
-
-    @Override
-    public void playAngrySound() {
-        SoundEvent soundEvent = this.getAngrySound();
-        if (soundEvent != null) {
-            this.playSound(soundEvent, this.getSoundVolume(), this.getSoundPitch());
-        }
     }
 
     @Override
@@ -372,19 +378,23 @@ implements RangedAttackMob {
     }
 
     @Override
+    @Nullable
     public LlamaEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         LlamaEntity llamaEntity = this.createChild();
-        this.setChildAttributes(passiveEntity, llamaEntity);
-        LlamaEntity llamaEntity2 = (LlamaEntity)passiveEntity;
-        int i = this.random.nextInt(Math.max(this.getStrength(), llamaEntity2.getStrength())) + 1;
-        if (this.random.nextFloat() < 0.03f) {
-            ++i;
+        if (llamaEntity != null) {
+            this.setChildAttributes(passiveEntity, llamaEntity);
+            LlamaEntity llamaEntity2 = (LlamaEntity)passiveEntity;
+            int i = this.random.nextInt(Math.max(this.getStrength(), llamaEntity2.getStrength())) + 1;
+            if (this.random.nextFloat() < 0.03f) {
+                ++i;
+            }
+            llamaEntity.setStrength(i);
+            llamaEntity.setVariant(this.random.nextBoolean() ? this.getVariant() : llamaEntity2.getVariant());
         }
-        llamaEntity.setStrength(i);
-        llamaEntity.setVariant(this.random.nextBoolean() ? this.getVariant() : llamaEntity2.getVariant());
         return llamaEntity;
     }
 
+    @Nullable
     protected LlamaEntity createChild() {
         return EntityType.LLAMA.create(this.world);
     }
@@ -478,6 +488,7 @@ implements RangedAttackMob {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }
@@ -486,6 +497,61 @@ implements RangedAttackMob {
     @Nullable
     public /* synthetic */ Entity getPrimaryPassenger() {
         return this.getPrimaryPassenger();
+    }
+
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
+    }
+
+    public static final class Variant
+    extends Enum<Variant>
+    implements StringIdentifiable {
+        public static final /* enum */ Variant CREAMY = new Variant(0, "creamy");
+        public static final /* enum */ Variant WHITE = new Variant(1, "white");
+        public static final /* enum */ Variant BROWN = new Variant(2, "brown");
+        public static final /* enum */ Variant GRAY = new Variant(3, "gray");
+        public static final Codec<Variant> CODEC;
+        private static final IntFunction<Variant> BY_ID;
+        final int id;
+        private final String name;
+        private static final /* synthetic */ Variant[] field_41594;
+
+        public static Variant[] values() {
+            return (Variant[])field_41594.clone();
+        }
+
+        public static Variant valueOf(String string) {
+            return Enum.valueOf(Variant.class, string);
+        }
+
+        private Variant(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public int getIndex() {
+            return this.id;
+        }
+
+        public static Variant byId(int id) {
+            return BY_ID.apply(id);
+        }
+
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
+        private static /* synthetic */ Variant[] method_47877() {
+            return new Variant[]{CREAMY, WHITE, BROWN, GRAY};
+        }
+
+        static {
+            field_41594 = Variant.method_47877();
+            CODEC = StringIdentifiable.createCodec(Variant::values);
+            BY_ID = ValueLists.createIdToValueFunction(Variant::getIndex, Variant.values(), ValueLists.OutOfBoundsHandling.CLAMP);
+        }
     }
 
     static class SpitRevengeGoal
@@ -521,9 +587,9 @@ implements RangedAttackMob {
 
     static class LlamaData
     extends PassiveEntity.PassiveData {
-        public final int variant;
+        public final Variant variant;
 
-        LlamaData(int variant) {
+        LlamaData(Variant variant) {
             super(true);
             this.variant = variant;
         }

@@ -12,7 +12,6 @@ package net.minecraft.client.util;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.text2speech.Narrator;
-import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
@@ -35,11 +34,19 @@ public class NarratorManager {
         this.client = client;
     }
 
-    public void narrateChatMessage(Supplier<Text> messageSupplier) {
-        if (this.getNarratorOption().shouldNarrateChat()) {
-            String string = messageSupplier.get().getString();
+    public void narrateChatMessage(Text text) {
+        if (this.getNarratorMode().shouldNarrateChat()) {
+            String string = text.getString();
             this.debugPrintMessage(string);
             this.narrator.say(string, false);
+        }
+    }
+
+    public void narrateSystemMessage(Text text) {
+        String string = text.getString();
+        if (this.getNarratorMode().shouldNarrateSystem() && !string.isEmpty()) {
+            this.debugPrintMessage(string);
+            this.narrator.say(string, true);
         }
     }
 
@@ -48,7 +55,7 @@ public class NarratorManager {
     }
 
     public void narrate(String text) {
-        if (this.getNarratorOption().shouldNarrateSystem() && !text.isEmpty()) {
+        if (this.getNarratorMode().shouldNarrateSystem() && !text.isEmpty()) {
             this.debugPrintMessage(text);
             if (this.narrator.active()) {
                 this.narrator.clear();
@@ -57,7 +64,7 @@ public class NarratorManager {
         }
     }
 
-    private NarratorMode getNarratorOption() {
+    private NarratorMode getNarratorMode() {
         return this.client.options.getNarrator().getValue();
     }
 
@@ -67,15 +74,15 @@ public class NarratorManager {
         }
     }
 
-    public void addToast(NarratorMode option) {
+    public void onModeChange(NarratorMode mode) {
         this.clear();
-        this.narrator.say(Text.translatable("options.narrator").append(" : ").append(option.getName()).getString(), true);
+        this.narrator.say(Text.translatable("options.narrator").append(" : ").append(mode.getName()).getString(), true);
         ToastManager toastManager = MinecraftClient.getInstance().getToastManager();
         if (this.narrator.active()) {
-            if (option == NarratorMode.OFF) {
+            if (mode == NarratorMode.OFF) {
                 SystemToast.show(toastManager, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("narrator.toast.disabled"), null);
             } else {
-                SystemToast.show(toastManager, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("narrator.toast.enabled"), option.getName());
+                SystemToast.show(toastManager, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("narrator.toast.enabled"), mode.getName());
             }
         } else {
             SystemToast.show(toastManager, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("narrator.toast.disabled"), Text.translatable("options.narrator.notavailable"));
@@ -87,7 +94,7 @@ public class NarratorManager {
     }
 
     public void clear() {
-        if (this.getNarratorOption() == NarratorMode.OFF || !this.narrator.active()) {
+        if (this.getNarratorMode() == NarratorMode.OFF || !this.narrator.active()) {
             return;
         }
         this.narrator.clear();

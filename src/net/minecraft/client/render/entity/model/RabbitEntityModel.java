@@ -84,18 +84,18 @@ extends EntityModel<T> {
             float f = 1.5f;
             matrices.push();
             matrices.scale(0.56666666f, 0.56666666f, 0.56666666f);
-            matrices.translate(0.0, 1.375, 0.125);
+            matrices.translate(0.0f, 1.375f, 0.125f);
             ImmutableList.of((Object)this.head, (Object)this.leftEar, (Object)this.rightEar, (Object)this.nose).forEach(part -> part.render(matrices, vertices, light, overlay, red, green, blue, alpha));
             matrices.pop();
             matrices.push();
             matrices.scale(0.4f, 0.4f, 0.4f);
-            matrices.translate(0.0, 2.25, 0.0);
+            matrices.translate(0.0f, 2.25f, 0.0f);
             ImmutableList.of((Object)this.leftHindLeg, (Object)this.rightHindLeg, (Object)this.leftHaunch, (Object)this.rightHaunch, (Object)this.body, (Object)this.leftFrontLeg, (Object)this.rightFrontLeg, (Object)this.tail).forEach(part -> part.render(matrices, vertices, light, overlay, red, green, blue, alpha));
             matrices.pop();
         } else {
             matrices.push();
             matrices.scale(0.6f, 0.6f, 0.6f);
-            matrices.translate(0.0, 1.0, 0.0);
+            matrices.translate(0.0f, 1.0f, 0.0f);
             ImmutableList.of((Object)this.leftHindLeg, (Object)this.rightHindLeg, (Object)this.leftHaunch, (Object)this.rightHaunch, (Object)this.body, (Object)this.leftFrontLeg, (Object)this.rightFrontLeg, (Object)this.head, (Object)this.rightEar, (Object)this.leftEar, (Object)this.tail, (Object)this.nose, (Object[])new ModelPart[0]).forEach(part -> part.render(matrices, vertices, light, overlay, red, green, blue, alpha));
             matrices.pop();
         }

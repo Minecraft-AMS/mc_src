@@ -29,16 +29,16 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
 import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.tag.PointOfInterestTypeTags;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.PointOfInterestTypeTags;
 import net.minecraft.util.Util;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.SectionDistanceLevelPropagator;
 import net.minecraft.world.WorldView;
@@ -186,9 +186,9 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
 
     public void initForPalette(ChunkPos chunkPos, ChunkSection chunkSection) {
         ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunkPos, ChunkSectionPos.getSectionCoord(chunkSection.getYOffset()));
-        Util.ifPresentOrElse(this.get(chunkSectionPos.asLong()), poiSet -> poiSet.updatePointsOfInterest(biConsumer -> {
+        Util.ifPresentOrElse(this.get(chunkSectionPos.asLong()), poiSet -> poiSet.updatePointsOfInterest(populator -> {
             if (PointOfInterestStorage.shouldScan(chunkSection)) {
-                this.scanAndPopulate(chunkSection, chunkSectionPos, (BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>)biConsumer);
+                this.scanAndPopulate(chunkSection, chunkSectionPos, (BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>)populator);
             }
         }), () -> {
             if (PointOfInterestStorage.shouldScan(chunkSection)) {
@@ -199,13 +199,13 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
     }
 
     private static boolean shouldScan(ChunkSection chunkSection) {
-        return chunkSection.hasAny(PointOfInterestTypes.POI_STATES::contains);
+        return chunkSection.hasAny(PointOfInterestTypes::isPointOfInterest);
     }
 
-    private void scanAndPopulate(ChunkSection chunkSection, ChunkSectionPos sectionPos, BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>> biConsumer) {
+    private void scanAndPopulate(ChunkSection chunkSection, ChunkSectionPos sectionPos, BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>> populator) {
         sectionPos.streamBlocks().forEach(pos -> {
             BlockState blockState = chunkSection.getBlockState(ChunkSectionPos.getLocalCoord(pos.getX()), ChunkSectionPos.getLocalCoord(pos.getY()), ChunkSectionPos.getLocalCoord(pos.getZ()));
-            PointOfInterestTypes.getTypeForState(blockState).ifPresent(poiType -> biConsumer.accept((BlockPos)pos, (RegistryEntry<PointOfInterestType>)poiType));
+            PointOfInterestTypes.getTypeForState(blockState).ifPresent(poiType -> populator.accept((BlockPos)pos, (RegistryEntry<PointOfInterestType>)poiType));
         });
     }
 
@@ -251,7 +251,7 @@ extends SerializingRegionBasedStorage<PointOfInterestSet> {
     extends Enum<OccupationStatus> {
         public static final /* enum */ OccupationStatus HAS_SPACE = new OccupationStatus(PointOfInterest::hasSpace);
         public static final /* enum */ OccupationStatus IS_OCCUPIED = new OccupationStatus(PointOfInterest::isOccupied);
-        public static final /* enum */ OccupationStatus ANY = new OccupationStatus(pointOfInterest -> true);
+        public static final /* enum */ OccupationStatus ANY = new OccupationStatus(poi -> true);
         private final Predicate<? super PointOfInterest> predicate;
         private static final /* synthetic */ OccupationStatus[] field_18491;
 

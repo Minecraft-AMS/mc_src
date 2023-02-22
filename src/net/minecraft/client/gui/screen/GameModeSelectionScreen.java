@@ -81,7 +81,7 @@ extends Screen {
         if (this.checkForClose()) {
             return;
         }
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         matrices.push();
         RenderSystem.enableBlend();
         RenderSystem.setShaderTexture(0, TEXTURE);
@@ -117,7 +117,7 @@ extends Screen {
         Optional<GameModeSelection> optional = GameModeSelection.of(client.interactionManager.getCurrentGameMode());
         GameModeSelection gameModeSelection = gameMode.get();
         if (optional.isPresent() && client.player.hasPermissionLevel(2) && gameModeSelection != optional.get()) {
-            client.player.sendCommand(gameModeSelection.getCommand());
+            client.player.networkHandler.sendCommand(gameModeSelection.getCommand());
         }
     }
 
@@ -244,14 +244,14 @@ extends Screen {
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
             MinecraftClient minecraftClient = MinecraftClient.getInstance();
             this.drawBackground(matrices, minecraftClient.getTextureManager());
-            this.gameMode.renderIcon(GameModeSelectionScreen.this.itemRenderer, this.x + 5, this.y + 5);
+            this.gameMode.renderIcon(GameModeSelectionScreen.this.itemRenderer, this.getX() + 5, this.getY() + 5);
             if (this.selected) {
                 this.drawSelectionBox(matrices, minecraftClient.getTextureManager());
             }
         }
 
         @Override
-        public void appendNarrations(NarrationMessageBuilder builder) {
+        public void appendClickableNarrations(NarrationMessageBuilder builder) {
             this.appendDefaultNarrations(builder);
         }
 
@@ -265,19 +265,19 @@ extends Screen {
         }
 
         private void drawBackground(MatrixStack matrices, TextureManager textureManager) {
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, TEXTURE);
             matrices.push();
-            matrices.translate(this.x, this.y, 0.0);
+            matrices.translate(this.getX(), this.getY(), 0.0f);
             ButtonWidget.drawTexture(matrices, 0, 0, 0.0f, 75.0f, 26, 26, 128, 128);
             matrices.pop();
         }
 
         private void drawSelectionBox(MatrixStack matrices, TextureManager textureManager) {
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, TEXTURE);
             matrices.push();
-            matrices.translate(this.x, this.y, 0.0);
+            matrices.translate(this.getX(), this.getY(), 0.0f);
             ButtonWidget.drawTexture(matrices, 0, 0, 26.0f, 75.0f, 26, 26, 128, 128);
             matrices.pop();
         }

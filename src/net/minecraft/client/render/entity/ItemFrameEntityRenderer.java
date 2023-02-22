@@ -35,16 +35,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class ItemFrameEntityRenderer<T extends ItemFrameEntity>
 extends EntityRenderer<T> {
-    private static final ModelIdentifier NORMAL_FRAME = new ModelIdentifier("item_frame", "map=false");
-    private static final ModelIdentifier MAP_FRAME = new ModelIdentifier("item_frame", "map=true");
-    private static final ModelIdentifier GLOW_FRAME = new ModelIdentifier("glow_item_frame", "map=false");
-    private static final ModelIdentifier MAP_GLOW_FRAME = new ModelIdentifier("glow_item_frame", "map=true");
+    private static final ModelIdentifier NORMAL_FRAME = ModelIdentifier.ofVanilla("item_frame", "map=false");
+    private static final ModelIdentifier MAP_FRAME = ModelIdentifier.ofVanilla("item_frame", "map=true");
+    private static final ModelIdentifier GLOW_FRAME = ModelIdentifier.ofVanilla("glow_item_frame", "map=false");
+    private static final ModelIdentifier MAP_GLOW_FRAME = ModelIdentifier.ofVanilla("glow_item_frame", "map=true");
     public static final int GLOW_FRAME_BLOCK_LIGHT = 5;
     public static final int field_32933 = 30;
     private final ItemRenderer itemRenderer;
@@ -73,34 +73,34 @@ extends EntityRenderer<T> {
         matrixStack.translate(-vec3d.getX(), -vec3d.getY(), -vec3d.getZ());
         double d = 0.46875;
         matrixStack.translate((double)direction.getOffsetX() * 0.46875, (double)direction.getOffsetY() * 0.46875, (double)direction.getOffsetZ() * 0.46875);
-        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(((Entity)itemFrameEntity).getPitch()));
-        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f - ((Entity)itemFrameEntity).getYaw()));
+        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(((Entity)itemFrameEntity).getPitch()));
+        matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - ((Entity)itemFrameEntity).getYaw()));
         boolean bl = ((Entity)itemFrameEntity).isInvisible();
         ItemStack itemStack = ((ItemFrameEntity)itemFrameEntity).getHeldItemStack();
         if (!bl) {
             BakedModelManager bakedModelManager = this.blockRenderManager.getModels().getModelManager();
             ModelIdentifier modelIdentifier = this.getModelId(itemFrameEntity, itemStack);
             matrixStack.push();
-            matrixStack.translate(-0.5, -0.5, -0.5);
+            matrixStack.translate(-0.5f, -0.5f, -0.5f);
             this.blockRenderManager.getModelRenderer().render(matrixStack.peek(), vertexConsumerProvider.getBuffer(TexturedRenderLayers.getEntitySolid()), null, bakedModelManager.getModel(modelIdentifier), 1.0f, 1.0f, 1.0f, i, OverlayTexture.DEFAULT_UV);
             matrixStack.pop();
         }
         if (!itemStack.isEmpty()) {
             OptionalInt optionalInt = ((ItemFrameEntity)itemFrameEntity).getMapId();
             if (bl) {
-                matrixStack.translate(0.0, 0.0, 0.5);
+                matrixStack.translate(0.0f, 0.0f, 0.5f);
             } else {
-                matrixStack.translate(0.0, 0.0, 0.4375);
+                matrixStack.translate(0.0f, 0.0f, 0.4375f);
             }
             int j = optionalInt.isPresent() ? ((ItemFrameEntity)itemFrameEntity).getRotation() % 4 * 2 : ((ItemFrameEntity)itemFrameEntity).getRotation();
-            matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion((float)j * 360.0f / 8.0f));
+            matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float)j * 360.0f / 8.0f));
             if (optionalInt.isPresent()) {
-                matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0f));
+                matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180.0f));
                 float h = 0.0078125f;
                 matrixStack.scale(0.0078125f, 0.0078125f, 0.0078125f);
-                matrixStack.translate(-64.0, -64.0, 0.0);
+                matrixStack.translate(-64.0f, -64.0f, 0.0f);
                 MapState mapState = FilledMapItem.getMapState(optionalInt.getAsInt(), ((ItemFrameEntity)itemFrameEntity).world);
-                matrixStack.translate(0.0, 0.0, -1.0);
+                matrixStack.translate(0.0f, 0.0f, -1.0f);
                 if (mapState != null) {
                     int k = this.getLight(itemFrameEntity, 15728850, i);
                     MinecraftClient.getInstance().gameRenderer.getMapRenderer().draw(matrixStack, vertexConsumerProvider, optionalInt.getAsInt(), mapState, true, k);

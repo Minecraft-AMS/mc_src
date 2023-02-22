@@ -11,6 +11,11 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.function.Function;
+import net.minecraft.registry.Registerable;
+import net.minecraft.registry.RegistryEntryLookup;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.AncientCityGenerator;
 import net.minecraft.structure.BastionRemnantGenerator;
 import net.minecraft.structure.PillagerOutpostGenerator;
@@ -18,30 +23,26 @@ import net.minecraft.structure.VillageGenerator;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolElement;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.BuiltinRegistries;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 
 public class StructurePools {
-    public static final RegistryKey<StructurePool> EMPTY = RegistryKey.of(Registry.STRUCTURE_POOL_KEY, new Identifier("empty"));
-    private static final RegistryEntry<StructurePool> INVALID = StructurePools.register(new StructurePool(EMPTY.getValue(), EMPTY.getValue(), (List<Pair<Function<StructurePool.Projection, ? extends StructurePoolElement>, Integer>>)ImmutableList.of(), StructurePool.Projection.RIGID));
+    public static final RegistryKey<StructurePool> EMPTY = StructurePools.of("empty");
 
-    public static RegistryEntry<StructurePool> register(StructurePool templatePool) {
-        return BuiltinRegistries.add(BuiltinRegistries.STRUCTURE_POOL, templatePool.getId(), templatePool);
+    public static RegistryKey<StructurePool> of(String id) {
+        return RegistryKey.of(RegistryKeys.TEMPLATE_POOL, new Identifier(id));
     }
 
-    @Deprecated
-    public static void method_44111() {
-        StructurePools.initDefaultPools(BuiltinRegistries.STRUCTURE_POOL);
+    public static void register(Registerable<StructurePool> structurePoolsRegisterable, String id, StructurePool pool) {
+        structurePoolsRegisterable.register(StructurePools.of(id), pool);
     }
 
-    public static RegistryEntry<StructurePool> initDefaultPools(Registry<StructurePool> registry) {
-        BastionRemnantGenerator.init();
-        PillagerOutpostGenerator.init();
-        VillageGenerator.init();
-        AncientCityGenerator.init();
-        return INVALID;
+    public static void bootstrap(Registerable<StructurePool> structurePoolsRegisterable) {
+        RegistryEntryLookup<StructurePool> registryEntryLookup = structurePoolsRegisterable.getRegistryLookup(RegistryKeys.TEMPLATE_POOL);
+        RegistryEntry.Reference<StructurePool> registryEntry = registryEntryLookup.getOrThrow(EMPTY);
+        structurePoolsRegisterable.register(EMPTY, new StructurePool(registryEntry, (List<Pair<Function<StructurePool.Projection, ? extends StructurePoolElement>, Integer>>)ImmutableList.of(), StructurePool.Projection.RIGID));
+        BastionRemnantGenerator.bootstrap(structurePoolsRegisterable);
+        PillagerOutpostGenerator.bootstrap(structurePoolsRegisterable);
+        VillageGenerator.bootstrap(structurePoolsRegisterable);
+        AncientCityGenerator.bootstrap(structurePoolsRegisterable);
     }
 }
 

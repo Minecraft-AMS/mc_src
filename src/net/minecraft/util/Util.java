@@ -5,7 +5,6 @@
  *  com.google.common.base.Ticker
  *  com.google.common.collect.Iterators
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  com.google.common.util.concurrent.MoreExecutors
  *  com.mojang.datafixers.DSL$TypeReference
  *  com.mojang.datafixers.DataFixUtils
@@ -13,6 +12,7 @@
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.DataResult$PartialResult
  *  it.unimi.dsi.fastutil.Hash$Strategy
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
@@ -26,7 +26,6 @@ package net.minecraft.util;
 import com.google.common.base.Ticker;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixUtils;
@@ -69,6 +68,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -230,12 +230,6 @@ public class Util {
             thread.setUncaughtExceptionHandler(Util::uncaughtExceptionHandler);
             return thread;
         });
-    }
-
-    public static <T> CompletableFuture<T> completeExceptionally(Throwable throwable) {
-        CompletableFuture completableFuture = new CompletableFuture();
-        completableFuture.completeExceptionally(throwable);
-        return completableFuture;
     }
 
     public static void throwUnchecked(Throwable t) {
@@ -722,7 +716,7 @@ public class Util {
 
     public static <T, R> Function<T, R> memoize(final Function<T, R> function) {
         return new Function<T, R>(){
-            private final Map<T, R> cache = Maps.newHashMap();
+            private final Map<T, R> cache = new ConcurrentHashMap();
 
             @Override
             public R apply(T object) {
@@ -737,7 +731,7 @@ public class Util {
 
     public static <T, U, R> BiFunction<T, U, R> memoize(final BiFunction<T, U, R> biFunction) {
         return new BiFunction<T, U, R>(){
-            private final Map<Pair<T, U>, R> cache = Maps.newHashMap();
+            private final Map<Pair<T, U>, R> cache = new ConcurrentHashMap();
 
             @Override
             public R apply(T a, U b) {
@@ -821,6 +815,14 @@ public class Util {
             object2IntMap.put(values.get(i), i);
         }
         return object2IntMap;
+    }
+
+    public static <T, E extends Exception> T getResult(DataResult<T> result, Function<String, E> exceptionGetter) throws E {
+        Optional optional = result.error();
+        if (optional.isPresent()) {
+            throw (Exception)exceptionGetter.apply(((DataResult.PartialResult)optional.get()).message());
+        }
+        return result.result().orElseThrow();
     }
 
     /*

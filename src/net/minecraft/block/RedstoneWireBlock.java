@@ -39,7 +39,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
@@ -64,16 +63,16 @@ extends Block {
     protected static final int field_31225 = 3;
     protected static final int field_31226 = 13;
     private static final VoxelShape DOT_SHAPE = Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 1.0, 13.0);
-    private static final Map<Direction, VoxelShape> field_24414 = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(3.0, 0.0, 0.0, 13.0, 1.0, 13.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 1.0, 16.0), (Object)Direction.EAST, (Object)Block.createCuboidShape(3.0, 0.0, 3.0, 16.0, 1.0, 13.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(0.0, 0.0, 3.0, 13.0, 1.0, 13.0)));
-    private static final Map<Direction, VoxelShape> field_24415 = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)VoxelShapes.union(field_24414.get(Direction.NORTH), Block.createCuboidShape(3.0, 0.0, 0.0, 13.0, 16.0, 1.0)), (Object)Direction.SOUTH, (Object)VoxelShapes.union(field_24414.get(Direction.SOUTH), Block.createCuboidShape(3.0, 0.0, 15.0, 13.0, 16.0, 16.0)), (Object)Direction.EAST, (Object)VoxelShapes.union(field_24414.get(Direction.EAST), Block.createCuboidShape(15.0, 0.0, 3.0, 16.0, 16.0, 13.0)), (Object)Direction.WEST, (Object)VoxelShapes.union(field_24414.get(Direction.WEST), Block.createCuboidShape(0.0, 0.0, 3.0, 1.0, 16.0, 13.0))));
+    private static final Map<Direction, VoxelShape> DIRECTION_TO_SIDE_SHAPE = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(3.0, 0.0, 0.0, 13.0, 1.0, 13.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 1.0, 16.0), (Object)Direction.EAST, (Object)Block.createCuboidShape(3.0, 0.0, 3.0, 16.0, 1.0, 13.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(0.0, 0.0, 3.0, 13.0, 1.0, 13.0)));
+    private static final Map<Direction, VoxelShape> DIRECTION_TO_UP_SHAPE = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)VoxelShapes.union(DIRECTION_TO_SIDE_SHAPE.get(Direction.NORTH), Block.createCuboidShape(3.0, 0.0, 0.0, 13.0, 16.0, 1.0)), (Object)Direction.SOUTH, (Object)VoxelShapes.union(DIRECTION_TO_SIDE_SHAPE.get(Direction.SOUTH), Block.createCuboidShape(3.0, 0.0, 15.0, 13.0, 16.0, 16.0)), (Object)Direction.EAST, (Object)VoxelShapes.union(DIRECTION_TO_SIDE_SHAPE.get(Direction.EAST), Block.createCuboidShape(15.0, 0.0, 3.0, 16.0, 16.0, 13.0)), (Object)Direction.WEST, (Object)VoxelShapes.union(DIRECTION_TO_SIDE_SHAPE.get(Direction.WEST), Block.createCuboidShape(0.0, 0.0, 3.0, 1.0, 16.0, 13.0))));
     private static final Map<BlockState, VoxelShape> SHAPES = Maps.newHashMap();
-    private static final Vec3d[] COLORS = Util.make(new Vec3d[16], vec3ds -> {
+    private static final Vec3d[] COLORS = Util.make(new Vec3d[16], colors -> {
         for (int i = 0; i <= 15; ++i) {
             float f;
             float g = f * 0.6f + ((f = (float)i / 15.0f) > 0.0f ? 0.4f : 0.3f);
             float h = MathHelper.clamp(f * f * 0.7f - 0.5f, 0.0f, 1.0f);
             float j = MathHelper.clamp(f * f * 0.6f - 0.7f, 0.0f, 1.0f);
-            vec3ds[i] = new Vec3d(g, h, j);
+            colors[i] = new Vec3d(g, h, j);
         }
     });
     private static final float field_31221 = 0.2f;
@@ -95,11 +94,11 @@ extends Block {
         for (Direction direction : Direction.Type.HORIZONTAL) {
             WireConnection wireConnection = (WireConnection)state.get(DIRECTION_TO_WIRE_CONNECTION_PROPERTY.get(direction));
             if (wireConnection == WireConnection.SIDE) {
-                voxelShape = VoxelShapes.union(voxelShape, field_24414.get(direction));
+                voxelShape = VoxelShapes.union(voxelShape, DIRECTION_TO_SIDE_SHAPE.get(direction));
                 continue;
             }
             if (wireConnection != WireConnection.UP) continue;
-            voxelShape = VoxelShapes.union(voxelShape, field_24415.get(direction));
+            voxelShape = VoxelShapes.union(voxelShape, DIRECTION_TO_UP_SHAPE.get(direction));
         }
         return voxelShape;
     }
@@ -395,7 +394,7 @@ extends Block {
         double d = 0.5 + (double)(0.4375f * (float)direction.getOffsetX()) + (double)(j * (float)direction2.getOffsetX());
         double e = 0.5 + (double)(0.4375f * (float)direction.getOffsetY()) + (double)(j * (float)direction2.getOffsetY());
         double k = 0.5 + (double)(0.4375f * (float)direction.getOffsetZ()) + (double)(j * (float)direction2.getOffsetZ());
-        world.addParticle(new DustParticleEffect(new Vec3f(color), 1.0f), (double)pos.getX() + d, (double)pos.getY() + e, (double)pos.getZ() + k, 0.0, 0.0, 0.0);
+        world.addParticle(new DustParticleEffect(color.toVector3f(), 1.0f), (double)pos.getX() + d, (double)pos.getY() + e, (double)pos.getZ() + k, 0.0, 0.0, 0.0);
     }
 
     @Override

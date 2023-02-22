@@ -47,10 +47,10 @@ import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -58,7 +58,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
-import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 
 public class WitherEntity
@@ -228,8 +227,7 @@ RangedAttackMob {
             int i2 = this.getInvulnerableTimer() - 1;
             this.bossBar.setPercent(1.0f - (float)i2 / 220.0f);
             if (i2 <= 0) {
-                Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
-                this.world.createExplosion(this, this.getX(), this.getEyeY(), this.getZ(), 7.0f, false, destructionType);
+                this.world.createExplosion((Entity)this, this.getX(), this.getEyeY(), this.getZ(), 7.0f, false, World.ExplosionSourceType.MOB);
                 if (!this.isSilent()) {
                     this.world.syncGlobalEvent(1023, this.getBlockPos(), 0);
                 }

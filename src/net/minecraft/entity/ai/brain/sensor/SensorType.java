@@ -26,10 +26,12 @@ import net.minecraft.entity.ai.brain.sensor.VillagerBabiesSensor;
 import net.minecraft.entity.ai.brain.sensor.VillagerHostilesSensor;
 import net.minecraft.entity.ai.brain.sensor.WardenAttackablesSensor;
 import net.minecraft.entity.passive.AxolotlBrain;
+import net.minecraft.entity.passive.CamelBrain;
 import net.minecraft.entity.passive.FrogBrain;
 import net.minecraft.entity.passive.GoatBrain;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 public class SensorType<U extends Sensor<?>> {
     public static final SensorType<DummySensor> DUMMY = SensorType.register("dummy", DummySensor::new);
@@ -50,6 +52,7 @@ public class SensorType<U extends Sensor<?>> {
     public static final SensorType<TemptationsSensor> AXOLOTL_TEMPTATIONS = SensorType.register("axolotl_temptations", () -> new TemptationsSensor(AxolotlBrain.getTemptItems()));
     public static final SensorType<TemptationsSensor> GOAT_TEMPTATIONS = SensorType.register("goat_temptations", () -> new TemptationsSensor(GoatBrain.getTemptItems()));
     public static final SensorType<TemptationsSensor> FROG_TEMPTATIONS = SensorType.register("frog_temptations", () -> new TemptationsSensor(FrogBrain.getTemptItems()));
+    public static final SensorType<TemptationsSensor> CAMEL_TEMPTATIONS = SensorType.register("camel_temptations", () -> new TemptationsSensor(CamelBrain.getBreedingIngredient()));
     public static final SensorType<FrogAttackablesSensor> FROG_ATTACKABLES = SensorType.register("frog_attackables", FrogAttackablesSensor::new);
     public static final SensorType<IsInWaterSensor> IS_IN_WATER = SensorType.register("is_in_water", IsInWaterSensor::new);
     public static final SensorType<WardenAttackablesSensor> WARDEN_ENTITY_SENSOR = SensorType.register("warden_entity_sensor", WardenAttackablesSensor::new);
@@ -64,7 +67,7 @@ public class SensorType<U extends Sensor<?>> {
     }
 
     private static <U extends Sensor<?>> SensorType<U> register(String id, Supplier<U> factory) {
-        return Registry.register(Registry.SENSOR_TYPE, new Identifier(id), new SensorType<U>(factory));
+        return Registry.register(Registries.SENSOR_TYPE, new Identifier(id), new SensorType<U>(factory));
     }
 }
 

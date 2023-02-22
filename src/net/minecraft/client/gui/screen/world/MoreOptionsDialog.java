@@ -44,21 +44,24 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.GeneratorOptionsHolder;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryOps;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.registry.tag.WorldPresetTags;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.integrated.IntegratedServerLoader;
-import net.minecraft.tag.TagKey;
-import net.minecraft.tag.WorldPresetTags;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
-import net.minecraft.util.dynamic.RegistryOps;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.dimension.DimensionOptionsRegistryHolder;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.gen.WorldPreset;
 import net.minecraft.world.gen.WorldPresets;
+import net.minecraft.world.level.WorldGenSettings;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
 
@@ -91,23 +94,23 @@ implements Drawable {
     }
 
     private static Optional<RegistryEntry<WorldPreset>> createPresetEntry(GeneratorOptionsHolder generatorOptionsHolder, Optional<RegistryKey<WorldPreset>> presetKey) {
-        return presetKey.flatMap(key -> generatorOptionsHolder.dynamicRegistryManager().get(Registry.WORLD_PRESET_KEY).getEntry((RegistryKey<WorldPreset>)key));
+        return presetKey.flatMap(key -> generatorOptionsHolder.getCombinedRegistryManager().get(RegistryKeys.WORLD_PRESET).getEntry((RegistryKey<WorldPreset>)key));
     }
 
     public void init(CreateWorldScreen parent, MinecraftClient client, TextRenderer textRenderer) {
         this.textRenderer = textRenderer;
         this.parentWidth = parent.width;
         this.seedTextField = new TextFieldWidget(this.textRenderer, this.parentWidth / 2 - 100, 60, 200, 20, Text.translatable("selectWorld.enterSeed"));
-        this.seedTextField.setText(MoreOptionsDialog.seedToString(this.seed));
+        this.seedTextField.setText(MoreOptionsDialog.toString(this.seed));
         this.seedTextField.setChangedListener(seedText -> {
             this.seed = GeneratorOptions.parseSeed(this.seedTextField.getText());
         });
         parent.addSelectableChild(this.seedTextField);
         int i = this.parentWidth / 2 - 155;
         int j = this.parentWidth / 2 + 5;
-        this.mapFeaturesButton = parent.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.generatorOptionsHolder.generatorOptions().shouldGenerateStructures()).narration(button -> ScreenTexts.joinSentences(button.getGenericNarrationMessage(), Text.translatable("selectWorld.mapFeatures.info"))).build(i, 100, 150, 20, Text.translatable("selectWorld.mapFeatures"), (cyclingButtonWidget, boolean_) -> this.apply(GeneratorOptions::toggleGenerateStructures)));
+        this.mapFeaturesButton = parent.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.generatorOptionsHolder.generatorOptions().shouldGenerateStructures()).narration(button -> ScreenTexts.joinSentences(button.getGenericNarrationMessage(), Text.translatable("selectWorld.mapFeatures.info"))).build(i, 100, 150, 20, Text.translatable("selectWorld.mapFeatures"), (button, structures) -> this.apply(generatorOptions -> generatorOptions.withStructures((boolean)structures))));
         this.mapFeaturesButton.visible = false;
-        Registry<WorldPreset> registry = this.generatorOptionsHolder.dynamicRegistryManager().get(Registry.WORLD_PRESET_KEY);
+        Registry<WorldPreset> registry = this.generatorOptionsHolder.getCombinedRegistryManager().get(RegistryKeys.WORLD_PRESET);
         List list = MoreOptionsDialog.collectPresets(registry, WorldPresetTags.NORMAL).orElseGet(() -> registry.streamEntries().collect(Collectors.toUnmodifiableList()));
         List<RegistryEntry<WorldPreset>> list2 = MoreOptionsDialog.collectPresets(registry, WorldPresetTags.EXTENDED).orElse(list);
         this.mapTypeButton = parent.addDrawableChild(CyclingButtonWidget.builder(MoreOptionsDialog::getText).values(list, list2).narration(button -> {
@@ -117,33 +120,33 @@ implements Drawable {
             return button.getGenericNarrationMessage();
         }).build(j, 100, 150, 20, Text.translatable("selectWorld.mapType"), (button, presetEntry) -> {
             this.presetEntry = Optional.of(presetEntry);
-            this.apply(generatorOptions -> ((WorldPreset)presetEntry.value()).createGeneratorOptions((GeneratorOptions)generatorOptions));
+            this.apply((dynamicRegistryManager, dimensionsRegistryHolder) -> ((WorldPreset)presetEntry.value()).createDimensionsRegistryHolder());
             parent.setMoreOptionsOpen();
         }));
         this.presetEntry.ifPresent(this.mapTypeButton::setValue);
         this.mapTypeButton.visible = false;
-        this.unchangeableMapTypeButton = parent.addDrawableChild(new ButtonWidget(j, 100, 150, 20, ScreenTexts.composeGenericOptionText(Text.translatable("selectWorld.mapType"), CUSTOM_TEXT), button -> {}));
+        this.unchangeableMapTypeButton = parent.addDrawableChild(ButtonWidget.builder(ScreenTexts.composeGenericOptionText(Text.translatable("selectWorld.mapType"), CUSTOM_TEXT), button -> {}).dimensions(j, 100, 150, 20).build());
         this.unchangeableMapTypeButton.active = false;
         this.unchangeableMapTypeButton.visible = false;
-        this.customizeTypeButton = parent.addDrawableChild(new ButtonWidget(j, 120, 150, 20, Text.translatable("selectWorld.customizeType"), button -> {
+        this.customizeTypeButton = parent.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.customizeType"), button -> {
             LevelScreenProvider levelScreenProvider = LevelScreenProvider.WORLD_PRESET_TO_SCREEN_PROVIDER.get(this.presetEntry.flatMap(RegistryEntry::getKey));
             if (levelScreenProvider != null) {
                 client.setScreen(levelScreenProvider.createEditScreen(parent, this.generatorOptionsHolder));
             }
-        }));
+        }).dimensions(j, 120, 150, 20).build());
         this.customizeTypeButton.visible = false;
-        this.bonusItemsButton = parent.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.generatorOptionsHolder.generatorOptions().hasBonusChest() && !parent.hardcore).build(i, 151, 150, 20, Text.translatable("selectWorld.bonusItems"), (button, bonusChest) -> this.apply(GeneratorOptions::toggleBonusChest)));
+        this.bonusItemsButton = parent.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.generatorOptionsHolder.generatorOptions().hasBonusChest() && !parent.hardcore).build(i, 151, 150, 20, Text.translatable("selectWorld.bonusItems"), (button, bonusChest) -> this.apply(generationOptions -> generationOptions.withBonusChest((boolean)bonusChest))));
         this.bonusItemsButton.visible = false;
-        this.importSettingsButton = parent.addDrawableChild(new ButtonWidget(i, 185, 150, 20, Text.translatable("selectWorld.import_worldgen_settings"), button -> {
+        this.importSettingsButton = parent.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.import_worldgen_settings"), button -> {
             DataResult dataResult;
             String string = TinyFileDialogs.tinyfd_openFileDialog((CharSequence)SELECT_SETTINGS_FILE_TEXT.getString(), null, null, null, (boolean)false);
             if (string == null) {
                 return;
             }
-            RegistryOps dynamicOps = RegistryOps.of(JsonOps.INSTANCE, this.generatorOptionsHolder.dynamicRegistryManager());
+            RegistryOps dynamicOps = RegistryOps.of(JsonOps.INSTANCE, this.generatorOptionsHolder.getCombinedRegistryManager());
             try (BufferedReader bufferedReader = Files.newBufferedReader(Paths.get(string, new String[0]));){
                 JsonElement jsonElement = JsonParser.parseReader((Reader)bufferedReader);
-                dataResult = GeneratorOptions.CODEC.parse(dynamicOps, (Object)jsonElement);
+                dataResult = WorldGenSettings.CODEC.parse(dynamicOps, (Object)jsonElement);
             }
             catch (Exception exception) {
                 dataResult = DataResult.error((String)("Failed to parse file: " + exception.getMessage()));
@@ -157,8 +160,8 @@ implements Drawable {
                 return;
             }
             Lifecycle lifecycle = dataResult.lifecycle();
-            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(generatorOptions -> IntegratedServerLoader.tryLoad(client, parent, lifecycle, () -> this.importOptions((GeneratorOptions)generatorOptions)));
-        }));
+            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(worldGenSettings -> IntegratedServerLoader.tryLoad(client, parent, lifecycle, () -> this.importOptions(worldGenSettings.generatorOptions(), worldGenSettings.dimensionOptionsRegistryHolder())));
+        }).dimensions(i, 185, 150, 20).build());
         this.importSettingsButton.visible = false;
         this.amplifiedInfoText = MultilineText.create(textRenderer, (StringVisitable)AMPLIFIED_INFO_TEXT, this.mapTypeButton.getWidth());
     }
@@ -175,12 +178,12 @@ implements Drawable {
         return presetEntry.getKey().map(key -> Text.translatable(key.getValue().toTranslationKey("generator"))).orElse(CUSTOM_TEXT);
     }
 
-    private void importOptions(GeneratorOptions generatorOptions) {
-        this.generatorOptionsHolder = this.generatorOptionsHolder.with(generatorOptions);
-        this.presetEntry = MoreOptionsDialog.createPresetEntry(this.generatorOptionsHolder, WorldPresets.getWorldPreset(generatorOptions));
+    private void importOptions(GeneratorOptions generatorOptions, DimensionOptionsRegistryHolder dimensionsRegistryHolder) {
+        this.generatorOptionsHolder = this.generatorOptionsHolder.with(generatorOptions, dimensionsRegistryHolder);
+        this.presetEntry = MoreOptionsDialog.createPresetEntry(this.generatorOptionsHolder, WorldPresets.getWorldPreset(dimensionsRegistryHolder.dimensions()));
         this.setMapTypeButtonVisible(true);
         this.seed = OptionalLong.of(generatorOptions.getSeed());
-        this.seedTextField.setText(MoreOptionsDialog.seedToString(this.seed));
+        this.seedTextField.setText(MoreOptionsDialog.toString(this.seed));
     }
 
     public void tickSeedTextField() {
@@ -194,15 +197,15 @@ implements Drawable {
         }
         this.seedTextField.render(matrices, mouseX, mouseY, delta);
         if (this.presetEntry.filter(MoreOptionsDialog::isAmplified).isPresent()) {
-            this.amplifiedInfoText.drawWithShadow(matrices, this.mapTypeButton.x + 2, this.mapTypeButton.y + 22, this.textRenderer.fontHeight, 0xA0A0A0);
+            this.amplifiedInfoText.drawWithShadow(matrices, this.mapTypeButton.getX() + 2, this.mapTypeButton.getY() + 22, this.textRenderer.fontHeight, 0xA0A0A0);
         }
     }
 
-    void apply(GeneratorOptionsHolder.Modifier modifier) {
+    void apply(GeneratorOptionsHolder.RegistryAwareModifier modifier) {
         this.generatorOptionsHolder = this.generatorOptionsHolder.apply(modifier);
     }
 
-    void apply(GeneratorOptionsHolder.RegistryAwareModifier modifier) {
+    private void apply(GeneratorOptionsHolder.Modifier modifier) {
         this.generatorOptionsHolder = this.generatorOptionsHolder.apply(modifier);
     }
 
@@ -210,20 +213,27 @@ implements Drawable {
         this.generatorOptionsHolder = generatorOptionsHolder;
     }
 
-    private static String seedToString(OptionalLong seed) {
+    private static String toString(OptionalLong seed) {
         if (seed.isPresent()) {
             return Long.toString(seed.getAsLong());
         }
         return "";
     }
 
-    public GeneratorOptionsHolder getGeneratorOptionsHolder(boolean hardcore) {
+    public GeneratorOptions getGeneratorOptionsHolder(boolean debug, boolean hardcore) {
         OptionalLong optionalLong = GeneratorOptions.parseSeed(this.seedTextField.getText());
-        return this.generatorOptionsHolder.apply(generatorOptions -> generatorOptions.withHardcore(hardcore, optionalLong));
+        GeneratorOptions generatorOptions = this.generatorOptionsHolder.generatorOptions();
+        if (debug || hardcore) {
+            generatorOptions = generatorOptions.withBonusChest(false);
+        }
+        if (debug) {
+            generatorOptions = generatorOptions.withStructures(false);
+        }
+        return generatorOptions.withSeed(optionalLong);
     }
 
     public boolean isDebugWorld() {
-        return this.generatorOptionsHolder.generatorOptions().isDebugWorld();
+        return this.generatorOptionsHolder.selectedDimensions().isDebug();
     }
 
     public void setVisible(boolean visible) {
@@ -257,7 +267,7 @@ implements Drawable {
     }
 
     public DynamicRegistryManager getRegistryManager() {
-        return this.generatorOptionsHolder.dynamicRegistryManager();
+        return this.generatorOptionsHolder.getCombinedRegistryManager();
     }
 
     public void disableBonusItems() {

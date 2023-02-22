@@ -10,6 +10,11 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix3fc
+ *  org.joml.Matrix4f
+ *  org.joml.Matrix4fc
+ *  org.joml.Vector3f
  *  org.slf4j.Logger
  */
 package net.minecraft.client.render;
@@ -21,13 +26,17 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -35,8 +44,9 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.pattern.CachedBlockPosition;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Program;
-import net.minecraft.client.gl.ShaderEffect;
+import net.minecraft.client.gl.PostEffectProcessor;
+import net.minecraft.client.gl.ShaderProgram;
+import net.minecraft.client.gl.ShaderStage;
 import net.minecraft.client.gui.hud.InGameOverlayRenderer;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.BufferBuilder;
@@ -47,7 +57,6 @@ import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.MapRenderer;
 import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.Shader;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexFormat;
@@ -68,9 +77,13 @@ import net.minecraft.entity.mob.SpiderEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceFactory;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloader;
+import net.minecraft.resource.ResourceReloader;
+import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -84,25 +97,27 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.profiler.Profiler;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
+import org.joml.Matrix3fc;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class GameRenderer
-implements SynchronousResourceReloader,
-AutoCloseable {
+implements AutoCloseable {
     private static final Identifier NAUSEA_OVERLAY = new Identifier("textures/misc/nausea.png");
-    private static final Logger LOGGER = LogUtils.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
     private static final boolean field_32688 = false;
     public static final float CAMERA_DEPTH = 0.05f;
-    private final MinecraftClient client;
+    final MinecraftClient client;
     private final ResourceManager resourceManager;
     private final Random random = Random.create();
     private float viewDistance;
@@ -132,124 +147,124 @@ AutoCloseable {
     private float floatingItemWidth;
     private float floatingItemHeight;
     @Nullable
-    private ShaderEffect shader;
-    private static final Identifier[] SHADERS_LOCATIONS = new Identifier[]{new Identifier("shaders/post/notch.json"), new Identifier("shaders/post/fxaa.json"), new Identifier("shaders/post/art.json"), new Identifier("shaders/post/bumpy.json"), new Identifier("shaders/post/blobs2.json"), new Identifier("shaders/post/pencil.json"), new Identifier("shaders/post/color_convolve.json"), new Identifier("shaders/post/deconverge.json"), new Identifier("shaders/post/flip.json"), new Identifier("shaders/post/invert.json"), new Identifier("shaders/post/ntsc.json"), new Identifier("shaders/post/outline.json"), new Identifier("shaders/post/phosphor.json"), new Identifier("shaders/post/scan_pincushion.json"), new Identifier("shaders/post/sobel.json"), new Identifier("shaders/post/bits.json"), new Identifier("shaders/post/desaturate.json"), new Identifier("shaders/post/green.json"), new Identifier("shaders/post/blur.json"), new Identifier("shaders/post/wobble.json"), new Identifier("shaders/post/blobs.json"), new Identifier("shaders/post/antialias.json"), new Identifier("shaders/post/creeper.json"), new Identifier("shaders/post/spider.json")};
-    public static final int SHADER_COUNT = SHADERS_LOCATIONS.length;
-    private int forcedShaderIndex = SHADER_COUNT;
-    private boolean shadersEnabled;
+    PostEffectProcessor postProcessor;
+    static final Identifier[] SUPER_SECRET_SETTING_PROGRAMS = new Identifier[]{new Identifier("shaders/post/notch.json"), new Identifier("shaders/post/fxaa.json"), new Identifier("shaders/post/art.json"), new Identifier("shaders/post/bumpy.json"), new Identifier("shaders/post/blobs2.json"), new Identifier("shaders/post/pencil.json"), new Identifier("shaders/post/color_convolve.json"), new Identifier("shaders/post/deconverge.json"), new Identifier("shaders/post/flip.json"), new Identifier("shaders/post/invert.json"), new Identifier("shaders/post/ntsc.json"), new Identifier("shaders/post/outline.json"), new Identifier("shaders/post/phosphor.json"), new Identifier("shaders/post/scan_pincushion.json"), new Identifier("shaders/post/sobel.json"), new Identifier("shaders/post/bits.json"), new Identifier("shaders/post/desaturate.json"), new Identifier("shaders/post/green.json"), new Identifier("shaders/post/blur.json"), new Identifier("shaders/post/wobble.json"), new Identifier("shaders/post/blobs.json"), new Identifier("shaders/post/antialias.json"), new Identifier("shaders/post/creeper.json"), new Identifier("shaders/post/spider.json")};
+    public static final int SUPER_SECRET_SETTING_COUNT = SUPER_SECRET_SETTING_PROGRAMS.length;
+    int superSecretSettingIndex = SUPER_SECRET_SETTING_COUNT;
+    private boolean postProcessorEnabled;
     private final Camera camera = new Camera();
-    public Shader blitScreenShader;
-    private final Map<String, Shader> shaders = Maps.newHashMap();
+    public ShaderProgram blitScreenProgram;
+    private final Map<String, ShaderProgram> programs = Maps.newHashMap();
     @Nullable
-    private static Shader positionShader;
+    private static ShaderProgram positionProgram;
     @Nullable
-    private static Shader positionColorShader;
+    private static ShaderProgram positionColorProgram;
     @Nullable
-    private static Shader positionColorTexShader;
+    private static ShaderProgram positionColorTexProgram;
     @Nullable
-    private static Shader positionTexShader;
+    private static ShaderProgram positionTexProgram;
     @Nullable
-    private static Shader positionTexColorShader;
+    private static ShaderProgram positionTexColorProgram;
     @Nullable
-    private static Shader blockShader;
+    private static ShaderProgram blockProgram;
     @Nullable
-    private static Shader newEntityShader;
+    private static ShaderProgram newEntityProgram;
     @Nullable
-    private static Shader particleShader;
+    private static ShaderProgram particleProgram;
     @Nullable
-    private static Shader positionColorLightmapShader;
+    private static ShaderProgram positionColorLightmapProgram;
     @Nullable
-    private static Shader positionColorTexLightmapShader;
+    private static ShaderProgram positionColorTexLightmapProgram;
     @Nullable
-    private static Shader positionTexColorNormalShader;
+    private static ShaderProgram positionTexColorNormalProgram;
     @Nullable
-    private static Shader positionTexLightmapColorShader;
+    private static ShaderProgram positionTexLightmapColorProgram;
     @Nullable
-    private static Shader renderTypeSolidShader;
+    private static ShaderProgram renderTypeSolidProgram;
     @Nullable
-    private static Shader renderTypeCutoutMippedShader;
+    private static ShaderProgram renderTypeCutoutMippedProgram;
     @Nullable
-    private static Shader renderTypeCutoutShader;
+    private static ShaderProgram renderTypeCutoutProgram;
     @Nullable
-    private static Shader renderTypeTranslucentShader;
+    private static ShaderProgram renderTypeTranslucentProgram;
     @Nullable
-    private static Shader renderTypeTranslucentMovingBlockShader;
+    private static ShaderProgram renderTypeTranslucentMovingBlockProgram;
     @Nullable
-    private static Shader renderTypeTranslucentNoCrumblingShader;
+    private static ShaderProgram renderTypeTranslucentNoCrumblingProgram;
     @Nullable
-    private static Shader renderTypeArmorCutoutNoCullShader;
+    private static ShaderProgram renderTypeArmorCutoutNoCullProgram;
     @Nullable
-    private static Shader renderTypeEntitySolidShader;
+    private static ShaderProgram renderTypeEntitySolidProgram;
     @Nullable
-    private static Shader renderTypeEntityCutoutShader;
+    private static ShaderProgram renderTypeEntityCutoutProgram;
     @Nullable
-    private static Shader renderTypeEntityCutoutNoNullShader;
+    private static ShaderProgram renderTypeEntityCutoutNoNullProgram;
     @Nullable
-    private static Shader renderTypeEntityCutoutNoNullZOffsetShader;
+    private static ShaderProgram renderTypeEntityCutoutNoNullZOffsetProgram;
     @Nullable
-    private static Shader renderTypeItemEntityTranslucentCullShader;
+    private static ShaderProgram renderTypeItemEntityTranslucentCullProgram;
     @Nullable
-    private static Shader renderTypeEntityTranslucentCullShader;
+    private static ShaderProgram renderTypeEntityTranslucentCullProgram;
     @Nullable
-    private static Shader renderTypeEntityTranslucentShader;
+    private static ShaderProgram renderTypeEntityTranslucentProgram;
     @Nullable
-    private static Shader renderTypeEntityTranslucentEmissiveShader;
+    private static ShaderProgram renderTypeEntityTranslucentEmissiveProgram;
     @Nullable
-    private static Shader renderTypeEntitySmoothCutoutShader;
+    private static ShaderProgram renderTypeEntitySmoothCutoutProgram;
     @Nullable
-    private static Shader renderTypeBeaconBeamShader;
+    private static ShaderProgram renderTypeBeaconBeamProgram;
     @Nullable
-    private static Shader renderTypeEntityDecalShader;
+    private static ShaderProgram renderTypeEntityDecalProgram;
     @Nullable
-    private static Shader renderTypeEntityNoOutlineShader;
+    private static ShaderProgram renderTypeEntityNoOutlineProgram;
     @Nullable
-    private static Shader renderTypeEntityShadowShader;
+    private static ShaderProgram renderTypeEntityShadowProgram;
     @Nullable
-    private static Shader renderTypeEntityAlphaShader;
+    private static ShaderProgram renderTypeEntityAlphaProgram;
     @Nullable
-    private static Shader renderTypeEyesShader;
+    private static ShaderProgram renderTypeEyesProgram;
     @Nullable
-    private static Shader renderTypeEnergySwirlShader;
+    private static ShaderProgram renderTypeEnergySwirlProgram;
     @Nullable
-    private static Shader renderTypeLeashShader;
+    private static ShaderProgram renderTypeLeashProgram;
     @Nullable
-    private static Shader renderTypeWaterMaskShader;
+    private static ShaderProgram renderTypeWaterMaskProgram;
     @Nullable
-    private static Shader renderTypeOutlineShader;
+    private static ShaderProgram renderTypeOutlineProgram;
     @Nullable
-    private static Shader renderTypeArmorGlintShader;
+    private static ShaderProgram renderTypeArmorGlintProgram;
     @Nullable
-    private static Shader renderTypeArmorEntityGlintShader;
+    private static ShaderProgram renderTypeArmorEntityGlintProgram;
     @Nullable
-    private static Shader renderTypeGlintTranslucentShader;
+    private static ShaderProgram renderTypeGlintTranslucentProgram;
     @Nullable
-    private static Shader renderTypeGlintShader;
+    private static ShaderProgram renderTypeGlintProgram;
     @Nullable
-    private static Shader renderTypeGlintDirectShader;
+    private static ShaderProgram renderTypeGlintDirectProgram;
     @Nullable
-    private static Shader renderTypeEntityGlintShader;
+    private static ShaderProgram renderTypeEntityGlintProgram;
     @Nullable
-    private static Shader renderTypeEntityGlintDirectShader;
+    private static ShaderProgram renderTypeEntityGlintDirectProgram;
     @Nullable
-    private static Shader renderTypeTextShader;
+    private static ShaderProgram renderTypeTextProgram;
     @Nullable
-    private static Shader renderTypeTextIntensityShader;
+    private static ShaderProgram renderTypeTextIntensityProgram;
     @Nullable
-    private static Shader renderTypeTextSeeThroughShader;
+    private static ShaderProgram renderTypeTextSeeThroughProgram;
     @Nullable
-    private static Shader renderTypeTextIntensitySeeThroughShader;
+    private static ShaderProgram renderTypeTextIntensitySeeThroughProgram;
     @Nullable
-    private static Shader renderTypeLightningShader;
+    private static ShaderProgram renderTypeLightningProgram;
     @Nullable
-    private static Shader renderTypeTripwireShader;
+    private static ShaderProgram renderTypeTripwireProgram;
     @Nullable
-    private static Shader renderTypeEndPortalShader;
+    private static ShaderProgram renderTypeEndPortalProgram;
     @Nullable
-    private static Shader renderTypeEndGatewayShader;
+    private static ShaderProgram renderTypeEndGatewayProgram;
     @Nullable
-    private static Shader renderTypeLinesShader;
+    private static ShaderProgram renderTypeLinesProgram;
     @Nullable
-    private static Shader renderTypeCrumblingShader;
+    private static ShaderProgram renderTypeCrumblingProgram;
 
     public GameRenderer(MinecraftClient client, HeldItemRenderer heldItemRenderer, ResourceManager resourceManager, BufferBuilderStorage buffers) {
         this.client = client;
@@ -258,7 +273,7 @@ AutoCloseable {
         this.mapRenderer = new MapRenderer(client.getTextureManager());
         this.lightmapTextureManager = new LightmapTextureManager(this, client);
         this.buffers = buffers;
-        this.shader = null;
+        this.postProcessor = null;
     }
 
     @Override
@@ -266,10 +281,10 @@ AutoCloseable {
         this.lightmapTextureManager.close();
         this.mapRenderer.close();
         this.overlayTexture.close();
-        this.disableShader();
-        this.clearShaders();
-        if (this.blitScreenShader != null) {
-            this.blitScreenShader.close();
+        this.disablePostProcessor();
+        this.clearPrograms();
+        if (this.blitScreenProgram != null) {
+            this.blitScreenProgram.close();
         }
     }
 
@@ -289,309 +304,343 @@ AutoCloseable {
         return this.renderingPanorama;
     }
 
-    public void disableShader() {
-        if (this.shader != null) {
-            this.shader.close();
+    public void disablePostProcessor() {
+        if (this.postProcessor != null) {
+            this.postProcessor.close();
         }
-        this.shader = null;
-        this.forcedShaderIndex = SHADER_COUNT;
+        this.postProcessor = null;
+        this.superSecretSettingIndex = SUPER_SECRET_SETTING_COUNT;
     }
 
-    public void toggleShadersEnabled() {
-        this.shadersEnabled = !this.shadersEnabled;
+    public void togglePostProcessorEnabled() {
+        this.postProcessorEnabled = !this.postProcessorEnabled;
     }
 
     public void onCameraEntitySet(@Nullable Entity entity) {
-        if (this.shader != null) {
-            this.shader.close();
+        if (this.postProcessor != null) {
+            this.postProcessor.close();
         }
-        this.shader = null;
+        this.postProcessor = null;
         if (entity instanceof CreeperEntity) {
-            this.loadShader(new Identifier("shaders/post/creeper.json"));
+            this.loadPostProcessor(new Identifier("shaders/post/creeper.json"));
         } else if (entity instanceof SpiderEntity) {
-            this.loadShader(new Identifier("shaders/post/spider.json"));
+            this.loadPostProcessor(new Identifier("shaders/post/spider.json"));
         } else if (entity instanceof EndermanEntity) {
-            this.loadShader(new Identifier("shaders/post/invert.json"));
+            this.loadPostProcessor(new Identifier("shaders/post/invert.json"));
         }
     }
 
-    public void loadForcedShader() {
+    public void cycleSuperSecretSetting() {
         if (!(this.client.getCameraEntity() instanceof PlayerEntity)) {
             return;
         }
-        if (this.shader != null) {
-            this.shader.close();
+        if (this.postProcessor != null) {
+            this.postProcessor.close();
         }
-        this.forcedShaderIndex = (this.forcedShaderIndex + 1) % (SHADERS_LOCATIONS.length + 1);
-        if (this.forcedShaderIndex == SHADER_COUNT) {
-            this.shader = null;
+        this.superSecretSettingIndex = (this.superSecretSettingIndex + 1) % (SUPER_SECRET_SETTING_PROGRAMS.length + 1);
+        if (this.superSecretSettingIndex == SUPER_SECRET_SETTING_COUNT) {
+            this.postProcessor = null;
         } else {
-            this.loadShader(SHADERS_LOCATIONS[this.forcedShaderIndex]);
+            this.loadPostProcessor(SUPER_SECRET_SETTING_PROGRAMS[this.superSecretSettingIndex]);
         }
     }
 
-    private void loadShader(Identifier id) {
-        if (this.shader != null) {
-            this.shader.close();
+    void loadPostProcessor(Identifier id) {
+        if (this.postProcessor != null) {
+            this.postProcessor.close();
         }
         try {
-            this.shader = new ShaderEffect(this.client.getTextureManager(), this.resourceManager, this.client.getFramebuffer(), id);
-            this.shader.setupDimensions(this.client.getWindow().getFramebufferWidth(), this.client.getWindow().getFramebufferHeight());
-            this.shadersEnabled = true;
+            this.postProcessor = new PostEffectProcessor(this.client.getTextureManager(), this.resourceManager, this.client.getFramebuffer(), id);
+            this.postProcessor.setupDimensions(this.client.getWindow().getFramebufferWidth(), this.client.getWindow().getFramebufferHeight());
+            this.postProcessorEnabled = true;
         }
         catch (IOException iOException) {
             LOGGER.warn("Failed to load shader: {}", (Object)id, (Object)iOException);
-            this.forcedShaderIndex = SHADER_COUNT;
-            this.shadersEnabled = false;
+            this.superSecretSettingIndex = SUPER_SECRET_SETTING_COUNT;
+            this.postProcessorEnabled = false;
         }
         catch (JsonSyntaxException jsonSyntaxException) {
             LOGGER.warn("Failed to parse shader: {}", (Object)id, (Object)jsonSyntaxException);
-            this.forcedShaderIndex = SHADER_COUNT;
-            this.shadersEnabled = false;
+            this.superSecretSettingIndex = SUPER_SECRET_SETTING_COUNT;
+            this.postProcessorEnabled = false;
         }
     }
 
-    @Override
-    public void reload(ResourceManager manager) {
-        this.loadShaders(manager);
-        if (this.shader != null) {
-            this.shader.close();
-        }
-        this.shader = null;
-        if (this.forcedShaderIndex == SHADER_COUNT) {
-            this.onCameraEntitySet(this.client.getCameraEntity());
-        } else {
-            this.loadShader(SHADERS_LOCATIONS[this.forcedShaderIndex]);
-        }
+    public ResourceReloader createProgramReloader() {
+        return new SinglePreparationResourceReloader<CachedResourceFactory>(){
+
+            @Override
+            protected CachedResourceFactory prepare(ResourceManager resourceManager, Profiler profiler) {
+                Map<Identifier, Resource> map = resourceManager.findResources("shaders", id -> {
+                    String string = id.getPath();
+                    return string.endsWith(".json") || string.endsWith(ShaderStage.Type.FRAGMENT.getFileExtension()) || string.endsWith(ShaderStage.Type.VERTEX.getFileExtension()) || string.endsWith(".glsl");
+                });
+                HashMap<Identifier, Resource> map2 = new HashMap<Identifier, Resource>();
+                map.forEach((id, resource) -> {
+                    try (InputStream inputStream = resource.getInputStream();){
+                        byte[] bs = inputStream.readAllBytes();
+                        map2.put((Identifier)id, new Resource(resource.getPack(), () -> new ByteArrayInputStream(bs)));
+                    }
+                    catch (Exception exception) {
+                        LOGGER.warn("Failed to read resource {}", id, (Object)exception);
+                    }
+                });
+                return new CachedResourceFactory(resourceManager, map2);
+            }
+
+            @Override
+            protected void apply(CachedResourceFactory cachedResourceFactory, ResourceManager resourceManager, Profiler profiler) {
+                GameRenderer.this.loadPrograms(cachedResourceFactory);
+                if (GameRenderer.this.postProcessor != null) {
+                    GameRenderer.this.postProcessor.close();
+                }
+                GameRenderer.this.postProcessor = null;
+                if (GameRenderer.this.superSecretSettingIndex == SUPER_SECRET_SETTING_COUNT) {
+                    GameRenderer.this.onCameraEntitySet(GameRenderer.this.client.getCameraEntity());
+                } else {
+                    GameRenderer.this.loadPostProcessor(SUPER_SECRET_SETTING_PROGRAMS[GameRenderer.this.superSecretSettingIndex]);
+                }
+            }
+
+            @Override
+            public String getName() {
+                return "Shader Loader";
+            }
+
+            @Override
+            protected /* synthetic */ Object prepare(ResourceManager manager, Profiler profiler) {
+                return this.prepare(manager, profiler);
+            }
+        };
     }
 
-    public void preloadShaders(ResourceFactory factory) {
-        if (this.blitScreenShader != null) {
+    public void preloadPrograms(ResourceFactory factory) {
+        if (this.blitScreenProgram != null) {
             throw new RuntimeException("Blit shader already preloaded");
         }
         try {
-            this.blitScreenShader = new Shader(factory, "blit_screen", VertexFormats.BLIT_SCREEN);
+            this.blitScreenProgram = new ShaderProgram(factory, "blit_screen", VertexFormats.BLIT_SCREEN);
         }
         catch (IOException iOException) {
             throw new RuntimeException("could not preload blit shader", iOException);
         }
-        positionShader = this.loadShader(factory, "position", VertexFormats.POSITION);
-        positionColorShader = this.loadShader(factory, "position_color", VertexFormats.POSITION_COLOR);
-        positionColorTexShader = this.loadShader(factory, "position_color_tex", VertexFormats.POSITION_COLOR_TEXTURE);
-        positionTexShader = this.loadShader(factory, "position_tex", VertexFormats.POSITION_TEXTURE);
-        positionTexColorShader = this.loadShader(factory, "position_tex_color", VertexFormats.POSITION_TEXTURE_COLOR);
-        renderTypeTextShader = this.loadShader(factory, "rendertype_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT);
+        positionProgram = this.preloadProgram(factory, "position", VertexFormats.POSITION);
+        positionColorProgram = this.preloadProgram(factory, "position_color", VertexFormats.POSITION_COLOR);
+        positionColorTexProgram = this.preloadProgram(factory, "position_color_tex", VertexFormats.POSITION_COLOR_TEXTURE);
+        positionTexProgram = this.preloadProgram(factory, "position_tex", VertexFormats.POSITION_TEXTURE);
+        positionTexColorProgram = this.preloadProgram(factory, "position_tex_color", VertexFormats.POSITION_TEXTURE_COLOR);
+        renderTypeTextProgram = this.preloadProgram(factory, "rendertype_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT);
     }
 
-    private Shader loadShader(ResourceFactory factory, String name, VertexFormat vertexFormat) {
+    private ShaderProgram preloadProgram(ResourceFactory factory, String name, VertexFormat format) {
         try {
-            Shader shader = new Shader(factory, name, vertexFormat);
-            this.shaders.put(name, shader);
-            return shader;
+            ShaderProgram shaderProgram = new ShaderProgram(factory, name, format);
+            this.programs.put(name, shaderProgram);
+            return shaderProgram;
         }
         catch (Exception exception) {
             throw new IllegalStateException("could not preload shader " + name, exception);
         }
     }
 
-    public void loadShaders(ResourceManager manager) {
+    void loadPrograms(ResourceFactory factory) {
         RenderSystem.assertOnRenderThread();
         ArrayList list = Lists.newArrayList();
-        list.addAll(Program.Type.FRAGMENT.getProgramCache().values());
-        list.addAll(Program.Type.VERTEX.getProgramCache().values());
-        list.forEach(Program::release);
-        ArrayList list2 = Lists.newArrayListWithCapacity((int)this.shaders.size());
+        list.addAll(ShaderStage.Type.FRAGMENT.getLoadedShaders().values());
+        list.addAll(ShaderStage.Type.VERTEX.getLoadedShaders().values());
+        list.forEach(ShaderStage::release);
+        ArrayList list2 = Lists.newArrayListWithCapacity((int)this.programs.size());
         try {
-            list2.add(Pair.of((Object)new Shader(manager, "block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                blockShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                blockProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "new_entity", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                newEntityShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "new_entity", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                newEntityProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "particle", VertexFormats.POSITION_TEXTURE_COLOR_LIGHT), shader -> {
-                particleShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "particle", VertexFormats.POSITION_TEXTURE_COLOR_LIGHT), program -> {
+                particleProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position", VertexFormats.POSITION), shader -> {
-                positionShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position", VertexFormats.POSITION), program -> {
+                positionProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_color", VertexFormats.POSITION_COLOR), shader -> {
-                positionColorShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_color", VertexFormats.POSITION_COLOR), program -> {
+                positionColorProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_color_lightmap", VertexFormats.POSITION_COLOR_LIGHT), shader -> {
-                positionColorLightmapShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_color_lightmap", VertexFormats.POSITION_COLOR_LIGHT), program -> {
+                positionColorLightmapProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_color_tex", VertexFormats.POSITION_COLOR_TEXTURE), shader -> {
-                positionColorTexShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_color_tex", VertexFormats.POSITION_COLOR_TEXTURE), program -> {
+                positionColorTexProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_color_tex_lightmap", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), shader -> {
-                positionColorTexLightmapShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_color_tex_lightmap", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
+                positionColorTexLightmapProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_tex", VertexFormats.POSITION_TEXTURE), shader -> {
-                positionTexShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_tex", VertexFormats.POSITION_TEXTURE), program -> {
+                positionTexProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_tex_color", VertexFormats.POSITION_TEXTURE_COLOR), shader -> {
-                positionTexColorShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_tex_color", VertexFormats.POSITION_TEXTURE_COLOR), program -> {
+                positionTexColorProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_tex_color_normal", VertexFormats.POSITION_TEXTURE_COLOR_NORMAL), shader -> {
-                positionTexColorNormalShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_tex_color_normal", VertexFormats.POSITION_TEXTURE_COLOR_NORMAL), program -> {
+                positionTexColorNormalProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "position_tex_lightmap_color", VertexFormats.POSITION_TEXTURE_LIGHT_COLOR), shader -> {
-                positionTexLightmapColorShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "position_tex_lightmap_color", VertexFormats.POSITION_TEXTURE_LIGHT_COLOR), program -> {
+                positionTexLightmapColorProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_solid", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeSolidShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_solid", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeSolidProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_cutout_mipped", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeCutoutMippedShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_cutout_mipped", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeCutoutMippedProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_cutout", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeCutoutShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_cutout", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeCutoutProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_translucent", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeTranslucentShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_translucent", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeTranslucentProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_translucent_moving_block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeTranslucentMovingBlockShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_translucent_moving_block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeTranslucentMovingBlockProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_translucent_no_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeTranslucentNoCrumblingShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_translucent_no_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeTranslucentNoCrumblingProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_armor_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeArmorCutoutNoCullShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_armor_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeArmorCutoutNoCullProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_solid", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntitySolidShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_solid", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntitySolidProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityCutoutShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityCutoutProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityCutoutNoNullShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityCutoutNoNullProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_cutout_no_cull_z_offset", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityCutoutNoNullZOffsetShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_cutout_no_cull_z_offset", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityCutoutNoNullZOffsetProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_item_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeItemEntityTranslucentCullShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_item_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeItemEntityTranslucentCullProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityTranslucentCullShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityTranslucentCullProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityTranslucentShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityTranslucentProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_translucent_emissive", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityTranslucentEmissiveShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_translucent_emissive", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityTranslucentEmissiveProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntitySmoothCutoutShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntitySmoothCutoutProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_beacon_beam", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeBeaconBeamShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_beacon_beam", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeBeaconBeamProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_decal", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityDecalShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_decal", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityDecalProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_no_outline", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityNoOutlineShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_no_outline", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityNoOutlineProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_shadow", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityShadowShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_shadow", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityShadowProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_alpha", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEntityAlphaShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_alpha", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEntityAlphaProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_eyes", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEyesShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_eyes", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEyesProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_energy_swirl", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
-                renderTypeEnergySwirlShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_energy_swirl", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), program -> {
+                renderTypeEnergySwirlProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_leash", VertexFormats.POSITION_COLOR_LIGHT), shader -> {
-                renderTypeLeashShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_leash", VertexFormats.POSITION_COLOR_LIGHT), program -> {
+                renderTypeLeashProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_water_mask", VertexFormats.POSITION), shader -> {
-                renderTypeWaterMaskShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_water_mask", VertexFormats.POSITION), program -> {
+                renderTypeWaterMaskProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_outline", VertexFormats.POSITION_COLOR_TEXTURE), shader -> {
-                renderTypeOutlineShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_outline", VertexFormats.POSITION_COLOR_TEXTURE), program -> {
+                renderTypeOutlineProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_armor_glint", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeArmorGlintShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_armor_glint", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeArmorGlintProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_armor_entity_glint", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeArmorEntityGlintShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_armor_entity_glint", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeArmorEntityGlintProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_glint_translucent", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeGlintTranslucentShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_glint_translucent", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeGlintTranslucentProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_glint", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeGlintShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_glint", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeGlintProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_glint_direct", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeGlintDirectShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_glint_direct", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeGlintDirectProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_glint", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeEntityGlintShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_glint", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeEntityGlintProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_glint_direct", VertexFormats.POSITION_TEXTURE), shader -> {
-                renderTypeEntityGlintDirectShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_entity_glint_direct", VertexFormats.POSITION_TEXTURE), program -> {
+                renderTypeEntityGlintDirectProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), shader -> {
-                renderTypeTextShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
+                renderTypeTextProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_text_intensity", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), shader -> {
-                renderTypeTextIntensityShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_intensity", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
+                renderTypeTextIntensityProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_text_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), shader -> {
-                renderTypeTextSeeThroughShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
+                renderTypeTextSeeThroughProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_text_intensity_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), shader -> {
-                renderTypeTextIntensitySeeThroughShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_text_intensity_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT), program -> {
+                renderTypeTextIntensitySeeThroughProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_lightning", VertexFormats.POSITION_COLOR), shader -> {
-                renderTypeLightningShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_lightning", VertexFormats.POSITION_COLOR), program -> {
+                renderTypeLightningProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_tripwire", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeTripwireShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_tripwire", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeTripwireProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_end_portal", VertexFormats.POSITION), shader -> {
-                renderTypeEndPortalShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_end_portal", VertexFormats.POSITION), program -> {
+                renderTypeEndPortalProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_end_gateway", VertexFormats.POSITION), shader -> {
-                renderTypeEndGatewayShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_end_gateway", VertexFormats.POSITION), program -> {
+                renderTypeEndGatewayProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_lines", VertexFormats.LINES), shader -> {
-                renderTypeLinesShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_lines", VertexFormats.LINES), program -> {
+                renderTypeLinesProgram = program;
             }));
-            list2.add(Pair.of((Object)new Shader(manager, "rendertype_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), shader -> {
-                renderTypeCrumblingShader = shader;
+            list2.add(Pair.of((Object)new ShaderProgram(factory, "rendertype_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL), program -> {
+                renderTypeCrumblingProgram = program;
             }));
         }
         catch (IOException iOException) {
-            list2.forEach(pair -> ((Shader)pair.getFirst()).close());
+            list2.forEach(pair -> ((ShaderProgram)pair.getFirst()).close());
             throw new RuntimeException("could not reload shaders", iOException);
         }
-        this.clearShaders();
+        this.clearPrograms();
         list2.forEach(pair -> {
-            Shader shader = (Shader)pair.getFirst();
-            this.shaders.put(shader.getName(), shader);
-            ((Consumer)pair.getSecond()).accept(shader);
+            ShaderProgram shaderProgram = (ShaderProgram)pair.getFirst();
+            this.programs.put(shaderProgram.getName(), shaderProgram);
+            ((Consumer)pair.getSecond()).accept(shaderProgram);
         });
     }
 
-    private void clearShaders() {
+    private void clearPrograms() {
         RenderSystem.assertOnRenderThread();
-        this.shaders.values().forEach(Shader::close);
-        this.shaders.clear();
+        this.programs.values().forEach(ShaderProgram::close);
+        this.programs.clear();
     }
 
     @Nullable
-    public Shader getShader(@Nullable String name) {
+    public ShaderProgram getProgram(@Nullable String name) {
         if (name == null) {
             return null;
         }
-        return this.shaders.get(name);
+        return this.programs.get(name);
     }
 
     public void tick() {
@@ -622,13 +671,13 @@ AutoCloseable {
     }
 
     @Nullable
-    public ShaderEffect getShader() {
-        return this.shader;
+    public PostEffectProcessor getPostProcessor() {
+        return this.postProcessor;
     }
 
     public void onResized(int width, int height) {
-        if (this.shader != null) {
-            this.shader.setupDimensions(width, height);
+        if (this.postProcessor != null) {
+            this.postProcessor.setupDimensions(width, height);
         }
         this.client.worldRenderer.onResized(width, height);
     }
@@ -725,7 +774,7 @@ AutoCloseable {
             float f = (float)livingEntity.hurtTime - tickDelta;
             if (livingEntity.isDead()) {
                 g = Math.min((float)livingEntity.deathTime + tickDelta, 20.0f);
-                matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(40.0f - 8000.0f / (g + 200.0f)));
+                matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(40.0f - 8000.0f / (g + 200.0f)));
             }
             if (f < 0.0f) {
                 return;
@@ -733,9 +782,9 @@ AutoCloseable {
             f /= (float)livingEntity.maxHurtTime;
             f = MathHelper.sin(f * f * f * f * (float)Math.PI);
             g = livingEntity.knockbackVelocity;
-            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-g));
-            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-f * 14.0f));
-            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(g));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-g));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-f * 14.0f));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(g));
         }
     }
 
@@ -747,9 +796,9 @@ AutoCloseable {
         float f = playerEntity.horizontalSpeed - playerEntity.prevHorizontalSpeed;
         float g = -(playerEntity.horizontalSpeed + f * tickDelta);
         float h = MathHelper.lerp(tickDelta, playerEntity.prevStrideDistance, playerEntity.strideDistance);
-        matrices.translate(MathHelper.sin(g * (float)Math.PI) * h * 0.5f, -Math.abs(MathHelper.cos(g * (float)Math.PI) * h), 0.0);
-        matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.sin(g * (float)Math.PI) * h * 3.0f));
-        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(Math.abs(MathHelper.cos(g * (float)Math.PI - 0.2f) * h) * 5.0f));
+        matrices.translate(MathHelper.sin(g * (float)Math.PI) * h * 0.5f, -Math.abs(MathHelper.cos(g * (float)Math.PI) * h), 0.0f);
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(MathHelper.sin(g * (float)Math.PI) * h * 3.0f));
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(Math.abs(MathHelper.cos(g * (float)Math.PI - 0.2f) * h) * 5.0f));
     }
 
     public void renderWithZoom(float zoom, float zoomX, float zoomY) {
@@ -768,9 +817,7 @@ AutoCloseable {
             return;
         }
         this.loadProjectionMatrix(this.getBasicProjectionMatrix(this.getFov(camera, tickDelta, false)));
-        MatrixStack.Entry entry = matrices.peek();
-        entry.getPositionMatrix().loadIdentity();
-        entry.getNormalMatrix().loadIdentity();
+        matrices.loadIdentity();
         matrices.push();
         this.bobViewWhenHurt(matrices, tickDelta);
         if (this.client.options.getBobView().getValue().booleanValue()) {
@@ -798,12 +845,12 @@ AutoCloseable {
 
     public Matrix4f getBasicProjectionMatrix(double fov) {
         MatrixStack matrixStack = new MatrixStack();
-        matrixStack.peek().getPositionMatrix().loadIdentity();
+        matrixStack.peek().getPositionMatrix().identity();
         if (this.zoom != 1.0f) {
-            matrixStack.translate(this.zoomX, -this.zoomY, 0.0);
+            matrixStack.translate(this.zoomX, -this.zoomY, 0.0f);
             matrixStack.scale(this.zoom, this.zoom, 1.0f);
         }
-        matrixStack.peek().getPositionMatrix().multiply(Matrix4f.viewboxMatrix(fov, (float)this.client.getWindow().getFramebufferWidth() / (float)this.client.getWindow().getFramebufferHeight(), 0.05f, this.method_32796()));
+        matrixStack.peek().getPositionMatrix().mul((Matrix4fc)new Matrix4f().setPerspective((float)(fov * 0.01745329238474369), (float)this.client.getWindow().getFramebufferWidth() / (float)this.client.getWindow().getFramebufferHeight(), 0.05f, this.method_32796()));
         return matrixStack.peek().getPositionMatrix();
     }
 
@@ -836,22 +883,22 @@ AutoCloseable {
             this.renderWorld(tickDelta, startTime, new MatrixStack());
             this.updateWorldIcon();
             this.client.worldRenderer.drawEntityOutlinesFramebuffer();
-            if (this.shader != null && this.shadersEnabled) {
+            if (this.postProcessor != null && this.postProcessorEnabled) {
                 RenderSystem.disableBlend();
                 RenderSystem.disableDepthTest();
                 RenderSystem.enableTexture();
                 RenderSystem.resetTextureMatrix();
-                this.shader.render(tickDelta);
+                this.postProcessor.render(tickDelta);
             }
             this.client.getFramebuffer().beginWrite(true);
         }
         Window window = this.client.getWindow();
         RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
-        Matrix4f matrix4f = Matrix4f.projectionMatrix(0.0f, (float)((double)window.getFramebufferWidth() / window.getScaleFactor()), 0.0f, (float)((double)window.getFramebufferHeight() / window.getScaleFactor()), 1000.0f, 3000.0f);
+        Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, (float)((double)window.getFramebufferWidth() / window.getScaleFactor()), (float)((double)window.getFramebufferHeight() / window.getScaleFactor()), 0.0f, 1000.0f, 3000.0f);
         RenderSystem.setProjectionMatrix(matrix4f);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.loadIdentity();
-        matrixStack.translate(0.0, 0.0, -2000.0);
+        matrixStack.translate(0.0f, 0.0f, -2000.0f);
         RenderSystem.applyModelViewMatrix();
         DiffuseLighting.enableGuiDepthLighting();
         MatrixStack matrixStack2 = new MatrixStack();
@@ -884,7 +931,7 @@ AutoCloseable {
         }
         if (this.client.currentScreen != null) {
             try {
-                this.client.currentScreen.render(matrixStack2, i, j, this.client.getLastFrameDuration());
+                this.client.currentScreen.renderWithTooltip(matrixStack2, i, j, this.client.getLastFrameDuration());
             }
             catch (Throwable throwable) {
                 CrashReport crashReport = CrashReport.create(throwable, "Rendering screen");
@@ -976,7 +1023,7 @@ AutoCloseable {
                     bl = blockState.createScreenHandlerFactory(this.client.world, blockPos) != null;
                 } else {
                     CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(this.client.world, blockPos, false);
-                    Registry<Block> registry = this.client.world.getRegistryManager().get(Registry.BLOCK_KEY);
+                    Registry<Block> registry = this.client.world.getRegistryManager().get(RegistryKeys.BLOCK);
                     bl = !itemStack.isEmpty() && (itemStack.canDestroy(registry, cachedBlockPosition) || itemStack.canPlaceOn(registry, cachedBlockPosition));
                 }
             }
@@ -997,7 +1044,7 @@ AutoCloseable {
         this.viewDistance = this.client.options.getClampedViewDistance() * 16;
         MatrixStack matrixStack = new MatrixStack();
         double d = this.getFov(camera, tickDelta, true);
-        matrixStack.peek().getPositionMatrix().multiply(this.getBasicProjectionMatrix(d));
+        matrixStack.multiplyPositionMatrix(this.getBasicProjectionMatrix(d));
         this.bobViewWhenHurt(matrixStack, tickDelta);
         if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrixStack, tickDelta);
@@ -1008,21 +1055,19 @@ AutoCloseable {
             int i = this.client.player.hasStatusEffect(StatusEffects.NAUSEA) ? 7 : 20;
             float h = 5.0f / (g * g + 5.0f) - g * 0.04f;
             h *= h;
-            Vec3f vec3f = new Vec3f(0.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f);
-            matrixStack.multiply(vec3f.getDegreesQuaternion(((float)this.ticks + tickDelta) * (float)i));
+            RotationAxis rotationAxis = RotationAxis.of(new Vector3f(0.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f));
+            matrixStack.multiply(rotationAxis.rotationDegrees(((float)this.ticks + tickDelta) * (float)i));
             matrixStack.scale(1.0f / h, 1.0f, 1.0f);
             float j = -((float)this.ticks + tickDelta) * (float)i;
-            matrixStack.multiply(vec3f.getDegreesQuaternion(j));
+            matrixStack.multiply(rotationAxis.rotationDegrees(j));
         }
         Matrix4f matrix4f = matrixStack.peek().getPositionMatrix();
         this.loadProjectionMatrix(matrix4f);
         camera.update(this.client.world, this.client.getCameraEntity() == null ? this.client.player : this.client.getCameraEntity(), !this.client.options.getPerspective().isFirstPerson(), this.client.options.getPerspective().isFrontView(), tickDelta);
-        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(camera.getPitch()));
-        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(camera.getYaw() + 180.0f));
-        Matrix3f matrix3f = matrices.peek().getNormalMatrix().copy();
-        if (matrix3f.invert()) {
-            RenderSystem.setInverseViewRotationMatrix(matrix3f);
-        }
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180.0f));
+        Matrix3f matrix3f = new Matrix3f((Matrix3fc)matrices.peek().getNormalMatrix()).invert();
+        RenderSystem.setInverseViewRotationMatrix(matrix3f);
         this.client.worldRenderer.setupFrustum(matrices, camera.getPos(), this.getBasicProjectionMatrix(Math.max(d, (double)this.client.options.getFov().getValue().intValue())));
         this.client.worldRenderer.render(matrices, tickDelta, limitTime, bl, camera, this, this.lightmapTextureManager, matrix4f);
         this.client.getProfiler().swap("hand");
@@ -1067,12 +1112,12 @@ AutoCloseable {
         RenderSystem.disableCull();
         MatrixStack matrixStack = new MatrixStack();
         matrixStack.push();
-        matrixStack.translate((float)(scaledWidth / 2) + l * MathHelper.abs(MathHelper.sin(k * 2.0f)), (float)(scaledHeight / 2) + m * MathHelper.abs(MathHelper.sin(k * 2.0f)), -50.0);
+        matrixStack.translate((float)(scaledWidth / 2) + l * MathHelper.abs(MathHelper.sin(k * 2.0f)), (float)(scaledHeight / 2) + m * MathHelper.abs(MathHelper.sin(k * 2.0f)), -50.0f);
         float n = 50.0f + 175.0f * MathHelper.sin(k);
         matrixStack.scale(n, -n, n);
-        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(900.0f * MathHelper.abs(MathHelper.sin(k))));
-        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(6.0f * MathHelper.cos(f * 8.0f)));
-        matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(6.0f * MathHelper.cos(f * 8.0f)));
+        matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(900.0f * MathHelper.abs(MathHelper.sin(k))));
+        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(6.0f * MathHelper.cos(f * 8.0f)));
+        matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(6.0f * MathHelper.cos(f * 8.0f)));
         VertexConsumerProvider.Immediate immediate = this.buffers.getEntityVertexConsumers();
         this.client.getItemRenderer().renderItem(this.floatingItem, ModelTransformation.Mode.FIXED, 0xF000F0, OverlayTexture.DEFAULT_UV, matrixStack, immediate, 0);
         matrixStack.pop();
@@ -1097,7 +1142,7 @@ AutoCloseable {
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE);
         RenderSystem.setShaderColor(f, g, h, 1.0f);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, NAUSEA_OVERLAY);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
@@ -1139,278 +1184,291 @@ AutoCloseable {
     }
 
     @Nullable
-    public static Shader getPositionShader() {
-        return positionShader;
+    public static ShaderProgram getPositionProgram() {
+        return positionProgram;
     }
 
     @Nullable
-    public static Shader getPositionColorShader() {
-        return positionColorShader;
+    public static ShaderProgram getPositionColorProgram() {
+        return positionColorProgram;
     }
 
     @Nullable
-    public static Shader getPositionColorTexShader() {
-        return positionColorTexShader;
+    public static ShaderProgram getPositionColorTexProgram() {
+        return positionColorTexProgram;
     }
 
     @Nullable
-    public static Shader getPositionTexShader() {
-        return positionTexShader;
+    public static ShaderProgram getPositionTexProgram() {
+        return positionTexProgram;
     }
 
     @Nullable
-    public static Shader getPositionTexColorShader() {
-        return positionTexColorShader;
+    public static ShaderProgram getPositionTexColorProgram() {
+        return positionTexColorProgram;
     }
 
     @Nullable
-    public static Shader getBlockShader() {
-        return blockShader;
+    public static ShaderProgram getBlockProgram() {
+        return blockProgram;
     }
 
     @Nullable
-    public static Shader getNewEntityShader() {
-        return newEntityShader;
+    public static ShaderProgram getNewEntityProgram() {
+        return newEntityProgram;
     }
 
     @Nullable
-    public static Shader getParticleShader() {
-        return particleShader;
+    public static ShaderProgram getParticleProgram() {
+        return particleProgram;
     }
 
     @Nullable
-    public static Shader getPositionColorLightmapShader() {
-        return positionColorLightmapShader;
+    public static ShaderProgram getPositionColorLightmapProgram() {
+        return positionColorLightmapProgram;
     }
 
     @Nullable
-    public static Shader getPositionColorTexLightmapShader() {
-        return positionColorTexLightmapShader;
+    public static ShaderProgram getPositionColorTexLightmapProgram() {
+        return positionColorTexLightmapProgram;
     }
 
     @Nullable
-    public static Shader getPositionTexColorNormalShader() {
-        return positionTexColorNormalShader;
+    public static ShaderProgram getPositionTexColorNormalProgram() {
+        return positionTexColorNormalProgram;
     }
 
     @Nullable
-    public static Shader getPositionTexLightmapColorShader() {
-        return positionTexLightmapColorShader;
+    public static ShaderProgram getPositionTexLightmapColorProgram() {
+        return positionTexLightmapColorProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeSolidShader() {
-        return renderTypeSolidShader;
+    public static ShaderProgram getRenderTypeSolidProgram() {
+        return renderTypeSolidProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeCutoutMippedShader() {
-        return renderTypeCutoutMippedShader;
+    public static ShaderProgram getRenderTypeCutoutMippedProgram() {
+        return renderTypeCutoutMippedProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeCutoutShader() {
-        return renderTypeCutoutShader;
+    public static ShaderProgram getRenderTypeCutoutProgram() {
+        return renderTypeCutoutProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTranslucentShader() {
-        return renderTypeTranslucentShader;
+    public static ShaderProgram getRenderTypeTranslucentProgram() {
+        return renderTypeTranslucentProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTranslucentMovingBlockShader() {
-        return renderTypeTranslucentMovingBlockShader;
+    public static ShaderProgram getRenderTypeTranslucentMovingBlockProgram() {
+        return renderTypeTranslucentMovingBlockProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTranslucentNoCrumblingShader() {
-        return renderTypeTranslucentNoCrumblingShader;
+    public static ShaderProgram getRenderTypeTranslucentNoCrumblingProgram() {
+        return renderTypeTranslucentNoCrumblingProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeArmorCutoutNoCullShader() {
-        return renderTypeArmorCutoutNoCullShader;
+    public static ShaderProgram getRenderTypeArmorCutoutNoCullProgram() {
+        return renderTypeArmorCutoutNoCullProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntitySolidShader() {
-        return renderTypeEntitySolidShader;
+    public static ShaderProgram getRenderTypeEntitySolidProgram() {
+        return renderTypeEntitySolidProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityCutoutShader() {
-        return renderTypeEntityCutoutShader;
+    public static ShaderProgram getRenderTypeEntityCutoutProgram() {
+        return renderTypeEntityCutoutProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityCutoutNoNullShader() {
-        return renderTypeEntityCutoutNoNullShader;
+    public static ShaderProgram getRenderTypeEntityCutoutNoNullProgram() {
+        return renderTypeEntityCutoutNoNullProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityCutoutNoNullZOffsetShader() {
-        return renderTypeEntityCutoutNoNullZOffsetShader;
+    public static ShaderProgram getRenderTypeEntityCutoutNoNullZOffsetProgram() {
+        return renderTypeEntityCutoutNoNullZOffsetProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeItemEntityTranslucentCullShader() {
-        return renderTypeItemEntityTranslucentCullShader;
+    public static ShaderProgram getRenderTypeItemEntityTranslucentCullProgram() {
+        return renderTypeItemEntityTranslucentCullProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityTranslucentCullShader() {
-        return renderTypeEntityTranslucentCullShader;
+    public static ShaderProgram getRenderTypeEntityTranslucentCullProgram() {
+        return renderTypeEntityTranslucentCullProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityTranslucentShader() {
-        return renderTypeEntityTranslucentShader;
+    public static ShaderProgram getRenderTypeEntityTranslucentProgram() {
+        return renderTypeEntityTranslucentProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityTranslucentEmissiveShader() {
-        return renderTypeEntityTranslucentEmissiveShader;
+    public static ShaderProgram getRenderTypeEntityTranslucentEmissiveProgram() {
+        return renderTypeEntityTranslucentEmissiveProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntitySmoothCutoutShader() {
-        return renderTypeEntitySmoothCutoutShader;
+    public static ShaderProgram getRenderTypeEntitySmoothCutoutProgram() {
+        return renderTypeEntitySmoothCutoutProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeBeaconBeamShader() {
-        return renderTypeBeaconBeamShader;
+    public static ShaderProgram getRenderTypeBeaconBeamProgram() {
+        return renderTypeBeaconBeamProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityDecalShader() {
-        return renderTypeEntityDecalShader;
+    public static ShaderProgram getRenderTypeEntityDecalProgram() {
+        return renderTypeEntityDecalProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityNoOutlineShader() {
-        return renderTypeEntityNoOutlineShader;
+    public static ShaderProgram getRenderTypeEntityNoOutlineProgram() {
+        return renderTypeEntityNoOutlineProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityShadowShader() {
-        return renderTypeEntityShadowShader;
+    public static ShaderProgram getRenderTypeEntityShadowProgram() {
+        return renderTypeEntityShadowProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityAlphaShader() {
-        return renderTypeEntityAlphaShader;
+    public static ShaderProgram getRenderTypeEntityAlphaProgram() {
+        return renderTypeEntityAlphaProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEyesShader() {
-        return renderTypeEyesShader;
+    public static ShaderProgram getRenderTypeEyesProgram() {
+        return renderTypeEyesProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEnergySwirlShader() {
-        return renderTypeEnergySwirlShader;
+    public static ShaderProgram getRenderTypeEnergySwirlProgram() {
+        return renderTypeEnergySwirlProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeLeashShader() {
-        return renderTypeLeashShader;
+    public static ShaderProgram getRenderTypeLeashProgram() {
+        return renderTypeLeashProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeWaterMaskShader() {
-        return renderTypeWaterMaskShader;
+    public static ShaderProgram getRenderTypeWaterMaskProgram() {
+        return renderTypeWaterMaskProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeOutlineShader() {
-        return renderTypeOutlineShader;
+    public static ShaderProgram getRenderTypeOutlineProgram() {
+        return renderTypeOutlineProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeArmorGlintShader() {
-        return renderTypeArmorGlintShader;
+    public static ShaderProgram getRenderTypeArmorGlintProgram() {
+        return renderTypeArmorGlintProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeArmorEntityGlintShader() {
-        return renderTypeArmorEntityGlintShader;
+    public static ShaderProgram getRenderTypeArmorEntityGlintProgram() {
+        return renderTypeArmorEntityGlintProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeGlintTranslucentShader() {
-        return renderTypeGlintTranslucentShader;
+    public static ShaderProgram getRenderTypeGlintTranslucentProgram() {
+        return renderTypeGlintTranslucentProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeGlintShader() {
-        return renderTypeGlintShader;
+    public static ShaderProgram getRenderTypeGlintProgram() {
+        return renderTypeGlintProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeGlintDirectShader() {
-        return renderTypeGlintDirectShader;
+    public static ShaderProgram getRenderTypeGlintDirectProgram() {
+        return renderTypeGlintDirectProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityGlintShader() {
-        return renderTypeEntityGlintShader;
+    public static ShaderProgram getRenderTypeEntityGlintProgram() {
+        return renderTypeEntityGlintProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEntityGlintDirectShader() {
-        return renderTypeEntityGlintDirectShader;
+    public static ShaderProgram getRenderTypeEntityGlintDirectProgram() {
+        return renderTypeEntityGlintDirectProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTextShader() {
-        return renderTypeTextShader;
+    public static ShaderProgram getRenderTypeTextProgram() {
+        return renderTypeTextProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTextIntensityShader() {
-        return renderTypeTextIntensityShader;
+    public static ShaderProgram getRenderTypeTextIntensityProgram() {
+        return renderTypeTextIntensityProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTextSeeThroughShader() {
-        return renderTypeTextSeeThroughShader;
+    public static ShaderProgram getRenderTypeTextSeeThroughProgram() {
+        return renderTypeTextSeeThroughProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTextIntensitySeeThroughShader() {
-        return renderTypeTextIntensitySeeThroughShader;
+    public static ShaderProgram getRenderTypeTextIntensitySeeThroughProgram() {
+        return renderTypeTextIntensitySeeThroughProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeLightningShader() {
-        return renderTypeLightningShader;
+    public static ShaderProgram getRenderTypeLightningProgram() {
+        return renderTypeLightningProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeTripwireShader() {
-        return renderTypeTripwireShader;
+    public static ShaderProgram getRenderTypeTripwireProgram() {
+        return renderTypeTripwireProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEndPortalShader() {
-        return renderTypeEndPortalShader;
+    public static ShaderProgram getRenderTypeEndPortalProgram() {
+        return renderTypeEndPortalProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeEndGatewayShader() {
-        return renderTypeEndGatewayShader;
+    public static ShaderProgram getRenderTypeEndGatewayProgram() {
+        return renderTypeEndGatewayProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeLinesShader() {
-        return renderTypeLinesShader;
+    public static ShaderProgram getRenderTypeLinesProgram() {
+        return renderTypeLinesProgram;
     }
 
     @Nullable
-    public static Shader getRenderTypeCrumblingShader() {
-        return renderTypeCrumblingShader;
+    public static ShaderProgram getRenderTypeCrumblingProgram() {
+        return renderTypeCrumblingProgram;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public record CachedResourceFactory(ResourceFactory original, Map<Identifier, Resource> cache) implements ResourceFactory
+    {
+        @Override
+        public Optional<Resource> getResource(Identifier identifier) {
+            Resource resource = this.cache.get(identifier);
+            if (resource != null) {
+                return Optional.of(resource);
+            }
+            return this.original.getResource(identifier);
+        }
     }
 }
 

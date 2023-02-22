@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 
 public class DebugLoggerPrintStream
 extends LoggerPrintStream {
-    private static final Logger field_36382 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public DebugLoggerPrintStream(String string, OutputStream outputStream) {
         super(string, outputStream);
@@ -24,7 +24,7 @@ extends LoggerPrintStream {
     protected void log(String message) {
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
         StackTraceElement stackTraceElement = stackTraceElements[Math.min(3, stackTraceElements.length)];
-        field_36382.info("[{}]@.({}:{}): {}", new Object[]{this.name, stackTraceElement.getFileName(), stackTraceElement.getLineNumber(), message});
+        LOGGER.info("[{}]@.({}:{}): {}", new Object[]{this.name, stackTraceElement.getFileName(), stackTraceElement.getLineNumber(), message});
     }
 }
 

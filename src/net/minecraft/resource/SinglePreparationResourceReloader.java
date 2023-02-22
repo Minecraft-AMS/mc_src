@@ -13,7 +13,7 @@ public abstract class SinglePreparationResourceReloader<T>
 implements ResourceReloader {
     @Override
     public final CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
-        return ((CompletableFuture)CompletableFuture.supplyAsync(() -> this.prepare(manager, prepareProfiler), prepareExecutor).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(object -> this.apply(object, manager, applyProfiler), applyExecutor);
+        return ((CompletableFuture)CompletableFuture.supplyAsync(() -> this.prepare(manager, prepareProfiler), prepareExecutor).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(prepared -> this.apply(prepared, manager, applyProfiler), applyExecutor);
     }
 
     protected abstract T prepare(ResourceManager var1, Profiler var2);

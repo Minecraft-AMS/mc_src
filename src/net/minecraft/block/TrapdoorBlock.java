@@ -20,6 +20,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
@@ -50,10 +52,14 @@ implements Waterloggable {
     protected static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 13.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape OPEN_BOTTOM_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 3.0, 16.0);
     protected static final VoxelShape OPEN_TOP_SHAPE = Block.createCuboidShape(0.0, 13.0, 0.0, 16.0, 16.0, 16.0);
+    private final SoundEvent closeSound;
+    private final SoundEvent openSound;
 
-    protected TrapdoorBlock(AbstractBlock.Settings settings) {
+    protected TrapdoorBlock(AbstractBlock.Settings settings, SoundEvent closeSound, SoundEvent openSound) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(OPEN, false)).with(HALF, BlockHalf.BOTTOM)).with(POWERED, false)).with(WATERLOGGED, false));
+        this.closeSound = closeSound;
+        this.openSound = openSound;
     }
 
     @Override
@@ -100,20 +106,14 @@ implements Waterloggable {
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 2);
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         this.playToggleSound(player, world, pos, state.get(OPEN));
         return ActionResult.success(world.isClient);
     }
 
     protected void playToggleSound(@Nullable PlayerEntity player, World world, BlockPos pos, boolean open) {
-        if (open) {
-            int i = this.material == Material.METAL ? 1037 : 1007;
-            world.syncWorldEvent(player, i, pos, 0);
-        } else {
-            int i = this.material == Material.METAL ? 1036 : 1013;
-            world.syncWorldEvent(player, i, pos, 0);
-        }
+        world.playSound(player, pos, open ? this.openSound : this.closeSound, SoundCategory.BLOCKS, 1.0f, world.getRandom().nextFloat() * 0.1f + 0.9f);
         world.emitGameEvent((Entity)player, open ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
     }
 
@@ -130,7 +130,7 @@ implements Waterloggable {
             }
             world.setBlockState(pos, (BlockState)state.with(POWERED, bl), 2);
             if (state.get(WATERLOGGED).booleanValue()) {
-                world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+                world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
             }
         }
     }
@@ -163,7 +163,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }

@@ -18,12 +18,12 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.SwordItem;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -147,7 +147,7 @@ implements Fertilizable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (!state.canPlaceAt(world, pos)) {
-            world.createAndScheduleBlockTick(pos, this, 1);
+            world.scheduleBlockTick(pos, this, 1);
         }
         if (direction == Direction.UP && neighborState.isOf(Blocks.BAMBOO) && neighborState.get(AGE) > state.get(AGE)) {
             world.setBlockState(pos, (BlockState)state.cycle(AGE), 2);
@@ -156,7 +156,7 @@ implements Fertilizable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         int j;
         int i = this.countBambooAbove(world, pos);
         return i + (j = this.countBambooBelow(world, pos)) + 1 < 16 && world.getBlockState(pos.up(i)).get(STAGE) != 1;

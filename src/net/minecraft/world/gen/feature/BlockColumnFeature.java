@@ -50,7 +50,7 @@ extends Feature<BlockColumnFeatureConfig> {
             if (m == 0) continue;
             BlockColumnFeatureConfig.Layer layer = blockColumnFeatureConfig.layers().get(l);
             for (int n = 0; n < m; ++n) {
-                structureWorldAccess.setBlockState(mutable, layer.state().getBlockState(random, mutable), 2);
+                structureWorldAccess.setBlockState(mutable, layer.state().get(random, mutable), 2);
                 mutable.move(blockColumnFeatureConfig.direction());
             }
         }

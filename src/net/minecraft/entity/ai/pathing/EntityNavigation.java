@@ -20,9 +20,8 @@ import net.minecraft.entity.ai.pathing.PathNodeMaker;
 import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.network.DebugInfoSender;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -35,6 +34,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class EntityNavigation {
     private static final int RECALCULATE_COOLDOWN = 20;
+    private static final int field_41545 = 100;
+    private static final float field_41546 = 0.25f;
     protected final MobEntity entity;
     protected final World world;
     @Nullable
@@ -243,7 +244,7 @@ public abstract class EntityNavigation {
     }
 
     private boolean shouldJumpToNextNode(Vec3d currentPos) {
-        Vec3d vec3d4;
+        boolean bl2;
         if (this.currentPath.getCurrentNodeIndex() + 1 >= this.currentPath.getLength()) {
             return false;
         }
@@ -255,13 +256,25 @@ public abstract class EntityNavigation {
             return true;
         }
         Vec3d vec3d2 = Vec3d.ofBottomCenter(this.currentPath.getNodePos(this.currentPath.getCurrentNodeIndex() + 1));
-        Vec3d vec3d3 = vec3d2.subtract(vec3d);
-        return vec3d3.dotProduct(vec3d4 = currentPos.subtract(vec3d)) > 0.0;
+        Vec3d vec3d3 = vec3d.subtract(currentPos);
+        Vec3d vec3d4 = vec3d2.subtract(currentPos);
+        double d = vec3d3.lengthSquared();
+        double e = vec3d4.lengthSquared();
+        boolean bl = e < d;
+        boolean bl3 = bl2 = d < 0.5;
+        if (bl || bl2) {
+            Vec3d vec3d5 = vec3d3.normalize();
+            Vec3d vec3d6 = vec3d4.normalize();
+            return vec3d6.dotProduct(vec3d5) < 0.0;
+        }
+        return false;
     }
 
     protected void checkTimeouts(Vec3d currentPos) {
         if (this.tickCount - this.pathStartTime > 100) {
-            if (currentPos.squaredDistanceTo(this.pathStartPos) < 2.25) {
+            float f = this.entity.getMovementSpeed() >= 1.0f ? this.entity.getMovementSpeed() : this.entity.getMovementSpeed() * this.entity.getMovementSpeed();
+            float g = f * 100.0f * 0.25f;
+            if (currentPos.squaredDistanceTo(this.pathStartPos) < (double)(g * g)) {
                 this.nearPathStartPos = true;
                 this.stop();
             } else {
@@ -272,17 +285,18 @@ public abstract class EntityNavigation {
         }
         if (this.currentPath != null && !this.currentPath.isFinished()) {
             BlockPos vec3i = this.currentPath.getCurrentNodePos();
+            long l = this.world.getTime();
             if (vec3i.equals(this.lastNodePosition)) {
-                this.currentNodeMs += Util.getMeasuringTimeMs() - this.lastActiveTickMs;
+                this.currentNodeMs += l - this.lastActiveTickMs;
             } else {
                 this.lastNodePosition = vec3i;
                 double d = currentPos.distanceTo(Vec3d.ofBottomCenter(this.lastNodePosition));
-                double d2 = this.currentNodeTimeout = this.entity.getMovementSpeed() > 0.0f ? d / (double)this.entity.getMovementSpeed() * 1000.0 : 0.0;
+                double d2 = this.currentNodeTimeout = this.entity.getMovementSpeed() > 0.0f ? d / (double)this.entity.getMovementSpeed() * 20.0 : 0.0;
             }
             if (this.currentNodeTimeout > 0.0 && (double)this.currentNodeMs > this.currentNodeTimeout * 3.0) {
                 this.resetNodeAndStop();
             }
-            this.lastActiveTickMs = Util.getMeasuringTimeMs();
+            this.lastActiveTickMs = l;
         }
     }
 
@@ -337,9 +351,9 @@ public abstract class EntityNavigation {
         return false;
     }
 
-    protected static boolean doesNotCollide(MobEntity entity, Vec3d startPos, Vec3d entityPos) {
+    protected static boolean doesNotCollide(MobEntity entity, Vec3d startPos, Vec3d entityPos, boolean includeFluids) {
         Vec3d vec3d = new Vec3d(entityPos.x, entityPos.y + (double)entity.getHeight() * 0.5, entityPos.z);
-        return entity.world.raycast(new RaycastContext(startPos, vec3d, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity)).getType() == HitResult.Type.MISS;
+        return entity.world.raycast(new RaycastContext(startPos, vec3d, RaycastContext.ShapeType.COLLIDER, includeFluids ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, entity)).getType() == HitResult.Type.MISS;
     }
 
     public boolean isValidPosition(BlockPos pos) {

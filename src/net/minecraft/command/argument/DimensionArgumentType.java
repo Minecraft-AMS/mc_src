@@ -24,12 +24,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.command.CommandSource;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
 public class DimensionArgumentType
@@ -58,7 +58,7 @@ implements ArgumentType<Identifier> {
 
     public static ServerWorld getDimensionArgument(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         Identifier identifier = (Identifier)context.getArgument(name, Identifier.class);
-        RegistryKey<World> registryKey = RegistryKey.of(Registry.WORLD_KEY, identifier);
+        RegistryKey<World> registryKey = RegistryKey.of(RegistryKeys.WORLD, identifier);
         ServerWorld serverWorld = ((ServerCommandSource)context.getSource()).getServer().getWorld(registryKey);
         if (serverWorld == null) {
             throw INVALID_DIMENSION_EXCEPTION.create((Object)identifier);

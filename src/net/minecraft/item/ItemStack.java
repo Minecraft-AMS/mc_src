@@ -68,12 +68,17 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -90,14 +95,12 @@ import net.minecraft.util.UseAction;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public final class ItemStack {
-    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.ITEM.getCodec().fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
+    public static final Codec<ItemStack> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registries.ITEM.getCodec().fieldOf("id").forGetter(stack -> stack.item), (App)Codec.INT.fieldOf("Count").forGetter(stack -> stack.count), (App)NbtCompound.CODEC.optionalFieldOf("tag").forGetter(stack -> Optional.ofNullable(stack.nbt))).apply((Applicative)instance, ItemStack::new));
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final ItemStack EMPTY = new ItemStack((ItemConvertible)null);
     public static final DecimalFormat MODIFIER_FORMAT = Util.make(new DecimalFormat("#.##"), decimalFormat -> decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.ROOT)));
@@ -112,6 +115,7 @@ public final class ItemStack {
     private static final String CAN_DESTROY_KEY = "CanDestroy";
     private static final String CAN_PLACE_ON_KEY = "CanPlaceOn";
     private static final String HIDE_FLAGS_KEY = "HideFlags";
+    private static final Text DISABLED_TEXT = Text.translatable("item.disabled").formatted(Formatting.RED);
     private static final int field_30903 = 0;
     private static final Style LORE_STYLE = Style.EMPTY.withColor(Formatting.DARK_PURPLE).withItalic(true);
     private int count;
@@ -164,7 +168,7 @@ public final class ItemStack {
     }
 
     private ItemStack(NbtCompound nbt) {
-        this.item = Registry.ITEM.get(new Identifier(nbt.getString("id")));
+        this.item = Registries.ITEM.get(new Identifier(nbt.getString("id")));
         this.count = nbt.getByte("Count");
         if (nbt.contains("tag", 10)) {
             this.nbt = nbt.getCompound("tag");
@@ -194,6 +198,10 @@ public final class ItemStack {
             return true;
         }
         return this.count <= 0;
+    }
+
+    public boolean isItemEnabled(FeatureSet enabledFeatures) {
+        return this.isEmpty() || this.getItem().isEnabled(enabledFeatures);
     }
 
     public ItemStack split(int amount) {
@@ -236,7 +244,7 @@ public final class ItemStack {
         PlayerEntity playerEntity = context.getPlayer();
         BlockPos blockPos = context.getBlockPos();
         CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(context.getWorld(), blockPos, false);
-        if (playerEntity != null && !playerEntity.getAbilities().allowModifyWorld && !this.canPlaceOn(context.getWorld().getRegistryManager().get(Registry.BLOCK_KEY), cachedBlockPosition)) {
+        if (playerEntity != null && !playerEntity.getAbilities().allowModifyWorld && !this.canPlaceOn(context.getWorld().getRegistryManager().get(RegistryKeys.BLOCK), cachedBlockPosition)) {
             return ActionResult.PASS;
         }
         Item item = this.getItem();
@@ -260,7 +268,7 @@ public final class ItemStack {
     }
 
     public NbtCompound writeNbt(NbtCompound nbt) {
-        Identifier identifier = Registry.ITEM.getId(this.getItem());
+        Identifier identifier = Registries.ITEM.getId(this.getItem());
         nbt.putString("id", identifier == null ? "minecraft:air" : identifier.toString());
         nbt.putByte("Count", (byte)this.count);
         if (this.nbt != null) {
@@ -397,6 +405,12 @@ public final class ItemStack {
         return itemStack;
     }
 
+    public ItemStack copyWithCount(int count) {
+        ItemStack itemStack = this.copy();
+        itemStack.setCount(count);
+        return itemStack;
+    }
+
     public static boolean areNbtEqual(ItemStack left, ItemStack right) {
         if (left.isEmpty() && right.isEmpty()) {
             return true;
@@ -433,16 +447,6 @@ public final class ItemStack {
         return this.nbt == null || this.nbt.equals(stack.nbt);
     }
 
-    public static boolean areItemsEqualIgnoreDamage(ItemStack left, ItemStack right) {
-        if (left == right) {
-            return true;
-        }
-        if (!left.isEmpty() && !right.isEmpty()) {
-            return left.isItemEqualIgnoreDamage(right);
-        }
-        return false;
-    }
-
     public static boolean areItemsEqual(ItemStack left, ItemStack right) {
         if (left == right) {
             return true;
@@ -453,15 +457,8 @@ public final class ItemStack {
         return false;
     }
 
-    public boolean isItemEqualIgnoreDamage(ItemStack stack) {
-        return !stack.isEmpty() && this.isOf(stack.getItem());
-    }
-
     public boolean isItemEqual(ItemStack stack) {
-        if (this.isDamageable()) {
-            return !stack.isEmpty() && this.isOf(stack.getItem());
-        }
-        return this.isItemEqualIgnoreDamage(stack);
+        return !stack.isEmpty() && this.isOf(stack.getItem());
     }
 
     public static boolean canCombine(ItemStack stack, ItemStack otherStack) {
@@ -713,10 +710,13 @@ public final class ItemStack {
             if (this.isDamaged()) {
                 list.add(Text.translatable("item.durability", this.getMaxDamage() - this.getDamage(), this.getMaxDamage()));
             }
-            list.add(Text.literal(Registry.ITEM.getId(this.getItem()).toString()).formatted(Formatting.DARK_GRAY));
+            list.add(Text.literal(Registries.ITEM.getId(this.getItem()).toString()).formatted(Formatting.DARK_GRAY));
             if (this.hasNbt()) {
                 list.add(Text.translatable("item.nbt_tags", this.nbt.getKeys().size()).formatted(Formatting.DARK_GRAY));
             }
+        }
+        if (player != null && !this.getItem().isEnabled(player.getWorld().getEnabledFeatures())) {
+            list.add(DISABLED_TEXT);
         }
         return list;
     }
@@ -740,13 +740,13 @@ public final class ItemStack {
     public static void appendEnchantments(List<Text> tooltip, NbtList enchantments) {
         for (int i = 0; i < enchantments.size(); ++i) {
             NbtCompound nbtCompound = enchantments.getCompound(i);
-            Registry.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(e -> tooltip.add(e.getName(EnchantmentHelper.getLevelFromNbt(nbtCompound))));
+            Registries.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(e -> tooltip.add(e.getName(EnchantmentHelper.getLevelFromNbt(nbtCompound))));
         }
     }
 
     private static Collection<Text> parseBlockTag(String tag) {
         try {
-            return (Collection)BlockArgumentParser.blockOrTag(Registry.BLOCK, tag, true).map(blockResult -> Lists.newArrayList((Object[])new Text[]{blockResult.blockState().getBlock().getName().formatted(Formatting.DARK_GRAY)}), tagResult -> tagResult.tag().stream().map(registryEntry -> ((Block)registryEntry.value()).getName().formatted(Formatting.DARK_GRAY)).collect(Collectors.toList()));
+            return (Collection)BlockArgumentParser.blockOrTag(Registries.BLOCK.getReadOnlyWrapper(), tag, true).map(blockResult -> Lists.newArrayList((Object[])new Text[]{blockResult.blockState().getBlock().getName().formatted(Formatting.DARK_GRAY)}), tagResult -> tagResult.tag().stream().map(registryEntry -> ((Block)registryEntry.value()).getName().formatted(Formatting.DARK_GRAY)).collect(Collectors.toList()));
         }
         catch (CommandSyntaxException commandSyntaxException) {
             return Lists.newArrayList((Object[])new Text[]{Text.literal("missingno").formatted(Formatting.DARK_GRAY)});
@@ -826,7 +826,7 @@ public final class ItemStack {
                 EntityAttributeModifier entityAttributeModifier;
                 Optional<EntityAttribute> optional;
                 NbtCompound nbtCompound = nbtList.getCompound(i);
-                if (nbtCompound.contains("Slot", 8) && !nbtCompound.getString("Slot").equals(slot.getName()) || !(optional = Registry.ATTRIBUTE.getOrEmpty(Identifier.tryParse(nbtCompound.getString("AttributeName")))).isPresent() || (entityAttributeModifier = EntityAttributeModifier.fromNbt(nbtCompound)) == null || entityAttributeModifier.getId().getLeastSignificantBits() == 0L || entityAttributeModifier.getId().getMostSignificantBits() == 0L) continue;
+                if (nbtCompound.contains("Slot", 8) && !nbtCompound.getString("Slot").equals(slot.getName()) || !(optional = Registries.ATTRIBUTE.getOrEmpty(Identifier.tryParse(nbtCompound.getString("AttributeName")))).isPresent() || (entityAttributeModifier = EntityAttributeModifier.fromNbt(nbtCompound)) == null || entityAttributeModifier.getId().getLeastSignificantBits() == 0L || entityAttributeModifier.getId().getMostSignificantBits() == 0L) continue;
                 multimap.put((Object)optional.get(), (Object)entityAttributeModifier);
             }
         } else {
@@ -842,7 +842,7 @@ public final class ItemStack {
         }
         NbtList nbtList = this.nbt.getList("AttributeModifiers", 10);
         NbtCompound nbtCompound = modifier.toNbt();
-        nbtCompound.putString("AttributeName", Registry.ATTRIBUTE.getId(attribute).toString());
+        nbtCompound.putString("AttributeName", Registries.ATTRIBUTE.getId(attribute).toString());
         if (slot != null) {
             nbtCompound.putString("Slot", slot.getName());
         }

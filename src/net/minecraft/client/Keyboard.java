@@ -34,6 +34,7 @@ import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -48,15 +49,13 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class Keyboard {
-    public static final int field_32143 = 10000;
+    public static final int DEBUG_CRASH_TIME = 10000;
     private final MinecraftClient client;
-    private boolean repeatEvents;
     private final Clipboard clipboard = new Clipboard();
     private long debugCrashStartTime = -1L;
     private long debugCrashLastLogTime = -1L;
@@ -166,9 +165,9 @@ public class Keyboard {
                 if (!this.client.player.hasPermissionLevel(2)) {
                     this.debugLog("debug.creative_spectator.error", new Object[0]);
                 } else if (!this.client.player.isSpectator()) {
-                    this.client.player.sendCommand("gamemode spectator");
+                    this.client.player.networkHandler.sendCommand("gamemode spectator");
                 } else {
-                    this.client.player.sendCommand("gamemode " + ((GameMode)((Object)MoreObjects.firstNonNull((Object)((Object)this.client.interactionManager.getPreviousGameMode()), (Object)((Object)GameMode.CREATIVE)))).getName());
+                    this.client.player.networkHandler.sendCommand("gamemode " + ((GameMode)MoreObjects.firstNonNull((Object)this.client.interactionManager.getPreviousGameMode(), (Object)GameMode.CREATIVE)).getName());
                 }
                 return true;
             }
@@ -261,7 +260,7 @@ public class Keyboard {
             }
             case ENTITY: {
                 Entity entity = ((EntityHitResult)hitResult).getEntity();
-                Identifier identifier = Registry.ENTITY_TYPE.getId(entity.getType());
+                Identifier identifier = Registries.ENTITY_TYPE.getId(entity.getType());
                 if (hasQueryPermission) {
                     if (queryServer) {
                         this.client.player.networkHandler.getDataQueryHandler().queryEntityNbt(entity.getId(), nbt -> {
@@ -352,7 +351,7 @@ public class Keyboard {
         if (screen != null) {
             boolean[] bls = new boolean[]{false};
             Screen.wrapScreenError(() -> {
-                if (action == 1 || action == 2 && this.repeatEvents) {
+                if (action == 1 || action == 2) {
                     screen.applyKeyPressNarratorDelay();
                     bls[0] = screen.keyPressed(key, scancode, modifiers);
                 } else if (action == 0) {
@@ -378,7 +377,7 @@ public class Keyboard {
                 }
             } else {
                 if (key == 293 && this.client.gameRenderer != null) {
-                    this.client.gameRenderer.toggleShadersEnabled();
+                    this.client.gameRenderer.togglePostProcessorEnabled();
                 }
                 bl2 = false;
                 if (this.client.currentScreen == null) {
@@ -420,10 +419,6 @@ public class Keyboard {
                 Screen.wrapScreenError(() -> element.charTyped(c, modifiers), "charTyped event handler", element.getClass().getCanonicalName());
             }
         }
-    }
-
-    public void setRepeatEvents(boolean repeatEvents) {
-        this.repeatEvents = repeatEvents;
     }
 
     public void setup(long window2) {

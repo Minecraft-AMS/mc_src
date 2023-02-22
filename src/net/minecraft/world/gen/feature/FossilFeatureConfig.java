@@ -14,10 +14,10 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.processor.StructureProcessorList;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.gen.feature.FeatureConfig;
 
 public class FossilFeatureConfig

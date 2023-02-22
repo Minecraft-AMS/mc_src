@@ -78,7 +78,7 @@ implements RecipeBookProvider {
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
         int k;
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, this.background);
         int i = this.x;
@@ -139,12 +139,6 @@ implements RecipeBookProvider {
     @Override
     public RecipeBookWidget getRecipeBookWidget() {
         return this.recipeBook;
-    }
-
-    @Override
-    public void removed() {
-        this.recipeBook.close();
-        super.removed();
     }
 }
 

@@ -90,11 +90,10 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.client.keyboard.setRepeatEvents(true);
-        this.cancelButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 42, 200, 20, ScreenTexts.CANCEL, button -> {
+        this.cancelButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> {
             this.cancelled = true;
             this.backButtonClicked();
-        }));
+        }).dimensions(this.width / 2 - 100, this.height - 42, 200, 20).build());
         this.checkDownloadSize();
     }
 
@@ -190,7 +189,7 @@ extends RealmsScreen {
     private void drawProgressBar(MatrixStack matrices) {
         double d = Math.min((double)this.downloadStatus.bytesWritten / (double)this.downloadStatus.totalBytes, 1.0);
         this.progress = String.format(Locale.ROOT, "%.1f", d * 100.0);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableTexture();
         Tessellator tessellator = Tessellator.getInstance();

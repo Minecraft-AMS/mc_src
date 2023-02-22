@@ -35,12 +35,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
@@ -72,7 +72,7 @@ public class EnchantmentHelper {
 
     @Nullable
     public static Identifier getEnchantmentId(Enchantment enchantment) {
-        return Registry.ENCHANTMENT.getId(enchantment);
+        return Registries.ENCHANTMENT.getId(enchantment);
     }
 
     public static int getLevel(Enchantment enchantment, ItemStack stack) {
@@ -99,7 +99,7 @@ public class EnchantmentHelper {
         LinkedHashMap map = Maps.newLinkedHashMap();
         for (int i = 0; i < list.size(); ++i) {
             NbtCompound nbtCompound = list.getCompound(i);
-            Registry.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> map.put(enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
+            Registries.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> map.put(enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
         }
         return map;
     }
@@ -128,7 +128,7 @@ public class EnchantmentHelper {
         NbtList nbtList = stack.getEnchantments();
         for (int i = 0; i < nbtList.size(); ++i) {
             NbtCompound nbtCompound = nbtList.getCompound(i);
-            Registry.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> consumer.accept((Enchantment)enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
+            Registries.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> consumer.accept((Enchantment)enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
         }
     }
 
@@ -359,7 +359,7 @@ public class EnchantmentHelper {
         ArrayList list = Lists.newArrayList();
         Item item = stack.getItem();
         boolean bl = stack.isOf(Items.BOOK);
-        block0: for (Enchantment enchantment : Registry.ENCHANTMENT) {
+        block0: for (Enchantment enchantment : Registries.ENCHANTMENT) {
             if (enchantment.isTreasure() && !treasureAllowed || !enchantment.isAvailableForRandomSelection() || !enchantment.type.isAcceptableItem(item) && !bl) continue;
             for (int i = enchantment.getMaxLevel(); i > enchantment.getMinLevel() - 1; --i) {
                 if (power < enchantment.getMinPower(i) || power > enchantment.getMaxPower(i)) continue;

@@ -3,10 +3,9 @@
  */
 package net.minecraft.client.option;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.function.IntFunction;
 import net.minecraft.util.TranslatableOption;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.function.ValueLists;
 
 public final class ChatVisibility
 extends Enum<ChatVisibility>
@@ -14,7 +13,7 @@ implements TranslatableOption {
     public static final /* enum */ ChatVisibility FULL = new ChatVisibility(0, "options.chat.visibility.full");
     public static final /* enum */ ChatVisibility SYSTEM = new ChatVisibility(1, "options.chat.visibility.system");
     public static final /* enum */ ChatVisibility HIDDEN = new ChatVisibility(2, "options.chat.visibility.hidden");
-    private static final ChatVisibility[] VALUES;
+    private static final IntFunction<ChatVisibility> BY_ID;
     private final int id;
     private final String translationKey;
     private static final /* synthetic */ ChatVisibility[] field_7537;
@@ -43,7 +42,7 @@ implements TranslatableOption {
     }
 
     public static ChatVisibility byId(int id) {
-        return VALUES[MathHelper.floorMod(id, VALUES.length)];
+        return BY_ID.apply(id);
     }
 
     private static /* synthetic */ ChatVisibility[] method_36660() {
@@ -52,7 +51,7 @@ implements TranslatableOption {
 
     static {
         field_7537 = ChatVisibility.method_36660();
-        VALUES = (ChatVisibility[])Arrays.stream(ChatVisibility.values()).sorted(Comparator.comparingInt(ChatVisibility::getId)).toArray(ChatVisibility[]::new);
+        BY_ID = ValueLists.createIdToValueFunction(ChatVisibility::getId, ChatVisibility.values(), ValueLists.OutOfBoundsHandling.WRAP);
     }
 }
 

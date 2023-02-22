@@ -68,18 +68,13 @@ extends ClickableWidget {
         return this.resultCollection;
     }
 
-    public void setPos(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
-
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         if (!Screen.hasControlDown()) {
             this.time += delta;
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = 29;
         if (!this.resultCollection.hasCraftableRecipes()) {
@@ -94,22 +89,22 @@ extends ClickableWidget {
         if (bl) {
             float f = 1.0f + 0.1f * (float)Math.sin(this.bounce / 15.0f * (float)Math.PI);
             matrixStack.push();
-            matrixStack.translate(this.x + 8, this.y + 12, 0.0);
+            matrixStack.translate(this.getX() + 8, this.getY() + 12, 0.0f);
             matrixStack.scale(f, f, 1.0f);
-            matrixStack.translate(-(this.x + 8), -(this.y + 12), 0.0);
+            matrixStack.translate(-(this.getX() + 8), -(this.getY() + 12), 0.0f);
             RenderSystem.applyModelViewMatrix();
             this.bounce -= delta;
         }
-        this.drawTexture(matrices, this.x, this.y, i, j, this.width, this.height);
+        this.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
         List<Recipe<?>> list = this.getResults();
         this.currentResultIndex = MathHelper.floor(this.time / 30.0f) % list.size();
         ItemStack itemStack = list.get(this.currentResultIndex).getOutput();
         int k = 4;
         if (this.resultCollection.hasSingleOutput() && this.getResults().size() > 1) {
-            minecraftClient.getItemRenderer().renderInGuiWithOverrides(itemStack, this.x + k + 1, this.y + k + 1, 0, 10);
+            minecraftClient.getItemRenderer().renderInGuiWithOverrides(itemStack, this.getX() + k + 1, this.getY() + k + 1, 0, 10);
             --k;
         }
-        minecraftClient.getItemRenderer().renderInGui(itemStack, this.x + k, this.y + k);
+        minecraftClient.getItemRenderer().renderInGui(itemStack, this.getX() + k, this.getY() + k);
         if (bl) {
             matrixStack.pop();
             RenderSystem.applyModelViewMatrix();
@@ -143,7 +138,7 @@ extends ClickableWidget {
     }
 
     @Override
-    public void appendNarrations(NarrationMessageBuilder builder) {
+    public void appendClickableNarrations(NarrationMessageBuilder builder) {
         ItemStack itemStack = this.getResults().get(this.currentResultIndex).getOutput();
         builder.put(NarrationPart.TITLE, (Text)Text.translatable("narration.recipe", itemStack.getName()));
         if (this.resultCollection.getResults(this.recipeBook.isFilteringCraftable(this.craftingScreenHandler)).size() > 1) {

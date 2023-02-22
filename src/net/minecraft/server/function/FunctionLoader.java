@@ -28,14 +28,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import net.minecraft.registry.tag.TagGroupLoader;
 import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
-import net.minecraft.tag.TagGroupLoader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
@@ -45,11 +46,9 @@ import org.slf4j.Logger;
 public class FunctionLoader
 implements ResourceReloader {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String EXTENSION = ".mcfunction";
-    private static final int PATH_PREFIX_LENGTH = "functions/".length();
-    private static final int EXTENSION_LENGTH = ".mcfunction".length();
+    private static final ResourceFinder FINDER = new ResourceFinder("functions", ".mcfunction");
     private volatile Map<Identifier, CommandFunction> functions = ImmutableMap.of();
-    private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader(this::get, "tags/functions");
+    private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader<CommandFunction>(this::get, "tags/functions");
     private volatile Map<Identifier, Collection<CommandFunction>> tags = Map.of();
     private final int level;
     private final CommandDispatcher<ServerCommandSource> commandDispatcher;
@@ -78,20 +77,19 @@ implements ResourceReloader {
     @Override
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
         CompletableFuture<Map> completableFuture = CompletableFuture.supplyAsync(() -> this.tagLoader.loadTags(manager), prepareExecutor);
-        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> manager.findResources("functions", identifier -> identifier.getPath().endsWith(EXTENSION)), prepareExecutor).thenCompose(map -> {
-            HashMap map2 = Maps.newHashMap();
+        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> FINDER.findResources(manager), prepareExecutor).thenCompose(functions -> {
+            HashMap map = Maps.newHashMap();
             ServerCommandSource serverCommandSource = new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.level, "", ScreenTexts.EMPTY, null, null);
-            for (Map.Entry entry : map.entrySet()) {
+            for (Map.Entry entry : functions.entrySet()) {
                 Identifier identifier = (Identifier)entry.getKey();
-                String string = identifier.getPath();
-                Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(PATH_PREFIX_LENGTH, string.length() - EXTENSION_LENGTH));
-                map2.put(identifier2, CompletableFuture.supplyAsync(() -> {
+                Identifier identifier2 = FINDER.toResourceId(identifier);
+                map.put(identifier2, CompletableFuture.supplyAsync(() -> {
                     List<String> list = FunctionLoader.readLines((Resource)entry.getValue());
                     return CommandFunction.create(identifier2, this.commandDispatcher, serverCommandSource, list);
                 }, prepareExecutor));
             }
-            CompletableFuture[] completableFutures = map2.values().toArray(new CompletableFuture[0]);
-            return CompletableFuture.allOf(completableFutures).handle((unused, ex) -> map2);
+            CompletableFuture[] completableFutures = map.values().toArray(new CompletableFuture[0]);
+            return CompletableFuture.allOf(completableFutures).handle((unused, ex) -> map);
         });
         return ((CompletableFuture)((CompletableFuture)completableFuture.thenCombine(completableFuture2, Pair::of)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(intermediate -> {
             Map map = (Map)intermediate.getSecond();

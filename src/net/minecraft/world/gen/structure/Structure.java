@@ -28,24 +28,25 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.minecraft.entity.SpawnGroup;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryCodecs;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.structure.StructurePiecesCollector;
 import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryCodecs;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureSpawns;
@@ -61,8 +62,8 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.gen.structure.StructureType;
 
 public abstract class Structure {
-    public static final Codec<Structure> STRUCTURE_CODEC = Registry.STRUCTURE_TYPE.getCodec().dispatch(Structure::getType, StructureType::codec);
-    public static final Codec<RegistryEntry<Structure>> ENTRY_CODEC = RegistryElementCodec.of(Registry.STRUCTURE_KEY, STRUCTURE_CODEC);
+    public static final Codec<Structure> STRUCTURE_CODEC = Registries.STRUCTURE_TYPE.getCodec().dispatch(Structure::getType, StructureType::codec);
+    public static final Codec<RegistryEntry<Structure>> ENTRY_CODEC = RegistryElementCodec.of(RegistryKeys.STRUCTURE, STRUCTURE_CODEC);
     protected final Config config;
 
     public static <S extends Structure> RecordCodecBuilder<S, Config> configCodecBuilder(RecordCodecBuilder.Instance<S> instance) {
@@ -103,8 +104,9 @@ public abstract class Structure {
     public StructureStart createStructureStart(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, BiomeSource biomeSource, NoiseConfig noiseConfig, StructureTemplateManager structureTemplateManager, long seed, ChunkPos chunkPos, int references, HeightLimitView world, Predicate<RegistryEntry<Biome>> validBiomes) {
         StructurePiecesCollector structurePiecesCollector;
         StructureStart structureStart;
-        Optional<StructurePosition> optional = this.getStructurePosition(new Context(dynamicRegistryManager, chunkGenerator, biomeSource, noiseConfig, structureTemplateManager, seed, chunkPos, world, validBiomes));
-        if (optional.isPresent() && Structure.isBiomeValid(optional.get(), chunkGenerator, noiseConfig, validBiomes) && (structureStart = new StructureStart(this, chunkPos, references, (structurePiecesCollector = optional.get().generate()).toList())).hasChildren()) {
+        Context context = new Context(dynamicRegistryManager, chunkGenerator, biomeSource, noiseConfig, structureTemplateManager, seed, chunkPos, world, validBiomes);
+        Optional<StructurePosition> optional = this.getValidStructurePosition(context);
+        if (optional.isPresent() && (structureStart = new StructureStart(this, chunkPos, references, (structurePiecesCollector = optional.get().generate()).toList())).hasChildren()) {
             return structureStart;
         }
         return StructureStart.DEFAULT;
@@ -118,9 +120,9 @@ public abstract class Structure {
         return Optional.of(new StructurePosition(new BlockPos(i, k, j), generator));
     }
 
-    private static boolean isBiomeValid(StructurePosition result, ChunkGenerator chunkGenerator, NoiseConfig noiseConfig, Predicate<RegistryEntry<Biome>> validBiomes) {
+    private static boolean isBiomeValid(StructurePosition result, Context context) {
         BlockPos blockPos = result.position();
-        return validBiomes.test(chunkGenerator.getBiomeSource().getBiome(BiomeCoords.fromBlock(blockPos.getX()), BiomeCoords.fromBlock(blockPos.getY()), BiomeCoords.fromBlock(blockPos.getZ()), noiseConfig.getMultiNoiseSampler()));
+        return context.biomePredicate.test(context.chunkGenerator.getBiomeSource().getBiome(BiomeCoords.fromBlock(blockPos.getX()), BiomeCoords.fromBlock(blockPos.getY()), BiomeCoords.fromBlock(blockPos.getZ()), context.noiseConfig.getMultiNoiseSampler()));
     }
 
     public void postPlace(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox box, ChunkPos chunkPos, StructurePiecesList pieces) {
@@ -163,7 +165,11 @@ public abstract class Structure {
         return new BlockPos(k, Structure.getMinCornerHeight(context, k, l, i, j), l);
     }
 
-    public abstract Optional<StructurePosition> getStructurePosition(Context var1);
+    protected abstract Optional<StructurePosition> getStructurePosition(Context var1);
+
+    public Optional<StructurePosition> getValidStructurePosition(Context context) {
+        return this.getStructurePosition(context).filter(position -> Structure.isBiomeValid(position, context));
+    }
 
     public abstract StructureType<?> getType();
 
@@ -173,7 +179,7 @@ public abstract class Structure {
         final Map<SpawnGroup, StructureSpawns> spawnOverrides;
         final GenerationStep.Feature step;
         final StructureTerrainAdaptation terrainAdaptation;
-        public static final MapCodec<Config> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)RegistryCodecs.entryList(Registry.BIOME_KEY).fieldOf("biomes").forGetter(Config::biomes), (App)Codec.simpleMap(SpawnGroup.CODEC, StructureSpawns.CODEC, (Keyable)StringIdentifiable.toKeyable(SpawnGroup.values())).fieldOf("spawn_overrides").forGetter(Config::spawnOverrides), (App)GenerationStep.Feature.CODEC.fieldOf("step").forGetter(Config::step), (App)StructureTerrainAdaptation.CODEC.optionalFieldOf("terrain_adaptation", (Object)StructureTerrainAdaptation.NONE).forGetter(Config::terrainAdaptation)).apply((Applicative)instance, Config::new));
+        public static final MapCodec<Config> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)RegistryCodecs.entryList(RegistryKeys.BIOME).fieldOf("biomes").forGetter(Config::biomes), (App)Codec.simpleMap(SpawnGroup.CODEC, StructureSpawns.CODEC, (Keyable)StringIdentifiable.toKeyable(SpawnGroup.values())).fieldOf("spawn_overrides").forGetter(Config::spawnOverrides), (App)GenerationStep.Feature.CODEC.fieldOf("step").forGetter(Config::step), (App)StructureTerrainAdaptation.CODEC.optionalFieldOf("terrain_adaptation", (Object)StructureTerrainAdaptation.NONE).forGetter(Config::terrainAdaptation)).apply((Applicative)instance, Config::new));
 
         public Config(RegistryEntryList<Biome> registryEntryList, Map<SpawnGroup, StructureSpawns> map, GenerationStep.Feature feature, StructureTerrainAdaptation structureTerrainAdaptation) {
             this.biomes = registryEntryList;
@@ -214,9 +220,34 @@ public abstract class Structure {
         }
     }
 
-    public record Context(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, BiomeSource biomeSource, NoiseConfig noiseConfig, StructureTemplateManager structureTemplateManager, ChunkRandom random, long seed, ChunkPos chunkPos, HeightLimitView world, Predicate<RegistryEntry<Biome>> biomePredicate) {
+    public static final class Context
+    extends Record {
+        private final DynamicRegistryManager dynamicRegistryManager;
+        final ChunkGenerator chunkGenerator;
+        private final BiomeSource biomeSource;
+        final NoiseConfig noiseConfig;
+        private final StructureTemplateManager structureTemplateManager;
+        private final ChunkRandom random;
+        private final long seed;
+        private final ChunkPos chunkPos;
+        private final HeightLimitView world;
+        final Predicate<RegistryEntry<Biome>> biomePredicate;
+
         public Context(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, BiomeSource biomeSource, NoiseConfig noiseConfig, StructureTemplateManager structureTemplateManager, long seed, ChunkPos chunkPos, HeightLimitView world, Predicate<RegistryEntry<Biome>> biomePredicate) {
             this(dynamicRegistryManager, chunkGenerator, biomeSource, noiseConfig, structureTemplateManager, Context.createChunkRandom(seed, chunkPos), seed, chunkPos, world, biomePredicate);
+        }
+
+        public Context(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, BiomeSource biomeSource, NoiseConfig noiseConfig, StructureTemplateManager structureTemplateManager, ChunkRandom chunkRandom, long l, ChunkPos chunkPos, HeightLimitView heightLimitView, Predicate<RegistryEntry<Biome>> predicate) {
+            this.dynamicRegistryManager = dynamicRegistryManager;
+            this.chunkGenerator = chunkGenerator;
+            this.biomeSource = biomeSource;
+            this.noiseConfig = noiseConfig;
+            this.structureTemplateManager = structureTemplateManager;
+            this.random = chunkRandom;
+            this.seed = l;
+            this.chunkPos = chunkPos;
+            this.world = heightLimitView;
+            this.biomePredicate = predicate;
         }
 
         private static ChunkRandom createChunkRandom(long seed, ChunkPos chunkPos) {
@@ -238,6 +269,46 @@ public abstract class Structure {
         @Override
         public final boolean equals(Object object) {
             return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{Context.class, "registryAccess;chunkGenerator;biomeSource;randomState;structureTemplateManager;random;seed;chunkPos;heightAccessor;validBiome", "dynamicRegistryManager", "chunkGenerator", "biomeSource", "noiseConfig", "structureTemplateManager", "random", "seed", "chunkPos", "world", "biomePredicate"}, this, object);
+        }
+
+        public DynamicRegistryManager dynamicRegistryManager() {
+            return this.dynamicRegistryManager;
+        }
+
+        public ChunkGenerator chunkGenerator() {
+            return this.chunkGenerator;
+        }
+
+        public BiomeSource biomeSource() {
+            return this.biomeSource;
+        }
+
+        public NoiseConfig noiseConfig() {
+            return this.noiseConfig;
+        }
+
+        public StructureTemplateManager structureTemplateManager() {
+            return this.structureTemplateManager;
+        }
+
+        public ChunkRandom random() {
+            return this.random;
+        }
+
+        public long seed() {
+            return this.seed;
+        }
+
+        public ChunkPos chunkPos() {
+            return this.chunkPos;
+        }
+
+        public HeightLimitView world() {
+            return this.world;
+        }
+
+        public Predicate<RegistryEntry<Biome>> biomePredicate() {
+            return this.biomePredicate;
         }
     }
 

@@ -12,11 +12,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Map;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.ai.brain.task.SeekSkyTask;
-import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.item.FireworkRocketItem;
@@ -33,7 +32,7 @@ import net.minecraft.village.raid.Raid;
 import org.jetbrains.annotations.Nullable;
 
 public class CelebrateRaidWinTask
-extends Task<VillagerEntity> {
+extends MultiTickTask<VillagerEntity> {
     @Nullable
     private Raid raid;
 
@@ -93,21 +92,6 @@ extends Task<VillagerEntity> {
             nbtCompound2.put("Explosions", nbtList);
         }
         return itemStack;
-    }
-
-    @Override
-    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
-        return this.shouldKeepRunning(world, (VillagerEntity)entity, time);
-    }
-
-    @Override
-    protected /* synthetic */ void finishRunning(ServerWorld world, LivingEntity entity, long time) {
-        this.finishRunning(world, (VillagerEntity)entity, time);
-    }
-
-    @Override
-    protected /* synthetic */ void keepRunning(ServerWorld world, LivingEntity entity, long time) {
-        this.keepRunning(world, (VillagerEntity)entity, time);
     }
 }
 

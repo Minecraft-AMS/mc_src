@@ -431,7 +431,7 @@ StringVisitable {
 
         @Nullable
         public static MutableText fromJson(String json) {
-            return JsonHelper.deserialize(GSON, json, MutableText.class, false);
+            return JsonHelper.deserializeNullable(GSON, json, MutableText.class, false);
         }
 
         @Nullable
@@ -441,7 +441,7 @@ StringVisitable {
 
         @Nullable
         public static MutableText fromLenientJson(String json) {
-            return JsonHelper.deserialize(GSON, json, MutableText.class, true);
+            return JsonHelper.deserializeNullable(GSON, json, MutableText.class, true);
         }
 
         public static MutableText fromJson(com.mojang.brigadier.StringReader reader) {

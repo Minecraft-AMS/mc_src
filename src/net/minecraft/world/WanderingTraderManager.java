@@ -12,9 +12,9 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.SpawnRestriction;
 import net.minecraft.entity.passive.TraderLlamaEntity;
 import net.minecraft.entity.passive.WanderingTraderEntity;
+import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.BiomeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
@@ -99,14 +99,14 @@ implements Spawner {
         BlockPos blockPos = playerEntity.getBlockPos();
         int i = 48;
         PointOfInterestStorage pointOfInterestStorage = world.getPointOfInterestStorage();
-        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.MEETING), pos -> true, blockPos, 48, PointOfInterestStorage.OccupationStatus.ANY);
+        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(poiType -> poiType.matchesKey(PointOfInterestTypes.MEETING), pos -> true, blockPos, 48, PointOfInterestStorage.OccupationStatus.ANY);
         BlockPos blockPos2 = optional.orElse(blockPos);
         BlockPos blockPos3 = this.getNearbySpawnPos(world, blockPos2, 48);
         if (blockPos3 != null && this.doesNotSuffocateAt(world, blockPos3)) {
             if (world.getBiome(blockPos3).isIn(BiomeTags.WITHOUT_WANDERING_TRADER_SPAWNS)) {
                 return false;
             }
-            WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(world, null, null, null, blockPos3, SpawnReason.EVENT, false, false);
+            WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(world, blockPos3, SpawnReason.EVENT);
             if (wanderingTraderEntity != null) {
                 for (int j = 0; j < 2; ++j) {
                     this.spawnLlama(world, wanderingTraderEntity, 4);
@@ -126,7 +126,7 @@ implements Spawner {
         if (blockPos == null) {
             return;
         }
-        TraderLlamaEntity traderLlamaEntity = EntityType.TRADER_LLAMA.spawn(world, null, null, null, blockPos, SpawnReason.EVENT, false, false);
+        TraderLlamaEntity traderLlamaEntity = EntityType.TRADER_LLAMA.spawn(world, blockPos, SpawnReason.EVENT);
         if (traderLlamaEntity == null) {
             return;
         }

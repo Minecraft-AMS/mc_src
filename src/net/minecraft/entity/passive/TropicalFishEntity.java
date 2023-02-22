@@ -2,15 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
-import java.util.Locale;
+import com.mojang.serialization.Codec;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
+import java.util.List;
+import java.util.function.IntFunction;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -20,13 +26,15 @@ import net.minecraft.entity.passive.SchoolingFishEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.BiomeTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BiomeTags;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.text.Text;
 import net.minecraft.util.DyeColor;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
@@ -36,23 +44,12 @@ import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class TropicalFishEntity
-extends SchoolingFishEntity {
+extends SchoolingFishEntity
+implements VariantHolder<Variety> {
     public static final String BUCKET_VARIANT_TAG_KEY = "BucketVariantTag";
     private static final TrackedData<Integer> VARIANT = DataTracker.registerData(TropicalFishEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    public static final int field_30380 = 0;
-    public static final int field_30383 = 1;
-    private static final int field_30379 = 2;
-    private static final Identifier[] SHAPE_IDS = new Identifier[]{new Identifier("textures/entity/fish/tropical_a.png"), new Identifier("textures/entity/fish/tropical_b.png")};
-    private static final Identifier[] SMALL_FISH_VARIETY_IDS = new Identifier[]{new Identifier("textures/entity/fish/tropical_a_pattern_1.png"), new Identifier("textures/entity/fish/tropical_a_pattern_2.png"), new Identifier("textures/entity/fish/tropical_a_pattern_3.png"), new Identifier("textures/entity/fish/tropical_a_pattern_4.png"), new Identifier("textures/entity/fish/tropical_a_pattern_5.png"), new Identifier("textures/entity/fish/tropical_a_pattern_6.png")};
-    private static final Identifier[] LARGE_FISH_VARIETY_IDS = new Identifier[]{new Identifier("textures/entity/fish/tropical_b_pattern_1.png"), new Identifier("textures/entity/fish/tropical_b_pattern_2.png"), new Identifier("textures/entity/fish/tropical_b_pattern_3.png"), new Identifier("textures/entity/fish/tropical_b_pattern_4.png"), new Identifier("textures/entity/fish/tropical_b_pattern_5.png"), new Identifier("textures/entity/fish/tropical_b_pattern_6.png")};
-    private static final int field_30381 = 6;
-    private static final int field_30382 = 15;
-    public static final int[] COMMON_VARIANTS = new int[]{TropicalFishEntity.toVariant(Variety.STRIPEY, DyeColor.ORANGE, DyeColor.GRAY), TropicalFishEntity.toVariant(Variety.FLOPPER, DyeColor.GRAY, DyeColor.GRAY), TropicalFishEntity.toVariant(Variety.FLOPPER, DyeColor.GRAY, DyeColor.BLUE), TropicalFishEntity.toVariant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.GRAY), TropicalFishEntity.toVariant(Variety.SUNSTREAK, DyeColor.BLUE, DyeColor.GRAY), TropicalFishEntity.toVariant(Variety.KOB, DyeColor.ORANGE, DyeColor.WHITE), TropicalFishEntity.toVariant(Variety.SPOTTY, DyeColor.PINK, DyeColor.LIGHT_BLUE), TropicalFishEntity.toVariant(Variety.BLOCKFISH, DyeColor.PURPLE, DyeColor.YELLOW), TropicalFishEntity.toVariant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.RED), TropicalFishEntity.toVariant(Variety.SPOTTY, DyeColor.WHITE, DyeColor.YELLOW), TropicalFishEntity.toVariant(Variety.GLITTER, DyeColor.WHITE, DyeColor.GRAY), TropicalFishEntity.toVariant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.ORANGE), TropicalFishEntity.toVariant(Variety.DASHER, DyeColor.CYAN, DyeColor.PINK), TropicalFishEntity.toVariant(Variety.BRINELY, DyeColor.LIME, DyeColor.LIGHT_BLUE), TropicalFishEntity.toVariant(Variety.BETTY, DyeColor.RED, DyeColor.WHITE), TropicalFishEntity.toVariant(Variety.SNOOPER, DyeColor.GRAY, DyeColor.RED), TropicalFishEntity.toVariant(Variety.BLOCKFISH, DyeColor.RED, DyeColor.WHITE), TropicalFishEntity.toVariant(Variety.FLOPPER, DyeColor.WHITE, DyeColor.YELLOW), TropicalFishEntity.toVariant(Variety.KOB, DyeColor.RED, DyeColor.WHITE), TropicalFishEntity.toVariant(Variety.SUNSTREAK, DyeColor.GRAY, DyeColor.WHITE), TropicalFishEntity.toVariant(Variety.DASHER, DyeColor.CYAN, DyeColor.YELLOW), TropicalFishEntity.toVariant(Variety.FLOPPER, DyeColor.YELLOW, DyeColor.YELLOW)};
+    public static final List<Variant> COMMON_VARIANTS = List.of(new Variant(Variety.STRIPEY, DyeColor.ORANGE, DyeColor.GRAY), new Variant(Variety.FLOPPER, DyeColor.GRAY, DyeColor.GRAY), new Variant(Variety.FLOPPER, DyeColor.GRAY, DyeColor.BLUE), new Variant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.GRAY), new Variant(Variety.SUNSTREAK, DyeColor.BLUE, DyeColor.GRAY), new Variant(Variety.KOB, DyeColor.ORANGE, DyeColor.WHITE), new Variant(Variety.SPOTTY, DyeColor.PINK, DyeColor.LIGHT_BLUE), new Variant(Variety.BLOCKFISH, DyeColor.PURPLE, DyeColor.YELLOW), new Variant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.RED), new Variant(Variety.SPOTTY, DyeColor.WHITE, DyeColor.YELLOW), new Variant(Variety.GLITTER, DyeColor.WHITE, DyeColor.GRAY), new Variant(Variety.CLAYFISH, DyeColor.WHITE, DyeColor.ORANGE), new Variant(Variety.DASHER, DyeColor.CYAN, DyeColor.PINK), new Variant(Variety.BRINELY, DyeColor.LIME, DyeColor.LIGHT_BLUE), new Variant(Variety.BETTY, DyeColor.RED, DyeColor.WHITE), new Variant(Variety.SNOOPER, DyeColor.GRAY, DyeColor.RED), new Variant(Variety.BLOCKFISH, DyeColor.RED, DyeColor.WHITE), new Variant(Variety.FLOPPER, DyeColor.WHITE, DyeColor.YELLOW), new Variant(Variety.KOB, DyeColor.RED, DyeColor.WHITE), new Variant(Variety.SUNSTREAK, DyeColor.GRAY, DyeColor.WHITE), new Variant(Variety.DASHER, DyeColor.CYAN, DyeColor.YELLOW), new Variant(Variety.FLOPPER, DyeColor.YELLOW, DyeColor.YELLOW));
     private boolean commonSpawn = true;
-
-    private static int toVariant(Variety variety, DyeColor baseColor, DyeColor patternColor) {
-        return variety.getShape() & 0xFF | (variety.getPattern() & 0xFF) << 8 | (baseColor.getId() & 0xFF) << 16 | (patternColor.getId() & 0xFF) << 24;
-    }
 
     public TropicalFishEntity(EntityType<? extends TropicalFishEntity> entityType, World world) {
         super((EntityType<? extends SchoolingFishEntity>)entityType, world);
@@ -62,18 +59,20 @@ extends SchoolingFishEntity {
         return "entity.minecraft.tropical_fish.predefined." + variant;
     }
 
+    static int getVariantId(Variety variety, DyeColor baseColor, DyeColor patternColor) {
+        return variety.getId() & 0xFFFF | (baseColor.getId() & 0xFF) << 16 | (patternColor.getId() & 0xFF) << 24;
+    }
+
     public static DyeColor getBaseDyeColor(int variant) {
-        return DyeColor.byId(TropicalFishEntity.getBaseDyeColorIndex(variant));
+        return DyeColor.byId(variant >> 16 & 0xFF);
     }
 
     public static DyeColor getPatternDyeColor(int variant) {
-        return DyeColor.byId(TropicalFishEntity.getPatternDyeColorIndex(variant));
+        return DyeColor.byId(variant >> 24 & 0xFF);
     }
 
-    public static String getTranslationKey(int variant) {
-        int i = TropicalFishEntity.getShape(variant);
-        int j = TropicalFishEntity.getPattern(variant);
-        return "entity.minecraft.tropical_fish.type." + Variety.getTranslateKey(i, j);
+    public static Variety getVariety(int variant) {
+        return Variety.fromId(variant & 0xFFFF);
     }
 
     @Override
@@ -85,16 +84,16 @@ extends SchoolingFishEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("Variant", this.getVariant());
+        nbt.putInt("Variant", this.getTropicalFishVariant());
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.setVariant(nbt.getInt("Variant"));
+        this.setTropicalFishVariant(nbt.getInt("Variant"));
     }
 
-    public void setVariant(int variant) {
+    private void setTropicalFishVariant(int variant) {
         this.dataTracker.set(VARIANT, variant);
     }
 
@@ -103,15 +102,36 @@ extends SchoolingFishEntity {
         return !this.commonSpawn;
     }
 
-    public int getVariant() {
+    private int getTropicalFishVariant() {
         return this.dataTracker.get(VARIANT);
+    }
+
+    public DyeColor getBaseColorComponents() {
+        return TropicalFishEntity.getBaseDyeColor(this.getTropicalFishVariant());
+    }
+
+    public DyeColor getPatternColorComponents() {
+        return TropicalFishEntity.getPatternDyeColor(this.getTropicalFishVariant());
+    }
+
+    @Override
+    public Variety getVariant() {
+        return TropicalFishEntity.getVariety(this.getTropicalFishVariant());
+    }
+
+    @Override
+    public void setVariant(Variety variety) {
+        int i = this.getTropicalFishVariant();
+        DyeColor dyeColor = TropicalFishEntity.getBaseDyeColor(i);
+        DyeColor dyeColor2 = TropicalFishEntity.getPatternDyeColor(i);
+        this.setTropicalFishVariant(TropicalFishEntity.getVariantId(variety, dyeColor, dyeColor2));
     }
 
     @Override
     public void copyDataToStack(ItemStack stack) {
         super.copyDataToStack(stack);
         NbtCompound nbtCompound = stack.getOrCreateNbt();
-        nbtCompound.putInt(BUCKET_VARIANT_TAG_KEY, this.getVariant());
+        nbtCompound.putInt(BUCKET_VARIANT_TAG_KEY, this.getTropicalFishVariant());
     }
 
     @Override
@@ -139,79 +159,32 @@ extends SchoolingFishEntity {
         return SoundEvents.ENTITY_TROPICAL_FISH_FLOP;
     }
 
-    private static int getBaseDyeColorIndex(int variant) {
-        return (variant & 0xFF0000) >> 16;
-    }
-
-    public float[] getBaseColorComponents() {
-        return DyeColor.byId(TropicalFishEntity.getBaseDyeColorIndex(this.getVariant())).getColorComponents();
-    }
-
-    private static int getPatternDyeColorIndex(int variant) {
-        return (variant & 0xFF000000) >> 24;
-    }
-
-    public float[] getPatternColorComponents() {
-        return DyeColor.byId(TropicalFishEntity.getPatternDyeColorIndex(this.getVariant())).getColorComponents();
-    }
-
-    public static int getShape(int variant) {
-        return Math.min(variant & 0xFF, 1);
-    }
-
-    public int getShape() {
-        return TropicalFishEntity.getShape(this.getVariant());
-    }
-
-    private static int getPattern(int variant) {
-        return Math.min((variant & 0xFF00) >> 8, 5);
-    }
-
-    public Identifier getVarietyId() {
-        if (TropicalFishEntity.getShape(this.getVariant()) == 0) {
-            return SMALL_FISH_VARIETY_IDS[TropicalFishEntity.getPattern(this.getVariant())];
-        }
-        return LARGE_FISH_VARIETY_IDS[TropicalFishEntity.getPattern(this.getVariant())];
-    }
-
-    public Identifier getShapeId() {
-        return SHAPE_IDS[TropicalFishEntity.getShape(this.getVariant())];
-    }
-
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        int l;
-        int k;
-        int j;
-        int i;
+        Variant variant;
         entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         if (spawnReason == SpawnReason.BUCKET && entityNbt != null && entityNbt.contains(BUCKET_VARIANT_TAG_KEY, 3)) {
-            this.setVariant(entityNbt.getInt(BUCKET_VARIANT_TAG_KEY));
+            this.setTropicalFishVariant(entityNbt.getInt(BUCKET_VARIANT_TAG_KEY));
             return entityData;
         }
         Random random = world.getRandom();
         if (entityData instanceof TropicalFishData) {
             TropicalFishData tropicalFishData = (TropicalFishData)entityData;
-            i = tropicalFishData.shape;
-            j = tropicalFishData.pattern;
-            k = tropicalFishData.baseColor;
-            l = tropicalFishData.patternColor;
+            variant = tropicalFishData.variant;
         } else if ((double)random.nextFloat() < 0.9) {
-            int m = Util.getRandom(COMMON_VARIANTS, random);
-            i = m & 0xFF;
-            j = (m & 0xFF00) >> 8;
-            k = (m & 0xFF0000) >> 16;
-            l = (m & 0xFF000000) >> 24;
-            entityData = new TropicalFishData(this, i, j, k, l);
+            variant = Util.getRandom(COMMON_VARIANTS, random);
+            entityData = new TropicalFishData(this, variant);
         } else {
             this.commonSpawn = false;
-            i = random.nextInt(2);
-            j = random.nextInt(6);
-            k = random.nextInt(15);
-            l = random.nextInt(15);
+            Variety[] varietys = Variety.values();
+            DyeColor[] dyeColors = DyeColor.values();
+            Variety variety = Util.getRandom(varietys, random);
+            DyeColor dyeColor = Util.getRandom(dyeColors, random);
+            DyeColor dyeColor2 = Util.getRandom(dyeColors, random);
+            variant = new Variant(variety, dyeColor, dyeColor2);
         }
-        this.setVariant(i | j << 8 | k << 16 | l << 24);
+        this.setTropicalFishVariant(variant.getId());
         return entityData;
     }
 
@@ -219,23 +192,32 @@ extends SchoolingFishEntity {
         return world.getFluidState(pos.down()).isIn(FluidTags.WATER) && world.getBlockState(pos.up()).isOf(Blocks.WATER) && (world.getBiome(pos).isIn(BiomeTags.ALLOWS_TROPICAL_FISH_SPAWNS_AT_ANY_HEIGHT) || WaterCreatureEntity.canSpawn(type, world, reason, pos, random));
     }
 
-    static final class Variety
-    extends Enum<Variety> {
-        public static final /* enum */ Variety KOB = new Variety(0, 0);
-        public static final /* enum */ Variety SUNSTREAK = new Variety(0, 1);
-        public static final /* enum */ Variety SNOOPER = new Variety(0, 2);
-        public static final /* enum */ Variety DASHER = new Variety(0, 3);
-        public static final /* enum */ Variety BRINELY = new Variety(0, 4);
-        public static final /* enum */ Variety SPOTTY = new Variety(0, 5);
-        public static final /* enum */ Variety FLOPPER = new Variety(1, 0);
-        public static final /* enum */ Variety STRIPEY = new Variety(1, 1);
-        public static final /* enum */ Variety GLITTER = new Variety(1, 2);
-        public static final /* enum */ Variety BLOCKFISH = new Variety(1, 3);
-        public static final /* enum */ Variety BETTY = new Variety(1, 4);
-        public static final /* enum */ Variety CLAYFISH = new Variety(1, 5);
-        private final int shape;
-        private final int pattern;
-        private static final Variety[] VALUES;
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
+    }
+
+    public static final class Variety
+    extends Enum<Variety>
+    implements StringIdentifiable {
+        public static final /* enum */ Variety KOB = new Variety("kob", Size.SMALL, 0);
+        public static final /* enum */ Variety SUNSTREAK = new Variety("sunstreak", Size.SMALL, 1);
+        public static final /* enum */ Variety SNOOPER = new Variety("snooper", Size.SMALL, 2);
+        public static final /* enum */ Variety DASHER = new Variety("dasher", Size.SMALL, 3);
+        public static final /* enum */ Variety BRINELY = new Variety("brinely", Size.SMALL, 4);
+        public static final /* enum */ Variety SPOTTY = new Variety("spotty", Size.SMALL, 5);
+        public static final /* enum */ Variety FLOPPER = new Variety("flopper", Size.LARGE, 0);
+        public static final /* enum */ Variety STRIPEY = new Variety("stripey", Size.LARGE, 1);
+        public static final /* enum */ Variety GLITTER = new Variety("glitter", Size.LARGE, 2);
+        public static final /* enum */ Variety BLOCKFISH = new Variety("blockfish", Size.LARGE, 3);
+        public static final /* enum */ Variety BETTY = new Variety("betty", Size.LARGE, 4);
+        public static final /* enum */ Variety CLAYFISH = new Variety("clayfish", Size.LARGE, 5);
+        public static final Codec<Variety> CODEC;
+        private static final IntFunction<Variety> BY_ID;
+        private final String name;
+        private final Text text;
+        private final Size size;
+        private final int id;
         private static final /* synthetic */ Variety[] field_6886;
 
         public static Variety[] values() {
@@ -246,25 +228,32 @@ extends SchoolingFishEntity {
             return Enum.valueOf(Variety.class, string);
         }
 
-        private Variety(int shape, int pattern) {
-            this.shape = shape;
-            this.pattern = pattern;
+        private Variety(String name, Size size, int id) {
+            this.name = name;
+            this.size = size;
+            this.id = size.id | id << 8;
+            this.text = Text.translatable("entity.minecraft.tropical_fish.type." + this.name);
         }
 
-        public int getShape() {
-            return this.shape;
+        public static Variety fromId(int id) {
+            return BY_ID.apply(id);
         }
 
-        public int getPattern() {
-            return this.pattern;
+        public Size getSize() {
+            return this.size;
         }
 
-        public static String getTranslateKey(int shape, int pattern) {
-            return VALUES[pattern + 6 * shape].getTranslationKey();
+        public int getId() {
+            return this.id;
         }
 
-        public String getTranslationKey() {
-            return this.name().toLowerCase(Locale.ROOT);
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
+        public Text getText() {
+            return this.text;
         }
 
         private static /* synthetic */ Variety[] method_36643() {
@@ -273,23 +262,67 @@ extends SchoolingFishEntity {
 
         static {
             field_6886 = Variety.method_36643();
-            VALUES = Variety.values();
+            CODEC = StringIdentifiable.createCodec(Variety::values);
+            BY_ID = ValueLists.createIdToValueFunction(Variety::getId, Variety.values(), KOB);
         }
     }
 
     static class TropicalFishData
     extends SchoolingFishEntity.FishData {
-        final int shape;
-        final int pattern;
-        final int baseColor;
-        final int patternColor;
+        final Variant variant;
 
-        TropicalFishData(TropicalFishEntity leader, int shape, int pattern, int baseColor, int patternColor) {
+        TropicalFishData(TropicalFishEntity leader, Variant variant) {
             super(leader);
-            this.shape = shape;
-            this.pattern = pattern;
-            this.baseColor = baseColor;
-            this.patternColor = patternColor;
+            this.variant = variant;
+        }
+    }
+
+    public record Variant(Variety variety, DyeColor baseColor, DyeColor patternColor) {
+        public int getId() {
+            return TropicalFishEntity.getVariantId(this.variety, this.baseColor, this.patternColor);
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{Variant.class, "pattern;baseColor;patternColor", "variety", "baseColor", "patternColor"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{Variant.class, "pattern;baseColor;patternColor", "variety", "baseColor", "patternColor"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{Variant.class, "pattern;baseColor;patternColor", "variety", "baseColor", "patternColor"}, this, object);
+        }
+    }
+
+    public static final class Size
+    extends Enum<Size> {
+        public static final /* enum */ Size SMALL = new Size(0);
+        public static final /* enum */ Size LARGE = new Size(1);
+        final int id;
+        private static final /* synthetic */ Size[] field_41577;
+
+        public static Size[] values() {
+            return (Size[])field_41577.clone();
+        }
+
+        public static Size valueOf(String string) {
+            return Enum.valueOf(Size.class, string);
+        }
+
+        private Size(int id) {
+            this.id = id;
+        }
+
+        private static /* synthetic */ Size[] method_47866() {
+            return new Size[]{SMALL, LARGE};
+        }
+
+        static {
+            field_41577 = Size.method_47866();
         }
     }
 }

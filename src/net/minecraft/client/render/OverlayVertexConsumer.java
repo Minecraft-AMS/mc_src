@@ -4,6 +4,13 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix3fc
+ *  org.joml.Matrix4f
+ *  org.joml.Matrix4fc
+ *  org.joml.Quaternionfc
+ *  org.joml.Vector3f
+ *  org.joml.Vector4f
  */
 package net.minecraft.client.render;
 
@@ -12,17 +19,21 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.FixedColorVertexConsumer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
-import net.minecraft.util.math.Vector4f;
+import org.joml.Matrix3f;
+import org.joml.Matrix3fc;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 @Environment(value=EnvType.CLIENT)
 public class OverlayVertexConsumer
 extends FixedColorVertexConsumer {
-    private final VertexConsumer vertexConsumer;
-    private final Matrix4f textureMatrix;
-    private final Matrix3f normalMatrix;
+    private final VertexConsumer delegate;
+    private final Matrix4f inverseTextureMatrix;
+    private final Matrix3f inverseNormalMatrix;
+    private final float textureScale;
     private float x;
     private float y;
     private float z;
@@ -33,12 +44,11 @@ extends FixedColorVertexConsumer {
     private float normalY;
     private float normalZ;
 
-    public OverlayVertexConsumer(VertexConsumer vertexConsumer, Matrix4f textureMatrix, Matrix3f normalMatrix) {
-        this.vertexConsumer = vertexConsumer;
-        this.textureMatrix = textureMatrix.copy();
-        this.textureMatrix.invert();
-        this.normalMatrix = normalMatrix.copy();
-        this.normalMatrix.invert();
+    public OverlayVertexConsumer(VertexConsumer delegate, Matrix4f textureMatrix, Matrix3f normalMatrix, float textureScale) {
+        this.delegate = delegate;
+        this.inverseTextureMatrix = new Matrix4f((Matrix4fc)textureMatrix).invert();
+        this.inverseNormalMatrix = new Matrix3f((Matrix3fc)normalMatrix).invert();
+        this.textureScale = textureScale;
         this.init();
     }
 
@@ -56,17 +66,15 @@ extends FixedColorVertexConsumer {
 
     @Override
     public void next() {
-        Vec3f vec3f = new Vec3f(this.normalX, this.normalY, this.normalZ);
-        vec3f.transform(this.normalMatrix);
-        Direction direction = Direction.getFacing(vec3f.getX(), vec3f.getY(), vec3f.getZ());
-        Vector4f vector4f = new Vector4f(this.x, this.y, this.z, 1.0f);
-        vector4f.transform(this.textureMatrix);
-        vector4f.rotate(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
-        vector4f.rotate(Vec3f.POSITIVE_X.getDegreesQuaternion(-90.0f));
-        vector4f.rotate(direction.getRotationQuaternion());
-        float f = -vector4f.getX();
-        float g = -vector4f.getY();
-        this.vertexConsumer.vertex(this.x, this.y, this.z).color(1.0f, 1.0f, 1.0f, 1.0f).texture(f, g).overlay(this.u1, this.v1).light(this.light).normal(this.normalX, this.normalY, this.normalZ).next();
+        Vector3f vector3f = this.inverseNormalMatrix.transform(new Vector3f(this.normalX, this.normalY, this.normalZ));
+        Direction direction = Direction.getFacing(vector3f.x(), vector3f.y(), vector3f.z());
+        Vector4f vector4f = this.inverseTextureMatrix.transform(new Vector4f(this.x, this.y, this.z, 1.0f));
+        vector4f.rotateY((float)Math.PI);
+        vector4f.rotateX(-1.5707964f);
+        vector4f.rotate((Quaternionfc)direction.getRotationQuaternion());
+        float f = -vector4f.x() * this.textureScale;
+        float g = -vector4f.y() * this.textureScale;
+        this.delegate.vertex(this.x, this.y, this.z).color(1.0f, 1.0f, 1.0f, 1.0f).texture(f, g).overlay(this.u1, this.v1).light(this.light).normal(this.normalX, this.normalY, this.normalZ).next();
         this.init();
     }
 

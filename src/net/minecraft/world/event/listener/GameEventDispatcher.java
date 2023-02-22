@@ -3,7 +3,6 @@
  */
 package net.minecraft.world.event.listener;
 
-import java.util.function.BiConsumer;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
@@ -25,7 +24,7 @@ public interface GameEventDispatcher {
         }
 
         @Override
-        public boolean dispatch(GameEvent event, Vec3d pos, GameEvent.Emitter emitter, BiConsumer<GameEventListener, Vec3d> onListenerAccept) {
+        public boolean dispatch(GameEvent event, Vec3d pos, GameEvent.Emitter emitter, DispatchCallback callback) {
             return false;
         }
     };
@@ -36,6 +35,11 @@ public interface GameEventDispatcher {
 
     public void removeListener(GameEventListener var1);
 
-    public boolean dispatch(GameEvent var1, Vec3d var2, GameEvent.Emitter var3, BiConsumer<GameEventListener, Vec3d> var4);
+    public boolean dispatch(GameEvent var1, Vec3d var2, GameEvent.Emitter var3, DispatchCallback var4);
+
+    @FunctionalInterface
+    public static interface DispatchCallback {
+        public void visit(GameEventListener var1, Vec3d var2);
+    }
 }
 

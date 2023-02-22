@@ -21,7 +21,7 @@ import java.util.function.Function;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.event.PositionSource;
@@ -29,7 +29,7 @@ import net.minecraft.world.event.PositionSourceType;
 
 public class EntityPositionSource
 implements PositionSource {
-    public static final Codec<EntityPositionSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codecs.UUID.fieldOf("source_entity").forGetter(EntityPositionSource::getUuid), (App)Codec.FLOAT.fieldOf("y_offset").orElse((Object)Float.valueOf(0.0f)).forGetter(entityPositionSource -> Float.valueOf(entityPositionSource.yOffset))).apply((Applicative)instance, (uUID, float_) -> new EntityPositionSource((Either<Entity, Either<UUID, Integer>>)Either.right((Object)Either.left((Object)uUID)), float_.floatValue())));
+    public static final Codec<EntityPositionSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Uuids.INT_STREAM_CODEC.fieldOf("source_entity").forGetter(EntityPositionSource::getUuid), (App)Codec.FLOAT.fieldOf("y_offset").orElse((Object)Float.valueOf(0.0f)).forGetter(entityPositionSource -> Float.valueOf(entityPositionSource.yOffset))).apply((Applicative)instance, (uuid, yOffset) -> new EntityPositionSource((Either<Entity, Either<UUID, Integer>>)Either.right((Object)Either.left((Object)uuid)), yOffset.floatValue())));
     private Either<Entity, Either<UUID, Integer>> source;
     final float yOffset;
 
@@ -51,7 +51,7 @@ implements PositionSource {
     }
 
     private void findEntityInWorld(World world) {
-        ((Optional)this.source.map(Optional::of, either -> Optional.ofNullable((Entity)either.map(uuid -> {
+        ((Optional)this.source.map(Optional::of, entityId -> Optional.ofNullable((Entity)entityId.map(uuid -> {
             Entity entity;
             if (world instanceof ServerWorld) {
                 ServerWorld serverWorld = (ServerWorld)world;
@@ -66,13 +66,13 @@ implements PositionSource {
     }
 
     private UUID getUuid() {
-        return (UUID)this.source.map(Entity::getUuid, either -> (UUID)either.map(Function.identity(), integer -> {
+        return (UUID)this.source.map(Entity::getUuid, entityId2 -> (UUID)entityId2.map(Function.identity(), entityId -> {
             throw new RuntimeException("Unable to get entityId from uuid");
         }));
     }
 
     int getEntityId() {
-        return (Integer)this.source.map(Entity::getId, either -> (Integer)either.map(uUID -> {
+        return (Integer)this.source.map(Entity::getId, entityId -> (Integer)entityId.map(uuid -> {
             throw new IllegalStateException("Unable to get entityId from uuid");
         }, Function.identity()));
     }

@@ -20,8 +20,6 @@
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.JsonOps
- *  it.unimi.dsi.fastutil.objects.Object2FloatMap
- *  it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.ArrayUtils
@@ -48,8 +46,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
-import it.unimi.dsi.fastutil.objects.Object2FloatMap;
-import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -62,11 +58,14 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -78,9 +77,8 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.option.AoMode;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.option.AttackIndicator;
-import net.minecraft.client.option.ChatPreviewMode;
 import net.minecraft.client.option.ChatVisibility;
 import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.option.GraphicsMode;
@@ -109,7 +107,6 @@ import net.minecraft.screen.ScreenTexts;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Formatting;
@@ -176,16 +173,11 @@ public class GameOptions {
     private static final Text FAST_GRAPHICS_TOOLTIP = Text.translatable("options.graphics.fast.tooltip");
     private static final Text FABULOUS_GRAPHICS_TOOLTIP = Text.translatable("options.graphics.fabulous.tooltip", Text.translatable("options.graphics.fabulous").formatted(Formatting.ITALIC));
     private static final Text FANCY_GRAPHICS_TOOLTIP = Text.translatable("options.graphics.fancy.tooltip");
-    private final SimpleOption<GraphicsMode> graphicsMode = new SimpleOption<GraphicsMode>("options.graphics", client -> {
-        List<OrderedText> list = SimpleOption.wrapLines(client, FAST_GRAPHICS_TOOLTIP);
-        List<OrderedText> list2 = SimpleOption.wrapLines(client, FANCY_GRAPHICS_TOOLTIP);
-        List<OrderedText> list3 = SimpleOption.wrapLines(client, FABULOUS_GRAPHICS_TOOLTIP);
-        return graphicsMode -> switch (graphicsMode) {
-            default -> throw new IncompatibleClassChangeError();
-            case GraphicsMode.FANCY -> list2;
-            case GraphicsMode.FAST -> list;
-            case GraphicsMode.FABULOUS -> list3;
-        };
+    private final SimpleOption<GraphicsMode> graphicsMode = new SimpleOption<GraphicsMode>("options.graphics", value -> switch (value) {
+        default -> throw new IncompatibleClassChangeError();
+        case GraphicsMode.FANCY -> Tooltip.of(FANCY_GRAPHICS_TOOLTIP);
+        case GraphicsMode.FAST -> Tooltip.of(FAST_GRAPHICS_TOOLTIP);
+        case GraphicsMode.FABULOUS -> Tooltip.of(FABULOUS_GRAPHICS_TOOLTIP);
     }, (optionText, value) -> {
         MutableText mutableText = Text.translatable(value.getTranslationKey());
         if (value == GraphicsMode.FABULOUS) {
@@ -202,20 +194,15 @@ public class GameOptions {
         option.setValue(graphicsMode);
         minecraftClient.worldRenderer.reload();
     }, Codec.INT.xmap(GraphicsMode::byId, GraphicsMode::getId)), GraphicsMode.FANCY, value -> {});
-    private final SimpleOption<AoMode> ao = new SimpleOption<AoMode>("options.ao", SimpleOption.emptyTooltip(), SimpleOption.enumValueText(), new SimpleOption.PotentialValuesBasedCallbacks<AoMode>(Arrays.asList(AoMode.values()), Codec.either((Codec)Codec.BOOL.xmap(value -> value != false ? AoMode.MAX.getId() : AoMode.OFF.getId(), value -> value.intValue() == AoMode.MAX.getId()), (Codec)Codec.INT).xmap(either -> (Integer)either.map(value -> value, value -> value), Either::right).xmap(AoMode::byId, AoMode::getId)), AoMode.MAX, value -> MinecraftClient.getInstance().worldRenderer.reload());
+    private final SimpleOption<Boolean> ao = SimpleOption.ofBoolean("options.ao", true, value -> MinecraftClient.getInstance().worldRenderer.reload());
     private static final Text NONE_CHUNK_BUILDER_MODE_TOOLTIP = Text.translatable("options.prioritizeChunkUpdates.none.tooltip");
     private static final Text BY_PLAYER_CHUNK_BUILDER_MODE_TOOLTIP = Text.translatable("options.prioritizeChunkUpdates.byPlayer.tooltip");
     private static final Text NEARBY_CHUNK_BUILDER_MODE_TOOLTIP = Text.translatable("options.prioritizeChunkUpdates.nearby.tooltip");
-    private final SimpleOption<ChunkBuilderMode> chunkBuilderMode = new SimpleOption<ChunkBuilderMode>("options.prioritizeChunkUpdates", client -> {
-        List<OrderedText> list = SimpleOption.wrapLines(client, NONE_CHUNK_BUILDER_MODE_TOOLTIP);
-        List<OrderedText> list2 = SimpleOption.wrapLines(client, BY_PLAYER_CHUNK_BUILDER_MODE_TOOLTIP);
-        List<OrderedText> list3 = SimpleOption.wrapLines(client, NEARBY_CHUNK_BUILDER_MODE_TOOLTIP);
-        return value -> switch (value) {
-            default -> throw new IncompatibleClassChangeError();
-            case ChunkBuilderMode.NONE -> list;
-            case ChunkBuilderMode.PLAYER_AFFECTED -> list2;
-            case ChunkBuilderMode.NEARBY -> list3;
-        };
+    private final SimpleOption<ChunkBuilderMode> chunkBuilderMode = new SimpleOption<ChunkBuilderMode>("options.prioritizeChunkUpdates", value -> switch (value) {
+        default -> throw new IncompatibleClassChangeError();
+        case ChunkBuilderMode.NONE -> Tooltip.of(NONE_CHUNK_BUILDER_MODE_TOOLTIP);
+        case ChunkBuilderMode.PLAYER_AFFECTED -> Tooltip.of(BY_PLAYER_CHUNK_BUILDER_MODE_TOOLTIP);
+        case ChunkBuilderMode.NEARBY -> Tooltip.of(NEARBY_CHUNK_BUILDER_MODE_TOOLTIP);
     }, SimpleOption.enumValueText(), new SimpleOption.PotentialValuesBasedCallbacks<ChunkBuilderMode>(Arrays.asList(ChunkBuilderMode.values()), Codec.INT.xmap(ChunkBuilderMode::get, ChunkBuilderMode::getId)), ChunkBuilderMode.NONE, value -> {});
     public List<String> resourcePacks = Lists.newArrayList();
     public List<String> incompatibleResourcePacks = Lists.newArrayList();
@@ -223,6 +210,7 @@ public class GameOptions {
     private final SimpleOption<Double> chatOpacity = new SimpleOption<Double>("options.chat.opacity", SimpleOption.emptyTooltip(), (optionText, value) -> GameOptions.getPercentValueText(optionText, value * 0.9 + 0.1), SimpleOption.DoubleSliderCallbacks.INSTANCE, 1.0, value -> MinecraftClient.getInstance().inGameHud.getChatHud().reset());
     private final SimpleOption<Double> chatLineSpacing = new SimpleOption<Double>("options.chat.line_spacing", SimpleOption.emptyTooltip(), GameOptions::getPercentValueText, SimpleOption.DoubleSliderCallbacks.INSTANCE, 0.0, value -> {});
     private final SimpleOption<Double> textBackgroundOpacity = new SimpleOption<Double>("options.accessibility.text_background_opacity", SimpleOption.emptyTooltip(), GameOptions::getPercentValueText, SimpleOption.DoubleSliderCallbacks.INSTANCE, 0.5, value -> MinecraftClient.getInstance().inGameHud.getChatHud().reset());
+    private final SimpleOption<Double> panoramaSpeed = new SimpleOption<Double>("options.accessibility.panorama_speed", SimpleOption.emptyTooltip(), GameOptions::getPercentValueText, SimpleOption.DoubleSliderCallbacks.INSTANCE, 1.0, value -> {});
     @Nullable
     public String fullscreenResolution;
     public boolean hideServerAddress;
@@ -254,7 +242,6 @@ public class GameOptions {
         }
         return GameOptions.getGenericValueText(optionText, value);
     }, new SimpleOption.ValidatingIntSliderCallbacks(0, 4), 4, value -> {});
-    private final Object2FloatMap<SoundCategory> soundVolumeLevels = (Object2FloatMap)Util.make(new Object2FloatOpenHashMap(), map -> map.defaultReturnValue(1.0f));
     public boolean useNativeTransport = true;
     private final SimpleOption<AttackIndicator> attackIndicator = new SimpleOption<AttackIndicator>("options.attackIndicator", SimpleOption.emptyTooltip(), SimpleOption.enumValueText(), new SimpleOption.PotentialValuesBasedCallbacks<AttackIndicator>(Arrays.asList(AttackIndicator.values()), Codec.INT.xmap(AttackIndicator::byId, AttackIndicator::getId)), AttackIndicator.CROSSHAIR, value -> {});
     public TutorialStep tutorialStep = TutorialStep.MOVEMENT;
@@ -273,6 +260,7 @@ public class GameOptions {
     });
     public int glDebugVerbosity = 1;
     private final SimpleOption<Boolean> autoJump = SimpleOption.ofBoolean("options.autoJump", true);
+    private final SimpleOption<Boolean> operatorItemsTab = SimpleOption.ofBoolean("options.operatorItemsTab", false);
     private final SimpleOption<Boolean> autoSuggestions = SimpleOption.ofBoolean("options.autoSuggestCommands", true);
     private final SimpleOption<Boolean> chatColors = SimpleOption.ofBoolean("options.chat.color", true);
     private final SimpleOption<Boolean> chatLinks = SimpleOption.ofBoolean("options.chat.links", true);
@@ -296,14 +284,15 @@ public class GameOptions {
     private static final Text ALLOW_SERVER_LISTING_TOOLTIP = Text.translatable("options.allowServerListing.tooltip");
     private final SimpleOption<Boolean> allowServerListing = SimpleOption.ofBoolean("options.allowServerListing", SimpleOption.constantTooltip(ALLOW_SERVER_LISTING_TOOLTIP), true, value -> this.sendClientSettings());
     private final SimpleOption<Boolean> reducedDebugInfo = SimpleOption.ofBoolean("options.reducedDebugInfo", false);
+    private final Map<SoundCategory, SimpleOption<Double>> soundVolumeLevels = Util.make(new EnumMap(SoundCategory.class), soundVolumeLevels -> {
+        for (SoundCategory soundCategory : SoundCategory.values()) {
+            soundVolumeLevels.put(soundCategory, this.createSoundVolumeOption("soundCategory." + soundCategory.getName(), soundCategory));
+        }
+    });
     private final SimpleOption<Boolean> showSubtitles = SimpleOption.ofBoolean("options.showSubtitles", false);
     private static final Text DIRECTIONAL_AUDIO_ON_TOOLTIP = Text.translatable("options.directionalAudio.on.tooltip");
     private static final Text DIRECTIONAL_AUDIO_OFF_TOOLTIP = Text.translatable("options.directionalAudio.off.tooltip");
-    private final SimpleOption<Boolean> directionalAudio = SimpleOption.ofBoolean("options.directionalAudio", client -> {
-        List<OrderedText> list = SimpleOption.wrapLines(client, DIRECTIONAL_AUDIO_ON_TOOLTIP);
-        List<OrderedText> list2 = SimpleOption.wrapLines(client, DIRECTIONAL_AUDIO_OFF_TOOLTIP);
-        return value -> value != false ? list : list2;
-    }, false, value -> {
+    private final SimpleOption<Boolean> directionalAudio = SimpleOption.ofBoolean("options.directionalAudio", value -> value != false ? Tooltip.of(DIRECTIONAL_AUDIO_ON_TOOLTIP) : Tooltip.of(DIRECTIONAL_AUDIO_OFF_TOOLTIP), false, value -> {
         SoundManager soundManager = MinecraftClient.getInstance().getSoundManager();
         soundManager.reloadSounds();
         soundManager.play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1.0f));
@@ -327,15 +316,6 @@ public class GameOptions {
     private static final Text HIDE_MATCHED_NAMES_TOOLTIP = Text.translatable("options.hideMatchedNames.tooltip");
     private final SimpleOption<Boolean> hideMatchedNames = SimpleOption.ofBoolean("options.hideMatchedNames", SimpleOption.constantTooltip(HIDE_MATCHED_NAMES_TOOLTIP), true);
     private final SimpleOption<Boolean> showAutosaveIndicator = SimpleOption.ofBoolean("options.autosaveIndicator", true);
-    private static final Text OFF_CHAT_PREVIEW_TOOLTIP = Text.translatable("options.chatPreview.tooltip.off");
-    private static final Text LIVE_CHAT_PREVIEW_TOOLTIP = Text.translatable("options.chatPreview.tooltip.live");
-    private static final Text CONFIRM_CHAT_PREVIEW_TOOLTIP = Text.translatable("options.chatPreview.tooltip.confirm");
-    private final SimpleOption<ChatPreviewMode> chatPreview = new SimpleOption<ChatPreviewMode>("options.chatPreview", client -> value -> switch (value) {
-        default -> throw new IncompatibleClassChangeError();
-        case ChatPreviewMode.OFF -> SimpleOption.wrapLines(client, OFF_CHAT_PREVIEW_TOOLTIP);
-        case ChatPreviewMode.LIVE -> SimpleOption.wrapLines(client, LIVE_CHAT_PREVIEW_TOOLTIP);
-        case ChatPreviewMode.CONFIRM -> SimpleOption.wrapLines(client, CONFIRM_CHAT_PREVIEW_TOOLTIP);
-    }, SimpleOption.enumValueText(), new SimpleOption.PotentialValuesBasedCallbacks<ChatPreviewMode>(Arrays.asList(ChatPreviewMode.values()), Codec.INT.xmap(ChatPreviewMode::byId, ChatPreviewMode::getId)), ChatPreviewMode.LIVE, value -> {});
     private static final Text ONLY_SHOW_SECURE_CHAT_TOOLTIP = Text.translatable("options.onlyShowSecureChat.tooltip");
     private final SimpleOption<Boolean> onlyShowSecureChat = SimpleOption.ofBoolean("options.onlyShowSecureChat", SimpleOption.constantTooltip(ONLY_SHOW_SECURE_CHAT_TOOLTIP), false);
     public final KeyBinding forwardKey = new KeyBinding("key.forward", 87, "key.categories.movement");
@@ -379,6 +359,17 @@ public class GameOptions {
         case 110 -> GameOptions.getGenericValueText(optionText, Text.translatable("options.fov.max"));
         default -> GameOptions.getGenericValueText(optionText, value);
     }, new SimpleOption.ValidatingIntSliderCallbacks(30, 110), Codec.DOUBLE.xmap(value -> (int)(value * 40.0 + 70.0), value -> ((double)value.intValue() - 70.0) / 40.0), 70, value -> MinecraftClient.getInstance().worldRenderer.scheduleTerrainUpdate());
+    private static final MutableText TELEMETRY_TOOLTIP = Text.translatable("options.telemetry.button.tooltip", Text.translatable("options.telemetry.state.minimal"), Text.translatable("options.telemetry.state.all"));
+    private final SimpleOption<Boolean> telemetryOptInExtra = SimpleOption.ofBoolean("options.telemetry.button", SimpleOption.constantTooltip(TELEMETRY_TOOLTIP), (optionText, value) -> {
+        MinecraftClient minecraftClient = MinecraftClient.getInstance();
+        if (!minecraftClient.isTelemetryEnabledByApi()) {
+            return Text.translatable("options.telemetry.state.none");
+        }
+        if (value.booleanValue() && minecraftClient.isOptionalTelemetryEnabledByApi()) {
+            return Text.translatable("options.telemetry.state.all");
+        }
+        return Text.translatable("options.telemetry.state.minimal");
+    }, false, value -> {});
     private static final Text SCREEN_EFFECT_SCALE_TOOLTIP = Text.translatable("options.screenEffectScale.tooltip");
     private final SimpleOption<Double> distortionEffectScale = new SimpleOption<Double>("options.screenEffectScale", SimpleOption.constantTooltip(SCREEN_EFFECT_SCALE_TOOLTIP), (optionText, value) -> {
         if (value == 0.0) {
@@ -426,7 +417,7 @@ public class GameOptions {
             return value.getName();
         }
         return Text.translatable("options.narrator.notavailable");
-    }, new SimpleOption.PotentialValuesBasedCallbacks<NarratorMode>(Arrays.asList(NarratorMode.values()), Codec.INT.xmap(NarratorMode::byId, NarratorMode::getId)), NarratorMode.OFF, value -> this.client.getNarratorManager().addToast((NarratorMode)((Object)value)));
+    }, new SimpleOption.PotentialValuesBasedCallbacks<NarratorMode>(Arrays.asList(NarratorMode.values()), Codec.INT.xmap(NarratorMode::byId, NarratorMode::getId)), NarratorMode.OFF, value -> this.client.getNarratorManager().onModeChange((NarratorMode)((Object)value)));
     public String language = "en_us";
     private final SimpleOption<String> soundDevice = new SimpleOption<String>("options.audioDevice", SimpleOption.emptyTooltip(), (optionText, value) -> {
         if (EMPTY_STRING.equals(value)) {
@@ -484,7 +475,7 @@ public class GameOptions {
         return this.graphicsMode;
     }
 
-    public SimpleOption<AoMode> getAo() {
+    public SimpleOption<Boolean> getAo() {
         return this.ao;
     }
 
@@ -506,6 +497,10 @@ public class GameOptions {
 
     public SimpleOption<Double> getTextBackgroundOpacity() {
         return this.textBackgroundOpacity;
+    }
+
+    public SimpleOption<Double> getPanoramaSpeed() {
+        return this.panoramaSpeed;
     }
 
     public SimpleOption<Arm> getMainArm() {
@@ -564,6 +559,10 @@ public class GameOptions {
         return this.autoJump;
     }
 
+    public SimpleOption<Boolean> getOperatorItemsTab() {
+        return this.operatorItemsTab;
+    }
+
     public SimpleOption<Boolean> getAutoSuggestions() {
         return this.autoSuggestions;
     }
@@ -612,6 +611,23 @@ public class GameOptions {
         return this.reducedDebugInfo;
     }
 
+    public final float getSoundVolume(SoundCategory category) {
+        return this.getSoundVolumeOption(category).getValue().floatValue();
+    }
+
+    public final SimpleOption<Double> getSoundVolumeOption(SoundCategory category) {
+        return Objects.requireNonNull(this.soundVolumeLevels.get((Object)category));
+    }
+
+    private SimpleOption<Double> createSoundVolumeOption(String key, SoundCategory category) {
+        return new SimpleOption<Double>(key, SimpleOption.emptyTooltip(), (prefix, value) -> {
+            if (value == 0.0) {
+                return GameOptions.getGenericValueText(prefix, ScreenTexts.OFF);
+            }
+            return GameOptions.getPercentValueText(prefix, value);
+        }, SimpleOption.DoubleSliderCallbacks.INSTANCE, 1.0, value -> MinecraftClient.getInstance().getSoundManager().updateSoundVolume(category, value.floatValue()));
+    }
+
     public SimpleOption<Boolean> getShowSubtitles() {
         return this.showSubtitles;
     }
@@ -652,16 +668,16 @@ public class GameOptions {
         return this.showAutosaveIndicator;
     }
 
-    public SimpleOption<ChatPreviewMode> getChatPreview() {
-        return this.chatPreview;
-    }
-
     public SimpleOption<Boolean> getOnlyShowSecureChat() {
         return this.onlyShowSecureChat;
     }
 
     public SimpleOption<Integer> getFov() {
         return this.fov;
+    }
+
+    public SimpleOption<Boolean> getTelemetryOptInExtra() {
+        return this.telemetryOptInExtra;
     }
 
     public SimpleOption<Double> getDistortionEffectScale() {
@@ -696,10 +712,10 @@ public class GameOptions {
         return this.soundDevice;
     }
 
-    public GameOptions(MinecraftClient client2, File optionsFile) {
-        this.client = client2;
+    public GameOptions(MinecraftClient client, File optionsFile) {
+        this.client = client;
         this.optionsFile = new File(optionsFile, "options.txt");
-        boolean bl = client2.is64Bit();
+        boolean bl = client.is64Bit();
         boolean bl2 = bl && Runtime.getRuntime().maxMemory() >= 1000000000L;
         this.viewDistance = new SimpleOption<Integer>("options.renderDistance", SimpleOption.emptyTooltip(), (optionText, value) -> GameOptions.getGenericValueText(optionText, Text.translatable("options.chunks", value)), new SimpleOption.ValidatingIntSliderCallbacks(2, bl2 ? 32 : 16), bl ? 12 : 8, value -> MinecraftClient.getInstance().worldRenderer.scheduleTerrainUpdate());
         this.simulationDistance = new SimpleOption<Integer>("options.simulationDistance", SimpleOption.emptyTooltip(), (optionText, value) -> GameOptions.getGenericValueText(optionText, Text.translatable("options.chunks", value)), new SimpleOption.ValidatingIntSliderCallbacks(5, bl2 ? 32 : 16), bl ? 12 : 8, value -> {});
@@ -726,6 +742,7 @@ public class GameOptions {
 
     private void accept(Visitor visitor) {
         visitor.accept("autoJump", this.autoJump);
+        visitor.accept("operatorItemsTab", this.operatorItemsTab);
         visitor.accept("autoSuggestions", this.autoSuggestions);
         visitor.accept("chatColors", this.chatColors);
         visitor.accept("chatLinks", this.chatLinks);
@@ -801,8 +818,9 @@ public class GameOptions {
         this.syncChunkWrites = visitor.visitBoolean("syncChunkWrites", this.syncChunkWrites);
         visitor.accept("showAutosaveIndicator", this.showAutosaveIndicator);
         visitor.accept("allowServerListing", this.allowServerListing);
-        visitor.accept("chatPreview", this.chatPreview);
         visitor.accept("onlyShowSecureChat", this.onlyShowSecureChat);
+        visitor.accept("panoramaScrollSpeed", this.panoramaSpeed);
+        visitor.accept("telemetryOptInExtra", this.telemetryOptInExtra);
         for (KeyBinding keyBinding : this.allKeys) {
             String string2;
             String string = keyBinding.getBoundKeyTranslationKey();
@@ -810,7 +828,7 @@ public class GameOptions {
             keyBinding.setBoundKey(InputUtil.fromTranslationKey(string2));
         }
         for (SoundCategory soundCategory : SoundCategory.values()) {
-            this.soundVolumeLevels.computeFloat((Object)soundCategory, (category, currentLevel) -> Float.valueOf(visitor.visitFloat("soundCategory_" + category.getName(), currentLevel != null ? currentLevel.floatValue() : 1.0f)));
+            visitor.accept("soundCategory_" + soundCategory.getName(), this.soundVolumeLevels.get((Object)soundCategory));
         }
         for (PlayerModelPart playerModelPart : PlayerModelPart.values()) {
             boolean bl = this.enabledPlayerModelParts.contains((Object)playerModelPart);
@@ -825,7 +843,6 @@ public class GameOptions {
             if (!this.optionsFile.exists()) {
                 return;
             }
-            this.soundVolumeLevels.clear();
             NbtCompound nbtCompound = new NbtCompound();
             try (BufferedReader bufferedReader = Files.newReader((File)this.optionsFile, (Charset)Charsets.UTF_8);){
                 bufferedReader.lines().forEach(line -> {
@@ -1011,15 +1028,6 @@ public class GameOptions {
             LOGGER.error("Failed to save options", (Throwable)exception);
         }
         this.sendClientSettings();
-    }
-
-    public float getSoundVolume(SoundCategory category) {
-        return this.soundVolumeLevels.getFloat((Object)category);
-    }
-
-    public void setSoundVolume(SoundCategory category, float volume) {
-        this.soundVolumeLevels.put((Object)category, volume);
-        this.client.getSoundManager().updateSoundVolume(category, volume);
     }
 
     public void sendClientSettings() {

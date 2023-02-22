@@ -26,11 +26,11 @@ import net.minecraft.world.event.GameEvent;
 
 public class LeveledCauldronBlock
 extends AbstractCauldronBlock {
-    public static final int field_31107 = 1;
-    public static final int field_31108 = 3;
+    public static final int MIN_LEVEL = 1;
+    public static final int MAX_LEVEL = 3;
     public static final IntProperty LEVEL = Properties.LEVEL_3;
-    private static final int field_31109 = 6;
-    private static final double field_31110 = 3.0;
+    private static final int BASE_FLUID_HEIGHT = 6;
+    private static final double FLUID_HEIGHT_PER_LEVEL = 3.0;
     public static final Predicate<Biome.Precipitation> RAIN_PREDICATE = precipitation -> precipitation == Biome.Precipitation.RAIN;
     public static final Predicate<Biome.Precipitation> SNOW_PREDICATE = precipitation -> precipitation == Biome.Precipitation.SNOW;
     private final Predicate<Biome.Precipitation> precipitationPredicate;

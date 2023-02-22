@@ -4,6 +4,8 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Quaternionf
+ *  org.joml.Quaternionfc
  */
 package net.minecraft.client.gui.screen.ingame;
 
@@ -29,8 +31,8 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Quaternion;
-import net.minecraft.util.math.Vec3f;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
 
 @Environment(value=EnvType.CLIENT)
 public class InventoryScreen
@@ -53,7 +55,7 @@ implements RecipeBookProvider {
     @Override
     public void handledScreenTick() {
         if (this.client.interactionManager.hasCreativeInventory()) {
-            this.client.setScreen(new CreativeInventoryScreen(this.client.player));
+            this.client.setScreen(new CreativeInventoryScreen(this.client.player, this.client.player.networkHandler.getEnabledFeatures(), this.client.options.getOperatorItemsTab().getValue()));
             return;
         }
         this.recipeBook.update();
@@ -62,7 +64,7 @@ implements RecipeBookProvider {
     @Override
     protected void init() {
         if (this.client.interactionManager.hasCreativeInventory()) {
-            this.client.setScreen(new CreativeInventoryScreen(this.client.player));
+            this.client.setScreen(new CreativeInventoryScreen(this.client.player, this.client.player.networkHandler.getEnabledFeatures(), this.client.options.getOperatorItemsTab().getValue()));
             return;
         }
         super.init();
@@ -73,7 +75,7 @@ implements RecipeBookProvider {
         this.addDrawableChild(new TexturedButtonWidget(this.x + 104, this.height / 2 - 22, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
             this.recipeBook.toggleOpen();
             this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
-            ((TexturedButtonWidget)button).setPos(this.x + 104, this.height / 2 - 22);
+            button.setPos(this.x + 104, this.height / 2 - 22);
             this.mouseDown = true;
         }));
         this.addSelectableChild(this.recipeBook);
@@ -104,7 +106,7 @@ implements RecipeBookProvider {
 
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
         int i = this.x;
@@ -118,16 +120,16 @@ implements RecipeBookProvider {
         float g = (float)Math.atan(mouseY / 40.0f);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
-        matrixStack.translate(x, y, 1050.0);
+        matrixStack.translate(x, y, 1050.0f);
         matrixStack.scale(1.0f, 1.0f, -1.0f);
         RenderSystem.applyModelViewMatrix();
         MatrixStack matrixStack2 = new MatrixStack();
-        matrixStack2.translate(0.0, 0.0, 1000.0);
+        matrixStack2.translate(0.0f, 0.0f, 1000.0f);
         matrixStack2.scale(size, size, size);
-        Quaternion quaternion = Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0f);
-        Quaternion quaternion2 = Vec3f.POSITIVE_X.getDegreesQuaternion(g * 20.0f);
-        quaternion.hamiltonProduct(quaternion2);
-        matrixStack2.multiply(quaternion);
+        Quaternionf quaternionf = new Quaternionf().rotateZ((float)Math.PI);
+        Quaternionf quaternionf2 = new Quaternionf().rotateX(g * 20.0f * ((float)Math.PI / 180));
+        quaternionf.mul((Quaternionfc)quaternionf2);
+        matrixStack2.multiply(quaternionf);
         float h = entity.bodyYaw;
         float i = entity.getYaw();
         float j = entity.getPitch();
@@ -140,8 +142,8 @@ implements RecipeBookProvider {
         entity.prevHeadYaw = entity.getYaw();
         DiffuseLighting.method_34742();
         EntityRenderDispatcher entityRenderDispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
-        quaternion2.conjugate();
-        entityRenderDispatcher.setRotation(quaternion2);
+        quaternionf2.conjugate();
+        entityRenderDispatcher.setRotation(quaternionf2);
         entityRenderDispatcher.setRenderShadows(false);
         VertexConsumerProvider.Immediate immediate = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
         RenderSystem.runAsFancy(() -> entityRenderDispatcher.render(entity, 0.0, 0.0, 0.0, 0.0f, 1.0f, matrixStack2, immediate, 0xF000F0));
@@ -198,14 +200,6 @@ implements RecipeBookProvider {
     @Override
     public void refreshRecipeBook() {
         this.recipeBook.refresh();
-    }
-
-    @Override
-    public void removed() {
-        if (this.open) {
-            this.recipeBook.close();
-        }
-        super.removed();
     }
 
     @Override

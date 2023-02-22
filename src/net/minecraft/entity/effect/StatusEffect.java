@@ -23,9 +23,9 @@ import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class StatusEffect {
@@ -38,19 +38,19 @@ public class StatusEffect {
 
     @Nullable
     public static StatusEffect byRawId(int rawId) {
-        return (StatusEffect)Registry.STATUS_EFFECT.get(rawId);
+        return (StatusEffect)Registries.STATUS_EFFECT.get(rawId);
     }
 
     public static int getRawId(StatusEffect type) {
-        return Registry.STATUS_EFFECT.getRawId(type);
+        return Registries.STATUS_EFFECT.getRawId(type);
     }
 
-    public static int method_43257(@Nullable StatusEffect statusEffect) {
-        return Registry.STATUS_EFFECT.getRawId(statusEffect);
+    public static int getRawIdNullable(@Nullable StatusEffect type) {
+        return Registries.STATUS_EFFECT.getRawId(type);
     }
 
-    protected StatusEffect(StatusEffectCategory statusEffectCategory, int color) {
-        this.category = statusEffectCategory;
+    protected StatusEffect(StatusEffectCategory category, int color) {
+        this.category = category;
         this.color = color;
     }
 
@@ -129,7 +129,7 @@ public class StatusEffect {
 
     protected String loadTranslationKey() {
         if (this.translationKey == null) {
-            this.translationKey = Util.createTranslationKey("effect", Registry.STATUS_EFFECT.getId(this));
+            this.translationKey = Util.createTranslationKey("effect", Registries.STATUS_EFFECT.getId(this));
         }
         return this.translationKey;
     }
@@ -156,8 +156,8 @@ public class StatusEffect {
         return this;
     }
 
-    public StatusEffect setFactorCalculationDataSupplier(Supplier<StatusEffectInstance.FactorCalculationData> supplier) {
-        this.factorCalculationDataSupplier = supplier;
+    public StatusEffect setFactorCalculationDataSupplier(Supplier<StatusEffectInstance.FactorCalculationData> factorCalculationDataSupplier) {
+        this.factorCalculationDataSupplier = factorCalculationDataSupplier;
         return this;
     }
 

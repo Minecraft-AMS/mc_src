@@ -32,9 +32,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BiomeTags;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -63,6 +63,7 @@ implements Monster {
 
     public SlimeEntity(EntityType<? extends SlimeEntity> entityType, World world) {
         super((EntityType<? extends MobEntity>)entityType, world);
+        this.reinitDimensions();
         this.moveControl = new SlimeMoveControl(this);
     }
 
@@ -198,6 +199,7 @@ implements Monster {
                 float g = ((float)(l % 2) - 0.5f) * f;
                 float h = ((float)(l / 2) - 0.5f) * f;
                 SlimeEntity slimeEntity = this.getType().create(this.world);
+                if (slimeEntity == null) continue;
                 if (this.isPersistent()) {
                     slimeEntity.setPersistent();
                 }

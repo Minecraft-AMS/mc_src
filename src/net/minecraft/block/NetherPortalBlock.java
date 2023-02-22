@@ -29,7 +29,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.dimension.AreaHelper;
+import net.minecraft.world.dimension.NetherPortal;
 
 public class NetherPortalBlock
 extends Block {
@@ -60,7 +60,7 @@ extends Block {
             while (world.getBlockState(pos).isOf(this)) {
                 pos = pos.down();
             }
-            if (world.getBlockState(pos).allowsSpawning(world, pos, EntityType.ZOMBIFIED_PIGLIN) && (entity = EntityType.ZOMBIFIED_PIGLIN.spawn(world, null, null, null, pos.up(), SpawnReason.STRUCTURE, false, false)) != null) {
+            if (world.getBlockState(pos).allowsSpawning(world, pos, EntityType.ZOMBIFIED_PIGLIN) && (entity = EntityType.ZOMBIFIED_PIGLIN.spawn(world, pos.up(), SpawnReason.STRUCTURE)) != null) {
                 entity.resetPortalCooldown();
             }
         }
@@ -72,7 +72,7 @@ extends Block {
         Direction.Axis axis = direction.getAxis();
         Direction.Axis axis2 = state.get(AXIS);
         boolean bl2 = bl = axis2 != axis && axis.isHorizontal();
-        if (bl || neighborState.isOf(this) || new AreaHelper(world, pos, axis2).wasAlreadyValid()) {
+        if (bl || neighborState.isOf(this) || new NetherPortal(world, pos, axis2).wasAlreadyValid()) {
             return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
         }
         return Blocks.AIR.getDefaultState();

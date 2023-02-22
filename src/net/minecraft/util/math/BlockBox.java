@@ -159,8 +159,12 @@ public class BlockBox {
         return new BlockBox(this.getMinX() - offset, this.getMinY() - offset, this.getMinZ() - offset, this.getMaxX() + offset, this.getMaxY() + offset, this.getMaxZ() + offset);
     }
 
-    public boolean contains(Vec3i vec) {
-        return vec.getX() >= this.minX && vec.getX() <= this.maxX && vec.getZ() >= this.minZ && vec.getZ() <= this.maxZ && vec.getY() >= this.minY && vec.getY() <= this.maxY;
+    public boolean contains(Vec3i pos) {
+        return this.contains(pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    public boolean contains(int x, int y, int z) {
+        return x >= this.minX && x <= this.maxX && z >= this.minZ && z <= this.maxZ && y >= this.minY && y <= this.maxY;
     }
 
     public Vec3i getDimensions() {

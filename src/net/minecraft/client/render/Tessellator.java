@@ -34,7 +34,7 @@ public class Tessellator {
     }
 
     public void draw() {
-        BufferRenderer.drawWithShader(this.buffer.end());
+        BufferRenderer.drawWithGlobalProgram(this.buffer.end());
     }
 
     public BufferBuilder getBuffer() {

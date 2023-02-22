@@ -5,6 +5,8 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
+ *  org.joml.Quaternionfc
  */
 package net.minecraft.client.render.debug;
 
@@ -48,9 +50,10 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Quaternionfc;
 
 @Environment(value=EnvType.CLIENT)
 public class DebugRenderer {
@@ -174,7 +177,7 @@ public class DebugRenderer {
     public static void drawBox(double minX, double minY, double minZ, double maxX, double maxY, double maxZ, float red, float green, float blue, float alpha) {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
         WorldRenderer.drawBox(bufferBuilder, minX, minY, minZ, maxX, maxY, maxZ, red, green, blue, alpha);
         tessellator.draw();
@@ -205,7 +208,7 @@ public class DebugRenderer {
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
         matrixStack.translate((float)(x - d), (float)(y - e) + 0.07f, (float)(z - f));
-        matrixStack.multiplyPositionMatrix(new Matrix4f(camera.getRotation()));
+        matrixStack.multiplyPositionMatrix(new Matrix4f().rotation((Quaternionfc)camera.getRotation()));
         matrixStack.scale(size, -size, size);
         RenderSystem.enableTexture();
         if (visibleThroughObjects) {

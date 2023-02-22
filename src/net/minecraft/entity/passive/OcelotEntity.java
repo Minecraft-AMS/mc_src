@@ -43,10 +43,10 @@ import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
@@ -236,6 +236,7 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public OcelotEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         return EntityType.OCELOT.create(serverWorld);
     }
@@ -284,6 +285,7 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }

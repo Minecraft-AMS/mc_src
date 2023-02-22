@@ -21,26 +21,29 @@ import net.minecraft.data.server.recipe.RecipeJsonProvider;
 import net.minecraft.item.Item;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
+import net.minecraft.recipe.book.RecipeCategory;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class SmithingRecipeJsonBuilder {
     private final Ingredient base;
     private final Ingredient addition;
+    private final RecipeCategory category;
     private final Item result;
     private final Advancement.Builder advancementBuilder = Advancement.Builder.create();
     private final RecipeSerializer<?> serializer;
 
-    public SmithingRecipeJsonBuilder(RecipeSerializer<?> serializer, Ingredient base, Ingredient addition, Item result) {
+    public SmithingRecipeJsonBuilder(RecipeSerializer<?> serializer, Ingredient base, Ingredient addition, RecipeCategory category, Item result) {
+        this.category = category;
         this.serializer = serializer;
         this.base = base;
         this.addition = addition;
         this.result = result;
     }
 
-    public static SmithingRecipeJsonBuilder create(Ingredient base, Ingredient addition, Item result) {
-        return new SmithingRecipeJsonBuilder(RecipeSerializer.SMITHING, base, addition, result);
+    public static SmithingRecipeJsonBuilder create(Ingredient base, Ingredient addition, RecipeCategory category, Item result) {
+        return new SmithingRecipeJsonBuilder(RecipeSerializer.SMITHING, base, addition, category, result);
     }
 
     public SmithingRecipeJsonBuilder criterion(String criterionName, CriterionConditions conditions) {
@@ -54,8 +57,8 @@ public class SmithingRecipeJsonBuilder {
 
     public void offerTo(Consumer<RecipeJsonProvider> exporter, Identifier recipeId) {
         this.validate(recipeId);
-        this.advancementBuilder.parent(CraftingRecipeJsonBuilder.field_39377).criterion("has_the_recipe", RecipeUnlockedCriterion.create(recipeId)).rewards(AdvancementRewards.Builder.recipe(recipeId)).criteriaMerger(CriterionMerger.OR);
-        exporter.accept(new SmithingRecipeJsonProvider(recipeId, this.serializer, this.base, this.addition, this.result, this.advancementBuilder, new Identifier(recipeId.getNamespace(), "recipes/" + this.result.getGroup().getName() + "/" + recipeId.getPath())));
+        this.advancementBuilder.parent(CraftingRecipeJsonBuilder.ROOT).criterion("has_the_recipe", RecipeUnlockedCriterion.create(recipeId)).rewards(AdvancementRewards.Builder.recipe(recipeId)).criteriaMerger(CriterionMerger.OR);
+        exporter.accept(new SmithingRecipeJsonProvider(recipeId, this.serializer, this.base, this.addition, this.result, this.advancementBuilder, recipeId.withPrefixedPath("recipes/" + this.category.getName() + "/")));
     }
 
     private void validate(Identifier recipeId) {
@@ -89,7 +92,7 @@ public class SmithingRecipeJsonBuilder {
             json.add("base", this.base.toJson());
             json.add("addition", this.addition.toJson());
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("item", Registry.ITEM.getId(this.result).toString());
+            jsonObject.addProperty("item", Registries.ITEM.getId(this.result).toString());
             json.add("result", (JsonElement)jsonObject);
         }
 

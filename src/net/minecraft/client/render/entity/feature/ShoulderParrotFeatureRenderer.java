@@ -21,6 +21,7 @@ import net.minecraft.client.render.entity.model.ParrotEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.passive.ParrotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 
@@ -44,8 +45,9 @@ extends FeatureRenderer<T, PlayerEntityModel<T>> {
         NbtCompound nbtCompound = leftShoulder ? ((PlayerEntity)player).getShoulderEntityLeft() : ((PlayerEntity)player).getShoulderEntityRight();
         EntityType.get(nbtCompound.getString("id")).filter(type -> type == EntityType.PARROT).ifPresent(type -> {
             matrices.push();
-            matrices.translate(leftShoulder ? (double)0.4f : (double)-0.4f, player.isInSneakingPose() ? (double)-1.3f : -1.5, 0.0);
-            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.getLayer(ParrotEntityRenderer.TEXTURES[nbtCompound.getInt("Variant")]));
+            matrices.translate(leftShoulder ? 0.4f : -0.4f, player.isInSneakingPose() ? -1.3f : -1.5f, 0.0f);
+            ParrotEntity.Variant variant = ParrotEntity.Variant.byIndex(nbtCompound.getInt("Variant"));
+            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.getLayer(ParrotEntityRenderer.getTexture(variant)));
             this.model.poseOnShoulder(matrices, vertexConsumer, light, OverlayTexture.DEFAULT_UV, limbAngle, limbDistance, headYaw, headPitch, playerEntity.age);
             matrices.pop();
         });

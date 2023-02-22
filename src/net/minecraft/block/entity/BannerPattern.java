@@ -13,11 +13,11 @@ import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 
 public class BannerPattern {
@@ -29,8 +29,7 @@ public class BannerPattern {
 
     public static Identifier getSpriteId(RegistryKey<BannerPattern> pattern, boolean banner) {
         String string = banner ? "banner" : "shield";
-        Identifier identifier = pattern.getValue();
-        return new Identifier(identifier.getNamespace(), "entity/" + string + "/" + identifier.getPath());
+        return pattern.getValue().withPrefixedPath("entity/" + string + "/");
     }
 
     public String getId() {
@@ -39,14 +38,14 @@ public class BannerPattern {
 
     @Nullable
     public static RegistryEntry<BannerPattern> byId(String id) {
-        return Registry.BANNER_PATTERN.streamEntries().filter(pattern -> ((BannerPattern)pattern.value()).id.equals(id)).findAny().orElse(null);
+        return Registries.BANNER_PATTERN.streamEntries().filter(pattern -> ((BannerPattern)pattern.value()).id.equals(id)).findAny().orElse(null);
     }
 
     public static class Patterns {
         private final List<Pair<RegistryEntry<BannerPattern>, DyeColor>> entries = Lists.newArrayList();
 
         public Patterns add(RegistryKey<BannerPattern> pattern, DyeColor color) {
-            return this.add(Registry.BANNER_PATTERN.entryOf(pattern), color);
+            return this.add(Registries.BANNER_PATTERN.entryOf(pattern), color);
         }
 
         public Patterns add(RegistryEntry<BannerPattern> pattern, DyeColor color) {

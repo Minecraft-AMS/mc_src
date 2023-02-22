@@ -11,31 +11,41 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import net.minecraft.resource.InputSupplier;
+import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.metadata.ResourceMetadata;
 import org.jetbrains.annotations.Nullable;
 
 public class Resource {
-    private final String resourcePackName;
+    private final ResourcePack pack;
     private final InputSupplier<InputStream> inputSupplier;
     private final InputSupplier<ResourceMetadata> metadataSupplier;
     @Nullable
     private ResourceMetadata metadata;
 
-    public Resource(String resourcePackName, InputSupplier<InputStream> inputSupplier, InputSupplier<ResourceMetadata> metadataSupplier) {
-        this.resourcePackName = resourcePackName;
+    public Resource(ResourcePack pack, InputSupplier<InputStream> inputSupplier, InputSupplier<ResourceMetadata> metadataSupplier) {
+        this.pack = pack;
         this.inputSupplier = inputSupplier;
         this.metadataSupplier = metadataSupplier;
     }
 
-    public Resource(String resourcePackName, InputSupplier<InputStream> inputSupplier) {
-        this.resourcePackName = resourcePackName;
+    public Resource(ResourcePack pack, InputSupplier<InputStream> inputSupplier) {
+        this.pack = pack;
         this.inputSupplier = inputSupplier;
-        this.metadataSupplier = () -> ResourceMetadata.NONE;
+        this.metadataSupplier = ResourceMetadata.NONE_SUPPLIER;
         this.metadata = ResourceMetadata.NONE;
     }
 
+    public ResourcePack getPack() {
+        return this.pack;
+    }
+
     public String getResourcePackName() {
-        return this.resourcePackName;
+        return this.pack.getName();
+    }
+
+    public boolean isAlwaysStable() {
+        return this.pack.isAlwaysStable();
     }
 
     public InputStream getInputStream() throws IOException {
@@ -51,11 +61,6 @@ public class Resource {
             this.metadata = this.metadataSupplier.get();
         }
         return this.metadata;
-    }
-
-    @FunctionalInterface
-    public static interface InputSupplier<T> {
-        public T get() throws IOException;
     }
 }
 

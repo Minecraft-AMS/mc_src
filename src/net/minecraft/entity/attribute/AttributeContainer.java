@@ -26,9 +26,10 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -61,13 +62,26 @@ public class AttributeContainer {
         return this.custom.computeIfAbsent(attribute2, attribute -> this.fallback.createOverride(this::updateTrackedStatus, (EntityAttribute)attribute));
     }
 
+    @Nullable
+    public EntityAttributeInstance getCustomInstance(RegistryEntry<EntityAttribute> attribute) {
+        return this.getCustomInstance(attribute.value());
+    }
+
     public boolean hasAttribute(EntityAttribute attribute) {
         return this.custom.get(attribute) != null || this.fallback.has(attribute);
+    }
+
+    public boolean hasAttribute(RegistryEntry<EntityAttribute> attribute) {
+        return this.hasAttribute(attribute.value());
     }
 
     public boolean hasModifierForAttribute(EntityAttribute attribute, UUID uuid) {
         EntityAttributeInstance entityAttributeInstance = this.custom.get(attribute);
         return entityAttributeInstance != null ? entityAttributeInstance.getModifier(uuid) != null : this.fallback.hasModifier(attribute, uuid);
+    }
+
+    public boolean hasModifierForAttribute(RegistryEntry<EntityAttribute> attribute, UUID uuid) {
+        return this.hasModifierForAttribute(attribute.value(), uuid);
     }
 
     public double getValue(EntityAttribute attribute) {
@@ -85,11 +99,15 @@ public class AttributeContainer {
         return entityAttributeInstance != null ? entityAttributeInstance.getModifier(uuid).getValue() : this.fallback.getModifierValue(attribute, uuid);
     }
 
+    public double getModifierValue(RegistryEntry<EntityAttribute> attribute, UUID uuid) {
+        return this.getModifierValue(attribute.value(), uuid);
+    }
+
     public void removeModifiers(Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers) {
-        attributeModifiers.asMap().forEach((attribute, collection) -> {
+        attributeModifiers.asMap().forEach((attribute, modifiers) -> {
             EntityAttributeInstance entityAttributeInstance = this.custom.get(attribute);
             if (entityAttributeInstance != null) {
-                collection.forEach(entityAttributeInstance::removeModifier);
+                modifiers.forEach(entityAttributeInstance::removeModifier);
             }
         });
     }
@@ -125,7 +143,7 @@ public class AttributeContainer {
         for (int i = 0; i < nbt.size(); ++i) {
             NbtCompound nbtCompound = nbt.getCompound(i);
             String string = nbtCompound.getString("Name");
-            Util.ifPresentOrElse(Registry.ATTRIBUTE.getOrEmpty(Identifier.tryParse(string)), attribute -> {
+            Util.ifPresentOrElse(Registries.ATTRIBUTE.getOrEmpty(Identifier.tryParse(string)), attribute -> {
                 EntityAttributeInstance entityAttributeInstance = this.getCustomInstance((EntityAttribute)attribute);
                 if (entityAttributeInstance != null) {
                     entityAttributeInstance.readNbt(nbtCompound);

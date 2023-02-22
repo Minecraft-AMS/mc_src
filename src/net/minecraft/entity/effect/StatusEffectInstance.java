@@ -41,12 +41,11 @@ implements Comparable<StatusEffectInstance> {
     int duration;
     private int amplifier;
     private boolean ambient;
-    private boolean permanent;
     private boolean showParticles;
     private boolean showIcon;
     @Nullable
     private StatusEffectInstance hiddenEffect;
-    private Optional<FactorCalculationData> factorCalculationData;
+    private final Optional<FactorCalculationData> factorCalculationData;
 
     public StatusEffectInstance(StatusEffect type) {
         this(type, 0, 0);
@@ -276,14 +275,6 @@ implements Comparable<StatusEffectInstance> {
         }
         Optional optional = nbt.contains("FactorCalculationData", 10) ? FactorCalculationData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("FactorCalculationData"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)) : Optional.empty();
         return new StatusEffectInstance(type, j, Math.max(i, 0), bl, bl2, bl3, statusEffectInstance, optional);
-    }
-
-    public void setPermanent(boolean permanent) {
-        this.permanent = permanent;
-    }
-
-    public boolean isPermanent() {
-        return this.permanent;
     }
 
     @Override

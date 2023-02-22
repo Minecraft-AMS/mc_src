@@ -4,6 +4,8 @@
 package net.minecraft.screen;
 
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.screen.AnvilScreenHandler;
 import net.minecraft.screen.BeaconScreenHandler;
 import net.minecraft.screen.BlastFurnaceScreenHandler;
@@ -24,7 +26,6 @@ import net.minecraft.screen.ShulkerBoxScreenHandler;
 import net.minecraft.screen.SmithingScreenHandler;
 import net.minecraft.screen.SmokerScreenHandler;
 import net.minecraft.screen.StonecutterScreenHandler;
-import net.minecraft.util.registry.Registry;
 
 public class ScreenHandlerType<T extends ScreenHandler> {
     public static final ScreenHandlerType<GenericContainerScreenHandler> GENERIC_9X1 = ScreenHandlerType.register("generic_9x1", GenericContainerScreenHandler::createGeneric9x1);
@@ -54,7 +55,7 @@ public class ScreenHandlerType<T extends ScreenHandler> {
     private final Factory<T> factory;
 
     private static <T extends ScreenHandler> ScreenHandlerType<T> register(String id, Factory<T> factory) {
-        return Registry.register(Registry.SCREEN_HANDLER, id, new ScreenHandlerType<T>(factory));
+        return Registry.register(Registries.SCREEN_HANDLER, id, new ScreenHandlerType<T>(factory));
     }
 
     private ScreenHandlerType(Factory<T> factory) {

@@ -2,36 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.mojang.datafixers.kinds.Applicative
  */
 package net.minecraft.entity.ai.brain.task;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.Map;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
+import com.mojang.datafixers.kinds.Applicative;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.village.VillagerData;
 import net.minecraft.village.VillagerProfession;
 
-public class LoseJobOnSiteLossTask
-extends Task<VillagerEntity> {
-    public LoseJobOnSiteLossTask() {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.JOB_SITE, (Object)((Object)MemoryModuleState.VALUE_ABSENT)));
-    }
-
-    @Override
-    protected boolean shouldRun(ServerWorld serverWorld, VillagerEntity villagerEntity) {
-        VillagerData villagerData = villagerEntity.getVillagerData();
-        return villagerData.getProfession() != VillagerProfession.NONE && villagerData.getProfession() != VillagerProfession.NITWIT && villagerEntity.getExperience() == 0 && villagerData.getLevel() <= 1;
-    }
-
-    @Override
-    protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
-        villagerEntity.setVillagerData(villagerEntity.getVillagerData().withProfession(VillagerProfession.NONE));
-        villagerEntity.reinitializeBrain(serverWorld);
+public class LoseJobOnSiteLossTask {
+    public static Task<VillagerEntity> create() {
+        return TaskTriggerer.task(context -> context.group(context.queryMemoryAbsent(MemoryModuleType.JOB_SITE)).apply((Applicative)context, jobSite -> (world, entity, time) -> {
+            VillagerData villagerData = entity.getVillagerData();
+            if (villagerData.getProfession() != VillagerProfession.NONE && villagerData.getProfession() != VillagerProfession.NITWIT && entity.getExperience() == 0 && villagerData.getLevel() <= 1) {
+                entity.setVillagerData(entity.getVillagerData().withProfession(VillagerProfession.NONE));
+                entity.reinitializeBrain(world);
+                return true;
+            }
+            return false;
+        }));
     }
 }
 

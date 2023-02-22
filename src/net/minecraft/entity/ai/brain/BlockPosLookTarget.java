@@ -18,6 +18,11 @@ implements LookTarget {
         this.pos = Vec3d.ofCenter(blockPos);
     }
 
+    public BlockPosLookTarget(Vec3d pos) {
+        this.blockPos = new BlockPos(pos);
+        this.pos = pos;
+    }
+
     @Override
     public Vec3d getPos() {
         return this.pos;

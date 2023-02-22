@@ -2,31 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.mojang.datafixers.kinds.Applicative
  */
 package net.minecraft.entity.ai.brain.task;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.Map;
+import com.mojang.datafixers.kinds.Applicative;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 
-public class PacifyTask
-extends Task<LivingEntity> {
-    private final int duration;
-
-    public PacifyTask(MemoryModuleType<?> requiredMemoryModuleType, int duration) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.PACIFIED, (Object)((Object)MemoryModuleState.VALUE_ABSENT), requiredMemoryModuleType, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
-        this.duration = duration;
-    }
-
-    @Override
-    protected void run(ServerWorld world, LivingEntity entity, long time) {
-        entity.getBrain().remember(MemoryModuleType.PACIFIED, true, this.duration);
-        entity.getBrain().forget(MemoryModuleType.ATTACK_TARGET);
+public class PacifyTask {
+    public static Task<LivingEntity> create(MemoryModuleType<?> requiredMemory, int duration) {
+        return TaskTriggerer.task(context -> context.group(context.queryMemoryOptional(MemoryModuleType.ATTACK_TARGET), context.queryMemoryAbsent(MemoryModuleType.PACIFIED), context.queryMemoryValue(requiredMemory)).apply((Applicative)context, context.supply(() -> "[BecomePassive if " + requiredMemory + " present]", (attackTarget, pacified, requiredMemoryResult) -> (world, entity, time) -> {
+            pacified.remember(true, duration);
+            attackTarget.forget();
+            return true;
+        })));
     }
 }
 

@@ -18,6 +18,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
@@ -157,9 +160,9 @@ extends BlockEntity {
         }
     }
 
-    private static void moveEntity(Direction direction, Entity entity, double d, Direction direction2) {
+    private static void moveEntity(Direction direction, Entity entity, double d, Direction movementDirection) {
         field_12205.set(direction);
-        entity.move(MovementType.PISTON, new Vec3d(d * (double)direction2.getOffsetX(), d * (double)direction2.getOffsetY(), d * (double)direction2.getOffsetZ()));
+        entity.move(MovementType.PISTON, new Vec3d(d * (double)movementDirection.getOffsetX(), d * (double)movementDirection.getOffsetY(), d * (double)movementDirection.getOffsetZ()));
         field_12205.set(null);
     }
 
@@ -285,7 +288,8 @@ extends BlockEntity {
     @Override
     public void readNbt(NbtCompound nbt) {
         super.readNbt(nbt);
-        this.pushedBlock = NbtHelper.toBlockState(nbt.getCompound("blockState"));
+        RegistryWrapper.Impl<Block> registryEntryLookup = this.world != null ? this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK) : Registries.BLOCK.getReadOnlyWrapper();
+        this.pushedBlock = NbtHelper.toBlockState(registryEntryLookup, nbt.getCompound("blockState"));
         this.facing = Direction.byId(nbt.getInt("facing"));
         this.lastProgress = this.progress = nbt.getFloat("progress");
         this.extending = nbt.getBoolean("extending");
@@ -318,6 +322,14 @@ extends BlockEntity {
 
     public long getSavedWorldTime() {
         return this.savedWorldTime;
+    }
+
+    @Override
+    public void setWorld(World world) {
+        super.setWorld(world);
+        if (world.createCommandRegistryWrapper(RegistryKeys.BLOCK).getOptional(this.pushedBlock.getBlock().getRegistryEntry().registryKey()).isEmpty()) {
+            this.pushedBlock = Blocks.AIR.getDefaultState();
+        }
     }
 }
 

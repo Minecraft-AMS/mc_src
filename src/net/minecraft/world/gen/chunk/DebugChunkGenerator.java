@@ -2,32 +2,29 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.chunk;
 
-import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.structure.StructureSet;
-import net.minecraft.util.dynamic.RegistryOps;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryOps;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
@@ -46,24 +43,18 @@ import net.minecraft.world.gen.noise.NoiseConfig;
 
 public class DebugChunkGenerator
 extends ChunkGenerator {
-    public static final Codec<DebugChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> DebugChunkGenerator.createStructureSetRegistryGetter(instance).and((App)RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(debugChunkGenerator -> debugChunkGenerator.biomeRegistry)).apply((Applicative)instance, instance.stable(DebugChunkGenerator::new)));
+    public static final Codec<DebugChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> instance.group(RegistryOps.getEntryCodec(BiomeKeys.PLAINS)).apply((Applicative)instance, instance.stable(DebugChunkGenerator::new)));
     private static final int field_31467 = 2;
-    private static final List<BlockState> BLOCK_STATES = StreamSupport.stream(Registry.BLOCK.spliterator(), false).flatMap(block -> block.getStateManager().getStates().stream()).collect(Collectors.toList());
+    private static final List<BlockState> BLOCK_STATES = StreamSupport.stream(Registries.BLOCK.spliterator(), false).flatMap(block -> block.getStateManager().getStates().stream()).collect(Collectors.toList());
     private static final int X_SIDE_LENGTH = MathHelper.ceil(MathHelper.sqrt(BLOCK_STATES.size()));
     private static final int Z_SIDE_LENGTH = MathHelper.ceil((float)BLOCK_STATES.size() / (float)X_SIDE_LENGTH);
     protected static final BlockState AIR = Blocks.AIR.getDefaultState();
     protected static final BlockState BARRIER = Blocks.BARRIER.getDefaultState();
     public static final int field_31465 = 70;
     public static final int field_31466 = 60;
-    private final Registry<Biome> biomeRegistry;
 
-    public DebugChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry) {
-        super(structureSetRegistry, Optional.empty(), new FixedBiomeSource(biomeRegistry.getOrCreateEntry(BiomeKeys.PLAINS)));
-        this.biomeRegistry = biomeRegistry;
-    }
-
-    public Registry<Biome> getBiomeRegistry() {
-        return this.biomeRegistry;
+    public DebugChunkGenerator(RegistryEntry.Reference<Biome> biomeEntry) {
+        super(new FixedBiomeSource(biomeEntry));
     }
 
     @Override

@@ -29,6 +29,7 @@ import net.minecraft.client.render.block.entity.ConduitBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EnchantingTableBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EndGatewayBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.EndPortalBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.HangingSignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.LecternBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.MobSpawnerBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.PistonBlockEntityRenderer;
@@ -36,7 +37,7 @@ import net.minecraft.client.render.block.entity.ShulkerBoxBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.SkullBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.StructureBlockBlockEntityRenderer;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.registry.Registries;
 
 @Environment(value=EnvType.CLIENT)
 public class BlockEntityRendererFactories {
@@ -53,7 +54,7 @@ public class BlockEntityRendererFactories {
                 builder.put(type, factory.create(args));
             }
             catch (Exception exception) {
-                throw new IllegalStateException("Failed to create model for " + Registry.BLOCK_ENTITY_TYPE.getId((BlockEntityType<?>)type), exception);
+                throw new IllegalStateException("Failed to create model for " + Registries.BLOCK_ENTITY_TYPE.getId((BlockEntityType<?>)type), exception);
             }
         });
         return builder.build();
@@ -61,6 +62,7 @@ public class BlockEntityRendererFactories {
 
     static {
         BlockEntityRendererFactories.register(BlockEntityType.SIGN, SignBlockEntityRenderer::new);
+        BlockEntityRendererFactories.register(BlockEntityType.HANGING_SIGN, HangingSignBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.MOB_SPAWNER, MobSpawnerBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.PISTON, PistonBlockEntityRenderer::new);
         BlockEntityRendererFactories.register(BlockEntityType.CHEST, ChestBlockEntityRenderer::new);

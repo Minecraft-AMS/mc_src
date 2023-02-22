@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -21,28 +22,31 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.PaintingVariantTags;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.PaintingVariantTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class PaintingEntity
-extends AbstractDecorationEntity {
+extends AbstractDecorationEntity
+implements VariantHolder<RegistryEntry<PaintingVariant>> {
     private static final TrackedData<RegistryEntry<PaintingVariant>> VARIANT = DataTracker.registerData(PaintingEntity.class, TrackedDataHandlerRegistry.PAINTING_VARIANT);
     private static final RegistryKey<PaintingVariant> DEFAULT_VARIANT = PaintingVariants.KEBAB;
 
     private static RegistryEntry<PaintingVariant> getDefaultVariant() {
-        return Registry.PAINTING_VARIANT.entryOf(DEFAULT_VARIANT);
+        return Registries.PAINTING_VARIANT.entryOf(DEFAULT_VARIANT);
     }
 
     public PaintingEntity(EntityType<? extends PaintingEntity> entityType, World world) {
@@ -61,10 +65,12 @@ extends AbstractDecorationEntity {
         }
     }
 
-    private void setVariant(RegistryEntry<PaintingVariant> variant) {
+    @Override
+    public void setVariant(RegistryEntry<PaintingVariant> variant) {
         this.dataTracker.set(VARIANT, variant);
     }
 
+    @Override
     public RegistryEntry<PaintingVariant> getVariant() {
         return this.dataTracker.get(VARIANT);
     }
@@ -72,7 +78,7 @@ extends AbstractDecorationEntity {
     public static Optional<PaintingEntity> placePainting(World world, BlockPos pos, Direction facing) {
         PaintingEntity paintingEntity = new PaintingEntity(world, pos);
         ArrayList<RegistryEntry> list = new ArrayList<RegistryEntry>();
-        Registry.PAINTING_VARIANT.iterateEntries(PaintingVariantTags.PLACEABLE).forEach(list::add);
+        Registries.PAINTING_VARIANT.iterateEntries(PaintingVariantTags.PLACEABLE).forEach(list::add);
         if (list.isEmpty()) {
             return Optional.empty();
         }
@@ -118,8 +124,8 @@ extends AbstractDecorationEntity {
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
-        RegistryKey<PaintingVariant> registryKey = RegistryKey.of(Registry.PAINTING_VARIANT_KEY, Identifier.tryParse(nbt.getString("variant")));
-        this.setVariant(Registry.PAINTING_VARIANT.getEntry(registryKey).orElseGet(PaintingEntity::getDefaultVariant));
+        RegistryEntry registryEntry = Optional.ofNullable(Identifier.tryParse(nbt.getString("variant"))).map(id -> RegistryKey.of(RegistryKeys.PAINTING_VARIANT, id)).flatMap(Registries.PAINTING_VARIANT::getEntry).map(entry -> entry).orElseGet(PaintingEntity::getDefaultVariant);
+        this.setVariant(registryEntry);
         this.facing = Direction.fromHorizontal(nbt.getByte("facing"));
         super.readCustomDataFromNbt(nbt);
         this.setFacing(this.facing);
@@ -127,12 +133,12 @@ extends AbstractDecorationEntity {
 
     @Override
     public int getWidthPixels() {
-        return this.getVariant().value().getWidth();
+        return ((PaintingVariant)this.getVariant().value()).getWidth();
     }
 
     @Override
     public int getHeightPixels() {
-        return this.getVariant().value().getHeight();
+        return ((PaintingVariant)this.getVariant().value()).getHeight();
     }
 
     @Override
@@ -171,7 +177,7 @@ extends AbstractDecorationEntity {
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
         return new EntitySpawnS2CPacket(this, this.facing.getId(), this.getDecorationBlockPos());
     }
 
@@ -184,6 +190,11 @@ extends AbstractDecorationEntity {
     @Override
     public ItemStack getPickBlockStack() {
         return new ItemStack(Items.PAINTING);
+    }
+
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
     }
 }
 

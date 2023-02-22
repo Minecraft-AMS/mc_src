@@ -16,10 +16,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
@@ -28,7 +27,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.BlockPosLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.ai.pathing.Path;
@@ -39,15 +38,15 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.collection.Weighted;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class LongJumpTask<E extends MobEntity>
-extends Task<E> {
+extends MultiTickTask<E> {
     protected static final int MAX_COOLDOWN = 20;
     private static final int TARGET_RETAIN_TIME = 40;
     protected static final int PATHING_DISTANCE = 8;
@@ -63,14 +62,20 @@ extends Task<E> {
     protected Vec3d lastTarget;
     protected int cooldown;
     protected long targetTime;
-    private Function<E, SoundEvent> entityToSound;
-    private final Predicate<BlockState> jumpToPredicate;
+    private final Function<E, SoundEvent> entityToSound;
+    private final BiPredicate<E, BlockPos> jumpToPredicate;
 
     public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound) {
-        this(cooldownRange, verticalRange, horizontalRange, maxRange, entityToSound, state -> false);
+        this(cooldownRange, verticalRange, horizontalRange, maxRange, entityToSound, LongJumpTask::shouldJumpTo);
     }
 
-    public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound, Predicate<BlockState> jumpToPredicate) {
+    public static <E extends MobEntity> boolean shouldJumpTo(E entity, BlockPos pos) {
+        World world = entity.world;
+        BlockPos blockPos = pos.down();
+        return world.getBlockState(blockPos).isOpaqueFullCube(world, blockPos) && entity.getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(world, pos.mutableCopy())) == 0.0f;
+    }
+
+    public LongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound, BiPredicate<E, BlockPos> jumpToPredicate) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LONG_JUMP_COOLING_DOWN, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), 200);
         this.cooldownRange = cooldownRange;
         this.verticalRange = verticalRange;
@@ -94,7 +99,7 @@ extends Task<E> {
     protected boolean shouldKeepRunning(ServerWorld serverWorld, MobEntity mobEntity, long l) {
         boolean bl;
         boolean bl2 = bl = this.lastPos.isPresent() && this.lastPos.get().equals(mobEntity.getPos()) && this.cooldown > 0 && !mobEntity.isInsideWaterOrBubbleColumn() && (this.lastTarget != null || !this.targets.isEmpty());
-        if (!bl && mobEntity.getBrain().getOptionalMemory(MemoryModuleType.LONG_JUMP_MID_JUMP).isEmpty()) {
+        if (!bl && mobEntity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.LONG_JUMP_MID_JUMP).isEmpty()) {
             mobEntity.getBrain().remember(MemoryModuleType.LONG_JUMP_COOLING_DOWN, this.cooldownRange.get(serverWorld.random) / 2);
             mobEntity.getBrain().forget(MemoryModuleType.LOOK_TARGET);
         }
@@ -127,24 +132,24 @@ extends Task<E> {
             }
         } else {
             --this.cooldown;
-            this.method_41342(serverWorld, mobEntity, l);
+            this.findTarget(serverWorld, mobEntity, l);
         }
     }
 
-    protected void method_41342(ServerWorld serverWorld, E mobEntity, long l) {
+    protected void findTarget(ServerWorld world, E entity, long time) {
         while (!this.targets.isEmpty()) {
             Vec3d vec3d;
             Vec3d vec3d2;
             Target target;
             BlockPos blockPos;
-            Optional<Target> optional = this.getTarget(serverWorld);
-            if (optional.isEmpty() || !this.canJumpTo(serverWorld, mobEntity, blockPos = (target = optional.get()).getPos()) || (vec3d2 = this.getRammingVelocity((MobEntity)mobEntity, vec3d = Vec3d.ofCenter(blockPos))) == null) continue;
-            ((LivingEntity)mobEntity).getBrain().remember(MemoryModuleType.LOOK_TARGET, new BlockPosLookTarget(blockPos));
-            EntityNavigation entityNavigation = ((MobEntity)mobEntity).getNavigation();
+            Optional<Target> optional = this.getTarget(world);
+            if (optional.isEmpty() || !this.canJumpTo(world, entity, blockPos = (target = optional.get()).getPos()) || (vec3d2 = this.getJumpingVelocity((MobEntity)entity, vec3d = Vec3d.ofCenter(blockPos))) == null) continue;
+            ((LivingEntity)entity).getBrain().remember(MemoryModuleType.LOOK_TARGET, new BlockPosLookTarget(blockPos));
+            EntityNavigation entityNavigation = ((MobEntity)entity).getNavigation();
             Path path = entityNavigation.findPathTo(blockPos, 0, 8);
             if (path != null && path.reachesTarget()) continue;
             this.lastTarget = vec3d2;
-            this.targetTime = l;
+            this.targetTime = time;
             return;
         }
     }
@@ -155,27 +160,24 @@ extends Task<E> {
         return optional;
     }
 
-    protected boolean canJumpTo(ServerWorld world, E entity, BlockPos pos) {
+    private boolean canJumpTo(ServerWorld world, E entity, BlockPos pos) {
         BlockPos blockPos = ((Entity)entity).getBlockPos();
         int i = blockPos.getX();
         int j = blockPos.getZ();
         if (i == pos.getX() && j == pos.getZ()) {
             return false;
         }
-        if (!((MobEntity)entity).getNavigation().isValidPosition(pos) && !this.jumpToPredicate.test(world.getBlockState(pos.down()))) {
-            return false;
-        }
-        return ((MobEntity)entity).getPathfindingPenalty(LandPathNodeMaker.getLandNodeType(((MobEntity)entity).world, pos.mutableCopy())) == 0.0f;
+        return this.jumpToPredicate.test(entity, pos);
     }
 
     @Nullable
-    protected Vec3d getRammingVelocity(MobEntity entity, Vec3d pos) {
+    protected Vec3d getJumpingVelocity(MobEntity entity, Vec3d pos) {
         ArrayList list = Lists.newArrayList(RAM_RANGES);
         Collections.shuffle(list);
         Iterator iterator = list.iterator();
         while (iterator.hasNext()) {
             int i = (Integer)iterator.next();
-            Vec3d vec3d = this.getRammingVelocity(entity, pos, i);
+            Vec3d vec3d = this.getJumpingVelocity(entity, pos, i);
             if (vec3d == null) continue;
             return vec3d;
         }
@@ -183,7 +185,7 @@ extends Task<E> {
     }
 
     @Nullable
-    private Vec3d getRammingVelocity(MobEntity entity, Vec3d pos, int range) {
+    private Vec3d getJumpingVelocity(MobEntity entity, Vec3d pos, int range) {
         Vec3d vec3d = entity.getPos();
         Vec3d vec3d2 = new Vec3d(pos.x - vec3d.x, 0.0, pos.z - vec3d.z).normalize().multiply(0.5);
         pos = pos.subtract(vec3d2);
@@ -213,12 +215,13 @@ extends Task<E> {
         int t = MathHelper.ceil(g / r) * 2;
         double u = 0.0;
         Vec3d vec3d4 = null;
+        EntityDimensions entityDimensions = entity.getDimensions(EntityPose.LONG_JUMPING);
         for (int v = 0; v < t - 1; ++v) {
             double w = l / m * (u += g / (double)t) - Math.pow(u, 2.0) * 0.08 / (2.0 * p * Math.pow(m, 2.0));
             double x = u * o;
             double y = u * n;
             Vec3d vec3d5 = new Vec3d(vec3d.x + x, vec3d.y + w, vec3d.z + y);
-            if (vec3d4 != null && !this.canReach(entity, vec3d4, vec3d5)) {
+            if (vec3d4 != null && !this.canReach(entity, entityDimensions, vec3d4, vec3d5)) {
                 return null;
             }
             vec3d4 = vec3d5;
@@ -226,25 +229,28 @@ extends Task<E> {
         return new Vec3d(r * o, s, r * n).multiply(0.95f);
     }
 
-    private boolean canReach(MobEntity entity, Vec3d startPos, Vec3d endPos) {
-        EntityDimensions entityDimensions = entity.getDimensions(EntityPose.LONG_JUMPING);
-        Vec3d vec3d = endPos.subtract(startPos);
-        double d = Math.min(entityDimensions.width, entityDimensions.height);
-        int i = MathHelper.ceil(vec3d.length() / d);
-        Vec3d vec3d2 = vec3d.normalize();
-        Vec3d vec3d3 = startPos;
+    private boolean canReach(MobEntity entity, EntityDimensions dimensions, Vec3d vec3d, Vec3d vec3d2) {
+        Vec3d vec3d3 = vec3d2.subtract(vec3d);
+        double d = Math.min(dimensions.width, dimensions.height);
+        int i = MathHelper.ceil(vec3d3.length() / d);
+        Vec3d vec3d4 = vec3d3.normalize();
+        Vec3d vec3d5 = vec3d;
         for (int j = 0; j < i; ++j) {
-            vec3d3 = j == i - 1 ? endPos : vec3d3.add(vec3d2.multiply(d * (double)0.9f));
-            Box box = entityDimensions.getBoxAt(vec3d3);
-            if (entity.world.isSpaceEmpty(entity, box)) continue;
+            Vec3d vec3d6 = vec3d5 = j == i - 1 ? vec3d2 : vec3d5.add(vec3d4.multiply(d * (double)0.9f));
+            if (entity.world.isSpaceEmpty(entity, dimensions.getBoxAt(vec3d5))) continue;
             return false;
         }
         return true;
     }
 
     @Override
-    protected /* synthetic */ void keepRunning(ServerWorld world, LivingEntity entity, long time) {
-        this.keepRunning(world, (E)((MobEntity)entity), time);
+    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
+        return this.shouldKeepRunning(world, (MobEntity)entity, time);
+    }
+
+    @Override
+    protected /* synthetic */ void run(ServerWorld world, LivingEntity entity, long time) {
+        this.run(world, (E)((MobEntity)entity), time);
     }
 
     public static class Target

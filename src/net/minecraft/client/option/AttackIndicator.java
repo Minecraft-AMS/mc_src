@@ -7,12 +7,11 @@
  */
 package net.minecraft.client.option;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.function.IntFunction;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.TranslatableOption;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.function.ValueLists;
 
 @Environment(value=EnvType.CLIENT)
 public final class AttackIndicator
@@ -21,7 +20,7 @@ implements TranslatableOption {
     public static final /* enum */ AttackIndicator OFF = new AttackIndicator(0, "options.off");
     public static final /* enum */ AttackIndicator CROSSHAIR = new AttackIndicator(1, "options.attack.crosshair");
     public static final /* enum */ AttackIndicator HOTBAR = new AttackIndicator(2, "options.attack.hotbar");
-    private static final AttackIndicator[] VALUES;
+    private static final IntFunction<AttackIndicator> BY_ID;
     private final int id;
     private final String translationKey;
     private static final /* synthetic */ AttackIndicator[] field_18157;
@@ -50,7 +49,7 @@ implements TranslatableOption {
     }
 
     public static AttackIndicator byId(int id) {
-        return VALUES[MathHelper.floorMod(id, VALUES.length)];
+        return BY_ID.apply(id);
     }
 
     private static /* synthetic */ AttackIndicator[] method_36858() {
@@ -59,7 +58,7 @@ implements TranslatableOption {
 
     static {
         field_18157 = AttackIndicator.method_36858();
-        VALUES = (AttackIndicator[])Arrays.stream(AttackIndicator.values()).sorted(Comparator.comparingInt(AttackIndicator::getId)).toArray(AttackIndicator[]::new);
+        BY_ID = ValueLists.createIdToValueFunction(AttackIndicator::getId, AttackIndicator.values(), ValueLists.OutOfBoundsHandling.WRAP);
     }
 }
 

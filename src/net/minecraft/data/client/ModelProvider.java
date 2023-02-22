@@ -5,26 +5,24 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.google.gson.JsonElement
- *  com.mojang.logging.LogUtils
- *  org.slf4j.Logger
  */
 package net.minecraft.data.client;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonElement;
-import com.mojang.logging.LogUtils;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.block.Block;
-import net.minecraft.data.DataGenerator;
+import net.minecraft.data.DataOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.DataWriter;
 import net.minecraft.data.client.BlockStateModelGenerator;
@@ -33,23 +31,21 @@ import net.minecraft.data.client.ItemModelGenerator;
 import net.minecraft.data.client.ModelIds;
 import net.minecraft.data.client.SimpleModelSupplier;
 import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import org.slf4j.Logger;
 
 public class ModelProvider
 implements DataProvider {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private final DataGenerator.PathResolver blockstatesPathResolver;
-    private final DataGenerator.PathResolver modelsPathResolver;
+    private final DataOutput.PathResolver blockstatesPathResolver;
+    private final DataOutput.PathResolver modelsPathResolver;
 
-    public ModelProvider(DataGenerator generator) {
-        this.blockstatesPathResolver = generator.createPathResolver(DataGenerator.OutputType.RESOURCE_PACK, "blockstates");
-        this.modelsPathResolver = generator.createPathResolver(DataGenerator.OutputType.RESOURCE_PACK, "models");
+    public ModelProvider(DataOutput output) {
+        this.blockstatesPathResolver = output.getResolver(DataOutput.OutputType.RESOURCE_PACK, "blockstates");
+        this.modelsPathResolver = output.getResolver(DataOutput.OutputType.RESOURCE_PACK, "models");
     }
 
     @Override
-    public void run(DataWriter writer) {
+    public CompletableFuture<?> run(DataWriter writer) {
         HashMap map = Maps.newHashMap();
         Consumer<BlockStateSupplier> consumer = blockStateSupplier -> {
             Block block = blockStateSupplier.getBlock();
@@ -60,20 +56,20 @@ implements DataProvider {
         };
         HashMap map2 = Maps.newHashMap();
         HashSet set = Sets.newHashSet();
-        BiConsumer<Identifier, Supplier<JsonElement>> biConsumer = (identifier, supplier) -> {
-            Supplier supplier2 = map2.put(identifier, supplier);
-            if (supplier2 != null) {
-                throw new IllegalStateException("Duplicate model definition for " + identifier);
+        BiConsumer<Identifier, Supplier<JsonElement>> biConsumer = (id, jsonSupplier) -> {
+            Supplier supplier = map2.put(id, jsonSupplier);
+            if (supplier != null) {
+                throw new IllegalStateException("Duplicate model definition for " + id);
             }
         };
         Consumer<Item> consumer2 = set::add;
         new BlockStateModelGenerator(consumer, biConsumer, consumer2).register();
         new ItemModelGenerator(biConsumer).register();
-        List<Block> list = Registry.BLOCK.stream().filter(block -> !map.containsKey(block)).toList();
+        List<Block> list = Registries.BLOCK.stream().filter(block -> !map.containsKey(block)).toList();
         if (!list.isEmpty()) {
             throw new IllegalStateException("Missing blockstate definitions for: " + list);
         }
-        Registry.BLOCK.forEach(block -> {
+        Registries.BLOCK.forEach(block -> {
             Item item = Item.BLOCK_ITEMS.get(block);
             if (item != null) {
                 if (set.contains(item)) {
@@ -85,25 +81,23 @@ implements DataProvider {
                 }
             }
         });
-        this.writeJsons(writer, map, block -> this.blockstatesPathResolver.resolveJson(block.getRegistryEntry().registryKey().getValue()));
-        this.writeJsons(writer, map2, this.modelsPathResolver::resolveJson);
+        CompletableFuture[] completableFutureArray = new CompletableFuture[2];
+        completableFutureArray[0] = this.writeJsons(writer, map, block -> this.blockstatesPathResolver.resolveJson(block.getRegistryEntry().registryKey().getValue()));
+        completableFutureArray[1] = this.writeJsons(writer, map2, this.modelsPathResolver::resolveJson);
+        return CompletableFuture.allOf(completableFutureArray);
     }
 
-    private <T> void writeJsons(DataWriter cache, Map<T, ? extends Supplier<JsonElement>> map, Function<T, Path> function) {
-        map.forEach((object, supplier) -> {
-            Path path = (Path)function.apply(object);
-            try {
-                DataProvider.writeToPath(cache, (JsonElement)supplier.get(), path);
-            }
-            catch (Exception exception) {
-                LOGGER.error("Couldn't save {}", (Object)path, (Object)exception);
-            }
-        });
+    private <T> CompletableFuture<?> writeJsons(DataWriter cache, Map<T, ? extends Supplier<JsonElement>> models, Function<T, Path> pathGetter) {
+        return CompletableFuture.allOf((CompletableFuture[])models.entrySet().stream().map(entry -> {
+            Path path = (Path)pathGetter.apply(entry.getKey());
+            JsonElement jsonElement = (JsonElement)((Supplier)entry.getValue()).get();
+            return DataProvider.writeToPath(cache, jsonElement, path);
+        }).toArray(CompletableFuture[]::new));
     }
 
     @Override
-    public String getName() {
-        return "Block State Definitions";
+    public final String getName() {
+        return "Model Definitions";
     }
 }
 

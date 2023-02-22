@@ -2,19 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
@@ -66,10 +65,10 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.EntityAttachS2CPacket;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
@@ -507,26 +506,41 @@ extends LivingEntity {
 
     protected void loot(ItemEntity item) {
         ItemStack itemStack = item.getStack();
-        if (this.tryEquip(itemStack)) {
+        ItemStack itemStack2 = this.tryEquip(itemStack.copy());
+        if (!itemStack2.isEmpty()) {
             this.triggerItemPickedUpByEntityCriteria(item);
-            this.sendPickup(item, itemStack.getCount());
-            item.discard();
+            this.sendPickup(item, itemStack2.getCount());
+            itemStack.decrement(itemStack2.getCount());
+            if (itemStack.isEmpty()) {
+                item.discard();
+            }
         }
     }
 
-    public boolean tryEquip(ItemStack equipment) {
-        EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(equipment);
+    public ItemStack tryEquip(ItemStack stack) {
+        EquipmentSlot equipmentSlot = this.getSlotToEquip(stack);
         ItemStack itemStack = this.getEquippedStack(equipmentSlot);
-        boolean bl = this.prefersNewEquipment(equipment, itemStack);
-        if (bl && this.canPickupItem(equipment)) {
+        boolean bl = this.prefersNewEquipment(stack, itemStack);
+        if (bl && this.canPickupItem(stack)) {
             double d = this.getDropChance(equipmentSlot);
             if (!itemStack.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1f, 0.0f) < d) {
                 this.dropStack(itemStack);
             }
-            this.equipLootStack(equipmentSlot, equipment);
-            return true;
+            if (equipmentSlot.isArmorSlot() && stack.getCount() > 1) {
+                ItemStack itemStack2 = stack.copyWithCount(1);
+                this.equipLootStack(equipmentSlot, itemStack2);
+                return itemStack2;
+            }
+            this.equipLootStack(equipmentSlot, stack);
+            return stack;
         }
-        return false;
+        return ItemStack.EMPTY;
+    }
+
+    private EquipmentSlot getSlotToEquip(ItemStack stack) {
+        EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(stack);
+        boolean bl = this.getEquippedStack(equipmentSlot).isEmpty();
+        return equipmentSlot.isArmorSlot() && !bl ? EquipmentSlot.MAINHAND : equipmentSlot;
     }
 
     protected void equipLootStack(EquipmentSlot slot, ItemStack stack) {
@@ -1099,6 +1113,9 @@ extends LivingEntity {
             return null;
         }
         MobEntity mobEntity = (MobEntity)entityType.create(this.world);
+        if (mobEntity == null) {
+            return null;
+        }
         mobEntity.copyPositionAndRotation(this);
         mobEntity.setBaby(this.isBaby());
         mobEntity.setAiDisabled(this.isAiDisabled());
@@ -1266,8 +1283,12 @@ extends LivingEntity {
         return this.getWidth() * 2.0f * (this.getWidth() * 2.0f) + target.getWidth();
     }
 
+    public double getSquaredDistanceToAttackPosOf(LivingEntity target) {
+        return Math.max(this.squaredDistanceTo(target.getAttackPos()), this.squaredDistanceTo(target.getPos()));
+    }
+
     public boolean isInAttackRange(LivingEntity entity) {
-        double d = this.squaredDistanceTo(entity.getX(), entity.getY(), entity.getZ());
+        double d = this.getSquaredDistanceToAttackPosOf(entity);
         return d <= this.squaredAttackRange(entity);
     }
 
@@ -1332,8 +1353,12 @@ extends LivingEntity {
     }
 
     public void clearGoalsAndTasks() {
-        this.goalSelector.clear();
+        this.clearGoals(goal -> true);
         this.getBrain().clear();
+    }
+
+    public void clearGoals(Predicate<Goal> predicate) {
+        this.goalSelector.clear(predicate);
     }
 
     @Override
@@ -1351,10 +1376,6 @@ extends LivingEntity {
             return null;
         }
         return new ItemStack(spawnEggItem);
-    }
-
-    public Iterable<BlockPos> getPotentialEscapePositions() {
-        return ImmutableSet.of((Object)new BlockPos(this.getBoundingBox().minX, (double)this.getBlockY(), this.getBoundingBox().minZ), (Object)new BlockPos(this.getBoundingBox().minX, (double)this.getBlockY(), this.getBoundingBox().maxZ), (Object)new BlockPos(this.getBoundingBox().maxX, (double)this.getBlockY(), this.getBoundingBox().minZ), (Object)new BlockPos(this.getBoundingBox().maxX, (double)this.getBlockY(), this.getBoundingBox().maxZ));
     }
 }
 

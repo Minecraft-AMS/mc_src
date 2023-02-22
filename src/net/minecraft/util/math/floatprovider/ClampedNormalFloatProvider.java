@@ -29,10 +29,10 @@ extends FloatProvider {
         }
         return DataResult.success((Object)provider);
     }, Function.identity());
-    private float mean;
-    private float deviation;
-    private float min;
-    private float max;
+    private final float mean;
+    private final float deviation;
+    private final float min;
+    private final float max;
 
     public static ClampedNormalFloatProvider create(float mean, float deviation, float min, float max) {
         return new ClampedNormalFloatProvider(mean, deviation, min, max);

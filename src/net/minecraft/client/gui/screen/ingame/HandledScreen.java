@@ -95,7 +95,6 @@ implements ScreenHandlerProvider<T> {
 
     @Override
     protected void init() {
-        super.init();
         this.x = (this.width - this.backgroundWidth) / 2;
         this.y = (this.height - this.backgroundHeight) / 2;
     }
@@ -111,7 +110,7 @@ implements ScreenHandlerProvider<T> {
         super.render(matrices, mouseX, mouseY, delta);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
-        matrixStack.translate(i, j, 0.0);
+        matrixStack.translate(i, j, 0.0f);
         RenderSystem.applyModelViewMatrix();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         this.focusedSlot = null;
@@ -119,7 +118,7 @@ implements ScreenHandlerProvider<T> {
         for (int k = 0; k < ((ScreenHandler)this.handler).slots.size(); ++k) {
             Slot slot = ((ScreenHandler)this.handler).slots.get(k);
             if (slot.isEnabled()) {
-                RenderSystem.setShader(GameRenderer::getPositionTexShader);
+                RenderSystem.setShader(GameRenderer::getPositionTexProgram);
                 this.drawSlot(matrices, slot);
             }
             if (!this.isPointOverSlot(slot, mouseX, mouseY) || !slot.isEnabled()) continue;
@@ -179,7 +178,7 @@ implements ScreenHandlerProvider<T> {
 
     private void drawItem(ItemStack stack, int x, int y, String amountText) {
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.translate(0.0, 0.0, 32.0);
+        matrixStack.translate(0.0f, 0.0f, 32.0f);
         RenderSystem.applyModelViewMatrix();
         this.setZOffset(200);
         this.itemRenderer.zOffset = 200.0f;
@@ -230,7 +229,7 @@ implements ScreenHandlerProvider<T> {
         this.itemRenderer.zOffset = 100.0f;
         if (itemStack.isEmpty() && slot.isEnabled() && (pair = slot.getBackgroundSprite()) != null) {
             Sprite sprite = this.client.getSpriteAtlas((Identifier)pair.getFirst()).apply((Identifier)pair.getSecond());
-            RenderSystem.setShaderTexture(0, sprite.getAtlas().getId());
+            RenderSystem.setShaderTexture(0, sprite.getAtlasId());
             HandledScreen.drawSprite(matrices, i, j, this.getZOffset(), 16, 16, sprite);
             bl2 = true;
         }

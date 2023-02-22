@@ -19,8 +19,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.BuddingAmethystBlock;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -124,32 +124,32 @@ extends Feature<GeodeFeatureConfig> {
                     BlockPos blockPos5 = blockPos3.offset(direction);
                     FluidState fluidState = structureWorldAccess.getFluidState(blockPos5);
                     if (fluidState.isEmpty()) continue;
-                    structureWorldAccess.createAndScheduleFluidTick(blockPos5, fluidState.getFluid(), 0);
+                    structureWorldAccess.scheduleFluidTick(blockPos5, fluidState.getFluid(), 0);
                 }
                 continue;
             }
             if (s >= e) {
-                this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.fillingProvider.getBlockState(random, blockPos3), predicate);
+                this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.fillingProvider.get(random, blockPos3), predicate);
                 continue;
             }
             if (s >= f) {
                 boolean bl2;
                 boolean bl3 = bl2 = (double)random.nextFloat() < geodeFeatureConfig.useAlternateLayer0Chance;
                 if (bl2) {
-                    this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.alternateInnerLayerProvider.getBlockState(random, blockPos3), predicate);
+                    this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.alternateInnerLayerProvider.get(random, blockPos3), predicate);
                 } else {
-                    this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.innerLayerProvider.getBlockState(random, blockPos3), predicate);
+                    this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.innerLayerProvider.get(random, blockPos3), predicate);
                 }
                 if (geodeFeatureConfig.placementsRequireLayer0Alternate && !bl2 || !((double)random.nextFloat() < geodeFeatureConfig.usePotentialPlacementsChance)) continue;
                 list3.add(blockPos3.toImmutable());
                 continue;
             }
             if (s >= g) {
-                this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.middleLayerProvider.getBlockState(random, blockPos3), predicate);
+                this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.middleLayerProvider.get(random, blockPos3), predicate);
                 continue;
             }
             if (!(s >= h)) continue;
-            this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.outerLayerProvider.getBlockState(random, blockPos3), predicate);
+            this.setBlockStateIf(structureWorldAccess, blockPos3, geodeLayerConfig.outerLayerProvider.get(random, blockPos3), predicate);
         }
         List<BlockState> list4 = geodeLayerConfig.innerBlocks;
         block5: for (BlockPos blockPos2 : list3) {

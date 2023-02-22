@@ -94,7 +94,7 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 40, RealmsResetWorldScreen.row(14) - 10, 80, 20, this.buttonTitle, button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(ButtonWidget.builder(this.buttonTitle, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 40, RealmsResetWorldScreen.row(14) - 10, 80, 20).build());
         new Thread("Realms-reset-world-fetcher"){
 
             @Override
@@ -129,11 +129,6 @@ extends RealmsScreen {
     @Override
     public Text getNarratedTitle() {
         return ScreenTexts.joinSentences(this.getTitle(), this.narrateLabels());
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override
@@ -211,13 +206,13 @@ extends RealmsScreen {
         private final Identifier image;
 
         public FrameButton(int x, int y, Text message, Identifier image, ButtonWidget.PressAction onPress) {
-            super(x, y, 60, 72, message, onPress);
+            super(x, y, 60, 72, message, onPress, DEFAULT_NARRATION_SUPPLIER);
             this.image = image;
         }
 
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RealmsResetWorldScreen.this.drawFrame(matrices, this.x, this.y, this.getMessage(), this.image, this.isHovered(), this.isMouseOver(mouseX, mouseY));
+            RealmsResetWorldScreen.this.drawFrame(matrices, this.getX(), this.getY(), this.getMessage(), this.image, this.isHovered(), this.isMouseOver(mouseX, mouseY));
         }
     }
 }

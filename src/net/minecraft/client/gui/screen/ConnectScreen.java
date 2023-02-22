@@ -13,7 +13,6 @@ package net.minecraft.client.gui.screen;
 import com.mojang.logging.LogUtils;
 import java.net.InetSocketAddress;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -26,11 +25,11 @@ import net.minecraft.client.network.AllowedAddressResolver;
 import net.minecraft.client.network.ClientLoginNetworkHandler;
 import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.report.ReporterEnvironment;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkState;
-import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.network.packet.c2s.handshake.HandshakeC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
 import net.minecraft.screen.ScreenTexts;
@@ -59,17 +58,16 @@ extends Screen {
         this.parent = parent;
     }
 
-    public static void connect(Screen screen, MinecraftClient client, ServerAddress address, @Nullable ServerInfo info) {
+    public static void connect(Screen screen, MinecraftClient client, ServerAddress address, ServerInfo info) {
         ConnectScreen connectScreen = new ConnectScreen(screen);
         client.disconnect();
         client.loadBlockList();
-        client.setCurrentServerEntry(info);
+        client.ensureAbuseReportContext(ReporterEnvironment.ofThirdPartyServer(info != null ? info.address : address.getAddress()));
         client.setScreen(connectScreen);
-        connectScreen.connect(client, address);
+        connectScreen.connect(client, address, info);
     }
 
-    private void connect(final MinecraftClient client, final ServerAddress address) {
-        final CompletableFuture<Optional<PlayerPublicKey.PublicKeyData>> completableFuture = client.getProfileKeys().method_45104();
+    private void connect(final MinecraftClient client, final ServerAddress address, final @Nullable ServerInfo info) {
         LOGGER.info("Connecting to {}, {}", (Object)address.getAddress(), (Object)address.getPort());
         Thread thread = new Thread("Server Connector #" + CONNECTOR_THREADS_COUNT.incrementAndGet()){
 
@@ -90,9 +88,9 @@ extends Screen {
                     }
                     inetSocketAddress = optional.get();
                     ConnectScreen.this.connection = ClientConnection.connect(inetSocketAddress, client.options.shouldUseNativeTransport());
-                    ConnectScreen.this.connection.setPacketListener(new ClientLoginNetworkHandler(ConnectScreen.this.connection, client, ConnectScreen.this.parent, ConnectScreen.this::setStatus));
+                    ConnectScreen.this.connection.setPacketListener(new ClientLoginNetworkHandler(ConnectScreen.this.connection, client, info, ConnectScreen.this.parent, false, null, ConnectScreen.this::setStatus));
                     ConnectScreen.this.connection.send(new HandshakeC2SPacket(inetSocketAddress.getHostName(), inetSocketAddress.getPort(), NetworkState.LOGIN));
-                    ConnectScreen.this.connection.send(new LoginHelloC2SPacket(client.getSession().getUsername(), (Optional)completableFuture.join(), Optional.ofNullable(client.getSession().getUuidOrNull())));
+                    ConnectScreen.this.connection.send(new LoginHelloC2SPacket(client.getSession().getUsername(), Optional.ofNullable(client.getSession().getUuidOrNull())));
                 }
                 catch (Exception exception) {
                     Exception exception2;
@@ -133,13 +131,13 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20, ScreenTexts.CANCEL, button -> {
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> {
             this.connectingCancelled = true;
             if (this.connection != null) {
                 this.connection.disconnect(Text.translatable("connect.aborted"));
             }
             this.client.setScreen(this.parent);
-        }));
+        }).dimensions(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build());
     }
 
     @Override

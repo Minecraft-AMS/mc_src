@@ -30,7 +30,7 @@ extends IdentifierNormalizingSchema {
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
         Schema1800.targetEntityItems(schema, map, "minecraft:panda");
-        schema.register(map, "minecraft:pillager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (TypeTemplate)Schema100.targetItems(schema)));
+        schema.register(map, "minecraft:pillager", name -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (TypeTemplate)Schema100.targetItems(schema)));
         return map;
     }
 }

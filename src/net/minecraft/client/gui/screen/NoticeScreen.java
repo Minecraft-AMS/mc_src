@@ -52,7 +52,7 @@ extends Screen {
         int i = this.noticeLines.count() * this.textRenderer.fontHeight;
         int j = MathHelper.clamp(90 + i + 12, this.height / 6 + 96, this.height - 24);
         int k = 150;
-        this.addDrawableChild(new ButtonWidget((this.width - 150) / 2, j, 150, 20, this.buttonText, button -> this.actionHandler.run()));
+        this.addDrawableChild(ButtonWidget.builder(this.buttonText, button -> this.actionHandler.run()).dimensions((this.width - 150) / 2, j, 150, 20).build());
     }
 
     @Override

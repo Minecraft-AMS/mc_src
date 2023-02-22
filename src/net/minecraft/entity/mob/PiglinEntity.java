@@ -39,6 +39,7 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.AbstractPiglinEntity;
+import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PiglinActivity;
@@ -50,6 +51,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -81,12 +83,12 @@ InventoryOwner {
     private static final float field_30552 = 0.1f;
     private static final int field_30553 = 3;
     private static final float field_30554 = 0.2f;
-    private static final float field_30555 = 0.81f;
+    private static final float field_30555 = 0.82f;
     private static final double field_30556 = 0.5;
     private final SimpleInventory inventory = new SimpleInventory(8);
     private boolean cannotHunt;
     protected static final ImmutableList<SensorType<? extends Sensor<? super PiglinEntity>>> SENSOR_TYPES = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_SPECIFIC_SENSOR);
-    protected static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULE_TYPES = ImmutableList.of(MemoryModuleType.LOOK_TARGET, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS, MemoryModuleType.NEARBY_ADULT_PIGLINS, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.WALK_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.PATH, MemoryModuleType.ANGRY_AT, MemoryModuleType.UNIVERSAL_ANGER, MemoryModuleType.AVOID_TARGET, MemoryModuleType.ADMIRING_ITEM, MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, MemoryModuleType.ADMIRING_DISABLED, MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryModuleType.CELEBRATE_LOCATION, MemoryModuleType.DANCING, MemoryModuleType.HUNTED_RECENTLY, MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, MemoryModuleType.NEAREST_VISIBLE_NEMESIS, MemoryModuleType.NEAREST_VISIBLE_ZOMBIFIED, MemoryModuleType.RIDE_TARGET, MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, MemoryModuleType.NEAREST_VISIBLE_HUNTABLE_HOGLIN, MemoryModuleType.NEAREST_TARGETABLE_PLAYER_NOT_WEARING_GOLD, MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM, MemoryModuleType.ATE_RECENTLY, MemoryModuleType.NEAREST_REPELLENT});
+    protected static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULE_TYPES = ImmutableList.of(MemoryModuleType.LOOK_TARGET, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS, MemoryModuleType.NEARBY_ADULT_PIGLINS, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, (Object[])new MemoryModuleType[]{MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.PATH, MemoryModuleType.ANGRY_AT, MemoryModuleType.UNIVERSAL_ANGER, MemoryModuleType.AVOID_TARGET, MemoryModuleType.ADMIRING_ITEM, MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, MemoryModuleType.ADMIRING_DISABLED, MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryModuleType.CELEBRATE_LOCATION, MemoryModuleType.DANCING, MemoryModuleType.HUNTED_RECENTLY, MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, MemoryModuleType.NEAREST_VISIBLE_NEMESIS, MemoryModuleType.NEAREST_VISIBLE_ZOMBIFIED, MemoryModuleType.RIDE_TARGET, MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, MemoryModuleType.NEAREST_VISIBLE_HUNTABLE_HOGLIN, MemoryModuleType.NEAREST_TARGETABLE_PLAYER_NOT_WEARING_GOLD, MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM, MemoryModuleType.ATE_RECENTLY, MemoryModuleType.NEAREST_REPELLENT});
 
     public PiglinEntity(EntityType<? extends AbstractPiglinEntity> entityType, World world) {
         super(entityType, world);
@@ -102,7 +104,7 @@ InventoryOwner {
         if (this.cannotHunt) {
             nbt.putBoolean("CannotHunt", true);
         }
-        nbt.put("Inventory", this.inventory.toNbtList());
+        this.writeInventory(nbt);
     }
 
     @Override
@@ -110,7 +112,7 @@ InventoryOwner {
         super.readCustomDataFromNbt(nbt);
         this.setBaby(nbt.getBoolean("IsBaby"));
         this.setCannotHunt(nbt.getBoolean("CannotHunt"));
-        this.inventory.readNbtList(nbt.getList("Inventory", 10));
+        this.readInventory(nbt);
     }
 
     @Override
@@ -121,7 +123,14 @@ InventoryOwner {
 
     @Override
     protected void dropEquipment(DamageSource source, int lootingMultiplier, boolean allowDrops) {
+        CreeperEntity creeperEntity;
+        Entity entity;
         super.dropEquipment(source, lootingMultiplier, allowDrops);
+        if (this.getWorld().getEnabledFeatures().contains(FeatureFlags.UPDATE_1_20) && (entity = source.getAttacker()) instanceof CreeperEntity && (creeperEntity = (CreeperEntity)entity).shouldDropHead()) {
+            ItemStack itemStack = new ItemStack(Items.PIGLIN_HEAD);
+            creeperEntity.onHeadDropped();
+            this.dropStack(itemStack);
+        }
         this.inventory.clearToList().forEach(this::dropStack);
     }
 
@@ -228,7 +237,8 @@ InventoryOwner {
 
     @Override
     protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return this.isBaby() ? 0.93f : 1.74f;
+        float f = super.getActiveEyeHeight(pose, dimensions);
+        return this.isBaby() ? f - 0.82f : f;
     }
 
     @Override

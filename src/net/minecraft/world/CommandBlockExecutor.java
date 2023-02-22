@@ -116,8 +116,8 @@ implements CommandOutput {
         if (minecraftServer.areCommandBlocksEnabled() && !StringHelper.isEmpty(this.command)) {
             try {
                 this.lastOutput = null;
-                ServerCommandSource serverCommandSource = this.getSource().withConsumer((ResultConsumer<ServerCommandSource>)((ResultConsumer)(commandContext, bl, i) -> {
-                    if (bl) {
+                ServerCommandSource serverCommandSource = this.getSource().withConsumer((ResultConsumer<ServerCommandSource>)((ResultConsumer)(context, success, result) -> {
+                    if (success) {
                         ++this.successCount;
                     }
                 }));

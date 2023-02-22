@@ -10,6 +10,7 @@ package net.minecraft.entity.vehicle;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntFunction;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -21,6 +22,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -33,17 +35,17 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
 import net.minecraft.network.packet.c2s.play.BoatPaddleStateC2SPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.function.BooleanBiFunction;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -58,7 +60,8 @@ import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class BoatEntity
-extends Entity {
+extends Entity
+implements VariantHolder<Type> {
     private static final TrackedData<Integer> DAMAGE_WOBBLE_TICKS = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> DAMAGE_WOBBLE_SIDE = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Float> DAMAGE_WOBBLE_STRENGTH = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -157,7 +160,7 @@ extends Entity {
 
     @Override
     public double getMountedHeightOffset() {
-        return -0.1;
+        return this.getVariant() == Type.BAMBOO ? 0.3 : -0.1;
     }
 
     @Override
@@ -216,28 +219,16 @@ extends Entity {
     }
 
     public Item asItem() {
-        switch (this.getBoatType()) {
-            default: {
-                return Items.OAK_BOAT;
-            }
-            case SPRUCE: {
-                return Items.SPRUCE_BOAT;
-            }
-            case BIRCH: {
-                return Items.BIRCH_BOAT;
-            }
-            case JUNGLE: {
-                return Items.JUNGLE_BOAT;
-            }
-            case ACACIA: {
-                return Items.ACACIA_BOAT;
-            }
-            case DARK_OAK: {
-                return Items.DARK_OAK_BOAT;
-            }
-            case MANGROVE: 
-        }
-        return Items.MANGROVE_BOAT;
+        return switch (this.getVariant()) {
+            case Type.SPRUCE -> Items.SPRUCE_BOAT;
+            case Type.BIRCH -> Items.BIRCH_BOAT;
+            case Type.JUNGLE -> Items.JUNGLE_BOAT;
+            case Type.ACACIA -> Items.ACACIA_BOAT;
+            case Type.DARK_OAK -> Items.DARK_OAK_BOAT;
+            case Type.MANGROVE -> Items.MANGROVE_BOAT;
+            case Type.BAMBOO -> Items.BAMBOO_RAFT;
+            default -> Items.OAK_BOAT;
+        };
     }
 
     @Override
@@ -671,13 +662,13 @@ extends Entity {
 
     @Override
     protected void writeCustomDataToNbt(NbtCompound nbt) {
-        nbt.putString("Type", this.getBoatType().getName());
+        nbt.putString("Type", this.getVariant().asString());
     }
 
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
         if (nbt.contains("Type", 8)) {
-            this.setBoatType(Type.getType(nbt.getString("Type")));
+            this.setVariant(Type.getType(nbt.getString("Type")));
         }
     }
 
@@ -713,7 +704,7 @@ extends Entity {
                     if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                         int i;
                         for (i = 0; i < 3; ++i) {
-                            this.dropItem(this.getBoatType().getBaseBlock());
+                            this.dropItem(this.getVariant().getBaseBlock());
                         }
                         for (i = 0; i < 2; ++i) {
                             this.dropItem(Items.STICK);
@@ -767,11 +758,13 @@ extends Entity {
         return this.dataTracker.get(DAMAGE_WOBBLE_SIDE);
     }
 
-    public void setBoatType(Type type) {
+    @Override
+    public void setVariant(Type type) {
         this.dataTracker.set(BOAT_TYPE, type.ordinal());
     }
 
-    public Type getBoatType() {
+    @Override
+    public Type getVariant() {
         return Type.getType(this.dataTracker.get(BOAT_TYPE));
     }
 
@@ -798,11 +791,6 @@ extends Entity {
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this);
-    }
-
-    @Override
     public boolean isSubmergedInWater() {
         return this.location == Location.UNDER_WATER || this.location == Location.UNDER_FLOWING_WATER;
     }
@@ -812,8 +800,14 @@ extends Entity {
         return new ItemStack(this.asItem());
     }
 
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
+    }
+
     public static final class Type
-    extends Enum<Type> {
+    extends Enum<Type>
+    implements StringIdentifiable {
         public static final /* enum */ Type OAK = new Type(Blocks.OAK_PLANKS, "oak");
         public static final /* enum */ Type SPRUCE = new Type(Blocks.SPRUCE_PLANKS, "spruce");
         public static final /* enum */ Type BIRCH = new Type(Blocks.BIRCH_PLANKS, "birch");
@@ -821,8 +815,11 @@ extends Entity {
         public static final /* enum */ Type ACACIA = new Type(Blocks.ACACIA_PLANKS, "acacia");
         public static final /* enum */ Type DARK_OAK = new Type(Blocks.DARK_OAK_PLANKS, "dark_oak");
         public static final /* enum */ Type MANGROVE = new Type(Blocks.MANGROVE_PLANKS, "mangrove");
+        public static final /* enum */ Type BAMBOO = new Type(Blocks.BAMBOO_PLANKS, "bamboo");
         private final String name;
         private final Block baseBlock;
+        public static final StringIdentifiable.Codec<Type> CODEC;
+        private static final IntFunction<Type> BY_ID;
         private static final /* synthetic */ Type[] field_7724;
 
         public static Type[] values() {
@@ -838,6 +835,11 @@ extends Entity {
             this.baseBlock = baseBlock;
         }
 
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         public String getName() {
             return this.name;
         }
@@ -851,28 +853,21 @@ extends Entity {
         }
 
         public static Type getType(int type) {
-            Type[] types = Type.values();
-            if (type < 0 || type >= types.length) {
-                type = 0;
-            }
-            return types[type];
+            return BY_ID.apply(type);
         }
 
         public static Type getType(String name) {
-            Type[] types = Type.values();
-            for (int i = 0; i < types.length; ++i) {
-                if (!types[i].getName().equals(name)) continue;
-                return types[i];
-            }
-            return types[0];
+            return CODEC.byId(name, OAK);
         }
 
         private static /* synthetic */ Type[] method_36671() {
-            return new Type[]{OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, DARK_OAK, MANGROVE};
+            return new Type[]{OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, DARK_OAK, MANGROVE, BAMBOO};
         }
 
         static {
             field_7724 = Type.method_36671();
+            CODEC = StringIdentifiable.createCodec(Type::values);
+            BY_ID = ValueLists.createIdToValueFunction(Enum::ordinal, Type.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 

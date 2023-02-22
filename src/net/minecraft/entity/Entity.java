@@ -75,10 +75,15 @@ import net.minecraft.nbt.NbtFloat;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.network.Packet;
-import net.minecraft.network.message.MessageSourceProfile;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.EntityTypeTags;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
@@ -92,10 +97,6 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.EntityTypeTags;
-import net.minecraft.tag.FluidTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -123,7 +124,6 @@ import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockLocating;
@@ -135,8 +135,8 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
 import net.minecraft.world.border.WorldBorder;
-import net.minecraft.world.dimension.AreaHelper;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.dimension.NetherPortal;
 import net.minecraft.world.entity.EntityChangeListener;
 import net.minecraft.world.entity.EntityLike;
 import net.minecraft.world.event.GameEvent;
@@ -506,12 +506,12 @@ CommandOutput {
         this.portalCooldown = this.getDefaultPortalCooldown();
     }
 
-    public boolean hasPortalCooldownn() {
+    public boolean hasPortalCooldown() {
         return this.portalCooldown > 0;
     }
 
     protected void tickPortalCooldown() {
-        if (this.hasPortalCooldownn()) {
+        if (this.hasPortalCooldown()) {
             --this.portalCooldown;
         }
     }
@@ -699,8 +699,15 @@ CommandOutput {
         this.playSound(SoundEvents.ENTITY_GENERIC_EXTINGUISH_FIRE, 0.7f, 1.6f + (this.random.nextFloat() - this.random.nextFloat()) * 0.4f);
     }
 
+    public void extinguishWithSound() {
+        if (!this.world.isClient && this.wasOnFire) {
+            this.playExtinguishSound();
+        }
+        this.extinguish();
+    }
+
     protected void addAirTravelEffects() {
-        if (this.hasWings()) {
+        if (this.isFlappingWings()) {
             this.addFlapEffects();
             if (this.getMoveEffect().emitsGameEvents()) {
                 this.emitGameEvent(GameEvent.FLAP);
@@ -868,8 +875,8 @@ CommandOutput {
 
     protected void checkBlockCollision() {
         Box box = this.getBoundingBox();
-        BlockPos blockPos = new BlockPos(box.minX + 0.001, box.minY + 0.001, box.minZ + 0.001);
-        BlockPos blockPos2 = new BlockPos(box.maxX - 0.001, box.maxY - 0.001, box.maxZ - 0.001);
+        BlockPos blockPos = new BlockPos(box.minX + 1.0E-7, box.minY + 1.0E-7, box.minZ + 1.0E-7);
+        BlockPos blockPos2 = new BlockPos(box.maxX - 1.0E-7, box.maxY - 1.0E-7, box.maxZ - 1.0E-7);
         if (this.world.isRegionLoaded(blockPos, blockPos2)) {
             BlockPos.Mutable mutable = new BlockPos.Mutable();
             for (int i = blockPos.getX(); i <= blockPos2.getX(); ++i) {
@@ -906,11 +913,12 @@ CommandOutput {
     }
 
     protected void playStepSound(BlockPos pos, BlockState state) {
-        if (state.getMaterial().isLiquid()) {
+        BlockState blockState = this.world.getBlockState(pos.up());
+        boolean bl = blockState.isIn(BlockTags.INSIDE_STEP_SOUND_BLOCKS);
+        if (!bl && state.getMaterial().isLiquid()) {
             return;
         }
-        BlockState blockState = this.world.getBlockState(pos.up());
-        BlockSoundGroup blockSoundGroup = blockState.isIn(BlockTags.INSIDE_STEP_SOUND_BLOCKS) ? blockState.getSoundGroup() : state.getSoundGroup();
+        BlockSoundGroup blockSoundGroup = bl ? blockState.getSoundGroup() : state.getSoundGroup();
         this.playSound(blockSoundGroup.getStepSound(), blockSoundGroup.getVolume() * 0.15f, blockSoundGroup.getPitch());
     }
 
@@ -932,7 +940,7 @@ CommandOutput {
     protected void addFlapEffects() {
     }
 
-    protected boolean hasWings() {
+    protected boolean isFlappingWings() {
         return false;
     }
 
@@ -1026,10 +1034,6 @@ CommandOutput {
         return this.submergedInWater && this.isTouchingWater();
     }
 
-    public MessageSourceProfile getMessageSourceProfile() {
-        return MessageSourceProfile.NONE;
-    }
-
     public void updateSwimming() {
         if (this.isSwimming()) {
             this.setSwimming(this.isSprinting() && this.isTouchingWater() && !this.hasVehicle());
@@ -1047,7 +1051,9 @@ CommandOutput {
     }
 
     void checkWaterState() {
-        if (this.getVehicle() instanceof BoatEntity) {
+        BoatEntity boatEntity;
+        Entity entity = this.getVehicle();
+        if (entity instanceof BoatEntity && !(boatEntity = (BoatEntity)entity).isSubmergedInWater()) {
             this.touchingWater = false;
         } else if (this.updateMovementInFluid(FluidTags.WATER, 0.014)) {
             if (!this.touchingWater && !this.firstUpdate) {
@@ -1723,6 +1729,10 @@ CommandOutput {
         }
     }
 
+    public boolean method_45320(Entity entity) {
+        return true;
+    }
+
     public void stopRiding() {
         this.dismountVehicle();
     }
@@ -1748,7 +1758,7 @@ CommandOutput {
         if (passenger.getVehicle() == this) {
             throw new IllegalStateException("Use x.stopRiding(y), not y.removePassenger(x)");
         }
-        this.passengerList = this.passengerList.size() == 1 && this.passengerList.get(0) == passenger ? ImmutableList.of() : (ImmutableList)this.passengerList.stream().filter(entity2 -> entity2 != passenger).collect(ImmutableList.toImmutableList());
+        this.passengerList = this.passengerList.size() == 1 && this.passengerList.get(0) == passenger ? ImmutableList.of() : (ImmutableList)this.passengerList.stream().filter(entity -> entity != passenger).collect(ImmutableList.toImmutableList());
         passenger.ridingCooldown = 60;
     }
 
@@ -1793,7 +1803,7 @@ CommandOutput {
     }
 
     public void setInNetherPortal(BlockPos pos) {
-        if (this.hasPortalCooldownn()) {
+        if (this.hasPortalCooldown()) {
             this.resetPortalCooldown();
             return;
         }
@@ -2060,6 +2070,12 @@ CommandOutput {
         return true;
     }
 
+    public void limitFallDistance() {
+        if (this.velocity.getY() > -0.5 && this.fallDistance > 1.0f) {
+            this.fallDistance = 1.0f;
+        }
+    }
+
     public void onLanding() {
         this.fallDistance = 0.0f;
     }
@@ -2237,12 +2253,12 @@ CommandOutput {
                 axis = Direction.Axis.X;
                 vec3d = new Vec3d(0.5, 0.0, 0.0);
             }
-            return AreaHelper.getNetherTeleportTarget(destination, rect, axis, vec3d, this.getDimensions(this.getPose()), this.getVelocity(), this.getYaw(), this.getPitch());
+            return NetherPortal.getNetherTeleportTarget(destination, rect, axis, vec3d, this, this.getVelocity(), this.getYaw(), this.getPitch());
         }).orElse(null);
     }
 
     protected Vec3d positionInPortal(Direction.Axis portalAxis, BlockLocating.Rectangle portalRect) {
-        return AreaHelper.entityPosInPortal(portalRect, portalAxis, this.getPos(), this.getDimensions(this.getPose()));
+        return NetherPortal.entityPosInPortal(portalRect, portalAxis, this.getPos(), this.getDimensions(this.getPose()));
     }
 
     protected Optional<BlockLocating.Rectangle> getPortalRect(ServerWorld destWorld, BlockPos destPos, boolean destIsNether, WorldBorder worldBorder) {
@@ -2369,6 +2385,10 @@ CommandOutput {
         });
     }
 
+    public void requestTeleportOffset(double offsetX, double offsetY, double offsetZ) {
+        this.requestTeleport(this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ);
+    }
+
     public boolean shouldRenderName() {
         return this.isCustomNameVisible();
     }
@@ -2377,6 +2397,14 @@ CommandOutput {
         if (POSE.equals(data)) {
             this.calculateDimensions();
         }
+    }
+
+    @Deprecated
+    protected void reinitDimensions() {
+        EntityDimensions entityDimensions;
+        EntityPose entityPose = this.getPose();
+        this.dimensions = entityDimensions = this.getDimensions(entityPose);
+        this.standingEyeHeight = this.getEyeHeight(entityPose, entityDimensions);
     }
 
     public void calculateDimensions() {
@@ -2446,7 +2474,11 @@ CommandOutput {
         return this.standingEyeHeight;
     }
 
-    public Vec3d getLeashOffset() {
+    public Vec3d getLeashOffset(float tickDelta) {
+        return this.getLeashOffset();
+    }
+
+    protected Vec3d getLeashOffset() {
         return new Vec3d(0.0, this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 
@@ -2744,7 +2776,9 @@ CommandOutput {
         return this.dimensions.height;
     }
 
-    public abstract Packet<?> createSpawnPacket();
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
+        return new EntitySpawnS2CPacket(this);
+    }
 
     public EntityDimensions getDimensions(EntityPose pose) {
         return this.type.getDimensions();
@@ -2780,6 +2814,10 @@ CommandOutput {
 
     public void setVelocity(Vec3d velocity) {
         this.velocity = velocity;
+    }
+
+    public void addVelocity(Vec3d velocity) {
+        this.velocity = this.velocity.add(velocity);
     }
 
     public void setVelocity(double x, double y, double z) {

@@ -12,7 +12,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -20,10 +20,10 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
 
 public class LeapingChargeTask
-extends Task<MobEntity> {
+extends MultiTickTask<MobEntity> {
     public static final int RUN_TIME = 100;
     private final UniformIntProvider cooldownRange;
-    private SoundEvent sound;
+    private final SoundEvent sound;
 
     public LeapingChargeTask(UniformIntProvider cooldownRange, SoundEvent sound) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), 100);
@@ -55,8 +55,8 @@ extends Task<MobEntity> {
     }
 
     @Override
-    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
-        return this.shouldKeepRunning(world, (MobEntity)entity, time);
+    protected /* synthetic */ void finishRunning(ServerWorld world, LivingEntity entity, long time) {
+        this.finishRunning(world, (MobEntity)entity, time);
     }
 
     @Override

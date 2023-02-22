@@ -11,12 +11,11 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.registry.Registries;
 import org.jetbrains.annotations.Nullable;
 
 public class EntityStatusEffectS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private static final short field_39448 = Short.MAX_VALUE;
     private static final int AMBIENT_MASK = 1;
     private static final int SHOW_PARTICLES_MASK = 2;
     private static final int SHOW_ICON_MASK = 4;
@@ -49,7 +48,7 @@ implements Packet<ClientPlayPacketListener> {
 
     public EntityStatusEffectS2CPacket(PacketByteBuf buf) {
         this.entityId = buf.readVarInt();
-        this.effectId = buf.readRegistryValue(Registry.STATUS_EFFECT);
+        this.effectId = buf.readRegistryValue(Registries.STATUS_EFFECT);
         this.amplifier = buf.readByte();
         this.duration = buf.readVarInt();
         this.flags = buf.readByte();
@@ -59,15 +58,11 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.entityId);
-        buf.writeRegistryValue(Registry.STATUS_EFFECT, this.effectId);
+        buf.writeRegistryValue(Registries.STATUS_EFFECT, this.effectId);
         buf.writeByte(this.amplifier);
         buf.writeVarInt(this.duration);
         buf.writeByte(this.flags);
         buf.writeNullable(this.factorCalculationData, (buf2, factorCalculationData) -> buf2.encode(StatusEffectInstance.FactorCalculationData.CODEC, factorCalculationData));
-    }
-
-    public boolean isPermanent() {
-        return this.duration >= Short.MAX_VALUE;
     }
 
     @Override

@@ -2,62 +2,61 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.primitives.Ints
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.MapCodec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.message;
 
+import com.google.common.primitives.Ints;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.security.SignatureException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.encryption.PlayerPublicKey;
+import net.minecraft.network.encryption.SignatureUpdatable;
 import net.minecraft.network.encryption.SignatureVerifier;
-import net.minecraft.network.message.DecoratedContents;
 import net.minecraft.network.message.FilterMask;
-import net.minecraft.network.message.LastSeenMessageList;
 import net.minecraft.network.message.MessageBody;
-import net.minecraft.network.message.MessageHeader;
-import net.minecraft.network.message.MessageMetadata;
+import net.minecraft.network.message.MessageLink;
 import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.network.message.MessageSourceProfile;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.Codecs;
 import org.jetbrains.annotations.Nullable;
 
-public record SignedMessage(MessageHeader signedHeader, MessageSignatureData headerSignature, MessageBody signedBody, Optional<Text> unsignedContent, FilterMask filterMask) {
+public record SignedMessage(MessageLink link, @Nullable MessageSignatureData signature, MessageBody signedBody, @Nullable Text unsignedContent, FilterMask filterMask) {
+    public static final MapCodec<SignedMessage> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)MessageLink.CODEC.fieldOf("link").forGetter(SignedMessage::link), (App)MessageSignatureData.CODEC.optionalFieldOf("signature").forGetter(message -> Optional.ofNullable(message.signature)), (App)MessageBody.CODEC.forGetter(SignedMessage::signedBody), (App)Codecs.TEXT.optionalFieldOf("unsigned_content").forGetter(message -> Optional.ofNullable(message.unsignedContent)), (App)FilterMask.CODEC.optionalFieldOf("filter_mask", (Object)FilterMask.PASS_THROUGH).forGetter(SignedMessage::filterMask)).apply((Applicative)instance, (link, signature, signedBody, unsignedContent, filterMask) -> new SignedMessage((MessageLink)link, signature.orElse(null), (MessageBody)signedBody, unsignedContent.orElse(null), (FilterMask)filterMask)));
+    private static final UUID NIL_UUID = Util.NIL_UUID;
     public static final Duration SERVERBOUND_TIME_TO_LIVE = Duration.ofMinutes(5L);
     public static final Duration CLIENTBOUND_TIME_TO_LIVE = SERVERBOUND_TIME_TO_LIVE.plus(Duration.ofMinutes(2L));
 
-    public SignedMessage(PacketByteBuf buf) {
-        this(new MessageHeader(buf), new MessageSignatureData(buf), new MessageBody(buf), buf.readOptional(PacketByteBuf::readText), FilterMask.readMask(buf));
+    public static SignedMessage ofUnsigned(String content) {
+        return SignedMessage.ofUnsigned(NIL_UUID, content);
     }
 
-    public static SignedMessage ofUnsigned(DecoratedContents content) {
-        return SignedMessage.ofUnsigned(MessageMetadata.of(), content);
-    }
-
-    public static SignedMessage ofUnsigned(MessageMetadata metadata, DecoratedContents content) {
-        MessageBody messageBody = new MessageBody(content, metadata.timestamp(), metadata.salt(), LastSeenMessageList.EMPTY);
-        MessageHeader messageHeader = new MessageHeader(null, metadata.sender());
-        return new SignedMessage(messageHeader, MessageSignatureData.EMPTY, messageBody, Optional.empty(), FilterMask.PASS_THROUGH);
-    }
-
-    public void write(PacketByteBuf buf) {
-        this.signedHeader.write(buf);
-        this.headerSignature.write(buf);
-        this.signedBody.write(buf);
-        buf.writeOptional(this.unsignedContent, PacketByteBuf::writeText);
-        FilterMask.writeMask(buf, this.filterMask);
+    public static SignedMessage ofUnsigned(UUID sender, String content) {
+        MessageBody messageBody = MessageBody.ofUnsigned(content);
+        MessageLink messageLink = MessageLink.of(sender);
+        return new SignedMessage(messageLink, null, messageBody, null, FilterMask.PASS_THROUGH);
     }
 
     public SignedMessage withUnsignedContent(Text unsignedContent) {
-        Optional<Text> optional = !this.getSignedContent().decorated().equals(unsignedContent) ? Optional.of(unsignedContent) : Optional.empty();
-        return new SignedMessage(this.signedHeader, this.headerSignature, this.signedBody, optional, this.filterMask);
+        Text text = !unsignedContent.equals(Text.literal(this.getSignedContent())) ? unsignedContent : null;
+        return new SignedMessage(this.link, this.signature, this.signedBody, text, this.filterMask);
     }
 
     public SignedMessage withoutUnsigned() {
-        if (this.unsignedContent.isPresent()) {
-            return new SignedMessage(this.signedHeader, this.headerSignature, this.signedBody, Optional.empty(), this.filterMask);
+        if (this.unsignedContent != null) {
+            return new SignedMessage(this.link, this.signature, this.signedBody, null, this.filterMask);
         }
         return this;
     }
@@ -66,33 +65,29 @@ public record SignedMessage(MessageHeader signedHeader, MessageSignatureData hea
         if (this.filterMask.equals(filterMask)) {
             return this;
         }
-        return new SignedMessage(this.signedHeader, this.headerSignature, this.signedBody, this.unsignedContent, filterMask);
+        return new SignedMessage(this.link, this.signature, this.signedBody, this.unsignedContent, filterMask);
     }
 
     public SignedMessage withFilterMaskEnabled(boolean enabled) {
         return this.withFilterMask(enabled ? this.filterMask : FilterMask.PASS_THROUGH);
     }
 
+    public static void update(SignatureUpdatable.SignatureUpdater updater, MessageLink link, MessageBody body) throws SignatureException {
+        updater.update(Ints.toByteArray((int)1));
+        link.update(updater);
+        body.update(updater);
+    }
+
     public boolean verify(SignatureVerifier verifier) {
-        return this.headerSignature.verify(verifier, this.signedHeader, this.signedBody);
+        return this.signature != null && this.signature.verify(verifier, updater -> SignedMessage.update(updater, this.link, this.signedBody));
     }
 
-    public boolean verify(PlayerPublicKey key) {
-        SignatureVerifier signatureVerifier = key.createSignatureInstance();
-        return this.verify(signatureVerifier);
-    }
-
-    public boolean verify(MessageSourceProfile profile) {
-        PlayerPublicKey playerPublicKey = profile.playerPublicKey();
-        return playerPublicKey != null && this.verify(playerPublicKey);
-    }
-
-    public DecoratedContents getSignedContent() {
+    public String getSignedContent() {
         return this.signedBody.content();
     }
 
     public Text getContent() {
-        return this.unsignedContent().orElse(this.getSignedContent().decorated());
+        return Objects.requireNonNullElseGet(this.unsignedContent, () -> Text.literal(this.getSignedContent()));
     }
 
     public Instant getTimestamp() {
@@ -111,21 +106,20 @@ public record SignedMessage(MessageHeader signedHeader, MessageSignatureData hea
         return currentTime.isAfter(this.getTimestamp().plus(CLIENTBOUND_TIME_TO_LIVE));
     }
 
-    public MessageMetadata createMetadata() {
-        return new MessageMetadata(this.signedHeader.sender(), this.getTimestamp(), this.getSalt());
+    public UUID getSender() {
+        return this.link.sender();
     }
 
-    @Nullable
-    public LastSeenMessageList.Entry toLastSeenMessageEntry() {
-        MessageMetadata messageMetadata = this.createMetadata();
-        if (!this.headerSignature.isEmpty() && !messageMetadata.lacksSender()) {
-            return new LastSeenMessageList.Entry(messageMetadata.sender(), this.headerSignature);
-        }
-        return null;
+    public boolean isSenderMissing() {
+        return this.getSender().equals(NIL_UUID);
+    }
+
+    public boolean hasSignature() {
+        return this.signature != null;
     }
 
     public boolean canVerifyFrom(UUID sender) {
-        return !this.headerSignature.isEmpty() && this.signedHeader.sender().equals(sender);
+        return this.hasSignature() && this.link.sender().equals(sender);
     }
 
     public boolean isFullyFiltered() {

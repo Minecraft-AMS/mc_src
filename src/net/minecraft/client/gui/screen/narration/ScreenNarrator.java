@@ -21,14 +21,14 @@ import net.minecraft.client.gui.screen.narration.NarrationPart;
 @Environment(value=EnvType.CLIENT)
 public class ScreenNarrator {
     int currentMessageIndex;
-    final Map<PartIndex, Message> narrations = Maps.newTreeMap(Comparator.comparing(partIndex -> partIndex.part).thenComparing(partIndex -> partIndex.messageIndex));
+    final Map<PartIndex, Message> narrations = Maps.newTreeMap(Comparator.comparing(partIndex -> partIndex.part).thenComparing(partIndex -> partIndex.depth));
 
     public void buildNarrations(Consumer<NarrationMessageBuilder> builderConsumer) {
         ++this.currentMessageIndex;
         builderConsumer.accept(new MessageBuilder(0));
     }
 
-    public String buildNarratorText(boolean forceTransform) {
+    public String buildNarratorText(boolean includeUnchanged) {
         final StringBuilder stringBuilder = new StringBuilder();
         Consumer<String> consumer = new Consumer<String>(){
             private boolean first = true;
@@ -48,9 +48,9 @@ public class ScreenNarrator {
             }
         };
         this.narrations.forEach((partIndex, message) -> {
-            if (message.index == this.currentMessageIndex && (forceTransform || !message.transformed)) {
+            if (message.index == this.currentMessageIndex && (includeUnchanged || !message.used)) {
                 message.narration.forEachSentence(consumer);
-                message.transformed = true;
+                message.used = true;
             }
         });
         return stringBuilder.toString();
@@ -59,20 +59,20 @@ public class ScreenNarrator {
     @Environment(value=EnvType.CLIENT)
     class MessageBuilder
     implements NarrationMessageBuilder {
-        private final int messageIndex;
+        private final int depth;
 
-        MessageBuilder(int startIndex) {
-            this.messageIndex = startIndex;
+        MessageBuilder(int depth) {
+            this.depth = depth;
         }
 
         @Override
         public void put(NarrationPart part, Narration<?> narration) {
-            ScreenNarrator.this.narrations.computeIfAbsent(new PartIndex(part, this.messageIndex), partIndex -> new Message()).setNarration(ScreenNarrator.this.currentMessageIndex, narration);
+            ScreenNarrator.this.narrations.computeIfAbsent(new PartIndex(part, this.depth), partIndex -> new Message()).setNarration(ScreenNarrator.this.currentMessageIndex, narration);
         }
 
         @Override
         public NarrationMessageBuilder nextMessage() {
-            return new MessageBuilder(this.messageIndex + 1);
+            return new MessageBuilder(this.depth + 1);
         }
     }
 
@@ -80,7 +80,7 @@ public class ScreenNarrator {
     static class Message {
         Narration<?> narration = Narration.EMPTY;
         int index = -1;
-        boolean transformed;
+        boolean used;
 
         Message() {
         }
@@ -88,9 +88,9 @@ public class ScreenNarrator {
         public Message setNarration(int index, Narration<?> narration) {
             if (!this.narration.equals(narration)) {
                 this.narration = narration;
-                this.transformed = false;
+                this.used = false;
             } else if (this.index + 1 != index) {
-                this.transformed = false;
+                this.used = false;
             }
             this.index = index;
             return this;
@@ -100,11 +100,11 @@ public class ScreenNarrator {
     @Environment(value=EnvType.CLIENT)
     static class PartIndex {
         final NarrationPart part;
-        final int messageIndex;
+        final int depth;
 
-        PartIndex(NarrationPart part, int messageIndex) {
+        PartIndex(NarrationPart part, int depth) {
             this.part = part;
-            this.messageIndex = messageIndex;
+            this.depth = depth;
         }
     }
 }

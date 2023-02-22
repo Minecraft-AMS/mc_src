@@ -7,6 +7,7 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
+import java.util.function.IntFunction;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.Goal;
@@ -17,6 +18,7 @@ import net.minecraft.entity.mob.IllagerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -117,6 +119,7 @@ extends IllagerEntity {
         public static final /* enum */ Spell WOLOLO = new Spell(3, 0.7, 0.5, 0.2);
         public static final /* enum */ Spell DISAPPEAR = new Spell(4, 0.3, 0.3, 0.8);
         public static final /* enum */ Spell BLINDNESS = new Spell(5, 0.1, 0.1, 0.2);
+        private static final IntFunction<Spell> BY_ID;
         final int id;
         final double[] particleVelocity;
         private static final /* synthetic */ Spell[] field_7376;
@@ -135,11 +138,7 @@ extends IllagerEntity {
         }
 
         public static Spell byId(int id) {
-            for (Spell spell : Spell.values()) {
-                if (id != spell.id) continue;
-                return spell;
-            }
-            return NONE;
+            return BY_ID.apply(id);
         }
 
         private static /* synthetic */ Spell[] method_36658() {
@@ -148,6 +147,7 @@ extends IllagerEntity {
 
         static {
             field_7376 = Spell.method_36658();
+            BY_ID = ValueLists.createIdToValueFunction(spell -> spell.id, Spell.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 

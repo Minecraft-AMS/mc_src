@@ -31,6 +31,7 @@ import net.minecraft.inventory.ContainerLock;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.screen.BeaconScreenHandler;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.PropertyDelegate;
@@ -40,8 +41,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
+import net.minecraft.util.Nameable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.Heightmap;
@@ -50,15 +51,17 @@ import org.jetbrains.annotations.Nullable;
 
 public class BeaconBlockEntity
 extends BlockEntity
-implements NamedScreenHandlerFactory {
+implements NamedScreenHandlerFactory,
+Nameable {
     private static final int field_31304 = 4;
     public static final StatusEffect[][] EFFECTS_BY_LEVEL = new StatusEffect[][]{{StatusEffects.SPEED, StatusEffects.HASTE}, {StatusEffects.RESISTANCE, StatusEffects.JUMP_BOOST}, {StatusEffects.STRENGTH}, {StatusEffects.REGENERATION}};
     private static final Set<StatusEffect> EFFECTS = Arrays.stream(EFFECTS_BY_LEVEL).flatMap(Arrays::stream).collect(Collectors.toSet());
-    public static final int field_31300 = 0;
-    public static final int field_31301 = 1;
-    public static final int field_31302 = 2;
-    public static final int field_31303 = 3;
+    public static final int LEVEL_PROPERTY_INDEX = 0;
+    public static final int PRIMARY_PROPERTY_INDEX = 1;
+    public static final int SECONDARY_PROPERTY_INDEX = 2;
+    public static final int PROPERTY_COUNT = 3;
     private static final int field_31305 = 10;
+    private static final Text CONTAINER_NAME_TEXT = Text.translatable("container.beacon");
     List<BeamSegment> beamSegments = Lists.newArrayList();
     private List<BeamSegment> field_19178 = Lists.newArrayList();
     int level;
@@ -76,8 +79,8 @@ implements NamedScreenHandlerFactory {
         public int get(int index) {
             return switch (index) {
                 case 0 -> BeaconBlockEntity.this.level;
-                case 1 -> StatusEffect.method_43257(BeaconBlockEntity.this.primary);
-                case 2 -> StatusEffect.method_43257(BeaconBlockEntity.this.secondary);
+                case 1 -> StatusEffect.getRawIdNullable(BeaconBlockEntity.this.primary);
+                case 2 -> StatusEffect.getRawIdNullable(BeaconBlockEntity.this.secondary);
                 default -> 0;
             };
         }
@@ -275,8 +278,8 @@ implements NamedScreenHandlerFactory {
     @Override
     protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
-        nbt.putInt("Primary", StatusEffect.method_43257(this.primary));
-        nbt.putInt("Secondary", StatusEffect.method_43257(this.secondary));
+        nbt.putInt("Primary", StatusEffect.getRawIdNullable(this.primary));
+        nbt.putInt("Secondary", StatusEffect.getRawIdNullable(this.secondary));
         nbt.putInt("Levels", this.level);
         if (this.customName != null) {
             nbt.putString("CustomName", Text.Serializer.toJson(this.customName));
@@ -290,6 +293,12 @@ implements NamedScreenHandlerFactory {
 
     @Override
     @Nullable
+    public Text getCustomName() {
+        return this.customName;
+    }
+
+    @Override
+    @Nullable
     public ScreenHandler createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
         if (LockableContainerBlockEntity.checkUnlocked(playerEntity, this.lock, this.getDisplayName())) {
             return new BeaconScreenHandler(i, playerInventory, this.propertyDelegate, ScreenHandlerContext.create(this.world, this.getPos()));
@@ -299,7 +308,15 @@ implements NamedScreenHandlerFactory {
 
     @Override
     public Text getDisplayName() {
-        return this.customName != null ? this.customName : Text.translatable("container.beacon");
+        return this.getName();
+    }
+
+    @Override
+    public Text getName() {
+        if (this.customName != null) {
+            return this.customName;
+        }
+        return CONTAINER_NAME_TEXT;
     }
 
     @Override

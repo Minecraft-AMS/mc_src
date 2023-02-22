@@ -39,22 +39,22 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsage;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.InstrumentTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.InstrumentTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -87,7 +87,7 @@ extends AnimalEntity {
     public ItemStack getGoatHornStack() {
         Random random = Random.create(this.getUuid().hashCode());
         TagKey<Instrument> tagKey = this.isScreaming() ? InstrumentTags.SCREAMING_GOAT_HORNS : InstrumentTags.REGULAR_GOAT_HORNS;
-        RegistryEntryList.Named<Instrument> registryEntryList = Registry.INSTRUMENT.getOrCreateEntryList(tagKey);
+        RegistryEntryList.Named<Instrument> registryEntryList = Registries.INSTRUMENT.getOrCreateEntryList(tagKey);
         return GoatHornItem.getStackForInstrument(Items.GOAT_HORN, registryEntryList.getRandom(random).get());
     }
 
@@ -157,12 +157,15 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public GoatEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         GoatEntity goatEntity = EntityType.GOAT.create(serverWorld);
         if (goatEntity != null) {
+            PassiveEntity goatEntity2;
             GoatBrain.resetLongJumpCooldown(goatEntity, serverWorld.getRandom());
-            boolean bl = passiveEntity instanceof GoatEntity && ((GoatEntity)passiveEntity).isScreaming();
-            goatEntity.setScreaming(bl || serverWorld.getRandom().nextDouble() < 0.02);
+            PassiveEntity passiveEntity2 = serverWorld.getRandom().nextBoolean() ? this : passiveEntity;
+            boolean bl = passiveEntity2 instanceof GoatEntity && ((GoatEntity)(goatEntity2 = passiveEntity2)).isScreaming() || serverWorld.getRandom().nextDouble() < 0.02;
+            goatEntity.setScreaming(bl);
         }
         return goatEntity;
     }
@@ -335,6 +338,7 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }

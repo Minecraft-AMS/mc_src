@@ -10,9 +10,9 @@ import java.util.Optional;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.math.GlobalPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
@@ -20,6 +20,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class PlayerRespawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
+    public static final byte KEEP_ATTRIBUTES = 1;
+    public static final byte KEEP_TRACKED_DATA = 2;
+    public static final byte KEEP_ALL = 3;
     private final RegistryKey<DimensionType> dimensionType;
     private final RegistryKey<World> dimension;
     private final long sha256Seed;
@@ -28,10 +31,10 @@ implements Packet<ClientPlayPacketListener> {
     private final GameMode previousGameMode;
     private final boolean debugWorld;
     private final boolean flatWorld;
-    private final boolean keepPlayerAttributes;
+    private final byte flag;
     private final Optional<GlobalPos> lastDeathPos;
 
-    public PlayerRespawnS2CPacket(RegistryKey<DimensionType> dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, @Nullable GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes, Optional<GlobalPos> lastDeathPos) {
+    public PlayerRespawnS2CPacket(RegistryKey<DimensionType> dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, @Nullable GameMode previousGameMode, boolean debugWorld, boolean flatWorld, byte flag, Optional<GlobalPos> lastDeathPos) {
         this.dimensionType = dimensionType;
         this.dimension = dimension;
         this.sha256Seed = sha256Seed;
@@ -39,19 +42,19 @@ implements Packet<ClientPlayPacketListener> {
         this.previousGameMode = previousGameMode;
         this.debugWorld = debugWorld;
         this.flatWorld = flatWorld;
-        this.keepPlayerAttributes = keepPlayerAttributes;
+        this.flag = flag;
         this.lastDeathPos = lastDeathPos;
     }
 
     public PlayerRespawnS2CPacket(PacketByteBuf buf) {
-        this.dimensionType = buf.readRegistryKey(Registry.DIMENSION_TYPE_KEY);
-        this.dimension = buf.readRegistryKey(Registry.WORLD_KEY);
+        this.dimensionType = buf.readRegistryKey(RegistryKeys.DIMENSION_TYPE);
+        this.dimension = buf.readRegistryKey(RegistryKeys.WORLD);
         this.sha256Seed = buf.readLong();
         this.gameMode = GameMode.byId(buf.readUnsignedByte());
         this.previousGameMode = GameMode.getOrNull(buf.readByte());
         this.debugWorld = buf.readBoolean();
         this.flatWorld = buf.readBoolean();
-        this.keepPlayerAttributes = buf.readBoolean();
+        this.flag = buf.readByte();
         this.lastDeathPos = buf.readOptional(PacketByteBuf::readGlobalPos);
     }
 
@@ -64,7 +67,7 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeByte(GameMode.getId(this.previousGameMode));
         buf.writeBoolean(this.debugWorld);
         buf.writeBoolean(this.flatWorld);
-        buf.writeBoolean(this.keepPlayerAttributes);
+        buf.writeByte(this.flag);
         buf.writeOptional(this.lastDeathPos, PacketByteBuf::writeGlobalPos);
     }
 
@@ -102,8 +105,8 @@ implements Packet<ClientPlayPacketListener> {
         return this.flatWorld;
     }
 
-    public boolean shouldKeepPlayerAttributes() {
-        return this.keepPlayerAttributes;
+    public boolean hasFlag(byte flag) {
+        return (this.flag & flag) != 0;
     }
 
     public Optional<GlobalPos> getLastDeathPos() {

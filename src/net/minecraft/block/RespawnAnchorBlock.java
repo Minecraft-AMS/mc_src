@@ -22,13 +22,13 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -126,7 +126,8 @@ extends Block {
                 return super.getBlastResistance(explosion, world, pos, blockState, fluidState);
             }
         };
-        world.createExplosion(null, DamageSource.badRespawnPoint(), explosionBehavior, (double)explodedPos.getX() + 0.5, (double)explodedPos.getY() + 0.5, (double)explodedPos.getZ() + 0.5, 5.0f, true, Explosion.DestructionType.DESTROY);
+        Vec3d vec3d = explodedPos.toCenterPos();
+        world.createExplosion(null, DamageSource.badRespawnPoint(vec3d), explosionBehavior, vec3d, 5.0f, true, World.ExplosionSourceType.BLOCK);
     }
 
     public static boolean isNether(World world) {

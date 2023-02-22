@@ -9,15 +9,15 @@ package net.minecraft.entity.passive;
 
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.FlowerBlock;
+import net.minecraft.block.SuspiciousStewIngredient;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.Shearable;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -25,22 +25,21 @@ import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsage;
 import net.minecraft.item.Items;
 import net.minecraft.item.SuspiciousStewItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
@@ -52,7 +51,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class MooshroomEntity
 extends CowEntity
-implements Shearable {
+implements Shearable,
+VariantHolder<Type> {
     private static final TrackedData<String> TYPE = DataTracker.registerData(MooshroomEntity.class, TrackedDataHandlerRegistry.STRING);
     private static final int MUTATION_CHANCE = 1024;
     @Nullable
@@ -81,7 +81,7 @@ implements Shearable {
     public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
         UUID uUID = lightning.getUuid();
         if (!uUID.equals(this.lightningId)) {
-            this.setType(this.getMooshroomType() == Type.RED ? Type.BROWN : Type.RED);
+            this.setVariant(this.getVariant() == Type.RED ? Type.BROWN : Type.RED);
             this.lightningId = uUID;
             this.playSound(SoundEvents.ENTITY_MOOSHROOM_CONVERT, 2.0f, 1.0f);
         }
@@ -122,7 +122,7 @@ implements Shearable {
             }
             return ActionResult.success(this.world.isClient);
         }
-        if (this.getMooshroomType() == Type.BROWN && itemStack.isIn(ItemTags.SMALL_FLOWERS)) {
+        if (this.getVariant() == Type.BROWN && itemStack.isIn(ItemTags.SMALL_FLOWERS)) {
             if (this.stewEffect != null) {
                 for (int i = 0; i < 2; ++i) {
                     this.world.addParticle(ParticleTypes.SMOKE, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
@@ -150,11 +150,11 @@ implements Shearable {
 
     @Override
     public void sheared(SoundCategory shearedSoundCategory) {
+        CowEntity cowEntity;
         this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_MOOSHROOM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
-        if (!this.world.isClient()) {
+        if (!this.world.isClient() && (cowEntity = EntityType.COW.create(this.world)) != null) {
             ((ServerWorld)this.world).spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getBodyY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
             this.discard();
-            CowEntity cowEntity = EntityType.COW.create(this.world);
             cowEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             cowEntity.setHealth(this.getHealth());
             cowEntity.bodyYaw = this.bodyYaw;
@@ -168,7 +168,7 @@ implements Shearable {
             cowEntity.setInvulnerable(this.isInvulnerable());
             this.world.spawnEntity(cowEntity);
             for (int i = 0; i < 5; ++i) {
-                this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getBodyY(1.0), this.getZ(), new ItemStack(this.getMooshroomType().mushroom.getBlock())));
+                this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getBodyY(1.0), this.getZ(), new ItemStack(this.getVariant().mushroom.getBlock())));
             }
         }
     }
@@ -181,7 +181,7 @@ implements Shearable {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putString("Type", this.getMooshroomType().name);
+        nbt.putString("Type", this.getVariant().asString());
         if (this.stewEffect != null) {
             nbt.putInt("EffectId", StatusEffect.getRawId(this.stewEffect));
             nbt.putInt("EffectDuration", this.stewEffectDuration);
@@ -191,7 +191,7 @@ implements Shearable {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.setType(Type.fromName(nbt.getString("Type")));
+        this.setVariant(Type.fromName(nbt.getString("Type")));
         if (nbt.contains("EffectId", 1)) {
             this.stewEffect = StatusEffect.byRawId(nbt.getInt("EffectId"));
         }
@@ -201,51 +201,63 @@ implements Shearable {
     }
 
     private Optional<Pair<StatusEffect, Integer>> getStewEffectFrom(ItemStack flower) {
-        Block block;
-        Item item = flower.getItem();
-        if (item instanceof BlockItem && (block = ((BlockItem)item).getBlock()) instanceof FlowerBlock) {
-            FlowerBlock flowerBlock = (FlowerBlock)block;
-            return Optional.of(Pair.of((Object)flowerBlock.getEffectInStew(), (Object)flowerBlock.getEffectInStewDuration()));
+        SuspiciousStewIngredient suspiciousStewIngredient = SuspiciousStewIngredient.of(flower.getItem());
+        if (suspiciousStewIngredient != null) {
+            return Optional.of(Pair.of((Object)suspiciousStewIngredient.getEffectInStew(), (Object)suspiciousStewIngredient.getEffectInStewDuration()));
         }
         return Optional.empty();
     }
 
-    private void setType(Type type) {
+    @Override
+    public void setVariant(Type type) {
         this.dataTracker.set(TYPE, type.name);
     }
 
-    public Type getMooshroomType() {
+    @Override
+    public Type getVariant() {
         return Type.fromName(this.dataTracker.get(TYPE));
     }
 
     @Override
+    @Nullable
     public MooshroomEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         MooshroomEntity mooshroomEntity = EntityType.MOOSHROOM.create(serverWorld);
-        mooshroomEntity.setType(this.chooseBabyType((MooshroomEntity)passiveEntity));
+        if (mooshroomEntity != null) {
+            mooshroomEntity.setVariant(this.chooseBabyType((MooshroomEntity)passiveEntity));
+        }
         return mooshroomEntity;
     }
 
     private Type chooseBabyType(MooshroomEntity mooshroom) {
         Type type2;
-        Type type = this.getMooshroomType();
-        Type type3 = type == (type2 = mooshroom.getMooshroomType()) && this.random.nextInt(1024) == 0 ? (type == Type.BROWN ? Type.RED : Type.BROWN) : (this.random.nextBoolean() ? type : type2);
+        Type type = this.getVariant();
+        Type type3 = type == (type2 = mooshroom.getVariant()) && this.random.nextInt(1024) == 0 ? (type == Type.BROWN ? Type.RED : Type.BROWN) : (this.random.nextBoolean() ? type : type2);
         return type3;
     }
 
     @Override
+    @Nullable
     public /* synthetic */ CowEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         return this.createChild(serverWorld, passiveEntity);
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }
 
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
+    }
+
     public static final class Type
-    extends Enum<Type> {
+    extends Enum<Type>
+    implements StringIdentifiable {
         public static final /* enum */ Type RED = new Type("red", Blocks.RED_MUSHROOM.getDefaultState());
         public static final /* enum */ Type BROWN = new Type("brown", Blocks.BROWN_MUSHROOM.getDefaultState());
+        public static final StringIdentifiable.Codec<Type> CODEC;
         final String name;
         final BlockState mushroom;
         private static final /* synthetic */ Type[] field_18113;
@@ -267,12 +279,13 @@ implements Shearable {
             return this.mushroom;
         }
 
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         static Type fromName(String name) {
-            for (Type type : Type.values()) {
-                if (!type.name.equals(name)) continue;
-                return type;
-            }
-            return RED;
+            return CODEC.byId(name, RED);
         }
 
         private static /* synthetic */ Type[] method_36639() {
@@ -281,6 +294,7 @@ implements Shearable {
 
         static {
             field_18113 = Type.method_36639();
+            CODEC = StringIdentifiable.createCodec(Type::values);
         }
     }
 }

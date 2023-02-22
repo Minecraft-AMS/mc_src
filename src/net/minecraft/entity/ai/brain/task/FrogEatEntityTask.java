@@ -18,7 +18,7 @@ import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.LookTargetUtil;
-import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.passive.FrogEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -27,7 +27,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.math.Vec3d;
 
 public class FrogEatEntityTask
-extends Task<FrogEntity> {
+extends MultiTickTask<FrogEntity> {
     public static final int RUN_TIME = 100;
     public static final int CATCH_DURATION = 6;
     public static final int EAT_DURATION = 10;
@@ -50,7 +50,7 @@ extends Task<FrogEntity> {
 
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, FrogEntity frogEntity) {
-        LivingEntity livingEntity = frogEntity.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET).get();
+        LivingEntity livingEntity = frogEntity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).get();
         boolean bl = this.isTargetReachable(frogEntity, livingEntity);
         if (!bl) {
             frogEntity.getBrain().forget(MemoryModuleType.ATTACK_TARGET);
@@ -66,7 +66,7 @@ extends Task<FrogEntity> {
 
     @Override
     protected void run(ServerWorld serverWorld, FrogEntity frogEntity, long l) {
-        LivingEntity livingEntity = frogEntity.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET).get();
+        LivingEntity livingEntity = frogEntity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).get();
         LookTargetUtil.lookAt(frogEntity, livingEntity);
         frogEntity.setFrogTarget(livingEntity);
         frogEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(livingEntity.getPos(), 2.0f, 0));
@@ -95,7 +95,7 @@ extends Task<FrogEntity> {
 
     @Override
     protected void keepRunning(ServerWorld serverWorld, FrogEntity frogEntity, long l) {
-        LivingEntity livingEntity = frogEntity.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET).get();
+        LivingEntity livingEntity = frogEntity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).get();
         frogEntity.setFrogTarget(livingEntity);
         switch (this.phase) {
             case MOVE_TO_TARGET: {
@@ -140,7 +140,7 @@ extends Task<FrogEntity> {
 
     private void markTargetAsUnreachable(FrogEntity entity, LivingEntity target) {
         boolean bl;
-        List list = entity.getBrain().getOptionalMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
+        List list = entity.getBrain().getOptionalRegisteredMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
         boolean bl2 = bl = !list.contains(target.getUuid());
         if (list.size() == 5 && bl) {
             list.remove(0);
@@ -152,8 +152,13 @@ extends Task<FrogEntity> {
     }
 
     @Override
-    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
-        return this.shouldKeepRunning(world, (FrogEntity)entity, time);
+    protected /* synthetic */ void finishRunning(ServerWorld world, LivingEntity entity, long time) {
+        this.finishRunning(world, (FrogEntity)entity, time);
+    }
+
+    @Override
+    protected /* synthetic */ void keepRunning(ServerWorld world, LivingEntity entity, long time) {
+        this.keepRunning(world, (FrogEntity)entity, time);
     }
 
     @Override

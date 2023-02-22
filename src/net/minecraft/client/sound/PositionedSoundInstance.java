@@ -11,10 +11,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.AbstractSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
@@ -28,6 +30,10 @@ extends AbstractSoundInstance {
         return PositionedSoundInstance.master(sound, pitch, 0.25f);
     }
 
+    public static PositionedSoundInstance master(RegistryEntry<SoundEvent> sound, float pitch) {
+        return PositionedSoundInstance.master(sound.value(), pitch);
+    }
+
     public static PositionedSoundInstance master(SoundEvent sound, float pitch, float volume) {
         return new PositionedSoundInstance(sound.getId(), SoundCategory.MASTER, volume, pitch, SoundInstance.createRandom(), false, 0, SoundInstance.AttenuationType.NONE, 0.0, 0.0, 0.0, true);
     }
@@ -36,8 +42,8 @@ extends AbstractSoundInstance {
         return new PositionedSoundInstance(sound.getId(), SoundCategory.MUSIC, 1.0f, 1.0f, SoundInstance.createRandom(), false, 0, SoundInstance.AttenuationType.NONE, 0.0, 0.0, 0.0, true);
     }
 
-    public static PositionedSoundInstance record(SoundEvent sound, double x, double y, double z) {
-        return new PositionedSoundInstance(sound, SoundCategory.RECORDS, 4.0f, 1.0f, SoundInstance.createRandom(), false, 0, SoundInstance.AttenuationType.LINEAR, x, y, z);
+    public static PositionedSoundInstance record(SoundEvent sound, Vec3d pos) {
+        return new PositionedSoundInstance(sound, SoundCategory.RECORDS, 4.0f, 1.0f, SoundInstance.createRandom(), false, 0, SoundInstance.AttenuationType.LINEAR, pos.x, pos.y, pos.z);
     }
 
     public static PositionedSoundInstance ambient(SoundEvent sound, float pitch, float volume) {

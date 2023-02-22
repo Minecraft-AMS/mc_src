@@ -22,6 +22,7 @@ import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.util.Identifier;
@@ -32,8 +33,6 @@ import org.slf4j.Logger;
 public abstract class JsonDataLoader
 extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String FILE_SUFFIX = ".json";
-    private static final int FILE_SUFFIX_LENGTH = ".json".length();
     private final Gson gson;
     private final String dataType;
 
@@ -45,21 +44,17 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
     @Override
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, Profiler profiler) {
         HashMap map = Maps.newHashMap();
-        int i = this.dataType.length() + 1;
-        for (Map.Entry<Identifier, Resource> entry : resourceManager.findResources(this.dataType, id -> id.getPath().endsWith(FILE_SUFFIX)).entrySet()) {
+        ResourceFinder resourceFinder = ResourceFinder.json(this.dataType);
+        for (Map.Entry<Identifier, Resource> entry : resourceFinder.findResources(resourceManager).entrySet()) {
             Identifier identifier = entry.getKey();
-            String string = identifier.getPath();
-            Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
+            Identifier identifier2 = resourceFinder.toResourceId(identifier);
             try {
                 BufferedReader reader = entry.getValue().getReader();
                 try {
                     JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
-                    if (jsonElement != null) {
-                        JsonElement jsonElement2 = map.put(identifier2, jsonElement);
-                        if (jsonElement2 == null) continue;
-                        throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
-                    }
-                    LOGGER.error("Couldn't load data file {} from {} as it's null or empty", (Object)identifier2, (Object)identifier);
+                    JsonElement jsonElement2 = map.put(identifier2, jsonElement);
+                    if (jsonElement2 == null) continue;
+                    throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
                 }
                 finally {
                     if (reader == null) continue;

@@ -39,6 +39,7 @@ import com.mojang.brigadier.tree.RootCommandNode;
 import com.mojang.logging.LogUtils;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -51,6 +52,12 @@ import net.minecraft.command.argument.ArgumentHelper;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.network.packet.s2c.play.CommandTreeS2CPacket;
+import net.minecraft.registry.BuiltinRegistries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.AdvancementCommand;
 import net.minecraft.server.command.AttributeCommand;
@@ -66,6 +73,7 @@ import net.minecraft.server.command.EffectCommand;
 import net.minecraft.server.command.EnchantCommand;
 import net.minecraft.server.command.ExecuteCommand;
 import net.minecraft.server.command.ExperienceCommand;
+import net.minecraft.server.command.FillBiomeCommand;
 import net.minecraft.server.command.FillCommand;
 import net.minecraft.server.command.ForceLoadCommand;
 import net.minecraft.server.command.FunctionCommand;
@@ -134,7 +142,6 @@ import net.minecraft.text.Texts;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
-import net.minecraft.util.registry.DynamicRegistryManager;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -149,7 +156,7 @@ public class CommandManager {
 
     public CommandManager(RegistrationEnvironment environment, CommandRegistryAccess commandRegistryAccess) {
         AdvancementCommand.register(this.dispatcher);
-        AttributeCommand.register(this.dispatcher);
+        AttributeCommand.register(this.dispatcher, commandRegistryAccess);
         ExecuteCommand.register(this.dispatcher, commandRegistryAccess);
         BossBarCommand.register(this.dispatcher);
         ClearCommand.register(this.dispatcher, commandRegistryAccess);
@@ -159,11 +166,12 @@ public class CommandManager {
         DebugCommand.register(this.dispatcher);
         DefaultGameModeCommand.register(this.dispatcher);
         DifficultyCommand.register(this.dispatcher);
-        EffectCommand.register(this.dispatcher);
+        EffectCommand.register(this.dispatcher, commandRegistryAccess);
         MeCommand.register(this.dispatcher);
-        EnchantCommand.register(this.dispatcher);
+        EnchantCommand.register(this.dispatcher, commandRegistryAccess);
         ExperienceCommand.register(this.dispatcher);
         FillCommand.register(this.dispatcher, commandRegistryAccess);
+        FillBiomeCommand.register(this.dispatcher, commandRegistryAccess);
         ForceLoadCommand.register(this.dispatcher);
         FunctionCommand.register(this.dispatcher);
         GameModeCommand.register(this.dispatcher);
@@ -174,10 +182,10 @@ public class CommandManager {
         KickCommand.register(this.dispatcher);
         KillCommand.register(this.dispatcher);
         ListCommand.register(this.dispatcher);
-        LocateCommand.register(this.dispatcher);
+        LocateCommand.register(this.dispatcher, commandRegistryAccess);
         LootCommand.register(this.dispatcher, commandRegistryAccess);
         MessageCommand.register(this.dispatcher);
-        ParticleCommand.register(this.dispatcher);
+        ParticleCommand.register(this.dispatcher, commandRegistryAccess);
         PlaceCommand.register(this.dispatcher);
         PlaySoundCommand.register(this.dispatcher);
         ReloadCommand.register(this.dispatcher);
@@ -192,7 +200,7 @@ public class CommandManager {
         SpectateCommand.register(this.dispatcher);
         SpreadPlayersCommand.register(this.dispatcher);
         StopSoundCommand.register(this.dispatcher);
-        SummonCommand.register(this.dispatcher);
+        SummonCommand.register(this.dispatcher, commandRegistryAccess);
         TagCommand.register(this.dispatcher);
         TeamCommand.register(this.dispatcher);
         TeamMsgCommand.register(this.dispatcher);
@@ -368,9 +376,31 @@ public class CommandManager {
         return CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().createWithContext(parse.getReader());
     }
 
+    public static CommandRegistryAccess createRegistryAccess(final RegistryWrapper.WrapperLookup registryLookup) {
+        return new CommandRegistryAccess(){
+
+            @Override
+            public <T> RegistryWrapper<T> createWrapper(RegistryKey<? extends Registry<T>> registryRef) {
+                final RegistryWrapper.Impl impl = registryLookup.getWrapperOrThrow(registryRef);
+                return new RegistryWrapper.Delegating<T>(impl){
+
+                    @Override
+                    public Optional<RegistryEntryList.Named<T>> getOptional(TagKey<T> tag) {
+                        return Optional.of(this.getOrThrow(tag));
+                    }
+
+                    @Override
+                    public RegistryEntryList.Named<T> getOrThrow(TagKey<T> tag) {
+                        Optional<RegistryEntryList.Named<RegistryEntryList.Named>> optional = impl.getOptional(tag);
+                        return optional.orElseGet(() -> RegistryEntryList.of(impl, tag));
+                    }
+                };
+            }
+        };
+    }
+
     public static void checkMissing() {
-        CommandRegistryAccess commandRegistryAccess = new CommandRegistryAccess(DynamicRegistryManager.BUILTIN.get());
-        commandRegistryAccess.setEntryListCreationPolicy(CommandRegistryAccess.EntryListCreationPolicy.RETURN_EMPTY);
+        CommandRegistryAccess commandRegistryAccess = CommandManager.createRegistryAccess(BuiltinRegistries.createWrapperLookup());
         CommandDispatcher<ServerCommandSource> commandDispatcher = new CommandManager(RegistrationEnvironment.ALL, commandRegistryAccess).getDispatcher();
         RootCommandNode rootCommandNode = commandDispatcher.getRoot();
         commandDispatcher.findAmbiguities((parent, child, sibling, inputs) -> LOGGER.warn("Ambiguity between arguments {} and {} with inputs: {}", new Object[]{commandDispatcher.getPath(child), commandDispatcher.getPath(sibling), inputs}));

@@ -89,6 +89,13 @@ public class GameRules {
     public static final Key<BooleanRule> FORGIVE_DEAD_PLAYERS = GameRules.register("forgiveDeadPlayers", Category.MOBS, BooleanRule.create(true));
     public static final Key<BooleanRule> UNIVERSAL_ANGER = GameRules.register("universalAnger", Category.MOBS, BooleanRule.create(false));
     public static final Key<IntRule> PLAYERS_SLEEPING_PERCENTAGE = GameRules.register("playersSleepingPercentage", Category.PLAYER, IntRule.create(100));
+    public static final Key<BooleanRule> BLOCK_EXPLOSION_DROP_DECAY = GameRules.register("blockExplosionDropDecay", Category.DROPS, BooleanRule.create(true));
+    public static final Key<BooleanRule> MOB_EXPLOSION_DROP_DECAY = GameRules.register("mobExplosionDropDecay", Category.DROPS, BooleanRule.create(true));
+    public static final Key<BooleanRule> TNT_EXPLOSION_DROP_DECAY = GameRules.register("tntExplosionDropDecay", Category.DROPS, BooleanRule.create(false));
+    public static final Key<IntRule> SNOW_ACCUMULATION_HEIGHT = GameRules.register("snowAccumulationHeight", Category.UPDATES, IntRule.create(1));
+    public static final Key<BooleanRule> WATER_SOURCE_CONVERSION = GameRules.register("waterSourceConversion", Category.UPDATES, BooleanRule.create(true));
+    public static final Key<BooleanRule> LAVA_SOURCE_CONVERSION = GameRules.register("lavaSourceConversion", Category.UPDATES, BooleanRule.create(false));
+    public static final Key<BooleanRule> GLOBAL_SOUND_EVENTS = GameRules.register("globalSoundEvents", Category.MISC, BooleanRule.create(true));
     private final Map<Key<?>, Rule<?>> rules;
 
     private static <T extends Rule<T>> Key<T> register(String name, Category category, Type<T> type) {
@@ -100,9 +107,9 @@ public class GameRules {
         return key;
     }
 
-    public GameRules(DynamicLike<?> dynamicLike) {
+    public GameRules(DynamicLike<?> dynamic) {
         this();
-        this.load(dynamicLike);
+        this.load(dynamic);
     }
 
     public GameRules() {
@@ -123,8 +130,8 @@ public class GameRules {
         return nbtCompound;
     }
 
-    private void load(DynamicLike<?> dynamicLike) {
-        this.rules.forEach((key, rule) -> dynamicLike.get(key.name).asString().result().ifPresent(rule::deserialize));
+    private void load(DynamicLike<?> dynamic) {
+        this.rules.forEach((key, rule) -> dynamic.get(key.name).asString().result().ifPresent(rule::deserialize));
     }
 
     public GameRules copy() {

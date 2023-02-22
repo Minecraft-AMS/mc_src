@@ -47,6 +47,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stat;
@@ -54,7 +55,6 @@ import net.minecraft.stat.StatHandler;
 import net.minecraft.stat.StatType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
@@ -118,11 +118,11 @@ extends StatHandler {
                 NbtCompound nbtCompound2 = nbtCompound.getCompound("stats");
                 for (String string : nbtCompound2.getKeys()) {
                     if (!nbtCompound2.contains(string, 10)) continue;
-                    Util.ifPresentOrElse(Registry.STAT_TYPE.getOrEmpty(new Identifier(string)), statType -> {
+                    Util.ifPresentOrElse(Registries.STAT_TYPE.getOrEmpty(new Identifier(string)), statType -> {
                         NbtCompound nbtCompound2 = nbtCompound2.getCompound(string);
                         for (String string2 : nbtCompound2.getKeys()) {
                             if (nbtCompound2.contains(string2, 99)) {
-                                Util.ifPresentOrElse(this.createStat((StatType)statType, string2), stat -> this.statMap.put(stat, nbtCompound2.getInt(string2)), () -> LOGGER.warn("Invalid statistic in {}: Don't know what {} is", (Object)this.file, (Object)string2));
+                                Util.ifPresentOrElse(this.createStat((StatType)statType, string2), id -> this.statMap.put(id, nbtCompound2.getInt(string2)), () -> LOGGER.warn("Invalid statistic in {}: Don't know what {} is", (Object)this.file, (Object)string2));
                                 continue;
                             }
                             LOGGER.warn("Invalid statistic value in {}: Don't know what {} is for key {}", new Object[]{this.file, nbtCompound2.get(string2), string2});
@@ -163,7 +163,7 @@ extends StatHandler {
         }
         JsonObject jsonObject = new JsonObject();
         for (Map.Entry entry : map.entrySet()) {
-            jsonObject.add(Registry.STAT_TYPE.getId((StatType)entry.getKey()).toString(), (JsonElement)entry.getValue());
+            jsonObject.add(Registries.STAT_TYPE.getId((StatType)entry.getKey()).toString(), (JsonElement)entry.getValue());
         }
         JsonObject jsonObject2 = new JsonObject();
         jsonObject2.add("stats", (JsonElement)jsonObject);

@@ -79,6 +79,8 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
@@ -92,8 +94,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.TradeOffers;
@@ -118,7 +118,7 @@ public class VillagerEntity
 extends MerchantEntity
 implements InteractionObserver,
 VillagerDataContainer {
-    private static final Logger field_36335 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(VillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
     public static final int field_30602 = 12;
     public static final Map<Item, Integer> ITEM_FOOD_VALUES = ImmutableMap.of((Object)Items.BREAD, (Object)4, (Object)Items.POTATO, (Object)1, (Object)Items.CARROT, (Object)1, (Object)Items.BEETROOT, (Object)1);
@@ -147,7 +147,7 @@ VillagerDataContainer {
     private int restocksToday;
     private long lastRestockCheckTime;
     private boolean natural;
-    private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.WALK_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, MemoryModuleType.PATH, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WOKEN, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_DETECTED_RECENTLY});
+    private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, (Object[])new MemoryModuleType[]{MemoryModuleType.WALK_TARGET, MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, MemoryModuleType.PATH, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WOKEN, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_DETECTED_RECENTLY});
     private static final ImmutableList<SensorType<? extends Sensor<? super VillagerEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.NEAREST_BED, SensorType.HURT_BY, SensorType.VILLAGER_HOSTILES, SensorType.VILLAGER_BABIES, SensorType.SECONDARY_POIS, SensorType.GOLEM_DETECTED);
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, RegistryEntry<PointOfInterestType>>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villager, registryEntry) -> registryEntry.matchesKey(PointOfInterestTypes.HOME), MemoryModuleType.JOB_SITE, (villager, registryEntry) -> villager.getVillagerData().getProfession().heldWorkstation().test((RegistryEntry<PointOfInterestType>)registryEntry), MemoryModuleType.POTENTIAL_JOB_SITE, (villager, registryEntry) -> VillagerProfession.IS_ACQUIRABLE_JOB_SITE.test((RegistryEntry<PointOfInterestType>)registryEntry), MemoryModuleType.MEETING_POINT, (villager, registryEntry) -> registryEntry.matchesKey(PointOfInterestTypes.MEETING));
 
@@ -420,9 +420,9 @@ VillagerDataContainer {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)field_36335).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
+        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
         nbt.putByte("FoodLevel", (byte)this.foodLevel);
-        nbt.put("Gossips", (NbtElement)this.gossip.serialize(NbtOps.INSTANCE).getValue());
+        nbt.put("Gossips", this.gossip.serialize(NbtOps.INSTANCE));
         nbt.putInt("Xp", this.experience);
         nbt.putLong("LastRestock", this.lastRestockTime);
         nbt.putLong("LastGossipDecay", this.lastGossipDecayTime);
@@ -437,7 +437,7 @@ VillagerDataContainer {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("VillagerData", 10)) {
             DataResult dataResult = VillagerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("VillagerData")));
-            dataResult.resultOrPartial(arg_0 -> ((Logger)field_36335).error(arg_0)).ifPresent(this::setVillagerData);
+            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(this::setVillagerData);
         }
         if (nbt.contains("Offers", 10)) {
             this.offers = new TradeOfferList(nbt.getCompound("Offers"));
@@ -546,7 +546,7 @@ VillagerDataContainer {
 
     @Override
     public void onDeath(DamageSource damageSource) {
-        field_36335.info("Villager {} died, message: '{}'", (Object)this, (Object)damageSource.getDeathMessage(this).getString());
+        LOGGER.info("Villager {} died, message: '{}'", (Object)this, (Object)damageSource.getDeathMessage(this).getString());
         Entity entity = damageSource.getAttacker();
         if (entity != null) {
             this.notifyDeath(entity);
@@ -568,26 +568,26 @@ VillagerDataContainer {
             return;
         }
         ServerWorld serverWorld = (ServerWorld)world;
-        Optional<LivingTargetCache> optional = this.brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS);
+        Optional<LivingTargetCache> optional = this.brain.getOptionalRegisteredMemory(MemoryModuleType.VISIBLE_MOBS);
         if (optional.isEmpty()) {
             return;
         }
-        optional.get().iterate(InteractionObserver.class::isInstance).forEach(livingEntity -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)livingEntity)));
+        optional.get().iterate(InteractionObserver.class::isInstance).forEach(observer -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)observer)));
     }
 
-    public void releaseTicketFor(MemoryModuleType<GlobalPos> memoryModuleType) {
+    public void releaseTicketFor(MemoryModuleType<GlobalPos> pos2) {
         if (!(this.world instanceof ServerWorld)) {
             return;
         }
         MinecraftServer minecraftServer = ((ServerWorld)this.world).getServer();
-        this.brain.getOptionalMemory(memoryModuleType).ifPresent(pos -> {
+        this.brain.getOptionalRegisteredMemory(pos2).ifPresent(pos -> {
             ServerWorld serverWorld = minecraftServer.getWorld(pos.getDimension());
             if (serverWorld == null) {
                 return;
             }
             PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
             Optional<RegistryEntry<PointOfInterestType>> optional = pointOfInterestStorage.getType(pos.getPos());
-            BiPredicate<VillagerEntity, RegistryEntry<PointOfInterestType>> biPredicate = POINTS_OF_INTEREST.get(memoryModuleType);
+            BiPredicate<VillagerEntity, RegistryEntry<PointOfInterestType>> biPredicate = POINTS_OF_INTEREST.get(pos2);
             if (optional.isPresent() && biPredicate.test(this, optional.get())) {
                 pointOfInterestStorage.releaseTicket(pos.getPos());
                 DebugInfoSender.sendPointOfInterest(serverWorld, pos.getPos());
@@ -597,7 +597,7 @@ VillagerDataContainer {
 
     @Override
     public boolean isReadyToBreed() {
-        return this.foodLevel + this.getAvailableFood() >= 12 && this.getBreedingAge() == 0;
+        return this.foodLevel + this.getAvailableFood() >= 12 && !this.isSleeping() && this.getBreedingAge() == 0;
     }
 
     private boolean lacksFood() {
@@ -651,7 +651,7 @@ VillagerDataContainer {
 
     @Override
     protected Text getDefaultName() {
-        return Text.translatable(this.getType().getTranslationKey() + "." + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
+        return Text.translatable(this.getType().getTranslationKey() + "." + Registries.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
     }
 
     @Override
@@ -685,6 +685,7 @@ VillagerDataContainer {
     }
 
     @Override
+    @Nullable
     public VillagerEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         double d = this.random.nextDouble();
         VillagerType villagerType = d < 0.5 ? VillagerType.forBiome(serverWorld.getBiome(this.getBlockPos())) : (d < 0.75 ? this.getVillagerData().getType() : ((VillagerEntity)passiveEntity).getVillagerData().getType());
@@ -696,19 +697,23 @@ VillagerDataContainer {
     @Override
     public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
         if (world.getDifficulty() != Difficulty.PEACEFUL) {
-            field_36335.info("Villager {} was struck by lightning {}.", (Object)this, (Object)lightning);
+            LOGGER.info("Villager {} was struck by lightning {}.", (Object)this, (Object)lightning);
             WitchEntity witchEntity = EntityType.WITCH.create(world);
-            witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
-            witchEntity.initialize(world, world.getLocalDifficulty(witchEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
-            witchEntity.setAiDisabled(this.isAiDisabled());
-            if (this.hasCustomName()) {
-                witchEntity.setCustomName(this.getCustomName());
-                witchEntity.setCustomNameVisible(this.isCustomNameVisible());
+            if (witchEntity != null) {
+                witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
+                witchEntity.initialize(world, world.getLocalDifficulty(witchEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
+                witchEntity.setAiDisabled(this.isAiDisabled());
+                if (this.hasCustomName()) {
+                    witchEntity.setCustomName(this.getCustomName());
+                    witchEntity.setCustomNameVisible(this.isCustomNameVisible());
+                }
+                witchEntity.setPersistent();
+                world.spawnEntityAndPassengers(witchEntity);
+                this.releaseAllTickets();
+                this.discard();
+            } else {
+                super.onStruckByLightning(world, lightning);
             }
-            witchEntity.setPersistent();
-            world.spawnEntityAndPassengers(witchEntity);
-            this.releaseAllTickets();
-            this.discard();
         } else {
             super.onStruckByLightning(world, lightning);
         }
@@ -860,7 +865,7 @@ VillagerDataContainer {
     }
 
     private boolean hasRecentlySlept(long worldTime) {
-        Optional<Long> optional = this.brain.getOptionalMemory(MemoryModuleType.LAST_SLEPT);
+        Optional<Long> optional = this.brain.getOptionalRegisteredMemory(MemoryModuleType.LAST_SLEPT);
         if (optional.isPresent()) {
             return worldTime - optional.get() < 24000L;
         }
@@ -868,6 +873,7 @@ VillagerDataContainer {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }

@@ -12,7 +12,6 @@ package net.minecraft.client.gui.screen.option;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -31,7 +30,6 @@ import net.minecraft.client.util.VideoMode;
 import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -74,14 +72,14 @@ extends GameOptionsScreen {
             Optional<VideoMode> optional = window.getVideoMode();
             j = optional.map(monitor::findClosestVideoModeIndex).orElse(-1);
         }
-        SimpleOption<Integer> simpleOption = new SimpleOption<Integer>("options.fullscreen.resolution", SimpleOption.emptyTooltip(), (text, value) -> {
+        SimpleOption<Integer> simpleOption = new SimpleOption<Integer>("options.fullscreen.resolution", SimpleOption.emptyTooltip(), (prefix, value) -> {
             if (monitor == null) {
                 return Text.translatable("options.fullscreen.unavailable");
             }
             if (value == -1) {
-                return GameOptions.getGenericValueText(text, Text.translatable("options.fullscreen.current"));
+                return GameOptions.getGenericValueText(prefix, Text.translatable("options.fullscreen.current"));
             }
-            return GameOptions.getGenericValueText(text, Text.literal(monitor.getVideoMode((int)value).toString()));
+            return GameOptions.getGenericValueText(prefix, Text.literal(monitor.getVideoMode((int)value).toString()));
         }, new SimpleOption.ValidatingIntSliderCallbacks(-1, monitor != null ? monitor.getVideoModeCount() - 1 : -1), j, value -> {
             if (monitor == null) {
                 return;
@@ -92,11 +90,11 @@ extends GameOptionsScreen {
         this.list.addSingleOptionEntry(this.gameOptions.getBiomeBlendRadius());
         this.list.addAll(VideoOptionsScreen.getOptions(this.gameOptions));
         this.addSelectableChild(this.list);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> {
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             this.client.options.write();
             window.applyVideoMode();
             this.client.setScreen(this.parent);
-        }));
+        }).dimensions(this.width / 2 - 100, this.height - 27, 200, 20).build());
     }
 
     @Override
@@ -148,28 +146,8 @@ extends GameOptionsScreen {
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        int i = this.gameOptions.getGuiScale().getValue();
-        if (super.mouseReleased(mouseX, mouseY, button)) {
-            return true;
-        }
-        if (this.list.mouseReleased(mouseX, mouseY, button)) {
-            if (this.gameOptions.getGuiScale().getValue() != i) {
-                this.client.onResolutionChanged();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.renderBackground(matrices);
-        this.list.render(matrices, mouseX, mouseY, delta);
-        VideoOptionsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 5, 0xFFFFFF);
-        super.render(matrices, mouseX, mouseY, delta);
-        List<OrderedText> list = VideoOptionsScreen.getHoveredButtonTooltip(this.list, mouseX, mouseY);
-        this.renderOrderedTooltip(matrices, list, mouseX, mouseY);
+        this.render(matrices, this.list, mouseX, mouseY, delta);
     }
 }
 

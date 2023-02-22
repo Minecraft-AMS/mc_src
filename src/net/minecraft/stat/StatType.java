@@ -9,10 +9,11 @@ package net.minecraft.stat;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatFormatter;
 import net.minecraft.text.Text;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class StatType<T>
@@ -48,7 +49,7 @@ implements Iterable<Stat<T>> {
     }
 
     public String getTranslationKey() {
-        return "stat_type." + Registry.STAT_TYPE.getId(this).toString().replace(':', '.');
+        return "stat_type." + Registries.STAT_TYPE.getId(this).toString().replace(':', '.');
     }
 
     public Text getName() {

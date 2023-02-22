@@ -108,7 +108,7 @@ extends BlockWithEntity {
         boolean bl = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos.up());
         boolean bl2 = state.get(TRIGGERED);
         if (bl && !bl2) {
-            world.createAndScheduleBlockTick(pos, this, 4);
+            world.scheduleBlockTick(pos, this, 4);
             world.setBlockState(pos, (BlockState)state.with(TRIGGERED, true), 4);
         } else if (!bl && bl2) {
             world.setBlockState(pos, (BlockState)state.with(TRIGGERED, false), 4);

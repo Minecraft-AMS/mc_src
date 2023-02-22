@@ -9,21 +9,23 @@ package net.minecraft.test;
 
 import com.mojang.authlib.GameProfile;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
-import net.minecraft.block.AbstractButtonBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.LeverBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LockableContainerBlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.Path;
@@ -31,10 +33,12 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsageContext;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Property;
 import net.minecraft.structure.StructureTemplate;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.test.GameTestException;
 import net.minecraft.test.GameTestState;
 import net.minecraft.test.PositionedException;
@@ -48,7 +52,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
@@ -88,6 +91,10 @@ public class TestContext {
         return itemEntity;
     }
 
+    public ItemEntity spawnItem(Item item, BlockPos pos) {
+        return this.spawnItem(item, pos.getX(), pos.getY(), pos.getZ());
+    }
+
     public <E extends Entity> E spawnEntity(EntityType<E> type, BlockPos pos) {
         return this.spawnEntity(type, Vec3d.ofBottomCenter(pos));
     }
@@ -95,8 +102,12 @@ public class TestContext {
     public <E extends Entity> E spawnEntity(EntityType<E> type, Vec3d pos) {
         ServerWorld serverWorld = this.getWorld();
         E entity = type.create(serverWorld);
+        if (entity == null) {
+            throw new NullPointerException("Failed to create entity " + type.getRegistryEntry().registryKey().getValue());
+        }
         if (entity instanceof MobEntity) {
-            ((MobEntity)entity).setPersistent();
+            MobEntity mobEntity = (MobEntity)entity;
+            mobEntity.setPersistent();
         }
         Vec3d vec3d = this.getAbsolute(pos);
         ((Entity)entity).refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, ((Entity)entity).getYaw(), ((Entity)entity).getPitch());
@@ -147,14 +158,23 @@ public class TestContext {
         this.checkBlockState(pos, state -> state.isIn(BlockTags.BUTTONS), () -> "Expected button");
         BlockPos blockPos = this.getAbsolutePos(pos);
         BlockState blockState = this.getWorld().getBlockState(blockPos);
-        AbstractButtonBlock abstractButtonBlock = (AbstractButtonBlock)blockState.getBlock();
-        abstractButtonBlock.powerOn(blockState, this.getWorld(), blockPos);
+        ButtonBlock buttonBlock = (ButtonBlock)blockState.getBlock();
+        buttonBlock.powerOn(blockState, this.getWorld(), blockPos);
     }
 
     public void useBlock(BlockPos pos) {
+        this.useBlock(pos, this.createMockCreativePlayer());
+    }
+
+    public void useBlock(BlockPos pos, PlayerEntity player) {
+        BlockPos blockPos = this.getAbsolutePos(pos);
+        this.useBlock(pos, player, new BlockHitResult(Vec3d.ofCenter(blockPos), Direction.NORTH, blockPos, true));
+    }
+
+    public void useBlock(BlockPos pos, PlayerEntity player, BlockHitResult result) {
         BlockPos blockPos = this.getAbsolutePos(pos);
         BlockState blockState = this.getWorld().getBlockState(blockPos);
-        blockState.onUse(this.getWorld(), this.createMockPlayer(), Hand.MAIN_HAND, new BlockHitResult(Vec3d.ofCenter(blockPos), Direction.NORTH, blockPos, true));
+        blockState.onUse(this.getWorld(), player, Hand.MAIN_HAND, result);
     }
 
     public LivingEntity drown(LivingEntity entity) {
@@ -163,8 +183,8 @@ public class TestContext {
         return entity;
     }
 
-    public PlayerEntity createMockPlayer() {
-        return new PlayerEntity(this.getWorld(), BlockPos.ORIGIN, 0.0f, new GameProfile(UUID.randomUUID(), "test-mock-player"), null){
+    public PlayerEntity createMockSurvivalPlayer() {
+        return new PlayerEntity(this.getWorld(), BlockPos.ORIGIN, 0.0f, new GameProfile(UUID.randomUUID(), "test-mock-player")){
 
             @Override
             public boolean isSpectator() {
@@ -173,6 +193,26 @@ public class TestContext {
 
             @Override
             public boolean isCreative() {
+                return false;
+            }
+        };
+    }
+
+    public PlayerEntity createMockCreativePlayer() {
+        return new PlayerEntity(this.getWorld(), BlockPos.ORIGIN, 0.0f, new GameProfile(UUID.randomUUID(), "test-mock-player")){
+
+            @Override
+            public boolean isSpectator() {
+                return false;
+            }
+
+            @Override
+            public boolean isCreative() {
+                return true;
+            }
+
+            @Override
+            public boolean isMainPlayer() {
                 return true;
             }
         };
@@ -257,7 +297,13 @@ public class TestContext {
     }
 
     public <T extends Comparable<T>> void expectBlockProperty(BlockPos pos, Property<T> property, T value) {
-        this.checkBlockState(pos, state -> state.contains(property) && state.get(property).equals(value), () -> "Expected property " + property.getName() + " to be " + value);
+        BlockState blockState = this.getBlockState(pos);
+        boolean bl = blockState.contains(property);
+        if (!bl || !blockState.get(property).equals(value)) {
+            String string = bl ? "was " + blockState.get(property) : "property " + property.getName() + " is missing";
+            String string2 = String.format(Locale.ROOT, "Expected property %s to be %s, %s", property.getName(), value, string);
+            throw new PositionedException(string2, this.getAbsolutePos(pos), pos, this.test.getTick());
+        }
     }
 
     public <T extends Comparable<T>> void checkBlockProperty(BlockPos pos, Property<T> property, Predicate<T> predicate, String errorMessage) {
@@ -287,6 +333,13 @@ public class TestContext {
         List<Entity> list = this.getWorld().getEntitiesByType(type, new Box(blockPos), Entity::isAlive);
         if (list.isEmpty()) {
             throw new PositionedException("Expected " + type.getUntranslatedName(), blockPos, pos, this.test.getTick());
+        }
+    }
+
+    public void expectEntityInside(EntityType<?> type, Vec3d pos1, Vec3d pos2) {
+        List<Entity> list = this.getWorld().getEntitiesByType(type, new Box(pos1, pos2), Entity::isAlive);
+        if (list.isEmpty()) {
+            throw new PositionedException("Expected " + type.getUntranslatedName() + " between ", new BlockPos(pos1), new BlockPos(pos2), this.test.getTick());
         }
     }
 
@@ -408,6 +461,32 @@ public class TestContext {
         }
     }
 
+    public <E extends LivingEntity> void expectEntityHoldingItem(BlockPos pos, EntityType<E> entityType, Item item) {
+        BlockPos blockPos = this.getAbsolutePos(pos);
+        List<LivingEntity> list = this.getWorld().getEntitiesByType(entityType, new Box(blockPos), Entity::isAlive);
+        if (list.isEmpty()) {
+            throw new PositionedException("Expected entity of type: " + entityType, blockPos, pos, this.getTick());
+        }
+        for (LivingEntity livingEntity : list) {
+            if (!livingEntity.isHolding(item)) continue;
+            return;
+        }
+        throw new PositionedException("Entity should be holding: " + item, blockPos, pos, this.getTick());
+    }
+
+    public <E extends Entity> void expectEntityWithItem(BlockPos pos, EntityType<E> entityType, Item item) {
+        BlockPos blockPos = this.getAbsolutePos(pos);
+        List<Entity> list = this.getWorld().getEntitiesByType(entityType, new Box(blockPos), entity -> ((Entity)entity).isAlive());
+        if (list.isEmpty()) {
+            throw new PositionedException("Expected " + entityType.getUntranslatedName() + " to exist", blockPos, pos, this.getTick());
+        }
+        for (Entity entity2 : list) {
+            if (!((InventoryOwner)((Object)entity2)).getInventory().containsAny(stack -> stack.isOf(item))) continue;
+            return;
+        }
+        throw new PositionedException("Entity inventory should contain: " + item, blockPos, pos, this.getTick());
+    }
+
     public void expectEmptyContainer(BlockPos pos) {
         BlockPos blockPos = this.getAbsolutePos(pos);
         BlockEntity blockEntity = this.getWorld().getBlockEntity(blockPos);
@@ -420,7 +499,7 @@ public class TestContext {
         BlockPos blockPos = this.getAbsolutePos(pos);
         BlockEntity blockEntity = this.getWorld().getBlockEntity(blockPos);
         if (!(blockEntity instanceof LockableContainerBlockEntity)) {
-            throw new GameTestException("Expected a container at " + pos + ", found " + Registry.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
+            throw new GameTestException("Expected a container at " + pos + ", found " + Registries.BLOCK_ENTITY_TYPE.getId(blockEntity.getType()));
         }
         if (((LockableContainerBlockEntity)blockEntity).count(item) != 1) {
             throw new GameTestException("Container should contain: " + item);
@@ -570,6 +649,17 @@ public class TestContext {
         return StructureTemplate.transformAround(vec3d.add(pos), BlockMirror.NONE, this.test.getRotation(), this.test.getPos());
     }
 
+    public Vec3d getRelative(Vec3d pos) {
+        Vec3d vec3d = Vec3d.of(this.test.getPos());
+        return StructureTemplate.transformAround(pos.subtract(vec3d), BlockMirror.NONE, this.test.getRotation(), this.test.getPos());
+    }
+
+    public void assertTrue(boolean condition, String message) {
+        if (!condition) {
+            throw new GameTestException(message);
+        }
+    }
+
     public long getTick() {
         return this.test.getTick();
     }
@@ -590,6 +680,13 @@ public class TestContext {
 
     public void forEachRemainingTick(Runnable runnable) {
         LongStream.range(this.test.getTick(), this.test.getTicksLeft()).forEach(tick -> this.test.runAtTick(tick, runnable::run));
+    }
+
+    public void useStackOnBlock(PlayerEntity player, ItemStack stack, BlockPos pos, Direction direction) {
+        BlockPos blockPos = this.getAbsolutePos(pos.offset(direction));
+        BlockHitResult blockHitResult = new BlockHitResult(Vec3d.ofCenter(blockPos), direction, blockPos, false);
+        ItemUsageContext itemUsageContext = new ItemUsageContext(player, Hand.MAIN_HAND, blockHitResult);
+        stack.useOnBlock(itemUsageContext);
     }
 }
 

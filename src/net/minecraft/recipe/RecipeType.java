@@ -11,8 +11,9 @@ import net.minecraft.recipe.SmeltingRecipe;
 import net.minecraft.recipe.SmithingRecipe;
 import net.minecraft.recipe.SmokingRecipe;
 import net.minecraft.recipe.StonecuttingRecipe;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 public interface RecipeType<T extends Recipe<?>> {
     public static final RecipeType<CraftingRecipe> CRAFTING = RecipeType.register("crafting");
@@ -24,7 +25,7 @@ public interface RecipeType<T extends Recipe<?>> {
     public static final RecipeType<SmithingRecipe> SMITHING = RecipeType.register("smithing");
 
     public static <T extends Recipe<?>> RecipeType<T> register(final String id) {
-        return Registry.register(Registry.RECIPE_TYPE, new Identifier(id), new RecipeType<T>(){
+        return Registry.register(Registries.RECIPE_TYPE, new Identifier(id), new RecipeType<T>(){
 
             public String toString() {
                 return id;

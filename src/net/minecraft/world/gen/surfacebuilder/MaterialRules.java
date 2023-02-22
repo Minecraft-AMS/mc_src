@@ -30,6 +30,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.dynamic.CodecHolder;
 import net.minecraft.util.math.BlockPos;
@@ -39,9 +44,6 @@ import net.minecraft.util.math.VerticalSurfaceType;
 import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.math.random.RandomSplitter;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
@@ -182,7 +184,7 @@ public class MaterialRules {
                 protected boolean test() {
                     int i = bl ? this.context.stoneDepthBelow : this.context.stoneDepthAbove;
                     int j = StoneDepthMaterialCondition.this.addSurfaceDepth ? this.context.runDepth : 0;
-                    int k = StoneDepthMaterialCondition.this.secondaryDepthRange == 0 ? 0 : (int)MathHelper.lerpFromProgress(this.context.method_39550(), -1.0, 1.0, 0.0, (double)StoneDepthMaterialCondition.this.secondaryDepthRange);
+                    int k = StoneDepthMaterialCondition.this.secondaryDepthRange == 0 ? 0 : (int)MathHelper.map(this.context.method_39550(), -1.0, 1.0, 0.0, (double)StoneDepthMaterialCondition.this.secondaryDepthRange);
                     return i <= 1 + StoneDepthMaterialCondition.this.offset + j + k;
                 }
             }
@@ -248,7 +250,7 @@ public class MaterialRules {
 
     public static interface MaterialCondition
     extends Function<MaterialRuleContext, BooleanSupplier> {
-        public static final Codec<MaterialCondition> CODEC = Registry.MATERIAL_CONDITION.getCodec().dispatch(materialCondition -> materialCondition.codec().codec(), Function.identity());
+        public static final Codec<MaterialCondition> CODEC = Registries.MATERIAL_CONDITION.getCodec().dispatch(materialCondition -> materialCondition.codec().codec(), Function.identity());
 
         public static Codec<? extends MaterialCondition> registerAndGetDefault(Registry<Codec<? extends MaterialCondition>> registry) {
             MaterialRules.register(registry, "biome", BiomeMaterialCondition.CODEC);
@@ -405,7 +407,7 @@ public class MaterialRules {
 
     static final class BiomeMaterialCondition
     implements MaterialCondition {
-        static final CodecHolder<BiomeMaterialCondition> CODEC = CodecHolder.of(RegistryKey.createCodec(Registry.BIOME_KEY).listOf().fieldOf("biome_is").xmap(MaterialRules::biome, biomeMaterialCondition -> biomeMaterialCondition.biomes));
+        static final CodecHolder<BiomeMaterialCondition> CODEC = CodecHolder.of(RegistryKey.createCodec(RegistryKeys.BIOME).listOf().fieldOf("biome_is").xmap(MaterialRules::biome, biomeMaterialCondition -> biomeMaterialCondition.biomes));
         private final List<RegistryKey<Biome>> biomes;
         final Predicate<RegistryKey<Biome>> predicate;
 
@@ -466,7 +468,7 @@ public class MaterialRules {
         private final RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> noise;
         final double minThreshold;
         final double maxThreshold;
-        static final CodecHolder<NoiseThresholdMaterialCondition> CODEC = CodecHolder.of(RecordCodecBuilder.mapCodec(instance -> instance.group((App)RegistryKey.createCodec(Registry.NOISE_KEY).fieldOf("noise").forGetter(NoiseThresholdMaterialCondition::noise), (App)Codec.DOUBLE.fieldOf("min_threshold").forGetter(NoiseThresholdMaterialCondition::minThreshold), (App)Codec.DOUBLE.fieldOf("max_threshold").forGetter(NoiseThresholdMaterialCondition::maxThreshold)).apply((Applicative)instance, NoiseThresholdMaterialCondition::new)));
+        static final CodecHolder<NoiseThresholdMaterialCondition> CODEC = CodecHolder.of(RecordCodecBuilder.mapCodec(instance -> instance.group((App)RegistryKey.createCodec(RegistryKeys.NOISE_PARAMETERS).fieldOf("noise").forGetter(NoiseThresholdMaterialCondition::noise), (App)Codec.DOUBLE.fieldOf("min_threshold").forGetter(NoiseThresholdMaterialCondition::minThreshold), (App)Codec.DOUBLE.fieldOf("max_threshold").forGetter(NoiseThresholdMaterialCondition::maxThreshold)).apply((Applicative)instance, NoiseThresholdMaterialCondition::new)));
 
         NoiseThresholdMaterialCondition(RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> registryKey, double d, double e) {
             this.noise = registryKey;
@@ -559,7 +561,7 @@ public class MaterialRules {
                     if (i2 >= j) {
                         return false;
                     }
-                    double d = MathHelper.lerpFromProgress((double)i2, (double)i, (double)j, 1.0, 0.0);
+                    double d = MathHelper.map((double)i2, (double)i, (double)j, 1.0, 0.0);
                     Random random = randomSplitter.split(this.context.blockX, i2, this.context.blockZ);
                     return (double)random.nextFloat() < d;
                 }
@@ -755,7 +757,7 @@ public class MaterialRules {
 
     public static interface MaterialRule
     extends Function<MaterialRuleContext, BlockStateRule> {
-        public static final Codec<MaterialRule> CODEC = Registry.MATERIAL_RULE.getCodec().dispatch(materialRule -> materialRule.codec().codec(), Function.identity());
+        public static final Codec<MaterialRule> CODEC = Registries.MATERIAL_RULE.getCodec().dispatch(materialRule -> materialRule.codec().codec(), Function.identity());
 
         public static Codec<? extends MaterialRule> registerAndGetDefault(Registry<Codec<? extends MaterialRule>> registry) {
             MaterialRules.register(registry, "bandlands", TerracottaBandsMaterialRule.CODEC);

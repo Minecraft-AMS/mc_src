@@ -31,13 +31,15 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.Packet;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -53,7 +55,7 @@ import org.slf4j.Logger;
 
 public class FallingBlockEntity
 extends Entity {
-    private static final Logger field_36333 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private BlockState block = Blocks.SAND.getDefaultState();
     public int timeFalling;
     public boolean dropItem = true;
@@ -167,7 +169,7 @@ extends Entity {
                                         blockEntity.readNbt(nbtCompound);
                                     }
                                     catch (Exception exception) {
-                                        field_36333.error("Failed to load block entity from falling block", (Throwable)exception);
+                                        LOGGER.error("Failed to load block entity from falling block", (Throwable)exception);
                                     }
                                     blockEntity.markDirty();
                                 }
@@ -218,10 +220,10 @@ extends Entity {
         if (this.block.getBlock() instanceof LandingBlock) {
             LandingBlock landingBlock = (LandingBlock)((Object)this.block.getBlock());
             predicate = landingBlock.getEntityPredicate();
-            damageSource2 = landingBlock.getDamageSource();
+            damageSource2 = landingBlock.getDamageSource(this);
         } else {
             predicate = EntityPredicates.EXCEPT_SPECTATOR;
-            damageSource2 = DamageSource.FALLING_BLOCK;
+            damageSource2 = DamageSource.fallingBlock(this);
         }
         float f = Math.min(MathHelper.floor((float)i * this.fallHurtAmount), this.fallHurtMax);
         this.world.getOtherEntities(this, this.getBoundingBox(), predicate).forEach(entity -> entity.damage(damageSource2, f));
@@ -252,7 +254,7 @@ extends Entity {
 
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
-        this.block = NbtHelper.toBlockState(nbt.getCompound("BlockState"));
+        this.block = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("BlockState"));
         this.timeFalling = nbt.getInt("Time");
         if (nbt.contains("HurtEntities", 99)) {
             this.hurtEntities = nbt.getBoolean("HurtEntities");
@@ -299,7 +301,7 @@ extends Entity {
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
         return new EntitySpawnS2CPacket(this, Block.getRawIdFromState(this.getBlockState()));
     }
 

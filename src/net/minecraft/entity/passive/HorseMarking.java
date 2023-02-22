@@ -3,8 +3,8 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.function.IntFunction;
+import net.minecraft.util.function.ValueLists;
 
 public final class HorseMarking
 extends Enum<HorseMarking> {
@@ -13,8 +13,8 @@ extends Enum<HorseMarking> {
     public static final /* enum */ HorseMarking WHITE_FIELD = new HorseMarking(2);
     public static final /* enum */ HorseMarking WHITE_DOTS = new HorseMarking(3);
     public static final /* enum */ HorseMarking BLACK_DOTS = new HorseMarking(4);
-    private static final HorseMarking[] VALUES;
-    private final int index;
+    private static final IntFunction<HorseMarking> BY_ID;
+    private final int id;
     private static final /* synthetic */ HorseMarking[] field_23815;
 
     public static HorseMarking[] values() {
@@ -25,16 +25,16 @@ extends Enum<HorseMarking> {
         return Enum.valueOf(HorseMarking.class, string);
     }
 
-    private HorseMarking(int index) {
-        this.index = index;
+    private HorseMarking(int id) {
+        this.id = id;
     }
 
-    public int getIndex() {
-        return this.index;
+    public int getId() {
+        return this.id;
     }
 
     public static HorseMarking byIndex(int index) {
-        return VALUES[index % VALUES.length];
+        return BY_ID.apply(index);
     }
 
     private static /* synthetic */ HorseMarking[] method_36645() {
@@ -43,7 +43,7 @@ extends Enum<HorseMarking> {
 
     static {
         field_23815 = HorseMarking.method_36645();
-        VALUES = (HorseMarking[])Arrays.stream(HorseMarking.values()).sorted(Comparator.comparingInt(HorseMarking::getIndex)).toArray(HorseMarking[]::new);
+        BY_ID = ValueLists.createIdToValueFunction(HorseMarking::getId, HorseMarking.values(), ValueLists.OutOfBoundsHandling.WRAP);
     }
 }
 

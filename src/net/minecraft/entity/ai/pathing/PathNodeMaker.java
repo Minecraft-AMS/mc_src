@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.pathing;
 
@@ -18,7 +17,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.chunk.ChunkCache;
-import org.jetbrains.annotations.Nullable;
 
 public abstract class PathNodeMaker {
     protected ChunkCache cachedWorld;
@@ -30,6 +28,7 @@ public abstract class PathNodeMaker {
     protected boolean canEnterOpenDoors;
     protected boolean canOpenDoors;
     protected boolean canSwim;
+    protected boolean canWalkOverFences;
 
     public void init(ChunkCache cachedWorld, MobEntity entity) {
         this.cachedWorld = cachedWorld;
@@ -45,28 +44,20 @@ public abstract class PathNodeMaker {
         this.entity = null;
     }
 
-    @Nullable
     protected PathNode getNode(BlockPos pos) {
         return this.getNode(pos.getX(), pos.getY(), pos.getZ());
     }
 
-    @Nullable
     protected PathNode getNode(int x, int y, int z) {
         return (PathNode)this.pathNodeCache.computeIfAbsent(PathNode.hash(x, y, z), l -> new PathNode(x, y, z));
     }
 
-    @Nullable
     public abstract PathNode getStart();
 
-    @Nullable
     public abstract TargetPathNode getNode(double var1, double var3, double var5);
 
-    @Nullable
-    protected TargetPathNode asTargetPathNode(@Nullable PathNode node) {
-        if (node != null) {
-            return new TargetPathNode(node);
-        }
-        return null;
+    protected TargetPathNode asTargetPathNode(PathNode node) {
+        return new TargetPathNode(node);
     }
 
     public abstract int getSuccessors(PathNode[] var1, PathNode var2);
@@ -87,6 +78,10 @@ public abstract class PathNodeMaker {
         this.canSwim = canSwim;
     }
 
+    public void setCanWalkOverFences(boolean canWalkOverFences) {
+        this.canWalkOverFences = canWalkOverFences;
+    }
+
     public boolean canEnterOpenDoors() {
         return this.canEnterOpenDoors;
     }
@@ -97,6 +92,10 @@ public abstract class PathNodeMaker {
 
     public boolean canSwim() {
         return this.canSwim;
+    }
+
+    public boolean canWalkOverFences() {
+        return this.canWalkOverFences;
     }
 }
 

@@ -17,6 +17,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.entity.ai.goal.Goal;
@@ -55,8 +56,8 @@ public class GoalSelector {
     }
 
     @VisibleForTesting
-    public void clear() {
-        this.goals.clear();
+    public void clear(Predicate<Goal> predicate) {
+        this.goals.removeIf(goal -> predicate.test(goal.getGoal()));
     }
 
     public void remove(Goal goal) {

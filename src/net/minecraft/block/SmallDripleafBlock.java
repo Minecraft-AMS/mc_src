@@ -20,12 +20,12 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
@@ -102,7 +102,7 @@ Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
@@ -113,7 +113,7 @@ Waterloggable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         return true;
     }
 

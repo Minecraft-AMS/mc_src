@@ -59,7 +59,7 @@ extends Feature<BlockPileFeatureConfig> {
 
     private void addPileBlock(WorldAccess world, BlockPos pos, Random random, BlockPileFeatureConfig config) {
         if (world.isAir(pos) && this.canPlace(world, pos, random)) {
-            world.setBlockState(pos, config.stateProvider.getBlockState(random, pos), 4);
+            world.setBlockState(pos, config.stateProvider.get(random, pos), 4);
         }
     }
 }

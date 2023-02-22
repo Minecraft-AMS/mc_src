@@ -15,7 +15,6 @@
  */
 package net.minecraft.screen;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.Supplier;
 import net.minecraft.block.Block;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -34,6 +34,8 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.screen.Property;
 import net.minecraft.screen.PropertyDelegate;
 import net.minecraft.screen.ScreenHandlerContext;
@@ -50,7 +52,6 @@ import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -187,9 +188,9 @@ public abstract class ScreenHandler {
         int i;
         for (i = 0; i < this.slots.size(); ++i) {
             ItemStack itemStack = this.slots.get(i).getStack();
-            Supplier supplier = Suppliers.memoize(itemStack::copy);
-            this.updateTrackedSlot(i, itemStack, (java.util.function.Supplier<ItemStack>)supplier);
-            this.checkSlotUpdates(i, itemStack, (java.util.function.Supplier<ItemStack>)supplier);
+            com.google.common.base.Supplier supplier = Suppliers.memoize(itemStack::copy);
+            this.updateTrackedSlot(i, itemStack, (Supplier<ItemStack>)supplier);
+            this.checkSlotUpdates(i, itemStack, (Supplier<ItemStack>)supplier);
         }
         this.checkCursorStackUpdates();
         for (i = 0; i < this.properties.size(); ++i) {
@@ -222,7 +223,7 @@ public abstract class ScreenHandler {
         }
     }
 
-    private void updateTrackedSlot(int slot, ItemStack stack, java.util.function.Supplier<ItemStack> copySupplier) {
+    private void updateTrackedSlot(int slot, ItemStack stack, Supplier<ItemStack> copySupplier) {
         ItemStack itemStack = this.trackedStacks.get(slot);
         if (!ItemStack.areEqual(itemStack, stack)) {
             ItemStack itemStack2 = copySupplier.get();
@@ -233,7 +234,7 @@ public abstract class ScreenHandler {
         }
     }
 
-    private void checkSlotUpdates(int slot, ItemStack stack, java.util.function.Supplier<ItemStack> copySupplier) {
+    private void checkSlotUpdates(int slot, ItemStack stack, Supplier<ItemStack> copySupplier) {
         if (this.disableSync) {
             return;
         }
@@ -296,7 +297,7 @@ public abstract class ScreenHandler {
         return this.slots.get(index);
     }
 
-    public abstract ItemStack transferSlot(PlayerEntity var1, int var2);
+    public abstract ItemStack quickMove(PlayerEntity var1, int var2);
 
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
         try {
@@ -305,7 +306,7 @@ public abstract class ScreenHandler {
         catch (Exception exception) {
             CrashReport crashReport = CrashReport.create(exception, "Container click");
             CrashReportSection crashReportSection = crashReport.addElement("Click info");
-            crashReportSection.add("Menu Type", () -> this.type != null ? Registry.SCREEN_HANDLER.getId(this.type).toString() : "<no type>");
+            crashReportSection.add("Menu Type", () -> this.type != null ? Registries.SCREEN_HANDLER.getId(this.type).toString() : "<no type>");
             crashReportSection.add("Menu Class", () -> this.getClass().getCanonicalName());
             crashReportSection.add("Slot Count", this.slots.size());
             crashReportSection.add("Slot", slotIndex);
@@ -420,9 +421,9 @@ public abstract class ScreenHandler {
                                         if (!slot.canTakeItems(player)) {
                                             return;
                                         }
-                                        ItemStack itemStack4 = this.transferSlot(player, slotIndex);
-                                        while (!itemStack4.isEmpty() && ItemStack.areItemsEqualIgnoreDamage(slot.getStack(), itemStack4)) {
-                                            itemStack4 = this.transferSlot(player, slotIndex);
+                                        ItemStack itemStack4 = this.quickMove(player, slotIndex);
+                                        while (!itemStack4.isEmpty() && ItemStack.areItemsEqual(slot.getStack(), itemStack4)) {
+                                            itemStack4 = this.quickMove(player, slotIndex);
                                         }
                                     } else {
                                         if (slotIndex < 0) {
@@ -432,7 +433,7 @@ public abstract class ScreenHandler {
                                         ItemStack itemStack5 = slot.getStack();
                                         ItemStack itemStack52 = this.getCursorStack();
                                         player.onPickupSlotClick(itemStack52, slot.getStack(), clickType);
-                                        if (!itemStack52.onStackClicked(slot, clickType, player) && !itemStack5.onClicked(itemStack52, slot, clickType, player, this.getCursorStackReference())) {
+                                        if (!this.handleSlotClick(player, clickType, slot, itemStack5, itemStack52)) {
                                             if (itemStack5.isEmpty()) {
                                                 if (!itemStack52.isEmpty()) {
                                                     int n = clickType == ClickType.LEFT ? itemStack52.getCount() : 1;
@@ -537,6 +538,14 @@ public abstract class ScreenHandler {
                 }
             }
         }
+    }
+
+    private boolean handleSlotClick(PlayerEntity player, ClickType clickType, Slot slot, ItemStack stack, ItemStack cursorStack) {
+        FeatureSet featureSet = player.getWorld().getEnabledFeatures();
+        if (cursorStack.isItemEnabled(featureSet) && cursorStack.onStackClicked(slot, clickType, player)) {
+            return true;
+        }
+        return stack.isItemEnabled(featureSet) && stack.onClicked(cursorStack, slot, clickType, player, this.getCursorStackReference());
     }
 
     private StackReference getCursorStackReference() {

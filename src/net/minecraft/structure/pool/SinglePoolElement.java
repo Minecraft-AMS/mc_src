@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.StructureBlockMode;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.StructureTemplateManager;
@@ -38,7 +39,6 @@ import net.minecraft.structure.pool.StructurePoolElementType;
 import net.minecraft.structure.processor.BlockIgnoreStructureProcessor;
 import net.minecraft.structure.processor.JigsawReplacementStructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorList;
-import net.minecraft.structure.processor.StructureProcessorLists;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
@@ -47,7 +47,6 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -79,10 +78,6 @@ extends StructurePoolElement {
         super(projection);
         this.location = location;
         this.processors = processors;
-    }
-
-    public SinglePoolElement(StructureTemplate template) {
-        this((Either<Identifier, StructureTemplate>)Either.right((Object)template), StructureProcessorLists.EMPTY, StructurePool.Projection.RIGID);
     }
 
     @Override

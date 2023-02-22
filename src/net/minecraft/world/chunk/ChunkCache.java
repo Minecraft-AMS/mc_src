@@ -16,13 +16,13 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
@@ -43,13 +43,13 @@ CollisionView {
     protected final Chunk[][] chunks;
     protected boolean empty;
     protected final World world;
-    private final Supplier<RegistryEntry<Biome>> field_36403;
+    private final Supplier<RegistryEntry<Biome>> plainsEntryGetter;
 
     public ChunkCache(World world, BlockPos minPos, BlockPos maxPos) {
         int l;
         int k;
         this.world = world;
-        this.field_36403 = Suppliers.memoize(() -> world.getRegistryManager().get(Registry.BIOME_KEY).entryOf(BiomeKeys.PLAINS));
+        this.plainsEntryGetter = Suppliers.memoize(() -> world.getRegistryManager().get(RegistryKeys.BIOME).entryOf(BiomeKeys.PLAINS));
         this.minX = ChunkSectionPos.getSectionCoord(minPos.getX());
         this.minZ = ChunkSectionPos.getSectionCoord(minPos.getZ());
         int i = ChunkSectionPos.getSectionCoord(maxPos.getX());
@@ -80,10 +80,10 @@ CollisionView {
         int i = chunkX - this.minX;
         int j = chunkZ - this.minZ;
         if (i < 0 || i >= this.chunks.length || j < 0 || j >= this.chunks[i].length) {
-            return new EmptyChunk(this.world, new ChunkPos(chunkX, chunkZ), this.field_36403.get());
+            return new EmptyChunk(this.world, new ChunkPos(chunkX, chunkZ), this.plainsEntryGetter.get());
         }
         Chunk chunk = this.chunks[i][j];
-        return chunk != null ? chunk : new EmptyChunk(this.world, new ChunkPos(chunkX, chunkZ), this.field_36403.get());
+        return chunk != null ? chunk : new EmptyChunk(this.world, new ChunkPos(chunkX, chunkZ), this.plainsEntryGetter.get());
     }
 
     @Override

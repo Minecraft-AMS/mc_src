@@ -36,12 +36,13 @@ import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 
 public class SetBannerPatternFunction
 extends ConditionalLootFunction {
@@ -104,7 +105,7 @@ extends ConditionalLootFunction {
         }
 
         public Builder pattern(RegistryKey<BannerPattern> pattern, DyeColor color) {
-            return this.pattern(Registry.BANNER_PATTERN.entryOf(pattern), color);
+            return this.pattern(Registries.BANNER_PATTERN.entryOf(pattern), color);
         }
 
         public Builder pattern(RegistryEntry<BannerPattern> pattern, DyeColor color) {
@@ -141,7 +142,7 @@ extends ConditionalLootFunction {
             for (int i = 0; i < jsonArray.size(); ++i) {
                 JsonObject jsonObject2 = JsonHelper.asObject(jsonArray.get(i), "pattern[" + i + "]");
                 String string = JsonHelper.getString(jsonObject2, "pattern");
-                Optional<RegistryEntry<BannerPattern>> optional = Registry.BANNER_PATTERN.getEntry(RegistryKey.of(Registry.BANNER_PATTERN_KEY, new Identifier(string)));
+                Optional<RegistryEntry.Reference<BannerPattern>> optional = Registries.BANNER_PATTERN.getEntry(RegistryKey.of(RegistryKeys.BANNER_PATTERN, new Identifier(string)));
                 if (optional.isEmpty()) {
                     throw new JsonSyntaxException("Unknown pattern: " + string);
                 }
@@ -150,7 +151,7 @@ extends ConditionalLootFunction {
                 if (dyeColor == null) {
                     throw new JsonSyntaxException("Unknown color: " + string2);
                 }
-                builder.add((Object)Pair.of(optional.get(), (Object)dyeColor));
+                builder.add((Object)Pair.of((Object)optional.get(), (Object)dyeColor));
             }
             boolean bl = JsonHelper.getBoolean(jsonObject, "append");
             return new SetBannerPatternFunction(lootConditions, (List<Pair<RegistryEntry<BannerPattern>, DyeColor>>)builder.build(), bl);

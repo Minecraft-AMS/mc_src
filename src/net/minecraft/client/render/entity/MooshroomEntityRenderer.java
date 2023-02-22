@@ -36,7 +36,7 @@ extends MobEntityRenderer<MooshroomEntity, CowEntityModel<MooshroomEntity>> {
 
     @Override
     public Identifier getTexture(MooshroomEntity mooshroomEntity) {
-        return TEXTURES.get((Object)mooshroomEntity.getMooshroomType());
+        return TEXTURES.get(mooshroomEntity.getVariant());
     }
 }
 

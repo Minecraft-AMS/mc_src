@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
  *  com.mojang.logging.LogUtils
@@ -10,12 +9,12 @@
  *  it.unimi.dsi.fastutil.ints.IntSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.client.font;
 
-import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
@@ -25,10 +24,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IllegalFormatException;
 import java.util.Locale;
-import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -42,6 +47,8 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -53,59 +60,107 @@ implements Font {
     private static final int field_32233 = 256;
     private static final int field_32234 = 256;
     private static final byte field_37905 = 0;
-    private final ResourceManager resourceManager;
+    private static final int field_40410 = 65536;
     private final byte[] sizes;
-    private final String template;
-    private final Map<Identifier, NativeImage> images = Maps.newHashMap();
+    private final FontImage[] fontImages = new FontImage[256];
 
     public UnicodeTextureFont(ResourceManager resourceManager, byte[] sizes, String template) {
-        this.resourceManager = resourceManager;
         this.sizes = sizes;
-        this.template = template;
+        HashSet<Identifier> set = new HashSet<Identifier>();
         for (int i = 0; i < 256; ++i) {
             int j = i * 256;
-            Identifier identifier = this.getImageId(j);
-            try (InputStream inputStream = this.resourceManager.open(identifier);
-                 NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);){
-                if (nativeImage.getWidth() == 256 && nativeImage.getHeight() == 256) {
-                    for (int k = 0; k < 256; ++k) {
-                        byte b = sizes[j + k];
-                        if (b == 0 || UnicodeTextureFont.getStart(b) <= UnicodeTextureFont.getEnd(b)) continue;
-                        sizes[j + k] = 0;
-                    }
-                    continue;
-                }
-            }
-            catch (IOException iOException) {
-                // empty catch block
-            }
-            Arrays.fill(sizes, j, j + 256, (byte)0);
+            set.add(UnicodeTextureFont.getImageId(template, j));
         }
+        String string = UnicodeTextureFont.getCommonPath(set);
+        HashMap map = new HashMap();
+        resourceManager.findResources(string, set::contains).forEach((id, resource) -> map.put(id, CompletableFuture.supplyAsync(() -> {
+            NativeImage nativeImage;
+            block8: {
+                InputStream inputStream = resource.getInputStream();
+                try {
+                    nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
+                    if (inputStream == null) break block8;
+                }
+                catch (Throwable throwable) {
+                    try {
+                        if (inputStream != null) {
+                            try {
+                                inputStream.close();
+                            }
+                            catch (Throwable throwable2) {
+                                throwable.addSuppressed(throwable2);
+                            }
+                        }
+                        throw throwable;
+                    }
+                    catch (IOException iOException) {
+                        LOGGER.error("Failed to read resource {} from pack {}", id, (Object)resource.getResourcePackName());
+                        return null;
+                    }
+                }
+                inputStream.close();
+            }
+            return nativeImage;
+        }, Util.getMainWorkerExecutor())));
+        ArrayList<CompletionStage> list = new ArrayList<CompletionStage>(256);
+        for (int k = 0; k < 256; ++k) {
+            int l = k * 256;
+            int m = k;
+            Identifier identifier = UnicodeTextureFont.getImageId(template, l);
+            CompletableFuture completableFuture = (CompletableFuture)map.get(identifier);
+            if (completableFuture == null) continue;
+            list.add(completableFuture.thenAcceptAsync(image -> {
+                if (image == null) {
+                    return;
+                }
+                if (image.getWidth() == 256 && image.getHeight() == 256) {
+                    for (int k = 0; k < 256; ++k) {
+                        byte b = sizes[l + k];
+                        if (b == 0 || UnicodeTextureFont.getStart(b) <= UnicodeTextureFont.getEnd(b)) continue;
+                        bs[i + k] = 0;
+                    }
+                    this.fontImages[j] = new FontImage(sizes, (NativeImage)image);
+                } else {
+                    image.close();
+                    Arrays.fill(sizes, l, l + 256, (byte)0);
+                }
+            }, (Executor)Util.getMainWorkerExecutor()));
+        }
+        CompletableFuture.allOf((CompletableFuture[])list.toArray(CompletableFuture[]::new)).join();
+    }
+
+    private static String getCommonPath(Set<Identifier> ids) {
+        String string = StringUtils.getCommonPrefix((String[])((String[])ids.stream().map(Identifier::getPath).toArray(String[]::new)));
+        int i = string.lastIndexOf("/");
+        if (i == -1) {
+            return "";
+        }
+        return string.substring(0, i);
     }
 
     @Override
     public void close() {
-        this.images.values().forEach(NativeImage::close);
+        for (FontImage fontImage : this.fontImages) {
+            if (fontImage == null) continue;
+            fontImage.close();
+        }
     }
 
-    private Identifier getImageId(int codePoint) {
-        Identifier identifier = new Identifier(String.format(Locale.ROOT, this.template, String.format(Locale.ROOT, "%02x", codePoint / 256)));
-        return new Identifier(identifier.getNamespace(), "textures/" + identifier.getPath());
+    private static Identifier getImageId(String template, int codePoint) {
+        String string = String.format(Locale.ROOT, "%02x", codePoint / 256);
+        Identifier identifier = new Identifier(String.format(Locale.ROOT, template, string));
+        return identifier.withPrefixedPath("textures/");
     }
 
     @Override
     @Nullable
     public Glyph getGlyph(int codePoint) {
-        NativeImage nativeImage;
         if (codePoint < 0 || codePoint >= this.sizes.length) {
             return null;
         }
-        byte b = this.sizes[codePoint];
-        if (b != 0 && (nativeImage = this.images.computeIfAbsent(this.getImageId(codePoint), this::getGlyphImage)) != null) {
-            int i = UnicodeTextureFont.getStart(b);
-            return new UnicodeTextureGlyph(codePoint % 16 * 16 + i, (codePoint & 0xFF) / 16 * 16, UnicodeTextureFont.getEnd(b) - i, 16, nativeImage);
-        }
-        return null;
+        int i = codePoint / 256;
+        FontImage fontImage = this.fontImages[i];
+        return fontImage != null ? fontImage.getGlyph(codePoint) : null;
     }
 
     @Override
@@ -118,43 +173,39 @@ implements Font {
         return intSet;
     }
 
-    @Nullable
-    private NativeImage getGlyphImage(Identifier glyphId) {
-        NativeImage nativeImage;
-        block8: {
-            InputStream inputStream = this.resourceManager.open(glyphId);
-            try {
-                nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
-                if (inputStream == null) break block8;
-            }
-            catch (Throwable throwable) {
-                try {
-                    if (inputStream != null) {
-                        try {
-                            inputStream.close();
-                        }
-                        catch (Throwable throwable2) {
-                            throwable.addSuppressed(throwable2);
-                        }
-                    }
-                    throw throwable;
-                }
-                catch (IOException iOException) {
-                    LOGGER.error("Couldn't load texture {}", (Object)glyphId, (Object)iOException);
-                    return null;
-                }
-            }
-            inputStream.close();
-        }
-        return nativeImage;
-    }
-
-    private static int getStart(byte size) {
+    static int getStart(byte size) {
         return size >> 4 & 0xF;
     }
 
-    private static int getEnd(byte size) {
+    static int getEnd(byte size) {
         return (size & 0xF) + 1;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class FontImage
+    implements AutoCloseable {
+        private final byte[] sizes;
+        private final NativeImage image;
+
+        FontImage(byte[] sizes, NativeImage image) {
+            this.sizes = sizes;
+            this.image = image;
+        }
+
+        @Override
+        public void close() {
+            this.image.close();
+        }
+
+        @Nullable
+        public Glyph getGlyph(int codePoint) {
+            byte b = this.sizes[codePoint];
+            if (b != 0) {
+                int i = UnicodeTextureFont.getStart(b);
+                return new UnicodeTextureGlyph(codePoint % 16 * 16 + i, (codePoint & 0xFF) / 16 * 16, UnicodeTextureFont.getEnd(b) - i, 16, this.image);
+            }
+            return null;
+        }
     }
 
     @Environment(value=EnvType.CLIENT)

@@ -37,9 +37,11 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
     static final Text INCOMPATIBLE = Text.translatable("pack.incompatible");
     static final Text INCOMPATIBLE_CONFIRM = Text.translatable("pack.incompatible.confirm.title");
     private final Text title;
+    private final Screen screen;
 
-    public PackListWidget(MinecraftClient client, int width, int height, Text title) {
+    public PackListWidget(MinecraftClient client, Screen screen, int width, int height, Text title) {
         super(client, width, height, 32, height - 55 + 4, 36);
+        this.screen = screen;
         this.title = title;
         this.centerListVertically = false;
         Objects.requireNonNull(client.textRenderer);
@@ -60,6 +62,11 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
     @Override
     protected int getScrollbarPositionX() {
         return this.right - 6;
+    }
+
+    @Override
+    protected boolean isFocused() {
+        return this.screen.getFocused() == this;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -119,7 +126,7 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 DrawableHelper.fill(matrices, x - 1, y - 1, x + entryWidth - 9, y + entryHeight + 1, -8978432);
             }
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, this.pack.getIconId());
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
@@ -128,7 +135,7 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
             if (this.isSelectable() && (this.client.options.getTouchscreen().getValue().booleanValue() || hovered)) {
                 RenderSystem.setShaderTexture(0, RESOURCE_PACKS_TEXTURE);
                 DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
-                RenderSystem.setShader(GameRenderer::getPositionTexShader);
+                RenderSystem.setShader(GameRenderer::getPositionTexProgram);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 int i = mouseX - x;
                 int j = mouseY - y;

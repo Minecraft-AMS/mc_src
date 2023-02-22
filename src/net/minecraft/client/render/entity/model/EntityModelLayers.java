@@ -37,6 +37,7 @@ public class EntityModelLayers {
     public static final EntityModelLayer BOOK = EntityModelLayers.registerMain("book");
     public static final EntityModelLayer CAT = EntityModelLayers.registerMain("cat");
     public static final EntityModelLayer CAT_COLLAR = EntityModelLayers.register("cat", "collar");
+    public static final EntityModelLayer CAMEL = EntityModelLayers.registerMain("camel");
     public static final EntityModelLayer CAVE_SPIDER = EntityModelLayers.registerMain("cave_spider");
     public static final EntityModelLayer CHEST = EntityModelLayers.registerMain("chest");
     public static final EntityModelLayer CHEST_MINECART = EntityModelLayers.registerMain("chest_minecart");
@@ -104,6 +105,7 @@ public class EntityModelLayers {
     public static final EntityModelLayer PIGLIN_BRUTE = EntityModelLayers.registerMain("piglin_brute");
     public static final EntityModelLayer PIGLIN_BRUTE_INNER_ARMOR = EntityModelLayers.createInnerArmor("piglin_brute");
     public static final EntityModelLayer PIGLIN_BRUTE_OUTER_ARMOR = EntityModelLayers.createOuterArmor("piglin_brute");
+    public static final EntityModelLayer PIGLIN_HEAD = EntityModelLayers.registerMain("piglin_head");
     public static final EntityModelLayer PIGLIN_INNER_ARMOR = EntityModelLayers.createInnerArmor("piglin");
     public static final EntityModelLayer PIGLIN_OUTER_ARMOR = EntityModelLayers.createOuterArmor("piglin");
     public static final EntityModelLayer PIG_SADDLE = EntityModelLayers.register("pig", "saddle");
@@ -206,6 +208,14 @@ public class EntityModelLayers {
         return EntityModelLayers.register(id, "outer_armor");
     }
 
+    public static EntityModelLayer createRaft(BoatEntity.Type type) {
+        return EntityModelLayers.create("raft/" + type.getName(), MAIN);
+    }
+
+    public static EntityModelLayer createChestRaft(BoatEntity.Type type) {
+        return EntityModelLayers.create("chest_raft/" + type.getName(), MAIN);
+    }
+
     public static EntityModelLayer createBoat(BoatEntity.Type type) {
         return EntityModelLayers.create("boat/" + type.getName(), MAIN);
     }
@@ -216,6 +226,10 @@ public class EntityModelLayers {
 
     public static EntityModelLayer createSign(SignType type) {
         return EntityModelLayers.create("sign/" + type.getName(), MAIN);
+    }
+
+    public static EntityModelLayer createHangingSign(SignType type) {
+        return EntityModelLayers.create("hanging_sign/" + type.getName(), MAIN);
     }
 
     public static Stream<EntityModelLayer> getLayers() {

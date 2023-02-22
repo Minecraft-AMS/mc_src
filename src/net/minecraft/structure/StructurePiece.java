@@ -28,6 +28,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.Registries;
 import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePiecesHolder;
@@ -39,7 +40,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.ServerWorldAccess;
@@ -87,7 +87,7 @@ public abstract class StructurePiece {
 
     public final NbtCompound toNbt(StructureContext context) {
         NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putString("id", Registry.STRUCTURE_PIECE.getId(this.getType()).toString());
+        nbtCompound.putString("id", Registries.STRUCTURE_PIECE.getId(this.getType()).toString());
         BlockBox.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.boundingBox).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbtCompound.put("BB", (NbtElement)nbtElement));
         Direction direction = this.getFacing();
         nbtCompound.putInt("O", direction == null ? -1 : direction.getHorizontal());
@@ -193,7 +193,7 @@ public abstract class StructurePiece {
         world.setBlockState(blockPos, block, 2);
         FluidState fluidState = world.getFluidState(blockPos);
         if (!fluidState.isEmpty()) {
-            world.createAndScheduleFluidTick(blockPos, fluidState.getFluid(), 0);
+            world.scheduleFluidTick(blockPos, fluidState.getFluid(), 0);
         }
         if (BLOCKS_NEEDING_POST_PROCESSING.contains(block.getBlock())) {
             world.getChunk(blockPos).markBlockForPostProcessing(blockPos);

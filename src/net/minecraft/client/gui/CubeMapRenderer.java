@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.gui;
 
@@ -21,8 +22,8 @@ import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class CubeMapRenderer {
@@ -31,22 +32,22 @@ public class CubeMapRenderer {
 
     public CubeMapRenderer(Identifier faces) {
         for (int i = 0; i < 6; ++i) {
-            this.faces[i] = new Identifier(faces.getNamespace(), faces.getPath() + "_" + i + ".png");
+            this.faces[i] = faces.withPath(faces.getPath() + "_" + i + ".png");
         }
     }
 
     public void draw(MinecraftClient client, float x, float y, float alpha) {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        Matrix4f matrix4f = Matrix4f.viewboxMatrix(85.0, (float)client.getWindow().getFramebufferWidth() / (float)client.getWindow().getFramebufferHeight(), 0.05f, 10.0f);
+        Matrix4f matrix4f = new Matrix4f().setPerspective(1.4835298f, (float)client.getWindow().getFramebufferWidth() / (float)client.getWindow().getFramebufferHeight(), 0.05f, 10.0f);
         RenderSystem.backupProjectionMatrix();
         RenderSystem.setProjectionMatrix(matrix4f);
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
         matrixStack.loadIdentity();
-        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(180.0f));
+        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180.0f));
         RenderSystem.applyModelViewMatrix();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
         RenderSystem.disableCull();
@@ -58,9 +59,9 @@ public class CubeMapRenderer {
             float f = ((float)(j % 2) / 2.0f - 0.5f) / 256.0f;
             float g = ((float)(j / 2) / 2.0f - 0.5f) / 256.0f;
             float h = 0.0f;
-            matrixStack.translate(f, g, 0.0);
-            matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(x));
-            matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(y));
+            matrixStack.translate(f, g, 0.0f);
+            matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(x));
+            matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(y));
             RenderSystem.applyModelViewMatrix();
             for (int k = 0; k < 6; ++k) {
                 RenderSystem.setShaderTexture(0, this.faces[k]);

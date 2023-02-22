@@ -8,12 +8,10 @@ import net.minecraft.util.StringIdentifiable;
 public final class ChestType
 extends Enum<ChestType>
 implements StringIdentifiable {
-    public static final /* enum */ ChestType SINGLE = new ChestType("single", 0);
-    public static final /* enum */ ChestType LEFT = new ChestType("left", 2);
-    public static final /* enum */ ChestType RIGHT = new ChestType("right", 1);
-    public static final ChestType[] VALUES;
+    public static final /* enum */ ChestType SINGLE = new ChestType("single");
+    public static final /* enum */ ChestType LEFT = new ChestType("left");
+    public static final /* enum */ ChestType RIGHT = new ChestType("right");
     private final String name;
-    private final int opposite;
     private static final /* synthetic */ ChestType[] field_12573;
 
     public static ChestType[] values() {
@@ -24,9 +22,8 @@ implements StringIdentifiable {
         return Enum.valueOf(ChestType.class, string);
     }
 
-    private ChestType(String name, int opposite) {
+    private ChestType(String name) {
         this.name = name;
-        this.opposite = opposite;
     }
 
     @Override
@@ -35,7 +32,12 @@ implements StringIdentifiable {
     }
 
     public ChestType getOpposite() {
-        return VALUES[this.opposite];
+        return switch (this) {
+            default -> throw new IncompatibleClassChangeError();
+            case SINGLE -> SINGLE;
+            case LEFT -> RIGHT;
+            case RIGHT -> LEFT;
+        };
     }
 
     private static /* synthetic */ ChestType[] method_36724() {
@@ -44,7 +46,6 @@ implements StringIdentifiable {
 
     static {
         field_12573 = ChestType.method_36724();
-        VALUES = ChestType.values();
     }
 }
 

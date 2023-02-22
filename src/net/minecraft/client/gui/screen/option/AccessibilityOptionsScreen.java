@@ -25,7 +25,7 @@ extends SimpleOptionsScreen {
     private static final String GUIDE_URL = "https://aka.ms/MinecraftJavaAccessibility";
 
     private static SimpleOption<?>[] getOptions(GameOptions gameOptions) {
-        return new SimpleOption[]{gameOptions.getNarrator(), gameOptions.getShowSubtitles(), gameOptions.getTextBackgroundOpacity(), gameOptions.getBackgroundForChatOnly(), gameOptions.getChatOpacity(), gameOptions.getChatLineSpacing(), gameOptions.getChatDelay(), gameOptions.getAutoJump(), gameOptions.getSneakToggled(), gameOptions.getSprintToggled(), gameOptions.getDistortionEffectScale(), gameOptions.getFovEffectScale(), gameOptions.getMonochromeLogo(), gameOptions.getHideLightningFlashes(), gameOptions.getDarknessEffectScale()};
+        return new SimpleOption[]{gameOptions.getNarrator(), gameOptions.getShowSubtitles(), gameOptions.getTextBackgroundOpacity(), gameOptions.getBackgroundForChatOnly(), gameOptions.getChatOpacity(), gameOptions.getChatLineSpacing(), gameOptions.getChatDelay(), gameOptions.getAutoJump(), gameOptions.getSneakToggled(), gameOptions.getSprintToggled(), gameOptions.getDistortionEffectScale(), gameOptions.getFovEffectScale(), gameOptions.getMonochromeLogo(), gameOptions.getHideLightningFlashes(), gameOptions.getDarknessEffectScale(), gameOptions.getPanoramaSpeed()};
     }
 
     public AccessibilityOptionsScreen(Screen parent, GameOptions gameOptions) {
@@ -34,13 +34,13 @@ extends SimpleOptionsScreen {
 
     @Override
     protected void initFooter() {
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 27, 150, 20, Text.translatable("options.accessibility.link"), button -> this.client.setScreen(new ConfirmLinkScreen(openInBrowser -> {
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("options.accessibility.link"), button -> this.client.setScreen(new ConfirmLinkScreen(openInBrowser -> {
             if (openInBrowser) {
                 Util.getOperatingSystem().open(GUIDE_URL);
             }
             this.client.setScreen(this);
-        }, GUIDE_URL, true))));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, this.height - 27, 150, 20, ScreenTexts.DONE, button -> this.client.setScreen(this.parent)));
+        }, GUIDE_URL, true))).dimensions(this.width / 2 - 155, this.height - 27, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 5, this.height - 27, 150, 20).build());
     }
 }
 

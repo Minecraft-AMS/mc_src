@@ -39,7 +39,7 @@ extends Screen {
     protected void init() {
         this.reasonFormatted = MultilineText.create(this.textRenderer, (StringVisitable)this.reason, this.width - 50);
         this.reasonHeight = this.reasonFormatted.count() * this.textRenderer.fontHeight;
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, Math.min(this.height / 2 + this.reasonHeight / 2 + this.textRenderer.fontHeight, this.height - 30), 200, 20, Text.translatable("gui.toMenu"), button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.toMenu"), button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 100, Math.min(this.height / 2 + this.reasonHeight / 2 + this.textRenderer.fontHeight, this.height - 30), 200, 20).build());
     }
 
     @Override

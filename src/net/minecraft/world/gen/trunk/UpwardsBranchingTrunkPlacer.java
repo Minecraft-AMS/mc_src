@@ -20,13 +20,13 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.RegistryCodecs;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryCodecs;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import net.minecraft.world.gen.foliage.FoliagePlacer;
@@ -35,7 +35,7 @@ import net.minecraft.world.gen.trunk.TrunkPlacerType;
 
 public class UpwardsBranchingTrunkPlacer
 extends TrunkPlacer {
-    public static final Codec<UpwardsBranchingTrunkPlacer> CODEC = RecordCodecBuilder.create(instance -> UpwardsBranchingTrunkPlacer.fillTrunkPlacerFields(instance).and(instance.group((App)IntProvider.POSITIVE_CODEC.fieldOf("extra_branch_steps").forGetter(trunkPlacer -> trunkPlacer.extraBranchSteps), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("place_branch_per_log_probability").forGetter(trunkPlacer -> Float.valueOf(trunkPlacer.placeBranchPerLogProbability)), (App)IntProvider.NON_NEGATIVE_CODEC.fieldOf("extra_branch_length").forGetter(trunkPlacer -> trunkPlacer.extraBranchLength), (App)RegistryCodecs.entryList(Registry.BLOCK_KEY).fieldOf("can_grow_through").forGetter(trunkPlacer -> trunkPlacer.canGrowThrough))).apply((Applicative)instance, UpwardsBranchingTrunkPlacer::new));
+    public static final Codec<UpwardsBranchingTrunkPlacer> CODEC = RecordCodecBuilder.create(instance -> UpwardsBranchingTrunkPlacer.fillTrunkPlacerFields(instance).and(instance.group((App)IntProvider.POSITIVE_CODEC.fieldOf("extra_branch_steps").forGetter(trunkPlacer -> trunkPlacer.extraBranchSteps), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("place_branch_per_log_probability").forGetter(trunkPlacer -> Float.valueOf(trunkPlacer.placeBranchPerLogProbability)), (App)IntProvider.NON_NEGATIVE_CODEC.fieldOf("extra_branch_length").forGetter(trunkPlacer -> trunkPlacer.extraBranchLength), (App)RegistryCodecs.entryList(RegistryKeys.BLOCK).fieldOf("can_grow_through").forGetter(trunkPlacer -> trunkPlacer.canGrowThrough))).apply((Applicative)instance, UpwardsBranchingTrunkPlacer::new));
     private final IntProvider extraBranchSteps;
     private final float placeBranchPerLogProbability;
     private final IntProvider extraBranchLength;

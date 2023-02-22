@@ -19,8 +19,8 @@ import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.FeatureUpdater;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class VersionedChunkStorage
 implements AutoCloseable {
-    public static final int field_36219 = 1493;
+    public static final int FEATURE_UPDATING_VERSION = 1493;
     private final StorageIoWorker worker;
     protected final DataFixer dataFixer;
     @Nullable
@@ -49,7 +49,7 @@ implements AutoCloseable {
     public NbtCompound updateChunkNbt(RegistryKey<World> worldKey, Supplier<PersistentStateManager> persistentStateManagerFactory, NbtCompound nbt, Optional<RegistryKey<Codec<? extends ChunkGenerator>>> generatorCodecKey) {
         int i = VersionedChunkStorage.getDataVersion(nbt);
         if (i < 1493 && (nbt = NbtHelper.update(this.dataFixer, DataFixTypes.CHUNK, nbt, i, 1493)).getCompound("Level").getBoolean("hasLegacyStructureData")) {
-            FeatureUpdater featureUpdater = this.method_43411(worldKey, persistentStateManagerFactory);
+            FeatureUpdater featureUpdater = this.getFeatureUpdater(worldKey, persistentStateManagerFactory);
             nbt = featureUpdater.getUpdatedReferences(nbt);
         }
         VersionedChunkStorage.saveContextToNbt(nbt, worldKey, generatorCodecKey);
@@ -64,14 +64,14 @@ implements AutoCloseable {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    private FeatureUpdater method_43411(RegistryKey<World> registryKey, Supplier<PersistentStateManager> supplier) {
+    private FeatureUpdater getFeatureUpdater(RegistryKey<World> worldKey, Supplier<PersistentStateManager> stateManagerGetter) {
         FeatureUpdater featureUpdater = this.featureUpdater;
         if (featureUpdater == null) {
             VersionedChunkStorage versionedChunkStorage = this;
             synchronized (versionedChunkStorage) {
                 featureUpdater = this.featureUpdater;
                 if (featureUpdater == null) {
-                    this.featureUpdater = featureUpdater = FeatureUpdater.create(registryKey, supplier.get());
+                    this.featureUpdater = featureUpdater = FeatureUpdater.create(worldKey, stateManagerGetter.get());
                 }
             }
         }

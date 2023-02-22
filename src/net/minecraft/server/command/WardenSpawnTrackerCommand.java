@@ -16,6 +16,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import java.util.Collection;
+import net.minecraft.block.entity.SculkShriekerWarningManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -28,7 +29,7 @@ public class WardenSpawnTrackerCommand {
 
     private static int setWarningLevel(ServerCommandSource source, Collection<? extends PlayerEntity> players, int warningCount) {
         for (PlayerEntity playerEntity : players) {
-            playerEntity.getSculkShriekerWarningManager().setWarningLevel(warningCount);
+            playerEntity.getSculkShriekerWarningManager().ifPresent(warningManager -> warningManager.setWarningLevel(warningCount));
         }
         if (players.size() == 1) {
             source.sendFeedback(Text.translatable("commands.warden_spawn_tracker.set.success.single", players.iterator().next().getDisplayName()), true);
@@ -40,7 +41,7 @@ public class WardenSpawnTrackerCommand {
 
     private static int clearTracker(ServerCommandSource source, Collection<? extends PlayerEntity> players) {
         for (PlayerEntity playerEntity : players) {
-            playerEntity.getSculkShriekerWarningManager().reset();
+            playerEntity.getSculkShriekerWarningManager().ifPresent(SculkShriekerWarningManager::reset);
         }
         if (players.size() == 1) {
             source.sendFeedback(Text.translatable("commands.warden_spawn_tracker.clear.success.single", players.iterator().next().getDisplayName()), true);

@@ -9,9 +9,8 @@ package net.minecraft.item;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
+import java.util.function.IntFunction;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
@@ -27,6 +26,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FireworkRocketItem
 extends Item {
+    public static final byte[] FLIGHT_VALUES = new byte[]{1, 2, 3};
     public static final String FIREWORKS_KEY = "Fireworks";
     public static final String EXPLOSION_KEY = "Explosion";
     public static final String EXPLOSIONS_KEY = "Explosions";
@@ -43,7 +44,7 @@ extends Item {
     public static final String FLICKER_KEY = "Flicker";
     public static final String COLORS_KEY = "Colors";
     public static final String FADE_COLORS_KEY = "FadeColors";
-    public static final double field_30884 = 0.15;
+    public static final double OFFSET_POS_MULTIPLIER = 0.15;
 
     public FireworkRocketItem(Item.Settings settings) {
         super(settings);
@@ -104,10 +105,14 @@ extends Item {
         }
     }
 
+    public static void setFlight(ItemStack stack, byte flight) {
+        stack.getOrCreateSubNbt(FIREWORKS_KEY).putByte(FLIGHT_KEY, flight);
+    }
+
     @Override
     public ItemStack getDefaultStack() {
         ItemStack itemStack = new ItemStack(this);
-        itemStack.getOrCreateNbt().putByte(FLIGHT_KEY, (byte)1);
+        FireworkRocketItem.setFlight(itemStack, (byte)1);
         return itemStack;
     }
 
@@ -118,7 +123,7 @@ extends Item {
         public static final /* enum */ Type STAR = new Type(2, "star");
         public static final /* enum */ Type CREEPER = new Type(3, "creeper");
         public static final /* enum */ Type BURST = new Type(4, "burst");
-        private static final Type[] TYPES;
+        private static final IntFunction<Type> BY_ID;
         private final int id;
         private final String name;
         private static final /* synthetic */ Type[] field_7978;
@@ -145,10 +150,7 @@ extends Item {
         }
 
         public static Type byId(int id) {
-            if (id < 0 || id >= TYPES.length) {
-                return SMALL_BALL;
-            }
-            return TYPES[id];
+            return BY_ID.apply(id);
         }
 
         private static /* synthetic */ Type[] method_36677() {
@@ -157,7 +159,7 @@ extends Item {
 
         static {
             field_7978 = Type.method_36677();
-            TYPES = (Type[])Arrays.stream(Type.values()).sorted(Comparator.comparingInt(type -> type.id)).toArray(Type[]::new);
+            BY_ID = ValueLists.createIdToValueFunction(Type::getId, Type.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 }

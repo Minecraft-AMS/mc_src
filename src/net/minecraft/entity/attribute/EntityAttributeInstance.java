@@ -26,7 +26,7 @@ import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.registry.Registries;
 import org.jetbrains.annotations.Nullable;
 
 public class EntityAttributeInstance {
@@ -170,7 +170,7 @@ public class EntityAttributeInstance {
 
     public NbtCompound toNbt() {
         NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putString("Name", Registry.ATTRIBUTE.getId(this.type).toString());
+        nbtCompound.putString("Name", Registries.ATTRIBUTE.getId(this.type).toString());
         nbtCompound.putDouble("Base", this.baseValue);
         if (!this.persistentModifiers.isEmpty()) {
             NbtList nbtList = new NbtList();

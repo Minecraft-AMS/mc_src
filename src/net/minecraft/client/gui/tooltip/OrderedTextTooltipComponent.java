@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.gui.tooltip;
 
@@ -13,7 +14,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.text.OrderedText;
-import net.minecraft.util.math.Matrix4f;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class OrderedTextTooltipComponent

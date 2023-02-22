@@ -2,66 +2,53 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.hash.HashCode
- *  com.google.common.hash.Hashing
- *  com.google.common.hash.HashingOutputStream
+ *  com.google.common.primitives.Ints
+ *  com.google.common.primitives.Longs
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.MapCodec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.network.message;
 
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hashing;
-import com.google.common.hash.HashingOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
 import java.nio.charset.StandardCharsets;
+import java.security.SignatureException;
 import java.time.Instant;
+import java.util.Optional;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.message.DecoratedContents;
+import net.minecraft.network.encryption.SignatureUpdatable;
 import net.minecraft.network.message.LastSeenMessageList;
-import net.minecraft.text.Text;
+import net.minecraft.network.message.MessageSignatureStorage;
+import net.minecraft.util.dynamic.Codecs;
 
-public record MessageBody(DecoratedContents content, Instant timestamp, long salt, LastSeenMessageList lastSeenMessages) {
-    public static final byte LAST_SEEN_SEPARATOR = 70;
+public record MessageBody(String content, Instant timestamp, long salt, LastSeenMessageList lastSeenMessages) {
+    public static final MapCodec<MessageBody> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)Codec.STRING.fieldOf("content").forGetter(MessageBody::content), (App)Codecs.INSTANT.fieldOf("time_stamp").forGetter(MessageBody::timestamp), (App)Codec.LONG.fieldOf("salt").forGetter(MessageBody::salt), (App)LastSeenMessageList.CODEC.optionalFieldOf("last_seen", (Object)LastSeenMessageList.EMPTY).forGetter(MessageBody::lastSeenMessages)).apply((Applicative)instance, MessageBody::new));
 
-    public MessageBody(PacketByteBuf buf) {
-        this(DecoratedContents.read(buf), buf.readInstant(), buf.readLong(), new LastSeenMessageList(buf));
+    public static MessageBody ofUnsigned(String content) {
+        return new MessageBody(content, Instant.now(), 0L, LastSeenMessageList.EMPTY);
     }
 
-    public void write(PacketByteBuf buf) {
-        DecoratedContents.write(buf, this.content);
-        buf.writeInstant(this.timestamp);
-        buf.writeLong(this.salt);
-        this.lastSeenMessages.write(buf);
+    public void update(SignatureUpdatable.SignatureUpdater updater) throws SignatureException {
+        updater.update(Longs.toByteArray((long)this.salt));
+        updater.update(Longs.toByteArray((long)this.timestamp.getEpochSecond()));
+        byte[] bs = this.content.getBytes(StandardCharsets.UTF_8);
+        updater.update(Ints.toByteArray((int)bs.length));
+        updater.update(bs);
+        this.lastSeenMessages.updateSignatures(updater);
     }
 
-    public HashCode digest() {
-        HashingOutputStream hashingOutputStream = new HashingOutputStream(Hashing.sha256(), OutputStream.nullOutputStream());
-        try {
-            DataOutputStream dataOutputStream = new DataOutputStream((OutputStream)hashingOutputStream);
-            dataOutputStream.writeLong(this.salt);
-            dataOutputStream.writeLong(this.timestamp.getEpochSecond());
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter((OutputStream)dataOutputStream, StandardCharsets.UTF_8);
-            outputStreamWriter.write(this.content.plain());
-            outputStreamWriter.flush();
-            dataOutputStream.write(70);
-            if (this.content.isDecorated()) {
-                outputStreamWriter.write(Text.Serializer.toSortedJsonString(this.content.decorated()));
-                outputStreamWriter.flush();
-            }
-            this.lastSeenMessages.write(dataOutputStream);
-        }
-        catch (IOException iOException) {
-            // empty catch block
-        }
-        return hashingOutputStream.hash();
-    }
-
-    public MessageBody withContent(DecoratedContents content) {
-        return new MessageBody(content, this.timestamp, this.salt, this.lastSeenMessages);
+    public Serialized toSerialized(MessageSignatureStorage storage) {
+        return new Serialized(this.content, this.timestamp, this.salt, this.lastSeenMessages.pack(storage));
     }
 
     @Override
@@ -77,6 +64,38 @@ public record MessageBody(DecoratedContents content, Instant timestamp, long sal
     @Override
     public final boolean equals(Object object) {
         return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{MessageBody.class, "content;timeStamp;salt;lastSeen", "content", "timestamp", "salt", "lastSeenMessages"}, this, object);
+    }
+
+    public record Serialized(String content, Instant timestamp, long salt, LastSeenMessageList.Indexed lastSeen) {
+        public Serialized(PacketByteBuf buf) {
+            this(buf.readString(256), buf.readInstant(), buf.readLong(), new LastSeenMessageList.Indexed(buf));
+        }
+
+        public void write(PacketByteBuf buf) {
+            buf.writeString(this.content, 256);
+            buf.writeInstant(this.timestamp);
+            buf.writeLong(this.salt);
+            this.lastSeen.write(buf);
+        }
+
+        public Optional<MessageBody> toBody(MessageSignatureStorage storage) {
+            return this.lastSeen.unpack(storage).map(lastSeenMessages -> new MessageBody(this.content, this.timestamp, this.salt, (LastSeenMessageList)lastSeenMessages));
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{Serialized.class, "content;timeStamp;salt;lastSeen", "content", "timestamp", "salt", "lastSeen"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{Serialized.class, "content;timeStamp;salt;lastSeen", "content", "timestamp", "salt", "lastSeen"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{Serialized.class, "content;timeStamp;salt;lastSeen", "content", "timestamp", "salt", "lastSeen"}, this, object);
+        }
     }
 }
 

@@ -141,7 +141,7 @@ implements ClientAdvancementManager.Listener {
         }
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
-        matrixStack.translate(x + 9, y + 18, 0.0);
+        matrixStack.translate(x + 9, y + 18, 0.0f);
         RenderSystem.applyModelViewMatrix();
         advancementTab.render(matrices);
         matrixStack.pop();
@@ -153,7 +153,7 @@ implements ClientAdvancementManager.Listener {
     public void drawWindow(MatrixStack matrices, int x, int y) {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, WINDOW_TEXTURE);
         this.drawTexture(matrices, x, y, 0, 0, 252, 140);
         if (this.tabs.size() > 1) {
@@ -175,7 +175,7 @@ implements ClientAdvancementManager.Listener {
         if (this.selectedTab != null) {
             MatrixStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.push();
-            matrixStack.translate(x + 9, y + 18, 400.0);
+            matrixStack.translate(x + 9, y + 18, 400.0f);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             this.selectedTab.drawWidgetTooltip(matrices, mouseX - x - 9, mouseY - y - 18, x, y);

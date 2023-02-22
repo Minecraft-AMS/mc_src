@@ -38,6 +38,7 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -46,7 +47,6 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.EightWayDirection;
 import net.minecraft.util.math.Vec3i;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.EmptyBlockView;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.World;
@@ -88,8 +88,8 @@ public class UpgradeData {
             if ((j & 1 << eightWayDirection.ordinal()) == 0) continue;
             this.sidesToUpgrade.add(eightWayDirection);
         }
-        UpgradeData.addNeighborTicks(nbt, "neighbor_block_ticks", id -> Registry.BLOCK.getOrEmpty(Identifier.tryParse(id)).or(() -> Optional.of(Blocks.AIR)), this.blockTicks);
-        UpgradeData.addNeighborTicks(nbt, "neighbor_fluid_ticks", id -> Registry.FLUID.getOrEmpty(Identifier.tryParse(id)).or(() -> Optional.of(Fluids.EMPTY)), this.fluidTicks);
+        UpgradeData.addNeighborTicks(nbt, "neighbor_block_ticks", id -> Registries.BLOCK.getOrEmpty(Identifier.tryParse(id)).or(() -> Optional.of(Blocks.AIR)), this.blockTicks);
+        UpgradeData.addNeighborTicks(nbt, "neighbor_fluid_ticks", id -> Registries.FLUID.getOrEmpty(Identifier.tryParse(id)).or(() -> Optional.of(Fluids.EMPTY)), this.fluidTicks);
     }
 
     private static <T> void addNeighborTicks(NbtCompound nbt, String key, Function<String, Optional<T>> nameToType, List<Tick<T>> ticks) {
@@ -109,11 +109,11 @@ public class UpgradeData {
         World world = chunk.getWorld();
         this.blockTicks.forEach(tick -> {
             Block block = tick.type() == Blocks.AIR ? world.getBlockState(tick.pos()).getBlock() : (Block)tick.type();
-            world.createAndScheduleBlockTick(tick.pos(), block, tick.delay(), tick.priority());
+            world.scheduleBlockTick(tick.pos(), block, tick.delay(), tick.priority());
         });
         this.fluidTicks.forEach(tick -> {
             Fluid fluid = tick.type() == Fluids.EMPTY ? world.getFluidState(tick.pos()).getFluid() : (Fluid)tick.type();
-            world.createAndScheduleFluidTick(tick.pos(), fluid, tick.delay(), tick.priority());
+            world.scheduleFluidTick(tick.pos(), fluid, tick.delay(), tick.priority());
         });
         CALLBACK_LOGICS.forEach(logic -> logic.postUpdate(world));
     }
@@ -217,12 +217,12 @@ public class UpgradeData {
         nbtCompound.putByte("Sides", (byte)i);
         if (!this.blockTicks.isEmpty()) {
             nbtList = new NbtList();
-            this.blockTicks.forEach(tick2 -> nbtList.add(tick2.toNbt(block -> Registry.BLOCK.getId((Block)block).toString())));
+            this.blockTicks.forEach(blockTick -> nbtList.add(blockTick.toNbt(block -> Registries.BLOCK.getId((Block)block).toString())));
             nbtCompound.put("neighbor_block_ticks", nbtList);
         }
         if (!this.fluidTicks.isEmpty()) {
             nbtList = new NbtList();
-            this.fluidTicks.forEach(tick2 -> nbtList.add(tick2.toNbt(fluid -> Registry.FLUID.getId((Fluid)fluid).toString())));
+            this.fluidTicks.forEach(fluidTick -> nbtList.add(fluidTick.toNbt(fluid -> Registries.FLUID.getId((Fluid)fluid).toString())));
             nbtCompound.put("neighbor_fluid_ticks", nbtList);
         }
         return nbtCompound;
@@ -234,7 +234,7 @@ public class UpgradeData {
     static abstract class BuiltinLogic
     extends Enum<BuiltinLogic>
     implements Logic {
-        public static final /* enum */ BuiltinLogic BLACKLIST = new BuiltinLogic(new Block[]{Blocks.OBSERVER, Blocks.NETHER_PORTAL, Blocks.WHITE_CONCRETE_POWDER, Blocks.ORANGE_CONCRETE_POWDER, Blocks.MAGENTA_CONCRETE_POWDER, Blocks.LIGHT_BLUE_CONCRETE_POWDER, Blocks.YELLOW_CONCRETE_POWDER, Blocks.LIME_CONCRETE_POWDER, Blocks.PINK_CONCRETE_POWDER, Blocks.GRAY_CONCRETE_POWDER, Blocks.LIGHT_GRAY_CONCRETE_POWDER, Blocks.CYAN_CONCRETE_POWDER, Blocks.PURPLE_CONCRETE_POWDER, Blocks.BLUE_CONCRETE_POWDER, Blocks.BROWN_CONCRETE_POWDER, Blocks.GREEN_CONCRETE_POWDER, Blocks.RED_CONCRETE_POWDER, Blocks.BLACK_CONCRETE_POWDER, Blocks.ANVIL, Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL, Blocks.DRAGON_EGG, Blocks.GRAVEL, Blocks.SAND, Blocks.RED_SAND, Blocks.OAK_SIGN, Blocks.SPRUCE_SIGN, Blocks.BIRCH_SIGN, Blocks.ACACIA_SIGN, Blocks.JUNGLE_SIGN, Blocks.DARK_OAK_SIGN, Blocks.OAK_WALL_SIGN, Blocks.SPRUCE_WALL_SIGN, Blocks.BIRCH_WALL_SIGN, Blocks.ACACIA_WALL_SIGN, Blocks.JUNGLE_WALL_SIGN, Blocks.DARK_OAK_WALL_SIGN}){
+        public static final /* enum */ BuiltinLogic BLACKLIST = new BuiltinLogic(new Block[]{Blocks.OBSERVER, Blocks.NETHER_PORTAL, Blocks.WHITE_CONCRETE_POWDER, Blocks.ORANGE_CONCRETE_POWDER, Blocks.MAGENTA_CONCRETE_POWDER, Blocks.LIGHT_BLUE_CONCRETE_POWDER, Blocks.YELLOW_CONCRETE_POWDER, Blocks.LIME_CONCRETE_POWDER, Blocks.PINK_CONCRETE_POWDER, Blocks.GRAY_CONCRETE_POWDER, Blocks.LIGHT_GRAY_CONCRETE_POWDER, Blocks.CYAN_CONCRETE_POWDER, Blocks.PURPLE_CONCRETE_POWDER, Blocks.BLUE_CONCRETE_POWDER, Blocks.BROWN_CONCRETE_POWDER, Blocks.GREEN_CONCRETE_POWDER, Blocks.RED_CONCRETE_POWDER, Blocks.BLACK_CONCRETE_POWDER, Blocks.ANVIL, Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL, Blocks.DRAGON_EGG, Blocks.GRAVEL, Blocks.SAND, Blocks.RED_SAND, Blocks.OAK_SIGN, Blocks.SPRUCE_SIGN, Blocks.BIRCH_SIGN, Blocks.ACACIA_SIGN, Blocks.JUNGLE_SIGN, Blocks.DARK_OAK_SIGN, Blocks.OAK_WALL_SIGN, Blocks.SPRUCE_WALL_SIGN, Blocks.BIRCH_WALL_SIGN, Blocks.ACACIA_WALL_SIGN, Blocks.JUNGLE_WALL_SIGN, Blocks.DARK_OAK_WALL_SIGN, Blocks.OAK_HANGING_SIGN, Blocks.SPRUCE_HANGING_SIGN, Blocks.BIRCH_HANGING_SIGN, Blocks.ACACIA_HANGING_SIGN, Blocks.JUNGLE_HANGING_SIGN, Blocks.DARK_OAK_HANGING_SIGN, Blocks.OAK_WALL_HANGING_SIGN, Blocks.SPRUCE_WALL_HANGING_SIGN, Blocks.BIRCH_WALL_HANGING_SIGN, Blocks.ACACIA_WALL_HANGING_SIGN, Blocks.JUNGLE_WALL_HANGING_SIGN, Blocks.DARK_OAK_WALL_HANGING_SIGN}){
 
             @Override
             public BlockState getUpdatedState(BlockState oldState, Direction direction, BlockState otherState, WorldAccess world, BlockPos currentPos, BlockPos otherPos) {

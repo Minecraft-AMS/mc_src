@@ -52,7 +52,6 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.explosion.Explosion;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -100,7 +99,8 @@ implements BlockEntityProvider {
             if (world.getBlockState(blockPos).isOf(this)) {
                 world.removeBlock(blockPos, false);
             }
-            world.createExplosion(null, DamageSource.badRespawnPoint(), null, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 5.0f, true, Explosion.DestructionType.DESTROY);
+            Vec3d vec3d = pos.toCenterPos();
+            world.createExplosion(null, DamageSource.badRespawnPoint(vec3d), null, vec3d, 5.0f, true, World.ExplosionSourceType.BLOCK);
             return ActionResult.SUCCESS;
         }
         if (state.get(OCCUPIED).booleanValue()) {
@@ -226,15 +226,14 @@ implements BlockEntityProvider {
         return world.getBlockState(pos.down()).getBlock() instanceof BedBlock;
     }
 
-    public static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, float spawnAngle) {
-        Direction direction3;
-        Direction direction = world.getBlockState(pos).get(FACING);
-        Direction direction2 = direction.rotateYClockwise();
-        Direction direction4 = direction3 = direction2.pointsTo(spawnAngle) ? direction2.getOpposite() : direction2;
+    public static Optional<Vec3d> findWakeUpPosition(EntityType<?> type, CollisionView world, BlockPos pos, Direction bedDirection, float spawnAngle) {
+        Direction direction2;
+        Direction direction = bedDirection.rotateYClockwise();
+        Direction direction3 = direction2 = direction.pointsTo(spawnAngle) ? direction.getOpposite() : direction;
         if (BedBlock.isBedBelow(world, pos)) {
-            return BedBlock.findWakeUpPosition(type, world, pos, direction, direction3);
+            return BedBlock.findWakeUpPosition(type, world, pos, bedDirection, direction2);
         }
-        int[][] is = BedBlock.getAroundAndOnBedOffsets(direction, direction3);
+        int[][] is = BedBlock.getAroundAndOnBedOffsets(bedDirection, direction2);
         Optional<Vec3d> optional = BedBlock.findWakeUpPosition(type, world, pos, is, true);
         if (optional.isPresent()) {
             return optional;

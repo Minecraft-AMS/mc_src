@@ -47,7 +47,7 @@ public class EndCityGenerator {
             if (depth > 8) {
                 return false;
             }
-            BlockRotation blockRotation = root.method_41626().getRotation();
+            BlockRotation blockRotation = root.getPlacementData().getRotation();
             Piece piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, root, pos, "base_floor", blockRotation, true));
             int i = random.nextInt(3);
             if (i == 0) {
@@ -74,7 +74,7 @@ public class EndCityGenerator {
 
         @Override
         public boolean create(StructureTemplateManager manager, int depth, Piece root, BlockPos pos, List<StructurePiece> pieces, Random random) {
-            BlockRotation blockRotation = root.method_41626().getRotation();
+            BlockRotation blockRotation = root.getPlacementData().getRotation();
             Piece piece = root;
             piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, piece, new BlockPos(3 + random.nextInt(2), -3, 3 + random.nextInt(2)), "tower_base", blockRotation, true));
             piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, piece, new BlockPos(0, 7, 0), "tower_piece", blockRotation, true));
@@ -110,7 +110,7 @@ public class EndCityGenerator {
 
         @Override
         public boolean create(StructureTemplateManager manager, int depth, Piece root, BlockPos pos, List<StructurePiece> pieces, Random random) {
-            BlockRotation blockRotation = root.method_41626().getRotation();
+            BlockRotation blockRotation = root.getPlacementData().getRotation();
             int i = random.nextInt(4) + 1;
             Piece piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, root, new BlockPos(0, 0, -4), "bridge_piece", blockRotation, true));
             piece.setChainLength(-1);
@@ -146,7 +146,7 @@ public class EndCityGenerator {
 
         @Override
         public boolean create(StructureTemplateManager manager, int depth, Piece root, BlockPos pos, List<StructurePiece> pieces, Random random) {
-            BlockRotation blockRotation = root.method_41626().getRotation();
+            BlockRotation blockRotation = root.getPlacementData().getRotation();
             Piece piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, root, new BlockPos(-3, 4, -3), "fat_tower_base", blockRotation, true));
             piece = EndCityGenerator.addPiece(pieces, EndCityGenerator.createPiece(manager, piece, new BlockPos(0, 4, 0), "fat_tower_middle", blockRotation, true));
             for (int i = 0; i < 2 && random.nextInt(3) != 0; ++i) {
@@ -163,8 +163,8 @@ public class EndCityGenerator {
     };
 
     static Piece createPiece(StructureTemplateManager structureTemplateManager, Piece lastPiece, BlockPos relativePosition, String template, BlockRotation rotation, boolean ignoreAir) {
-        Piece piece = new Piece(structureTemplateManager, template, lastPiece.method_41625(), rotation, ignoreAir);
-        BlockPos blockPos = lastPiece.getTemplate().transformBox(lastPiece.method_41626(), relativePosition, piece.method_41626(), BlockPos.ORIGIN);
+        Piece piece = new Piece(structureTemplateManager, template, lastPiece.getPos(), rotation, ignoreAir);
+        BlockPos blockPos = lastPiece.getTemplate().transformBox(lastPiece.getPlacementData(), relativePosition, piece.getPlacementData(), BlockPos.ORIGIN);
         piece.translate(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         return piece;
     }
@@ -216,7 +216,7 @@ public class EndCityGenerator {
         }
 
         public Piece(StructureTemplateManager manager, NbtCompound nbt) {
-            super(StructurePieceType.END_CITY, nbt, manager, identifier -> Piece.createPlacementData(nbt.getBoolean("OW"), BlockRotation.valueOf(nbt.getString("Rot"))));
+            super(StructurePieceType.END_CITY, nbt, manager, id -> Piece.createPlacementData(nbt.getBoolean("OW"), BlockRotation.valueOf(nbt.getString("Rot"))));
         }
 
         private static StructurePlacementData createPlacementData(boolean includeAir, BlockRotation rotation) {
@@ -250,8 +250,10 @@ public class EndCityGenerator {
             } else if (boundingBox.contains(pos) && World.isValid(pos)) {
                 if (metadata.startsWith("Sentry")) {
                     ShulkerEntity shulkerEntity = EntityType.SHULKER.create(world.toServerWorld());
-                    shulkerEntity.setPosition((double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5);
-                    world.spawnEntity(shulkerEntity);
+                    if (shulkerEntity != null) {
+                        shulkerEntity.setPosition((double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5);
+                        world.spawnEntity(shulkerEntity);
+                    }
                 } else if (metadata.startsWith("Elytra")) {
                     ItemFrameEntity itemFrameEntity = new ItemFrameEntity(world.toServerWorld(), pos, this.placementData.getRotation().rotate(Direction.SOUTH));
                     itemFrameEntity.setHeldItemStack(new ItemStack(Items.ELYTRA), false);

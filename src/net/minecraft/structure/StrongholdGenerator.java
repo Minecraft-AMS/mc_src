@@ -9,9 +9,9 @@ package net.minecraft.structure;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import net.minecraft.block.AbstractButtonBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ButtonBlock;
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.EndPortalFrameBlock;
 import net.minecraft.block.FenceBlock;
@@ -989,10 +989,10 @@ public class StrongholdGenerator {
             this.fillWithOutline(world, chunkBox, 0, 0, 0, 10, 7, 15, false, random, STONE_BRICK_RANDOMIZER);
             this.generateEntrance(world, random, chunkBox, Piece.EntranceType.GRATES, 4, 1, 0);
             int i = 6;
-            this.fillWithOutline(world, chunkBox, 1, i, 1, 1, i, 14, false, random, STONE_BRICK_RANDOMIZER);
-            this.fillWithOutline(world, chunkBox, 9, i, 1, 9, i, 14, false, random, STONE_BRICK_RANDOMIZER);
-            this.fillWithOutline(world, chunkBox, 2, i, 1, 8, i, 2, false, random, STONE_BRICK_RANDOMIZER);
-            this.fillWithOutline(world, chunkBox, 2, i, 14, 8, i, 14, false, random, STONE_BRICK_RANDOMIZER);
+            this.fillWithOutline(world, chunkBox, 1, 6, 1, 1, 6, 14, false, random, STONE_BRICK_RANDOMIZER);
+            this.fillWithOutline(world, chunkBox, 9, 6, 1, 9, 6, 14, false, random, STONE_BRICK_RANDOMIZER);
+            this.fillWithOutline(world, chunkBox, 2, 6, 1, 8, 6, 2, false, random, STONE_BRICK_RANDOMIZER);
+            this.fillWithOutline(world, chunkBox, 2, 6, 14, 8, 6, 14, false, random, STONE_BRICK_RANDOMIZER);
             this.fillWithOutline(world, chunkBox, 1, 1, 1, 2, 1, 4, false, random, STONE_BRICK_RANDOMIZER);
             this.fillWithOutline(world, chunkBox, 8, 1, 1, 9, 1, 4, false, random, STONE_BRICK_RANDOMIZER);
             this.fillWithOutline(world, chunkBox, 1, 1, 1, 1, 1, 3, Blocks.LAVA.getDefaultState(), Blocks.LAVA.getDefaultState(), false);
@@ -1056,7 +1056,8 @@ public class StrongholdGenerator {
                 world.setBlockState(blockPos, Blocks.SPAWNER.getDefaultState(), 2);
                 BlockEntity blockEntity = world.getBlockEntity(blockPos);
                 if (blockEntity instanceof MobSpawnerBlockEntity) {
-                    ((MobSpawnerBlockEntity)blockEntity).getLogic().setEntityId(EntityType.SILVERFISH);
+                    MobSpawnerBlockEntity mobSpawnerBlockEntity = (MobSpawnerBlockEntity)blockEntity;
+                    mobSpawnerBlockEntity.setEntityType(EntityType.SILVERFISH, random);
                 }
             }
         }
@@ -1120,8 +1121,8 @@ public class StrongholdGenerator {
                     this.addBlock(world, Blocks.STONE_BRICKS.getDefaultState(), x + 2, y, z, boundingBox);
                     this.addBlock(world, Blocks.IRON_DOOR.getDefaultState(), x + 1, y, z, boundingBox);
                     this.addBlock(world, (BlockState)Blocks.IRON_DOOR.getDefaultState().with(DoorBlock.HALF, DoubleBlockHalf.UPPER), x + 1, y + 1, z, boundingBox);
-                    this.addBlock(world, (BlockState)Blocks.STONE_BUTTON.getDefaultState().with(AbstractButtonBlock.FACING, Direction.NORTH), x + 2, y + 1, z + 1, boundingBox);
-                    this.addBlock(world, (BlockState)Blocks.STONE_BUTTON.getDefaultState().with(AbstractButtonBlock.FACING, Direction.SOUTH), x + 2, y + 1, z - 1, boundingBox);
+                    this.addBlock(world, (BlockState)Blocks.STONE_BUTTON.getDefaultState().with(ButtonBlock.FACING, Direction.NORTH), x + 2, y + 1, z + 1, boundingBox);
+                    this.addBlock(world, (BlockState)Blocks.STONE_BUTTON.getDefaultState().with(ButtonBlock.FACING, Direction.SOUTH), x + 2, y + 1, z - 1, boundingBox);
                 }
             }
         }

@@ -11,6 +11,7 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.gui.hud;
 
@@ -41,7 +42,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.ShaderEffect;
+import net.minecraft.client.gl.PostEffectProcessor;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
@@ -54,6 +55,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
@@ -69,9 +72,6 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LightType;
 import net.minecraft.world.LocalDifficulty;
@@ -85,6 +85,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.noise.NoiseConfig;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class DebugHud
@@ -178,7 +179,7 @@ extends DrawableHelper {
     }
 
     protected List<String> getLeftText() {
-        ShaderEffect shaderEffect;
+        PostEffectProcessor postEffectProcessor;
         World world;
         IntegratedServer integratedServer = this.client.getServer();
         ClientConnection clientConnection = this.client.getNetworkHandler().getConnection();
@@ -275,8 +276,8 @@ extends DrawableHelper {
                 list.add("SC: N/A");
             }
         }
-        if ((shaderEffect = this.client.gameRenderer.getShader()) != null) {
-            list.add("Shader: " + shaderEffect.getName());
+        if ((postEffectProcessor = this.client.gameRenderer.getPostProcessor()) != null) {
+            list.add("Shader: " + postEffectProcessor.getName());
         }
         list.add(this.client.getSoundManager().getDebugString() + String.format(Locale.ROOT, " (Mood %d%%)", Math.round(this.client.player.getMoodPercentage() * 100.0f)));
         return list;
@@ -345,7 +346,7 @@ extends DrawableHelper {
             BlockState blockState = this.client.world.getBlockState(blockPos);
             list.add("");
             list.add(Formatting.UNDERLINE + "Targeted Block: " + blockPos.getX() + ", " + blockPos.getY() + ", " + blockPos.getZ());
-            list.add(String.valueOf(Registry.BLOCK.getId(blockState.getBlock())));
+            list.add(String.valueOf(Registries.BLOCK.getId(blockState.getBlock())));
             for (Map.Entry entry : blockState.getEntries().entrySet()) {
                 list.add(this.propertyToString(entry));
             }
@@ -356,7 +357,7 @@ extends DrawableHelper {
             FluidState fluidState = this.client.world.getFluidState(blockPos);
             list.add("");
             list.add(Formatting.UNDERLINE + "Targeted Fluid: " + blockPos.getX() + ", " + blockPos.getY() + ", " + blockPos.getZ());
-            list.add(String.valueOf(Registry.FLUID.getId(fluidState.getFluid())));
+            list.add(String.valueOf(Registries.FLUID.getId(fluidState.getFluid())));
             for (Map.Entry entry : fluidState.getEntries().entrySet()) {
                 list.add(this.propertyToString(entry));
             }
@@ -365,7 +366,7 @@ extends DrawableHelper {
         if ((entity = this.client.targetedEntity) != null) {
             list.add("");
             list.add(Formatting.UNDERLINE + "Targeted Entity");
-            list.add(String.valueOf(Registry.ENTITY_TYPE.getId(entity.getType())));
+            list.add(String.valueOf(Registries.ENTITY_TYPE.getId(entity.getType())));
         }
         return list;
     }
@@ -405,7 +406,7 @@ extends DrawableHelper {
         }
         r = this.client.getWindow().getScaledHeight();
         DebugHud.fill(matrices, x, r - 60, x + n, r, -1873784752);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         RenderSystem.enableBlend();
         RenderSystem.disableTexture();
@@ -427,7 +428,7 @@ extends DrawableHelper {
             ++l;
             k = metricsData.wrapIndex(k + 1);
         }
-        BufferRenderer.drawWithShader(bufferBuilder.end());
+        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
         if (showFps) {

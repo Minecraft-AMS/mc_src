@@ -60,10 +60,16 @@ import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
 import net.minecraft.util.CubicSampler;
 import net.minecraft.util.CuboidBlockIterator;
@@ -79,10 +85,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.EntityList;
@@ -94,6 +96,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
+import net.minecraft.world.biome.ColorResolver;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.WorldChunk;
@@ -101,7 +104,6 @@ import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.entity.EntityHandler;
 import net.minecraft.world.entity.EntityLookup;
 import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.tick.EmptyTickSchedulers;
 import net.minecraft.world.tick.QueryableTickScheduler;
 import org.jetbrains.annotations.Nullable;
@@ -263,7 +265,7 @@ extends World {
     public void tickEntity(Entity entity) {
         entity.resetPosition();
         ++entity.age;
-        this.getProfiler().push(() -> Registry.ENTITY_TYPE.getId(entity.getType()).toString());
+        this.getProfiler().push(() -> Registries.ENTITY_TYPE.getId(entity.getType()).toString());
         entity.tick();
         this.getProfiler().pop();
         for (Entity entity2 : entity.getPassengerList()) {
@@ -394,14 +396,14 @@ extends World {
         }
     }
 
-    private void addParticle(BlockPos pos, BlockState state, ParticleEffect parameters, boolean bl) {
+    private void addParticle(BlockPos pos, BlockState state, ParticleEffect parameters, boolean solidBelow) {
         if (!state.getFluidState().isEmpty()) {
             return;
         }
         VoxelShape voxelShape = state.getCollisionShape(this, pos);
         double d = voxelShape.getMax(Direction.Axis.Y);
         if (d < 1.0) {
-            if (bl) {
+            if (solidBelow) {
                 this.addParticle(pos.getX(), pos.getX() + 1, pos.getZ(), pos.getZ() + 1, (double)(pos.getY() + 1) - 0.05, parameters);
             }
         } else if (!state.isIn(BlockTags.IMPERMEABLE)) {
@@ -437,21 +439,17 @@ extends World {
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, RegistryEntry<SoundEvent> sound, SoundCategory category, float volume, float pitch, long seed) {
         if (except == this.client.player) {
-            this.playSound(x, y, z, sound, category, volume, pitch, false, seed);
+            this.playSound(x, y, z, sound.value(), category, volume, pitch, false, seed);
         }
     }
 
     @Override
-    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
+    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, RegistryEntry<SoundEvent> sound, SoundCategory category, float volume, float pitch, long seed) {
         if (except == this.client.player) {
-            this.client.getSoundManager().play(new EntityTrackingSoundInstance(sound, category, volume, pitch, entity, seed));
+            this.client.getSoundManager().play(new EntityTrackingSoundInstance(sound.value(), category, volume, pitch, entity, seed));
         }
-    }
-
-    public void playSound(BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch, boolean useDistance) {
-        this.playSound((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, sound, category, volume, pitch, useDistance);
     }
 
     @Override
@@ -510,9 +508,12 @@ extends World {
         return this.mapStates.get(id);
     }
 
+    public void putClientsideMapState(String id, MapState state) {
+        this.mapStates.put(id, state);
+    }
+
     @Override
     public void putMapState(String id, MapState state) {
-        this.mapStates.put(id, state);
     }
 
     @Override
@@ -603,7 +604,7 @@ extends World {
 
     @Override
     public RegistryEntry<Biome> getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
-        return this.getRegistryManager().get(Registry.BIOME_KEY).entryOf(BiomeKeys.PLAINS);
+        return this.getRegistryManager().get(RegistryKeys.BIOME).entryOf(BiomeKeys.PLAINS);
     }
 
     public float getStarBrightness(float tickDelta) {
@@ -799,6 +800,11 @@ extends World {
 
     public int getSimulationDistance() {
         return this.simulationDistance;
+    }
+
+    @Override
+    public FeatureSet getEnabledFeatures() {
+        return this.networkHandler.getEnabledFeatures();
     }
 
     @Override

@@ -37,6 +37,7 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.play.ChunkData;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.crash.CrashException;
@@ -46,7 +47,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
@@ -103,12 +103,12 @@ extends Chunk {
     private final ChunkTickScheduler<Block> blockTickScheduler;
     private final ChunkTickScheduler<Fluid> fluidTickScheduler;
 
-    public WorldChunk(World world, ChunkPos chunkPos) {
-        this(world, chunkPos, UpgradeData.NO_UPGRADE_DATA, new ChunkTickScheduler<Block>(), new ChunkTickScheduler<Fluid>(), 0L, null, null, null);
+    public WorldChunk(World world, ChunkPos pos) {
+        this(world, pos, UpgradeData.NO_UPGRADE_DATA, new ChunkTickScheduler<Block>(), new ChunkTickScheduler<Fluid>(), 0L, null, null, null);
     }
 
     public WorldChunk(World world, ChunkPos pos, UpgradeData upgradeData, ChunkTickScheduler<Block> blockTickScheduler, ChunkTickScheduler<Fluid> fluidTickScheduler, long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable EntityLoader entityLoader, @Nullable BlendingData blendingData) {
-        super(pos, upgradeData, world, world.getRegistryManager().get(Registry.BIOME_KEY), inhabitedTime, sectionArrayInitializer, blendingData);
+        super(pos, upgradeData, world, world.getRegistryManager().get(RegistryKeys.BIOME), inhabitedTime, sectionArrayInitializer, blendingData);
         this.world = world;
         this.gameEventDispatchers = new Int2ObjectOpenHashMap();
         for (Heightmap.Type type : Heightmap.Type.values()) {
@@ -382,10 +382,10 @@ extends Chunk {
         this.removeBlockEntityTicker(pos);
     }
 
-    private <T extends BlockEntity> void removeGameEventListener(T blockEntity, ServerWorld serverWorld) {
+    private <T extends BlockEntity> void removeGameEventListener(T blockEntity, ServerWorld world) {
         GameEventListener gameEventListener;
         Block block = blockEntity.getCachedState().getBlock();
-        if (block instanceof BlockEntityProvider && (gameEventListener = ((BlockEntityProvider)((Object)block)).getGameEventListener(serverWorld, blockEntity)) != null) {
+        if (block instanceof BlockEntityProvider && (gameEventListener = ((BlockEntityProvider)((Object)block)).getGameEventListener(world, blockEntity)) != null) {
             int i = ChunkSectionPos.getSectionCoord(blockEntity.getPos().getY());
             GameEventDispatcher gameEventDispatcher = this.getGameEventDispatcher(i);
             gameEventDispatcher.removeListener(gameEventListener);
@@ -544,12 +544,11 @@ extends Chunk {
         });
     }
 
-    private <T extends BlockEntity> void updateGameEventListener(T blockEntity, ServerWorld serverWorld) {
+    private <T extends BlockEntity> void updateGameEventListener(T blockEntity, ServerWorld world) {
         GameEventListener gameEventListener;
         Block block = blockEntity.getCachedState().getBlock();
-        if (block instanceof BlockEntityProvider && (gameEventListener = ((BlockEntityProvider)((Object)block)).getGameEventListener(serverWorld, blockEntity)) != null) {
-            GameEventDispatcher gameEventDispatcher = this.getGameEventDispatcher(ChunkSectionPos.getSectionCoord(blockEntity.getPos().getY()));
-            gameEventDispatcher.addListener(gameEventListener);
+        if (block instanceof BlockEntityProvider && (gameEventListener = ((BlockEntityProvider)((Object)block)).getGameEventListener(world, blockEntity)) != null) {
+            this.getGameEventDispatcher(ChunkSectionPos.getSectionCoord(blockEntity.getPos().getY())).addListener(gameEventListener);
         }
     }
 
@@ -559,16 +558,16 @@ extends Chunk {
         if (blockEntityTicker == null) {
             this.removeBlockEntityTicker(blockEntity.getPos());
         } else {
-            this.blockEntityTickers.compute(blockEntity.getPos(), (pos, wrappedBlockEntityTickInvoker) -> {
+            this.blockEntityTickers.compute(blockEntity.getPos(), (pos, ticker) -> {
                 BlockEntityTickInvoker blockEntityTickInvoker = this.wrapTicker(blockEntity, blockEntityTicker);
-                if (wrappedBlockEntityTickInvoker != null) {
-                    wrappedBlockEntityTickInvoker.setWrapped(blockEntityTickInvoker);
-                    return wrappedBlockEntityTickInvoker;
+                if (ticker != null) {
+                    ticker.setWrapped(blockEntityTickInvoker);
+                    return ticker;
                 }
                 if (this.canTickBlockEntities()) {
-                    WrappedBlockEntityTickInvoker wrappedBlockEntityTickInvoker2 = new WrappedBlockEntityTickInvoker(blockEntityTickInvoker);
-                    this.world.addBlockEntityTicker(wrappedBlockEntityTickInvoker2);
-                    return wrappedBlockEntityTickInvoker2;
+                    WrappedBlockEntityTickInvoker wrappedBlockEntityTickInvoker = new WrappedBlockEntityTickInvoker(blockEntityTickInvoker);
+                    this.world.addBlockEntityTicker(wrappedBlockEntityTickInvoker);
+                    return wrappedBlockEntityTickInvoker;
                 }
                 return null;
             });

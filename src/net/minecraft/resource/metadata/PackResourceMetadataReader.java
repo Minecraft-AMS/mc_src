@@ -10,13 +10,13 @@ package net.minecraft.resource.metadata;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import net.minecraft.resource.metadata.PackResourceMetadata;
-import net.minecraft.resource.metadata.ResourceMetadataReader;
+import net.minecraft.resource.metadata.ResourceMetadataSerializer;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.JsonHelper;
 
 public class PackResourceMetadataReader
-implements ResourceMetadataReader<PackResourceMetadata> {
+implements ResourceMetadataSerializer<PackResourceMetadata> {
     @Override
     public PackResourceMetadata fromJson(JsonObject jsonObject) {
         MutableText text = Text.Serializer.fromJson(jsonObject.get("description"));
@@ -25,6 +25,14 @@ implements ResourceMetadataReader<PackResourceMetadata> {
         }
         int i = JsonHelper.getInt(jsonObject, "pack_format");
         return new PackResourceMetadata(text, i);
+    }
+
+    @Override
+    public JsonObject toJson(PackResourceMetadata packResourceMetadata) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.add("description", Text.Serializer.toJsonTree(packResourceMetadata.getDescription()));
+        jsonObject.addProperty("pack_format", (Number)packResourceMetadata.getPackFormat());
+        return jsonObject;
     }
 
     @Override

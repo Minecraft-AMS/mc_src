@@ -29,13 +29,14 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.recipebook.RecipeBookGroup;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
+import net.minecraft.recipe.AbstractCookingRecipe;
+import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeType;
+import net.minecraft.recipe.book.CookingRecipeCategory;
+import net.minecraft.recipe.book.CraftingRecipeCategory;
 import net.minecraft.recipe.book.RecipeBook;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.registry.Registries;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
@@ -45,12 +46,12 @@ extends RecipeBook {
     private Map<RecipeBookGroup, List<RecipeResultCollection>> resultsByGroup = ImmutableMap.of();
     private List<RecipeResultCollection> orderedResults = ImmutableList.of();
 
-    public void reload(Iterable<Recipe<?>> recipes) {
-        Map<RecipeBookGroup, List<List<Recipe<?>>>> map = ClientRecipeBook.toGroupedMap(recipes);
+    public void reload(Iterable<Recipe<?>> recipes2) {
+        Map<RecipeBookGroup, List<List<Recipe<?>>>> map = ClientRecipeBook.toGroupedMap(recipes2);
         HashMap map2 = Maps.newHashMap();
         ImmutableList.Builder builder = ImmutableList.builder();
-        map.forEach((recipeBookGroup, list) -> map2.put(recipeBookGroup, (List)list.stream().map(RecipeResultCollection::new).peek(arg_0 -> ((ImmutableList.Builder)builder).add(arg_0)).collect(ImmutableList.toImmutableList())));
-        RecipeBookGroup.SEARCH_MAP.forEach((recipeBookGroup2, list) -> map2.put(recipeBookGroup2, (List)list.stream().flatMap(recipeBookGroup -> ((List)map2.getOrDefault(recipeBookGroup, ImmutableList.of())).stream()).collect(ImmutableList.toImmutableList())));
+        map.forEach((group, recipes) -> map2.put(group, (List)recipes.stream().map(RecipeResultCollection::new).peek(arg_0 -> ((ImmutableList.Builder)builder).add(arg_0)).collect(ImmutableList.toImmutableList())));
+        RecipeBookGroup.SEARCH_MAP.forEach((group, searchGroups) -> map2.put(group, (List)searchGroups.stream().flatMap(searchGroup -> ((List)map2.getOrDefault(searchGroup, ImmutableList.of())).stream()).collect(ImmutableList.toImmutableList())));
         this.resultsByGroup = ImmutableMap.copyOf((Map)map2);
         this.orderedResults = builder.build();
     }
@@ -78,49 +79,45 @@ extends RecipeBook {
     }
 
     private static RecipeBookGroup getGroupForRecipe(Recipe<?> recipe) {
+        if (recipe instanceof CraftingRecipe) {
+            CraftingRecipe craftingRecipe = (CraftingRecipe)recipe;
+            return switch (craftingRecipe.getCategory()) {
+                default -> throw new IncompatibleClassChangeError();
+                case CraftingRecipeCategory.BUILDING -> RecipeBookGroup.CRAFTING_BUILDING_BLOCKS;
+                case CraftingRecipeCategory.EQUIPMENT -> RecipeBookGroup.CRAFTING_EQUIPMENT;
+                case CraftingRecipeCategory.REDSTONE -> RecipeBookGroup.CRAFTING_REDSTONE;
+                case CraftingRecipeCategory.MISC -> RecipeBookGroup.CRAFTING_MISC;
+            };
+        }
         RecipeType<?> recipeType = recipe.getType();
-        if (recipeType == RecipeType.CRAFTING) {
-            ItemStack itemStack = recipe.getOutput();
-            ItemGroup itemGroup = itemStack.getItem().getGroup();
-            if (itemGroup == ItemGroup.BUILDING_BLOCKS) {
-                return RecipeBookGroup.CRAFTING_BUILDING_BLOCKS;
+        if (recipe instanceof AbstractCookingRecipe) {
+            AbstractCookingRecipe abstractCookingRecipe = (AbstractCookingRecipe)recipe;
+            CookingRecipeCategory cookingRecipeCategory = abstractCookingRecipe.getCategory();
+            if (recipeType == RecipeType.SMELTING) {
+                return switch (cookingRecipeCategory) {
+                    default -> throw new IncompatibleClassChangeError();
+                    case CookingRecipeCategory.BLOCKS -> RecipeBookGroup.FURNACE_BLOCKS;
+                    case CookingRecipeCategory.FOOD -> RecipeBookGroup.FURNACE_FOOD;
+                    case CookingRecipeCategory.MISC -> RecipeBookGroup.FURNACE_MISC;
+                };
             }
-            if (itemGroup == ItemGroup.TOOLS || itemGroup == ItemGroup.COMBAT) {
-                return RecipeBookGroup.CRAFTING_EQUIPMENT;
+            if (recipeType == RecipeType.BLASTING) {
+                return cookingRecipeCategory == CookingRecipeCategory.BLOCKS ? RecipeBookGroup.BLAST_FURNACE_BLOCKS : RecipeBookGroup.BLAST_FURNACE_MISC;
             }
-            if (itemGroup == ItemGroup.REDSTONE) {
-                return RecipeBookGroup.CRAFTING_REDSTONE;
+            if (recipeType == RecipeType.SMOKING) {
+                return RecipeBookGroup.SMOKER_FOOD;
             }
-            return RecipeBookGroup.CRAFTING_MISC;
-        }
-        if (recipeType == RecipeType.SMELTING) {
-            if (recipe.getOutput().getItem().isFood()) {
-                return RecipeBookGroup.FURNACE_FOOD;
+            if (recipeType == RecipeType.CAMPFIRE_COOKING) {
+                return RecipeBookGroup.CAMPFIRE;
             }
-            if (recipe.getOutput().getItem() instanceof BlockItem) {
-                return RecipeBookGroup.FURNACE_BLOCKS;
-            }
-            return RecipeBookGroup.FURNACE_MISC;
-        }
-        if (recipeType == RecipeType.BLASTING) {
-            if (recipe.getOutput().getItem() instanceof BlockItem) {
-                return RecipeBookGroup.BLAST_FURNACE_BLOCKS;
-            }
-            return RecipeBookGroup.BLAST_FURNACE_MISC;
-        }
-        if (recipeType == RecipeType.SMOKING) {
-            return RecipeBookGroup.SMOKER_FOOD;
         }
         if (recipeType == RecipeType.STONECUTTING) {
             return RecipeBookGroup.STONECUTTER;
         }
-        if (recipeType == RecipeType.CAMPFIRE_COOKING) {
-            return RecipeBookGroup.CAMPFIRE;
-        }
         if (recipeType == RecipeType.SMITHING) {
             return RecipeBookGroup.SMITHING;
         }
-        LOGGER.warn("Unknown recipe category: {}/{}", LogUtils.defer(() -> Registry.RECIPE_TYPE.getId(recipe.getType())), LogUtils.defer(recipe::getId));
+        LOGGER.warn("Unknown recipe category: {}/{}", LogUtils.defer(() -> Registries.RECIPE_TYPE.getId(recipe.getType())), LogUtils.defer(recipe::getId));
         return RecipeBookGroup.UNKNOWN;
     }
 

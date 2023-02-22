@@ -22,19 +22,19 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.block.Block;
 import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.CommandRegistryWrapper;
 import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.command.argument.BlockStateArgument;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.util.registry.Registry;
 
 public class BlockStateArgumentType
 implements ArgumentType<BlockStateArgument> {
     private static final Collection<String> EXAMPLES = Arrays.asList("stone", "minecraft:stone", "stone[foo=bar]", "foo{bar=baz}");
-    private final CommandRegistryWrapper<Block> registryWrapper;
+    private final RegistryWrapper<Block> registryWrapper;
 
     public BlockStateArgumentType(CommandRegistryAccess commandRegistryAccess) {
-        this.registryWrapper = commandRegistryAccess.createWrapper(Registry.BLOCK_KEY);
+        this.registryWrapper = commandRegistryAccess.createWrapper(RegistryKeys.BLOCK);
     }
 
     public static BlockStateArgumentType blockState(CommandRegistryAccess commandRegistryAccess) {

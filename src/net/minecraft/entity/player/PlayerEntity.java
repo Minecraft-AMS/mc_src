@@ -8,7 +8,6 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.datafixers.util.Either
  *  com.mojang.logging.LogUtils
- *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
@@ -21,7 +20,6 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -89,12 +87,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.encryption.PlayerPublicKey;
-import net.minecraft.network.message.MessageSourceProfile;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.Team;
@@ -108,7 +106,6 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -119,15 +116,15 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.village.TradeOfferList;
+import net.minecraft.world.CollisionView;
 import net.minecraft.world.CommandBlockExecutor;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
@@ -138,7 +135,7 @@ import org.slf4j.Logger;
 
 public abstract class PlayerEntity
 extends LivingEntity {
-    private static final Logger field_38197 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int field_30643 = 16;
     public static final int field_30644 = 20;
     public static final int field_30645 = 100;
@@ -147,7 +144,7 @@ extends LivingEntity {
     public static final float field_30648 = 1.5f;
     public static final float field_30649 = 0.6f;
     public static final float field_30650 = 0.6f;
-    public static final float field_30651 = 1.62f;
+    public static final float DEFAULT_EYE_HEIGHT = 1.62f;
     public static final EntityDimensions STANDING_DIMENSIONS = EntityDimensions.changing(0.6f, 1.8f);
     private static final Map<EntityPose, EntityDimensions> POSE_DIMENSIONS = ImmutableMap.builder().put((Object)EntityPose.STANDING, (Object)STANDING_DIMENSIONS).put((Object)EntityPose.SLEEPING, (Object)SLEEPING_DIMENSIONS).put((Object)EntityPose.FALL_FLYING, (Object)EntityDimensions.changing(0.6f, 0.6f)).put((Object)EntityPose.SWIMMING, (Object)EntityDimensions.changing(0.6f, 0.6f)).put((Object)EntityPose.SPIN_ATTACK, (Object)EntityDimensions.changing(0.6f, 0.6f)).put((Object)EntityPose.CROUCHING, (Object)EntityDimensions.changing(0.6f, 1.5f)).put((Object)EntityPose.DYING, (Object)EntityDimensions.fixed(0.2f, 0.2f)).build();
     private static final int field_30652 = 25;
@@ -163,7 +160,6 @@ extends LivingEntity {
     public final PlayerScreenHandler playerScreenHandler;
     public ScreenHandler currentScreenHandler;
     protected HungerManager hungerManager = new HungerManager();
-    protected SculkShriekerWarningManager sculkShriekerWarningManager = new SculkShriekerWarningManager(0, 0, 0);
     protected int abilityResyncCountdown;
     public float prevStrideDistance;
     public float strideDistance;
@@ -184,8 +180,6 @@ extends LivingEntity {
     protected final float field_7509 = 0.02f;
     private int lastPlayedLevelUpSoundTime;
     private final GameProfile gameProfile;
-    @Nullable
-    private final PlayerPublicKey publicKey;
     private boolean reducedDebugInfo;
     private ItemStack selectedItem = ItemStack.EMPTY;
     private final ItemCooldownManager itemCooldownManager = this.createCooldownManager();
@@ -193,11 +187,10 @@ extends LivingEntity {
     @Nullable
     public FishingBobberEntity fishHook;
 
-    public PlayerEntity(World world, BlockPos pos, float yaw, GameProfile gameProfile, @Nullable PlayerPublicKey publicKey) {
+    public PlayerEntity(World world, BlockPos pos, float yaw, GameProfile gameProfile) {
         super((EntityType<? extends LivingEntity>)EntityType.PLAYER, world);
-        this.setUuid(DynamicSerializableUuid.getUuidFromProfile(gameProfile));
+        this.setUuid(Uuids.getUuidFromProfile(gameProfile));
         this.gameProfile = gameProfile;
-        this.publicKey = publicKey;
         this.playerScreenHandler = new PlayerScreenHandler(this.inventory, !world.isClient, this);
         this.currentScreenHandler = this.playerScreenHandler;
         this.refreshPositionAndAngles((double)pos.getX() + 0.5, pos.getY() + 1, (double)pos.getZ() + 0.5, yaw, 0.0f);
@@ -215,7 +208,7 @@ extends LivingEntity {
             return false;
         }
         ItemStack itemStack = this.getMainHandStack();
-        return itemStack.isEmpty() || !itemStack.canDestroy(world.getRegistryManager().get(Registry.BLOCK_KEY), new CachedBlockPosition(world, pos, false));
+        return itemStack.isEmpty() || !itemStack.canDestroy(world.getRegistryManager().get(RegistryKeys.BLOCK), new CachedBlockPosition(world, pos, false));
     }
 
     public static DefaultAttributeContainer.Builder createPlayerAttributes() {
@@ -265,7 +258,6 @@ extends LivingEntity {
         this.updateCapeAngles();
         if (!this.world.isClient) {
             this.hungerManager.update(this);
-            this.sculkShriekerWarningManager.tick();
             this.incrementStat(Stats.PLAY_TIME);
             this.incrementStat(Stats.TOTAL_WORLD_TIME);
             if (this.isAlive()) {
@@ -434,6 +426,9 @@ extends LivingEntity {
 
     protected void closeHandledScreen() {
         this.currentScreenHandler = this.playerScreenHandler;
+    }
+
+    protected void closeScreenHandler() {
     }
 
     @Override
@@ -673,7 +668,7 @@ extends LivingEntity {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.setUuid(DynamicSerializableUuid.getUuidFromProfile(this.gameProfile));
+        this.setUuid(Uuids.getUuidFromProfile(this.gameProfile));
         NbtList nbtList = nbt.getList("Inventory", 10);
         this.inventory.readNbt(nbtList);
         this.inventory.selectedSlot = nbt.getInt("SelectedItemSlot");
@@ -687,11 +682,6 @@ extends LivingEntity {
         }
         this.setScore(nbt.getInt("Score"));
         this.hungerManager.readNbt(nbt);
-        if (nbt.contains("warden_spawn_tracker", 10)) {
-            SculkShriekerWarningManager.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("warden_spawn_tracker"))).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)).ifPresent(sculkShriekerWarningManager -> {
-                this.sculkShriekerWarningManager = sculkShriekerWarningManager;
-            });
-        }
         this.abilities.readNbt(nbt);
         this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(this.abilities.getWalkSpeed());
         if (nbt.contains("EnderItems", 9)) {
@@ -704,7 +694,7 @@ extends LivingEntity {
             this.setShoulderEntityRight(nbt.getCompound("ShoulderEntityRight"));
         }
         if (nbt.contains("LastDeathLocation", 10)) {
-            this.setLastDeathPos(GlobalPos.CODEC.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("LastDeathLocation")).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)));
+            this.setLastDeathPos(GlobalPos.CODEC.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("LastDeathLocation")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)));
         }
     }
 
@@ -721,7 +711,6 @@ extends LivingEntity {
         nbt.putInt("XpSeed", this.enchantmentTableSeed);
         nbt.putInt("Score", this.getScore());
         this.hungerManager.writeNbt(nbt);
-        SculkShriekerWarningManager.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.sculkShriekerWarningManager).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)).ifPresent(nbtElement -> nbt.put("warden_spawn_tracker", (NbtElement)nbtElement));
         this.abilities.writeNbt(nbt);
         nbt.put("EnderItems", this.enderChestInventory.toNbtList());
         if (!this.getShoulderEntityLeft().isEmpty()) {
@@ -730,7 +719,7 @@ extends LivingEntity {
         if (!this.getShoulderEntityRight().isEmpty()) {
             nbt.put("ShoulderEntityRight", this.getShoulderEntityRight());
         }
-        this.getLastDeathPos().flatMap(globalPos -> GlobalPos.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, globalPos).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0))).ifPresent(nbtElement -> nbt.put("LastDeathLocation", (NbtElement)nbtElement));
+        this.getLastDeathPos().flatMap(globalPos -> GlobalPos.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, globalPos).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(nbtElement -> nbt.put("LastDeathLocation", (NbtElement)nbtElement));
     }
 
     @Override
@@ -872,6 +861,10 @@ extends LivingEntity {
     @Override
     protected boolean isOnSoulSpeedBlock() {
         return !this.abilities.flying && super.isOnSoulSpeedBlock();
+    }
+
+    public boolean shouldFilterText() {
+        return false;
     }
 
     public void openEditSignScreen(SignBlockEntity sign) {
@@ -1164,8 +1157,8 @@ extends LivingEntity {
     public void remove(Entity.RemovalReason reason) {
         super.remove(reason);
         this.playerScreenHandler.close(this);
-        if (this.currentScreenHandler != null) {
-            this.currentScreenHandler.close(this);
+        if (this.currentScreenHandler != null && this.shouldCloseHandledScreenOnRespawn()) {
+            this.closeScreenHandler();
         }
     }
 
@@ -1175,11 +1168,6 @@ extends LivingEntity {
 
     public GameProfile getGameProfile() {
         return this.gameProfile;
-    }
-
-    @Nullable
-    public PlayerPublicKey getPublicKey() {
-        return this.publicKey;
     }
 
     public PlayerInventory getInventory() {
@@ -1219,15 +1207,15 @@ extends LivingEntity {
     public static Optional<Vec3d> findRespawnPosition(ServerWorld world, BlockPos pos, float angle, boolean forced, boolean alive) {
         BlockState blockState = world.getBlockState(pos);
         Block block = blockState.getBlock();
-        if (block instanceof RespawnAnchorBlock && blockState.get(RespawnAnchorBlock.CHARGES) > 0 && RespawnAnchorBlock.isNether(world)) {
+        if (block instanceof RespawnAnchorBlock && (forced || blockState.get(RespawnAnchorBlock.CHARGES) > 0) && RespawnAnchorBlock.isNether(world)) {
             Optional<Vec3d> optional = RespawnAnchorBlock.findRespawnPosition(EntityType.PLAYER, world, pos);
-            if (!alive && optional.isPresent()) {
+            if (!forced && !alive && optional.isPresent()) {
                 world.setBlockState(pos, (BlockState)blockState.with(RespawnAnchorBlock.CHARGES, blockState.get(RespawnAnchorBlock.CHARGES) - 1), 3);
             }
             return optional;
         }
         if (block instanceof BedBlock && BedBlock.isBedWorking(world)) {
-            return BedBlock.findWakeUpPosition(EntityType.PLAYER, world, pos, angle);
+            return BedBlock.findWakeUpPosition(EntityType.PLAYER, (CollisionView)world, pos, blockState.get(BedBlock.FACING), angle);
         }
         if (!forced) {
             return Optional.empty();
@@ -1420,11 +1408,6 @@ extends LivingEntity {
         return super.handleFallDamage(fallDistance, damageMultiplier, damageSource);
     }
 
-    @Override
-    public MessageSourceProfile getMessageSourceProfile() {
-        return new MessageSourceProfile(this.getGameProfile().getId(), this.getPublicKey());
-    }
-
     public boolean checkFallFlying() {
         ItemStack itemStack;
         if (!this.onGround && !this.isFallFlying() && !this.isTouchingWater() && !this.hasStatusEffect(StatusEffects.LEVITATION) && (itemStack = this.getEquippedStack(EquipmentSlot.CHEST)).isOf(Items.ELYTRA) && ElytraItem.isUsable(itemStack)) {
@@ -1536,8 +1519,8 @@ extends LivingEntity {
         }
     }
 
-    public SculkShriekerWarningManager getSculkShriekerWarningManager() {
-        return this.sculkShriekerWarningManager;
+    public Optional<SculkShriekerWarningManager> getSculkShriekerWarningManager() {
+        return Optional.empty();
     }
 
     public HungerManager getHungerManager() {
@@ -1562,7 +1545,7 @@ extends LivingEntity {
         }
         BlockPos blockPos = pos.offset(facing.getOpposite());
         CachedBlockPosition cachedBlockPosition = new CachedBlockPosition(this.world, blockPos, false);
-        return stack.canPlaceOn(this.world.getRegistryManager().get(Registry.BLOCK_KEY), cachedBlockPosition);
+        return stack.canPlaceOn(this.world.getRegistryManager().get(RegistryKeys.BLOCK), cachedBlockPosition);
     }
 
     @Override

@@ -22,12 +22,13 @@ import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.GeneratorOptionsHolder;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
 import org.jetbrains.annotations.Nullable;
@@ -47,9 +48,9 @@ extends Screen {
         super(Text.translatable("createWorld.customize.buffet.title"));
         this.parent = parent;
         this.onDone = onDone;
-        this.biomeRegistry = generatorOptionsHolder.dynamicRegistryManager().get(Registry.BIOME_KEY);
-        RegistryEntry<Biome> registryEntry = this.biomeRegistry.getEntry(BiomeKeys.PLAINS).or(() -> this.biomeRegistry.streamEntries().findAny()).orElseThrow();
-        this.biome = generatorOptionsHolder.generatorOptions().getChunkGenerator().getBiomeSource().getBiomes().stream().findFirst().orElse(registryEntry);
+        this.biomeRegistry = generatorOptionsHolder.getCombinedRegistryManager().get(RegistryKeys.BIOME);
+        RegistryEntry registryEntry = this.biomeRegistry.getEntry(BiomeKeys.PLAINS).or(() -> this.biomeRegistry.streamEntries().findAny()).orElseThrow();
+        this.biome = generatorOptionsHolder.selectedDimensions().getChunkGenerator().getBiomeSource().getBiomes().stream().findFirst().orElse(registryEntry);
     }
 
     @Override
@@ -59,14 +60,13 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.client.keyboard.setRepeatEvents(true);
         this.biomeSelectionList = new BuffetBiomesListWidget();
         this.addSelectableChild(this.biomeSelectionList);
-        this.confirmButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, ScreenTexts.DONE, button -> {
+        this.confirmButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             this.onDone.accept(this.biome);
             this.client.setScreen(this.parent);
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, this.height - 28, 150, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        }).dimensions(this.width / 2 - 155, this.height - 28, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 5, this.height - 28, 150, 20).build());
         this.biomeSelectionList.setSelected((BuffetBiomesListWidget.BuffetBiomeItem)this.biomeSelectionList.children().stream().filter(entry -> Objects.equals(entry.biome, this.biome)).findFirst().orElse(null));
     }
 

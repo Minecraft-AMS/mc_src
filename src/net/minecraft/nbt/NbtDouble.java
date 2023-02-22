@@ -16,13 +16,13 @@ import net.minecraft.util.math.MathHelper;
 
 public class NbtDouble
 extends AbstractNbtNumber {
-    private static final int SIZE = 128;
+    private static final int SIZE = 16;
     public static final NbtDouble ZERO = new NbtDouble(0.0);
     public static final NbtType<NbtDouble> TYPE = new NbtType.OfFixedSize<NbtDouble>(){
 
         @Override
         public NbtDouble read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
-            nbtTagSizeTracker.add(128L);
+            nbtTagSizeTracker.add(16L);
             return NbtDouble.of(dataInput.readDouble());
         }
 
@@ -72,6 +72,11 @@ extends AbstractNbtNumber {
     @Override
     public void write(DataOutput output) throws IOException {
         output.writeDouble(this.value);
+    }
+
+    @Override
+    public int getSizeInBytes() {
+        return 16;
     }
 
     @Override

@@ -81,7 +81,7 @@ implements OperatorBlock {
         }
         if (bl) {
             commandBlockBlockEntity.updateConditionMet();
-            world.createAndScheduleBlockTick(pos, this, 1);
+            world.scheduleBlockTick(pos, this, 1);
         }
     }
 
@@ -102,7 +102,7 @@ implements OperatorBlock {
                     commandBlockExecutor.setSuccessCount(0);
                 }
                 if (commandBlockBlockEntity.isPowered() || commandBlockBlockEntity.isAuto()) {
-                    world.createAndScheduleBlockTick(pos, this, 1);
+                    world.scheduleBlockTick(pos, this, 1);
                 }
             } else if (type == CommandBlockBlockEntity.Type.REDSTONE) {
                 if (bl2) {

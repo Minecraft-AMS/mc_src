@@ -35,11 +35,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Util;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
@@ -70,26 +70,26 @@ public class PointOfInterestSet {
         return this.pointsOfInterestByType.entrySet().stream().filter(entry -> predicate.test((RegistryEntry)entry.getKey())).flatMap(entry -> ((Set)entry.getValue()).stream()).filter(occupationStatus.getPredicate());
     }
 
-    public void add(BlockPos pos, RegistryEntry<PointOfInterestType> registryEntry) {
-        if (this.add(new PointOfInterest(pos, registryEntry, this.updateListener))) {
-            LOGGER.debug("Added POI of type {} @ {}", (Object)registryEntry.getKey().map(registryKey -> registryKey.getValue().toString()).orElse("[unregistered]"), (Object)pos);
+    public void add(BlockPos pos, RegistryEntry<PointOfInterestType> type) {
+        if (this.add(new PointOfInterest(pos, type, this.updateListener))) {
+            LOGGER.debug("Added POI of type {} @ {}", (Object)type.getKey().map(key -> key.getValue().toString()).orElse("[unregistered]"), (Object)pos);
             this.updateListener.run();
         }
     }
 
     private boolean add(PointOfInterest poi) {
         BlockPos blockPos = poi.getPos();
-        RegistryEntry<PointOfInterestType> registryEntry2 = poi.getType();
+        RegistryEntry<PointOfInterestType> registryEntry = poi.getType();
         short s = ChunkSectionPos.packLocal(blockPos);
         PointOfInterest pointOfInterest = (PointOfInterest)this.pointsOfInterestByPos.get(s);
         if (pointOfInterest != null) {
-            if (registryEntry2.equals(pointOfInterest.getType())) {
+            if (registryEntry.equals(pointOfInterest.getType())) {
                 return false;
             }
             Util.error("POI data mismatch: already registered at " + blockPos);
         }
         this.pointsOfInterestByPos.put(s, (Object)poi);
-        this.pointsOfInterestByType.computeIfAbsent(registryEntry2, registryEntry -> Sets.newHashSet()).add(poi);
+        this.pointsOfInterestByType.computeIfAbsent(registryEntry, type -> Sets.newHashSet()).add(poi);
         return true;
     }
 
@@ -132,11 +132,11 @@ public class PointOfInterestSet {
         return Optional.ofNullable((PointOfInterest)this.pointsOfInterestByPos.get(ChunkSectionPos.packLocal(pos)));
     }
 
-    public void updatePointsOfInterest(Consumer<BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>> consumer) {
+    public void updatePointsOfInterest(Consumer<BiConsumer<BlockPos, RegistryEntry<PointOfInterestType>>> updater) {
         if (!this.valid) {
             Short2ObjectOpenHashMap short2ObjectMap = new Short2ObjectOpenHashMap(this.pointsOfInterestByPos);
             this.clear();
-            consumer.accept((arg_0, arg_1) -> this.method_20352((Short2ObjectMap)short2ObjectMap, arg_0, arg_1));
+            updater.accept((arg_0, arg_1) -> this.method_20352((Short2ObjectMap)short2ObjectMap, arg_0, arg_1));
             this.valid = true;
             this.updateListener.run();
         }

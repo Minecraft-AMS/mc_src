@@ -9,15 +9,12 @@ package net.minecraft.entity.passive;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -34,6 +31,7 @@ import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.ai.control.MoveControl;
@@ -79,20 +77,22 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.ItemStackParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.FluidTags;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -103,7 +103,8 @@ import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
 public class FoxEntity
-extends AnimalEntity {
+extends AnimalEntity
+implements VariantHolder<Type> {
     private static final TrackedData<Integer> TYPE = DataTracker.registerData(FoxEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Byte> FOX_FLAGS = DataTracker.registerData(FoxEntity.class, TrackedDataHandlerRegistry.BYTE);
     private static final int SITTING_FLAG = 1;
@@ -259,9 +260,12 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public FoxEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         FoxEntity foxEntity = EntityType.FOX.create(serverWorld);
-        foxEntity.setType(this.random.nextBoolean() ? this.getFoxType() : ((FoxEntity)passiveEntity).getFoxType());
+        if (foxEntity != null) {
+            foxEntity.setVariant(this.random.nextBoolean() ? this.getVariant() : ((FoxEntity)passiveEntity).getVariant());
+        }
         return foxEntity;
     }
 
@@ -284,7 +288,7 @@ extends AnimalEntity {
         } else {
             entityData = new FoxData(type);
         }
-        this.setType(type);
+        this.setVariant(type);
         if (bl) {
             this.setBreedingAge(-24000);
         }
@@ -296,7 +300,7 @@ extends AnimalEntity {
     }
 
     private void addTypeSpecificGoals() {
-        if (this.getFoxType() == Type.RED) {
+        if (this.getVariant() == Type.RED) {
             this.targetSelector.add(4, this.followChickenAndRabbitGoal);
             this.targetSelector.add(4, this.followBabyTurtleGoal);
             this.targetSelector.add(6, this.followFishGoal);
@@ -323,11 +327,13 @@ extends AnimalEntity {
         return 0.4f;
     }
 
-    public Type getFoxType() {
+    @Override
+    public Type getVariant() {
         return Type.fromId(this.dataTracker.get(TYPE));
     }
 
-    private void setType(Type type) {
+    @Override
+    public void setVariant(Type type) {
         this.dataTracker.set(TYPE, type.getId());
     }
 
@@ -357,7 +363,7 @@ extends AnimalEntity {
         }
         nbt.put("Trusted", nbtList);
         nbt.putBoolean("Sleeping", this.isSleeping());
-        nbt.putString("Type", this.getFoxType().getKey());
+        nbt.putString("Type", this.getVariant().asString());
         nbt.putBoolean("Sitting", this.isSitting());
         nbt.putBoolean("Crouching", this.isInSneakingPose());
     }
@@ -370,7 +376,7 @@ extends AnimalEntity {
             this.addTrustedUuid(NbtHelper.toUuid(nbtList.get(i)));
         }
         this.setSleeping(nbt.getBoolean("Sleeping"));
-        this.setType(Type.byName(nbt.getString("Type")));
+        this.setVariant(Type.byName(nbt.getString("Type")));
         this.setSitting(nbt.getBoolean("Sitting"));
         this.setCrouching(nbt.getBoolean("Crouching"));
         if (this.world instanceof ServerWorld) {
@@ -642,7 +648,7 @@ extends AnimalEntity {
             double g = f == 0.0 ? 0.0 : d * (double)((float)j / 6.0f);
             double h = f == 0.0 ? e * (double)((float)j / 6.0f) : g / f;
             for (int k = 1; k < 4; ++k) {
-                if (fox.world.getBlockState(new BlockPos(fox.getX() + h, fox.getY() + (double)k, fox.getZ() + g)).getMaterial().isReplaceable()) continue;
+                if (fox.world.getBlockState(new BlockPos(fox.getX() + h, fox.getY() + (double)k, fox.getZ() + g)).isReplaceable()) continue;
                 return false;
             }
         }
@@ -655,8 +661,14 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
+    }
+
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
     }
 
     public class FoxLookControl
@@ -1346,11 +1358,12 @@ extends AnimalEntity {
     }
 
     public static final class Type
-    extends Enum<Type> {
+    extends Enum<Type>
+    implements StringIdentifiable {
         public static final /* enum */ Type RED = new Type(0, "red");
         public static final /* enum */ Type SNOW = new Type(1, "snow");
-        private static final Type[] TYPES;
-        private static final Map<String, Type> NAME_TYPE_MAP;
+        public static final StringIdentifiable.Codec<Type> CODEC;
+        private static final IntFunction<Type> BY_ID;
         private final int id;
         private final String key;
         private static final /* synthetic */ Type[] field_18003;
@@ -1368,7 +1381,8 @@ extends AnimalEntity {
             this.key = key;
         }
 
-        public String getKey() {
+        @Override
+        public String asString() {
             return this.key;
         }
 
@@ -1377,18 +1391,15 @@ extends AnimalEntity {
         }
 
         public static Type byName(String name) {
-            return NAME_TYPE_MAP.getOrDefault(name, RED);
+            return CODEC.byId(name, RED);
         }
 
         public static Type fromId(int id) {
-            if (id < 0 || id > TYPES.length) {
-                id = 0;
-            }
-            return TYPES[id];
+            return BY_ID.apply(id);
         }
 
-        public static Type fromBiome(RegistryEntry<Biome> registryEntry) {
-            return registryEntry.value().getPrecipitation() == Biome.Precipitation.SNOW ? SNOW : RED;
+        public static Type fromBiome(RegistryEntry<Biome> biome) {
+            return biome.value().getPrecipitation() == Biome.Precipitation.SNOW ? SNOW : RED;
         }
 
         private static /* synthetic */ Type[] method_36637() {
@@ -1397,8 +1408,8 @@ extends AnimalEntity {
 
         static {
             field_18003 = Type.method_36637();
-            TYPES = (Type[])Arrays.stream(Type.values()).sorted(Comparator.comparingInt(Type::getId)).toArray(Type[]::new);
-            NAME_TYPE_MAP = Arrays.stream(Type.values()).collect(Collectors.toMap(Type::getKey, type -> type));
+            CODEC = StringIdentifiable.createCodec(Type::values);
+            BY_ID = ValueLists.createIdToValueFunction(Type::getId, Type.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 

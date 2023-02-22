@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.render.entity;
 
@@ -22,9 +23,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class EntityRenderer<T extends Entity> {
@@ -99,7 +100,7 @@ public abstract class EntityRenderer<T extends Entity> {
         float f = ((Entity)entity).getHeight() + 0.5f;
         int i = "deadmau5".equals(text.getString()) ? -10 : 0;
         matrices.push();
-        matrices.translate(0.0, f, 0.0);
+        matrices.translate(0.0f, f, 0.0f);
         matrices.multiply(this.dispatcher.getRotation());
         matrices.scale(-0.025f, -0.025f, 0.025f);
         Matrix4f matrix4f = matrices.peek().getPositionMatrix();

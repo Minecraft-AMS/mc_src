@@ -46,7 +46,7 @@ public class PortalForcer {
         PointOfInterestStorage pointOfInterestStorage = this.world.getPointOfInterestStorage();
         int i = destIsNether ? 16 : 128;
         pointOfInterestStorage.preloadChunks(this.world, pos, i);
-        Optional<PointOfInterest> optional = pointOfInterestStorage.getInSquare(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.NETHER_PORTAL), pos, i, PointOfInterestStorage.OccupationStatus.ANY).filter(poi -> worldBorder.contains(poi.getPos())).sorted(Comparator.comparingDouble(poi -> poi.getPos().getSquaredDistance(pos)).thenComparingInt(poi -> poi.getPos().getY())).filter(poi -> this.world.getBlockState(poi.getPos()).contains(Properties.HORIZONTAL_AXIS)).findFirst();
+        Optional<PointOfInterest> optional = pointOfInterestStorage.getInSquare(poiType -> poiType.matchesKey(PointOfInterestTypes.NETHER_PORTAL), pos, i, PointOfInterestStorage.OccupationStatus.ANY).filter(poi -> worldBorder.contains(poi.getPos())).sorted(Comparator.comparingDouble(poi -> poi.getPos().getSquaredDistance(pos)).thenComparingInt(poi -> poi.getPos().getY())).filter(poi -> this.world.getBlockState(poi.getPos()).contains(Properties.HORIZONTAL_AXIS)).findFirst();
         return optional.map(poi -> {
             BlockPos blockPos = poi.getPos();
             this.world.getChunkManager().addTicket(ChunkTicketType.PORTAL, new ChunkPos(blockPos), 3, blockPos);
@@ -75,9 +75,9 @@ public class PortalForcer {
             for (l = j; l >= this.world.getBottomY(); --l) {
                 int n;
                 mutable2.setY(l);
-                if (!this.world.isAir(mutable2)) continue;
+                if (!this.isBlockStateValid(mutable2)) continue;
                 m = l;
-                while (l > this.world.getBottomY() && this.world.isAir(mutable2.move(Direction.DOWN))) {
+                while (l > this.world.getBottomY() && this.isBlockStateValid(mutable2.move(Direction.DOWN))) {
                     --l;
                 }
                 if (l + 4 > i || (n = m - l) > 0 && n < 3) continue;
@@ -135,6 +135,11 @@ public class PortalForcer {
         return Optional.of(new BlockLocating.Rectangle(blockPos.toImmutable(), 2, 3));
     }
 
+    private boolean isBlockStateValid(BlockPos.Mutable pos) {
+        BlockState blockState = this.world.getBlockState(pos);
+        return blockState.isReplaceable() && blockState.getFluidState().isEmpty();
+    }
+
     private boolean isValidPortalPos(BlockPos pos, BlockPos.Mutable temp, Direction portalDirection, int distanceOrthogonalToPortal) {
         Direction direction = portalDirection.rotateYClockwise();
         for (int i = -1; i < 3; ++i) {
@@ -143,7 +148,7 @@ public class PortalForcer {
                 if (j < 0 && !this.world.getBlockState(temp).getMaterial().isSolid()) {
                     return false;
                 }
-                if (j < 0 || this.world.isAir(temp)) continue;
+                if (j < 0 || this.isBlockStateValid(temp)) continue;
                 return false;
             }
         }

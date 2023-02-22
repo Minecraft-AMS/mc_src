@@ -28,6 +28,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BrewingStandBlockEntity;
 import net.minecraft.block.entity.CampfireBlockEntity;
 import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.block.entity.ComparatorBlockEntity;
 import net.minecraft.block.entity.ConduitBlockEntity;
@@ -39,6 +40,7 @@ import net.minecraft.block.entity.EndGatewayBlockEntity;
 import net.minecraft.block.entity.EndPortalBlockEntity;
 import net.minecraft.block.entity.EnderChestBlockEntity;
 import net.minecraft.block.entity.FurnaceBlockEntity;
+import net.minecraft.block.entity.HangingSignBlockEntity;
 import net.minecraft.block.entity.HopperBlockEntity;
 import net.minecraft.block.entity.JigsawBlockEntity;
 import net.minecraft.block.entity.JukeboxBlockEntity;
@@ -55,10 +57,11 @@ import net.minecraft.block.entity.SmokerBlockEntity;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.block.entity.TrappedChestBlockEntity;
 import net.minecraft.datafixer.TypeReferences;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.BlockView;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -72,14 +75,15 @@ public class BlockEntityType<T extends BlockEntity> {
     public static final BlockEntityType<JukeboxBlockEntity> JUKEBOX = BlockEntityType.create("jukebox", Builder.create(JukeboxBlockEntity::new, Blocks.JUKEBOX));
     public static final BlockEntityType<DispenserBlockEntity> DISPENSER = BlockEntityType.create("dispenser", Builder.create(DispenserBlockEntity::new, Blocks.DISPENSER));
     public static final BlockEntityType<DropperBlockEntity> DROPPER = BlockEntityType.create("dropper", Builder.create(DropperBlockEntity::new, Blocks.DROPPER));
-    public static final BlockEntityType<SignBlockEntity> SIGN = BlockEntityType.create("sign", Builder.create(SignBlockEntity::new, Blocks.OAK_SIGN, Blocks.SPRUCE_SIGN, Blocks.BIRCH_SIGN, Blocks.ACACIA_SIGN, Blocks.JUNGLE_SIGN, Blocks.DARK_OAK_SIGN, Blocks.OAK_WALL_SIGN, Blocks.SPRUCE_WALL_SIGN, Blocks.BIRCH_WALL_SIGN, Blocks.ACACIA_WALL_SIGN, Blocks.JUNGLE_WALL_SIGN, Blocks.DARK_OAK_WALL_SIGN, Blocks.CRIMSON_SIGN, Blocks.CRIMSON_WALL_SIGN, Blocks.WARPED_SIGN, Blocks.WARPED_WALL_SIGN, Blocks.MANGROVE_SIGN, Blocks.MANGROVE_WALL_SIGN));
+    public static final BlockEntityType<SignBlockEntity> SIGN = BlockEntityType.create("sign", Builder.create(SignBlockEntity::new, Blocks.OAK_SIGN, Blocks.SPRUCE_SIGN, Blocks.BIRCH_SIGN, Blocks.ACACIA_SIGN, Blocks.JUNGLE_SIGN, Blocks.DARK_OAK_SIGN, Blocks.OAK_WALL_SIGN, Blocks.SPRUCE_WALL_SIGN, Blocks.BIRCH_WALL_SIGN, Blocks.ACACIA_WALL_SIGN, Blocks.JUNGLE_WALL_SIGN, Blocks.DARK_OAK_WALL_SIGN, Blocks.CRIMSON_SIGN, Blocks.CRIMSON_WALL_SIGN, Blocks.WARPED_SIGN, Blocks.WARPED_WALL_SIGN, Blocks.MANGROVE_SIGN, Blocks.MANGROVE_WALL_SIGN, Blocks.BAMBOO_SIGN, Blocks.BAMBOO_WALL_SIGN));
+    public static final BlockEntityType<HangingSignBlockEntity> HANGING_SIGN = BlockEntityType.create("hanging_sign", Builder.create(HangingSignBlockEntity::new, Blocks.OAK_HANGING_SIGN, Blocks.SPRUCE_HANGING_SIGN, Blocks.BIRCH_HANGING_SIGN, Blocks.ACACIA_HANGING_SIGN, Blocks.JUNGLE_HANGING_SIGN, Blocks.DARK_OAK_HANGING_SIGN, Blocks.CRIMSON_HANGING_SIGN, Blocks.WARPED_HANGING_SIGN, Blocks.MANGROVE_HANGING_SIGN, Blocks.BAMBOO_HANGING_SIGN, Blocks.OAK_WALL_HANGING_SIGN, Blocks.SPRUCE_WALL_HANGING_SIGN, Blocks.BIRCH_WALL_HANGING_SIGN, Blocks.ACACIA_WALL_HANGING_SIGN, Blocks.JUNGLE_WALL_HANGING_SIGN, Blocks.DARK_OAK_WALL_HANGING_SIGN, Blocks.CRIMSON_WALL_HANGING_SIGN, Blocks.WARPED_WALL_HANGING_SIGN, Blocks.MANGROVE_WALL_HANGING_SIGN, Blocks.BAMBOO_WALL_HANGING_SIGN));
     public static final BlockEntityType<MobSpawnerBlockEntity> MOB_SPAWNER = BlockEntityType.create("mob_spawner", Builder.create(MobSpawnerBlockEntity::new, Blocks.SPAWNER));
     public static final BlockEntityType<PistonBlockEntity> PISTON = BlockEntityType.create("piston", Builder.create(PistonBlockEntity::new, Blocks.MOVING_PISTON));
     public static final BlockEntityType<BrewingStandBlockEntity> BREWING_STAND = BlockEntityType.create("brewing_stand", Builder.create(BrewingStandBlockEntity::new, Blocks.BREWING_STAND));
     public static final BlockEntityType<EnchantingTableBlockEntity> ENCHANTING_TABLE = BlockEntityType.create("enchanting_table", Builder.create(EnchantingTableBlockEntity::new, Blocks.ENCHANTING_TABLE));
     public static final BlockEntityType<EndPortalBlockEntity> END_PORTAL = BlockEntityType.create("end_portal", Builder.create(EndPortalBlockEntity::new, Blocks.END_PORTAL));
     public static final BlockEntityType<BeaconBlockEntity> BEACON = BlockEntityType.create("beacon", Builder.create(BeaconBlockEntity::new, Blocks.BEACON));
-    public static final BlockEntityType<SkullBlockEntity> SKULL = BlockEntityType.create("skull", Builder.create(SkullBlockEntity::new, Blocks.SKELETON_SKULL, Blocks.SKELETON_WALL_SKULL, Blocks.CREEPER_HEAD, Blocks.CREEPER_WALL_HEAD, Blocks.DRAGON_HEAD, Blocks.DRAGON_WALL_HEAD, Blocks.ZOMBIE_HEAD, Blocks.ZOMBIE_WALL_HEAD, Blocks.WITHER_SKELETON_SKULL, Blocks.WITHER_SKELETON_WALL_SKULL, Blocks.PLAYER_HEAD, Blocks.PLAYER_WALL_HEAD));
+    public static final BlockEntityType<SkullBlockEntity> SKULL = BlockEntityType.create("skull", Builder.create(SkullBlockEntity::new, Blocks.SKELETON_SKULL, Blocks.SKELETON_WALL_SKULL, Blocks.CREEPER_HEAD, Blocks.CREEPER_WALL_HEAD, Blocks.DRAGON_HEAD, Blocks.DRAGON_WALL_HEAD, Blocks.ZOMBIE_HEAD, Blocks.ZOMBIE_WALL_HEAD, Blocks.WITHER_SKELETON_SKULL, Blocks.WITHER_SKELETON_WALL_SKULL, Blocks.PLAYER_HEAD, Blocks.PLAYER_WALL_HEAD, Blocks.PIGLIN_HEAD, Blocks.PIGLIN_WALL_HEAD));
     public static final BlockEntityType<DaylightDetectorBlockEntity> DAYLIGHT_DETECTOR = BlockEntityType.create("daylight_detector", Builder.create(DaylightDetectorBlockEntity::new, Blocks.DAYLIGHT_DETECTOR));
     public static final BlockEntityType<HopperBlockEntity> HOPPER = BlockEntityType.create("hopper", Builder.create(HopperBlockEntity::new, Blocks.HOPPER));
     public static final BlockEntityType<ComparatorBlockEntity> COMPARATOR = BlockEntityType.create("comparator", Builder.create(ComparatorBlockEntity::new, Blocks.COMPARATOR));
@@ -101,13 +105,14 @@ public class BlockEntityType<T extends BlockEntity> {
     public static final BlockEntityType<SculkSensorBlockEntity> SCULK_SENSOR = BlockEntityType.create("sculk_sensor", Builder.create(SculkSensorBlockEntity::new, Blocks.SCULK_SENSOR));
     public static final BlockEntityType<SculkCatalystBlockEntity> SCULK_CATALYST = BlockEntityType.create("sculk_catalyst", Builder.create(SculkCatalystBlockEntity::new, Blocks.SCULK_CATALYST));
     public static final BlockEntityType<SculkShriekerBlockEntity> SCULK_SHRIEKER = BlockEntityType.create("sculk_shrieker", Builder.create(SculkShriekerBlockEntity::new, Blocks.SCULK_SHRIEKER));
+    public static final BlockEntityType<ChiseledBookshelfBlockEntity> CHISELED_BOOKSHELF = BlockEntityType.create("chiseled_bookshelf", Builder.create(ChiseledBookshelfBlockEntity::new, Blocks.CHISELED_BOOKSHELF));
     private final BlockEntityFactory<? extends T> factory;
     private final Set<Block> blocks;
     private final Type<?> type;
 
     @Nullable
     public static Identifier getId(BlockEntityType<?> type) {
-        return Registry.BLOCK_ENTITY_TYPE.getId(type);
+        return Registries.BLOCK_ENTITY_TYPE.getId(type);
     }
 
     private static <T extends BlockEntity> BlockEntityType<T> create(String id, Builder<T> builder) {
@@ -115,7 +120,7 @@ public class BlockEntityType<T extends BlockEntity> {
             LOGGER.warn("Block entity type {} requires at least one valid block to be defined!", (Object)id);
         }
         Type<?> type = Util.getChoiceType(TypeReferences.BLOCK_ENTITY, id);
-        return Registry.register(Registry.BLOCK_ENTITY_TYPE, id, builder.build(type));
+        return Registry.register(Registries.BLOCK_ENTITY_TYPE, id, builder.build(type));
     }
 
     public BlockEntityType(BlockEntityFactory<? extends T> factory, Set<Block> blocks, Type<?> type) {

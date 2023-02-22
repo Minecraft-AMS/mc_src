@@ -22,8 +22,8 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.recipe.RecipeMatcher;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Nameable;
 import net.minecraft.util.collection.DefaultedList;
@@ -493,7 +493,7 @@ Nameable {
     public boolean contains(ItemStack stack) {
         for (List list : this.combinedInventory) {
             for (ItemStack itemStack : list) {
-                if (itemStack.isEmpty() || !itemStack.isItemEqualIgnoreDamage(stack)) continue;
+                if (itemStack.isEmpty() || !ItemStack.canCombine(itemStack, stack)) continue;
                 return true;
             }
         }

@@ -2,32 +2,37 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
- *  com.mojang.serialization.DataResult
+ *  com.mojang.logging.LogUtils
+ *  com.mojang.serialization.Codec
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntMap$Entry
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  it.unimi.dsi.fastutil.objects.ObjectIterator
+ *  org.slf4j.Logger
  */
 package net.minecraft.village;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
-import com.mojang.serialization.DataResult;
+import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,14 +44,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.DoublePredicate;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.annotation.Debug;
-import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.village.VillageGossipType;
+import org.slf4j.Logger;
 
 public class VillagerGossips {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int field_30236 = 2;
     private final Map<UUID, Reputation> entityReputation = Maps.newHashMap();
 
@@ -75,21 +82,21 @@ public class VillagerGossips {
     }
 
     private Collection<GossipEntry> pickGossips(Random random, int count) {
-        List list = this.entries().collect(Collectors.toList());
+        List<GossipEntry> list = this.entries().toList();
         if (list.isEmpty()) {
             return Collections.emptyList();
         }
         int[] is = new int[list.size()];
         int i = 0;
         for (int j = 0; j < list.size(); ++j) {
-            GossipEntry gossipEntry = (GossipEntry)list.get(j);
+            GossipEntry gossipEntry = list.get(j);
             is[j] = (i += Math.abs(gossipEntry.getValue())) - 1;
         }
         Set set = Sets.newIdentityHashSet();
         for (int k = 0; k < count; ++k) {
             int l = random.nextInt(i);
             int m = Arrays.binarySearch(is, l);
-            set.add((GossipEntry)list.get(m < 0 ? -m - 1 : m));
+            set.add(list.get(m < 0 ? -m - 1 : m));
         }
         return set;
     }
@@ -150,12 +157,12 @@ public class VillagerGossips {
         }
     }
 
-    public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
-        return new Dynamic(dynamicOps, dynamicOps.createList(this.entries().map(gossipEntry -> gossipEntry.serialize(dynamicOps)).map(Dynamic::getValue)));
+    public <T> T serialize(DynamicOps<T> ops) {
+        return (T)GossipEntry.LIST_CODEC.encodeStart(ops, this.entries().toList()).resultOrPartial(error -> LOGGER.warn("Failed to serialize gossips: {}", error)).orElseGet(() -> ops.emptyList());
     }
 
     public void deserialize(Dynamic<?> dynamic) {
-        dynamic.asStream().map(GossipEntry::deserialize).flatMap(dataResult -> dataResult.result().stream()).forEach(gossipEntry -> this.getReputationFor((UUID)gossipEntry.target).associatedGossip.put((Object)gossipEntry.type, gossipEntry.value));
+        GossipEntry.LIST_CODEC.decode(dynamic).resultOrPartial(error -> LOGGER.warn("Failed to deserialize gossips: {}", error)).stream().flatMap(pair -> ((List)pair.getFirst()).stream()).forEach(entry -> this.getReputationFor((UUID)entry.target).associatedGossip.put((Object)entry.type, entry.value));
     }
 
     private static int max(int left, int right) {
@@ -174,18 +181,18 @@ public class VillagerGossips {
         }
 
         public int getValueFor(Predicate<VillageGossipType> gossipTypeFilter) {
-            return this.associatedGossip.object2IntEntrySet().stream().filter(entry -> gossipTypeFilter.test((VillageGossipType)((Object)((Object)entry.getKey())))).mapToInt(entry -> entry.getIntValue() * ((VillageGossipType)((Object)((Object)entry.getKey()))).multiplier).sum();
+            return this.associatedGossip.object2IntEntrySet().stream().filter(entry -> gossipTypeFilter.test((VillageGossipType)entry.getKey())).mapToInt(entry -> entry.getIntValue() * ((VillageGossipType)entry.getKey()).multiplier).sum();
         }
 
         public Stream<GossipEntry> entriesFor(UUID target) {
-            return this.associatedGossip.object2IntEntrySet().stream().map(entry -> new GossipEntry(target, (VillageGossipType)((Object)((Object)entry.getKey())), entry.getIntValue()));
+            return this.associatedGossip.object2IntEntrySet().stream().map(entry -> new GossipEntry(target, (VillageGossipType)entry.getKey(), entry.getIntValue()));
         }
 
         public void decay() {
             ObjectIterator objectIterator = this.associatedGossip.object2IntEntrySet().iterator();
             while (objectIterator.hasNext()) {
                 Object2IntMap.Entry entry = (Object2IntMap.Entry)objectIterator.next();
-                int i = entry.getIntValue() - ((VillageGossipType)((Object)entry.getKey())).decay;
+                int i = entry.getIntValue() - ((VillageGossipType)entry.getKey()).decay;
                 if (i < 2) {
                     objectIterator.remove();
                     continue;
@@ -213,15 +220,15 @@ public class VillagerGossips {
         }
     }
 
-    static class GossipEntry {
-        public static final String TARGET_KEY = "Target";
-        public static final String TYPE_KEY = "Type";
-        public static final String VALUE_KEY = "Value";
-        public final UUID target;
-        public final VillageGossipType type;
-        public final int value;
+    static final class GossipEntry
+    extends Record {
+        final UUID target;
+        final VillageGossipType type;
+        final int value;
+        public static final Codec<GossipEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Uuids.INT_STREAM_CODEC.fieldOf("Target").forGetter(GossipEntry::target), (App)VillageGossipType.CODEC.fieldOf("Type").forGetter(GossipEntry::type), (App)Codecs.POSITIVE_INT.fieldOf("Value").forGetter(GossipEntry::value)).apply((Applicative)instance, GossipEntry::new));
+        public static final Codec<List<GossipEntry>> LIST_CODEC = CODEC.listOf();
 
-        public GossipEntry(UUID target, VillageGossipType type, int value) {
+        GossipEntry(UUID target, VillageGossipType type, int value) {
             this.target = target;
             this.type = type;
             this.value = value;
@@ -231,16 +238,31 @@ public class VillagerGossips {
             return this.value * this.type.multiplier;
         }
 
-        public String toString() {
-            return "GossipEntry{target=" + this.target + ", type=" + this.type + ", value=" + this.value + "}";
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{GossipEntry.class, "target;type;value", "target", "type", "value"}, this);
         }
 
-        public <T> Dynamic<T> serialize(DynamicOps<T> dynamicOps) {
-            return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString(TARGET_KEY), DynamicSerializableUuid.CODEC.encodeStart(dynamicOps, (Object)this.target).result().orElseThrow(RuntimeException::new), (Object)dynamicOps.createString(TYPE_KEY), (Object)dynamicOps.createString(this.type.key), (Object)dynamicOps.createString(VALUE_KEY), (Object)dynamicOps.createInt(this.value))));
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{GossipEntry.class, "target;type;value", "target", "type", "value"}, this);
         }
 
-        public static DataResult<GossipEntry> deserialize(Dynamic<?> dynamic) {
-            return DataResult.unbox((App)DataResult.instance().group((App)dynamic.get(TARGET_KEY).read(DynamicSerializableUuid.CODEC), (App)dynamic.get(TYPE_KEY).asString().map(VillageGossipType::byKey), (App)dynamic.get(VALUE_KEY).asNumber().map(Number::intValue)).apply((Applicative)DataResult.instance(), GossipEntry::new));
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{GossipEntry.class, "target;type;value", "target", "type", "value"}, this, object);
+        }
+
+        public UUID target() {
+            return this.target;
+        }
+
+        public VillageGossipType type() {
+            return this.type;
+        }
+
+        public int value() {
+            return this.value;
         }
     }
 }

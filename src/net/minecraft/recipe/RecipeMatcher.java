@@ -30,8 +30,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class RecipeMatcher {
@@ -57,7 +57,7 @@ public class RecipeMatcher {
     }
 
     public static int getItemId(ItemStack stack) {
-        return Registry.ITEM.getRawId(stack.getItem());
+        return Registries.ITEM.getRawId(stack.getItem());
     }
 
     boolean contains(int itemId) {

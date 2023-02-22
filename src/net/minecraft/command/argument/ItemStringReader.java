@@ -27,18 +27,18 @@ import com.mojang.datafixers.util.Either;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import net.minecraft.command.CommandRegistryWrapper;
 import net.minecraft.command.CommandSource;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.StringNbtReader;
-import net.minecraft.tag.TagKey;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
-import net.minecraft.util.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemStringReader {
@@ -48,7 +48,7 @@ public class ItemStringReader {
     private static final char LEFT_CURLY_BRACKET = '{';
     private static final char HASH_SIGN = '#';
     private static final Function<SuggestionsBuilder, CompletableFuture<Suggestions>> NBT_SUGGESTION_PROVIDER = SuggestionsBuilder::buildFuture;
-    private final CommandRegistryWrapper<Item> registryWrapper;
+    private final RegistryWrapper<Item> registryWrapper;
     private final StringReader reader;
     private final boolean allowTag;
     private Either<RegistryEntry<Item>, RegistryEntryList<Item>> result;
@@ -56,13 +56,13 @@ public class ItemStringReader {
     private NbtCompound nbt;
     private Function<SuggestionsBuilder, CompletableFuture<Suggestions>> suggestions = NBT_SUGGESTION_PROVIDER;
 
-    private ItemStringReader(CommandRegistryWrapper<Item> registryWrapper, StringReader reader, boolean allowTag) {
+    private ItemStringReader(RegistryWrapper<Item> registryWrapper, StringReader reader, boolean allowTag) {
         this.registryWrapper = registryWrapper;
         this.reader = reader;
         this.allowTag = allowTag;
     }
 
-    public static ItemResult item(CommandRegistryWrapper<Item> registryWrapper, StringReader reader) throws CommandSyntaxException {
+    public static ItemResult item(RegistryWrapper<Item> registryWrapper, StringReader reader) throws CommandSyntaxException {
         int i = reader.getCursor();
         try {
             ItemStringReader itemStringReader = new ItemStringReader(registryWrapper, reader, false);
@@ -76,7 +76,7 @@ public class ItemStringReader {
         }
     }
 
-    public static Either<ItemResult, TagResult> itemOrTag(CommandRegistryWrapper<Item> registryWrapper, StringReader reader) throws CommandSyntaxException {
+    public static Either<ItemResult, TagResult> itemOrTag(RegistryWrapper<Item> registryWrapper, StringReader reader) throws CommandSyntaxException {
         int i = reader.getCursor();
         try {
             ItemStringReader itemStringReader = new ItemStringReader(registryWrapper, reader, true);
@@ -89,7 +89,7 @@ public class ItemStringReader {
         }
     }
 
-    public static CompletableFuture<Suggestions> getSuggestions(CommandRegistryWrapper<Item> registryWrapper, SuggestionsBuilder builder, boolean allowTag) {
+    public static CompletableFuture<Suggestions> getSuggestions(RegistryWrapper<Item> registryWrapper, SuggestionsBuilder builder, boolean allowTag) {
         StringReader stringReader = new StringReader(builder.getInput());
         stringReader.setCursor(builder.getStart());
         ItemStringReader itemStringReader = new ItemStringReader(registryWrapper, stringReader, allowTag);
@@ -105,8 +105,8 @@ public class ItemStringReader {
     private void readItem() throws CommandSyntaxException {
         int i = this.reader.getCursor();
         Identifier identifier = Identifier.fromCommandInput(this.reader);
-        Optional<RegistryEntry<Item>> optional = this.registryWrapper.getEntry(RegistryKey.of(Registry.ITEM_KEY, identifier));
-        this.result = Either.left(optional.orElseThrow(() -> {
+        Optional<RegistryEntry.Reference<Item>> optional = this.registryWrapper.getOptional(RegistryKey.of(RegistryKeys.ITEM, identifier));
+        this.result = Either.left((Object)optional.orElseThrow(() -> {
             this.reader.setCursor(i);
             return ID_INVALID_EXCEPTION.createWithContext((ImmutableStringReader)this.reader, (Object)identifier);
         }));
@@ -120,8 +120,8 @@ public class ItemStringReader {
         this.reader.expect('#');
         this.suggestions = this::suggestTag;
         Identifier identifier = Identifier.fromCommandInput(this.reader);
-        Optional<RegistryEntryList<Item>> optional = this.registryWrapper.getEntryList(TagKey.of(Registry.ITEM_KEY, identifier));
-        this.result = Either.right(optional.orElseThrow(() -> {
+        Optional<RegistryEntryList.Named<Item>> optional = this.registryWrapper.getOptional(TagKey.of(RegistryKeys.ITEM, identifier));
+        this.result = Either.right((Object)optional.orElseThrow(() -> {
             this.reader.setCursor(i);
             return UNKNOWN_TAG_EXCEPTION.createWithContext((ImmutableStringReader)this.reader, (Object)identifier);
         }));
@@ -153,7 +153,7 @@ public class ItemStringReader {
     }
 
     private CompletableFuture<Suggestions> suggestTag(SuggestionsBuilder builder) {
-        return CommandSource.suggestIdentifiers(this.registryWrapper.streamTags().map(TagKey::id), builder, String.valueOf('#'));
+        return CommandSource.suggestIdentifiers(this.registryWrapper.streamTagKeys().map(TagKey::id), builder, String.valueOf('#'));
     }
 
     private CompletableFuture<Suggestions> suggestItemId(SuggestionsBuilder builder) {

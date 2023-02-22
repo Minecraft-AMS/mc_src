@@ -9,6 +9,7 @@
  *  com.mojang.serialization.DataResult
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.client.option;
@@ -35,24 +36,24 @@ import java.util.stream.IntStream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.OptionSliderWidget;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.util.OrderableTooltip;
 import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public final class SimpleOption<T> {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final PotentialValuesBasedCallbacks<Boolean> BOOLEAN = new PotentialValuesBasedCallbacks(ImmutableList.of((Object)Boolean.TRUE, (Object)Boolean.FALSE), Codec.BOOL);
-    private static final int TOOLTIP_WIDTH = 200;
-    private final TooltipFactoryGetter<T> tooltipFactoryGetter;
+    public static final ValueTextGetter<Boolean> BOOLEAN_TEXT_GETTER = (optionText, value) -> value != false ? ScreenTexts.ON : ScreenTexts.OFF;
+    private final TooltipFactory<T> tooltipFactory;
     final Function<T, Text> textGetter;
     private final Callbacks<T> callbacks;
     private final Codec<T> codec;
@@ -69,21 +70,25 @@ public final class SimpleOption<T> {
         return SimpleOption.ofBoolean(key, SimpleOption.emptyTooltip(), defaultValue, value -> {});
     }
 
-    public static SimpleOption<Boolean> ofBoolean(String key, TooltipFactoryGetter<Boolean> tooltipFactoryGetter, boolean defaultValue) {
-        return SimpleOption.ofBoolean(key, tooltipFactoryGetter, defaultValue, value -> {});
+    public static SimpleOption<Boolean> ofBoolean(String key, TooltipFactory<Boolean> tooltipFactory, boolean defaultValue) {
+        return SimpleOption.ofBoolean(key, tooltipFactory, defaultValue, value -> {});
     }
 
-    public static SimpleOption<Boolean> ofBoolean(String key, TooltipFactoryGetter<Boolean> tooltipFactoryGetter, boolean defaultValue, Consumer<Boolean> changeCallback) {
-        return new SimpleOption<Boolean>(key, tooltipFactoryGetter, (optionText, value) -> value != false ? ScreenTexts.ON : ScreenTexts.OFF, BOOLEAN, defaultValue, changeCallback);
+    public static SimpleOption<Boolean> ofBoolean(String key, TooltipFactory<Boolean> tooltipFactory, boolean defaultValue, Consumer<Boolean> changeCallback) {
+        return SimpleOption.ofBoolean(key, tooltipFactory, BOOLEAN_TEXT_GETTER, defaultValue, changeCallback);
     }
 
-    public SimpleOption(String key, TooltipFactoryGetter<T> tooltipFactoryGetter, ValueTextGetter<T> valueTextGetter, Callbacks<T> callbacks, T defaultValue, Consumer<T> changeCallback) {
-        this(key, tooltipFactoryGetter, valueTextGetter, callbacks, callbacks.codec(), defaultValue, changeCallback);
+    public static SimpleOption<Boolean> ofBoolean(String key, TooltipFactory<Boolean> tooltipFactory, ValueTextGetter<Boolean> valueTextGetter, boolean defaultValue, Consumer<Boolean> changeCallback) {
+        return new SimpleOption<Boolean>(key, tooltipFactory, valueTextGetter, BOOLEAN, defaultValue, changeCallback);
     }
 
-    public SimpleOption(String key, TooltipFactoryGetter<T> tooltipFactoryGetter, ValueTextGetter<T> valueTextGetter, Callbacks<T> callbacks, Codec<T> codec, T defaultValue, Consumer<T> changeCallback) {
+    public SimpleOption(String key, TooltipFactory<T> tooltipFactory, ValueTextGetter<T> valueTextGetter, Callbacks<T> callbacks, T defaultValue, Consumer<T> changeCallback) {
+        this(key, tooltipFactory, valueTextGetter, callbacks, callbacks.codec(), defaultValue, changeCallback);
+    }
+
+    public SimpleOption(String key, TooltipFactory<T> tooltipFactory, ValueTextGetter<T> valueTextGetter, Callbacks<T> callbacks, Codec<T> codec, T defaultValue, Consumer<T> changeCallback) {
         this.text = Text.translatable(key);
-        this.tooltipFactoryGetter = tooltipFactoryGetter;
+        this.tooltipFactory = tooltipFactory;
         this.textGetter = value -> valueTextGetter.toString(this.text, value);
         this.callbacks = callbacks;
         this.codec = codec;
@@ -92,28 +97,24 @@ public final class SimpleOption<T> {
         this.value = this.defaultValue;
     }
 
-    public static <T> TooltipFactoryGetter<T> emptyTooltip() {
-        return client -> value -> ImmutableList.of();
+    public static <T> TooltipFactory<T> emptyTooltip() {
+        return value -> null;
     }
 
-    public static <T> TooltipFactoryGetter<T> constantTooltip(Text text) {
-        return client -> {
-            List<OrderedText> list = SimpleOption.wrapLines(client, text);
-            return value -> list;
-        };
+    public static <T> TooltipFactory<T> constantTooltip(Text text) {
+        return value -> Tooltip.of(text);
     }
 
     public static <T extends TranslatableOption> ValueTextGetter<T> enumValueText() {
         return (optionText, value) -> value.getText();
     }
 
-    protected static List<OrderedText> wrapLines(MinecraftClient client, Text text) {
-        return client.textRenderer.wrapLines(text, 200);
+    public ClickableWidget createButton(GameOptions options, int x, int y, int width) {
+        return this.createButton(options, x, y, width, value -> {});
     }
 
-    public ClickableWidget createButton(GameOptions options, int x, int y, int width) {
-        TooltipFactory tooltipFactory = (TooltipFactory)this.tooltipFactoryGetter.apply(MinecraftClient.getInstance());
-        return this.callbacks.getButtonCreator(tooltipFactory, options, x, y, width).apply(this);
+    public ClickableWidget createButton(GameOptions options, int x, int y, int width, Consumer<T> changeCallback) {
+        return this.callbacks.getButtonCreator(this.tooltipFactory, options, x, y, width, changeCallback).apply(this);
     }
 
     public T getValue() {
@@ -147,9 +148,11 @@ public final class SimpleOption<T> {
         return this.callbacks;
     }
 
+    @FunctionalInterface
     @Environment(value=EnvType.CLIENT)
-    public static interface TooltipFactoryGetter<T>
-    extends Function<MinecraftClient, TooltipFactory<T>> {
+    public static interface TooltipFactory<T> {
+        @Nullable
+        public Tooltip apply(T var1);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -173,17 +176,11 @@ public final class SimpleOption<T> {
 
     @Environment(value=EnvType.CLIENT)
     static interface Callbacks<T> {
-        public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> var1, GameOptions var2, int var3, int var4, int var5);
+        public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> var1, GameOptions var2, int var3, int var4, int var5, Consumer<T> var6);
 
         public Optional<T> validate(T var1);
 
         public Codec<T> codec();
-    }
-
-    @FunctionalInterface
-    @Environment(value=EnvType.CLIENT)
-    public static interface TooltipFactory<T>
-    extends Function<T, List<OrderedText>> {
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -320,12 +317,12 @@ public final class SimpleOption<T> {
 
         @Override
         default public double toSliderProgress(Integer integer) {
-            return MathHelper.lerpFromProgress(integer.intValue(), this.minInclusive(), this.maxInclusive(), 0.0f, 1.0f);
+            return MathHelper.map(integer.intValue(), this.minInclusive(), this.maxInclusive(), 0.0f, 1.0f);
         }
 
         @Override
         default public Integer toValue(double d) {
-            return MathHelper.floor(MathHelper.lerpFromProgress(d, 0.0, 1.0, (double)this.minInclusive(), (double)this.maxInclusive()));
+            return MathHelper.floor(MathHelper.map(d, 0.0, 1.0, (double)this.minInclusive(), (double)this.maxInclusive()));
         }
 
         default public <R> SliderCallbacks<R> withModifier(final IntFunction<? extends R> sliderProgressValueToValue, final ToIntFunction<? super R> valueToSliderProgressValue) {
@@ -361,34 +358,32 @@ public final class SimpleOption<T> {
 
     @Environment(value=EnvType.CLIENT)
     static final class OptionSliderWidgetImpl<N>
-    extends OptionSliderWidget
-    implements OrderableTooltip {
+    extends OptionSliderWidget {
         private final SimpleOption<N> option;
         private final SliderCallbacks<N> callbacks;
         private final TooltipFactory<N> tooltipFactory;
+        private final Consumer<N> changeCallback;
 
-        OptionSliderWidgetImpl(GameOptions options, int x, int y, int width, int height, SimpleOption<N> option, SliderCallbacks<N> callbacks, TooltipFactory<N> tooltipFactory) {
+        OptionSliderWidgetImpl(GameOptions options, int x, int y, int width, int height, SimpleOption<N> option, SliderCallbacks<N> callbacks, TooltipFactory<N> tooltipFactory, Consumer<N> changeCallback) {
             super(options, x, y, width, height, callbacks.toSliderProgress(option.getValue()));
             this.option = option;
             this.callbacks = callbacks;
             this.tooltipFactory = tooltipFactory;
+            this.changeCallback = changeCallback;
             this.updateMessage();
         }
 
         @Override
         protected void updateMessage() {
             this.setMessage(this.option.textGetter.apply(this.option.getValue()));
+            this.setTooltip(this.tooltipFactory.apply(this.callbacks.toValue(this.value)));
         }
 
         @Override
         protected void applyValue() {
             this.option.setValue(this.callbacks.toValue(this.value));
             this.options.write();
-        }
-
-        @Override
-        public List<OrderedText> getOrderedTooltip() {
-            return (List)this.tooltipFactory.apply(this.callbacks.toValue(this.value));
+            this.changeCallback.accept(this.option.getValue());
         }
     }
 
@@ -427,11 +422,11 @@ public final class SimpleOption<T> {
         public boolean isCycling();
 
         @Override
-        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width) {
+        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width, Consumer<T> changeCallback) {
             if (this.isCycling()) {
-                return CyclingCallbacks.super.getButtonCreator(tooltipFactory, gameOptions, x, y, width);
+                return CyclingCallbacks.super.getButtonCreator(tooltipFactory, gameOptions, x, y, width, changeCallback);
             }
-            return SliderCallbacks.super.getButtonCreator(tooltipFactory, gameOptions, x, y, width);
+            return SliderCallbacks.super.getButtonCreator(tooltipFactory, gameOptions, x, y, width, changeCallback);
         }
     }
 
@@ -445,10 +440,11 @@ public final class SimpleOption<T> {
         }
 
         @Override
-        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width) {
+        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width, Consumer<T> changeCallback) {
             return option -> CyclingButtonWidget.builder(option.textGetter).values(this.getValues()).tooltip(tooltipFactory).initially(option.value).build(x, y, width, 20, option.text, (button, value) -> {
                 this.valueSetter().set((SimpleOption<Object>)option, value);
                 gameOptions.write();
+                changeCallback.accept(value);
             });
         }
 
@@ -466,8 +462,8 @@ public final class SimpleOption<T> {
         public T toValue(double var1);
 
         @Override
-        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width) {
-            return option -> new OptionSliderWidgetImpl(gameOptions, x, y, width, 20, option, this, tooltipFactory);
+        default public Function<SimpleOption<T>, ClickableWidget> getButtonCreator(TooltipFactory<T> tooltipFactory, GameOptions gameOptions, int x, int y, int width, Consumer<T> changeCallback) {
+            return option -> new OptionSliderWidgetImpl(gameOptions, x, y, width, 20, option, this, tooltipFactory, changeCallback);
         }
     }
 }

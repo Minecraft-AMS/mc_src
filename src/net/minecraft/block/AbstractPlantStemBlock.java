@@ -17,9 +17,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.WorldView;
 
 public abstract class AbstractPlantStemBlock
 extends AbstractPlantPartBlock
@@ -71,13 +71,13 @@ implements Fertilizable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (direction == this.growthDirection.getOpposite() && !state.canPlaceAt(world, pos)) {
-            world.createAndScheduleBlockTick(pos, this, 1);
+            world.scheduleBlockTick(pos, this, 1);
         }
         if (direction == this.growthDirection && (neighborState.isOf(this) || neighborState.isOf(this.getPlant()))) {
             return this.copyState(state, this.getPlant().getDefaultState());
         }
         if (this.tickWater) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
@@ -88,7 +88,7 @@ implements Fertilizable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         return this.chooseStemState(world.getBlockState(pos.offset(this.growthDirection)));
     }
 

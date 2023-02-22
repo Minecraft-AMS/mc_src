@@ -10,9 +10,9 @@ package net.minecraft.text;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import java.util.List;
-import net.minecraft.client.font.TextVisitFactory;
 import net.minecraft.text.CharacterVisitor;
 import net.minecraft.text.Style;
+import net.minecraft.text.TextVisitFactory;
 
 @FunctionalInterface
 public interface OrderedText {

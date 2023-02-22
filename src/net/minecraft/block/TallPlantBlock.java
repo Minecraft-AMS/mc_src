@@ -15,6 +15,7 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
@@ -110,7 +111,7 @@ extends PlantBlock {
         BlockState blockState;
         DoubleBlockHalf doubleBlockHalf = state.get(HALF);
         if (doubleBlockHalf == DoubleBlockHalf.UPPER && (blockState = world.getBlockState(blockPos = pos.down())).isOf(state.getBlock()) && blockState.get(HALF) == DoubleBlockHalf.LOWER) {
-            BlockState blockState2 = blockState.contains(Properties.WATERLOGGED) && blockState.get(Properties.WATERLOGGED) != false ? Blocks.WATER.getDefaultState() : Blocks.AIR.getDefaultState();
+            BlockState blockState2 = blockState.getFluidState().isOf(Fluids.WATER) ? Blocks.WATER.getDefaultState() : Blocks.AIR.getDefaultState();
             world.setBlockState(blockPos, blockState2, 35);
             world.syncWorldEvent(player, 2001, blockPos, Block.getRawIdFromState(blockState));
         }

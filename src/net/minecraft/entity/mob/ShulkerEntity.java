@@ -3,6 +3,8 @@
  * 
  * Could not load the following classes:
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Vector3f
+ *  org.joml.Vector3fc
  */
 package net.minecraft.entity.mob;
 
@@ -20,6 +22,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.ai.control.BodyControl;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
@@ -40,6 +43,7 @@ import net.minecraft.entity.passive.GolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
+import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
@@ -53,7 +57,6 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
@@ -61,10 +64,13 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 public class ShulkerEntity
 extends GolemEntity
-implements Monster {
+implements VariantHolder<Optional<DyeColor>>,
+Monster {
     private static final UUID COVERED_ARMOR_BONUS_ID = UUID.fromString("7E0292F2-9434-48D5-A29F-9583AF7DF27F");
     private static final EntityAttributeModifier COVERED_ARMOR_BONUS = new EntityAttributeModifier(COVERED_ARMOR_BONUS_ID, "Covered armor bonus", 20.0, EntityAttributeModifier.Operation.ADDITION);
     protected static final TrackedData<Direction> ATTACHED_FACE = DataTracker.registerData(ShulkerEntity.class, TrackedDataHandlerRegistry.FACING);
@@ -77,9 +83,9 @@ implements Monster {
     private static final int field_30491 = 8;
     private static final int field_30492 = 5;
     private static final float field_30493 = 0.05f;
-    static final Vec3f SOUTH_VECTOR = Util.make(() -> {
+    static final Vector3f SOUTH_VECTOR = Util.make(() -> {
         Vec3i vec3i = Direction.SOUTH.getVector();
-        return new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
+        return new Vector3f((float)vec3i.getX(), (float)vec3i.getY(), (float)vec3i.getZ());
     });
     private float prevOpenProgress;
     private float openProgress;
@@ -253,7 +259,7 @@ implements Monster {
     @Override
     public double getHeightOffset() {
         EntityType<?> entityType = this.getVehicle().getType();
-        if (entityType == EntityType.BOAT || entityType == EntityType.MINECART) {
+        if (this.getVehicle() instanceof BoatEntity || entityType == EntityType.MINECART) {
             return 0.1875 - this.getVehicle().getMountedHeightOffset();
         }
         return super.getHeightOffset();
@@ -422,12 +428,11 @@ implements Monster {
             return;
         }
         ShulkerEntity shulkerEntity = EntityType.SHULKER.create(this.world);
-        DyeColor dyeColor = this.getColor();
-        if (dyeColor != null) {
-            shulkerEntity.setColor(dyeColor);
+        if (shulkerEntity != null) {
+            shulkerEntity.setVariant((Optional<DyeColor>)this.getVariant());
+            shulkerEntity.refreshPositionAfterTeleport(vec3d);
+            this.world.spawnEntity(shulkerEntity);
         }
-        shulkerEntity.refreshPositionAfterTeleport(vec3d);
-        this.world.spawnEntity(shulkerEntity);
     }
 
     @Override
@@ -505,21 +510,27 @@ implements Monster {
         return 0.0f;
     }
 
-    public Optional<Vec3d> method_33352(float f) {
+    public Optional<Vec3d> getRenderPositionOffset(float tickDelta) {
         if (this.prevAttachedBlock == null || this.teleportLerpTimer <= 0) {
             return Optional.empty();
         }
-        double d = (double)((float)this.teleportLerpTimer - f) / 6.0;
+        double d = (double)((float)this.teleportLerpTimer - tickDelta) / 6.0;
         d *= d;
         BlockPos blockPos = this.getBlockPos();
         double e = (double)(blockPos.getX() - this.prevAttachedBlock.getX()) * d;
-        double g = (double)(blockPos.getY() - this.prevAttachedBlock.getY()) * d;
-        double h = (double)(blockPos.getZ() - this.prevAttachedBlock.getZ()) * d;
-        return Optional.of(new Vec3d(-e, -g, -h));
+        double f = (double)(blockPos.getY() - this.prevAttachedBlock.getY()) * d;
+        double g = (double)(blockPos.getZ() - this.prevAttachedBlock.getZ()) * d;
+        return Optional.of(new Vec3d(-e, -f, -g));
     }
 
-    private void setColor(DyeColor color) {
-        this.dataTracker.set(COLOR, (byte)color.getId());
+    @Override
+    public void setVariant(Optional<DyeColor> optional) {
+        this.dataTracker.set(COLOR, optional.map(color -> (byte)color.getId()).orElse((byte)16));
+    }
+
+    @Override
+    public Optional<DyeColor> getVariant() {
+        return Optional.ofNullable(this.getColor());
     }
 
     @Nullable
@@ -529,6 +540,11 @@ implements Monster {
             return null;
         }
         return DyeColor.byId(b);
+    }
+
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
     }
 
     class ShulkerLookControl
@@ -544,17 +560,16 @@ implements Monster {
         @Override
         protected Optional<Float> getTargetYaw() {
             Direction direction = ShulkerEntity.this.getAttachedFace().getOpposite();
-            Vec3f vec3f = SOUTH_VECTOR.copy();
-            vec3f.rotate(direction.getRotationQuaternion());
+            Vector3f vector3f = direction.getRotationQuaternion().transform(new Vector3f((Vector3fc)SOUTH_VECTOR));
             Vec3i vec3i = direction.getVector();
-            Vec3f vec3f2 = new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
-            vec3f2.cross(vec3f);
+            Vector3f vector3f2 = new Vector3f((float)vec3i.getX(), (float)vec3i.getY(), (float)vec3i.getZ());
+            vector3f2.cross((Vector3fc)vector3f);
             double d = this.x - this.entity.getX();
             double e = this.y - this.entity.getEyeY();
             double f = this.z - this.entity.getZ();
-            Vec3f vec3f3 = new Vec3f((float)d, (float)e, (float)f);
-            float g = vec3f2.dot(vec3f3);
-            float h = vec3f.dot(vec3f3);
+            Vector3f vector3f3 = new Vector3f((float)d, (float)e, (float)f);
+            float g = vector3f2.dot((Vector3fc)vector3f3);
+            float h = vector3f.dot((Vector3fc)vector3f3);
             return Math.abs(g) > 1.0E-5f || Math.abs(h) > 1.0E-5f ? Optional.of(Float.valueOf((float)(MathHelper.atan2(-g, h) * 57.2957763671875))) : Optional.empty();
         }
 

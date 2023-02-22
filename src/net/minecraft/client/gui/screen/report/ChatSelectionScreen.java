@@ -59,9 +59,7 @@ extends Screen {
     private SelectionListWidget selectionList;
     final ChatAbuseReport report;
     private final Consumer<ChatAbuseReport> newReportConsumer;
-    private MessagesListAdder<ReceivedMessage.ChatMessage> listAdder;
-    @Nullable
-    private List<OrderedText> tooltip;
+    private MessagesListAdder listAdder;
 
     public ChatSelectionScreen(@Nullable Screen parent, AbuseReportContext reporter, ChatAbuseReport report, Consumer<ChatAbuseReport> newReportConsumer) {
         super(TITLE);
@@ -73,16 +71,16 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.listAdder = new MessagesListAdder<ReceivedMessage.ChatMessage>(this.reporter.chatLog(), this::isSentByReportedPlayer, ReceivedMessage.ChatMessage.class);
+        this.listAdder = new MessagesListAdder(this.reporter, this::isSentByReportedPlayer);
         this.contextMessage = MultilineText.create(this.textRenderer, (StringVisitable)CONTEXT_MESSAGE, this.width - 16);
         this.selectionList = new SelectionListWidget(this.client, (this.contextMessage.count() + 1) * this.textRenderer.fontHeight);
         this.selectionList.setRenderBackground(false);
         this.addSelectableChild(this.selectionList);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 32, 150, 20, ScreenTexts.BACK, button -> this.close()));
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 32, 150, 20, ScreenTexts.DONE, button -> {
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> this.close()).dimensions(this.width / 2 - 155, this.height - 32, 150, 20).build());
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             this.newReportConsumer.accept(this.report);
             this.close();
-        }));
+        }).dimensions(this.width / 2 - 155 + 160, this.height - 32, 150, 20).build());
         this.setDoneButtonActivation();
         this.addMessages();
         this.selectionList.setScrollAmount(this.selectionList.getMaxScroll());
@@ -110,17 +108,13 @@ extends Screen {
         this.renderBackground(matrices);
         this.selectionList.render(matrices, mouseX, mouseY, delta);
         ChatSelectionScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 16, 0xFFFFFF);
-        AbuseReportLimits abuseReportLimits = this.reporter.sender().getLimits();
+        AbuseReportLimits abuseReportLimits = this.reporter.getSender().getLimits();
         int i = this.report.getSelections().size();
         int j = abuseReportLimits.maxReportedMessageCount();
         MutableText text = Text.translatable("gui.chatSelection.selected", i, j);
         ChatSelectionScreen.drawCenteredText(matrices, this.textRenderer, text, this.width / 2, 16 + this.textRenderer.fontHeight * 3 / 2, 0xA0A0A0);
         this.contextMessage.drawCenterWithShadow(matrices, this.width / 2, this.selectionList.getContextMessageY());
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltip != null) {
-            this.renderOrderedTooltip(matrices, this.tooltip, mouseX, mouseY);
-            this.tooltip = null;
-        }
     }
 
     @Override
@@ -133,14 +127,10 @@ extends Screen {
         return ScreenTexts.joinSentences(super.getNarratedTitle(), CONTEXT_MESSAGE);
     }
 
-    void setTooltip(@Nullable List<OrderedText> tooltip) {
-        this.tooltip = tooltip;
-    }
-
     @Environment(value=EnvType.CLIENT)
     public class SelectionListWidget
     extends AlwaysSelectedEntryListWidget<Entry>
-    implements MessagesListAdder.MessagesList<ReceivedMessage.ChatMessage> {
+    implements MessagesListAdder.MessagesList {
         @Nullable
         private SenderEntryPair lastSenderEntryPair;
 
@@ -158,13 +148,13 @@ extends Screen {
         }
 
         @Override
-        public void addMessage(int i, ReceivedMessage.ChatMessage chatMessage) {
-            boolean bl = chatMessage.isSentFrom(ChatSelectionScreen.this.report.getReportedPlayerUuid());
-            MessageTrustStatus messageTrustStatus = chatMessage.trustStatus();
-            MessageIndicator messageIndicator = messageTrustStatus.createIndicator(chatMessage.message());
-            MessageEntry entry = new MessageEntry(i, chatMessage.getContent(), chatMessage.getNarration(), messageIndicator, bl, true);
+        public void addMessage(int index, ReceivedMessage.ChatMessage message) {
+            boolean bl = message.isSentFrom(ChatSelectionScreen.this.report.getReportedPlayerUuid());
+            MessageTrustStatus messageTrustStatus = message.trustStatus();
+            MessageIndicator messageIndicator = messageTrustStatus.createIndicator(message.message());
+            MessageEntry entry = new MessageEntry(index, message.getContent(), message.getNarration(), messageIndicator, bl, true);
             this.addEntryToTop(entry);
-            this.addSenderEntry(chatMessage, bl);
+            this.addSenderEntry(message, bl);
         }
 
         private void addSenderEntry(ReceivedMessage.ChatMessage message, boolean fromReportedPlayer) {
@@ -254,7 +244,7 @@ extends Screen {
         @Environment(value=EnvType.CLIENT)
         public class MessageEntry
         extends Entry {
-            private static final Identifier CHECKMARK = new Identifier("realms", "textures/gui/realms/checkmark.png");
+            private static final Identifier CHECKMARK = new Identifier("minecraft", "textures/gui/checkmark.png");
             private static final int CHECKMARK_WIDTH = 9;
             private static final int CHECKMARK_HEIGHT = 8;
             private static final int CHAT_MESSAGE_LEFT_MARGIN = 11;

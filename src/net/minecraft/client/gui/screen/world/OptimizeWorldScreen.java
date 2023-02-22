@@ -25,15 +25,18 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.SaveLoader;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.World;
-import net.minecraft.world.gen.GeneratorOptions;
+import net.minecraft.world.dimension.DimensionOptions;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.updater.WorldUpdater;
@@ -58,8 +61,9 @@ extends Screen {
         SaveLoader saveLoader = client.createIntegratedServerLoader().createSaveLoader(storageSession, false);
         try {
             SaveProperties saveProperties = saveLoader.saveProperties();
-            storageSession.backupLevelDataFile(saveLoader.dynamicRegistryManager(), saveProperties);
-            OptimizeWorldScreen optimizeWorldScreen = new OptimizeWorldScreen(callback, dataFixer, storageSession, saveProperties.getLevelInfo(), eraseCache, saveProperties.getGeneratorOptions());
+            DynamicRegistryManager.Immutable immutable = saveLoader.combinedDynamicRegistries().getCombinedRegistryManager();
+            storageSession.backupLevelDataFile(immutable, saveProperties);
+            OptimizeWorldScreen optimizeWorldScreen = new OptimizeWorldScreen(callback, dataFixer, storageSession, saveProperties.getLevelInfo(), eraseCache, immutable.get(RegistryKeys.DIMENSION));
             if (saveLoader != null) {
                 saveLoader.close();
             }
@@ -84,19 +88,19 @@ extends Screen {
         }
     }
 
-    private OptimizeWorldScreen(BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, LevelInfo levelInfo, boolean eraseCache, GeneratorOptions generatorOptions) {
+    private OptimizeWorldScreen(BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, LevelInfo levelInfo, boolean eraseCache, Registry<DimensionOptions> dimensionOptionsRegistry) {
         super(Text.translatable("optimizeWorld.title", levelInfo.getLevelName()));
         this.callback = callback;
-        this.updater = new WorldUpdater(storageSession, dataFixer, generatorOptions, eraseCache);
+        this.updater = new WorldUpdater(storageSession, dataFixer, dimensionOptionsRegistry, eraseCache);
     }
 
     @Override
     protected void init() {
         super.init();
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 150, 200, 20, ScreenTexts.CANCEL, button -> {
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> {
             this.updater.cancel();
             this.callback.accept(false);
-        }));
+        }).dimensions(this.width / 2 - 100, this.height / 4 + 150, 200, 20).build());
     }
 
     @Override
@@ -131,9 +135,9 @@ extends Screen {
             OptimizeWorldScreen.drawTextWithShadow(matrices, this.textRenderer, Text.translatable("optimizeWorld.info.skipped", this.updater.getSkippedChunkCount()), i, 40 + this.textRenderer.fontHeight + 3, 0xA0A0A0);
             OptimizeWorldScreen.drawTextWithShadow(matrices, this.textRenderer, Text.translatable("optimizeWorld.info.total", this.updater.getTotalChunkCount()), i, 40 + (this.textRenderer.fontHeight + 3) * 2, 0xA0A0A0);
             int m = 0;
-            for (RegistryKey registryKey : this.updater.getWorlds()) {
+            for (RegistryKey<World> registryKey : this.updater.getWorlds()) {
                 int n = MathHelper.floor(this.updater.getProgress(registryKey) * (float)(j - i));
-                OptimizeWorldScreen.fill(matrices, i + m, k, i + m + n, l, DIMENSION_COLORS.getInt((Object)registryKey));
+                OptimizeWorldScreen.fill(matrices, i + m, k, i + m + n, l, DIMENSION_COLORS.getInt(registryKey));
                 m += n;
             }
             int o = this.updater.getUpgradedChunkCount() + this.updater.getSkippedChunkCount();

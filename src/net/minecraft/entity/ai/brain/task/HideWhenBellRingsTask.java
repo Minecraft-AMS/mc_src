@@ -2,34 +2,27 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.mojang.datafixers.kinds.Applicative
  */
 package net.minecraft.entity.ai.brain.task;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.Map;
+import com.mojang.datafixers.kinds.Applicative;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
-import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 import net.minecraft.village.raid.Raid;
 
-public class HideWhenBellRingsTask
-extends Task<LivingEntity> {
-    public HideWhenBellRingsTask() {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.HEARD_BELL_TIME, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
-    }
-
-    @Override
-    protected void run(ServerWorld world, LivingEntity entity, long time) {
-        Brain<?> brain = entity.getBrain();
-        Raid raid = world.getRaidAt(entity.getBlockPos());
-        if (raid == null) {
-            brain.doExclusively(Activity.HIDE);
-        }
+public class HideWhenBellRingsTask {
+    public static Task<LivingEntity> create() {
+        return TaskTriggerer.task(context -> context.group(context.queryMemoryValue(MemoryModuleType.HEARD_BELL_TIME)).apply((Applicative)context, heardBellTime -> (world, entity, time) -> {
+            Raid raid = world.getRaidAt(entity.getBlockPos());
+            if (raid == null) {
+                entity.getBrain().doExclusively(Activity.HIDE);
+            }
+            return true;
+        }));
     }
 }
 

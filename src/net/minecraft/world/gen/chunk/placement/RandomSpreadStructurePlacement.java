@@ -20,15 +20,14 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.placement.SpreadType;
 import net.minecraft.world.gen.chunk.placement.StructurePlacement;
+import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
 import net.minecraft.world.gen.chunk.placement.StructurePlacementType;
-import net.minecraft.world.gen.noise.NoiseConfig;
 
 public class RandomSpreadStructurePlacement
 extends StructurePlacement {
-    public static final Codec<RandomSpreadStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> RandomSpreadStructurePlacement.method_41637(instance).and(instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(RandomSpreadStructurePlacement::getSpacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(RandomSpreadStructurePlacement::getSeparation), (App)SpreadType.CODEC.optionalFieldOf("spread_type", (Object)SpreadType.LINEAR).forGetter(RandomSpreadStructurePlacement::getSpreadType))).apply((Applicative)instance, RandomSpreadStructurePlacement::new)).flatXmap(placement -> {
+    public static final Codec<RandomSpreadStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> RandomSpreadStructurePlacement.buildCodec(instance).and(instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(RandomSpreadStructurePlacement::getSpacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(RandomSpreadStructurePlacement::getSeparation), (App)SpreadType.CODEC.optionalFieldOf("spread_type", (Object)SpreadType.LINEAR).forGetter(RandomSpreadStructurePlacement::getSpreadType))).apply((Applicative)instance, RandomSpreadStructurePlacement::new)).flatXmap(placement -> {
         if (placement.spacing <= placement.separation) {
             return DataResult.error((String)"Spacing has to be larger than separation");
         }
@@ -73,8 +72,8 @@ extends StructurePlacement {
     }
 
     @Override
-    protected boolean isStartChunk(ChunkGenerator chunkGenerator, NoiseConfig noiseConfig, long seed, int chunkX, int chunkZ) {
-        ChunkPos chunkPos = this.getStartChunk(seed, chunkX, chunkZ);
+    protected boolean isStartChunk(StructurePlacementCalculator calculator, int chunkX, int chunkZ) {
+        ChunkPos chunkPos = this.getStartChunk(calculator.getStructureSeed(), chunkX, chunkZ);
         return chunkPos.x == chunkX && chunkPos.z == chunkZ;
     }
 

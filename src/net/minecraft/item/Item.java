@@ -35,11 +35,16 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.resource.featuretoggle.FeatureFlag;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
+import net.minecraft.resource.featuretoggle.ToggleableFeature;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -51,30 +56,26 @@ import net.minecraft.util.Rarity;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.UseAction;
 import net.minecraft.util.Util;
-import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class Item
-implements ItemConvertible {
+implements ToggleableFeature,
+ItemConvertible {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final Map<Block, Item> BLOCK_ITEMS = Maps.newHashMap();
     protected static final UUID ATTACK_DAMAGE_MODIFIER_ID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
     protected static final UUID ATTACK_SPEED_MODIFIER_ID = UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3");
     public static final int DEFAULT_MAX_COUNT = 64;
-    public static final int field_30888 = 32;
-    public static final int field_30889 = 13;
-    private final RegistryEntry.Reference<Item> registryEntry = Registry.ITEM.createEntry(this);
-    @Nullable
-    protected final ItemGroup group;
+    public static final int DEFAULT_MAX_USE_TIME = 32;
+    public static final int ITEM_BAR_STEPS = 13;
+    private final RegistryEntry.Reference<Item> registryEntry = Registries.ITEM.createEntry(this);
     private final Rarity rarity;
     private final int maxCount;
     private final int maxDamage;
@@ -85,13 +86,14 @@ implements ItemConvertible {
     private String translationKey;
     @Nullable
     private final FoodComponent foodComponent;
+    private final FeatureSet requiredFeatures;
 
     public static int getRawId(Item item) {
-        return item == null ? 0 : Registry.ITEM.getRawId(item);
+        return item == null ? 0 : Registries.ITEM.getRawId(item);
     }
 
     public static Item byRawId(int id) {
-        return Registry.ITEM.get(id);
+        return Registries.ITEM.get(id);
     }
 
     @Deprecated
@@ -101,13 +103,13 @@ implements ItemConvertible {
 
     public Item(Settings settings) {
         String string;
-        this.group = settings.group;
         this.rarity = settings.rarity;
         this.recipeRemainder = settings.recipeRemainder;
         this.maxDamage = settings.maxDamage;
         this.maxCount = settings.maxCount;
         this.foodComponent = settings.foodComponent;
         this.fireproof = settings.fireproof;
+        this.requiredFeatures = settings.requiredFeatures;
         if (SharedConstants.isDevelopment && !(string = this.getClass().getSimpleName()).endsWith("Item")) {
             LOGGER.error("Item classes should end with Item and {} doesn't.", (Object)string);
         }
@@ -217,12 +219,12 @@ implements ItemConvertible {
     }
 
     public String toString() {
-        return Registry.ITEM.getId(this).getPath();
+        return Registries.ITEM.getId(this).getPath();
     }
 
     protected String getOrCreateTranslationKey() {
         if (this.translationKey == null) {
-            this.translationKey = Util.createTranslationKey("item", Registry.ITEM.getId(this));
+            this.translationKey = Util.createTranslationKey("item", Registries.ITEM.getId(this));
         }
         return this.translationKey;
     }
@@ -327,22 +329,6 @@ implements ItemConvertible {
         return 0;
     }
 
-    public void appendStacks(ItemGroup group, DefaultedList<ItemStack> stacks) {
-        if (this.isIn(group)) {
-            stacks.add(new ItemStack(this));
-        }
-    }
-
-    protected boolean isIn(ItemGroup group) {
-        ItemGroup itemGroup = this.getGroup();
-        return itemGroup != null && (group == ItemGroup.SEARCH || group == itemGroup);
-    }
-
-    @Nullable
-    public final ItemGroup getGroup() {
-        return this.group;
-    }
-
     public boolean canRepair(ItemStack stack, ItemStack ingredient) {
         return false;
     }
@@ -393,17 +379,21 @@ implements ItemConvertible {
         return true;
     }
 
+    @Override
+    public FeatureSet getRequiredFeatures() {
+        return this.requiredFeatures;
+    }
+
     public static class Settings {
         int maxCount = 64;
         int maxDamage;
         @Nullable
         Item recipeRemainder;
-        @Nullable
-        ItemGroup group;
         Rarity rarity = Rarity.COMMON;
         @Nullable
         FoodComponent foodComponent;
         boolean fireproof;
+        FeatureSet requiredFeatures = FeatureFlags.VANILLA_FEATURES;
 
         public Settings food(FoodComponent foodComponent) {
             this.foodComponent = foodComponent;
@@ -433,11 +423,6 @@ implements ItemConvertible {
             return this;
         }
 
-        public Settings group(ItemGroup group) {
-            this.group = group;
-            return this;
-        }
-
         public Settings rarity(Rarity rarity) {
             this.rarity = rarity;
             return this;
@@ -445,6 +430,11 @@ implements ItemConvertible {
 
         public Settings fireproof() {
             this.fireproof = true;
+            return this;
+        }
+
+        public Settings requires(FeatureFlag ... features) {
+            this.requiredFeatures = FeatureFlags.FEATURE_MANAGER.featureSetOf(features);
             return this;
         }
     }

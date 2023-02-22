@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.vehicle;
 
@@ -15,13 +18,14 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.explosion.Explosion;
+import org.jetbrains.annotations.Nullable;
 
 public class TntMinecartEntity
 extends AbstractMinecartEntity {
@@ -66,7 +70,8 @@ extends AbstractMinecartEntity {
         PersistentProjectileEntity persistentProjectileEntity;
         Entity entity = source.getSource();
         if (entity instanceof PersistentProjectileEntity && (persistentProjectileEntity = (PersistentProjectileEntity)entity).isOnFire()) {
-            this.explode(persistentProjectileEntity.getVelocity().lengthSquared());
+            DamageSource damageSource = DamageSource.explosion(this, source.getAttacker());
+            this.explode(damageSource, persistentProjectileEntity.getVelocity().lengthSquared());
         }
         return super.damage(source, amount);
     }
@@ -89,13 +94,17 @@ extends AbstractMinecartEntity {
         return Items.TNT_MINECART;
     }
 
-    protected void explode(double velocity) {
+    protected void explode(double power) {
+        this.explode(null, power);
+    }
+
+    protected void explode(@Nullable DamageSource damageSource, double power) {
         if (!this.world.isClient) {
-            double d = Math.sqrt(velocity);
+            double d = Math.sqrt(power);
             if (d > 5.0) {
                 d = 5.0;
             }
-            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), Explosion.DestructionType.BREAK);
+            this.world.createExplosion(this, damageSource, null, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), false, World.ExplosionSourceType.TNT);
             this.discard();
         }
     }

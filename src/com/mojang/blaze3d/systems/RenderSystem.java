@@ -8,6 +8,11 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix3fc
+ *  org.joml.Matrix4f
+ *  org.joml.Matrix4fc
+ *  org.joml.Vector3f
  *  org.lwjgl.glfw.GLFW
  *  org.lwjgl.glfw.GLFWErrorCallbackI
  *  org.slf4j.Logger
@@ -31,10 +36,10 @@ import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.render.FogShape;
-import net.minecraft.client.render.Shader;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.texture.AbstractTexture;
@@ -44,10 +49,12 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.TimeSupplier;
 import net.minecraft.util.annotation.DeobfuscateClass;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
+import org.joml.Matrix3fc;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.slf4j.Logger;
@@ -67,13 +74,13 @@ public class RenderSystem {
     private static int MAX_SUPPORTED_TEXTURE_SIZE;
     private static boolean isInInit;
     private static double lastDrawTime;
-    private static final IndexBuffer sharedSequential;
-    private static final IndexBuffer sharedSequentialQuad;
-    private static final IndexBuffer sharedSequentialLines;
+    private static final ShapeIndexBuffer sharedSequential;
+    private static final ShapeIndexBuffer sharedSequentialQuad;
+    private static final ShapeIndexBuffer sharedSequentialLines;
     private static Matrix3f inverseViewRotationMatrix;
     private static Matrix4f projectionMatrix;
     private static Matrix4f savedProjectionMatrix;
-    private static MatrixStack modelViewStack;
+    private static final MatrixStack modelViewStack;
     private static Matrix4f modelViewMatrix;
     private static Matrix4f textureMatrix;
     private static final int[] shaderTextures;
@@ -82,12 +89,12 @@ public class RenderSystem {
     private static float shaderFogEnd;
     private static final float[] shaderFogColor;
     private static FogShape shaderFogShape;
-    private static final Vec3f[] shaderLightDirections;
+    private static final Vector3f[] shaderLightDirections;
     private static float shaderGameTime;
     private static float shaderLineWidth;
     private static String apiDescription;
     @Nullable
-    private static Shader shader;
+    private static ShaderProgram shader;
 
     public static void initRenderThread() {
         if (renderThread != null || gameThread == Thread.currentThread()) {
@@ -439,17 +446,17 @@ public class RenderSystem {
         return shaderFogShape;
     }
 
-    public static void setShaderLights(Vec3f vec3f, Vec3f vec3f2) {
+    public static void setShaderLights(Vector3f vector3f, Vector3f vector3f2) {
         RenderSystem.assertOnRenderThread();
-        RenderSystem._setShaderLights(vec3f, vec3f2);
+        RenderSystem._setShaderLights(vector3f, vector3f2);
     }
 
-    public static void _setShaderLights(Vec3f vec3f, Vec3f vec3f2) {
-        RenderSystem.shaderLightDirections[0] = vec3f;
-        RenderSystem.shaderLightDirections[1] = vec3f2;
+    public static void _setShaderLights(Vector3f vector3f, Vector3f vector3f2) {
+        RenderSystem.shaderLightDirections[0] = vector3f;
+        RenderSystem.shaderLightDirections[1] = vector3f2;
     }
 
-    public static void setupShaderLights(Shader shader) {
+    public static void setupShaderLights(ShaderProgram shader) {
         RenderSystem.assertOnRenderThread();
         if (shader.light0Direction != null) {
             shader.light0Direction.set(shaderLightDirections[0]);
@@ -555,10 +562,10 @@ public class RenderSystem {
         GlStateManager._clearDepth(1.0);
         GlStateManager._enableDepthTest();
         GlStateManager._depthFunc(515);
-        projectionMatrix.loadIdentity();
-        savedProjectionMatrix.loadIdentity();
-        modelViewMatrix.loadIdentity();
-        textureMatrix.loadIdentity();
+        projectionMatrix.identity();
+        savedProjectionMatrix.identity();
+        modelViewMatrix.identity();
+        textureMatrix.identity();
         GlStateManager._viewport(x, y, width, height);
     }
 
@@ -673,19 +680,19 @@ public class RenderSystem {
         RenderSystem.setShaderTexture(1, 0);
     }
 
-    public static void setupLevelDiffuseLighting(Vec3f vec3f, Vec3f vec3f2, Matrix4f matrix4f) {
+    public static void setupLevelDiffuseLighting(Vector3f vector3f, Vector3f vector3f2, Matrix4f matrix4f) {
         RenderSystem.assertOnRenderThread();
-        GlStateManager.setupLevelDiffuseLighting(vec3f, vec3f2, matrix4f);
+        GlStateManager.setupLevelDiffuseLighting(vector3f, vector3f2, matrix4f);
     }
 
-    public static void setupGuiFlatDiffuseLighting(Vec3f vec3f, Vec3f vec3f2) {
+    public static void setupGuiFlatDiffuseLighting(Vector3f vector3f, Vector3f vector3f2) {
         RenderSystem.assertOnRenderThread();
-        GlStateManager.setupGuiFlatDiffuseLighting(vec3f, vec3f2);
+        GlStateManager.setupGuiFlatDiffuseLighting(vector3f, vector3f2);
     }
 
-    public static void setupGui3DDiffuseLighting(Vec3f vec3f, Vec3f vec3f2) {
+    public static void setupGui3DDiffuseLighting(Vector3f vector3f, Vector3f vector3f2) {
         RenderSystem.assertOnRenderThread();
-        GlStateManager.setupGui3DDiffuseLighting(vec3f, vec3f2);
+        GlStateManager.setupGui3DDiffuseLighting(vector3f, vector3f2);
     }
 
     public static void beginInitialization() {
@@ -741,18 +748,18 @@ public class RenderSystem {
         simpleOption.setValue(graphicsMode);
     }
 
-    public static void setShader(Supplier<Shader> shaderSupplier) {
+    public static void setShader(Supplier<ShaderProgram> program) {
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
-                shader = (Shader)shaderSupplier.get();
+                shader = (ShaderProgram)program.get();
             });
         } else {
-            shader = shaderSupplier.get();
+            shader = program.get();
         }
     }
 
     @Nullable
-    public static Shader getShader() {
+    public static ShaderProgram getShader() {
         RenderSystem.assertOnRenderThread();
         return shader;
     }
@@ -800,7 +807,7 @@ public class RenderSystem {
     }
 
     public static void setProjectionMatrix(Matrix4f projectionMatrix) {
-        Matrix4f matrix4f = projectionMatrix.copy();
+        Matrix4f matrix4f = new Matrix4f((Matrix4fc)projectionMatrix);
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 projectionMatrix = matrix4f;
@@ -811,7 +818,7 @@ public class RenderSystem {
     }
 
     public static void setInverseViewRotationMatrix(Matrix3f inverseViewRotationMatrix) {
-        Matrix3f matrix3f = inverseViewRotationMatrix.copy();
+        Matrix3f matrix3f = new Matrix3f((Matrix3fc)inverseViewRotationMatrix);
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 inverseViewRotationMatrix = matrix3f;
@@ -822,7 +829,7 @@ public class RenderSystem {
     }
 
     public static void setTextureMatrix(Matrix4f textureMatrix) {
-        Matrix4f matrix4f = textureMatrix.copy();
+        Matrix4f matrix4f = new Matrix4f((Matrix4fc)textureMatrix);
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 textureMatrix = matrix4f;
@@ -834,14 +841,14 @@ public class RenderSystem {
 
     public static void resetTextureMatrix() {
         if (!RenderSystem.isOnRenderThread()) {
-            RenderSystem.recordRenderCall(() -> textureMatrix.loadIdentity());
+            RenderSystem.recordRenderCall(() -> textureMatrix.identity());
         } else {
-            textureMatrix.loadIdentity();
+            textureMatrix.identity();
         }
     }
 
     public static void applyModelViewMatrix() {
-        Matrix4f matrix4f = modelViewStack.peek().getPositionMatrix().copy();
+        Matrix4f matrix4f = new Matrix4f((Matrix4fc)modelViewStack.peek().getPositionMatrix());
         if (!RenderSystem.isOnRenderThread()) {
             RenderSystem.recordRenderCall(() -> {
                 modelViewMatrix = matrix4f;
@@ -899,7 +906,7 @@ public class RenderSystem {
         return textureMatrix;
     }
 
-    public static IndexBuffer getSequentialBuffer(VertexFormat.DrawMode drawMode) {
+    public static ShapeIndexBuffer getSequentialBuffer(VertexFormat.DrawMode drawMode) {
         RenderSystem.assertOnRenderThread();
         return switch (drawMode) {
             case VertexFormat.DrawMode.QUADS -> sharedSequentialQuad;
@@ -924,16 +931,16 @@ public class RenderSystem {
         return shaderGameTime;
     }
 
-    private static /* synthetic */ void lambda$setupGui3DDiffuseLighting$58(Vec3f vec3f, Vec3f vec3f2) {
-        GlStateManager.setupGui3DDiffuseLighting(vec3f, vec3f2);
+    private static /* synthetic */ void lambda$setupGui3DDiffuseLighting$58(Vector3f vector3f, Vector3f vector3f2) {
+        GlStateManager.setupGui3DDiffuseLighting(vector3f, vector3f2);
     }
 
-    private static /* synthetic */ void lambda$setupGuiFlatDiffuseLighting$57(Vec3f vec3f, Vec3f vec3f2) {
-        GlStateManager.setupGuiFlatDiffuseLighting(vec3f, vec3f2);
+    private static /* synthetic */ void lambda$setupGuiFlatDiffuseLighting$57(Vector3f vector3f, Vector3f vector3f2) {
+        GlStateManager.setupGuiFlatDiffuseLighting(vector3f, vector3f2);
     }
 
-    private static /* synthetic */ void lambda$setupLevelDiffuseLighting$56(Vec3f vec3f, Vec3f vec3f2, Matrix4f matrix4f) {
-        GlStateManager.setupLevelDiffuseLighting(vec3f, vec3f2, matrix4f);
+    private static /* synthetic */ void lambda$setupLevelDiffuseLighting$56(Vector3f vector3f, Vector3f vector3f2, Matrix4f matrix4f) {
+        GlStateManager.setupLevelDiffuseLighting(vector3f, vector3f2, matrix4f);
     }
 
     private static /* synthetic */ void lambda$teardownOverlayColor$55() {
@@ -1030,8 +1037,8 @@ public class RenderSystem {
         GlStateManager._drawElements(i, j, k, 0L);
     }
 
-    private static /* synthetic */ void lambda$setShaderLights$30(Vec3f vec3f, Vec3f vec3f2) {
-        RenderSystem._setShaderLights(vec3f, vec3f2);
+    private static /* synthetic */ void lambda$setShaderLights$30(Vector3f vector3f, Vector3f vector3f2) {
+        RenderSystem._setShaderLights(vector3f, vector3f2);
     }
 
     private static /* synthetic */ void lambda$setShaderFogShape$29(FogShape fogShape) {
@@ -1150,24 +1157,24 @@ public class RenderSystem {
     static {
         MAX_SUPPORTED_TEXTURE_SIZE = -1;
         lastDrawTime = Double.MIN_VALUE;
-        sharedSequential = new IndexBuffer(1, 1, java.util.function.IntConsumer::accept);
-        sharedSequentialQuad = new IndexBuffer(4, 6, (indexConsumer, vertexCount) -> {
-            indexConsumer.accept(vertexCount + 0);
-            indexConsumer.accept(vertexCount + 1);
-            indexConsumer.accept(vertexCount + 2);
-            indexConsumer.accept(vertexCount + 2);
-            indexConsumer.accept(vertexCount + 3);
-            indexConsumer.accept(vertexCount + 0);
+        sharedSequential = new ShapeIndexBuffer(1, 1, java.util.function.IntConsumer::accept);
+        sharedSequentialQuad = new ShapeIndexBuffer(4, 6, (indexConsumer, firstVertexIndex) -> {
+            indexConsumer.accept(firstVertexIndex + 0);
+            indexConsumer.accept(firstVertexIndex + 1);
+            indexConsumer.accept(firstVertexIndex + 2);
+            indexConsumer.accept(firstVertexIndex + 2);
+            indexConsumer.accept(firstVertexIndex + 3);
+            indexConsumer.accept(firstVertexIndex + 0);
         });
-        sharedSequentialLines = new IndexBuffer(4, 6, (indexConsumer, vertexCount) -> {
-            indexConsumer.accept(vertexCount + 0);
-            indexConsumer.accept(vertexCount + 1);
-            indexConsumer.accept(vertexCount + 2);
-            indexConsumer.accept(vertexCount + 3);
-            indexConsumer.accept(vertexCount + 2);
-            indexConsumer.accept(vertexCount + 1);
+        sharedSequentialLines = new ShapeIndexBuffer(4, 6, (indexConsumer, firstVertexIndex) -> {
+            indexConsumer.accept(firstVertexIndex + 0);
+            indexConsumer.accept(firstVertexIndex + 1);
+            indexConsumer.accept(firstVertexIndex + 2);
+            indexConsumer.accept(firstVertexIndex + 3);
+            indexConsumer.accept(firstVertexIndex + 2);
+            indexConsumer.accept(firstVertexIndex + 1);
         });
-        inverseViewRotationMatrix = new Matrix3f();
+        inverseViewRotationMatrix = new Matrix3f().zero();
         projectionMatrix = new Matrix4f();
         savedProjectionMatrix = new Matrix4f();
         modelViewStack = new MatrixStack();
@@ -1178,50 +1185,46 @@ public class RenderSystem {
         shaderFogEnd = 1.0f;
         shaderFogColor = new float[]{0.0f, 0.0f, 0.0f, 0.0f};
         shaderFogShape = FogShape.SPHERE;
-        shaderLightDirections = new Vec3f[2];
+        shaderLightDirections = new Vector3f[2];
         shaderLineWidth = 1.0f;
         apiDescription = "Unknown";
-        projectionMatrix.loadIdentity();
-        savedProjectionMatrix.loadIdentity();
-        modelViewMatrix.loadIdentity();
-        textureMatrix.loadIdentity();
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static final class IndexBuffer {
-        private final int sizeMultiplier;
-        private final int increment;
-        private final IndexMapper indexMapper;
+    public static final class ShapeIndexBuffer {
+        private final int vertexCountInShape;
+        private final int vertexCountInTriangulated;
+        private final Triangulator triangulator;
         private int id;
         private VertexFormat.IndexType indexType = VertexFormat.IndexType.BYTE;
         private int size;
 
-        IndexBuffer(int sizeMultiplier, int increment, IndexMapper indexMapper) {
-            this.sizeMultiplier = sizeMultiplier;
-            this.increment = increment;
-            this.indexMapper = indexMapper;
+        ShapeIndexBuffer(int vertexCountInShape, int vertexCountInTriangulated, Triangulator triangulator) {
+            this.vertexCountInShape = vertexCountInShape;
+            this.vertexCountInTriangulated = vertexCountInTriangulated;
+            this.triangulator = triangulator;
         }
 
-        public boolean isSizeLessThanOrEqual(int size) {
-            return size <= this.size;
+        public boolean isLargeEnough(int requiredSize) {
+            return requiredSize <= this.size;
         }
 
-        public void bindAndGrow(int newSize) {
+        public void bindAndGrow(int requiredSize) {
             if (this.id == 0) {
                 this.id = GlStateManager._glGenBuffers();
             }
             GlStateManager._glBindBuffer(34963, this.id);
-            this.grow(newSize);
+            this.grow(requiredSize);
         }
 
-        private void grow(int newSize) {
-            if (this.isSizeLessThanOrEqual(newSize)) {
+        private void grow(int requiredSize) {
+            if (this.isLargeEnough(requiredSize)) {
                 return;
             }
-            newSize = MathHelper.roundUpToMultiple(newSize * 2, this.increment);
-            LOGGER.debug("Growing IndexBuffer: Old limit {}, new limit {}.", (Object)this.size, (Object)newSize);
-            VertexFormat.IndexType indexType = VertexFormat.IndexType.smallestFor(newSize);
-            int i = MathHelper.roundUpToMultiple(newSize * indexType.size, 4);
+            requiredSize = MathHelper.roundUpToMultiple(requiredSize * 2, this.vertexCountInTriangulated);
+            LOGGER.debug("Growing IndexBuffer: Old limit {}, new limit {}.", (Object)this.size, (Object)requiredSize);
+            VertexFormat.IndexType indexType = VertexFormat.IndexType.smallestFor(requiredSize);
+            int i = MathHelper.roundUpToMultiple(requiredSize * indexType.size, 4);
             GlStateManager._glBufferData(34963, i, 35048);
             ByteBuffer byteBuffer = GlStateManager.mapBuffer(34963, 35001);
             if (byteBuffer == null) {
@@ -1229,23 +1232,23 @@ public class RenderSystem {
             }
             this.indexType = indexType;
             IntConsumer intConsumer = this.getIndexConsumer(byteBuffer);
-            for (int j = 0; j < newSize; j += this.increment) {
-                this.indexMapper.accept(intConsumer, j * this.sizeMultiplier / this.increment);
+            for (int j = 0; j < requiredSize; j += this.vertexCountInTriangulated) {
+                this.triangulator.accept(intConsumer, j * this.vertexCountInShape / this.vertexCountInTriangulated);
             }
             GlStateManager._glUnmapBuffer(34963);
-            this.size = newSize;
+            this.size = requiredSize;
         }
 
-        private IntConsumer getIndexConsumer(ByteBuffer indicesBuffer) {
+        private IntConsumer getIndexConsumer(ByteBuffer indexBuffer) {
             switch (this.indexType) {
                 case BYTE: {
-                    return index -> indicesBuffer.put((byte)index);
+                    return index -> indexBuffer.put((byte)index);
                 }
                 case SHORT: {
-                    return index -> indicesBuffer.putShort((short)index);
+                    return index -> indexBuffer.putShort((short)index);
                 }
             }
-            return indicesBuffer::putInt;
+            return indexBuffer::putInt;
         }
 
         public VertexFormat.IndexType getIndexType() {
@@ -1253,7 +1256,7 @@ public class RenderSystem {
         }
 
         @Environment(value=EnvType.CLIENT)
-        static interface IndexMapper {
+        static interface Triangulator {
             public void accept(IntConsumer var1, int var2);
         }
     }

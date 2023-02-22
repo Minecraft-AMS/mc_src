@@ -21,12 +21,12 @@ import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.state.property.Property;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.function.BooleanBiFunction;
@@ -165,7 +165,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (direction == Direction.DOWN) {
             return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);

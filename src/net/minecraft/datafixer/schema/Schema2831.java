@@ -22,8 +22,8 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> map, Map<String, Supplier<TypeTemplate>> map2) {
-        super.registerTypes(schema, map, map2);
+    public void registerTypes(Schema schema, Map<String, Supplier<TypeTemplate>> entityTypes, Map<String, Supplier<TypeTemplate>> blockEntityTypes) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
         schema.registerType(true, TypeReferences.UNTAGGED_SPAWNER, () -> DSL.optionalFields((String)"SpawnPotentials", (TypeTemplate)DSL.list((TypeTemplate)DSL.fields((String)"data", (TypeTemplate)DSL.fields((String)"entity", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema)))), (String)"SpawnData", (TypeTemplate)DSL.fields((String)"entity", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema))));
     }
 }

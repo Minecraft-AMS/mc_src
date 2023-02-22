@@ -7,11 +7,11 @@
 package net.minecraft.stat;
 
 import java.util.Objects;
+import net.minecraft.registry.Registries;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.stat.StatFormatter;
 import net.minecraft.stat.StatType;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class Stat<T>
@@ -28,7 +28,7 @@ extends ScoreboardCriterion {
     }
 
     public static <T> String getName(StatType<T> type, T value) {
-        return Stat.getName(Registry.STAT_TYPE.getId(type)) + ":" + Stat.getName(type.getRegistry().getId(value));
+        return Stat.getName(Registries.STAT_TYPE.getId(type)) + ":" + Stat.getName(type.getRegistry().getId(value));
     }
 
     private static <T> String getName(@Nullable Identifier id) {

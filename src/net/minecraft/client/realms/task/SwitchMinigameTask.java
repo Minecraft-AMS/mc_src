@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class SwitchMinigameTask
 extends LongRunningTask {
-    private static final Logger field_36360 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final long worldId;
     private final WorldTemplate worldTemplate;
     private final RealmsConfigureWorldScreen lastScreen;
@@ -58,7 +58,7 @@ extends LongRunningTask {
                 if (this.aborted()) {
                     return;
                 }
-                field_36360.error("Couldn't start mini game!");
+                LOGGER.error("Couldn't start mini game!");
                 this.error(exception.toString());
             }
         }

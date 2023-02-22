@@ -6,6 +6,7 @@
  *  com.mojang.authlib.GameProfile
  *  com.mojang.datafixers.util.Either
  *  com.mojang.logging.LogUtils
+ *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
@@ -16,6 +17,7 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +32,7 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.NetherPortalBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
+import net.minecraft.block.entity.SculkShriekerWarningManager;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.option.ChatVisibility;
 import net.minecraft.command.argument.EntityAnchorArgumentType;
@@ -58,9 +61,8 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketCallbacks;
-import net.minecraft.network.encryption.PlayerPublicKey;
-import net.minecraft.network.message.MessageHeader;
-import net.minecraft.network.message.MessageSignatureData;
+import net.minecraft.network.encryption.PublicPlayerSession;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SentMessage;
 import net.minecraft.network.packet.c2s.play.ClientSettingsC2SPacket;
@@ -80,12 +82,12 @@ import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.LookAtS2CPacket;
-import net.minecraft.network.packet.s2c.play.MessageHeaderS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenHorseScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenWrittenBookS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerAbilitiesS2CPacket;
+import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerSpawnS2CPacket;
 import net.minecraft.network.packet.s2c.play.RemoveEntityStatusEffectS2CPacket;
@@ -100,6 +102,8 @@ import net.minecraft.network.packet.s2c.play.UnloadChunkS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
@@ -149,7 +153,6 @@ import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.world.BlockLocating;
 import net.minecraft.world.GameMode;
@@ -211,6 +214,7 @@ extends PlayerEntity {
     private final TextStream textStream;
     private boolean filterText;
     private boolean allowServerListing = true;
+    private SculkShriekerWarningManager sculkShriekerWarningManager = new SculkShriekerWarningManager(0, 0, 0);
     private final ScreenHandlerSyncHandler screenHandlerSyncHandler = new ScreenHandlerSyncHandler(){
 
         @Override
@@ -257,12 +261,14 @@ extends PlayerEntity {
         public void onPropertyUpdate(ScreenHandler handler, int property, int value) {
         }
     };
+    @Nullable
+    private PublicPlayerSession session;
     private int screenHandlerSyncId;
     public int pingMilliseconds;
     public boolean notInAnyWorld;
 
-    public ServerPlayerEntity(MinecraftServer server, ServerWorld world, GameProfile profile, @Nullable PlayerPublicKey publicKey) {
-        super(world, world.getSpawnPos(), world.getSpawnAngle(), profile, publicKey);
+    public ServerPlayerEntity(MinecraftServer server, ServerWorld world, GameProfile profile) {
+        super(world, world.getSpawnPos(), world.getSpawnAngle(), profile);
         this.textStream = server.createFilterer(this);
         this.interactionManager = server.getPlayerInteractionManager(this);
         this.server = server;
@@ -315,6 +321,11 @@ extends PlayerEntity {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("warden_spawn_tracker", 10)) {
+            SculkShriekerWarningManager.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("warden_spawn_tracker"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(sculkShriekerWarningManager -> {
+                this.sculkShriekerWarningManager = sculkShriekerWarningManager;
+            });
+        }
         if (nbt.contains("enteredNetherPosition", 10)) {
             NbtCompound nbtCompound = nbt.getCompound("enteredNetherPosition");
             this.enteredNetherPos = new Vec3d(nbtCompound.getDouble("x"), nbtCompound.getDouble("y"), nbtCompound.getDouble("z"));
@@ -339,6 +350,7 @@ extends PlayerEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
+        SculkShriekerWarningManager.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.sculkShriekerWarningManager).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(encoded -> nbt.put("warden_spawn_tracker", (NbtElement)encoded));
         this.writeGameModeNbt(nbt);
         nbt.putBoolean("seenCredits", this.seenCredits);
         if (this.enteredNetherPos != null) {
@@ -366,7 +378,7 @@ extends PlayerEntity {
             nbt.putInt("SpawnZ", this.spawnPointPosition.getZ());
             nbt.putBoolean("SpawnForced", this.spawnForced);
             nbt.putFloat("SpawnAngle", this.spawnAngle);
-            Identifier.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.spawnPointDimension.getValue()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("SpawnDimension", (NbtElement)nbtElement));
+            Identifier.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.spawnPointDimension.getValue()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(encoded -> nbt.put("SpawnDimension", (NbtElement)encoded));
         }
     }
 
@@ -429,6 +441,7 @@ extends PlayerEntity {
     public void tick() {
         Entity entity;
         this.interactionManager.update();
+        this.sculkShriekerWarningManager.tick();
         --this.joinInvulnerabilityTicks;
         if (this.timeUntilRegen > 0) {
             --this.timeUntilRegen;
@@ -694,7 +707,7 @@ extends PlayerEntity {
             return this;
         }
         WorldProperties worldProperties = destination.getLevelProperties();
-        this.networkHandler.sendPacket(new PlayerRespawnS2CPacket(destination.getDimensionKey(), destination.getRegistryKey(), BiomeAccess.hashSeed(destination.getSeed()), this.interactionManager.getGameMode(), this.interactionManager.getPreviousGameMode(), destination.isDebugWorld(), destination.isFlat(), true, this.getLastDeathPos()));
+        this.networkHandler.sendPacket(new PlayerRespawnS2CPacket(destination.getDimensionKey(), destination.getRegistryKey(), BiomeAccess.hashSeed(destination.getSeed()), this.interactionManager.getGameMode(), this.interactionManager.getPreviousGameMode(), destination.isDebugWorld(), destination.isFlat(), 3, this.getLastDeathPos()));
         this.networkHandler.sendPacket(new DifficultyS2CPacket(worldProperties.getDifficulty(), worldProperties.isDifficultyLocked()));
         PlayerManager playerManager = this.server.getPlayerManager();
         playerManager.sendCommandTree(this);
@@ -711,9 +724,9 @@ extends PlayerEntity {
             serverWorld.getProfiler().pop();
             serverWorld.getProfiler().push("placing");
             this.setWorld(destination);
+            this.networkHandler.requestTeleport(teleportTarget.position.x, teleportTarget.position.y, teleportTarget.position.z, teleportTarget.yaw, teleportTarget.pitch);
+            this.networkHandler.syncWithPlayerPosition();
             destination.onPlayerChangeDimension(this);
-            this.setRotation(teleportTarget.yaw, teleportTarget.pitch);
-            this.refreshPositionAfterTeleport(teleportTarget.position.x, teleportTarget.position.y, teleportTarget.position.z);
             serverWorld.getProfiler().pop();
             this.worldChanged(serverWorld);
             this.networkHandler.sendPacket(new PlayerAbilitiesS2CPacket(this.getAbilities()));
@@ -808,7 +821,7 @@ extends PlayerEntity {
             double d = 8.0;
             double e = 5.0;
             Vec3d vec3d = Vec3d.ofBottomCenter(pos);
-            List<HostileEntity> list = this.world.getEntitiesByClass(HostileEntity.class, new Box(vec3d.getX() - 8.0, vec3d.getY() - 5.0, vec3d.getZ() - 8.0, vec3d.getX() + 8.0, vec3d.getY() + 5.0, vec3d.getZ() + 8.0), hostileEntity -> hostileEntity.isAngryAt(this));
+            List<HostileEntity> list = this.world.getEntitiesByClass(HostileEntity.class, new Box(vec3d.getX() - 8.0, vec3d.getY() - 5.0, vec3d.getZ() - 8.0, vec3d.getX() + 8.0, vec3d.getY() + 5.0, vec3d.getZ() + 8.0), entity -> entity.isAngryAt(this));
             if (!list.isEmpty()) {
                 return Either.left((Object)((Object)PlayerEntity.SleepFailureReason.NOT_SAFE));
             }
@@ -980,6 +993,7 @@ extends PlayerEntity {
         this.closeScreenHandler();
     }
 
+    @Override
     public void closeScreenHandler() {
         this.currentScreenHandler.close(this);
         this.playerScreenHandler.copySharedSlots(this.currentScreenHandler);
@@ -1078,8 +1092,11 @@ extends PlayerEntity {
     }
 
     public void copyFrom(ServerPlayerEntity oldPlayer, boolean alive) {
+        this.sculkShriekerWarningManager = oldPlayer.sculkShriekerWarningManager;
         this.filterText = oldPlayer.filterText;
+        this.session = oldPlayer.session;
         this.interactionManager.setGameMode(oldPlayer.interactionManager.getGameMode(), oldPlayer.interactionManager.getPreviousGameMode());
+        this.sendAbilitiesUpdate();
         if (alive) {
             this.getInventory().clone(oldPlayer.getInventory());
             this.setHealth(oldPlayer.getHealth());
@@ -1140,7 +1157,12 @@ extends PlayerEntity {
 
     @Override
     public void requestTeleport(double destX, double destY, double destZ) {
-        this.networkHandler.requestTeleport(destX, destY, destZ, this.getYaw(), this.getPitch());
+        this.networkHandler.requestTeleport(destX, destY, destZ, this.getYaw(), this.getPitch(), PlayerPositionLookS2CPacket.Flag.ROT);
+    }
+
+    @Override
+    public void requestTeleportOffset(double offsetX, double offsetY, double offsetZ) {
+        this.networkHandler.requestTeleport(this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, this.getYaw(), this.getPitch(), PlayerPositionLookS2CPacket.Flag.VALUES);
     }
 
     @Override
@@ -1225,12 +1247,6 @@ extends PlayerEntity {
         }
     }
 
-    public void sendMessageHeader(MessageHeader header, MessageSignatureData headerSignature, byte[] bodyDigest) {
-        if (this.acceptsChatMessage()) {
-            this.networkHandler.sendPacket(new MessageHeaderS2CPacket(header, headerSignature, bodyDigest));
-        }
-    }
-
     public String getIp() {
         String string = this.networkHandler.connection.getAddress().toString();
         string = string.substring(string.indexOf("/") + 1);
@@ -1271,7 +1287,7 @@ extends PlayerEntity {
     }
 
     public void sendServerMetadata(ServerMetadata metadata) {
-        this.networkHandler.sendPacket(new ServerMetadataS2CPacket(metadata.getDescription(), metadata.getFavicon(), metadata.shouldPreviewChat(), metadata.isSecureChatEnforced()));
+        this.networkHandler.sendPacket(new ServerMetadataS2CPacket(metadata.getDescription(), metadata.getFavicon(), metadata.isSecureChatEnforced()));
     }
 
     @Override
@@ -1310,7 +1326,8 @@ extends PlayerEntity {
         Entity entity3 = this.cameraEntity = entity == null ? this : entity;
         if (entity2 != this.cameraEntity) {
             this.networkHandler.sendPacket(new SetCameraEntityS2CPacket(this.cameraEntity));
-            this.requestTeleport(this.cameraEntity.getX(), this.cameraEntity.getY(), this.cameraEntity.getZ());
+            this.networkHandler.requestTeleport(this.cameraEntity.getX(), this.cameraEntity.getY(), this.cameraEntity.getZ(), this.getYaw(), this.getPitch());
+            this.networkHandler.syncWithPlayerPosition();
         }
     }
 
@@ -1365,7 +1382,7 @@ extends PlayerEntity {
         } else {
             ServerWorld serverWorld = this.getWorld();
             WorldProperties worldProperties = targetWorld.getLevelProperties();
-            this.networkHandler.sendPacket(new PlayerRespawnS2CPacket(targetWorld.getDimensionKey(), targetWorld.getRegistryKey(), BiomeAccess.hashSeed(targetWorld.getSeed()), this.interactionManager.getGameMode(), this.interactionManager.getPreviousGameMode(), targetWorld.isDebugWorld(), targetWorld.isFlat(), true, this.getLastDeathPos()));
+            this.networkHandler.sendPacket(new PlayerRespawnS2CPacket(targetWorld.getDimensionKey(), targetWorld.getRegistryKey(), BiomeAccess.hashSeed(targetWorld.getSeed()), this.interactionManager.getGameMode(), this.interactionManager.getPreviousGameMode(), targetWorld.isDebugWorld(), targetWorld.isFlat(), 3, this.getLastDeathPos()));
             this.networkHandler.sendPacket(new DifficultyS2CPacket(worldProperties.getDifficulty(), worldProperties.isDifficultyLocked()));
             this.server.getPlayerManager().sendCommandTree(this);
             serverWorld.removePlayer(this, Entity.RemovalReason.CHANGED_DIMENSION);
@@ -1436,11 +1453,11 @@ extends PlayerEntity {
 
     @Override
     public void playSound(SoundEvent event, SoundCategory category, float volume, float pitch) {
-        this.networkHandler.sendPacket(new PlaySoundS2CPacket(event, category, this.getX(), this.getY(), this.getZ(), volume, pitch, this.random.nextLong()));
+        this.networkHandler.sendPacket(new PlaySoundS2CPacket(Registries.SOUND_EVENT.getEntry(event), category, this.getX(), this.getY(), this.getZ(), volume, pitch, this.random.nextLong()));
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
         return new PlayerSpawnS2CPacket(this);
     }
 
@@ -1495,6 +1512,7 @@ extends PlayerEntity {
         }
     }
 
+    @Override
     public boolean shouldFilterText() {
         return this.filterText;
     }
@@ -1529,6 +1547,11 @@ extends PlayerEntity {
     }
 
     @Override
+    public Optional<SculkShriekerWarningManager> getSculkShriekerWarningManager() {
+        return Optional.of(this.sculkShriekerWarningManager);
+    }
+
+    @Override
     public void triggerItemPickedUpByEntityCriteria(ItemEntity item) {
         Entity entity;
         super.triggerItemPickedUpByEntityCriteria(item);
@@ -1536,6 +1559,15 @@ extends PlayerEntity {
         if (entity != null) {
             Criteria.THROWN_ITEM_PICKED_UP_BY_PLAYER.trigger(this, item.getStack(), entity);
         }
+    }
+
+    public void setSession(PublicPlayerSession session) {
+        this.session = session;
+    }
+
+    @Nullable
+    public PublicPlayerSession getSession() {
+        return this.session;
     }
 
     @Override

@@ -11,10 +11,10 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.WorldChunk;
@@ -22,11 +22,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class EmptyChunk
 extends WorldChunk {
-    private final RegistryEntry<Biome> field_36407;
+    private final RegistryEntry<Biome> biomeEntry;
 
-    public EmptyChunk(World world, ChunkPos chunkPos, RegistryEntry<Biome> registryEntry) {
-        super(world, chunkPos);
-        this.field_36407 = registryEntry;
+    public EmptyChunk(World world, ChunkPos pos, RegistryEntry<Biome> biomeEntry) {
+        super(world, pos);
+        this.biomeEntry = biomeEntry;
     }
 
     @Override
@@ -85,7 +85,7 @@ extends WorldChunk {
 
     @Override
     public RegistryEntry<Biome> getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
-        return this.field_36407;
+        return this.biomeEntry;
     }
 }
 

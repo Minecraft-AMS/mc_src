@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.command.CommandSource;
 import net.minecraft.entity.EntityType;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
 
 public class SuggestionProviders {
     private static final Map<Identifier, SuggestionProvider<CommandSource>> REGISTRY = Maps.newHashMap();
@@ -33,7 +33,7 @@ public class SuggestionProviders {
     public static final SuggestionProvider<CommandSource> ASK_SERVER = SuggestionProviders.register(ASK_SERVER_NAME, (SuggestionProvider<CommandSource>)((SuggestionProvider)(context, builder) -> ((CommandSource)context.getSource()).getCompletions(context)));
     public static final SuggestionProvider<ServerCommandSource> ALL_RECIPES = SuggestionProviders.register(new Identifier("all_recipes"), (SuggestionProvider<CommandSource>)((SuggestionProvider)(context, builder) -> CommandSource.suggestIdentifiers(((CommandSource)context.getSource()).getRecipeIds(), builder)));
     public static final SuggestionProvider<ServerCommandSource> AVAILABLE_SOUNDS = SuggestionProviders.register(new Identifier("available_sounds"), (SuggestionProvider<CommandSource>)((SuggestionProvider)(context, builder) -> CommandSource.suggestIdentifiers(((CommandSource)context.getSource()).getSoundIds(), builder)));
-    public static final SuggestionProvider<ServerCommandSource> SUMMONABLE_ENTITIES = SuggestionProviders.register(new Identifier("summonable_entities"), (SuggestionProvider<CommandSource>)((SuggestionProvider)(context, builder) -> CommandSource.suggestFromIdentifier(Registry.ENTITY_TYPE.stream().filter(EntityType::isSummonable), builder, EntityType::getId, entityType -> Text.translatable(Util.createTranslationKey("entity", EntityType.getId(entityType))))));
+    public static final SuggestionProvider<ServerCommandSource> SUMMONABLE_ENTITIES = SuggestionProviders.register(new Identifier("summonable_entities"), (SuggestionProvider<CommandSource>)((SuggestionProvider)(context, builder) -> CommandSource.suggestFromIdentifier(Registries.ENTITY_TYPE.stream().filter(entityType -> entityType.isEnabled(((CommandSource)context.getSource()).getEnabledFeatures()) && entityType.isSummonable()), builder, EntityType::getId, entityType -> Text.translatable(Util.createTranslationKey("entity", EntityType.getId(entityType))))));
 
     public static <S extends CommandSource> SuggestionProvider<S> register(Identifier id, SuggestionProvider<CommandSource> provider) {
         if (REGISTRY.containsKey(id)) {

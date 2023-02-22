@@ -51,6 +51,7 @@ import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.predicate.block.BlockPredicate;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ChunkTicketType;
@@ -68,6 +69,7 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.EndConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndPortalFeature;
 import net.minecraft.world.gen.feature.EndSpikeFeature;
@@ -248,8 +250,10 @@ public class EnderDragonFight {
             this.dragonSpawnState = null;
             this.dragonKilled = false;
             EnderDragonEntity enderDragonEntity = this.createDragon();
-            for (ServerPlayerEntity serverPlayerEntity : this.bossBar.getPlayers()) {
-                Criteria.SUMMONED_ENTITY.trigger(serverPlayerEntity, enderDragonEntity);
+            if (enderDragonEntity != null) {
+                for (ServerPlayerEntity serverPlayerEntity : this.bossBar.getPlayers()) {
+                    Criteria.SUMMONED_ENTITY.trigger(serverPlayerEntity, enderDragonEntity);
+                }
             }
         } else {
             this.dragonSpawnState = spawnState;
@@ -361,7 +365,7 @@ public class EnderDragonFight {
 
     private void generateEndGateway(BlockPos pos) {
         this.world.syncWorldEvent(3000, pos, 0);
-        EndConfiguredFeatures.END_GATEWAY_DELAYED.value().generate(this.world, this.world.getChunkManager().getChunkGenerator(), Random.create(), pos);
+        this.world.getRegistryManager().getOptional(RegistryKeys.CONFIGURED_FEATURE).flatMap(registry -> registry.getEntry(EndConfiguredFeatures.END_GATEWAY_DELAYED)).ifPresent(reference -> ((ConfiguredFeature)reference.value()).generate(this.world, this.world.getChunkManager().getChunkGenerator(), Random.create(), pos));
     }
 
     private void generateEndPortal(boolean previouslyKilled) {
@@ -375,13 +379,16 @@ public class EnderDragonFight {
         endPortalFeature.generateIfValid(FeatureConfig.DEFAULT, this.world, this.world.getChunkManager().getChunkGenerator(), Random.create(), this.exitPortalLocation);
     }
 
+    @Nullable
     private EnderDragonEntity createDragon() {
         this.world.getWorldChunk(new BlockPos(0, 128, 0));
         EnderDragonEntity enderDragonEntity = EntityType.ENDER_DRAGON.create(this.world);
-        enderDragonEntity.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
-        enderDragonEntity.refreshPositionAndAngles(0.0, 128.0, 0.0, this.world.random.nextFloat() * 360.0f, 0.0f);
-        this.world.spawnEntity(enderDragonEntity);
-        this.dragonUuid = enderDragonEntity.getUuid();
+        if (enderDragonEntity != null) {
+            enderDragonEntity.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
+            enderDragonEntity.refreshPositionAndAngles(0.0, 128.0, 0.0, this.world.random.nextFloat() * 360.0f, 0.0f);
+            this.world.spawnEntity(enderDragonEntity);
+            this.dragonUuid = enderDragonEntity.getUuid();
+        }
         return enderDragonEntity;
     }
 

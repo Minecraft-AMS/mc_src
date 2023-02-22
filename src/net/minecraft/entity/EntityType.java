@@ -31,7 +31,6 @@ import net.minecraft.entity.EyeOfEnderEntity;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MarkerEntity;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.entity.SpawnReason;
@@ -88,6 +87,7 @@ import net.minecraft.entity.passive.AllayEntity;
 import net.minecraft.entity.passive.AxolotlEntity;
 import net.minecraft.entity.passive.BatEntity;
 import net.minecraft.entity.passive.BeeEntity;
+import net.minecraft.entity.passive.CamelEntity;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.passive.CodEntity;
@@ -152,9 +152,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.resource.featuretoggle.FeatureFlag;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
+import net.minecraft.resource.featuretoggle.ToggleableFeature;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypeFilter;
@@ -163,8 +170,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.World;
@@ -173,10 +178,11 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class EntityType<T extends Entity>
-implements TypeFilter<Entity, T> {
+implements ToggleableFeature,
+TypeFilter<Entity, T> {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final String ENTITY_TAG_KEY = "EntityTag";
-    private final RegistryEntry.Reference<EntityType<?>> registryEntry = Registry.ENTITY_TYPE.createEntry(this);
+    private final RegistryEntry.Reference<EntityType<?>> registryEntry = Registries.ENTITY_TYPE.createEntry(this);
     private static final float field_30054 = 1.3964844f;
     public static final EntityType<AllayEntity> ALLAY = EntityType.register("allay", Builder.create(AllayEntity::new, SpawnGroup.CREATURE).setDimensions(0.35f, 0.6f).maxTrackingRange(8).trackingTickInterval(2));
     public static final EntityType<AreaEffectCloudEntity> AREA_EFFECT_CLOUD = EntityType.register("area_effect_cloud", Builder.create(AreaEffectCloudEntity::new, SpawnGroup.MISC).makeFireImmune().setDimensions(6.0f, 0.5f).maxTrackingRange(10).trackingTickInterval(Integer.MAX_VALUE));
@@ -189,6 +195,7 @@ implements TypeFilter<Entity, T> {
     public static final EntityType<BoatEntity> BOAT = EntityType.register("boat", Builder.create(BoatEntity::new, SpawnGroup.MISC).setDimensions(1.375f, 0.5625f).maxTrackingRange(10));
     public static final EntityType<ChestBoatEntity> CHEST_BOAT = EntityType.register("chest_boat", Builder.create(ChestBoatEntity::new, SpawnGroup.MISC).setDimensions(1.375f, 0.5625f).maxTrackingRange(10));
     public static final EntityType<CatEntity> CAT = EntityType.register("cat", Builder.create(CatEntity::new, SpawnGroup.CREATURE).setDimensions(0.6f, 0.7f).maxTrackingRange(8));
+    public static final EntityType<CamelEntity> CAMEL = EntityType.register("camel", Builder.create(CamelEntity::new, SpawnGroup.CREATURE).setDimensions(1.7f, 2.375f).maxTrackingRange(10).requires(FeatureFlags.UPDATE_1_20));
     public static final EntityType<CaveSpiderEntity> CAVE_SPIDER = EntityType.register("cave_spider", Builder.create(CaveSpiderEntity::new, SpawnGroup.MONSTER).setDimensions(0.7f, 0.5f).maxTrackingRange(8));
     public static final EntityType<ChickenEntity> CHICKEN = EntityType.register("chicken", Builder.create(ChickenEntity::new, SpawnGroup.CREATURE).setDimensions(0.4f, 0.7f).maxTrackingRange(10));
     public static final EntityType<CodEntity> COD = EntityType.register("cod", Builder.create(CodEntity::new, SpawnGroup.WATER_AMBIENT).setDimensions(0.5f, 0.3f).maxTrackingRange(4));
@@ -312,20 +319,21 @@ implements TypeFilter<Entity, T> {
     @Nullable
     private Identifier lootTableId;
     private final EntityDimensions dimensions;
+    private final FeatureSet requiredFeatures;
 
     private static <T extends Entity> EntityType<T> register(String id, Builder<T> type) {
-        return Registry.register(Registry.ENTITY_TYPE, id, type.build(id));
+        return Registry.register(Registries.ENTITY_TYPE, id, type.build(id));
     }
 
     public static Identifier getId(EntityType<?> type) {
-        return Registry.ENTITY_TYPE.getId(type);
+        return Registries.ENTITY_TYPE.getId(type);
     }
 
     public static Optional<EntityType<?>> get(String id) {
-        return Registry.ENTITY_TYPE.getOrEmpty(Identifier.tryParse(id));
+        return Registries.ENTITY_TYPE.getOrEmpty(Identifier.tryParse(id));
     }
 
-    public EntityType(EntityFactory<T> factory, SpawnGroup spawnGroup, boolean saveable, boolean summonable, boolean fireImmune, boolean spawnableFarFromPlayer, ImmutableSet<Block> canSpawnInside, EntityDimensions dimensions, int maxTrackDistance, int trackTickInterval) {
+    public EntityType(EntityFactory<T> factory, SpawnGroup spawnGroup, boolean saveable, boolean summonable, boolean fireImmune, boolean spawnableFarFromPlayer, ImmutableSet<Block> canSpawnInside, EntityDimensions dimensions, int maxTrackDistance, int trackTickInterval, FeatureSet requiredFeatures) {
         this.factory = factory;
         this.spawnGroup = spawnGroup;
         this.spawnableFarFromPlayer = spawnableFarFromPlayer;
@@ -336,16 +344,52 @@ implements TypeFilter<Entity, T> {
         this.dimensions = dimensions;
         this.maxTrackDistance = maxTrackDistance;
         this.trackTickInterval = trackTickInterval;
+        this.requiredFeatures = requiredFeatures;
     }
 
     @Nullable
-    public Entity spawnFromItemStack(ServerWorld world, @Nullable ItemStack stack, @Nullable PlayerEntity player, BlockPos pos, SpawnReason spawnReason, boolean alignPosition, boolean invertY) {
-        return this.spawn(world, stack == null ? null : stack.getNbt(), stack != null && stack.hasCustomName() ? stack.getName() : null, player, pos, spawnReason, alignPosition, invertY);
+    public T spawnFromItemStack(ServerWorld world, @Nullable ItemStack stack, @Nullable PlayerEntity player, BlockPos pos, SpawnReason spawnReason, boolean alignPosition, boolean invertY) {
+        Consumer<Entity> consumer;
+        NbtCompound nbtCompound;
+        if (stack != null) {
+            nbtCompound = stack.getNbt();
+            consumer = EntityType.copier(world, stack, player);
+        } else {
+            consumer = entity -> {};
+            nbtCompound = null;
+        }
+        return (T)this.spawn(world, nbtCompound, consumer, pos, spawnReason, alignPosition, invertY);
+    }
+
+    public static <T extends Entity> Consumer<T> copier(ServerWorld world, ItemStack stack, @Nullable PlayerEntity player) {
+        Consumer<Entity> consumer = entity -> {};
+        consumer = EntityType.customNameCopier(consumer, stack);
+        return EntityType.nbtCopier(consumer, world, stack, player);
+    }
+
+    public static <T extends Entity> Consumer<T> customNameCopier(Consumer<T> chained, ItemStack stack) {
+        if (stack.hasCustomName()) {
+            return chained.andThen(entity -> entity.setCustomName(stack.getName()));
+        }
+        return chained;
+    }
+
+    public static <T extends Entity> Consumer<T> nbtCopier(Consumer<T> chained, ServerWorld world, ItemStack stack, @Nullable PlayerEntity player) {
+        NbtCompound nbtCompound = stack.getNbt();
+        if (nbtCompound != null) {
+            return chained.andThen(entity -> EntityType.loadFromEntityNbt(world, player, entity, nbtCompound));
+        }
+        return chained;
     }
 
     @Nullable
-    public T spawn(ServerWorld world, @Nullable NbtCompound itemNbt, @Nullable Text name, @Nullable PlayerEntity player, BlockPos pos, SpawnReason spawnReason, boolean alignPosition, boolean invertY) {
-        T entity = this.create(world, itemNbt, name, player, pos, spawnReason, alignPosition, invertY);
+    public T spawn(ServerWorld world, BlockPos pos, SpawnReason reason) {
+        return this.spawn(world, null, null, pos, reason, false, false);
+    }
+
+    @Nullable
+    public T spawn(ServerWorld world, @Nullable NbtCompound itemNbt, @Nullable Consumer<T> afterConsumer, BlockPos pos, SpawnReason reason, boolean alignPosition, boolean invertY) {
+        T entity = this.create(world, itemNbt, afterConsumer, pos, reason, alignPosition, invertY);
         if (entity != null) {
             world.spawnEntityAndPassengers((Entity)entity);
         }
@@ -353,7 +397,7 @@ implements TypeFilter<Entity, T> {
     }
 
     @Nullable
-    public T create(ServerWorld world, @Nullable NbtCompound itemNbt, @Nullable Text name, @Nullable PlayerEntity player, BlockPos pos, SpawnReason spawnReason, boolean alignPosition, boolean invertY) {
+    public T create(ServerWorld world, @Nullable NbtCompound itemNbt, @Nullable Consumer<T> afterConsumer, BlockPos pos, SpawnReason reason, boolean alignPosition, boolean invertY) {
         double d;
         T entity = this.create(world);
         if (entity == null) {
@@ -370,13 +414,12 @@ implements TypeFilter<Entity, T> {
             MobEntity mobEntity = (MobEntity)entity;
             mobEntity.headYaw = mobEntity.getYaw();
             mobEntity.bodyYaw = mobEntity.getYaw();
-            mobEntity.initialize(world, world.getLocalDifficulty(mobEntity.getBlockPos()), spawnReason, null, itemNbt);
+            mobEntity.initialize(world, world.getLocalDifficulty(mobEntity.getBlockPos()), reason, null, itemNbt);
             mobEntity.playAmbientSound();
         }
-        if (name != null && entity instanceof LivingEntity) {
-            ((Entity)entity).setCustomName(name);
+        if (afterConsumer != null) {
+            afterConsumer.accept(entity);
         }
-        EntityType.loadFromEntityNbt(world, player, entity, itemNbt);
         return entity;
     }
 
@@ -429,7 +472,7 @@ implements TypeFilter<Entity, T> {
 
     public String getTranslationKey() {
         if (this.translationKey == null) {
-            this.translationKey = Util.createTranslationKey("entity", Registry.ENTITY_TYPE.getId(this));
+            this.translationKey = Util.createTranslationKey("entity", Registries.ENTITY_TYPE.getId(this));
         }
         return this.translationKey;
     }
@@ -452,8 +495,8 @@ implements TypeFilter<Entity, T> {
 
     public Identifier getLootTableId() {
         if (this.lootTableId == null) {
-            Identifier identifier = Registry.ENTITY_TYPE.getId(this);
-            this.lootTableId = new Identifier(identifier.getNamespace(), "entities/" + identifier.getPath());
+            Identifier identifier = Registries.ENTITY_TYPE.getId(this);
+            this.lootTableId = identifier.withPrefixedPath("entities/");
         }
         return this.lootTableId;
     }
@@ -466,8 +509,16 @@ implements TypeFilter<Entity, T> {
         return this.dimensions.height;
     }
 
+    @Override
+    public FeatureSet getRequiredFeatures() {
+        return this.requiredFeatures;
+    }
+
     @Nullable
     public T create(World world) {
+        if (!this.isEnabled(world.getEnabledFeatures())) {
+            return null;
+        }
         return this.factory.create(this, world);
     }
 
@@ -495,7 +546,7 @@ implements TypeFilter<Entity, T> {
     }
 
     public static Optional<EntityType<?>> fromNbt(NbtCompound nbt) {
-        return Registry.ENTITY_TYPE.getOrEmpty(new Identifier(nbt.getString("id")));
+        return Registries.ENTITY_TYPE.getOrEmpty(new Identifier(nbt.getString("id")));
     }
 
     @Nullable
@@ -595,6 +646,7 @@ implements TypeFilter<Entity, T> {
         private int maxTrackingRange = 5;
         private int trackingTickInterval = 3;
         private EntityDimensions dimensions = EntityDimensions.changing(0.6f, 1.8f);
+        private FeatureSet requiredFeatures = FeatureFlags.VANILLA_FEATURES;
 
         private Builder(EntityFactory<T> factory, SpawnGroup spawnGroup) {
             this.factory = factory;
@@ -650,11 +702,16 @@ implements TypeFilter<Entity, T> {
             return this;
         }
 
+        public Builder<T> requires(FeatureFlag ... features) {
+            this.requiredFeatures = FeatureFlags.FEATURE_MANAGER.featureSetOf(features);
+            return this;
+        }
+
         public EntityType<T> build(String id) {
             if (this.saveable) {
                 Util.getChoiceType(TypeReferences.ENTITY_TREE, id);
             }
-            return new EntityType<T>(this.factory, this.spawnGroup, this.saveable, this.summonable, this.fireImmune, this.spawnableFarFromPlayer, this.canSpawnInside, this.dimensions, this.maxTrackingRange, this.trackingTickInterval);
+            return new EntityType<T>(this.factory, this.spawnGroup, this.saveable, this.summonable, this.fireImmune, this.spawnableFarFromPlayer, this.canSpawnInside, this.dimensions, this.maxTrackingRange, this.trackingTickInterval, this.requiredFeatures);
         }
     }
 

@@ -13,18 +13,19 @@ import net.minecraft.block.entity.SkullBlockEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.WallStandingBlockItem;
+import net.minecraft.item.VerticallyAttachableBlockItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.Direction;
 import org.apache.commons.lang3.StringUtils;
 
 public class SkullItem
-extends WallStandingBlockItem {
+extends VerticallyAttachableBlockItem {
     public static final String SKULL_OWNER_KEY = "SkullOwner";
 
-    public SkullItem(Block block, Block block2, Item.Settings settings) {
-        super(block, block2, settings);
+    public SkullItem(Block block, Block wallBlock, Item.Settings settings) {
+        super(block, wallBlock, settings, Direction.DOWN);
     }
 
     @Override

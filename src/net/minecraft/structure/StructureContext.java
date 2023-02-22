@@ -5,11 +5,11 @@ package net.minecraft.structure;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureTemplateManager;
-import net.minecraft.util.registry.DynamicRegistryManager;
 
 public record StructureContext(ResourceManager resourceManager, DynamicRegistryManager registryManager, StructureTemplateManager structureTemplateManager) {
     public static StructureContext from(ServerWorld world) {

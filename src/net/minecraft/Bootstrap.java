@@ -9,7 +9,6 @@ package net.minecraft;
 
 import com.mojang.logging.LogUtils;
 import java.io.PrintStream;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -28,17 +27,12 @@ import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.Item;
 import net.minecraft.recipe.BrewingRecipeRegistry;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.util.Language;
-import net.minecraft.util.Util;
 import net.minecraft.util.logging.DebugLoggerPrintStream;
 import net.minecraft.util.logging.LoggerPrintStream;
-import net.minecraft.util.registry.BuiltinRegistries;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.gen.feature.PlacedFeature;
-import net.minecraft.world.gen.placementmodifier.BiomePlacementModifier;
 import org.slf4j.Logger;
 
 public class Bootstrap {
@@ -51,7 +45,7 @@ public class Bootstrap {
             return;
         }
         initialized = true;
-        if (Registry.REGISTRIES.getIds().isEmpty()) {
+        if (Registries.REGISTRIES.getIds().isEmpty()) {
             throw new IllegalStateException("Unable to load registries");
         }
         FireBlock.registerDefaultFlammables();
@@ -63,7 +57,7 @@ public class Bootstrap {
         EntitySelectorOptions.register();
         DispenserBehavior.registerDefaults();
         CauldronBehavior.registerBehavior();
-        Registry.freezeRegistries();
+        Registries.bootstrap();
         Bootstrap.setOutputStreams();
     }
 
@@ -92,13 +86,13 @@ public class Bootstrap {
 
     public static Set<String> getMissingTranslations() {
         TreeSet<String> set = new TreeSet<String>();
-        Bootstrap.collectMissingTranslations(Registry.ATTRIBUTE, EntityAttribute::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.ENTITY_TYPE, EntityType::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.STATUS_EFFECT, StatusEffect::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.ITEM, Item::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.ENCHANTMENT, Enchantment::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.BLOCK, Block::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.CUSTOM_STAT, stat -> "stat." + stat.toString().replace(':', '.'), set);
+        Bootstrap.collectMissingTranslations(Registries.ATTRIBUTE, EntityAttribute::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.ENTITY_TYPE, EntityType::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.STATUS_EFFECT, StatusEffect::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.ITEM, Item::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.ENCHANTMENT, Enchantment::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.BLOCK, Block::getTranslationKey, set);
+        Bootstrap.collectMissingTranslations(Registries.CUSTOM_STAT, stat -> "stat." + stat.toString().replace(':', '.'), set);
         Bootstrap.collectMissingGameRuleTranslations(set);
         return set;
     }
@@ -126,20 +120,8 @@ public class Bootstrap {
         if (SharedConstants.isDevelopment) {
             Bootstrap.getMissingTranslations().forEach(key -> LOGGER.error("Missing translations: {}", key));
             CommandManager.checkMissing();
-            Bootstrap.logMissingBiomePlacementModifier();
         }
         DefaultAttributeRegistry.checkMissing();
-    }
-
-    private static void logMissingBiomePlacementModifier() {
-        BuiltinRegistries.BIOME.stream().forEach(biome -> {
-            List<RegistryEntryList<PlacedFeature>> list = biome.getGenerationSettings().getFeatures();
-            list.stream().flatMap(RegistryEntryList::stream).forEach(registryEntry -> {
-                if (!((PlacedFeature)registryEntry.value()).placementModifiers().contains(BiomePlacementModifier.of())) {
-                    Util.error("Placed feature " + BuiltinRegistries.PLACED_FEATURE.getKey((PlacedFeature)registryEntry.value()) + " is missing BiomeFilter.biome()");
-                }
-            });
-        });
     }
 
     private static void setOutputStreams() {

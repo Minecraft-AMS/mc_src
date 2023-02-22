@@ -40,17 +40,17 @@ import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.BiomeTags;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BiomeTags;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -76,6 +76,7 @@ implements Angerable {
     }
 
     @Override
+    @Nullable
     public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return EntityType.POLAR_BEAR.create(world);
     }

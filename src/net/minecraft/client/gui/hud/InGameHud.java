@@ -50,9 +50,11 @@ import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.texture.StatusEffectSpriteManager;
+import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.JumpingMount;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffect;
@@ -61,13 +63,13 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.server.integrated.IntegratedServer;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
@@ -81,7 +83,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.border.WorldBorder;
@@ -163,8 +165,9 @@ extends DrawableHelper {
     public void render(MatrixStack matrices, float tickDelta) {
         int k;
         float g;
-        this.scaledWidth = this.client.getWindow().getScaledWidth();
-        this.scaledHeight = this.client.getWindow().getScaledHeight();
+        Window window = this.client.getWindow();
+        this.scaledWidth = window.getScaledWidth();
+        this.scaledHeight = window.getScaledHeight();
         TextRenderer textRenderer = this.getTextRenderer();
         RenderSystem.enableBlend();
         if (MinecraftClient.isFancyGraphicsOrBetter()) {
@@ -200,11 +203,11 @@ extends DrawableHelper {
         }
         if (!this.client.options.hudHidden) {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderTexture(0, GUI_ICONS_TEXTURE);
             RenderSystem.enableBlend();
             this.renderCrosshair(matrices);
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.defaultBlendFunc();
             this.client.getProfiler().push("bossHealth");
             this.bossBarHud.render(matrices);
@@ -217,8 +220,9 @@ extends DrawableHelper {
             this.renderMountHealth(matrices);
             RenderSystem.disableBlend();
             int i = this.scaledWidth / 2 - 91;
-            if (this.client.player.hasJumpingMount()) {
-                this.renderMountJumpBar(matrices, i);
+            JumpingMount jumpingMount = this.client.player.getJumpingMount();
+            if (jumpingMount != null) {
+                this.renderMountJumpBar(jumpingMount, matrices, i);
             } else if (this.client.interactionManager.hasExperienceBar()) {
                 this.renderExperienceBar(matrices, i);
             }
@@ -262,7 +266,7 @@ extends DrawableHelper {
                 }
                 if (l > 8) {
                     matrices.push();
-                    matrices.translate(this.scaledWidth / 2, this.scaledHeight - 68, 0.0);
+                    matrices.translate(this.scaledWidth / 2, this.scaledHeight - 68, 0.0f);
                     RenderSystem.enableBlend();
                     RenderSystem.defaultBlendFunc();
                     k = 0xFFFFFF;
@@ -291,7 +295,7 @@ extends DrawableHelper {
                 }
                 if ((l = MathHelper.clamp(l, 0, 255)) > 8) {
                     matrices.push();
-                    matrices.translate(this.scaledWidth / 2, this.scaledHeight / 2, 0.0);
+                    matrices.translate(this.scaledWidth / 2, this.scaledHeight / 2, 0.0f);
                     RenderSystem.enableBlend();
                     RenderSystem.defaultBlendFunc();
                     matrices.push();
@@ -327,14 +331,13 @@ extends DrawableHelper {
             }
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
-            matrices.push();
-            matrices.translate(0.0, this.scaledHeight - 48, 0.0);
+            n = MathHelper.floor(this.client.mouse.getX() * (double)window.getScaledWidth() / (double)window.getWidth());
+            int p = MathHelper.floor(this.client.mouse.getY() * (double)window.getScaledHeight() / (double)window.getHeight());
             this.client.getProfiler().push("chat");
-            this.chatHud.render(matrices, this.ticks);
+            this.chatHud.render(matrices, this.ticks, n, p);
             this.client.getProfiler().pop();
-            matrices.pop();
             scoreboardObjective2 = scoreboard.getObjectiveForSlot(0);
-            if (this.client.options.playerListKey.isPressed() && (!this.client.isInSingleplayer() || this.client.player.networkHandler.getPlayerList().size() > 1 || scoreboardObjective2 != null)) {
+            if (this.client.options.playerListKey.isPressed() && (!this.client.isInSingleplayer() || this.client.player.networkHandler.getListedPlayerListEntries().size() > 1 || scoreboardObjective2 != null)) {
                 this.playerListHud.setVisible(true);
                 this.playerListHud.render(matrices, this.scaledWidth, scoreboard, scoreboardObjective2);
             } else {
@@ -366,8 +369,8 @@ extends DrawableHelper {
             MatrixStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.push();
             matrixStack.translate(this.scaledWidth / 2, this.scaledHeight / 2, this.getZOffset());
-            matrixStack.multiply(Vec3f.NEGATIVE_X.getDegreesQuaternion(camera.getPitch()));
-            matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(camera.getYaw()));
+            matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(camera.getPitch()));
+            matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw()));
             matrixStack.scale(-1.0f, -1.0f, -1.0f);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.renderCrosshair(10);
@@ -455,7 +458,7 @@ extends DrawableHelper {
             int o = l;
             float g = f;
             list.add(() -> {
-                RenderSystem.setShaderTexture(0, sprite.getAtlas().getId());
+                RenderSystem.setShaderTexture(0, sprite.getAtlasId());
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, g);
                 InGameHud.drawSprite(matrices, n + 3, o + 3, this.getZOffset(), 18, 18, sprite);
             });
@@ -474,7 +477,7 @@ extends DrawableHelper {
             return;
         }
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
         ItemStack itemStack = playerEntity.getOffHandStack();
         Arm arm = playerEntity.getMainArm().getOpposite();
@@ -524,7 +527,7 @@ extends DrawableHelper {
         RenderSystem.disableBlend();
     }
 
-    public void renderMountJumpBar(MatrixStack matrices, int x) {
+    public void renderMountJumpBar(JumpingMount mount, MatrixStack matrices, int x) {
         this.client.getProfiler().push("jumpBar");
         RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
         float f = this.client.player.getMountJumpStrength();
@@ -532,7 +535,9 @@ extends DrawableHelper {
         int j = (int)(f * 183.0f);
         int k = this.scaledHeight - 32 + 3;
         this.drawTexture(matrices, x, k, 0, 84, 182, 5);
-        if (j > 0) {
+        if (mount.getJumpCooldown() > 0) {
+            this.drawTexture(matrices, x, k, 0, 74, 182, 5);
+        } else if (j > 0) {
             this.drawTexture(matrices, x, k, 0, 89, j, 5);
         }
         this.client.getProfiler().pop();
@@ -865,7 +870,7 @@ extends DrawableHelper {
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, opacity);
         RenderSystem.setShaderTexture(0, texture);
         Tessellator tessellator = Tessellator.getInstance();
@@ -886,7 +891,7 @@ extends DrawableHelper {
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, SPYGLASS_SCOPE);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
@@ -904,7 +909,7 @@ extends DrawableHelper {
         bufferBuilder.vertex(m, l, -90.0).texture(1.0f, 0.0f).next();
         bufferBuilder.vertex(k, l, -90.0).texture(0.0f, 0.0f).next();
         tessellator.draw();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         RenderSystem.disableTexture();
         bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
         bufferBuilder.vertex(0.0, this.scaledHeight, -90.0).color(0, 0, 0, 255).next();
@@ -957,7 +962,7 @@ extends DrawableHelper {
             g = MathHelper.clamp(g, 0.0f, 1.0f);
             RenderSystem.setShaderColor(g, g, g, 1.0f);
         }
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, VIGNETTE_TEXTURE);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
@@ -984,7 +989,7 @@ extends DrawableHelper {
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, nauseaStrength);
         RenderSystem.setShaderTexture(0, SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         Sprite sprite = this.client.getBlockRenderManager().getModels().getModelParticleSprite(Blocks.NETHER_PORTAL.getDefaultState());
         float f = sprite.getMinU();
         float g = sprite.getMinV();
@@ -1012,13 +1017,13 @@ extends DrawableHelper {
         if (f > 0.0f) {
             float g = 1.0f + f / 5.0f;
             matrixStack.push();
-            matrixStack.translate(x + 8, y + 12, 0.0);
+            matrixStack.translate(x + 8, y + 12, 0.0f);
             matrixStack.scale(1.0f / g, (g + 1.0f) / 2.0f, 1.0f);
-            matrixStack.translate(-(x + 8), -(y + 12), 0.0);
+            matrixStack.translate(-(x + 8), -(y + 12), 0.0f);
             RenderSystem.applyModelViewMatrix();
         }
         this.itemRenderer.renderInGuiWithOverrides(player, stack, x, y, seed);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         if (f > 0.0f) {
             matrixStack.pop();
             RenderSystem.applyModelViewMatrix();
@@ -1060,6 +1065,7 @@ extends DrawableHelper {
             }
             this.currentStack = itemStack;
         }
+        this.chatHud.tickRemovalQueueIfExists();
     }
 
     private void tickAutosaveIndicator() {

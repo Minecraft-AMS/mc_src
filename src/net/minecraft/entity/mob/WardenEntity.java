@@ -33,7 +33,6 @@ import net.minecraft.entity.ai.WardenAngerManager;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.SonicBoomTask;
-import net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.ai.pathing.MobNavigation;
@@ -58,16 +57,17 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.Packet;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.tag.GameEventTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.GameEventTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.Unit;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -89,15 +89,15 @@ import org.slf4j.Logger;
 public class WardenEntity
 extends HostileEntity
 implements VibrationListener.Callback {
-    private static final Logger field_38138 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_38139 = 16;
     private static final int field_38142 = 40;
     private static final int field_38860 = 200;
-    private static final int field_38143 = 500;
-    private static final float field_38144 = 0.3f;
-    private static final float field_38145 = 1.0f;
-    private static final float field_38146 = 1.5f;
-    private static final int field_38147 = 30;
+    private static final int MAX_HEALTH = 500;
+    private static final float MOVEMENT_SPEED = 0.3f;
+    private static final float KNOCKBACK_RESISTANCE = 1.0f;
+    private static final float ATTACK_KNOCKBACK = 1.5f;
+    private static final int ATTACK_DAMAGE = 30;
     private static final TrackedData<Integer> ANGER = DataTracker.registerData(WardenEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final int field_38149 = 200;
     private static final int field_38150 = 260;
@@ -128,7 +128,7 @@ implements VibrationListener.Callback {
 
     public WardenEntity(EntityType<? extends HostileEntity> entityType, World world) {
         super(entityType, world);
-        this.gameEventHandler = new EntityGameEventHandler<VibrationListener>(new VibrationListener(new EntityPositionSource(this, this.getStandingEyeHeight()), 16, this, null, 0.0f, 0));
+        this.gameEventHandler = new EntityGameEventHandler<VibrationListener>(new VibrationListener(new EntityPositionSource(this, this.getStandingEyeHeight()), 16, this));
         this.experiencePoints = 5;
         this.getNavigation().setCanSwim(true);
         this.setPathfindingPenalty(PathNodeType.UNPASSABLE_RAIL, 0.0f);
@@ -140,7 +140,7 @@ implements VibrationListener.Callback {
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
         return new EntitySpawnS2CPacket(this, this.isInPose(EntityPose.EMERGING) ? 1 : 0);
     }
 
@@ -436,21 +436,21 @@ implements VibrationListener.Callback {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        WardenAngerManager.createCodec(this::isValidTarget).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.angerManager).resultOrPartial(arg_0 -> ((Logger)field_38138).error(arg_0)).ifPresent(angerNbt -> nbt.put("anger", (NbtElement)angerNbt));
-        VibrationListener.createCodec(this).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.gameEventHandler.getListener()).resultOrPartial(arg_0 -> ((Logger)field_38138).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
+        WardenAngerManager.createCodec(this::isValidTarget).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.angerManager).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(angerNbt -> nbt.put("anger", (NbtElement)angerNbt));
+        VibrationListener.createCodec(this).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.gameEventHandler.getListener()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("listener", (NbtElement)nbtElement));
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("anger")) {
-            WardenAngerManager.createCodec(this::isValidTarget).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("anger"))).resultOrPartial(arg_0 -> ((Logger)field_38138).error(arg_0)).ifPresent(angerManager -> {
+            WardenAngerManager.createCodec(this::isValidTarget).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("anger"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(angerManager -> {
                 this.angerManager = angerManager;
             });
             this.updateAnger();
         }
         if (nbt.contains("listener", 10)) {
-            VibrationListener.createCodec(this).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)field_38138).error(arg_0)).ifPresent(vibrationListener -> this.gameEventHandler.setListener((VibrationListener)vibrationListener, this.world));
+            VibrationListener.createCodec(this).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(vibrationListener -> this.gameEventHandler.setListener((VibrationListener)vibrationListener, this.world));
         }
     }
 
@@ -480,7 +480,7 @@ implements VibrationListener.Callback {
     public void increaseAngerAt(@Nullable Entity entity, int amount, boolean listening) {
         if (!this.isAiDisabled() && this.isValidTarget(entity)) {
             WardenBrain.resetDigCooldown(this);
-            boolean bl = !(this.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) instanceof PlayerEntity);
+            boolean bl = !(this.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) instanceof PlayerEntity);
             int i = this.angerManager.increaseAngerAt(entity, amount);
             if (entity instanceof PlayerEntity && bl && Angriness.getForAnger(i).isAngry()) {
                 this.getBrain().forget(MemoryModuleType.ATTACK_TARGET);
@@ -501,7 +501,7 @@ implements VibrationListener.Callback {
     @Override
     @Nullable
     public LivingEntity getTarget() {
-        return this.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+        return this.getBrain().getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
     }
 
     @Override
@@ -527,7 +527,7 @@ implements VibrationListener.Callback {
         if (!(this.world.isClient || this.isAiDisabled() || this.isDiggingOrEmerging())) {
             Entity entity = source.getAttacker();
             this.increaseAngerAt(entity, Angriness.ANGRY.getThreshold() + 20, false);
-            if (this.brain.getOptionalMemory(MemoryModuleType.ATTACK_TARGET).isEmpty() && entity instanceof LivingEntity) {
+            if (this.brain.getOptionalRegisteredMemory(MemoryModuleType.ATTACK_TARGET).isEmpty() && entity instanceof LivingEntity) {
                 LivingEntity livingEntity = (LivingEntity)entity;
                 if (!(source instanceof ProjectileDamageSource) || this.isInRange(livingEntity, 5.0)) {
                     this.updateAttackTarget(livingEntity);
@@ -539,7 +539,8 @@ implements VibrationListener.Callback {
 
     public void updateAttackTarget(LivingEntity target) {
         this.getBrain().forget(MemoryModuleType.ROAR_TARGET);
-        UpdateAttackTargetTask.updateAttackTarget(this, target);
+        this.getBrain().remember(MemoryModuleType.ATTACK_TARGET, target);
+        this.getBrain().forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         SonicBoomTask.cooldown(this, 200);
     }
 
@@ -570,7 +571,7 @@ implements VibrationListener.Callback {
     @Override
     public boolean accepts(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, GameEvent.Emitter emitter) {
         LivingEntity livingEntity;
-        if (this.isAiDisabled() || this.isDead() || this.getBrain().hasMemoryModule(MemoryModuleType.VIBRATION_COOLDOWN) || this.isDiggingOrEmerging() || !world.getWorldBorder().contains(pos) || this.isRemoved() || this.world != world) {
+        if (this.isAiDisabled() || this.isDead() || this.getBrain().hasMemoryModule(MemoryModuleType.VIBRATION_COOLDOWN) || this.isDiggingOrEmerging() || !world.getWorldBorder().contains(pos)) {
             return false;
         }
         Entity entity = emitter.sourceEntity();

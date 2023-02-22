@@ -46,14 +46,21 @@ import net.minecraft.loot.LootTables;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.resource.featuretoggle.FeatureFlag;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
+import net.minecraft.resource.featuretoggle.ToggleableFeature;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.state.State;
 import net.minecraft.state.property.Property;
-import net.minecraft.tag.FluidTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -67,9 +74,6 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -79,7 +83,8 @@ import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class AbstractBlock {
+public abstract class AbstractBlock
+implements ToggleableFeature {
     protected static final Direction[] DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.DOWN, Direction.UP};
     protected final Material material;
     protected final boolean collidable;
@@ -90,6 +95,7 @@ public abstract class AbstractBlock {
     protected final float velocityMultiplier;
     protected final float jumpVelocityMultiplier;
     protected final boolean dynamicBounds;
+    protected final FeatureSet requiredFeatures;
     protected final Settings settings;
     @Nullable
     protected Identifier lootTableId;
@@ -105,6 +111,7 @@ public abstract class AbstractBlock {
         this.velocityMultiplier = settings.velocityMultiplier;
         this.jumpVelocityMultiplier = settings.jumpVelocityMultiplier;
         this.dynamicBounds = settings.dynamicBounds;
+        this.requiredFeatures = settings.requiredFeatures;
         this.settings = settings;
     }
 
@@ -200,6 +207,11 @@ public abstract class AbstractBlock {
 
     public float getVerticalModelOffsetMultiplier() {
         return 0.2f;
+    }
+
+    @Override
+    public FeatureSet getRequiredFeatures() {
+        return this.requiredFeatures;
     }
 
     @Deprecated
@@ -351,8 +363,8 @@ public abstract class AbstractBlock {
 
     public final Identifier getLootTableId() {
         if (this.lootTableId == null) {
-            Identifier identifier = Registry.BLOCK.getId(this.asBlock());
-            this.lootTableId = new Identifier(identifier.getNamespace(), "blocks/" + identifier.getPath());
+            Identifier identifier = Registries.BLOCK.getId(this.asBlock());
+            this.lootTableId = identifier.withPrefixedPath("blocks/");
         }
         return this.lootTableId;
     }
@@ -389,6 +401,7 @@ public abstract class AbstractBlock {
         Identifier lootTableId;
         boolean opaque = true;
         boolean isAir;
+        boolean blockBreakParticles = true;
         TypedContextPredicate<EntityType<?>> allowsSpawningPredicate = (state, world, pos, type) -> state.isSideSolidFullSquare(world, pos, Direction.UP) && state.getLuminance() < 14;
         ContextPredicate solidBlockPredicate = (state, world, pos) -> state.getMaterial().blocksLight() && state.isFullCube(world, pos);
         ContextPredicate suffocationPredicate;
@@ -396,6 +409,7 @@ public abstract class AbstractBlock {
         ContextPredicate postProcessPredicate = (state, world, pos) -> false;
         ContextPredicate emissiveLightingPredicate = (state, world, pos) -> false;
         boolean dynamicBounds;
+        FeatureSet requiredFeatures = FeatureFlags.VANILLA_FEATURES;
         Function<BlockState, OffsetType> offsetType = state -> OffsetType.NONE;
 
         private Settings(Material material, MapColor mapColorProvider) {
@@ -440,6 +454,8 @@ public abstract class AbstractBlock {
             settings.isAir = block.settings.isAir;
             settings.toolRequired = block.settings.toolRequired;
             settings.offsetType = block.settings.offsetType;
+            settings.blockBreakParticles = block.settings.blockBreakParticles;
+            settings.requiredFeatures = block.settings.requiredFeatures;
             return settings;
         }
 
@@ -575,6 +591,16 @@ public abstract class AbstractBlock {
             this.offsetType = offsetType;
             return this;
         }
+
+        public Settings noBlockBreakParticles() {
+            this.blockBreakParticles = false;
+            return this;
+        }
+
+        public Settings requires(FeatureFlag ... features) {
+            this.requiredFeatures = FeatureFlags.FEATURE_MANAGER.featureSetOf(features);
+            return this;
+        }
     }
 
     public static interface TypedContextPredicate<A> {
@@ -601,8 +627,11 @@ public abstract class AbstractBlock {
         private final ContextPredicate postProcessPredicate;
         private final ContextPredicate emissiveLightingPredicate;
         private final OffsetType offsetType;
+        private final boolean blockBreakParticles;
         @Nullable
         protected ShapeCache shapeCache;
+        private FluidState fluidState = Fluids.EMPTY.getDefaultState();
+        private boolean ticksRandomly;
 
         protected AbstractBlockState(Block block, ImmutableMap<Property<?>, Comparable<?>> propertyMap, MapCodec<BlockState> codec) {
             super(block, propertyMap, codec);
@@ -621,9 +650,12 @@ public abstract class AbstractBlock {
             this.postProcessPredicate = settings.postProcessPredicate;
             this.emissiveLightingPredicate = settings.emissiveLightingPredicate;
             this.offsetType = settings.offsetType.apply(this.asBlockState());
+            this.blockBreakParticles = settings.blockBreakParticles;
         }
 
         public void initShapeCache() {
+            this.fluidState = ((Block)this.owner).getFluidState(this.asBlockState());
+            this.ticksRandomly = ((Block)this.owner).hasRandomTicks(this.asBlockState());
             if (!this.getBlock().hasDynamicBounds()) {
                 this.shapeCache = new ShapeCache(this.asBlockState());
             }
@@ -907,6 +939,10 @@ public abstract class AbstractBlock {
             return this.getBlock().canBucketPlace(this.asBlockState(), fluid);
         }
 
+        public boolean isReplaceable() {
+            return this.getMaterial().isReplaceable();
+        }
+
         public boolean canPlaceAt(WorldView world, BlockPos pos) {
             return this.getBlock().canPlaceAt(this.asBlockState(), world, pos);
         }
@@ -953,11 +989,11 @@ public abstract class AbstractBlock {
         }
 
         public FluidState getFluidState() {
-            return this.getBlock().getFluidState(this.asBlockState());
+            return this.fluidState;
         }
 
         public boolean hasRandomTicks() {
-            return this.getBlock().hasRandomTicks(this.asBlockState());
+            return this.ticksRandomly;
         }
 
         public long getRenderingSeed(BlockPos pos) {
@@ -1000,6 +1036,10 @@ public abstract class AbstractBlock {
             return this.offsetType;
         }
 
+        public boolean hasBlockBreakParticles() {
+            return this.blockBreakParticles;
+        }
+
         static final class ShapeCache {
             private static final Direction[] DIRECTIONS = Direction.values();
             private static final int SHAPE_TYPE_LENGTH = SideShapeType.values().length;
@@ -1032,7 +1072,7 @@ public abstract class AbstractBlock {
                 }
                 this.collisionShape = block.getCollisionShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
                 if (!this.collisionShape.isEmpty() && state.getOffsetType() != OffsetType.NONE) {
-                    throw new IllegalStateException(String.format(Locale.ROOT, "%s has a collision shape and an offset type, but is not marked as dynamicShape in its properties.", Registry.BLOCK.getId(block)));
+                    throw new IllegalStateException(String.format(Locale.ROOT, "%s has a collision shape and an offset type, but is not marked as dynamicShape in its properties.", Registries.BLOCK.getId(block)));
                 }
                 this.exceedsCube = Arrays.stream(Direction.Axis.values()).anyMatch(axis -> this.collisionShape.getMin((Direction.Axis)axis) < 0.0 || this.collisionShape.getMax((Direction.Axis)axis) > 1.0);
                 this.solidSides = new boolean[DIRECTIONS.length * SHAPE_TYPE_LENGTH];

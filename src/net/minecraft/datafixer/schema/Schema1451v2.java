@@ -24,7 +24,7 @@ extends IdentifierNormalizingSchema {
 
     public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema schema) {
         Map map = super.registerBlockEntities(schema);
-        schema.register(map, "minecraft:piston", string -> DSL.optionalFields((String)"blockState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema)));
+        schema.register(map, "minecraft:piston", name -> DSL.optionalFields((String)"blockState", (TypeTemplate)TypeReferences.BLOCK_STATE.in(schema)));
         return map;
     }
 }

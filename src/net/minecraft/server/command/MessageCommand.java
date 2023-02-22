@@ -18,9 +18,9 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import java.util.Collection;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.MessageArgumentType;
-import net.minecraft.entity.Entity;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SentMessage;
+import net.minecraft.network.message.SignedMessage;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -29,39 +29,30 @@ import net.minecraft.server.network.ServerPlayerEntity;
 public class MessageCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("msg").then(CommandManager.argument("targets", EntityArgumentType.players()).then(CommandManager.argument("message", MessageArgumentType.message()).executes(context -> {
-            MessageArgumentType.SignedMessage signedMessage = MessageArgumentType.getSignedMessage((CommandContext<ServerCommandSource>)context, "message");
-            try {
-                return MessageCommand.execute((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), signedMessage);
+            Collection<ServerPlayerEntity> collection = EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets");
+            if (!collection.isEmpty()) {
+                MessageArgumentType.getSignedMessage((CommandContext<ServerCommandSource>)context, "message", message -> MessageCommand.execute((ServerCommandSource)context.getSource(), collection, message));
             }
-            catch (Exception exception) {
-                signedMessage.sendHeader((ServerCommandSource)context.getSource());
-                throw exception;
-            }
+            return collection.size();
         }))));
         dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("tell").redirect((CommandNode)literalCommandNode));
         dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("w").redirect((CommandNode)literalCommandNode));
     }
 
-    private static int execute(ServerCommandSource source, Collection<ServerPlayerEntity> targets, MessageArgumentType.SignedMessage signedMessage) {
+    private static void execute(ServerCommandSource source, Collection<ServerPlayerEntity> targets, SignedMessage message) {
         MessageType.Parameters parameters = MessageType.params(MessageType.MSG_COMMAND_INCOMING, source);
-        signedMessage.decorate(source, message -> {
-            SentMessage sentMessage = SentMessage.of(message);
-            boolean bl = message.isFullyFiltered();
-            Entity entity = source.getEntity();
-            boolean bl2 = false;
-            for (ServerPlayerEntity serverPlayerEntity : targets) {
-                MessageType.Parameters parameters2 = MessageType.params(MessageType.MSG_COMMAND_OUTGOING, source).withTargetName(serverPlayerEntity.getDisplayName());
-                source.sendChatMessage(sentMessage, false, parameters2);
-                boolean bl3 = source.shouldFilterText(serverPlayerEntity);
-                serverPlayerEntity.sendChatMessage(sentMessage, bl3, parameters);
-                bl2 |= bl && bl3 && serverPlayerEntity != entity;
-            }
-            if (bl2) {
-                source.sendMessage(PlayerManager.FILTERED_FULL_TEXT);
-            }
-            sentMessage.afterPacketsSent(source.getServer().getPlayerManager());
-        });
-        return targets.size();
+        SentMessage sentMessage = SentMessage.of(message);
+        boolean bl = false;
+        for (ServerPlayerEntity serverPlayerEntity : targets) {
+            MessageType.Parameters parameters2 = MessageType.params(MessageType.MSG_COMMAND_OUTGOING, source).withTargetName(serverPlayerEntity.getDisplayName());
+            source.sendChatMessage(sentMessage, false, parameters2);
+            boolean bl2 = source.shouldFilterText(serverPlayerEntity);
+            serverPlayerEntity.sendChatMessage(sentMessage, bl2, parameters);
+            bl |= bl2 && message.isFullyFiltered();
+        }
+        if (bl) {
+            source.sendMessage(PlayerManager.FILTERED_FULL_TEXT);
+        }
     }
 }
 

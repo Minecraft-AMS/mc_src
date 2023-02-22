@@ -14,8 +14,8 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.Block;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.util.math.floatprovider.FloatProvider;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.gen.YOffset;
 import net.minecraft.world.gen.carver.CarverConfig;
 import net.minecraft.world.gen.carver.CarverDebugConfig;
@@ -23,7 +23,7 @@ import net.minecraft.world.gen.heightprovider.HeightProvider;
 
 public class CaveCarverConfig
 extends CarverConfig {
-    public static final Codec<CaveCarverConfig> CAVE_CODEC = RecordCodecBuilder.create(instance -> instance.group((App)CarverConfig.CONFIG_CODEC.forGetter(caveCarverConfig -> caveCarverConfig), (App)FloatProvider.VALUE_CODEC.fieldOf("horizontal_radius_multiplier").forGetter(config -> config.horizontalRadiusMultiplier), (App)FloatProvider.VALUE_CODEC.fieldOf("vertical_radius_multiplier").forGetter(config -> config.verticalRadiusMultiplier), (App)FloatProvider.createValidatedCodec(-1.0f, 1.0f).fieldOf("floor_level").forGetter(config -> config.floorLevel)).apply((Applicative)instance, CaveCarverConfig::new));
+    public static final Codec<CaveCarverConfig> CAVE_CODEC = RecordCodecBuilder.create(instance -> instance.group((App)CarverConfig.CONFIG_CODEC.forGetter(config -> config), (App)FloatProvider.VALUE_CODEC.fieldOf("horizontal_radius_multiplier").forGetter(config -> config.horizontalRadiusMultiplier), (App)FloatProvider.VALUE_CODEC.fieldOf("vertical_radius_multiplier").forGetter(config -> config.verticalRadiusMultiplier), (App)FloatProvider.createValidatedCodec(-1.0f, 1.0f).fieldOf("floor_level").forGetter(config -> config.floorLevel)).apply((Applicative)instance, CaveCarverConfig::new));
     public final FloatProvider horizontalRadiusMultiplier;
     public final FloatProvider verticalRadiusMultiplier;
     final FloatProvider floorLevel;

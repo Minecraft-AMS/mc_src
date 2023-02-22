@@ -26,14 +26,14 @@ extends ButtonWidget {
     private final boolean playPageTurnSound;
 
     public PageTurnWidget(int x, int y, boolean isNextPageButton, ButtonWidget.PressAction action, boolean playPageTurnSound) {
-        super(x, y, 23, 13, ScreenTexts.EMPTY, action);
+        super(x, y, 23, 13, ScreenTexts.EMPTY, action, DEFAULT_NARRATION_SUPPLIER);
         this.isNextPageButton = isNextPageButton;
         this.playPageTurnSound = playPageTurnSound;
     }
 
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, BookScreen.BOOK_TEXTURE);
         int i = 0;
@@ -44,7 +44,7 @@ extends ButtonWidget {
         if (!this.isNextPageButton) {
             j += 13;
         }
-        this.drawTexture(matrices, this.x, this.y, i, j, 23, 13);
+        this.drawTexture(matrices, this.getX(), this.getY(), i, j, 23, 13);
     }
 
     @Override

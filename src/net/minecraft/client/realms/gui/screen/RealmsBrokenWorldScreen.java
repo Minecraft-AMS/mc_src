@@ -75,13 +75,12 @@ extends RealmsScreen {
     public void init() {
         this.left_x = this.width / 2 - 150;
         this.right_x = this.width / 2 + 190;
-        this.addDrawableChild(new ButtonWidget(this.right_x - 80 + 8, RealmsBrokenWorldScreen.row(13) - 5, 70, 20, ScreenTexts.BACK, button -> this.backButtonClicked()));
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> this.backButtonClicked()).dimensions(this.right_x - 80 + 8, RealmsBrokenWorldScreen.row(13) - 5, 70, 20).build());
         if (this.serverData == null) {
             this.fetchServerData(this.serverId);
         } else {
             this.addButtons();
         }
-        this.client.keyboard.setRepeatEvents(true);
     }
 
     @Override
@@ -93,7 +92,7 @@ extends RealmsScreen {
         for (Map.Entry<Integer, RealmsWorldOptions> entry : this.serverData.slots.entrySet()) {
             int i = entry.getKey();
             boolean bl = i != this.serverData.activeSlot || this.serverData.worldType == RealmsServer.WorldType.MINIGAME;
-            ButtonWidget buttonWidget = bl ? new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, Text.translatable("mco.brokenworld.play"), button -> {
+            ButtonWidget buttonWidget = bl ? ButtonWidget.builder(Text.translatable("mco.brokenworld.play"), button -> {
                 if (this.serverData.slots.get((Object)Integer.valueOf((int)i)).empty) {
                     RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, this.serverData, Text.translatable("mco.configure.world.switch.slot"), Text.translatable("mco.configure.world.switch.slot.subtitle"), 0xA0A0A0, ScreenTexts.CANCEL, this::play, () -> {
                         this.client.setScreen(this);
@@ -105,7 +104,7 @@ extends RealmsScreen {
                 } else {
                     this.client.setScreen(new RealmsLongRunningMcoTaskScreen(this.parent, new SwitchSlotTask(this.serverData.id, i, this::play)));
                 }
-            }) : new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, Text.translatable("mco.brokenworld.download"), button -> {
+            }).dimensions(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20).build() : ButtonWidget.builder(Text.translatable("mco.brokenworld.download"), button -> {
                 MutableText text = Text.translatable("mco.configure.world.restore.download.question.line1");
                 MutableText text2 = Text.translatable("mco.configure.world.restore.download.question.line2");
                 this.client.setScreen(new RealmsLongConfirmationScreen(confirmed -> {
@@ -115,13 +114,13 @@ extends RealmsScreen {
                         this.client.setScreen(this);
                     }
                 }, RealmsLongConfirmationScreen.Type.INFO, text, text2, true));
-            });
+            }).dimensions(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20).build();
             if (this.slotsThatHasBeenDownloaded.contains(i)) {
                 buttonWidget.active = false;
                 buttonWidget.setMessage(Text.translatable("mco.brokenworld.downloaded"));
             }
             this.addDrawableChild(buttonWidget);
-            this.addDrawableChild(new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(10), 80, 20, Text.translatable("mco.brokenworld.reset"), button -> {
+            this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.brokenworld.reset"), button -> {
                 RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, this.serverData, this::play, () -> {
                     this.client.setScreen(this);
                     this.play();
@@ -130,7 +129,7 @@ extends RealmsScreen {
                     realmsResetWorldScreen.setSlot(i);
                 }
                 this.client.setScreen(realmsResetWorldScreen);
-            }));
+            }).dimensions(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(10), 80, 20).build());
         }
     }
 
@@ -161,11 +160,6 @@ extends RealmsScreen {
 
     private int getFramePositionX(int i) {
         return this.left_x + (i - 1) * 110;
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override

@@ -6,6 +6,9 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix4f
+ *  org.joml.Quaternionf
  */
 package net.minecraft.client.render.entity;
 
@@ -55,16 +58,16 @@ import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Quaternion;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 @Environment(value=EnvType.CLIENT)
 public class EntityRenderDispatcher
@@ -75,7 +78,7 @@ implements SynchronousResourceReloader {
     public final TextureManager textureManager;
     private World world;
     public Camera camera;
-    private Quaternion rotation;
+    private Quaternionf rotation;
     public Entity targetedEntity;
     private final ItemRenderer itemRenderer;
     private final BlockRenderManager blockRenderManager;
@@ -119,7 +122,7 @@ implements SynchronousResourceReloader {
         this.targetedEntity = target;
     }
 
-    public void setRotation(Quaternion rotation) {
+    public void setRotation(Quaternionf rotation) {
         this.rotation = rotation;
     }
 
@@ -215,8 +218,8 @@ implements SynchronousResourceReloader {
         float h = 0.0f;
         float i = entity.getHeight() / f;
         float j = 0.0f;
-        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-this.camera.getYaw()));
-        matrices.translate(0.0, 0.0, -0.3f + (float)((int)i) * 0.02f);
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-this.camera.getYaw()));
+        matrices.translate(0.0f, 0.0f, -0.3f + (float)((int)i) * 0.02f);
         float k = 0.0f;
         int l = 0;
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(TexturedRenderLayers.getEntityCutout());
@@ -331,7 +334,7 @@ implements SynchronousResourceReloader {
         return this.camera.getPos().squaredDistanceTo(x, y, z);
     }
 
-    public Quaternion getRotation() {
+    public Quaternionf getRotation() {
         return this.rotation;
     }
 

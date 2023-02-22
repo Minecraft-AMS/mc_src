@@ -30,11 +30,11 @@ import net.minecraft.block.Material;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -95,7 +95,7 @@ extends Fluid {
         if (state.get(FALLING).booleanValue()) {
             for (Direction direction2 : Direction.Type.HORIZONTAL) {
                 mutable.set((Vec3i)pos, direction2);
-                if (!this.method_15749(world, mutable, direction2) && !this.method_15749(world, (BlockPos)mutable.up(), direction2)) continue;
+                if (!this.isFlowBlocked(world, mutable, direction2) && !this.isFlowBlocked(world, (BlockPos)mutable.up(), direction2)) continue;
                 vec3d = vec3d.normalize().add(0.0, -6.0, 0.0);
                 break;
             }
@@ -107,7 +107,7 @@ extends Fluid {
         return state.isEmpty() || state.getFluid().matchesType(this);
     }
 
-    protected boolean method_15749(BlockView world, BlockPos pos, Direction direction) {
+    protected boolean isFlowBlocked(BlockView world, BlockPos pos, Direction direction) {
         BlockState blockState = world.getBlockState(pos);
         FluidState fluidState = world.getFluidState(pos);
         if (fluidState.getFluid().matchesType(this)) {
@@ -122,7 +122,7 @@ extends Fluid {
         return blockState.isSideSolidFullSquare(world, pos, direction);
     }
 
-    protected void tryFlow(WorldAccess world, BlockPos fluidPos, FluidState state) {
+    protected void tryFlow(World world, BlockPos fluidPos, FluidState state) {
         if (state.isEmpty()) {
             return;
         }
@@ -132,15 +132,15 @@ extends Fluid {
         FluidState fluidState = this.getUpdatedState(world, blockPos, blockState2);
         if (this.canFlow(world, fluidPos, blockState, Direction.DOWN, blockPos, blockState2, world.getFluidState(blockPos), fluidState.getFluid())) {
             this.flow(world, blockPos, blockState2, Direction.DOWN, fluidState);
-            if (this.method_15740(world, fluidPos) >= 3) {
-                this.method_15744(world, fluidPos, state, blockState);
+            if (this.countNeighboringSources(world, fluidPos) >= 3) {
+                this.flowToSides(world, fluidPos, state, blockState);
             }
-        } else if (state.isStill() || !this.method_15736(world, fluidState.getFluid(), fluidPos, blockState, blockPos, blockState2)) {
-            this.method_15744(world, fluidPos, state, blockState);
+        } else if (state.isStill() || !this.canFlowDownTo(world, fluidState.getFluid(), fluidPos, blockState, blockPos, blockState2)) {
+            this.flowToSides(world, fluidPos, state, blockState);
         }
     }
 
-    private void method_15744(WorldAccess world, BlockPos pos, FluidState fluidState, BlockState blockState) {
+    private void flowToSides(World world, BlockPos pos, FluidState fluidState, BlockState blockState) {
         int i = fluidState.getLevel() - this.getLevelDecreasePerBlock(world);
         if (fluidState.get(FALLING).booleanValue()) {
             i = 7;
@@ -159,7 +159,7 @@ extends Fluid {
         }
     }
 
-    protected FluidState getUpdatedState(WorldView world, BlockPos pos, BlockState state) {
+    protected FluidState getUpdatedState(World world, BlockPos pos, BlockState state) {
         BlockPos blockPos2;
         BlockState blockState3;
         FluidState fluidState3;
@@ -175,7 +175,7 @@ extends Fluid {
             }
             i = Math.max(i, fluidState.getLevel());
         }
-        if (this.isInfinite() && j >= 2) {
+        if (this.isInfinite(world) && j >= 2) {
             BlockState blockState2 = world.getBlockState(pos.down());
             FluidState fluidState2 = blockState2.getFluidState();
             if (blockState2.getMaterial().isSolid() || this.isMatchingAndStill(fluidState2)) {
@@ -229,7 +229,7 @@ extends Fluid {
         return (FluidState)this.getStill().getDefaultState().with(FALLING, falling);
     }
 
-    protected abstract boolean isInfinite();
+    protected abstract boolean isInfinite(World var1);
 
     protected void flow(WorldAccess world, BlockPos pos, BlockState state, Direction direction, FluidState fluidState) {
         if (state.getBlock() instanceof FluidFillable) {
@@ -250,7 +250,7 @@ extends Fluid {
         return (short)((i + 128 & 0xFF) << 8 | j + 128 & 0xFF);
     }
 
-    protected int method_15742(WorldView world, BlockPos blockPos, int i, Direction direction, BlockState blockState, BlockPos blockPos2, Short2ObjectMap<Pair<BlockState, FluidState>> short2ObjectMap, Short2BooleanMap short2BooleanMap) {
+    protected int getFlowSpeedBetween(WorldView world, BlockPos blockPos, int i, Direction direction, BlockState blockState, BlockPos blockPos2, Short2ObjectMap<Pair<BlockState, FluidState>> short2ObjectMap, Short2BooleanMap short2BooleanMap) {
         int j = 1000;
         for (Direction direction2 : Direction.Type.HORIZONTAL) {
             int k;
@@ -267,18 +267,18 @@ extends Fluid {
             boolean bl = short2BooleanMap.computeIfAbsent(s2, s -> {
                 BlockPos blockPos2 = blockPos3.down();
                 BlockState blockState2 = world.getBlockState(blockPos2);
-                return this.method_15736(world, this.getFlowing(), blockPos3, blockState2, blockPos2, blockState2);
+                return this.canFlowDownTo(world, this.getFlowing(), blockPos3, blockState2, blockPos2, blockState2);
             });
             if (bl) {
                 return i;
             }
-            if (i >= this.getFlowSpeed(world) || (k = this.method_15742(world, blockPos3, i + 1, direction2.getOpposite(), blockState2, blockPos2, short2ObjectMap, short2BooleanMap)) >= j) continue;
+            if (i >= this.getFlowSpeed(world) || (k = this.getFlowSpeedBetween(world, blockPos3, i + 1, direction2.getOpposite(), blockState2, blockPos2, short2ObjectMap, short2BooleanMap)) >= j) continue;
             j = k;
         }
         return j;
     }
 
-    private boolean method_15736(BlockView world, Fluid fluid, BlockPos pos, BlockState state, BlockPos fromPos, BlockState fromState) {
+    private boolean canFlowDownTo(BlockView world, Fluid fluid, BlockPos pos, BlockState state, BlockPos fromPos, BlockState fromState) {
         if (!this.receivesFlow(Direction.DOWN, world, pos, state, fromPos, fromState)) {
             return false;
         }
@@ -298,7 +298,7 @@ extends Fluid {
 
     protected abstract int getFlowSpeed(WorldView var1);
 
-    private int method_15740(WorldView world, BlockPos pos) {
+    private int countNeighboringSources(WorldView world, BlockPos pos) {
         int i = 0;
         for (Direction direction : Direction.Type.HORIZONTAL) {
             BlockPos blockPos = pos.offset(direction);
@@ -309,7 +309,7 @@ extends Fluid {
         return i;
     }
 
-    protected Map<Direction, FluidState> getSpread(WorldView world, BlockPos pos, BlockState state) {
+    protected Map<Direction, FluidState> getSpread(World world, BlockPos pos, BlockState state) {
         int i = 1000;
         EnumMap map = Maps.newEnumMap(Direction.class);
         Short2ObjectOpenHashMap short2ObjectMap = new Short2ObjectOpenHashMap();
@@ -328,9 +328,9 @@ extends Fluid {
             BlockPos blockPos2 = blockPos.down();
             boolean bl = short2BooleanMap.computeIfAbsent(s2, s -> {
                 BlockState blockState2 = world.getBlockState(blockPos2);
-                return this.method_15736(world, this.getFlowing(), blockPos, blockState, blockPos2, blockState2);
+                return this.canFlowDownTo(world, this.getFlowing(), blockPos, blockState, blockPos2, blockState2);
             });
-            int j = bl ? 0 : this.method_15742(world, blockPos, 1, direction.getOpposite(), blockState, pos, (Short2ObjectMap<Pair<BlockState, FluidState>>)short2ObjectMap, (Short2BooleanMap)short2BooleanMap);
+            int j = bl ? 0 : this.getFlowSpeedBetween(world, blockPos, 1, direction.getOpposite(), blockState, pos, (Short2ObjectMap<Pair<BlockState, FluidState>>)short2ObjectMap, (Short2BooleanMap)short2BooleanMap);
             if (j < i) {
                 map.clear();
             }
@@ -378,7 +378,7 @@ extends Fluid {
                 state = fluidState;
                 BlockState blockState = state.getBlockState();
                 world.setBlockState(pos, blockState, 2);
-                world.createAndScheduleFluidTick(pos, state.getFluid(), i);
+                world.scheduleFluidTick(pos, state.getFluid(), i);
                 world.updateNeighborsAlways(pos, blockState.getBlock());
             }
         }
@@ -417,7 +417,7 @@ extends Fluid {
         if (state.getLevel() == 9 && FlowableFluid.isFluidAboveEqual(state, world, pos)) {
             return VoxelShapes.fullCube();
         }
-        return this.shapeCache.computeIfAbsent(state, fluidState -> VoxelShapes.cuboid(0.0, 0.0, 0.0, 1.0, fluidState.getHeight(world, pos), 1.0));
+        return this.shapeCache.computeIfAbsent(state, state2 -> VoxelShapes.cuboid(0.0, 0.0, 0.0, 1.0, state2.getHeight(world, pos), 1.0));
     }
 }
 

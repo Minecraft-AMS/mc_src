@@ -16,46 +16,49 @@ import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.entity.ai.brain.task.AquaticStrollTask;
 import net.minecraft.entity.ai.brain.task.BiasedLongJumpTask;
 import net.minecraft.entity.ai.brain.task.BreedTask;
 import net.minecraft.entity.ai.brain.task.CompositeTask;
-import net.minecraft.entity.ai.brain.task.ConditionalTask;
 import net.minecraft.entity.ai.brain.task.CroakTask;
-import net.minecraft.entity.ai.brain.task.FollowMobTask;
+import net.minecraft.entity.ai.brain.task.FollowMobWithIntervalTask;
 import net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask;
 import net.minecraft.entity.ai.brain.task.FrogEatEntityTask;
-import net.minecraft.entity.ai.brain.task.GoTowardsLookTarget;
+import net.minecraft.entity.ai.brain.task.GoTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.LayFrogSpawnTask;
 import net.minecraft.entity.ai.brain.task.LeapingChargeTask;
+import net.minecraft.entity.ai.brain.task.LongJumpTask;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
 import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.RandomTask;
 import net.minecraft.entity.ai.brain.task.StrollTask;
 import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 import net.minecraft.entity.ai.brain.task.TemptTask;
 import net.minecraft.entity.ai.brain.task.TemptationCooldownTask;
-import net.minecraft.entity.ai.brain.task.TimeLimitedTask;
 import net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask;
-import net.minecraft.entity.ai.brain.task.WaitTask;
 import net.minecraft.entity.ai.brain.task.WalkTask;
 import net.minecraft.entity.ai.brain.task.WalkTowardsLandTask;
 import net.minecraft.entity.ai.brain.task.WalkTowardsWaterTask;
 import net.minecraft.entity.ai.brain.task.WanderAroundTask;
+import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
+import net.minecraft.entity.ai.pathing.PathNodeType;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.FrogEntity;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.World;
 
 public class FrogBrain {
     private static final float field_37469 = 2.0f;
@@ -91,23 +94,42 @@ public class FrogBrain {
     }
 
     private static void addIdleActivities(Brain<FrogEntity> brain) {
-        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, new TimeLimitedTask<LivingEntity>(new FollowMobTask(EntityType.PLAYER, 6.0f), UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)0, (Object)new BreedTask(EntityType.FROG, 1.0f)), (Object)Pair.of((Object)1, (Object)new TemptTask(frog -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, new UpdateAttackTargetTask<FrogEntity>(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)3, (Object)new WalkTowardsLandTask(6, 1.0f)), (Object)Pair.of((Object)4, new RandomTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), ImmutableList.of((Object)Pair.of((Object)new StrollTask(1.0f), (Object)1), (Object)Pair.of((Object)new GoTowardsLookTarget(1.0f, 3), (Object)1), (Object)Pair.of((Object)new CroakTask(), (Object)3), (Object)Pair.of(new ConditionalTask<LivingEntity>(Entity::isOnGround, new WaitTask(5, 20)), (Object)2))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
+        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)0, (Object)new BreedTask(EntityType.FROG, 1.0f)), (Object)Pair.of((Object)1, (Object)new TemptTask(frog -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, UpdateAttackTargetTask.create(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalRegisteredMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)3, WalkTowardsLandTask.create(6, 1.0f)), (Object)Pair.of((Object)4, new RandomTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), ImmutableList.of((Object)Pair.of(StrollTask.create(1.0f), (Object)1), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)1), (Object)Pair.of((Object)new CroakTask(), (Object)3), (Object)Pair.of(TaskTriggerer.predicate(Entity::isOnGround), (Object)2))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
     }
 
     private static void addSwimActivities(Brain<FrogEntity> brain) {
-        brain.setTaskList(Activity.SWIM, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, new TimeLimitedTask<LivingEntity>(new FollowMobTask(EntityType.PLAYER, 6.0f), UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new TemptTask(frog -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, new UpdateAttackTargetTask<FrogEntity>(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)3, (Object)new WalkTowardsLandTask(8, 1.5f)), (Object)Pair.of((Object)5, new CompositeTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Set<MemoryModuleType<?>>)ImmutableSet.of(), CompositeTask.Order.ORDERED, CompositeTask.RunMode.TRY_ALL, ImmutableList.of((Object)Pair.of((Object)new AquaticStrollTask(0.75f), (Object)1), (Object)Pair.of((Object)new StrollTask(1.0f, true), (Object)1), (Object)Pair.of((Object)new GoTowardsLookTarget(1.0f, 3), (Object)1), (Object)Pair.of(new ConditionalTask<LivingEntity>(Entity::isInsideWaterOrBubbleColumn, new WaitTask(30, 60)), (Object)5))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_PRESENT))));
+        brain.setTaskList(Activity.SWIM, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, (Object)new TemptTask(frog -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, UpdateAttackTargetTask.create(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalRegisteredMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)3, WalkTowardsLandTask.create(8, 1.5f)), (Object)Pair.of((Object)5, new CompositeTask((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Set<MemoryModuleType<?>>)ImmutableSet.of(), CompositeTask.Order.ORDERED, CompositeTask.RunMode.TRY_ALL, ImmutableList.of((Object)Pair.of(StrollTask.createDynamicRadius(0.75f), (Object)1), (Object)Pair.of(StrollTask.create(1.0f, true), (Object)1), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)1), (Object)Pair.of(TaskTriggerer.predicate(Entity::isInsideWaterOrBubbleColumn), (Object)5))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_PRESENT))));
     }
 
     private static void addLaySpawnActivities(Brain<FrogEntity> brain) {
-        brain.setTaskList(Activity.LAY_SPAWN, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, new TimeLimitedTask<LivingEntity>(new FollowMobTask(EntityType.PLAYER, 6.0f), UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, new UpdateAttackTargetTask<FrogEntity>(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)2, (Object)new WalkTowardsWaterTask(8, 1.0f)), (Object)Pair.of((Object)3, (Object)new LayFrogSpawnTask(Blocks.FROGSPAWN, MemoryModuleType.IS_PREGNANT)), (Object)Pair.of((Object)4, new RandomTask(ImmutableList.of((Object)Pair.of((Object)new StrollTask(1.0f), (Object)2), (Object)Pair.of((Object)new GoTowardsLookTarget(1.0f, 3), (Object)1), (Object)Pair.of((Object)new CroakTask(), (Object)2), (Object)Pair.of(new ConditionalTask<LivingEntity>(Entity::isOnGround, new WaitTask(5, 20)), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_PREGNANT, (Object)((Object)MemoryModuleState.VALUE_PRESENT))));
+        brain.setTaskList(Activity.LAY_SPAWN, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)1, UpdateAttackTargetTask.create(FrogBrain::isNotBreeding, frog -> frog.getBrain().getOptionalRegisteredMemory(MemoryModuleType.NEAREST_ATTACKABLE))), (Object)Pair.of((Object)2, WalkTowardsWaterTask.create(8, 1.0f)), (Object)Pair.of((Object)3, LayFrogSpawnTask.create(Blocks.FROGSPAWN)), (Object)Pair.of((Object)4, new RandomTask(ImmutableList.of((Object)Pair.of(StrollTask.create(1.0f), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)1), (Object)Pair.of((Object)new CroakTask(), (Object)2), (Object)Pair.of(TaskTriggerer.predicate(Entity::isOnGround), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_PREGNANT, (Object)((Object)MemoryModuleState.VALUE_PRESENT))));
     }
 
     private static void addLongJumpActivities(Brain<FrogEntity> brain) {
-        brain.setTaskList(Activity.LONG_JUMP, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, (Object)new LeapingChargeTask(longJumpCooldownRange, SoundEvents.ENTITY_FROG_STEP)), (Object)Pair.of((Object)1, new BiasedLongJumpTask<FrogEntity>(longJumpCooldownRange, 2, 4, 1.5f, frog -> SoundEvents.ENTITY_FROG_LONG_JUMP, BlockTags.FROG_PREFER_JUMP_TO, 0.5f, state -> state.isOf(Blocks.LILY_PAD)))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.TEMPTING_PLAYER, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.BREED_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.LONG_JUMP_COOLING_DOWN, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
+        brain.setTaskList(Activity.LONG_JUMP, (ImmutableList<Pair<Integer, Task<FrogEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, (Object)new LeapingChargeTask(longJumpCooldownRange, SoundEvents.ENTITY_FROG_STEP)), (Object)Pair.of((Object)1, new BiasedLongJumpTask<FrogEntity>(longJumpCooldownRange, 2, 4, 1.5f, frog -> SoundEvents.ENTITY_FROG_LONG_JUMP, BlockTags.FROG_PREFER_JUMP_TO, 0.5f, FrogBrain::shouldJumpTo))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.TEMPTING_PLAYER, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.BREED_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.LONG_JUMP_COOLING_DOWN, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.IS_IN_WATER, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
     }
 
     private static void addTongueActivities(Brain<FrogEntity> brain) {
-        brain.setTaskList(Activity.TONGUE, 0, (ImmutableList<Task<FrogEntity>>)ImmutableList.of(new ForgetAttackTargetTask(), (Object)new FrogEatEntityTask(SoundEvents.ENTITY_FROG_TONGUE, SoundEvents.ENTITY_FROG_EAT)), MemoryModuleType.ATTACK_TARGET);
+        brain.setTaskList(Activity.TONGUE, 0, (ImmutableList<Task<FrogEntity>>)ImmutableList.of(ForgetAttackTargetTask.create(), (Object)new FrogEatEntityTask(SoundEvents.ENTITY_FROG_TONGUE, SoundEvents.ENTITY_FROG_EAT)), MemoryModuleType.ATTACK_TARGET);
+    }
+
+    private static <E extends MobEntity> boolean shouldJumpTo(E frog, BlockPos pos) {
+        World world = frog.world;
+        BlockPos blockPos = pos.down();
+        if (!(world.getFluidState(pos).isEmpty() && world.getFluidState(blockPos).isEmpty() && world.getFluidState(pos.up()).isEmpty())) {
+            return false;
+        }
+        BlockState blockState = world.getBlockState(pos);
+        BlockState blockState2 = world.getBlockState(blockPos);
+        if (blockState.isIn(BlockTags.FROG_PREFER_JUMP_TO) || blockState2.isIn(BlockTags.FROG_PREFER_JUMP_TO)) {
+            return true;
+        }
+        PathNodeType pathNodeType = LandPathNodeMaker.getLandNodeType(world, pos.mutableCopy());
+        PathNodeType pathNodeType2 = LandPathNodeMaker.getLandNodeType(world, blockPos.mutableCopy());
+        if (pathNodeType == PathNodeType.TRAPDOOR || blockState.isAir() && pathNodeType2 == PathNodeType.TRAPDOOR) {
+            return true;
+        }
+        return LongJumpTask.shouldJumpTo(frog, pos);
     }
 
     private static boolean isNotBreeding(FrogEntity frog) {

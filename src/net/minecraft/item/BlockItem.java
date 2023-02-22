@@ -19,13 +19,13 @@ import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsage;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.BlockSoundGroup;
@@ -35,7 +35,6 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -43,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class BlockItem
 extends Item {
-    private static final String BLOCK_ENTITY_TAG_KEY = "BlockEntityTag";
+    public static final String BLOCK_ENTITY_TAG_KEY = "BlockEntityTag";
     public static final String BLOCK_STATE_TAG_KEY = "BlockStateTag";
     @Deprecated
     private final Block block;
@@ -64,6 +63,9 @@ extends Item {
     }
 
     public ActionResult place(ItemPlacementContext context) {
+        if (!this.getBlock().isEnabled(context.getWorld().getEnabledFeatures())) {
+            return ActionResult.FAIL;
+        }
         if (!context.canPlace()) {
             return ActionResult.FAIL;
         }
@@ -185,13 +187,6 @@ extends Item {
     }
 
     @Override
-    public void appendStacks(ItemGroup group, DefaultedList<ItemStack> stacks) {
-        if (this.isIn(group)) {
-            this.getBlock().appendStacks(group, stacks);
-        }
-    }
-
-    @Override
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         super.appendTooltip(stack, world, tooltip, context);
         this.getBlock().appendTooltip(stack, world, tooltip, context);
@@ -232,6 +227,11 @@ extends Item {
             BlockEntity.writeIdToNbt(tag, blockEntityType);
             stack.setSubNbt(BLOCK_ENTITY_TAG_KEY, tag);
         }
+    }
+
+    @Override
+    public FeatureSet getRequiredFeatures() {
+        return this.getBlock().getRequiredFeatures();
     }
 }
 

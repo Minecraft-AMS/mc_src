@@ -12,6 +12,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.SoundContainer;
 import net.minecraft.client.sound.SoundSystem;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.floatprovider.FloatSupplier;
 import net.minecraft.util.math.random.Random;
@@ -20,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class Sound
 implements SoundContainer<Sound> {
+    public static final ResourceFinder FINDER = new ResourceFinder("sounds", ".ogg");
     private final Identifier id;
     private final FloatSupplier volume;
     private final FloatSupplier pitch;
@@ -45,7 +47,7 @@ implements SoundContainer<Sound> {
     }
 
     public Identifier getLocation() {
-        return new Identifier(this.id.getNamespace(), "sounds/" + this.id.getPath() + ".ogg");
+        return FINDER.toResourcePath(this.id);
     }
 
     public FloatSupplier getVolume() {

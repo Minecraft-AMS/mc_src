@@ -31,6 +31,7 @@ import net.minecraft.block.VineBlock;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.structure.SimpleStructurePiece;
 import net.minecraft.structure.StructureContext;
@@ -48,7 +49,6 @@ import net.minecraft.structure.processor.StructureProcessorRule;
 import net.minecraft.structure.rule.AlwaysTrueRuleTest;
 import net.minecraft.structure.rule.BlockMatchRuleTest;
 import net.minecraft.structure.rule.RandomBlockMatchRuleTest;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
@@ -68,7 +68,7 @@ import org.slf4j.Logger;
 
 public class RuinedPortalStructurePiece
 extends SimpleStructurePiece {
-    private static final Logger field_24992 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final float field_31620 = 0.3f;
     private static final float field_31621 = 0.07f;
     private static final float field_31622 = 0.2f;
@@ -84,7 +84,7 @@ extends SimpleStructurePiece {
     public RuinedPortalStructurePiece(StructureTemplateManager manager, NbtCompound nbt) {
         super(StructurePieceType.RUINED_PORTAL, nbt, manager, id -> RuinedPortalStructurePiece.createPlacementData(manager, nbt, id));
         this.verticalPlacement = VerticalPlacement.getFromId(nbt.getString("VerticalPlacement"));
-        this.properties = (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0));
+        this.properties = (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)LOGGER).error(arg_0));
     }
 
     @Override
@@ -93,13 +93,13 @@ extends SimpleStructurePiece {
         nbt.putString("Rotation", this.placementData.getRotation().name());
         nbt.putString("Mirror", this.placementData.getMirror().name());
         nbt.putString("VerticalPlacement", this.verticalPlacement.getId());
-        Properties.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.properties).resultOrPartial(arg_0 -> ((Logger)field_24992).error(arg_0)).ifPresent(nbtElement -> nbt.put("Properties", (NbtElement)nbtElement));
+        Properties.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.properties).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("Properties", (NbtElement)nbtElement));
     }
 
     private static StructurePlacementData createPlacementData(StructureTemplateManager manager, NbtCompound nbt, Identifier id) {
         StructureTemplate structureTemplate = manager.getTemplateOrBlank(id);
         BlockPos blockPos = new BlockPos(structureTemplate.getSize().getX() / 2, 0, structureTemplate.getSize().getZ() / 2);
-        return RuinedPortalStructurePiece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mirror")), BlockRotation.valueOf(nbt.getString("Rotation")), VerticalPlacement.getFromId(nbt.getString("VerticalPlacement")), blockPos, (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0)));
+        return RuinedPortalStructurePiece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mirror")), BlockRotation.valueOf(nbt.getString("Rotation")), VerticalPlacement.getFromId(nbt.getString("VerticalPlacement")), blockPos, (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)LOGGER).error(arg_0)));
     }
 
     private static StructurePlacementData createPlacementData(BlockMirror mirror, BlockRotation rotation, VerticalPlacement verticalPlacement, BlockPos pos, Properties properties) {
@@ -265,7 +265,7 @@ extends SimpleStructurePiece {
         public static final /* enum */ VerticalPlacement IN_MOUNTAIN = new VerticalPlacement("in_mountain");
         public static final /* enum */ VerticalPlacement UNDERGROUND = new VerticalPlacement("underground");
         public static final /* enum */ VerticalPlacement IN_NETHER = new VerticalPlacement("in_nether");
-        public static final StringIdentifiable.Codec<VerticalPlacement> field_37811;
+        public static final StringIdentifiable.Codec<VerticalPlacement> CODEC;
         private final String id;
         private static final /* synthetic */ VerticalPlacement[] field_24037;
 
@@ -286,7 +286,7 @@ extends SimpleStructurePiece {
         }
 
         public static VerticalPlacement getFromId(String id) {
-            return field_37811.byId(id);
+            return CODEC.byId(id);
         }
 
         @Override
@@ -300,7 +300,7 @@ extends SimpleStructurePiece {
 
         static {
             field_24037 = VerticalPlacement.method_36761();
-            field_37811 = StringIdentifiable.createCodec(VerticalPlacement::values);
+            CODEC = StringIdentifiable.createCodec(VerticalPlacement::values);
         }
     }
 

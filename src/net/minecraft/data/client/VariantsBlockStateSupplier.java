@@ -69,14 +69,14 @@ implements BlockStateSupplier {
         }
         TreeMap map2 = new TreeMap();
         stream.forEach(pair -> map2.put(((PropertiesMap)pair.getFirst()).asString(), BlockStateVariant.toJson((List)pair.getSecond())));
-        JsonObject jsonObject2 = new JsonObject();
-        jsonObject2.add("variants", (JsonElement)Util.make(new JsonObject(), jsonObject -> map2.forEach((arg_0, arg_1) -> ((JsonObject)jsonObject).add(arg_0, arg_1))));
-        return jsonObject2;
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.add("variants", (JsonElement)Util.make(new JsonObject(), json -> map2.forEach((arg_0, arg_1) -> ((JsonObject)json).add(arg_0, arg_1))));
+        return jsonObject;
     }
 
     private static List<BlockStateVariant> intersect(List<BlockStateVariant> left, List<BlockStateVariant> right) {
         ImmutableList.Builder builder = ImmutableList.builder();
-        left.forEach(blockStateVariant -> right.forEach(blockStateVariant2 -> builder.add((Object)BlockStateVariant.union(blockStateVariant, blockStateVariant2))));
+        left.forEach(leftVariant -> right.forEach(rightVariant -> builder.add((Object)BlockStateVariant.union(leftVariant, rightVariant))));
         return builder.build();
     }
 

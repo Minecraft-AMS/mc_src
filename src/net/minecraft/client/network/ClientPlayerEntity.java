@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.mojang.brigadier.ParseResults
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -13,9 +12,7 @@
 package net.minecraft.client.network;
 
 import com.google.common.collect.Lists;
-import com.mojang.brigadier.ParseResults;
 import com.mojang.logging.LogUtils;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +22,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
+import net.minecraft.block.entity.HangingSignBlockEntity;
 import net.minecraft.block.entity.JigsawBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
@@ -34,6 +32,7 @@ import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.gui.screen.ingame.BookEditScreen;
 import net.minecraft.client.gui.screen.ingame.CommandBlockScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.ingame.HangingSignEditScreen;
 import net.minecraft.client.gui.screen.ingame.JigsawBlockScreen;
 import net.minecraft.client.gui.screen.ingame.MinecartCommandBlockScreen;
 import net.minecraft.client.gui.screen.ingame.SignEditScreen;
@@ -51,8 +50,6 @@ import net.minecraft.client.sound.MinecartInsideSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.ClientPlayerTickable;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.argument.DecoratableArgumentList;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityPose;
@@ -69,17 +66,9 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.ElytraItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.network.encryption.Signer;
-import net.minecraft.network.message.ArgumentSignatureDataMap;
-import net.minecraft.network.message.DecoratedContents;
-import net.minecraft.network.message.LastSeenMessageList;
-import net.minecraft.network.message.MessageMetadata;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
 import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInputC2SPacket;
@@ -89,16 +78,15 @@ import net.minecraft.network.packet.c2s.play.UpdatePlayerAbilitiesC2SPacket;
 import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.StatHandler;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.Hand;
-import net.minecraft.util.StringHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -113,7 +101,7 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class ClientPlayerEntity
 extends AbstractClientPlayerEntity {
-    public static final Logger field_39078 = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32671 = 20;
     private static final int field_32672 = 600;
     private static final int field_32673 = 100;
@@ -162,7 +150,7 @@ extends AbstractClientPlayerEntity {
     private boolean showsDeathScreen = true;
 
     public ClientPlayerEntity(MinecraftClient client, ClientWorld world, ClientPlayNetworkHandler networkHandler, StatHandler stats, ClientRecipeBook recipeBook, boolean lastSneaking, boolean lastSprinting) {
-        super(world, networkHandler.getProfile(), client.getProfileKeys().getPublicKey().orElse(null));
+        super(world, networkHandler.getProfile());
         this.client = client;
         this.networkHandler = networkHandler;
         this.statHandler = stats;
@@ -226,6 +214,7 @@ extends AbstractClientPlayerEntity {
             Entity entity = this.getRootVehicle();
             if (entity != this && entity.isLogicalSideForUpdatingMovement()) {
                 this.networkHandler.sendPacket(new VehicleMoveC2SPacket(entity));
+                this.sendSprintingPacket();
             }
         } else {
             this.sendMovementPackets();
@@ -244,48 +233,43 @@ extends AbstractClientPlayerEntity {
     }
 
     private void sendMovementPackets() {
-        boolean bl2;
-        boolean bl = this.isSprinting();
-        if (bl != this.lastSprinting) {
-            ClientCommandC2SPacket.Mode mode = bl ? ClientCommandC2SPacket.Mode.START_SPRINTING : ClientCommandC2SPacket.Mode.STOP_SPRINTING;
+        this.sendSprintingPacket();
+        boolean bl = this.isSneaking();
+        if (bl != this.lastSneaking) {
+            ClientCommandC2SPacket.Mode mode = bl ? ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY : ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY;
             this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, mode));
-            this.lastSprinting = bl;
-        }
-        if ((bl2 = this.isSneaking()) != this.lastSneaking) {
-            ClientCommandC2SPacket.Mode mode2 = bl2 ? ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY : ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY;
-            this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, mode2));
-            this.lastSneaking = bl2;
+            this.lastSneaking = bl;
         }
         if (this.isCamera()) {
-            boolean bl4;
+            boolean bl3;
             double d = this.getX() - this.lastX;
             double e = this.getY() - this.lastBaseY;
             double f = this.getZ() - this.lastZ;
             double g = this.getYaw() - this.lastYaw;
             double h = this.getPitch() - this.lastPitch;
             ++this.ticksSinceLastPositionPacketSent;
-            boolean bl3 = MathHelper.squaredMagnitude(d, e, f) > MathHelper.square(2.0E-4) || this.ticksSinceLastPositionPacketSent >= 20;
-            boolean bl5 = bl4 = g != 0.0 || h != 0.0;
+            boolean bl2 = MathHelper.squaredMagnitude(d, e, f) > MathHelper.square(2.0E-4) || this.ticksSinceLastPositionPacketSent >= 20;
+            boolean bl4 = bl3 = g != 0.0 || h != 0.0;
             if (this.hasVehicle()) {
                 Vec3d vec3d = this.getVelocity();
                 this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(vec3d.x, -999.0, vec3d.z, this.getYaw(), this.getPitch(), this.onGround));
-                bl3 = false;
-            } else if (bl3 && bl4) {
+                bl2 = false;
+            } else if (bl2 && bl3) {
                 this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch(), this.onGround));
-            } else if (bl3) {
+            } else if (bl2) {
                 this.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(this.getX(), this.getY(), this.getZ(), this.onGround));
-            } else if (bl4) {
+            } else if (bl3) {
                 this.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(this.getYaw(), this.getPitch(), this.onGround));
             } else if (this.lastOnGround != this.onGround) {
                 this.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(this.onGround));
             }
-            if (bl3) {
+            if (bl2) {
                 this.lastX = this.getX();
                 this.lastBaseY = this.getY();
                 this.lastZ = this.getZ();
                 this.ticksSinceLastPositionPacketSent = 0;
             }
-            if (bl4) {
+            if (bl3) {
                 this.lastYaw = this.getYaw();
                 this.lastPitch = this.getPitch();
             }
@@ -294,91 +278,20 @@ extends AbstractClientPlayerEntity {
         }
     }
 
+    private void sendSprintingPacket() {
+        boolean bl = this.isSprinting();
+        if (bl != this.lastSprinting) {
+            ClientCommandC2SPacket.Mode mode = bl ? ClientCommandC2SPacket.Mode.START_SPRINTING : ClientCommandC2SPacket.Mode.STOP_SPRINTING;
+            this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, mode));
+            this.lastSprinting = bl;
+        }
+    }
+
     public boolean dropSelectedItem(boolean entireStack) {
         PlayerActionC2SPacket.Action action = entireStack ? PlayerActionC2SPacket.Action.DROP_ALL_ITEMS : PlayerActionC2SPacket.Action.DROP_ITEM;
         ItemStack itemStack = this.getInventory().dropSelectedItem(entireStack);
         this.networkHandler.sendPacket(new PlayerActionC2SPacket(action, BlockPos.ORIGIN, Direction.DOWN));
         return !itemStack.isEmpty();
-    }
-
-    public void sendChatMessage(String message, @Nullable Text preview) {
-        this.sendChatMessageInternal(message, preview);
-    }
-
-    public boolean hasSignedArgument(String command) {
-        ParseResults parseResults = this.networkHandler.getCommandDispatcher().parse(command, (Object)this.networkHandler.getCommandSource());
-        return ArgumentSignatureDataMap.hasSignedArgument(DecoratableArgumentList.of(parseResults));
-    }
-
-    public boolean sendCommand(String command) {
-        if (!this.hasSignedArgument(command)) {
-            LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
-            this.networkHandler.sendPacket(new CommandExecutionC2SPacket(command, Instant.now(), 0L, ArgumentSignatureDataMap.EMPTY, false, acknowledgment));
-            return true;
-        }
-        return false;
-    }
-
-    public void sendCommand(String command, @Nullable Text preview) {
-        this.sendCommandInternal(command, preview);
-    }
-
-    private void sendChatMessageInternal(String message, @Nullable Text preview) {
-        DecoratedContents decoratedContents = this.toDecoratedContents(message, preview);
-        MessageMetadata messageMetadata = this.createMessageMetadata();
-        LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
-        MessageSignatureData messageSignatureData = this.signChatMessage(messageMetadata, decoratedContents, acknowledgment.lastSeen());
-        this.networkHandler.sendPacket(new ChatMessageC2SPacket(decoratedContents.plain(), messageMetadata.timestamp(), messageMetadata.salt(), messageSignatureData, decoratedContents.isDecorated(), acknowledgment));
-    }
-
-    private MessageSignatureData signChatMessage(MessageMetadata metadata, DecoratedContents content, LastSeenMessageList lastSeenMessages) {
-        try {
-            Signer signer = this.client.getProfileKeys().getSigner();
-            if (signer != null) {
-                return this.networkHandler.getMessagePacker().pack(signer, metadata, content, lastSeenMessages).signature();
-            }
-        }
-        catch (Exception exception) {
-            field_39078.error("Failed to sign chat message: '{}'", (Object)content.plain(), (Object)exception);
-        }
-        return MessageSignatureData.EMPTY;
-    }
-
-    private void sendCommandInternal(String command, @Nullable Text preview) {
-        ParseResults parseResults = this.networkHandler.getCommandDispatcher().parse(command, (Object)this.networkHandler.getCommandSource());
-        MessageMetadata messageMetadata = this.createMessageMetadata();
-        LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
-        ArgumentSignatureDataMap argumentSignatureDataMap = this.signArguments(messageMetadata, (ParseResults<CommandSource>)parseResults, preview, acknowledgment.lastSeen());
-        this.networkHandler.sendPacket(new CommandExecutionC2SPacket(command, messageMetadata.timestamp(), messageMetadata.salt(), argumentSignatureDataMap, preview != null, acknowledgment));
-    }
-
-    private ArgumentSignatureDataMap signArguments(MessageMetadata signer, ParseResults<CommandSource> parseResults, @Nullable Text preview, LastSeenMessageList lastSeenMessages) {
-        Signer signer2 = this.client.getProfileKeys().getSigner();
-        if (signer2 == null) {
-            return ArgumentSignatureDataMap.EMPTY;
-        }
-        try {
-            return ArgumentSignatureDataMap.sign(DecoratableArgumentList.of(parseResults), (argumentName, value) -> {
-                DecoratedContents decoratedContents = this.toDecoratedContents(value, preview);
-                return this.networkHandler.getMessagePacker().pack(signer2, signer, decoratedContents, lastSeenMessages).signature();
-            });
-        }
-        catch (Exception exception) {
-            field_39078.error("Failed to sign command arguments", (Throwable)exception);
-            return ArgumentSignatureDataMap.EMPTY;
-        }
-    }
-
-    private DecoratedContents toDecoratedContents(String message, @Nullable Text preview) {
-        String string = StringHelper.truncateChat(message);
-        if (preview != null) {
-            return new DecoratedContents(string, preview);
-        }
-        return new DecoratedContents(string);
-    }
-
-    private MessageMetadata createMessageMetadata() {
-        return MessageMetadata.of(this.getUuid());
     }
 
     @Override
@@ -630,9 +543,11 @@ extends AbstractClientPlayerEntity {
         }
     }
 
-    public boolean hasJumpingMount() {
+    @Nullable
+    public JumpingMount getJumpingMount() {
+        JumpingMount jumpingMount;
         Entity entity = this.getVehicle();
-        return this.hasVehicle() && entity instanceof JumpingMount && ((JumpingMount)((Object)entity)).canJump();
+        return entity instanceof JumpingMount && (jumpingMount = (JumpingMount)((Object)entity)).canJump(this) ? jumpingMount : null;
     }
 
     public float getMountJumpStrength() {
@@ -640,8 +555,18 @@ extends AbstractClientPlayerEntity {
     }
 
     @Override
+    public boolean shouldFilterText() {
+        return this.client.shouldFilterText();
+    }
+
+    @Override
     public void openEditSignScreen(SignBlockEntity sign) {
-        this.client.setScreen(new SignEditScreen(sign, this.client.shouldFilterText()));
+        if (sign instanceof HangingSignBlockEntity) {
+            HangingSignBlockEntity hangingSignBlockEntity = (HangingSignBlockEntity)sign;
+            this.client.setScreen(new HangingSignEditScreen(hangingSignBlockEntity, this.client.shouldFilterText()));
+        } else {
+            this.client.setScreen(new SignEditScreen(sign, this.client.shouldFilterText()));
+        }
     }
 
     @Override
@@ -729,10 +654,10 @@ extends AbstractClientPlayerEntity {
 
     @Override
     public void tickMovement() {
+        JumpingMount jumpingMount;
         int i;
         ItemStack itemStack;
         boolean bl6;
-        boolean bl5;
         ++this.ticksSinceSprintingChanged;
         if (this.ticksLeftToDoubleTapSprint > 0) {
             --this.ticksLeftToDoubleTapSprint;
@@ -765,8 +690,8 @@ extends AbstractClientPlayerEntity {
         if (bl2) {
             this.ticksLeftToDoubleTapSprint = 0;
         }
-        boolean bl7 = bl5 = (float)this.getHungerManager().getFoodLevel() > 6.0f || this.getAbilities().allowFlying;
-        if (!(!this.onGround && !this.isSubmergedInWater() || bl2 || bl3 || !this.isWalking() || this.isSprinting() || !bl5 || this.isUsingItem() || this.hasStatusEffect(StatusEffects.BLINDNESS))) {
+        boolean bl5 = this.canSprint();
+        if ((this.onGround || this.isSubmergedInWater() || this.hasVehicle() && this.getVehicle().isOnGround()) && !bl2 && !bl3 && this.isWalking() && !this.isSprinting() && bl5 && !this.isUsingItem() && !this.hasStatusEffect(StatusEffects.BLINDNESS)) {
             if (this.ticksLeftToDoubleTapSprint > 0 || this.client.options.sprintKey.isPressed()) {
                 this.setSprinting(true);
             } else {
@@ -777,14 +702,14 @@ extends AbstractClientPlayerEntity {
             this.setSprinting(true);
         }
         if (this.isSprinting()) {
-            boolean bl72;
+            boolean bl7;
             bl6 = !this.input.hasForwardMovement() || !bl5;
-            boolean bl8 = bl72 = bl6 || this.horizontalCollision && !this.collidedSoftly || this.isTouchingWater() && !this.isSubmergedInWater();
+            boolean bl8 = bl7 = bl6 || this.horizontalCollision && !this.collidedSoftly || this.isTouchingWater() && !this.isSubmergedInWater();
             if (this.isSwimming()) {
                 if (!this.onGround && !this.input.sneaking && bl6 || !this.isTouchingWater()) {
                     this.setSprinting(false);
                 }
-            } else if (bl72) {
+            } else if (bl7) {
                 this.setSprinting(false);
             }
         }
@@ -833,8 +758,7 @@ extends AbstractClientPlayerEntity {
                 this.setVelocity(this.getVelocity().add(0.0, (float)i * this.getAbilities().getFlySpeed() * 3.0f, 0.0));
             }
         }
-        if (this.hasJumpingMount()) {
-            JumpingMount jumpingMount = (JumpingMount)((Object)this.getVehicle());
+        if ((jumpingMount = this.getJumpingMount()) != null && jumpingMount.getJumpCooldown() == 0) {
             if (this.field_3938 < 0) {
                 ++this.field_3938;
                 if (this.field_3938 == 0) {
@@ -1062,6 +986,10 @@ extends AbstractClientPlayerEntity {
     private boolean isWalking() {
         double d = 0.8;
         return this.isSubmergedInWater() ? this.input.hasForwardMovement() : (double)this.input.movementForward >= 0.8;
+    }
+
+    private boolean canSprint() {
+        return this.hasVehicle() || (float)this.getHungerManager().getFoodLevel() > 6.0f || this.getAbilities().allowFlying;
     }
 
     public float getUnderwaterVisibility() {

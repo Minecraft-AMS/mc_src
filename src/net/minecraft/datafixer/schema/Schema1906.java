@@ -27,13 +27,13 @@ extends IdentifierNormalizingSchema {
         Schema1906.method_16052(schema, map, "minecraft:barrel");
         Schema1906.method_16052(schema, map, "minecraft:smoker");
         Schema1906.method_16052(schema, map, "minecraft:blast_furnace");
-        schema.register(map, "minecraft:lectern", string -> DSL.optionalFields((String)"Book", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register(map, "minecraft:lectern", name -> DSL.optionalFields((String)"Book", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         schema.registerSimple(map, "minecraft:bell");
         return map;
     }
 
-    protected static void method_16052(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
+    protected static void method_16052(Schema schema, Map<String, Supplier<TypeTemplate>> map, String name) {
+        schema.register(map, name, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
     }
 }
 

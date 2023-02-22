@@ -11,10 +11,10 @@ import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.nbt.visitor.StringNbtWriter;
 
 public interface NbtElement {
-    public static final int field_33246 = 64;
-    public static final int field_33247 = 96;
-    public static final int field_33248 = 32;
-    public static final int field_33249 = 224;
+    public static final int field_33246 = 8;
+    public static final int field_33247 = 12;
+    public static final int field_33248 = 4;
+    public static final int field_33249 = 28;
     public static final byte END_TYPE = 0;
     public static final byte BYTE_TYPE = 1;
     public static final byte SHORT_TYPE = 2;
@@ -40,6 +40,8 @@ public interface NbtElement {
     public NbtType<?> getNbtType();
 
     public NbtElement copy();
+
+    public int getSizeInBytes();
 
     default public String asString() {
         return new StringNbtWriter().apply(this);

@@ -7,15 +7,14 @@
  */
 package net.minecraft.client.texture;
 
-import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasHolder;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.entity.decoration.painting.PaintingVariant;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 @Environment(value=EnvType.CLIENT)
 public class PaintingManager
@@ -23,16 +22,11 @@ extends SpriteAtlasHolder {
     private static final Identifier PAINTING_BACK_ID = new Identifier("back");
 
     public PaintingManager(TextureManager manager) {
-        super(manager, new Identifier("textures/atlas/paintings.png"), "painting");
-    }
-
-    @Override
-    protected Stream<Identifier> getSprites() {
-        return Stream.concat(Registry.PAINTING_VARIANT.getIds().stream(), Stream.of(PAINTING_BACK_ID));
+        super(manager, new Identifier("textures/atlas/paintings.png"), new Identifier("paintings"));
     }
 
     public Sprite getPaintingSprite(PaintingVariant variant) {
-        return this.getSprite(Registry.PAINTING_VARIANT.getId(variant));
+        return this.getSprite(Registries.PAINTING_VARIANT.getId(variant));
     }
 
     public Sprite getBackSprite() {

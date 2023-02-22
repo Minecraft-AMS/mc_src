@@ -17,9 +17,9 @@ import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 public class FixedBiomeSource
 extends BiomeSource
 implements BiomeAccess.Storage {
-    public static final Codec<FixedBiomeSource> CODEC = Biome.REGISTRY_CODEC.fieldOf("biome").xmap(FixedBiomeSource::new, fixedBiomeSource -> fixedBiomeSource.biome).stable().codec();
+    public static final Codec<FixedBiomeSource> CODEC = Biome.REGISTRY_CODEC.fieldOf("biome").xmap(FixedBiomeSource::new, biomeSource -> biomeSource.biome).stable().codec();
     private final RegistryEntry<Biome> biome;
 
     public FixedBiomeSource(RegistryEntry<Biome> biome) {

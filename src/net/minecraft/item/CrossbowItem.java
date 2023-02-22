@@ -4,6 +4,9 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Quaternionf
+ *  org.joml.Quaternionfc
+ *  org.joml.Vector3f
  */
 package net.minecraft.item;
 
@@ -39,26 +42,27 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.UseAction;
-import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
 
 public class CrossbowItem
 extends RangedWeaponItem
 implements Vanishable {
     private static final String CHARGED_KEY = "Charged";
     private static final String CHARGED_PROJECTILES_KEY = "ChargedProjectiles";
-    private static final int field_30866 = 25;
+    private static final int DEFAULT_PULL_TIME = 25;
     public static final int RANGE = 8;
     private boolean charged = false;
     private boolean loaded = false;
     private static final float field_30867 = 0.2f;
     private static final float field_30868 = 0.5f;
-    private static final float field_30869 = 3.15f;
-    private static final float field_30870 = 1.6f;
+    private static final float DEFAULT_SPEED = 3.15f;
+    private static final float FIREWORK_ROCKET_SPEED = 1.6f;
 
     public CrossbowItem(Item.Settings settings) {
         super(settings);
@@ -214,11 +218,10 @@ implements Vanishable {
             crossbowUser.shoot(crossbowUser.getTarget(), crossbow, projectileEntity, simulated);
         } else {
             Vec3d vec3d = shooter.getOppositeRotationVector(1.0f);
-            Quaternion quaternion = new Quaternion(new Vec3f(vec3d), simulated, true);
+            Quaternionf quaternionf = new Quaternionf().setAngleAxis((double)(simulated * ((float)Math.PI / 180)), vec3d.x, vec3d.y, vec3d.z);
             Vec3d vec3d2 = shooter.getRotationVec(1.0f);
-            Vec3f vec3f = new Vec3f(vec3d2);
-            vec3f.rotate(quaternion);
-            projectileEntity.setVelocity(vec3f.getX(), vec3f.getY(), vec3f.getZ(), speed, divergence);
+            Vector3f vector3f = vec3d2.toVector3f().rotate((Quaternionfc)quaternionf);
+            projectileEntity.setVelocity(vector3f.x(), vector3f.y(), vector3f.z(), speed, divergence);
         }
         crossbow.damage(bl ? 3 : 1, shooter, e -> e.sendToolBreakStatus(hand));
         world.spawnEntity(projectileEntity);

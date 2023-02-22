@@ -38,16 +38,15 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 
 public class CreeperEntity
@@ -220,8 +219,9 @@ implements SkinOverlayOwner {
     @Override
     protected ActionResult interactMob(PlayerEntity player2, Hand hand) {
         ItemStack itemStack = player2.getStackInHand(hand);
-        if (itemStack.isOf(Items.FLINT_AND_STEEL)) {
-            this.world.playSound(player2, this.getX(), this.getY(), this.getZ(), SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
+        if (itemStack.isIn(ItemTags.CREEPER_IGNITERS)) {
+            SoundEvent soundEvent = itemStack.isOf(Items.FIRE_CHARGE) ? SoundEvents.ITEM_FIRECHARGE_USE : SoundEvents.ITEM_FLINTANDSTEEL_USE;
+            this.world.playSound(player2, this.getX(), this.getY(), this.getZ(), soundEvent, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
             if (!this.world.isClient) {
                 this.ignite();
                 itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
@@ -233,10 +233,9 @@ implements SkinOverlayOwner {
 
     private void explode() {
         if (!this.world.isClient) {
-            Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
             float f = this.shouldRenderOverlay() ? 2.0f : 1.0f;
             this.dead = true;
-            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, destructionType);
+            this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, World.ExplosionSourceType.MOB);
             this.discard();
             this.spawnEffectsCloud();
         }

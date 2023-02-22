@@ -51,7 +51,10 @@ public class NbtPathArgumentType
 implements ArgumentType<NbtPath> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo.bar", "foo[0]", "[0]", "[]", "{foo=bar}");
     public static final SimpleCommandExceptionType INVALID_PATH_NODE_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("arguments.nbtpath.node.invalid"));
+    public static final SimpleCommandExceptionType TOO_DEEP_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("arguments.nbtpath.too_deep"));
     public static final DynamicCommandExceptionType NOTHING_FOUND_EXCEPTION = new DynamicCommandExceptionType(path -> Text.translatable("arguments.nbtpath.nothing_found", path));
+    static final DynamicCommandExceptionType EXPECTED_LIST_EXCEPTION = new DynamicCommandExceptionType(object -> Text.translatable("commands.data.modify.expected_list", object));
+    static final DynamicCommandExceptionType INVALID_INDEX_EXCEPTION = new DynamicCommandExceptionType(object -> Text.translatable("commands.data.modify.invalid_index", object));
     private static final char LEFT_SQUARE_BRACKET = '[';
     private static final char RIGHT_SQUARE_BRACKET = ']';
     private static final char LEFT_CURLY_BRACKET = '{';
@@ -202,14 +205,87 @@ implements ArgumentType<NbtPath> {
             return elements.stream().map(operation).reduce(0, (a, b) -> a + b);
         }
 
-        public int put(NbtElement element, NbtElement source) throws CommandSyntaxException {
-            return this.put(element, source::copy);
+        public static boolean isTooDeep(NbtElement element, int depth) {
+            block4: {
+                block3: {
+                    if (depth >= 512) {
+                        return true;
+                    }
+                    if (!(element instanceof NbtCompound)) break block3;
+                    NbtCompound nbtCompound = (NbtCompound)element;
+                    for (String string : nbtCompound.getKeys()) {
+                        NbtElement nbtElement = nbtCompound.get(string);
+                        if (nbtElement == null || !NbtPath.isTooDeep(nbtElement, depth + 1)) continue;
+                        return true;
+                    }
+                    break block4;
+                }
+                if (!(element instanceof NbtList)) break block4;
+                NbtList nbtList = (NbtList)element;
+                for (NbtElement nbtElement2 : nbtList) {
+                    if (!NbtPath.isTooDeep(nbtElement2, depth + 1)) continue;
+                    return true;
+                }
+            }
+            return false;
         }
 
-        public int put(NbtElement element, Supplier<NbtElement> source) throws CommandSyntaxException {
+        public int put(NbtElement element, NbtElement source) throws CommandSyntaxException {
+            if (NbtPath.isTooDeep(source, this.getDepth())) {
+                throw TOO_DEEP_EXCEPTION.create();
+            }
+            NbtElement nbtElement = source.copy();
             List<NbtElement> list = this.getTerminals(element);
+            if (list.isEmpty()) {
+                return 0;
+            }
             PathNode pathNode = this.nodes[this.nodes.length - 1];
-            return NbtPath.forEach(list, nbt -> pathNode.set((NbtElement)nbt, source));
+            MutableBoolean mutableBoolean = new MutableBoolean(false);
+            return NbtPath.forEach(list, nbtElement2 -> pathNode.set((NbtElement)nbtElement2, () -> {
+                if (mutableBoolean.isFalse()) {
+                    mutableBoolean.setTrue();
+                    return nbtElement;
+                }
+                return nbtElement.copy();
+            }));
+        }
+
+        private int getDepth() {
+            return this.nodes.length;
+        }
+
+        public int insert(int index, NbtCompound compound, List<NbtElement> elements) throws CommandSyntaxException {
+            ArrayList<NbtElement> list = new ArrayList<NbtElement>(elements.size());
+            for (NbtElement nbtElement : elements) {
+                NbtElement nbtElement2 = nbtElement.copy();
+                list.add(nbtElement2);
+                if (!NbtPath.isTooDeep(nbtElement2, this.getDepth())) continue;
+                throw TOO_DEEP_EXCEPTION.create();
+            }
+            List<NbtElement> collection = this.getOrInit(compound, NbtList::new);
+            int i = 0;
+            boolean bl = false;
+            for (NbtElement nbtElement3 : collection) {
+                if (!(nbtElement3 instanceof AbstractNbtList)) {
+                    throw EXPECTED_LIST_EXCEPTION.create((Object)nbtElement3);
+                }
+                AbstractNbtList abstractNbtList = (AbstractNbtList)nbtElement3;
+                boolean bl2 = false;
+                int j = index < 0 ? abstractNbtList.size() + index + 1 : index;
+                for (NbtElement nbtElement4 : list) {
+                    try {
+                        if (!abstractNbtList.addElement(j, bl ? nbtElement4.copy() : nbtElement4)) continue;
+                        ++j;
+                        bl2 = true;
+                    }
+                    catch (IndexOutOfBoundsException indexOutOfBoundsException) {
+                        throw INVALID_INDEX_EXCEPTION.create((Object)j);
+                    }
+                }
+                bl = true;
+                i += bl2 ? 1 : 0;
+            }
+            return i;
         }
 
         public int remove(NbtElement element) {

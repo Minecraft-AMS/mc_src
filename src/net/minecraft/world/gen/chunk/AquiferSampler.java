@@ -83,7 +83,7 @@ public interface AquiferSampler {
         private final int startZ;
         private final int sizeX;
         private final int sizeZ;
-        private static final int[][] CHUNK_POS_OFFSETS = new int[][]{{-2, -1}, {-1, -1}, {0, -1}, {1, -1}, {-3, 0}, {-2, 0}, {-1, 0}, {0, 0}, {1, 0}, {-2, 1}, {-1, 1}, {0, 1}, {1, 1}};
+        private static final int[][] CHUNK_POS_OFFSETS = new int[][]{{0, 0}, {-2, -1}, {-1, -1}, {0, -1}, {1, -1}, {-3, 0}, {-2, 0}, {-1, 0}, {1, 0}, {-2, 1}, {-1, 1}, {0, 1}, {1, 1}};
 
         Impl(ChunkNoiseSampler chunkNoiseSampler, ChunkPos chunkPos, NoiseRouter noiseRouter, RandomSplitter randomSplitter, int minimumY, int height, FluidLevelSampler fluidLevelSampler) {
             this.chunkNoiseSampler = chunkNoiseSampler;
@@ -335,16 +335,16 @@ public interface AquiferSampler {
             double e;
             double d;
             DensityFunction.UnblendedNoisePos unblendedNoisePos = new DensityFunction.UnblendedNoisePos(blockX, blockY, blockZ);
-            if (VanillaBiomeParameters.method_43718(this.erosionDensityFunction.sample(unblendedNoisePos), this.depthDensityFunction.sample(unblendedNoisePos))) {
+            if (VanillaBiomeParameters.method_43718(this.erosionDensityFunction, this.depthDensityFunction, unblendedNoisePos)) {
                 d = -1.0;
                 e = -1.0;
             } else {
                 i = surfaceHeightEstimate + 8 - blockY;
                 int j = 64;
-                double f = bl ? MathHelper.clampedLerpFromProgress((double)i, 0.0, 64.0, 1.0, 0.0) : 0.0;
+                double f = bl ? MathHelper.clampedMap((double)i, 0.0, 64.0, 1.0, 0.0) : 0.0;
                 double g = MathHelper.clamp(this.fluidLevelFloodednessNoise.sample(unblendedNoisePos), -1.0, 1.0);
-                double h = MathHelper.lerpFromProgress(f, 1.0, 0.0, -0.3, 0.8);
-                double k = MathHelper.lerpFromProgress(f, 1.0, 0.0, -0.8, 0.4);
+                double h = MathHelper.map(f, 1.0, 0.0, -0.3, 0.8);
+                double k = MathHelper.map(f, 1.0, 0.0, -0.8, 0.4);
                 d = g - k;
                 e = g - h;
             }

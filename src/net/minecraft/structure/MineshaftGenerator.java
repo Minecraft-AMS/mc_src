@@ -30,11 +30,11 @@ import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.tag.BiomeTags;
 import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePiecesHolder;
-import net.minecraft.tag.BiomeTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -479,7 +479,8 @@ public class MineshaftGenerator {
                 world.setBlockState(blockPos, Blocks.SPAWNER.getDefaultState(), 2);
                 BlockEntity blockEntity = world.getBlockEntity(blockPos);
                 if (!(blockEntity instanceof MobSpawnerBlockEntity)) continue;
-                ((MobSpawnerBlockEntity)blockEntity).getLogic().setEntityId(EntityType.CAVE_SPIDER);
+                MobSpawnerBlockEntity mobSpawnerBlockEntity = (MobSpawnerBlockEntity)blockEntity;
+                mobSpawnerBlockEntity.setEntityType(EntityType.CAVE_SPIDER, random);
             }
             for (n = 0; n <= 2; ++n) {
                 for (o = 0; o <= m; ++o) {
@@ -633,7 +634,7 @@ public class MineshaftGenerator {
 
         public MineshaftPart(StructurePieceType structurePieceType, NbtCompound nbtCompound) {
             super(structurePieceType, nbtCompound);
-            this.mineshaftType = MineshaftStructure.Type.byIndex(nbtCompound.getInt("MST"));
+            this.mineshaftType = MineshaftStructure.Type.byId(nbtCompound.getInt("MST"));
         }
 
         @Override

@@ -38,7 +38,7 @@ import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
@@ -82,7 +82,7 @@ implements BlockEntityRenderer<T> {
         ModelPartData modelPartData = modelData.getRoot();
         modelPartData.addChild(BASE, ModelPartBuilder.create().uv(0, 19).cuboid(1.0f, 0.0f, 1.0f, 14.0f, 10.0f, 14.0f), ModelTransform.NONE);
         modelPartData.addChild(LID, ModelPartBuilder.create().uv(0, 0).cuboid(1.0f, 0.0f, 0.0f, 14.0f, 5.0f, 14.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
-        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(7.0f, -1.0f, 15.0f, 2.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 8.0f, 0.0f));
+        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(7.0f, -2.0f, 14.0f, 2.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
         return TexturedModelData.of(modelData, 64, 64);
     }
 
@@ -91,7 +91,7 @@ implements BlockEntityRenderer<T> {
         ModelPartData modelPartData = modelData.getRoot();
         modelPartData.addChild(BASE, ModelPartBuilder.create().uv(0, 19).cuboid(1.0f, 0.0f, 1.0f, 15.0f, 10.0f, 14.0f), ModelTransform.NONE);
         modelPartData.addChild(LID, ModelPartBuilder.create().uv(0, 0).cuboid(1.0f, 0.0f, 0.0f, 15.0f, 5.0f, 14.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
-        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(15.0f, -1.0f, 15.0f, 1.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 8.0f, 0.0f));
+        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(15.0f, -2.0f, 14.0f, 1.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
         return TexturedModelData.of(modelData, 64, 64);
     }
 
@@ -100,7 +100,7 @@ implements BlockEntityRenderer<T> {
         ModelPartData modelPartData = modelData.getRoot();
         modelPartData.addChild(BASE, ModelPartBuilder.create().uv(0, 19).cuboid(0.0f, 0.0f, 1.0f, 15.0f, 10.0f, 14.0f), ModelTransform.NONE);
         modelPartData.addChild(LID, ModelPartBuilder.create().uv(0, 0).cuboid(0.0f, 0.0f, 0.0f, 15.0f, 5.0f, 14.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
-        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(0.0f, -1.0f, 15.0f, 1.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 8.0f, 0.0f));
+        modelPartData.addChild(LATCH, ModelPartBuilder.create().uv(0, 0).cuboid(0.0f, -2.0f, 14.0f, 1.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 9.0f, 1.0f));
         return TexturedModelData.of(modelData, 64, 64);
     }
 
@@ -118,9 +118,9 @@ implements BlockEntityRenderer<T> {
         boolean bl2 = chestType != ChestType.SINGLE;
         matrices.push();
         float f = blockState.get(ChestBlock.FACING).asRotation();
-        matrices.translate(0.5, 0.5, 0.5);
-        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-f));
-        matrices.translate(-0.5, -0.5, -0.5);
+        matrices.translate(0.5f, 0.5f, 0.5f);
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-f));
+        matrices.translate(-0.5f, -0.5f, -0.5f);
         DoubleBlockProperties.PropertySource<Object> propertySource = bl ? abstractChestBlock.getBlockEntitySource(blockState, world, ((BlockEntity)entity).getPos(), true) : DoubleBlockProperties.PropertyRetriever::getFallback;
         float g = propertySource.apply(ChestBlock.getAnimationProgressRetriever((LidOpenable)entity)).get(tickDelta);
         g = 1.0f - g;

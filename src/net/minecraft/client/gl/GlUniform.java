@@ -5,6 +5,10 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix4f
+ *  org.joml.Vector3f
+ *  org.joml.Vector4f
  *  org.lwjgl.system.MemoryUtil
  *  org.slf4j.Logger
  */
@@ -18,12 +22,12 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gl.GlShader;
+import net.minecraft.client.gl.ShaderProgramSetupView;
 import net.minecraft.client.gl.Uniform;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
-import net.minecraft.util.math.Vector4f;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
@@ -51,9 +55,9 @@ implements AutoCloseable {
     private final FloatBuffer floatData;
     private final String name;
     private boolean stateDirty;
-    private final GlShader program;
+    private final ShaderProgramSetupView program;
 
-    public GlUniform(String name, int dataType, int count, GlShader program) {
+    public GlUniform(String name, int dataType, int count, ShaderProgramSetupView program) {
         this.name = name;
         this.count = count;
         this.dataType = dataType;
@@ -159,11 +163,9 @@ implements AutoCloseable {
     }
 
     @Override
-    public final void set(Vec3f vector) {
+    public final void set(Vector3f vector) {
         this.floatData.position(0);
-        this.floatData.put(0, vector.getX());
-        this.floatData.put(1, vector.getY());
-        this.floatData.put(2, vector.getZ());
+        vector.get(this.floatData);
         this.markStateDirty();
     }
 
@@ -181,10 +183,7 @@ implements AutoCloseable {
     @Override
     public final void set(Vector4f vec) {
         this.floatData.position(0);
-        this.floatData.put(0, vec.getX());
-        this.floatData.put(1, vec.getY());
-        this.floatData.put(2, vec.getZ());
-        this.floatData.put(3, vec.getW());
+        vec.get(this.floatData);
         this.markStateDirty();
     }
 
@@ -408,14 +407,14 @@ implements AutoCloseable {
     @Override
     public final void set(Matrix4f values) {
         this.floatData.position(0);
-        values.writeColumnMajor(this.floatData);
+        values.get(this.floatData);
         this.markStateDirty();
     }
 
     @Override
     public final void set(Matrix3f values) {
         this.floatData.position(0);
-        values.writeColumnMajor(this.floatData);
+        values.get(this.floatData);
         this.markStateDirty();
     }
 

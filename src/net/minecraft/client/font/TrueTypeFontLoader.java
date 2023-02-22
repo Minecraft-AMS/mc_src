@@ -93,7 +93,7 @@ implements FontLoader {
         block10: {
             STBTTFontinfo sTBTTFontinfo = null;
             ByteBuffer byteBuffer = null;
-            InputStream inputStream = manager.open(new Identifier(this.filename.getNamespace(), "font/" + this.filename.getPath()));
+            InputStream inputStream = manager.open(this.filename.withPrefixedPath("font/"));
             try {
                 LOGGER.debug("Loading font {}", (Object)this.filename);
                 sTBTTFontinfo = STBTTFontinfo.malloc();

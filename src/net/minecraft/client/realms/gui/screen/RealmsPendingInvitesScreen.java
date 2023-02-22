@@ -63,7 +63,6 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.client.keyboard.setRepeatEvents(true);
         this.pendingInvitationSelectionList = new PendingInvitationSelectionList();
         new Thread("Realms-pending-invitations-fetcher"){
 
@@ -87,17 +86,17 @@ extends RealmsScreen {
             }
         }.start();
         this.addSelectableChild(this.pendingInvitationSelectionList);
-        this.acceptButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 174, this.height - 32, 100, 20, Text.translatable("mco.invites.button.accept"), button -> {
+        this.acceptButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.invites.button.accept"), button -> {
             this.accept(this.selectedInvite);
             this.selectedInvite = -1;
             this.updateButtonStates();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, this.height - 32, 100, 20, ScreenTexts.DONE, button -> this.client.setScreen(new RealmsMainScreen(this.parent))));
-        this.rejectButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 74, this.height - 32, 100, 20, Text.translatable("mco.invites.button.reject"), button -> {
+        }).dimensions(this.width / 2 - 174, this.height - 32, 100, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.client.setScreen(new RealmsMainScreen(this.parent))).dimensions(this.width / 2 - 50, this.height - 32, 100, 20).build());
+        this.rejectButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.invites.button.reject"), button -> {
             this.reject(this.selectedInvite);
             this.selectedInvite = -1;
             this.updateButtonStates();
-        }));
+        }).dimensions(this.width / 2 + 74, this.height - 32, 100, 20).build());
         this.updateButtonStates();
     }
 

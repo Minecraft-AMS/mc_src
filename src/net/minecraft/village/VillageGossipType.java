@@ -2,33 +2,30 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  org.jetbrains.annotations.Nullable
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.village;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Stream;
-import org.jetbrains.annotations.Nullable;
+import com.mojang.serialization.Codec;
+import net.minecraft.util.StringIdentifiable;
 
 public final class VillageGossipType
-extends Enum<VillageGossipType> {
+extends Enum<VillageGossipType>
+implements StringIdentifiable {
     public static final /* enum */ VillageGossipType MAJOR_NEGATIVE = new VillageGossipType("major_negative", -5, 100, 10, 10);
     public static final /* enum */ VillageGossipType MINOR_NEGATIVE = new VillageGossipType("minor_negative", -1, 200, 20, 20);
     public static final /* enum */ VillageGossipType MINOR_POSITIVE = new VillageGossipType("minor_positive", 1, 200, 1, 5);
     public static final /* enum */ VillageGossipType MAJOR_POSITIVE = new VillageGossipType("major_positive", 5, 100, 0, 100);
     public static final /* enum */ VillageGossipType TRADING = new VillageGossipType("trading", 1, 25, 2, 20);
-    public static final int field_30240 = 25;
-    public static final int field_30241 = 20;
-    public static final int field_30242 = 2;
+    public static final int MAX_TRADING_REPUTATION = 25;
+    public static final int TRADING_GOSSIP_SHARE_DECREMENT = 20;
+    public static final int TRADING_GOSSIP_DECAY = 2;
     public final String key;
     public final int multiplier;
     public final int maxValue;
     public final int decay;
     public final int shareDecrement;
-    private static final Map<String, VillageGossipType> BY_KEY;
+    public static final Codec<VillageGossipType> CODEC;
     private static final /* synthetic */ VillageGossipType[] field_18436;
 
     public static VillageGossipType[] values() {
@@ -47,9 +44,9 @@ extends Enum<VillageGossipType> {
         this.shareDecrement = shareDecrement;
     }
 
-    @Nullable
-    public static VillageGossipType byKey(String key) {
-        return BY_KEY.get(key);
+    @Override
+    public String asString() {
+        return this.key;
     }
 
     private static /* synthetic */ VillageGossipType[] method_36623() {
@@ -58,7 +55,7 @@ extends Enum<VillageGossipType> {
 
     static {
         field_18436 = VillageGossipType.method_36623();
-        BY_KEY = (Map)Stream.of(VillageGossipType.values()).collect(ImmutableMap.toImmutableMap(villageGossipType -> villageGossipType.key, Function.identity()));
+        CODEC = StringIdentifiable.createCodec(VillageGossipType::values);
     }
 }
 

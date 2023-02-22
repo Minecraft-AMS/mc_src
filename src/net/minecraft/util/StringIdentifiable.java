@@ -17,6 +17,7 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Keyable;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -56,8 +57,8 @@ public interface StringIdentifiable {
     @Deprecated
     public static class Codec<E extends Enum<E>>
     implements com.mojang.serialization.Codec<E> {
-        private com.mojang.serialization.Codec<E> base;
-        private Function<String, E> idToIdentifiable;
+        private final com.mojang.serialization.Codec<E> base;
+        private final Function<String, E> idToIdentifiable;
 
         public Codec(E[] values, Function<String, E> idToIdentifiable) {
             this.base = Codecs.orCompressed(Codecs.idChecked(identifiable -> ((StringIdentifiable)identifiable).asString(), idToIdentifiable), Codecs.rawIdChecked(enum_ -> ((Enum)enum_).ordinal(), ordinal -> ordinal >= 0 && ordinal < values.length ? values[ordinal] : null, -1));
@@ -75,6 +76,10 @@ public interface StringIdentifiable {
         @Nullable
         public E byId(@Nullable String id) {
             return (E)((Enum)this.idToIdentifiable.apply(id));
+        }
+
+        public E byId(@Nullable String id, E fallback) {
+            return (E)((Enum)Objects.requireNonNullElse(this.byId(id), fallback));
         }
 
         public /* synthetic */ DataResult encode(Object input, DynamicOps ops, Object prefix) {

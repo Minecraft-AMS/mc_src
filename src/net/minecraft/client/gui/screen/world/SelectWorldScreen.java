@@ -5,14 +5,12 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.client.gui.screen.world;
 
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
-import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
@@ -21,28 +19,24 @@ import net.minecraft.client.gui.screen.world.WorldListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.resource.DataPackSettings;
+import net.minecraft.resource.DataConfiguration;
 import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import net.minecraft.util.FileNameUtil;
-import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.PathUtil;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class SelectWorldScreen
 extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
+    public static final GeneratorOptions DEBUG_GENERATOR_OPTIONS = new GeneratorOptions("test1".hashCode(), true, false);
     protected final Screen parent;
-    @Nullable
-    private List<OrderedText> tooltip;
     private ButtonWidget deleteButton;
     private ButtonWidget selectButton;
     private ButtonWidget editButton;
@@ -67,18 +61,17 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.client.keyboard.setRepeatEvents(true);
         this.searchBox = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 22, 200, 20, this.searchBox, Text.translatable("selectWorld.search"));
         this.searchBox.setChangedListener(search -> this.levelList.setSearch((String)search));
         this.levelList = new WorldListWidget(this, this.client, this.width, this.height, 48, this.height - 64, 36, this.searchBox.getText(), this.levelList);
         this.addSelectableChild(this.searchBox);
         this.addSelectableChild(this.levelList);
-        this.selectButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 52, 150, 20, Text.translatable("selectWorld.select"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::play)));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 52, 150, 20, Text.translatable("selectWorld.create"), button -> CreateWorldScreen.create(this.client, this)));
-        this.editButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 28, 72, 20, Text.translatable("selectWorld.edit"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::edit)));
-        this.deleteButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 76, this.height - 28, 72, 20, Text.translatable("selectWorld.delete"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::deleteIfConfirmed)));
-        this.recreateButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 28, 72, 20, Text.translatable("selectWorld.recreate"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::recreate)));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 82, this.height - 28, 72, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        this.selectButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.select"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::play)).dimensions(this.width / 2 - 154, this.height - 52, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.create"), button -> CreateWorldScreen.create(this.client, this)).dimensions(this.width / 2 + 4, this.height - 52, 150, 20).build());
+        this.editButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.edit"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::edit)).dimensions(this.width / 2 - 154, this.height - 28, 72, 20).build());
+        this.deleteButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.delete"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::deleteIfConfirmed)).dimensions(this.width / 2 - 76, this.height - 28, 72, 20).build());
+        this.recreateButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.recreate"), button -> this.levelList.getSelectedAsOptional().ifPresent(WorldListWidget.WorldEntry::recreate)).dimensions(this.width / 2 + 4, this.height - 28, 72, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 82, this.height - 28, 72, 20).build());
         this.worldSelected(false);
         this.setInitialFocus(this.searchBox);
     }
@@ -103,18 +96,10 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltip = null;
         this.levelList.render(matrices, mouseX, mouseY, delta);
         this.searchBox.render(matrices, mouseX, mouseY, delta);
         SelectWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltip != null) {
-            this.renderOrderedTooltip(matrices, this.tooltip, mouseX, mouseY);
-        }
-    }
-
-    public void setTooltip(List<OrderedText> tooltip) {
-        this.tooltip = tooltip;
     }
 
     public void worldSelected(boolean active) {
@@ -139,11 +124,9 @@ extends Screen {
             if (!this.levelList.children().isEmpty() && (entry = (WorldListWidget.Entry)this.levelList.children().get(0)) instanceof WorldListWidget.WorldEntry && (worldEntry = (WorldListWidget.WorldEntry)entry).getLevelDisplayName().equals("DEBUG world")) {
                 worldEntry.delete();
             }
-            DynamicRegistryManager.Immutable dynamicRegistryManager = DynamicRegistryManager.createAndLoad().toImmutable();
-            GeneratorOptions generatorOptions = WorldPresets.createDefaultOptions(dynamicRegistryManager, "test1".hashCode());
-            LevelInfo levelInfo = new LevelInfo("DEBUG world", GameMode.SPECTATOR, false, Difficulty.NORMAL, true, new GameRules(), DataPackSettings.SAFE_MODE);
-            String string2 = FileNameUtil.getNextUniqueName(this.client.getLevelStorage().getSavesDirectory(), "DEBUG world", "");
-            this.client.createIntegratedServerLoader().createAndStart(string2, levelInfo, dynamicRegistryManager, generatorOptions);
+            LevelInfo levelInfo = new LevelInfo("DEBUG world", GameMode.SPECTATOR, false, Difficulty.NORMAL, true, new GameRules(), DataConfiguration.SAFE_MODE);
+            String string2 = PathUtil.getNextUniqueName(this.client.getLevelStorage().getSavesDirectory(), "DEBUG world", "");
+            this.client.createIntegratedServerLoader().createAndStart(string2, levelInfo, DEBUG_GENERATOR_OPTIONS, WorldPresets::createDemoOptions);
         }
         catch (IOException iOException) {
             LOGGER.error("Failed to recreate the debug world", (Throwable)iOException);

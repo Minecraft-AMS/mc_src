@@ -37,13 +37,15 @@ import net.minecraft.client.render.block.entity.SkullBlockEntityModel;
 import net.minecraft.client.render.entity.model.DragonHeadEntityModel;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.EntityModelLoader;
+import net.minecraft.client.render.entity.model.PiglinHeadEntityModel;
 import net.minecraft.client.render.entity.model.SkullEntityModel;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.RotationPropertyHelper;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -56,6 +58,7 @@ implements BlockEntityRenderer<SkullBlockEntity> {
         map.put(SkullBlock.Type.ZOMBIE, new Identifier("textures/entity/zombie/zombie.png"));
         map.put(SkullBlock.Type.CREEPER, new Identifier("textures/entity/creeper/creeper.png"));
         map.put(SkullBlock.Type.DRAGON, new Identifier("textures/entity/enderdragon/dragon.png"));
+        map.put(SkullBlock.Type.PIGLIN, new Identifier("textures/entity/piglin/piglin.png"));
         map.put(SkullBlock.Type.PLAYER, DefaultSkinHelper.getTexture());
     });
 
@@ -67,6 +70,7 @@ implements BlockEntityRenderer<SkullBlockEntity> {
         builder.put((Object)SkullBlock.Type.ZOMBIE, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.ZOMBIE_HEAD)));
         builder.put((Object)SkullBlock.Type.CREEPER, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.CREEPER_HEAD)));
         builder.put((Object)SkullBlock.Type.DRAGON, (Object)new DragonHeadEntityModel(modelLoader.getModelPart(EntityModelLayers.DRAGON_SKULL)));
+        builder.put((Object)SkullBlock.Type.PIGLIN, (Object)new PiglinHeadEntityModel(modelLoader.getModelPart(EntityModelLayers.PIGLIN_HEAD)));
         return builder.build();
     }
 
@@ -76,11 +80,12 @@ implements BlockEntityRenderer<SkullBlockEntity> {
 
     @Override
     public void render(SkullBlockEntity skullBlockEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, int j) {
-        float g = skullBlockEntity.getTicksPowered(f);
+        float g = skullBlockEntity.getPoweredTicks(f);
         BlockState blockState = skullBlockEntity.getCachedState();
         boolean bl = blockState.getBlock() instanceof WallSkullBlock;
         Direction direction = bl ? blockState.get(WallSkullBlock.FACING) : null;
-        float h = 22.5f * (float)(bl ? (2 + direction.getHorizontal()) * 4 : blockState.get(SkullBlock.ROTATION));
+        int k = bl ? RotationPropertyHelper.fromDirection(direction) : blockState.get(SkullBlock.ROTATION);
+        float h = RotationPropertyHelper.toDegrees(k);
         SkullBlock.SkullType skullType = ((AbstractSkullBlock)blockState.getBlock()).getSkullType();
         SkullBlockEntityModel skullBlockEntityModel = this.MODELS.get(skullType);
         RenderLayer renderLayer = SkullBlockEntityRenderer.getRenderLayer(skullType, skullBlockEntity.getOwner());
@@ -90,10 +95,10 @@ implements BlockEntityRenderer<SkullBlockEntity> {
     public static void renderSkull(@Nullable Direction direction, float yaw, float animationProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, SkullBlockEntityModel model, RenderLayer renderLayer) {
         matrices.push();
         if (direction == null) {
-            matrices.translate(0.5, 0.0, 0.5);
+            matrices.translate(0.5f, 0.0f, 0.5f);
         } else {
             float f = 0.25f;
-            matrices.translate(0.5f - (float)direction.getOffsetX() * 0.25f, 0.25, 0.5f - (float)direction.getOffsetZ() * 0.25f);
+            matrices.translate(0.5f - (float)direction.getOffsetX() * 0.25f, 0.25f, 0.5f - (float)direction.getOffsetZ() * 0.25f);
         }
         matrices.scale(-1.0f, -1.0f, 1.0f);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(renderLayer);
@@ -112,7 +117,7 @@ implements BlockEntityRenderer<SkullBlockEntity> {
         if (map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
             return RenderLayer.getEntityTranslucent(minecraftClient.getSkinProvider().loadSkin(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN));
         }
-        return RenderLayer.getEntityCutoutNoCull(DefaultSkinHelper.getTexture(DynamicSerializableUuid.getUuidFromProfile(profile)));
+        return RenderLayer.getEntityCutoutNoCull(DefaultSkinHelper.getTexture(Uuids.getUuidFromProfile(profile)));
     }
 }
 

@@ -11,14 +11,11 @@
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.context.CommandContextBuilder
  *  com.mojang.brigadier.context.ParsedArgument
- *  com.mojang.brigadier.context.ParsedCommandNode
- *  com.mojang.brigadier.context.StringRange
  *  com.mojang.brigadier.context.SuggestionContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.suggestion.Suggestion
  *  com.mojang.brigadier.suggestion.Suggestions
  *  com.mojang.brigadier.suggestion.SuggestionsBuilder
- *  com.mojang.brigadier.tree.CommandNode
  *  com.mojang.brigadier.tree.LiteralCommandNode
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -35,14 +32,11 @@ import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.CommandContextBuilder;
 import com.mojang.brigadier.context.ParsedArgument;
-import com.mojang.brigadier.context.ParsedCommandNode;
-import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.context.SuggestionContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -243,7 +237,7 @@ public class ChatInputSuggestor {
             if (this.pendingSuggestions.join().isEmpty() && !this.parse.getExceptions().isEmpty()) {
                 int i = 0;
                 for (Map.Entry entry : this.parse.getExceptions().entrySet()) {
-                    CommandSyntaxException commandSyntaxException = (CommandSyntaxException)entry.getValue();
+                    CommandSyntaxException commandSyntaxException = (CommandSyntaxException)((Object)entry.getValue());
                     if (commandSyntaxException.getType() == CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect()) {
                         ++i;
                         continue;
@@ -359,41 +353,6 @@ public class ChatInputSuggestor {
             return "\n" + this.window.getNarration();
         }
         return "";
-    }
-
-    @Nullable
-    public CommandNode<CommandSource> getNodeAt(int cursor) {
-        return this.parse != null ? ChatInputSuggestor.getNodeAt(cursor, this.parse.getContext()) : null;
-    }
-
-    @Nullable
-    public ParseResults<CommandSource> getParse() {
-        return this.parse;
-    }
-
-    @Nullable
-    private static <S> CommandNode<S> getNodeAt(int cursor, CommandContextBuilder<S> builder) {
-        StringRange stringRange = builder.getRange();
-        if (cursor < stringRange.getStart()) {
-            return null;
-        }
-        List list = builder.getNodes();
-        if (cursor <= stringRange.getEnd()) {
-            for (ParsedCommandNode parsedCommandNode : list) {
-                StringRange stringRange2 = parsedCommandNode.getRange();
-                if (cursor < stringRange2.getStart() || cursor > stringRange2.getEnd()) continue;
-                return parsedCommandNode.getNode();
-            }
-        } else {
-            if (builder.getChild() != null) {
-                return ChatInputSuggestor.getNodeAt(cursor, builder.getChild());
-            }
-            if (!list.isEmpty()) {
-                ParsedCommandNode parsedCommandNode2 = (ParsedCommandNode)list.get(list.size() - 1);
-                return parsedCommandNode2.getNode();
-            }
-        }
-        return builder.getRootNode();
     }
 
     @Environment(value=EnvType.CLIENT)

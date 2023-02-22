@@ -13,7 +13,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.stream.Stream;
-import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.PlacedFeature;

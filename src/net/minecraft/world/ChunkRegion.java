@@ -27,6 +27,9 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -42,8 +45,6 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LocalDifficulty;
@@ -86,7 +87,7 @@ implements StructureWorldAccess {
     @Nullable
     private Supplier<String> currentlyGeneratingStructureName;
     private final AtomicLong tickOrder = new AtomicLong();
-    private static final Identifier field_38683 = new Identifier("worldgen_region_random");
+    private static final Identifier WORLDGEN_REGION_RANDOM_ID = new Identifier("worldgen_region_random");
 
     public ChunkRegion(ServerWorld world, List<Chunk> chunks, ChunkStatus status, int placementRadius) {
         this.status = status;
@@ -101,7 +102,7 @@ implements StructureWorldAccess {
         this.world = world;
         this.seed = world.getSeed();
         this.levelProperties = world.getLevelProperties();
-        this.random = world.getChunkManager().getNoiseConfig().getOrCreateRandomDeriver(field_38683).split(this.centerPos.getPos().getStartPos());
+        this.random = world.getChunkManager().getNoiseConfig().getOrCreateRandomDeriver(WORLDGEN_REGION_RANDOM_ID).split(this.centerPos.getPos().getStartPos());
         this.dimension = world.getDimension();
         this.biomeAccess = new BiomeAccess(this, BiomeAccess.hashSeed(this.seed));
         this.lowerCorner = chunks.get(0).getPos();
@@ -335,6 +336,11 @@ implements StructureWorldAccess {
     }
 
     @Override
+    public FeatureSet getEnabledFeatures() {
+        return this.world.getEnabledFeatures();
+    }
+
+    @Override
     public WorldProperties getLevelProperties() {
         return this.levelProperties;
     }
@@ -389,7 +395,7 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity player, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+    public void playSound(@Nullable PlayerEntity except, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
     }
 
     @Override

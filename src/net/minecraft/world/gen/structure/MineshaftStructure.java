@@ -17,12 +17,14 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.structure.MineshaftGenerator;
 import net.minecraft.structure.StructurePiecesCollector;
 import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
@@ -83,6 +85,7 @@ extends Structure {
         public static final /* enum */ Type NORMAL = new Type("normal", Blocks.OAK_LOG, Blocks.OAK_PLANKS, Blocks.OAK_FENCE);
         public static final /* enum */ Type MESA = new Type("mesa", Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_PLANKS, Blocks.DARK_OAK_FENCE);
         public static final Codec<Type> CODEC;
+        private static final IntFunction<Type> BY_ID;
         private final String name;
         private final BlockState log;
         private final BlockState planks;
@@ -108,11 +111,8 @@ extends Structure {
             return this.name;
         }
 
-        public static Type byIndex(int index) {
-            if (index < 0 || index >= Type.values().length) {
-                return NORMAL;
-            }
-            return Type.values()[index];
+        public static Type byId(int id) {
+            return BY_ID.apply(id);
         }
 
         public BlockState getLog() {
@@ -139,6 +139,7 @@ extends Structure {
         static {
             field_13688 = Type.method_36755();
             CODEC = StringIdentifiable.createCodec(Type::values);
+            BY_ID = ValueLists.createIdToValueFunction(Enum::ordinal, Type.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 }

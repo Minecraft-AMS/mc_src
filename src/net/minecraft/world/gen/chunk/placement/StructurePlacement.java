@@ -18,23 +18,23 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructureSet;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
 import net.minecraft.world.gen.chunk.placement.StructurePlacementType;
-import net.minecraft.world.gen.noise.NoiseConfig;
 
 public abstract class StructurePlacement {
-    public static final Codec<StructurePlacement> TYPE_CODEC = Registry.STRUCTURE_PLACEMENT.getCodec().dispatch(StructurePlacement::getType, StructurePlacementType::codec);
+    public static final Codec<StructurePlacement> TYPE_CODEC = Registries.STRUCTURE_PLACEMENT.getCodec().dispatch(StructurePlacement::getType, StructurePlacementType::codec);
     private static final int ARBITRARY_SALT = 10387320;
     private final Vec3i locateOffset;
     private final FrequencyReductionMethod frequencyReductionMethod;
@@ -42,7 +42,7 @@ public abstract class StructurePlacement {
     private final int salt;
     private final Optional<ExclusionZone> exclusionZone;
 
-    protected static <S extends StructurePlacement> Products.P5<RecordCodecBuilder.Mu<S>, Vec3i, FrequencyReductionMethod, Float, Integer, Optional<ExclusionZone>> method_41637(RecordCodecBuilder.Instance<S> instance) {
+    protected static <S extends StructurePlacement> Products.P5<RecordCodecBuilder.Mu<S>, Vec3i, FrequencyReductionMethod, Float, Integer, Optional<ExclusionZone>> buildCodec(RecordCodecBuilder.Instance<S> instance) {
         return instance.group((App)Vec3i.createOffsetCodec(16).optionalFieldOf("locate_offset", (Object)Vec3i.ZERO).forGetter(StructurePlacement::getLocateOffset), (App)FrequencyReductionMethod.CODEC.optionalFieldOf("frequency_reduction_method", (Object)FrequencyReductionMethod.DEFAULT).forGetter(StructurePlacement::getFrequencyReductionMethod), (App)Codec.floatRange((float)0.0f, (float)1.0f).optionalFieldOf("frequency", (Object)Float.valueOf(1.0f)).forGetter(StructurePlacement::getFrequency), (App)Codecs.NONNEGATIVE_INT.fieldOf("salt").forGetter(StructurePlacement::getSalt), (App)ExclusionZone.CODEC.optionalFieldOf("exclusion_zone").forGetter(StructurePlacement::getExclusionZone));
     }
 
@@ -74,17 +74,17 @@ public abstract class StructurePlacement {
         return this.exclusionZone;
     }
 
-    public boolean shouldGenerate(ChunkGenerator chunkGenerator, NoiseConfig noiseConfig, long seed, int chunkX, int chunkZ) {
-        if (!this.isStartChunk(chunkGenerator, noiseConfig, seed, chunkX, chunkZ)) {
+    public boolean shouldGenerate(StructurePlacementCalculator calculator, int chunkX, int chunkZ) {
+        if (!this.isStartChunk(calculator, chunkX, chunkZ)) {
             return false;
         }
-        if (this.frequency < 1.0f && !this.frequencyReductionMethod.shouldGenerate(seed, this.salt, chunkX, chunkZ, this.frequency)) {
+        if (this.frequency < 1.0f && !this.frequencyReductionMethod.shouldGenerate(calculator.getStructureSeed(), this.salt, chunkX, chunkZ, this.frequency)) {
             return false;
         }
-        return !this.exclusionZone.isPresent() || !this.exclusionZone.get().shouldExclude(chunkGenerator, noiseConfig, seed, chunkX, chunkZ);
+        return !this.exclusionZone.isPresent() || !this.exclusionZone.get().shouldExclude(calculator, chunkX, chunkZ);
     }
 
-    protected abstract boolean isStartChunk(ChunkGenerator var1, NoiseConfig var2, long var3, int var5, int var6);
+    protected abstract boolean isStartChunk(StructurePlacementCalculator var1, int var2, int var3);
 
     public BlockPos getLocatePos(ChunkPos chunkPos) {
         return new BlockPos(chunkPos.getStartX(), 0, chunkPos.getStartZ()).add(this.getLocateOffset());
@@ -165,10 +165,10 @@ public abstract class StructurePlacement {
 
     @Deprecated
     public record ExclusionZone(RegistryEntry<StructureSet> otherSet, int chunkCount) {
-        public static final Codec<ExclusionZone> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RegistryElementCodec.of(Registry.STRUCTURE_SET_KEY, StructureSet.CODEC, false).fieldOf("other_set").forGetter(ExclusionZone::otherSet), (App)Codec.intRange((int)1, (int)16).fieldOf("chunk_count").forGetter(ExclusionZone::chunkCount)).apply((Applicative)instance, ExclusionZone::new));
+        public static final Codec<ExclusionZone> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RegistryElementCodec.of(RegistryKeys.STRUCTURE_SET, StructureSet.CODEC, false).fieldOf("other_set").forGetter(ExclusionZone::otherSet), (App)Codec.intRange((int)1, (int)16).fieldOf("chunk_count").forGetter(ExclusionZone::chunkCount)).apply((Applicative)instance, ExclusionZone::new));
 
-        boolean shouldExclude(ChunkGenerator chunkGenerator, NoiseConfig noiseConfig, long seed, int x, int z) {
-            return chunkGenerator.shouldStructureGenerateInRange(this.otherSet, noiseConfig, seed, x, z, this.chunkCount);
+        boolean shouldExclude(StructurePlacementCalculator calculator, int centerChunkX, int centerChunkZ) {
+            return calculator.canGenerate(this.otherSet, centerChunkX, centerChunkZ, this.chunkCount);
         }
     }
 

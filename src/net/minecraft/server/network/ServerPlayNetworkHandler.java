@@ -7,14 +7,11 @@
  *  com.mojang.brigadier.CommandDispatcher
  *  com.mojang.brigadier.ParseResults
  *  com.mojang.brigadier.StringReader
- *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.brigadier.suggestion.Suggestions
- *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap$Entry
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMaps
  *  it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
- *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -25,23 +22,23 @@ import com.google.common.primitives.Floats;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -62,7 +59,7 @@ import net.minecraft.block.entity.JigsawBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.client.option.ChatVisibility;
-import net.minecraft.command.argument.DecoratableArgumentList;
+import net.minecraft.command.argument.SignedArgumentList;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
@@ -87,19 +84,17 @@ import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.encryption.PlayerPublicKey;
+import net.minecraft.network.encryption.PublicPlayerSession;
+import net.minecraft.network.encryption.SignatureVerifier;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.network.listener.TickablePacketListener;
 import net.minecraft.network.message.AcknowledgmentValidator;
-import net.minecraft.network.message.ArgumentSignatureDataMap;
-import net.minecraft.network.message.CachedDecoratorResult;
-import net.minecraft.network.message.DecoratedContents;
-import net.minecraft.network.message.FilterMask;
 import net.minecraft.network.message.LastSeenMessageList;
+import net.minecraft.network.message.MessageBody;
 import net.minecraft.network.message.MessageChain;
 import net.minecraft.network.message.MessageChainTaskQueue;
-import net.minecraft.network.message.MessageMetadata;
 import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.network.message.MessageSourceProfile;
+import net.minecraft.network.message.MessageSignatureStorage;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedCommandArguments;
 import net.minecraft.network.message.SignedMessage;
@@ -129,12 +124,12 @@ import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayerSessionC2SPacket;
 import net.minecraft.network.packet.c2s.play.QueryBlockNbtC2SPacket;
 import net.minecraft.network.packet.c2s.play.QueryEntityNbtC2SPacket;
 import net.minecraft.network.packet.c2s.play.RecipeBookDataC2SPacket;
 import net.minecraft.network.packet.c2s.play.RecipeCategoryOptionsC2SPacket;
 import net.minecraft.network.packet.c2s.play.RenameItemC2SPacket;
-import net.minecraft.network.packet.c2s.play.RequestChatPreviewC2SPacket;
 import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
 import net.minecraft.network.packet.c2s.play.ResourcePackStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.SelectMerchantTradeC2SPacket;
@@ -152,18 +147,22 @@ import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateStructureBlockC2SPacket;
 import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ChatPreviewS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.CommandSuggestionsS2CPacket;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.KeepAliveS2CPacket;
 import net.minecraft.network.packet.s2c.play.NbtQueryResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerActionResponseS2CPacket;
+import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import net.minecraft.network.packet.s2c.play.ProfilelessChatMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.AnvilScreenHandler;
 import net.minecraft.screen.BeaconScreenHandler;
@@ -183,7 +182,6 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PendingTaskRunner;
 import net.minecraft.util.StringHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
@@ -196,8 +194,6 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.CommandBlockExecutor;
@@ -205,7 +201,6 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -218,6 +213,7 @@ ServerPlayPacketListener {
     public static final double MAX_BREAK_SQUARED_DISTANCE = MathHelper.square(6.0);
     private static final int DEFAULT_SEQUENCE = -1;
     private static final int MAX_PENDING_ACKNOWLEDGMENTS = 4096;
+    private static final Text CHAT_VALIDATION_FAILED_TEXT = Text.translatable("multiplayer.disconnect.chat_validation_failed");
     public final ClientConnection connection;
     private final MinecraftServer server;
     public ServerPlayerEntity player;
@@ -252,11 +248,12 @@ ServerPlayPacketListener {
     private int vehicleFloatingTicks;
     private int movePacketsCount;
     private int lastTickMovePacketsCount;
-    private final CachedDecoratorResult cachedDecoratorResult = new CachedDecoratorResult();
-    private final PendingTaskRunner previewTaskRunner = new PendingTaskRunner();
     private final AtomicReference<Instant> lastMessageTimestamp = new AtomicReference<Instant>(Instant.EPOCH);
-    private final MessageChain.Unpacker messageUnpacker;
-    private final AcknowledgmentValidator acknowledgmentValidator = new AcknowledgmentValidator();
+    @Nullable
+    private PublicPlayerSession session;
+    private MessageChain.Unpacker messageUnpacker;
+    private final AcknowledgmentValidator acknowledgmentValidator = new AcknowledgmentValidator(20);
+    private final MessageSignatureStorage signatureStorage = MessageSignatureStorage.create();
     private final MessageChainTaskQueue messageChainTaskQueue;
 
     public ServerPlayNetworkHandler(MinecraftServer server, ClientConnection connection, ServerPlayerEntity player) {
@@ -267,8 +264,7 @@ ServerPlayPacketListener {
         player.networkHandler = this;
         this.lastKeepAliveTime = Util.getMeasuringTimeMs();
         player.getTextStream().onConnect();
-        PlayerPublicKey playerPublicKey = player.getPublicKey();
-        this.messageUnpacker = playerPublicKey != null ? new MessageChain().getUnpacker() : MessageChain.Unpacker.UNSIGNED;
+        this.messageUnpacker = server.shouldEnforceSecureProfile() ? MessageChain.Unpacker.NOT_INITIALIZED : MessageChain.Unpacker.unsigned(player.getUuid());
         this.messageChainTaskQueue = new MessageChainTaskQueue(server);
     }
 
@@ -341,7 +337,6 @@ ServerPlayPacketListener {
         if (this.player.getLastActionTime() > 0L && this.server.getPlayerIdleTimeout() > 0 && Util.getMeasuringTimeMs() - this.player.getLastActionTime() > (long)(this.server.getPlayerIdleTimeout() * 1000 * 60)) {
             this.disconnect(Text.translatable("multiplayer.disconnect.idling"));
         }
-        this.previewTaskRunner.tick();
     }
 
     public void syncWithPlayerPosition() {
@@ -706,7 +701,7 @@ ServerPlayPacketListener {
             JigsawBlockEntity jigsawBlockEntity = (JigsawBlockEntity)blockEntity;
             jigsawBlockEntity.setName(packet.getName());
             jigsawBlockEntity.setTarget(packet.getTarget());
-            jigsawBlockEntity.setPool(RegistryKey.of(Registry.STRUCTURE_POOL_KEY, packet.getPool()));
+            jigsawBlockEntity.setPool(RegistryKey.of(RegistryKeys.TEMPLATE_POOL, packet.getPool()));
             jigsawBlockEntity.setFinalState(packet.getFinalState());
             jigsawBlockEntity.setJoint(packet.getJointType());
             jigsawBlockEntity.markDirty();
@@ -921,6 +916,7 @@ ServerPlayPacketListener {
         this.player.updatePositionAndAngles(d, e, f, g, h);
         if (!this.player.noClip && !this.player.isSleeping() && (bl3 && serverWorld.isSpaceEmpty(this.player, box) || this.isPlayerNotCollidingWithBlocks(serverWorld, box))) {
             this.requestTeleport(i, j, k, g, h);
+            this.player.handleFall(this.player.getY() - l, packet.isOnGround());
             return;
         }
         this.floating = t >= -0.03125 && !bl22 && this.player.interactionManager.getGameMode() != GameMode.SPECTATOR && !this.server.isFlightEnabled() && !this.player.getAbilities().allowFlying && !this.player.hasStatusEffect(StatusEffects.LEVITATION) && !this.player.isFallFlying() && !this.player.isUsingRiptide() && this.isEntityOnAir(this.player);
@@ -1031,6 +1027,9 @@ ServerPlayPacketListener {
         ServerWorld serverWorld = this.player.getWorld();
         Hand hand = packet.getHand();
         ItemStack itemStack = this.player.getStackInHand(hand);
+        if (!itemStack.isItemEnabled(serverWorld.getEnabledFeatures())) {
+            return;
+        }
         BlockHitResult blockHitResult = packet.getBlockHitResult();
         Vec3d vec3d = blockHitResult.getPos();
         BlockPos blockPos = blockHitResult.getBlockPos();
@@ -1073,7 +1072,7 @@ ServerPlayPacketListener {
         Hand hand = packet.getHand();
         ItemStack itemStack = this.player.getStackInHand(hand);
         this.player.updateLastActionTime();
-        if (itemStack.isEmpty()) {
+        if (itemStack.isEmpty() || !itemStack.isItemEnabled(serverWorld.getEnabledFeatures())) {
             return;
         }
         ActionResult actionResult = this.player.interactionManager.interactItem(this.player, serverWorld, itemStack, hand);
@@ -1119,6 +1118,7 @@ ServerPlayPacketListener {
 
     @Override
     public void onDisconnected(Text reason) {
+        this.messageChainTaskQueue.close();
         LOGGER.info("{} lost connection: {}", (Object)this.player.getName().getString(), (Object)reason.getString());
         this.server.forcePlayerSampleUpdate();
         this.server.getPlayerManager().broadcast(Text.translatable("multiplayer.player.left", this.player.getDisplayName()).formatted(Formatting.YELLOW), false);
@@ -1175,21 +1175,23 @@ ServerPlayPacketListener {
             this.disconnect(Text.translatable("multiplayer.disconnect.illegal_characters"));
             return;
         }
-        if (this.canAcceptMessage(packet.chatMessage(), packet.timestamp(), packet.acknowledgment())) {
+        Optional<LastSeenMessageList> optional = this.validateMessage(packet.chatMessage(), packet.timestamp(), packet.acknowledgment());
+        if (optional.isPresent()) {
             this.server.submit(() -> {
-                SignedMessage signedMessage = this.getSignedMessage(packet);
-                if (!this.canAcceptMessage(signedMessage)) {
+                SignedMessage signedMessage;
+                try {
+                    signedMessage = this.getSignedMessage(packet, (LastSeenMessageList)optional.get());
+                }
+                catch (MessageChain.MessageChainException messageChainException) {
+                    this.handleMessageChainException(messageChainException);
                     return;
                 }
-                this.messageChainTaskQueue.append(() -> {
-                    CompletableFuture<FilteredMessage> completableFuture = this.filterText(signedMessage.getSignedContent().plain());
-                    CompletableFuture<SignedMessage> completableFuture2 = this.server.getMessageDecorator().decorate(this.player, signedMessage);
-                    return CompletableFuture.allOf(completableFuture, completableFuture2).thenAcceptAsync(void_ -> {
-                        FilterMask filterMask = ((FilteredMessage)completableFuture.join()).mask();
-                        SignedMessage signedMessage = ((SignedMessage)completableFuture2.join()).withFilterMask(filterMask);
-                        this.handleDecoratedMessage(signedMessage);
-                    }, (Executor)this.server);
-                });
+                CompletableFuture<FilteredMessage> completableFuture = this.filterText(signedMessage.getSignedContent());
+                CompletableFuture<Text> completableFuture2 = this.server.getMessageDecorator().decorate(this.player, signedMessage.getContent());
+                this.messageChainTaskQueue.append(executor -> CompletableFuture.allOf(completableFuture, completableFuture2).thenAcceptAsync(void_ -> {
+                    SignedMessage signedMessage2 = signedMessage.withUnsignedContent((Text)completableFuture2.join()).withFilterMask(((FilteredMessage)completableFuture.join()).mask());
+                    this.handleDecoratedMessage(signedMessage2);
+                }, executor));
             });
         }
     }
@@ -1200,19 +1202,23 @@ ServerPlayPacketListener {
             this.disconnect(Text.translatable("multiplayer.disconnect.illegal_characters"));
             return;
         }
-        if (this.canAcceptMessage(packet.command(), packet.timestamp(), packet.acknowledgment())) {
+        Optional<LastSeenMessageList> optional = this.validateMessage(packet.command(), packet.timestamp(), packet.acknowledgment());
+        if (optional.isPresent()) {
             this.server.submit(() -> {
-                this.handleCommandExecution(packet);
+                this.handleCommandExecution(packet, (LastSeenMessageList)optional.get());
                 this.checkForSpam();
             });
         }
     }
 
-    private void handleCommandExecution(CommandExecutionC2SPacket packet) {
+    private void handleCommandExecution(CommandExecutionC2SPacket packet, LastSeenMessageList lastSeenMessages) {
+        Map<String, SignedMessage> map;
         ParseResults<ServerCommandSource> parseResults = this.parse(packet.command());
-        Map<String, SignedMessage> map = this.collectArgumentMessages(packet, DecoratableArgumentList.of(parseResults));
-        for (SignedMessage signedMessage : map.values()) {
-            if (this.canAcceptMessage(signedMessage)) continue;
+        try {
+            map = this.collectArgumentMessages(packet, SignedArgumentList.of(parseResults), lastSeenMessages);
+        }
+        catch (MessageChain.MessageChainException messageChainException) {
+            this.handleMessageChainException(messageChainException);
             return;
         }
         SignedCommandArguments.Impl signedCommandArguments = new SignedCommandArguments.Impl(map);
@@ -1220,19 +1226,20 @@ ServerPlayPacketListener {
         this.server.getCommandManager().execute(parseResults, packet.command());
     }
 
-    private Map<String, SignedMessage> collectArgumentMessages(CommandExecutionC2SPacket packet, DecoratableArgumentList<?> arguments) {
-        Text text = this.cachedDecoratorResult.tryConsume(packet.command());
-        MessageMetadata messageMetadata = new MessageMetadata(this.player.getUuid(), packet.timestamp(), packet.salt());
-        LastSeenMessageList lastSeenMessageList = packet.acknowledgment().lastSeen();
+    private void handleMessageChainException(MessageChain.MessageChainException exception) {
+        if (exception.shouldDisconnect()) {
+            this.disconnect(exception.getMessageText());
+        } else {
+            this.player.sendMessage(exception.getMessageText().copy().formatted(Formatting.RED));
+        }
+    }
+
+    private Map<String, SignedMessage> collectArgumentMessages(CommandExecutionC2SPacket packet, SignedArgumentList<?> arguments, LastSeenMessageList lastSeenMessages) throws MessageChain.MessageChainException {
         Object2ObjectOpenHashMap map = new Object2ObjectOpenHashMap();
-        MessageChain.Unpacker unpacker = this.player.networkHandler.getMessageUnpacker();
-        for (Pair<String, String> pair : ArgumentSignatureDataMap.toNameValuePairs(arguments)) {
-            String string = (String)pair.getFirst();
-            String string2 = (String)pair.getSecond();
-            MessageSignatureData messageSignatureData = packet.argumentSignatures().get(string);
-            DecoratedContents decoratedContents = packet.signedPreview() && text != null ? new DecoratedContents(string2, text) : new DecoratedContents(string2);
-            MessageChain.Signature signature = new MessageChain.Signature(messageSignatureData);
-            map.put(string, unpacker.unpack(signature, messageMetadata, decoratedContents, lastSeenMessageList));
+        for (SignedArgumentList.ParsedArgument<?> parsedArgument : arguments.arguments()) {
+            MessageSignatureData messageSignatureData = packet.argumentSignatures().get(parsedArgument.getNodeName());
+            MessageBody messageBody = new MessageBody(parsedArgument.value(), packet.timestamp(), packet.salt(), lastSeenMessages);
+            map.put(parsedArgument.getNodeName(), this.messageUnpacker.unpack(messageSignatureData, messageBody));
         }
         return map;
     }
@@ -1242,30 +1249,34 @@ ServerPlayPacketListener {
         return commandDispatcher.parse(command, (Object)this.player.getCommandSource());
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    private boolean canAcceptMessage(String message, Instant timestamp, LastSeenMessageList.Acknowledgment acknowledgment) {
-        Set<AcknowledgmentValidator.FailureReason> set;
+    private Optional<LastSeenMessageList> validateMessage(String message, Instant timestamp, LastSeenMessageList.Acknowledgment acknowledgment) {
         if (!this.isInProperOrder(timestamp)) {
             LOGGER.warn("{} sent out-of-order chat: '{}'", (Object)this.player.getName().getString(), (Object)message);
             this.disconnect(Text.translatable("multiplayer.disconnect.out_of_order_chat"));
-            return false;
+            return Optional.empty();
         }
         if (this.player.getClientChatVisibility() == ChatVisibility.HIDDEN) {
             this.sendPacket(new GameMessageS2CPacket(Text.translatable("chat.disabled.options").formatted(Formatting.RED), false));
-            return false;
+            return Optional.empty();
         }
+        Optional<LastSeenMessageList> optional = this.validateAcknowledgment(acknowledgment);
+        this.player.updateLastActionTime();
+        return optional;
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    private Optional<LastSeenMessageList> validateAcknowledgment(LastSeenMessageList.Acknowledgment acknowledgment) {
         AcknowledgmentValidator acknowledgmentValidator = this.acknowledgmentValidator;
         synchronized (acknowledgmentValidator) {
-            set = this.acknowledgmentValidator.validate(acknowledgment);
+            Optional<LastSeenMessageList> optional = this.acknowledgmentValidator.validate(acknowledgment);
+            if (optional.isEmpty()) {
+                LOGGER.warn("Failed to validate message acknowledgements from {}", (Object)this.player.getName().getString());
+                this.disconnect(CHAT_VALIDATION_FAILED_TEXT);
+            }
+            return optional;
         }
-        if (!set.isEmpty()) {
-            this.handleAcknowledgmentFailure(set);
-            return false;
-        }
-        this.player.updateLastActionTime();
-        return true;
     }
 
     private boolean isInProperOrder(Instant timestamp) {
@@ -1285,44 +1296,14 @@ ServerPlayPacketListener {
         return false;
     }
 
-    private SignedMessage getSignedMessage(ChatMessageC2SPacket packet) {
-        MessageMetadata messageMetadata = packet.getMetadata(this.player);
-        MessageChain.Signature signature = new MessageChain.Signature(packet.signature());
-        LastSeenMessageList lastSeenMessageList = packet.acknowledgment().lastSeen();
-        DecoratedContents decoratedContents = this.getDecoratedContents(packet);
-        return this.messageUnpacker.unpack(signature, messageMetadata, decoratedContents, lastSeenMessageList);
-    }
-
-    private DecoratedContents getDecoratedContents(ChatMessageC2SPacket packet) {
-        Text text = this.cachedDecoratorResult.tryConsume(packet.chatMessage());
-        if (packet.signedPreview() && text != null) {
-            return new DecoratedContents(packet.chatMessage(), text);
-        }
-        return new DecoratedContents(packet.chatMessage());
+    private SignedMessage getSignedMessage(ChatMessageC2SPacket packet, LastSeenMessageList lastSeenMessages) throws MessageChain.MessageChainException {
+        MessageBody messageBody = new MessageBody(packet.chatMessage(), packet.timestamp(), packet.salt(), lastSeenMessages);
+        return this.messageUnpacker.unpack(packet.signature(), messageBody);
     }
 
     private void handleDecoratedMessage(SignedMessage message) {
         this.server.getPlayerManager().broadcast(message, this.player, MessageType.params(MessageType.CHAT, this.player));
         this.checkForSpam();
-    }
-
-    private boolean canAcceptMessage(SignedMessage signedMessage) {
-        MessageSourceProfile messageSourceProfile = this.player.getMessageSourceProfile();
-        PlayerPublicKey playerPublicKey = messageSourceProfile.playerPublicKey();
-        if (playerPublicKey != null) {
-            if (playerPublicKey.data().isExpired()) {
-                this.player.sendMessage(Text.translatable("chat.disabled.expiredProfileKey").formatted(Formatting.RED));
-                return false;
-            }
-            if (!signedMessage.verify(messageSourceProfile)) {
-                this.disconnect(Text.translatable("multiplayer.disconnect.unsigned_chat"));
-                return false;
-            }
-        }
-        if (signedMessage.isExpiredOnServer(Instant.now())) {
-            LOGGER.warn("{} sent expired chat: '{}'. Is the client/server system time unsynchronized?", (Object)this.player.getName().getString(), (Object)signedMessage.getSignedContent().plain());
-        }
-        return true;
     }
 
     private void checkForSpam() {
@@ -1332,85 +1313,18 @@ ServerPlayPacketListener {
         }
     }
 
-    @Override
-    public void onRequestChatPreview(RequestChatPreviewC2SPacket packet) {
-        if (this.shouldPreviewChat()) {
-            this.previewTaskRunner.queue(() -> {
-                int i = packet.queryId();
-                String string = packet.query();
-                return this.decorate(string).thenAccept(decorated -> this.sendChatPreviewPacket(i, (Text)decorated));
-            });
-        }
-    }
-
-    private boolean shouldPreviewChat() {
-        return this.server.shouldPreviewChat() || this.connection.isLocal();
-    }
-
-    private void sendChatPreviewPacket(int queryId, Text preview) {
-        this.sendPacket(new ChatPreviewS2CPacket(queryId, preview), PacketCallbacks.of(() -> new ChatPreviewS2CPacket(queryId, null)));
-    }
-
-    private CompletableFuture<Text> decorate(String query) {
-        String string = StringUtils.normalizeSpace((String)query);
-        if (string.startsWith("/")) {
-            return this.decorateCommand(string.substring(1));
-        }
-        return this.decorateChat(query);
-    }
-
-    private CompletableFuture<Text> decorateChat(String query) {
-        MutableText text = Text.literal(query);
-        CompletionStage completableFuture = this.server.getMessageDecorator().decorate(this.player, text).thenApply(decorated -> !text.equals(decorated) ? decorated : null);
-        ((CompletableFuture)completableFuture).thenAcceptAsync(decorated -> this.cachedDecoratorResult.setCachedResult(query, (Text)decorated), (Executor)this.server);
-        return completableFuture;
-    }
-
-    private CompletableFuture<Text> decorateCommand(String query) {
-        ServerCommandSource serverCommandSource = this.player.getCommandSource();
-        ParseResults parseResults = this.server.getCommandManager().getDispatcher().parse(query, (Object)serverCommandSource);
-        CompletableFuture<Text> completableFuture = this.decorateCommand(serverCommandSource, DecoratableArgumentList.of(parseResults));
-        completableFuture.thenAcceptAsync(decorated -> this.cachedDecoratorResult.setCachedResult(query, (Text)decorated), (Executor)this.server);
-        return completableFuture;
-    }
-
-    private CompletableFuture<Text> decorateCommand(ServerCommandSource source, DecoratableArgumentList<ServerCommandSource> arguments) {
-        List<DecoratableArgumentList.ParsedArgument<ServerCommandSource>> list = arguments.arguments();
-        if (list.isEmpty()) {
-            return CompletableFuture.completedFuture(null);
-        }
-        for (int i = list.size() - 1; i >= 0; --i) {
-            DecoratableArgumentList.ParsedArgument<ServerCommandSource> parsedArgument = list.get(i);
-            try {
-                CompletableFuture<Text> completableFuture = parsedArgument.argumentType().decorate(source, parsedArgument.parsedValue());
-                if (completableFuture == null) continue;
-                return completableFuture;
-            }
-            catch (CommandSyntaxException commandSyntaxException) {
-                return CompletableFuture.completedFuture(null);
-            }
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     @Override
     public void onMessageAcknowledgment(MessageAcknowledgmentC2SPacket packet) {
-        Set<AcknowledgmentValidator.FailureReason> set;
         AcknowledgmentValidator acknowledgmentValidator = this.acknowledgmentValidator;
         synchronized (acknowledgmentValidator) {
-            set = this.acknowledgmentValidator.validate(packet.acknowledgment());
+            if (!this.acknowledgmentValidator.removeUntil(packet.offset())) {
+                LOGGER.warn("Failed to validate message acknowledgements from {}", (Object)this.player.getName().getString());
+                this.disconnect(CHAT_VALIDATION_FAILED_TEXT);
+            }
         }
-        if (!set.isEmpty()) {
-            this.handleAcknowledgmentFailure(set);
-        }
-    }
-
-    private void handleAcknowledgmentFailure(Set<AcknowledgmentValidator.FailureReason> reasons) {
-        LOGGER.warn("Failed to validate message from {}, reasons: {}", (Object)this.player.getName().getString(), (Object)reasons.stream().map(AcknowledgmentValidator.FailureReason::getDescription).collect(Collectors.joining(",")));
-        this.disconnect(Text.translatable("multiplayer.disconnect.chat_validation_failed"));
     }
 
     @Override
@@ -1451,7 +1365,7 @@ ServerPlayPacketListener {
                 if (!(this.player.getVehicle() instanceof JumpingMount)) break;
                 JumpingMount jumpingMount = (JumpingMount)((Object)this.player.getVehicle());
                 int i = packet.getMountJumpHeight();
-                if (!jumpingMount.canJump() || i <= 0) break;
+                if (!jumpingMount.canJump(this.player) || i <= 0) break;
                 jumpingMount.startJumping(i);
                 break;
             }
@@ -1479,33 +1393,39 @@ ServerPlayPacketListener {
         }
     }
 
-    public MessageChain.Unpacker getMessageUnpacker() {
-        return this.messageUnpacker;
-    }
-
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     public void addPendingAcknowledgment(SignedMessage message) {
         int i;
-        LastSeenMessageList.Entry entry = message.toLastSeenMessageEntry();
-        if (entry == null) {
+        MessageSignatureData messageSignatureData = message.signature();
+        if (messageSignatureData == null) {
             return;
         }
+        this.signatureStorage.add(message);
         AcknowledgmentValidator acknowledgmentValidator = this.acknowledgmentValidator;
         synchronized (acknowledgmentValidator) {
-            this.acknowledgmentValidator.addPending(entry);
-            i = this.acknowledgmentValidator.getPendingCount();
+            this.acknowledgmentValidator.addPending(messageSignatureData);
+            i = this.acknowledgmentValidator.getMessageCount();
         }
         if (i > 4096) {
             this.disconnect(Text.translatable("multiplayer.disconnect.too_many_pending_chats"));
         }
     }
 
+    public void sendChatMessage(SignedMessage message, MessageType.Parameters params) {
+        this.sendPacket(new ChatMessageS2CPacket(message.link().sender(), message.link().index(), message.signature(), message.signedBody().toSerialized(this.signatureStorage), message.unsignedContent(), message.filterMask(), params.toSerialized(this.player.world.getRegistryManager())));
+        this.addPendingAcknowledgment(message);
+    }
+
+    public void sendProfilelessChatMessage(Text message, MessageType.Parameters params) {
+        this.sendPacket(new ProfilelessChatMessageS2CPacket(message, params.toSerialized(this.player.world.getRegistryManager())));
+    }
+
     @Override
     public void onPlayerInteractEntity(PlayerInteractEntityC2SPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.player.getWorld());
-        ServerWorld serverWorld = this.player.getWorld();
+        final ServerWorld serverWorld = this.player.getWorld();
         final Entity entity = packet.getEntity(serverWorld);
         this.player.updateLastActionTime();
         this.player.setSneaking(packet.isPlayerSneaking());
@@ -1517,10 +1437,14 @@ ServerPlayPacketListener {
                 packet.handle(new PlayerInteractEntityC2SPacket.Handler(){
 
                     private void processInteract(Hand hand, Interaction action) {
-                        ItemStack itemStack = ServerPlayNetworkHandler.this.player.getStackInHand(hand).copy();
+                        ItemStack itemStack = ServerPlayNetworkHandler.this.player.getStackInHand(hand);
+                        if (!itemStack.isItemEnabled(serverWorld.getEnabledFeatures())) {
+                            return;
+                        }
+                        ItemStack itemStack2 = itemStack.copy();
                         ActionResult actionResult = action.run(ServerPlayNetworkHandler.this.player, entity, hand);
                         if (actionResult.isAccepted()) {
-                            Criteria.PLAYER_INTERACTED_WITH_ENTITY.trigger(ServerPlayNetworkHandler.this.player, itemStack, entity);
+                            Criteria.PLAYER_INTERACTED_WITH_ENTITY.trigger(ServerPlayNetworkHandler.this.player, itemStack2, entity);
                             if (actionResult.shouldSwingHand()) {
                                 ServerPlayNetworkHandler.this.player.swingHand(hand, true);
                             }
@@ -1542,6 +1466,10 @@ ServerPlayPacketListener {
                         if (entity instanceof ItemEntity || entity instanceof ExperienceOrbEntity || entity instanceof PersistentProjectileEntity || entity == ServerPlayNetworkHandler.this.player) {
                             ServerPlayNetworkHandler.this.disconnect(Text.translatable("multiplayer.disconnect.invalid_entity_attacked"));
                             LOGGER.warn("Player {} tried to attack an invalid entity", (Object)ServerPlayNetworkHandler.this.player.getName().getString());
+                            return;
+                        }
+                        ItemStack itemStack = ServerPlayNetworkHandler.this.player.getStackInHand(Hand.MAIN_HAND);
+                        if (!itemStack.isItemEnabled(serverWorld.getEnabledFeatures())) {
                             return;
                         }
                         ServerPlayNetworkHandler.this.player.attack(entity);
@@ -1660,6 +1588,9 @@ ServerPlayPacketListener {
             BlockPos blockPos;
             boolean bl = packet.getSlot() < 0;
             ItemStack itemStack = packet.getItemStack();
+            if (!itemStack.isItemEnabled(this.player.getWorld().getEnabledFeatures())) {
+                return;
+            }
             NbtCompound nbtCompound = BlockItem.getBlockEntityNbt(itemStack);
             if (!itemStack.isEmpty() && nbtCompound != null && nbtCompound.contains("x") && nbtCompound.contains("y") && nbtCompound.contains("z") && this.player.world.canSetBlock(blockPos = BlockEntity.posFromNbt(nbtCompound)) && (blockEntity = this.player.world.getBlockEntity(blockPos)) != null) {
                 blockEntity.setStackNbt(itemStack);
@@ -1753,6 +1684,39 @@ ServerPlayPacketListener {
             return;
         }
         this.server.setDifficultyLocked(packet.isDifficultyLocked());
+    }
+
+    @Override
+    public void onPlayerSession(PlayerSessionC2SPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.player.getWorld());
+        PublicPlayerSession.Serialized serialized = packet.chatSession();
+        PlayerPublicKey.PublicKeyData publicKeyData = this.session != null ? this.session.publicKeyData().data() : null;
+        PlayerPublicKey.PublicKeyData publicKeyData2 = serialized.publicKeyData();
+        if (Objects.equals(publicKeyData, publicKeyData2)) {
+            return;
+        }
+        if (publicKeyData != null && publicKeyData2.expiresAt().isBefore(publicKeyData.expiresAt())) {
+            this.disconnect(PlayerPublicKey.EXPIRED_PUBLIC_KEY_TEXT);
+            return;
+        }
+        try {
+            SignatureVerifier signatureVerifier = this.server.getServicesSignatureVerifier();
+            this.setSession(serialized.toSession(this.player.getGameProfile(), signatureVerifier, Duration.ZERO));
+        }
+        catch (PlayerPublicKey.PublicKeyException publicKeyException) {
+            LOGGER.error("Failed to validate profile key: {}", (Object)publicKeyException.getMessage());
+            this.disconnect(publicKeyException.getMessageText());
+        }
+    }
+
+    private void setSession(PublicPlayerSession session) {
+        this.session = session;
+        this.messageUnpacker = session.createUnpacker(this.player.getUuid());
+        this.messageChainTaskQueue.append(executor -> {
+            this.player.setSession(session);
+            this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(EnumSet.of(PlayerListS2CPacket.Action.INITIALIZE_CHAT), List.of(this.player)));
+            return CompletableFuture.completedFuture(null);
+        });
     }
 
     @Override

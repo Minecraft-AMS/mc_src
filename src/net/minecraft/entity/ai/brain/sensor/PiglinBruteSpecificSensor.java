@@ -37,9 +37,9 @@ extends Sensor<LivingEntity> {
     protected void sense(ServerWorld world, LivingEntity entity) {
         Brain<?> brain = entity.getBrain();
         ArrayList list = Lists.newArrayList();
-        LivingTargetCache livingTargetCache = brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse(LivingTargetCache.empty());
+        LivingTargetCache livingTargetCache = brain.getOptionalRegisteredMemory(MemoryModuleType.VISIBLE_MOBS).orElse(LivingTargetCache.empty());
         Optional<MobEntity> optional = livingTargetCache.findFirst(livingEntity -> livingEntity instanceof WitherSkeletonEntity || livingEntity instanceof WitherEntity).map(MobEntity.class::cast);
-        List<LivingEntity> list2 = brain.getOptionalMemory(MemoryModuleType.MOBS).orElse((List<LivingEntity>)ImmutableList.of());
+        List<LivingEntity> list2 = brain.getOptionalRegisteredMemory(MemoryModuleType.MOBS).orElse((List<LivingEntity>)ImmutableList.of());
         for (LivingEntity livingEntity2 : list2) {
             if (!(livingEntity2 instanceof AbstractPiglinEntity) || !((AbstractPiglinEntity)livingEntity2).isAdult()) continue;
             list.add((AbstractPiglinEntity)livingEntity2);

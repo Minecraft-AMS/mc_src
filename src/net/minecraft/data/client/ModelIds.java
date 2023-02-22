@@ -5,8 +5,8 @@ package net.minecraft.data.client;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 public class ModelIds {
     @Deprecated
@@ -19,23 +19,23 @@ public class ModelIds {
     }
 
     public static Identifier getBlockSubModelId(Block block, String suffix) {
-        Identifier identifier = Registry.BLOCK.getId(block);
-        return new Identifier(identifier.getNamespace(), "block/" + identifier.getPath() + suffix);
+        Identifier identifier = Registries.BLOCK.getId(block);
+        return identifier.withPath(path -> "block/" + path + suffix);
     }
 
     public static Identifier getBlockModelId(Block block) {
-        Identifier identifier = Registry.BLOCK.getId(block);
-        return new Identifier(identifier.getNamespace(), "block/" + identifier.getPath());
+        Identifier identifier = Registries.BLOCK.getId(block);
+        return identifier.withPrefixedPath("block/");
     }
 
     public static Identifier getItemModelId(Item item) {
-        Identifier identifier = Registry.ITEM.getId(item);
-        return new Identifier(identifier.getNamespace(), "item/" + identifier.getPath());
+        Identifier identifier = Registries.ITEM.getId(item);
+        return identifier.withPrefixedPath("item/");
     }
 
     public static Identifier getItemSubModelId(Item item, String suffix) {
-        Identifier identifier = Registry.ITEM.getId(item);
-        return new Identifier(identifier.getNamespace(), "item/" + identifier.getPath() + suffix);
+        Identifier identifier = Registries.ITEM.getId(item);
+        return identifier.withPath(path -> "item/" + path + suffix);
     }
 }
 

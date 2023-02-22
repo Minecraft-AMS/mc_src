@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.resource.Resource;
 import net.minecraft.util.Identifier;
@@ -15,16 +16,20 @@ import net.minecraft.util.Identifier;
 public interface ResourceFactory {
     public Optional<Resource> getResource(Identifier var1);
 
-    default public Resource getResourceOrThrow(Identifier identifier) throws FileNotFoundException {
-        return this.getResource(identifier).orElseThrow(() -> new FileNotFoundException(identifier.toString()));
+    default public Resource getResourceOrThrow(Identifier id) throws FileNotFoundException {
+        return this.getResource(id).orElseThrow(() -> new FileNotFoundException(id.toString()));
     }
 
-    default public InputStream open(Identifier identifier) throws IOException {
-        return this.getResourceOrThrow(identifier).getInputStream();
+    default public InputStream open(Identifier id) throws IOException {
+        return this.getResourceOrThrow(id).getInputStream();
     }
 
-    default public BufferedReader openAsReader(Identifier identifier) throws IOException {
-        return this.getResourceOrThrow(identifier).getReader();
+    default public BufferedReader openAsReader(Identifier id) throws IOException {
+        return this.getResourceOrThrow(id).getReader();
+    }
+
+    public static ResourceFactory fromMap(Map<Identifier, Resource> map) {
+        return id -> Optional.ofNullable((Resource)map.get(id));
     }
 }
 

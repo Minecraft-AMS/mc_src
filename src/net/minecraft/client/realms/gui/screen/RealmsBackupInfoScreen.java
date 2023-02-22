@@ -43,16 +43,10 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.client.keyboard.setRepeatEvents(true);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 24, 200, 20, ScreenTexts.BACK, button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 100, this.height / 4 + 120 + 24, 200, 20).build());
         this.backupInfoList = new BackupInfoList(this.client);
         this.addSelectableChild(this.backupInfoList);
         this.focusOn(this.backupInfoList);
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override

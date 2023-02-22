@@ -7,12 +7,11 @@
  */
 package net.minecraft.client.render;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.function.IntFunction;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.TranslatableOption;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.function.ValueLists;
 
 @Environment(value=EnvType.CLIENT)
 public final class ChunkBuilderMode
@@ -21,7 +20,7 @@ implements TranslatableOption {
     public static final /* enum */ ChunkBuilderMode NONE = new ChunkBuilderMode(0, "options.prioritizeChunkUpdates.none");
     public static final /* enum */ ChunkBuilderMode PLAYER_AFFECTED = new ChunkBuilderMode(1, "options.prioritizeChunkUpdates.byPlayer");
     public static final /* enum */ ChunkBuilderMode NEARBY = new ChunkBuilderMode(2, "options.prioritizeChunkUpdates.nearby");
-    private static final ChunkBuilderMode[] modes;
+    private static final IntFunction<ChunkBuilderMode> BY_ID;
     private final int id;
     private final String name;
     private static final /* synthetic */ ChunkBuilderMode[] field_34794;
@@ -50,7 +49,7 @@ implements TranslatableOption {
     }
 
     public static ChunkBuilderMode get(int id) {
-        return modes[MathHelper.floorMod(id, modes.length)];
+        return BY_ID.apply(id);
     }
 
     private static /* synthetic */ ChunkBuilderMode[] method_38526() {
@@ -59,7 +58,7 @@ implements TranslatableOption {
 
     static {
         field_34794 = ChunkBuilderMode.method_38526();
-        modes = (ChunkBuilderMode[])Arrays.stream(ChunkBuilderMode.values()).sorted(Comparator.comparingInt(ChunkBuilderMode::getId)).toArray(ChunkBuilderMode[]::new);
+        BY_ID = ValueLists.createIdToValueFunction(ChunkBuilderMode::getId, ChunkBuilderMode.values(), ValueLists.OutOfBoundsHandling.WRAP);
     }
 }
 

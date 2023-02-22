@@ -136,27 +136,26 @@ extends Screen {
     @Override
     protected void init() {
         this.invalidatePageContent();
-        this.client.keyboard.setRepeatEvents(true);
-        this.signButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, Text.translatable("book.signButton"), button -> {
+        this.signButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("book.signButton"), button -> {
             this.signing = true;
             this.updateButtons();
-        }));
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 2, 196, 98, 20, ScreenTexts.DONE, button -> {
+        }).dimensions(this.width / 2 - 100, 196, 98, 20).build());
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             this.client.setScreen(null);
             this.finalizeBook(false);
-        }));
-        this.finalizeButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, Text.translatable("book.finalizeButton"), button -> {
+        }).dimensions(this.width / 2 + 2, 196, 98, 20).build());
+        this.finalizeButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("book.finalizeButton"), button -> {
             if (this.signing) {
                 this.finalizeBook(true);
                 this.client.setScreen(null);
             }
-        }));
-        this.cancelButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 2, 196, 98, 20, ScreenTexts.CANCEL, button -> {
+        }).dimensions(this.width / 2 - 100, 196, 98, 20).build());
+        this.cancelButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> {
             if (this.signing) {
                 this.signing = false;
             }
             this.updateButtons();
-        }));
+        }).dimensions(this.width / 2 + 2, 196, 98, 20).build());
         int i = (this.width - 192) / 2;
         int j = 2;
         this.nextPageButton = this.addDrawableChild(new PageTurnWidget(i + 116, 159, true, button -> this.openNextPage(), true));
@@ -183,11 +182,6 @@ extends Screen {
         }
         this.updateButtons();
         this.changePage();
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     private void updateButtons() {
@@ -417,7 +411,7 @@ extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         this.setFocused(null);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.setShaderTexture(0, BookScreen.BOOK_TEXTURE);
         int i = (this.width - 192) / 2;
@@ -460,7 +454,7 @@ extends Screen {
     private void drawSelection(Rect2i[] selectionRectangles) {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionShader);
+        RenderSystem.setShader(GameRenderer::getPositionProgram);
         RenderSystem.setShaderColor(0.0f, 0.0f, 255.0f, 255.0f);
         RenderSystem.disableTexture();
         RenderSystem.enableColorLogicOp();

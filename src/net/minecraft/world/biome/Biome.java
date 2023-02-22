@@ -31,23 +31,23 @@ import net.minecraft.client.color.world.FoliageColors;
 import net.minecraft.client.color.world.GrassColors;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.registry.RegistryCodecs;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.sound.BiomeAdditionsSound;
 import net.minecraft.sound.BiomeMoodSound;
 import net.minecraft.sound.MusicSound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.OctaveSimplexNoiseSampler;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryCodecs;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.LightType;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.BiomeEffects;
@@ -59,8 +59,8 @@ import org.jetbrains.annotations.Nullable;
 public final class Biome {
     public static final Codec<Biome> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Weather.CODEC.forGetter(biome -> biome.weather), (App)BiomeEffects.CODEC.fieldOf("effects").forGetter(biome -> biome.effects), (App)GenerationSettings.CODEC.forGetter(biome -> biome.generationSettings), (App)SpawnSettings.CODEC.forGetter(biome -> biome.spawnSettings)).apply((Applicative)instance, Biome::new));
     public static final Codec<Biome> NETWORK_CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Weather.CODEC.forGetter(biome -> biome.weather), (App)BiomeEffects.CODEC.fieldOf("effects").forGetter(biome -> biome.effects)).apply((Applicative)instance, (weather, effects) -> new Biome((Weather)weather, (BiomeEffects)effects, GenerationSettings.INSTANCE, SpawnSettings.INSTANCE)));
-    public static final Codec<RegistryEntry<Biome>> REGISTRY_CODEC = RegistryElementCodec.of(Registry.BIOME_KEY, CODEC);
-    public static final Codec<RegistryEntryList<Biome>> REGISTRY_ENTRY_LIST_CODEC = RegistryCodecs.entryList(Registry.BIOME_KEY, CODEC);
+    public static final Codec<RegistryEntry<Biome>> REGISTRY_CODEC = RegistryElementCodec.of(RegistryKeys.BIOME, CODEC);
+    public static final Codec<RegistryEntryList<Biome>> REGISTRY_ENTRY_LIST_CODEC = RegistryCodecs.entryList(RegistryKeys.BIOME, CODEC);
     private static final OctaveSimplexNoiseSampler TEMPERATURE_NOISE = new OctaveSimplexNoiseSampler((Random)new ChunkRandom(new CheckedRandom(1234L)), (List<Integer>)ImmutableList.of((Object)0));
     static final OctaveSimplexNoiseSampler FROZEN_OCEAN_NOISE = new OctaveSimplexNoiseSampler((Random)new ChunkRandom(new CheckedRandom(3456L)), (List<Integer>)ImmutableList.of((Object)-2, (Object)-1, (Object)0));
     @Deprecated(forRemoval=true)
@@ -174,7 +174,7 @@ public final class Biome {
         if (this.doesNotSnow(pos)) {
             return false;
         }
-        return pos.getY() >= world.getBottomY() && pos.getY() < world.getTopY() && world.getLightLevel(LightType.BLOCK, pos) < 10 && (blockState = world.getBlockState(pos)).isAir() && Blocks.SNOW.getDefaultState().canPlaceAt(world, pos);
+        return pos.getY() >= world.getBottomY() && pos.getY() < world.getTopY() && world.getLightLevel(LightType.BLOCK, pos) < 10 && ((blockState = world.getBlockState(pos)).isAir() || blockState.isOf(Blocks.SNOW)) && Blocks.SNOW.getDefaultState().canPlaceAt(world, pos);
     }
 
     public GenerationSettings getGenerationSettings() {
@@ -230,7 +230,7 @@ public final class Biome {
         return this.effects.getParticleConfig();
     }
 
-    public Optional<SoundEvent> getLoopSound() {
+    public Optional<RegistryEntry<SoundEvent>> getLoopSound() {
         return this.effects.getLoopSound();
     }
 

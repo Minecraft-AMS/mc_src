@@ -12,10 +12,12 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -39,14 +41,20 @@ extends HorizontalFacingBlock {
     protected static final VoxelShape IN_WALL_X_AXIS_SHAPE = Block.createCuboidShape(6.0, 0.0, 0.0, 10.0, 13.0, 16.0);
     protected static final VoxelShape Z_AXIS_COLLISION_SHAPE = Block.createCuboidShape(0.0, 0.0, 6.0, 16.0, 24.0, 10.0);
     protected static final VoxelShape X_AXIS_COLLISION_SHAPE = Block.createCuboidShape(6.0, 0.0, 0.0, 10.0, 24.0, 16.0);
+    protected static final VoxelShape Z_AXIS_SIDES_SHAPE = Block.createCuboidShape(0.0, 5.0, 6.0, 16.0, 24.0, 10.0);
+    protected static final VoxelShape X_AXIS_SIDES_SHAPE = Block.createCuboidShape(6.0, 5.0, 0.0, 10.0, 24.0, 16.0);
     protected static final VoxelShape Z_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(0.0, 5.0, 7.0, 2.0, 16.0, 9.0), Block.createCuboidShape(14.0, 5.0, 7.0, 16.0, 16.0, 9.0));
     protected static final VoxelShape X_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(7.0, 5.0, 0.0, 9.0, 16.0, 2.0), Block.createCuboidShape(7.0, 5.0, 14.0, 9.0, 16.0, 16.0));
     protected static final VoxelShape IN_WALL_Z_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(0.0, 2.0, 7.0, 2.0, 13.0, 9.0), Block.createCuboidShape(14.0, 2.0, 7.0, 16.0, 13.0, 9.0));
     protected static final VoxelShape IN_WALL_X_AXIS_CULL_SHAPE = VoxelShapes.union(Block.createCuboidShape(7.0, 2.0, 0.0, 9.0, 13.0, 2.0), Block.createCuboidShape(7.0, 2.0, 14.0, 9.0, 13.0, 16.0));
+    private final SoundEvent closeSound;
+    private final SoundEvent openSound;
 
-    public FenceGateBlock(AbstractBlock.Settings settings) {
+    public FenceGateBlock(AbstractBlock.Settings settings, SoundEvent closeSound, SoundEvent openSound) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(OPEN, false)).with(POWERED, false)).with(IN_WALL, false));
+        this.closeSound = closeSound;
+        this.openSound = openSound;
     }
 
     @Override
@@ -65,6 +73,14 @@ extends HorizontalFacingBlock {
             return (BlockState)state.with(IN_WALL, bl);
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+    }
+
+    @Override
+    public VoxelShape getSidesShape(BlockState state, BlockView world, BlockPos pos) {
+        if (state.get(OPEN).booleanValue()) {
+            return VoxelShapes.empty();
+        }
+        return state.get(FACING).getAxis() == Direction.Axis.Z ? Z_AXIS_SIDES_SHAPE : X_AXIS_SIDES_SHAPE;
     }
 
     @Override
@@ -128,7 +144,7 @@ extends HorizontalFacingBlock {
             world.setBlockState(pos, state, 10);
         }
         boolean bl = state.get(OPEN);
-        world.syncWorldEvent(player, bl ? 1008 : 1014, pos, 0);
+        world.playSound(player, pos, bl ? this.openSound : this.closeSound, SoundCategory.BLOCKS, 1.0f, world.getRandom().nextFloat() * 0.1f + 0.9f);
         world.emitGameEvent((Entity)player, bl ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
         return ActionResult.success(world.isClient);
     }
@@ -142,7 +158,7 @@ extends HorizontalFacingBlock {
         if (state.get(POWERED) != bl) {
             world.setBlockState(pos, (BlockState)((BlockState)state.with(POWERED, bl)).with(OPEN, bl), 2);
             if (state.get(OPEN) != bl) {
-                world.syncWorldEvent(null, bl ? 1008 : 1014, pos, 0);
+                world.playSound(null, pos, bl ? this.openSound : this.closeSound, SoundCategory.BLOCKS, 1.0f, world.getRandom().nextFloat() * 0.1f + 0.9f);
                 world.emitGameEvent(null, bl ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
             }
         }

@@ -22,11 +22,11 @@ import net.minecraft.entity.ai.brain.task.Task;
 
 public class RandomTask<E extends LivingEntity>
 extends CompositeTask<E> {
-    public RandomTask(List<Pair<Task<? super E>, Integer>> tasks) {
-        this((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(), tasks);
+    public RandomTask(List<Pair<? extends Task<? super E>, Integer>> tasks) {
+        this((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(), (List<Pair<Task<E>, Integer>>)tasks);
     }
 
-    public RandomTask(Map<MemoryModuleType<?>, MemoryModuleState> requiredMemoryState, List<Pair<Task<? super E>, Integer>> tasks) {
+    public RandomTask(Map<MemoryModuleType<?>, MemoryModuleState> requiredMemoryState, List<Pair<? extends Task<? super E>, Integer>> tasks) {
         super(requiredMemoryState, (Set<MemoryModuleType<?>>)ImmutableSet.of(), CompositeTask.Order.SHUFFLED, CompositeTask.RunMode.RUN_ONE, tasks);
     }
 }

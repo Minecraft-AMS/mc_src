@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 
 public class EntityUuidFix
 extends AbstractUuidFix {
-    private static final Logger field_36328 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<String> RIDEABLE_TAMEABLES = Sets.newHashSet();
     private static final Set<String> TAMEABLE_PETS = Sets.newHashSet();
     private static final Set<String> BREEDABLES = Sets.newHashSet();
@@ -78,7 +78,7 @@ extends AbstractUuidFix {
 
     private static Dynamic<?> updateAngryAtMemory(Dynamic<?> dynamic2) {
         return dynamic2.update("Brain", dynamic -> dynamic.update("memories", dynamic2 -> dynamic2.update("minecraft:angry_at", dynamic -> EntityUuidFix.updateStringUuid(dynamic, "value", "value").orElseGet(() -> {
-            field_36328.warn("angry_at has no value.");
+            LOGGER.warn("angry_at has no value.");
             return dynamic;
         }))));
     }
@@ -107,7 +107,7 @@ extends AbstractUuidFix {
 
     private static Dynamic<?> updateFox(Dynamic<?> dynamic) {
         Optional<Dynamic> optional = dynamic.get("TrustedUUIDs").result().map(dynamic22 -> dynamic.createList(dynamic22.asStream().map(dynamic -> EntityUuidFix.createArrayFromCompoundUuid(dynamic).orElseGet(() -> {
-            field_36328.warn("Trusted contained invalid data.");
+            LOGGER.warn("Trusted contained invalid data.");
             return dynamic;
         }))));
         return (Dynamic)DataFixUtils.orElse(optional.map(dynamic2 -> dynamic.remove("TrustedUUIDs").set("Trusted", dynamic2)), dynamic);

@@ -21,13 +21,13 @@ import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
@@ -102,6 +102,7 @@ extends Block {
                 for (int j = 0; j < state.get(EGGS); ++j) {
                     world.syncWorldEvent(2001, pos, Block.getRawIdFromState(state));
                     TurtleEntity turtleEntity = EntityType.TURTLE.create(world);
+                    if (turtleEntity == null) continue;
                     turtleEntity.setBreedingAge(-24000);
                     turtleEntity.setHomePos(pos);
                     turtleEntity.refreshPositionAndAngles((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);

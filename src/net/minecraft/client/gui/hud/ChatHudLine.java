@@ -19,20 +19,20 @@ import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
-public record ChatHudLine(int creationTick, Text content, @Nullable MessageSignatureData headerSignature, @Nullable MessageIndicator indicator) {
+public record ChatHudLine(int creationTick, Text content, @Nullable MessageSignatureData signature, @Nullable MessageIndicator indicator) {
     @Override
     public final String toString() {
-        return ObjectMethods.bootstrap("toString", new MethodHandle[]{ChatHudLine.class, "addedTime;content;headerSignature;tag", "creationTick", "content", "headerSignature", "indicator"}, this);
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{ChatHudLine.class, "addedTime;content;signature;tag", "creationTick", "content", "signature", "indicator"}, this);
     }
 
     @Override
     public final int hashCode() {
-        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{ChatHudLine.class, "addedTime;content;headerSignature;tag", "creationTick", "content", "headerSignature", "indicator"}, this);
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{ChatHudLine.class, "addedTime;content;signature;tag", "creationTick", "content", "signature", "indicator"}, this);
     }
 
     @Override
     public final boolean equals(Object object) {
-        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{ChatHudLine.class, "addedTime;content;headerSignature;tag", "creationTick", "content", "headerSignature", "indicator"}, this, object);
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{ChatHudLine.class, "addedTime;content;signature;tag", "creationTick", "content", "signature", "indicator"}, this, object);
     }
 
     @Environment(value=EnvType.CLIENT)

@@ -2,25 +2,42 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.sound;
 
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 
 public class SoundEvent {
-    public static final Codec<SoundEvent> CODEC = Identifier.CODEC.xmap(SoundEvent::new, soundEvent -> soundEvent.id);
+    public static final Codec<SoundEvent> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Identifier.CODEC.fieldOf("sound_id").forGetter(SoundEvent::getId), (App)Codec.FLOAT.optionalFieldOf("range").forGetter(SoundEvent::getStaticDistanceToTravel)).apply((Applicative)instance, SoundEvent::of));
+    public static final Codec<RegistryEntry<SoundEvent>> ENTRY_CODEC = RegistryElementCodec.of(RegistryKeys.SOUND_EVENT, CODEC);
+    private static final float DEFAULT_DISTANCE_TO_TRAVEL = 16.0f;
     private final Identifier id;
     private final float distanceToTravel;
     private final boolean staticDistance;
 
-    public SoundEvent(Identifier id) {
-        this(id, 16.0f, false);
+    private static SoundEvent of(Identifier id, Optional<Float> distanceToTravel) {
+        return distanceToTravel.map(float_ -> SoundEvent.of(id, float_.floatValue())).orElseGet(() -> SoundEvent.of(id));
     }
 
-    public SoundEvent(Identifier id, float distanceToTravel) {
-        this(id, distanceToTravel, true);
+    public static SoundEvent of(Identifier id) {
+        return new SoundEvent(id, 16.0f, false);
+    }
+
+    public static SoundEvent of(Identifier id, float distanceToTravel) {
+        return new SoundEvent(id, distanceToTravel, true);
     }
 
     private SoundEvent(Identifier id, float distanceToTravel, boolean useStaticDistance) {
@@ -38,6 +55,21 @@ public class SoundEvent {
             return this.distanceToTravel;
         }
         return volume > 1.0f ? 16.0f * volume : 16.0f;
+    }
+
+    private Optional<Float> getStaticDistanceToTravel() {
+        return this.staticDistance ? Optional.of(Float.valueOf(this.distanceToTravel)) : Optional.empty();
+    }
+
+    public void writeBuf(PacketByteBuf buf) {
+        buf.writeIdentifier(this.id);
+        buf.writeOptional(this.getStaticDistanceToTravel(), PacketByteBuf::writeFloat);
+    }
+
+    public static SoundEvent fromBuf(PacketByteBuf buf) {
+        Identifier identifier = buf.readIdentifier();
+        Optional<Float> optional = buf.readOptional(PacketByteBuf::readFloat);
+        return SoundEvent.of(identifier, optional);
     }
 }
 

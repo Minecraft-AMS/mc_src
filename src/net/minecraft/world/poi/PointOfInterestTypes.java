@@ -5,14 +5,12 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
- *  it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
  */
 package net.minecraft.world.poi;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -22,11 +20,12 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.BedPart;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.poi.PointOfInterestType;
 
 public class PointOfInterestTypes {
@@ -53,26 +52,25 @@ public class PointOfInterestTypes {
     private static final Set<BlockState> BED_HEADS = (Set)ImmutableList.of((Object)Blocks.RED_BED, (Object)Blocks.BLACK_BED, (Object)Blocks.BLUE_BED, (Object)Blocks.BROWN_BED, (Object)Blocks.CYAN_BED, (Object)Blocks.GRAY_BED, (Object)Blocks.GREEN_BED, (Object)Blocks.LIGHT_BLUE_BED, (Object)Blocks.LIGHT_GRAY_BED, (Object)Blocks.LIME_BED, (Object)Blocks.MAGENTA_BED, (Object)Blocks.ORANGE_BED, (Object[])new Block[]{Blocks.PINK_BED, Blocks.PURPLE_BED, Blocks.WHITE_BED, Blocks.YELLOW_BED}).stream().flatMap(block -> block.getStateManager().getStates().stream()).filter(blockState -> blockState.get(BedBlock.PART) == BedPart.HEAD).collect(ImmutableSet.toImmutableSet());
     private static final Set<BlockState> CAULDRONS = (Set)ImmutableList.of((Object)Blocks.CAULDRON, (Object)Blocks.LAVA_CAULDRON, (Object)Blocks.WATER_CAULDRON, (Object)Blocks.POWDER_SNOW_CAULDRON).stream().flatMap(block -> block.getStateManager().getStates().stream()).collect(ImmutableSet.toImmutableSet());
     private static final Map<BlockState, RegistryEntry<PointOfInterestType>> POI_STATES_TO_TYPE = Maps.newHashMap();
-    protected static final Set<BlockState> POI_STATES = new ObjectOpenHashSet(POI_STATES_TO_TYPE.keySet());
 
     private static Set<BlockState> getStatesOfBlock(Block block) {
         return ImmutableSet.copyOf(block.getStateManager().getStates());
     }
 
     private static RegistryKey<PointOfInterestType> of(String id) {
-        return RegistryKey.of(Registry.POINT_OF_INTEREST_TYPE_KEY, new Identifier(id));
+        return RegistryKey.of(RegistryKeys.POINT_OF_INTEREST_TYPE, new Identifier(id));
     }
 
     private static PointOfInterestType register(Registry<PointOfInterestType> registry, RegistryKey<PointOfInterestType> key, Set<BlockState> states, int ticketCount, int searchDistance) {
         PointOfInterestType pointOfInterestType = new PointOfInterestType(states, ticketCount, searchDistance);
         Registry.register(registry, key, pointOfInterestType);
-        PointOfInterestTypes.registerStates(registry.entryOf(key));
+        PointOfInterestTypes.registerStates(registry.entryOf(key), states);
         return pointOfInterestType;
     }
 
-    private static void registerStates(RegistryEntry<PointOfInterestType> poiType) {
-        poiType.value().blockStates().forEach(state -> {
-            RegistryEntry<PointOfInterestType> registryEntry2 = POI_STATES_TO_TYPE.put((BlockState)state, poiType);
+    private static void registerStates(RegistryEntry<PointOfInterestType> poiTypeEntry, Set<BlockState> states) {
+        states.forEach(state -> {
+            RegistryEntry<PointOfInterestType> registryEntry2 = POI_STATES_TO_TYPE.put((BlockState)state, poiTypeEntry);
             if (registryEntry2 != null) {
                 throw Util.throwOrPause(new IllegalStateException(String.format(Locale.ROOT, "%s is defined in more than one PoI type", state)));
             }
@@ -81,6 +79,10 @@ public class PointOfInterestTypes {
 
     public static Optional<RegistryEntry<PointOfInterestType>> getTypeForState(BlockState state) {
         return Optional.ofNullable(POI_STATES_TO_TYPE.get(state));
+    }
+
+    public static boolean isPointOfInterest(BlockState state) {
+        return POI_STATES_TO_TYPE.containsKey(state);
     }
 
     public static PointOfInterestType registerAndGetDefault(Registry<PointOfInterestType> registry) {

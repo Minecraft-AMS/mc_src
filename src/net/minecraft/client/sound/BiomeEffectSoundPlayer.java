@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class BiomeEffectSoundPlayer
 implements ClientPlayerTickable {
-    private static final int field_32994 = 40;
+    private static final int MAX_STRENGTH = 40;
     private static final float field_32995 = 0.001f;
     private final ClientPlayerEntity player;
     private final SoundManager soundManager;
@@ -70,7 +70,7 @@ implements ClientPlayerTickable {
             this.soundLoops.values().forEach(MusicLoop::fadeOut);
             biome.getLoopSound().ifPresent(sound2 -> this.soundLoops.compute((Object)biome, (sound, loop) -> {
                 if (loop == null) {
-                    loop = new MusicLoop((SoundEvent)sound2);
+                    loop = new MusicLoop((SoundEvent)sound2.value());
                     this.soundManager.play((SoundInstance)loop);
                 }
                 loop.fadeIn();
@@ -79,7 +79,7 @@ implements ClientPlayerTickable {
         }
         this.additionsSound.ifPresent(sound -> {
             if (this.random.nextDouble() < sound.getChance()) {
-                this.soundManager.play(PositionedSoundInstance.ambient(sound.getSound()));
+                this.soundManager.play(PositionedSoundInstance.ambient(sound.getSound().value()));
             }
         });
         this.moodSound.ifPresent(sound -> {
@@ -97,7 +97,7 @@ implements ClientPlayerTickable {
                 double k = f - this.player.getZ();
                 double l = Math.sqrt(g * g + h * h + k * k);
                 double m = l + sound.getExtraDistance();
-                PositionedSoundInstance positionedSoundInstance = PositionedSoundInstance.ambient(sound.getSound(), this.random, this.player.getX() + g / l * m, this.player.getEyeY() + h / l * m, this.player.getZ() + k / l * m);
+                PositionedSoundInstance positionedSoundInstance = PositionedSoundInstance.ambient(sound.getSound().value(), this.random, this.player.getX() + g / l * m, this.player.getEyeY() + h / l * m, this.player.getZ() + k / l * m);
                 this.soundManager.play(positionedSoundInstance);
                 this.moodPercentage = 0.0f;
             } else {

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.RuinedPortalStructurePiece;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.util.BlockMirror;
@@ -31,7 +32,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
@@ -165,7 +165,7 @@ extends Structure {
     }
 
     public record Setup(RuinedPortalStructurePiece.VerticalPlacement placement, float airPocketProbability, float mossiness, boolean overgrown, boolean vines, boolean canBeCold, boolean replaceWithBlackstone, float weight) {
-        public static final Codec<Setup> field_37814 = RecordCodecBuilder.create(instance -> instance.group((App)RuinedPortalStructurePiece.VerticalPlacement.field_37811.fieldOf("placement").forGetter(Setup::placement), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("air_pocket_probability").forGetter(Setup::airPocketProbability), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("mossiness").forGetter(Setup::mossiness), (App)Codec.BOOL.fieldOf("overgrown").forGetter(Setup::overgrown), (App)Codec.BOOL.fieldOf("vines").forGetter(Setup::vines), (App)Codec.BOOL.fieldOf("can_be_cold").forGetter(Setup::canBeCold), (App)Codec.BOOL.fieldOf("replace_with_blackstone").forGetter(Setup::replaceWithBlackstone), (App)Codecs.POSITIVE_FLOAT.fieldOf("weight").forGetter(Setup::weight)).apply((Applicative)instance, Setup::new));
+        public static final Codec<Setup> field_37814 = RecordCodecBuilder.create(instance -> instance.group((App)RuinedPortalStructurePiece.VerticalPlacement.CODEC.fieldOf("placement").forGetter(Setup::placement), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("air_pocket_probability").forGetter(Setup::airPocketProbability), (App)Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("mossiness").forGetter(Setup::mossiness), (App)Codec.BOOL.fieldOf("overgrown").forGetter(Setup::overgrown), (App)Codec.BOOL.fieldOf("vines").forGetter(Setup::vines), (App)Codec.BOOL.fieldOf("can_be_cold").forGetter(Setup::canBeCold), (App)Codec.BOOL.fieldOf("replace_with_blackstone").forGetter(Setup::replaceWithBlackstone), (App)Codecs.POSITIVE_FLOAT.fieldOf("weight").forGetter(Setup::weight)).apply((Applicative)instance, Setup::new));
     }
 }
 

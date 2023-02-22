@@ -52,6 +52,10 @@ extends Enum<EquipmentSlot> {
         return this.name;
     }
 
+    public boolean isArmorSlot() {
+        return this.type == Type.ARMOR;
+    }
+
     public static EquipmentSlot byName(String name) {
         for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             if (!equipmentSlot.getName().equals(name)) continue;

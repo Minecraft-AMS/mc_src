@@ -47,7 +47,7 @@ extends Screen {
     private ButtonWidget buttonJoin;
     private ButtonWidget buttonDelete;
     @Nullable
-    private List<Text> tooltip;
+    private List<Text> multiplayerScreenTooltip;
     private ServerInfo selectedEntry;
     private LanServerQueryManager.LanServerEntryList lanServers;
     @Nullable
@@ -61,8 +61,6 @@ extends Screen {
 
     @Override
     protected void init() {
-        super.init();
-        this.client.keyboard.setRepeatEvents(true);
         if (this.initialized) {
             this.serverListWidget.updateSize(this.width, this.height, 32, this.height - 64);
         } else {
@@ -81,16 +79,16 @@ extends Screen {
             this.serverListWidget.setServers(this.serverList);
         }
         this.addSelectableChild(this.serverListWidget);
-        this.buttonJoin = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 52, 100, 20, Text.translatable("selectServer.select"), button -> this.connect()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, this.height - 52, 100, 20, Text.translatable("selectServer.direct"), button -> {
+        this.buttonJoin = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.select"), button -> this.connect()).dimensions(this.width / 2 - 154, this.height - 52, 100, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.direct"), button -> {
             this.selectedEntry = new ServerInfo(I18n.translate("selectServer.defaultName", new Object[0]), "", false);
             this.client.setScreen(new DirectConnectScreen(this, this::directConnect, this.selectedEntry));
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4 + 50, this.height - 52, 100, 20, Text.translatable("selectServer.add"), button -> {
+        }).dimensions(this.width / 2 - 50, this.height - 52, 100, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.add"), button -> {
             this.selectedEntry = new ServerInfo(I18n.translate("selectServer.defaultName", new Object[0]), "", false);
             this.client.setScreen(new AddServerScreen(this, this::addEntry, this.selectedEntry));
-        }));
-        this.buttonEdit = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 28, 70, 20, Text.translatable("selectServer.edit"), button -> {
+        }).dimensions(this.width / 2 + 4 + 50, this.height - 52, 100, 20).build());
+        this.buttonEdit = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.edit"), button -> {
             MultiplayerServerListWidget.Entry entry = (MultiplayerServerListWidget.Entry)this.serverListWidget.getSelectedOrNull();
             if (entry instanceof MultiplayerServerListWidget.ServerEntry) {
                 ServerInfo serverInfo = ((MultiplayerServerListWidget.ServerEntry)entry).getServer();
@@ -98,8 +96,8 @@ extends Screen {
                 this.selectedEntry.copyWithSettingsFrom(serverInfo);
                 this.client.setScreen(new AddServerScreen(this, this::editEntry, this.selectedEntry));
             }
-        }));
-        this.buttonDelete = this.addDrawableChild(new ButtonWidget(this.width / 2 - 74, this.height - 28, 70, 20, Text.translatable("selectServer.delete"), button -> {
+        }).dimensions(this.width / 2 - 154, this.height - 28, 70, 20).build());
+        this.buttonDelete = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.delete"), button -> {
             String string;
             MultiplayerServerListWidget.Entry entry = (MultiplayerServerListWidget.Entry)this.serverListWidget.getSelectedOrNull();
             if (entry instanceof MultiplayerServerListWidget.ServerEntry && (string = ((MultiplayerServerListWidget.ServerEntry)entry).getServer().name) != null) {
@@ -109,18 +107,17 @@ extends Screen {
                 Text text4 = ScreenTexts.CANCEL;
                 this.client.setScreen(new ConfirmScreen(this::removeEntry, text, text2, text3, text4));
             }
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 28, 70, 20, Text.translatable("selectServer.refresh"), button -> this.refresh()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4 + 76, this.height - 28, 75, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        }).dimensions(this.width / 2 - 74, this.height - 28, 70, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.refresh"), button -> this.refresh()).dimensions(this.width / 2 + 4, this.height - 28, 70, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 4 + 76, this.height - 28, 75, 20).build());
         this.updateButtonActivationStates();
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (this.lanServers.needsUpdate()) {
-            List<LanServerInfo> list = this.lanServers.getServers();
-            this.lanServers.markClean();
+        List<LanServerInfo> list = this.lanServers.getEntriesIfUpdated();
+        if (list != null) {
             this.serverListWidget.setLanServers(list);
         }
         this.serverListPinger.tick();
@@ -128,7 +125,6 @@ extends Screen {
 
     @Override
     public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
         if (this.lanServerDetector != null) {
             this.lanServerDetector.interrupt();
             this.lanServerDetector = null;
@@ -216,13 +212,13 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltip = null;
+        this.multiplayerScreenTooltip = null;
         this.renderBackground(matrices);
         this.serverListWidget.render(matrices, mouseX, mouseY, delta);
         MultiplayerScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltip != null) {
-            this.renderTooltip(matrices, this.tooltip, mouseX, mouseY);
+        if (this.multiplayerScreenTooltip != null) {
+            this.renderTooltip(matrices, this.multiplayerScreenTooltip, mouseX, mouseY);
         }
     }
 
@@ -263,8 +259,8 @@ extends Screen {
         return this.serverListPinger;
     }
 
-    public void setTooltip(List<Text> tooltip) {
-        this.tooltip = tooltip;
+    public void setMultiplayerScreenTooltip(List<Text> tooltip) {
+        this.multiplayerScreenTooltip = tooltip;
     }
 
     public ServerList getServerList() {

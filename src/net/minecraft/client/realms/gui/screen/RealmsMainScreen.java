@@ -20,7 +20,6 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +30,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.PlayerSkinDrawer;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -72,7 +72,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -112,7 +112,7 @@ extends RealmsScreen {
     private static final Text OPEN_TEXT = Text.translatable("mco.selectServer.open");
     private static final Text CLOSED_TEXT = Text.translatable("mco.selectServer.closed");
     private static final Text LEAVE_TEXT = Text.translatable("mco.selectServer.leave");
-    private static final Text CONFIGURE_TEXT = Text.translatable("mco.selectServer.configure");
+    private static final Text CONFIGURE_TEXT = Text.translatable("mco.selectServer.configureRealm");
     private static final Text NEWS_TEXT = Text.translatable("mco.news");
     static final Text UNINITIALIZED_BUTTON_NARRATION = Text.translatable("gui.narrate.button", UNINITIALIZED_TEXT);
     static final Text TRIAL_NARRATION = ScreenTexts.joinLines(TRIAL_MESSAGE_LINES);
@@ -138,8 +138,6 @@ extends RealmsScreen {
     private ButtonWidget renewButton;
     private ButtonWidget configureButton;
     private ButtonWidget leaveButton;
-    @Nullable
-    private List<Text> tooltip;
     private List<RealmsServer> realmsServers = ImmutableList.of();
     volatile int pendingInvitesCount;
     int animTick;
@@ -226,7 +224,6 @@ extends RealmsScreen {
         if (!this.dontSetConnectedToRealms) {
             this.client.setConnectedToRealms(false);
         }
-        this.client.keyboard.setRepeatEvents(true);
         this.showingPopup = false;
         this.addButtons();
         this.realmSelectionList = new RealmSelectionList();
@@ -253,29 +250,29 @@ extends RealmsScreen {
     }
 
     public void addButtons() {
-        this.leaveButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 202, this.height - 32, 90, 20, Text.translatable("mco.selectServer.leave"), button -> this.leaveClicked(this.findServer())));
-        this.configureButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 190, this.height - 32, 90, 20, Text.translatable("mco.selectServer.configure"), button -> this.configureClicked(this.findServer())));
-        this.playButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 93, this.height - 32, 90, 20, Text.translatable("mco.selectServer.play"), button -> this.play(this.findServer(), this)));
-        this.backButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 32, 90, 20, ScreenTexts.BACK, button -> {
+        this.leaveButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.leave"), button -> this.leaveClicked(this.findServer())).dimensions(this.width / 2 - 190, this.height - 32, 90, 20).build());
+        this.configureButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.configure"), button -> this.configureClicked(this.findServer())).dimensions(this.width / 2 - 190, this.height - 32, 90, 20).build());
+        this.playButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.play"), button -> this.play(this.findServer(), this)).dimensions(this.width / 2 - 93, this.height - 32, 90, 20).build());
+        this.backButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> {
             if (!this.justClosedPopup) {
                 this.client.setScreen(this.lastScreen);
             }
-        }));
-        this.renewButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 100, this.height - 32, 90, 20, Text.translatable("mco.selectServer.expiredRenew"), button -> this.onRenew(this.findServer())));
+        }).dimensions(this.width / 2 + 4, this.height - 32, 90, 20).build());
+        this.renewButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.expiredRenew"), button -> this.onRenew(this.findServer())).dimensions(this.width / 2 + 100, this.height - 32, 90, 20).build());
         this.newsButton = this.addDrawableChild(new NewsButton());
-        this.showPopupButton = this.addDrawableChild(new ButtonWidget(this.width - 90, 6, 80, 20, Text.translatable("mco.selectServer.purchase"), button -> {
+        this.showPopupButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.purchase"), button -> {
             this.popupOpenedByUser = !this.popupOpenedByUser;
-        }));
+        }).dimensions(this.width - 90, 6, 80, 20).build());
         this.pendingInvitesButton = this.addDrawableChild(new PendingInvitesButton());
         this.closeButton = this.addDrawableChild(new CloseButton());
-        this.createTrialButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 52, this.popupY0() + 137 - 20, 98, 20, Text.translatable("mco.selectServer.trial"), button -> {
+        this.createTrialButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.trial"), button -> {
             if (!this.trialAvailable || this.createdTrial) {
                 return;
             }
             Util.getOperatingSystem().open("https://aka.ms/startjavarealmstrial");
             this.client.setScreen(this.lastScreen);
-        }));
-        this.buyARealmButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 52, this.popupY0() + 160 - 20, 98, 20, Text.translatable("mco.selectServer.buy"), button -> Util.getOperatingSystem().open("https://aka.ms/BuyJavaRealms")));
+        }).dimensions(this.width / 2 + 52, this.popupY0() + 137 - 20, 98, 20).build());
+        this.buyARealmButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.selectServer.buy"), button -> Util.getOperatingSystem().open("https://aka.ms/BuyJavaRealms")).dimensions(this.width / 2 + 52, this.popupY0() + 160 - 20, 98, 20).build());
         this.updateButtonStates(null);
     }
 
@@ -451,11 +448,6 @@ extends RealmsScreen {
             list.add(realmsServer.id);
         }
         return list;
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     public void setCreatedTrial(boolean createdTrial) {
@@ -672,7 +664,6 @@ extends RealmsScreen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.hoverState = HoverState.NONE;
-        this.tooltip = null;
         this.renderBackground(matrices);
         this.realmSelectionList.render(matrices, mouseX, mouseY, delta);
         this.drawRealmsLogo(matrices, this.width / 2 - 50, 7);
@@ -696,9 +687,6 @@ extends RealmsScreen {
             this.showingPopup = false;
         }
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltip != null) {
-            this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
-        }
         if (this.trialAvailable && !this.createdTrial && this.shouldShowPopup()) {
             RenderSystem.setShaderTexture(0, TRIAL_ICON);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -708,12 +696,12 @@ extends RealmsScreen {
             if ((Util.getMeasuringTimeMs() / 800L & 1L) == 1L) {
                 k = 8;
             }
-            DrawableHelper.drawTexture(matrices, this.createTrialButton.x + this.createTrialButton.getWidth() - 8 - 4, this.createTrialButton.y + this.createTrialButton.getHeight() / 2 - 4, 0.0f, k, 8, 8, 8, 16);
+            DrawableHelper.drawTexture(matrices, this.createTrialButton.getX() + this.createTrialButton.getWidth() - 8 - 4, this.createTrialButton.getY() + this.createTrialButton.getHeight() / 2 - 4, 0.0f, k, 8, 8, 8, 16);
         }
     }
 
     private void drawRealmsLogo(MatrixStack matrices, int x, int y) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, REALMS);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         matrices.push();
@@ -878,7 +866,7 @@ extends RealmsScreen {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27 && mouseY < this.height - 40 && mouseY > 32 && !this.shouldShowPopup()) {
-            this.setTooltips(EXPIRED_TEXT);
+            this.setTooltip(EXPIRED_TEXT);
         }
     }
 
@@ -892,11 +880,11 @@ extends RealmsScreen {
         }
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27 && mouseY < this.height - 40 && mouseY > 32 && !this.shouldShowPopup()) {
             if (remainingDays <= 0) {
-                this.setTooltips(EXPIRES_SOON_TEXT);
+                this.setTooltip(EXPIRES_SOON_TEXT);
             } else if (remainingDays == 1) {
-                this.setTooltips(EXPIRES_IN_A_DAY_TEXT);
+                this.setTooltip(EXPIRES_IN_A_DAY_TEXT);
             } else {
-                this.setTooltips(Text.translatable("mco.selectServer.expires.days", remainingDays));
+                this.setTooltip(Text.translatable("mco.selectServer.expires.days", remainingDays));
             }
         }
     }
@@ -906,7 +894,7 @@ extends RealmsScreen {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27 && mouseY < this.height - 40 && mouseY > 32 && !this.shouldShowPopup()) {
-            this.setTooltips(OPEN_TEXT);
+            this.setTooltip(OPEN_TEXT);
         }
     }
 
@@ -915,7 +903,7 @@ extends RealmsScreen {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 10, 28, 10, 28);
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27 && mouseY < this.height - 40 && mouseY > 32 && !this.shouldShowPopup()) {
-            this.setTooltips(CLOSED_TEXT);
+            this.setTooltip(CLOSED_TEXT);
         }
     }
 
@@ -929,7 +917,7 @@ extends RealmsScreen {
         float f = bl ? 28.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, f, 0.0f, 28, 28, 56, 28);
         if (bl) {
-            this.setTooltips(LEAVE_TEXT);
+            this.setTooltip(LEAVE_TEXT);
             this.hoverState = HoverState.LEAVE;
         }
     }
@@ -944,32 +932,8 @@ extends RealmsScreen {
         float f = bl ? 28.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, f, 0.0f, 28, 28, 56, 28);
         if (bl) {
-            this.setTooltips(CONFIGURE_TEXT);
+            this.setTooltip(CONFIGURE_TEXT);
             this.hoverState = HoverState.CONFIGURE;
-        }
-    }
-
-    protected void renderMousehoverTooltip(MatrixStack matrices, List<Text> tooltips, int x, int y) {
-        if (tooltips.isEmpty()) {
-            return;
-        }
-        int i = 0;
-        int j = 0;
-        for (Text text : tooltips) {
-            int k = this.textRenderer.getWidth(text);
-            if (k <= j) continue;
-            j = k;
-        }
-        int l = x - j - 5;
-        int m = y;
-        if (l < 0) {
-            l = x + 12;
-        }
-        for (Text text2 : tooltips) {
-            int n = m - (i == 0 ? 3 : 0) + i;
-            this.fillGradient(matrices, l - 3, n, l + j + 3, m + 8 + 3 + i, -1073741824, -1073741824);
-            this.textRenderer.drawWithShadow(matrices, text2, (float)l, (float)(m + i), 0xFFFFFF);
-            i += 10;
         }
     }
 
@@ -988,7 +952,7 @@ extends RealmsScreen {
         float f = bl2 ? 20.0f : 0.0f;
         DrawableHelper.drawTexture(matrices, x, y, f, 0.0f, 20, 20, 40, 20);
         if (bl && active) {
-            this.setTooltips(NEWS_TEXT);
+            this.setTooltip(NEWS_TEXT);
         }
         if (hasUnread && active) {
             int i = bl ? 0 : (int)(Math.max(0.0f, Math.max(MathHelper.sin((float)(10 + this.animTick) * 0.57f), MathHelper.cos((float)this.animTick * 0.35f))) * -6.0f);
@@ -1002,8 +966,8 @@ extends RealmsScreen {
         String string = "LOCAL!";
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         matrices.push();
-        matrices.translate(this.width / 2 - 25, 20.0, 0.0);
-        matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-20.0f));
+        matrices.translate(this.width / 2 - 25, 20.0f, 0.0f);
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-20.0f));
         matrices.scale(1.5f, 1.5f, 1.5f);
         this.textRenderer.draw(matrices, "LOCAL!", 0.0f, 0.0f, 0x7FFF7F);
         matrices.pop();
@@ -1013,8 +977,8 @@ extends RealmsScreen {
         String string = "STAGE!";
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         matrices.push();
-        matrices.translate(this.width / 2 - 25, 20.0, 0.0);
-        matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-20.0f));
+        matrices.translate(this.width / 2 - 25, 20.0f, 0.0f);
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-20.0f));
         matrices.scale(1.5f, 1.5f, 1.5f);
         this.textRenderer.draw(matrices, "STAGE!", 0.0f, 0.0f, -256);
         matrices.pop();
@@ -1029,10 +993,6 @@ extends RealmsScreen {
     public static void loadImages(ResourceManager manager) {
         Set<Identifier> collection = manager.findResources("textures/gui/images", filename -> filename.getPath().endsWith(".png")).keySet();
         IMAGES = collection.stream().filter(id -> id.getNamespace().equals("realms")).toList();
-    }
-
-    void setTooltips(Text ... tooltips) {
-        this.tooltip = Arrays.asList(tooltips);
     }
 
     private void openPendingInvitesScreen(ButtonWidget button) {
@@ -1141,19 +1101,24 @@ extends RealmsScreen {
                 if (realmsMainScreen.newsLink == null) {
                     return;
                 }
-                Util.getOperatingSystem().open(realmsMainScreen.newsLink);
+                RealmsMainScreen.this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
+                    if (confirmed) {
+                        Util.getOperatingSystem().open(realmsMainScreen.newsLink);
+                    }
+                    RealmsMainScreen.this.client.setScreen(RealmsMainScreen.this);
+                }, realmsMainScreen.newsLink, true));
                 if (realmsMainScreen.hasUnreadNews) {
                     RealmsPersistence.RealmsPersistenceData realmsPersistenceData = RealmsPersistence.readFile();
                     realmsPersistenceData.hasUnreadNews = false;
                     realmsMainScreen.hasUnreadNews = false;
                     RealmsPersistence.writeFile(realmsPersistenceData);
                 }
-            });
+            }, DEFAULT_NARRATION_SUPPLIER);
         }
 
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RealmsMainScreen.this.renderNews(matrices, mouseX, mouseY, RealmsMainScreen.this.hasUnreadNews, this.x, this.y, this.isHovered(), this.active);
+            RealmsMainScreen.this.renderNews(matrices, mouseX, mouseY, RealmsMainScreen.this.hasUnreadNews, this.getX(), this.getY(), this.isHovered(), this.active);
         }
     }
 
@@ -1161,7 +1126,7 @@ extends RealmsScreen {
     class PendingInvitesButton
     extends ButtonWidget {
         public PendingInvitesButton() {
-            super(RealmsMainScreen.this.width / 2 + 47, 6, 22, 22, ScreenTexts.EMPTY, RealmsMainScreen.this::openPendingInvitesScreen);
+            super(RealmsMainScreen.this.width / 2 + 47, 6, 22, 22, ScreenTexts.EMPTY, RealmsMainScreen.this::openPendingInvitesScreen, DEFAULT_NARRATION_SUPPLIER);
         }
 
         public void updatePendingText() {
@@ -1170,7 +1135,7 @@ extends RealmsScreen {
 
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            RealmsMainScreen.this.drawInvitationPendingIcon(matrices, mouseX, mouseY, this.x, this.y, this.isHovered(), this.active);
+            RealmsMainScreen.this.drawInvitationPendingIcon(matrices, mouseX, mouseY, this.getX(), this.getY(), this.isHovered(), this.active);
         }
     }
 
@@ -1178,7 +1143,7 @@ extends RealmsScreen {
     class CloseButton
     extends ButtonWidget {
         public CloseButton() {
-            super(RealmsMainScreen.this.popupX0() + 4, RealmsMainScreen.this.popupY0() + 4, 12, 12, Text.translatable("mco.selectServer.close"), button -> RealmsMainScreen.this.onClosePopup());
+            super(RealmsMainScreen.this.popupX0() + 4, RealmsMainScreen.this.popupY0() + 4, 12, 12, Text.translatable("mco.selectServer.close"), button -> RealmsMainScreen.this.onClosePopup(), DEFAULT_NARRATION_SUPPLIER);
         }
 
         @Override
@@ -1186,9 +1151,9 @@ extends RealmsScreen {
             RenderSystem.setShaderTexture(0, CROSS_ICON);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             float f = this.isHovered() ? 12.0f : 0.0f;
-            CloseButton.drawTexture(matrices, this.x, this.y, 0.0f, f, 12, 12, 12, 24);
+            CloseButton.drawTexture(matrices, this.getX(), this.getY(), 0.0f, f, 12, 12, 12, 24);
             if (this.isMouseOver(mouseX, mouseY)) {
-                RealmsMainScreen.this.setTooltips(this.getMessage());
+                RealmsMainScreen.this.setTooltip(this.getMessage());
             }
         }
     }
@@ -1332,7 +1297,7 @@ extends RealmsScreen {
                 String string = Formatting.GRAY + serverData.serverPing.nrOfPlayers;
                 RealmsMainScreen.this.textRenderer.draw(matrices, string, (float)(x + 207 - RealmsMainScreen.this.textRenderer.getWidth(string)), (float)(y + 3), 0x808080);
                 if (mouseX >= x + 207 - RealmsMainScreen.this.textRenderer.getWidth(string) && mouseX <= x + 207 && mouseY >= y + 1 && mouseY <= y + 10 && mouseY < RealmsMainScreen.this.height - 40 && mouseY > 32 && !RealmsMainScreen.this.shouldShowPopup()) {
-                    RealmsMainScreen.this.setTooltips(Text.literal(serverData.serverPing.playerList));
+                    RealmsMainScreen.this.setTooltip(Text.literal(serverData.serverPing.playerList));
                 }
             }
             if (RealmsMainScreen.this.isSelfOwnedServer(serverData) && serverData.expired) {

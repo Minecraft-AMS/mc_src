@@ -13,15 +13,15 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 
 public class CheckerboardBiomeSource
 extends BiomeSource {
-    public static final Codec<CheckerboardBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Biome.REGISTRY_ENTRY_LIST_CODEC.fieldOf("biomes").forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.biomeArray), (App)Codec.intRange((int)0, (int)62).fieldOf("scale").orElse((Object)2).forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.scale)).apply((Applicative)instance, CheckerboardBiomeSource::new));
+    public static final Codec<CheckerboardBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Biome.REGISTRY_ENTRY_LIST_CODEC.fieldOf("biomes").forGetter(biomeSource -> biomeSource.biomeArray), (App)Codec.intRange((int)0, (int)62).fieldOf("scale").orElse((Object)2).forGetter(biomeSource -> biomeSource.scale)).apply((Applicative)instance, CheckerboardBiomeSource::new));
     private final RegistryEntryList<Biome> biomeArray;
     private final int gridSize;
     private final int scale;

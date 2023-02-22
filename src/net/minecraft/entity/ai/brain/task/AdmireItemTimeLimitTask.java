@@ -2,53 +2,38 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.mojang.datafixers.kinds.Applicative
  */
 package net.minecraft.entity.ai.brain.task;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.Map;
+import com.mojang.datafixers.kinds.Applicative;
 import java.util.Optional;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
-import net.minecraft.entity.mob.PiglinEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.entity.ai.brain.task.TaskTriggerer;
 
-public class AdmireItemTimeLimitTask<E extends PiglinEntity>
-extends Task<E> {
-    private final int timeLimit;
-    private final int cooldown;
-
-    public AdmireItemTimeLimitTask(int timeLimit, int cooldown) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ADMIRING_ITEM, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, (Object)((Object)MemoryModuleState.REGISTERED)));
-        this.timeLimit = timeLimit;
-        this.cooldown = cooldown;
-    }
-
-    @Override
-    protected boolean shouldRun(ServerWorld serverWorld, E piglinEntity) {
-        return ((LivingEntity)piglinEntity).getOffHandStack().isEmpty();
-    }
-
-    @Override
-    protected void run(ServerWorld serverWorld, E piglinEntity, long l) {
-        Brain<PiglinEntity> brain = ((PiglinEntity)piglinEntity).getBrain();
-        Optional<Integer> optional = brain.getOptionalMemory(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM);
-        if (!optional.isPresent()) {
-            brain.remember(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, 0);
-        } else {
-            int i = optional.get();
-            if (i > this.timeLimit) {
-                brain.forget(MemoryModuleType.ADMIRING_ITEM);
-                brain.forget(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM);
-                brain.remember(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, true, this.cooldown);
-            } else {
-                brain.remember(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, i + 1);
+public class AdmireItemTimeLimitTask {
+    public static Task<LivingEntity> create(int cooldown, int timeLimit) {
+        return TaskTriggerer.task(context -> context.group(context.queryMemoryValue(MemoryModuleType.ADMIRING_ITEM), context.queryMemoryValue(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM), context.queryMemoryOptional(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM), context.queryMemoryOptional(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM)).apply((Applicative)context, (admiringItem, nearestVisibleWantedItem, timeTryingToReachAdmireItem, disableWalkToAdmireItem) -> (world, entity, time) -> {
+            if (!entity.getOffHandStack().isEmpty()) {
+                return false;
             }
-        }
+            Optional optional = context.getOptionalValue(timeTryingToReachAdmireItem);
+            if (optional.isEmpty()) {
+                timeTryingToReachAdmireItem.remember(0);
+            } else {
+                int k = (Integer)optional.get();
+                if (k > cooldown) {
+                    admiringItem.forget();
+                    timeTryingToReachAdmireItem.forget();
+                    disableWalkToAdmireItem.remember(true, timeLimit);
+                } else {
+                    timeTryingToReachAdmireItem.remember(k + 1);
+                }
+            }
+            return true;
+        }));
     }
 }
 

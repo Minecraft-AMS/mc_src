@@ -54,17 +54,18 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.SynchronousResourceReloader;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.MatrixUtil;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,6 +79,11 @@ implements SynchronousResourceReloader {
     public static final int field_32934 = 200;
     public static final float COMPASS_WITH_GLINT_GUI_MODEL_MULTIPLIER = 0.5f;
     public static final float COMPASS_WITH_GLINT_FIRST_PERSON_MODEL_MULTIPLIER = 0.75f;
+    public static final float field_41120 = 0.0078125f;
+    private static final ModelIdentifier TRIDENT = ModelIdentifier.ofVanilla("trident", "inventory");
+    public static final ModelIdentifier TRIDENT_IN_HAND = ModelIdentifier.ofVanilla("trident_in_hand", "inventory");
+    private static final ModelIdentifier SPYGLASS = ModelIdentifier.ofVanilla("spyglass", "inventory");
+    public static final ModelIdentifier SPYGLASS_IN_HAND = ModelIdentifier.ofVanilla("spyglass_in_hand", "inventory");
     public float zOffset;
     private final ItemModels models;
     private final TextureManager textureManager;
@@ -88,9 +94,9 @@ implements SynchronousResourceReloader {
         this.textureManager = manager;
         this.models = new ItemModels(bakery);
         this.builtinModelItemRenderer = builtinModelItemRenderer;
-        for (Item item : Registry.ITEM) {
+        for (Item item : Registries.ITEM) {
             if (WITHOUT_MODELS.contains(item)) continue;
-            this.models.putModel(item, new ModelIdentifier(Registry.ITEM.getId(item), "inventory"));
+            this.models.putModel(item, new ModelIdentifier(Registries.ITEM.getId(item), "inventory"));
         }
         this.colors = colors;
     }
@@ -119,13 +125,13 @@ implements SynchronousResourceReloader {
         boolean bl2 = bl = renderMode == ModelTransformation.Mode.GUI || renderMode == ModelTransformation.Mode.GROUND || renderMode == ModelTransformation.Mode.FIXED;
         if (bl) {
             if (stack.isOf(Items.TRIDENT)) {
-                model = this.models.getModelManager().getModel(new ModelIdentifier("minecraft:trident#inventory"));
+                model = this.models.getModelManager().getModel(TRIDENT);
             } else if (stack.isOf(Items.SPYGLASS)) {
-                model = this.models.getModelManager().getModel(new ModelIdentifier("minecraft:spyglass#inventory"));
+                model = this.models.getModelManager().getModel(SPYGLASS);
             }
         }
         model.getTransformation().getTransformation(renderMode).apply(leftHanded, matrices);
-        matrices.translate(-0.5, -0.5, -0.5);
+        matrices.translate(-0.5f, -0.5f, -0.5f);
         if (model.isBuiltin() || stack.isOf(Items.TRIDENT) && !bl) {
             this.builtinModelItemRenderer.render(stack, renderMode, matrices, vertexConsumers, light, overlay);
         } else {
@@ -137,9 +143,9 @@ implements SynchronousResourceReloader {
                 matrices.push();
                 MatrixStack.Entry entry = matrices.peek();
                 if (renderMode == ModelTransformation.Mode.GUI) {
-                    entry.getPositionMatrix().multiply(0.5f);
+                    MatrixUtil.scale(entry.getPositionMatrix(), 0.5f);
                 } else if (renderMode.isFirstPerson()) {
-                    entry.getPositionMatrix().multiply(0.75f);
+                    MatrixUtil.scale(entry.getPositionMatrix(), 0.75f);
                 }
                 vertexConsumer = bl22 ? ItemRenderer.getDirectCompassGlintConsumer(vertexConsumers, renderLayer, entry) : ItemRenderer.getCompassGlintConsumer(vertexConsumers, renderLayer, entry);
                 matrices.pop();
@@ -159,11 +165,11 @@ implements SynchronousResourceReloader {
     }
 
     public static VertexConsumer getCompassGlintConsumer(VertexConsumerProvider provider, RenderLayer layer, MatrixStack.Entry entry) {
-        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getGlint()), entry.getPositionMatrix(), entry.getNormalMatrix()), provider.getBuffer(layer));
+        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getGlint()), entry.getPositionMatrix(), entry.getNormalMatrix(), 0.0078125f), provider.getBuffer(layer));
     }
 
     public static VertexConsumer getDirectCompassGlintConsumer(VertexConsumerProvider provider, RenderLayer layer, MatrixStack.Entry entry) {
-        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getDirectGlint()), entry.getPositionMatrix(), entry.getNormalMatrix()), provider.getBuffer(layer));
+        return VertexConsumers.union((VertexConsumer)new OverlayVertexConsumer(provider.getBuffer(RenderLayer.getDirectGlint()), entry.getPositionMatrix(), entry.getNormalMatrix(), 0.0078125f), provider.getBuffer(layer));
     }
 
     public static VertexConsumer getItemGlintConsumer(VertexConsumerProvider vertexConsumers, RenderLayer layer, boolean solid, boolean glint) {
@@ -199,7 +205,7 @@ implements SynchronousResourceReloader {
     }
 
     public BakedModel getModel(ItemStack stack, @Nullable World world, @Nullable LivingEntity entity, int seed) {
-        BakedModel bakedModel = stack.isOf(Items.TRIDENT) ? this.models.getModelManager().getModel(new ModelIdentifier("minecraft:trident_in_hand#inventory")) : (stack.isOf(Items.SPYGLASS) ? this.models.getModelManager().getModel(new ModelIdentifier("minecraft:spyglass_in_hand#inventory")) : this.models.getModel(stack));
+        BakedModel bakedModel = stack.isOf(Items.TRIDENT) ? this.models.getModelManager().getModel(TRIDENT_IN_HAND) : (stack.isOf(Items.SPYGLASS) ? this.models.getModelManager().getModel(SPYGLASS_IN_HAND) : this.models.getModel(stack));
         ClientWorld clientWorld = world instanceof ClientWorld ? (ClientWorld)world : null;
         BakedModel bakedModel2 = bakedModel.getOverrides().apply(bakedModel, stack, clientWorld, entity, seed);
         return bakedModel2 == null ? this.models.getModelManager().getMissingModel() : bakedModel2;
@@ -231,7 +237,7 @@ implements SynchronousResourceReloader {
         MatrixStack matrixStack = RenderSystem.getModelViewStack();
         matrixStack.push();
         matrixStack.translate(x, y, 100.0f + this.zOffset);
-        matrixStack.translate(8.0, 8.0, 0.0);
+        matrixStack.translate(8.0f, 8.0f, 0.0f);
         matrixStack.scale(1.0f, -1.0f, 1.0f);
         matrixStack.scale(16.0f, 16.0f, 16.0f);
         RenderSystem.applyModelViewMatrix();
@@ -309,7 +315,7 @@ implements SynchronousResourceReloader {
         MatrixStack matrixStack = new MatrixStack();
         if (stack.getCount() != 1 || countLabel != null) {
             String string = countLabel == null ? String.valueOf(stack.getCount()) : countLabel;
-            matrixStack.translate(0.0, 0.0, this.zOffset + 200.0f);
+            matrixStack.translate(0.0f, 0.0f, this.zOffset + 200.0f);
             VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
             renderer.draw(string, (float)(x + 19 - 2 - renderer.getWidth(string)), (float)(y + 6 + 3), 0xFFFFFF, true, matrixStack.peek().getPositionMatrix(), (VertexConsumerProvider)immediate, false, 0, 0xF000F0);
             immediate.draw();
@@ -343,13 +349,13 @@ implements SynchronousResourceReloader {
     }
 
     private void renderGuiQuad(BufferBuilder buffer, int x, int y, int width, int height, int red, int green, int blue, int alpha) {
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         buffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
         buffer.vertex(x + 0, y + 0, 0.0).color(red, green, blue, alpha).next();
         buffer.vertex(x + 0, y + height, 0.0).color(red, green, blue, alpha).next();
         buffer.vertex(x + width, y + height, 0.0).color(red, green, blue, alpha).next();
         buffer.vertex(x + width, y + 0, 0.0).color(red, green, blue, alpha).next();
-        BufferRenderer.drawWithShader(buffer.end());
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
     }
 
     @Override

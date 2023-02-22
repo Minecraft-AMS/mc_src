@@ -25,8 +25,8 @@ public class IdentifierNormalizingSchema
 extends Schema {
     public static final PrimitiveCodec<String> CODEC = new PrimitiveCodec<String>(){
 
-        public <T> DataResult<String> read(DynamicOps<T> dynamicOps, T object) {
-            return dynamicOps.getStringValue(object).map(IdentifierNormalizingSchema::normalize);
+        public <T> DataResult<String> read(DynamicOps<T> ops, T input) {
+            return ops.getStringValue(input).map(IdentifierNormalizingSchema::normalize);
         }
 
         public <T> T write(DynamicOps<T> dynamicOps, String string) {
@@ -37,8 +37,8 @@ extends Schema {
             return "NamespacedString";
         }
 
-        public /* synthetic */ Object write(DynamicOps dynamicOps, Object object) {
-            return this.write(dynamicOps, (String)object);
+        public /* synthetic */ Object write(DynamicOps ops, Object value) {
+            return this.write(ops, (String)value);
         }
     };
     private static final Type<String> IDENTIFIER_TYPE = new Const.PrimitiveType(CODEC);
@@ -59,8 +59,8 @@ extends Schema {
         return IDENTIFIER_TYPE;
     }
 
-    public Type<?> getChoiceType(DSL.TypeReference typeReference, String string) {
-        return super.getChoiceType(typeReference, IdentifierNormalizingSchema.normalize(string));
+    public Type<?> getChoiceType(DSL.TypeReference type, String choiceName) {
+        return super.getChoiceType(type, IdentifierNormalizingSchema.normalize(choiceName));
     }
 }
 

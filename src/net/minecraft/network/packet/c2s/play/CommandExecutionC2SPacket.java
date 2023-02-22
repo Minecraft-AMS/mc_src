@@ -11,21 +11,11 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 import net.minecraft.network.message.ArgumentSignatureDataMap;
 import net.minecraft.network.message.LastSeenMessageList;
-import net.minecraft.util.StringHelper;
 
-public record CommandExecutionC2SPacket(String command, Instant timestamp, long salt, ArgumentSignatureDataMap argumentSignatures, boolean signedPreview, LastSeenMessageList.Acknowledgment acknowledgment) implements Packet<ServerPlayPacketListener>
+public record CommandExecutionC2SPacket(String command, Instant timestamp, long salt, ArgumentSignatureDataMap argumentSignatures, LastSeenMessageList.Acknowledgment acknowledgment) implements Packet<ServerPlayPacketListener>
 {
-    public CommandExecutionC2SPacket(String command, Instant timestamp, long salt, ArgumentSignatureDataMap argumentSignatures, boolean signedPreview, LastSeenMessageList.Acknowledgment acknowledgment) {
-        this.command = command = StringHelper.truncateChat(command);
-        this.timestamp = timestamp;
-        this.salt = salt;
-        this.argumentSignatures = argumentSignatures;
-        this.signedPreview = signedPreview;
-        this.acknowledgment = acknowledgment;
-    }
-
     public CommandExecutionC2SPacket(PacketByteBuf buf) {
-        this(buf.readString(256), buf.readInstant(), buf.readLong(), new ArgumentSignatureDataMap(buf), buf.readBoolean(), new LastSeenMessageList.Acknowledgment(buf));
+        this(buf.readString(256), buf.readInstant(), buf.readLong(), new ArgumentSignatureDataMap(buf), new LastSeenMessageList.Acknowledgment(buf));
     }
 
     @Override
@@ -34,7 +24,6 @@ public record CommandExecutionC2SPacket(String command, Instant timestamp, long 
         buf.writeInstant(this.timestamp);
         buf.writeLong(this.salt);
         this.argumentSignatures.write(buf);
-        buf.writeBoolean(this.signedPreview);
         this.acknowledgment.write(buf);
     }
 
@@ -45,17 +34,17 @@ public record CommandExecutionC2SPacket(String command, Instant timestamp, long 
 
     @Override
     public final String toString() {
-        return ObjectMethods.bootstrap("toString", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;signedPreview;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "signedPreview", "acknowledgment"}, this);
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "acknowledgment"}, this);
     }
 
     @Override
     public final int hashCode() {
-        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;signedPreview;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "signedPreview", "acknowledgment"}, this);
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "acknowledgment"}, this);
     }
 
     @Override
     public final boolean equals(Object object) {
-        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;signedPreview;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "signedPreview", "acknowledgment"}, this, object);
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{CommandExecutionC2SPacket.class, "command;timeStamp;salt;argumentSignatures;lastSeenMessages", "command", "timestamp", "salt", "argumentSignatures", "acknowledgment"}, this, object);
     }
 }
 

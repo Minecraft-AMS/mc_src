@@ -6,16 +6,15 @@ package net.minecraft.entity.ai.brain.task;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.task.LongJumpTask;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
@@ -28,7 +27,7 @@ extends LongJumpTask<E> {
     private final List<LongJumpTask.Target> unfavoredTargets = new ArrayList<LongJumpTask.Target>();
     private boolean useBias;
 
-    public BiasedLongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound, TagKey<Block> favoredBlocks, float biasChance, Predicate<BlockState> jumpToPredicate) {
+    public BiasedLongJumpTask(UniformIntProvider cooldownRange, int verticalRange, int horizontalRange, float maxRange, Function<E, SoundEvent> entityToSound, TagKey<Block> favoredBlocks, float biasChance, BiPredicate<E, BlockPos> jumpToPredicate) {
         super(cooldownRange, verticalRange, horizontalRange, maxRange, entityToSound, jumpToPredicate);
         this.favoredBlocks = favoredBlocks;
         this.biasChance = biasChance;
@@ -63,12 +62,8 @@ extends LongJumpTask<E> {
     }
 
     @Override
-    protected boolean canJumpTo(ServerWorld world, E entity, BlockPos pos) {
-        return super.canJumpTo(world, entity, pos) && this.isFluidStateAndBelowEmpty(world, pos);
-    }
-
-    private boolean isFluidStateAndBelowEmpty(ServerWorld world, BlockPos pos) {
-        return world.getFluidState(pos).isEmpty() && world.getFluidState(pos.down()).isEmpty();
+    protected /* synthetic */ void run(ServerWorld world, LivingEntity entity, long time) {
+        this.run(world, (E)((MobEntity)entity), time);
     }
 }
 

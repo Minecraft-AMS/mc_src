@@ -22,8 +22,8 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    protected static void method_17343(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
+    protected static void method_17343(Schema schema, Map<String, Supplier<TypeTemplate>> map, String name) {
+        schema.register(map, name, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
     }
 
     public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema schema) {

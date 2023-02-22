@@ -98,6 +98,8 @@ implements Packet<ClientPlayPacketListener> {
         public static final /* enum */ Flag Z = new Flag(2);
         public static final /* enum */ Flag Y_ROT = new Flag(3);
         public static final /* enum */ Flag X_ROT = new Flag(4);
+        public static final Set<Flag> VALUES;
+        public static final Set<Flag> ROT;
         private final int shift;
         private static final /* synthetic */ Flag[] field_12402;
 
@@ -144,6 +146,8 @@ implements Packet<ClientPlayPacketListener> {
 
         static {
             field_12402 = Flag.method_36952();
+            VALUES = Set.of(Flag.values());
+            ROT = Set.of(X_ROT, Y_ROT);
         }
     }
 }

@@ -30,18 +30,18 @@ import net.minecraft.item.NetworkSyncedItem;
 import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.BiomeTags;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.BiomeTags;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
@@ -54,6 +54,8 @@ extends NetworkSyncedItem {
     public static final int field_30908 = 128;
     private static final int DEFAULT_MAP_COLOR = -12173266;
     private static final String MAP_KEY = "map";
+    public static final String MAP_SCALE_DIRECTION_KEY = "map_scale_direction";
+    public static final String MAP_TO_LOCK_KEY = "map_to_lock";
 
     public FilledMapItem(Item.Settings settings) {
         super(settings);
@@ -117,6 +119,8 @@ extends NetworkSyncedItem {
         }
         MapState.PlayerUpdateTracker playerUpdateTracker = state.getPlayerSyncData((PlayerEntity)entity);
         ++playerUpdateTracker.field_131;
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        BlockPos.Mutable mutable2 = new BlockPos.Mutable();
         boolean bl = false;
         for (int o = l - n + 1; o < l + n; ++o) {
             if ((o & 0xF) != (playerUpdateTracker.field_131 & 0xF) && !bl) continue;
@@ -125,62 +129,57 @@ extends NetworkSyncedItem {
             for (int p = m - n - 1; p < m + n; ++p) {
                 double f;
                 if (o < 0 || p < -1 || o >= 128 || p >= 128) continue;
-                int q = o - l;
-                int r = p - m;
-                boolean bl2 = q * q + r * r > (n - 2) * (n - 2);
-                int s = (j / i + o - 64) * i;
-                int t = (k / i + p - 64) * i;
+                int q = MathHelper.square(o - l) + MathHelper.square(p - m);
+                boolean bl2 = q > (n - 2) * (n - 2);
+                int r = (j / i + o - 64) * i;
+                int s = (k / i + p - 64) * i;
                 LinkedHashMultiset multiset = LinkedHashMultiset.create();
-                WorldChunk worldChunk = world.getWorldChunk(new BlockPos(s, 0, t));
+                WorldChunk worldChunk = world.getChunk(ChunkSectionPos.getSectionCoord(r), ChunkSectionPos.getSectionCoord(s));
                 if (worldChunk.isEmpty()) continue;
-                ChunkPos chunkPos = worldChunk.getPos();
-                int u = s & 0xF;
-                int v = t & 0xF;
-                int w = 0;
+                int t = 0;
                 double e = 0.0;
                 if (world.getDimension().hasCeiling()) {
-                    int x = s + t * 231871;
-                    if (((x = x * x * 31287121 + x * 11) >> 20 & 1) == 0) {
+                    u = r + s * 231871;
+                    if (((u = u * u * 31287121 + u * 11) >> 20 & 1) == 0) {
                         multiset.add((Object)Blocks.DIRT.getDefaultState().getMapColor(world, BlockPos.ORIGIN), 10);
                     } else {
                         multiset.add((Object)Blocks.STONE.getDefaultState().getMapColor(world, BlockPos.ORIGIN), 100);
                     }
                     e = 100.0;
                 } else {
-                    BlockPos.Mutable mutable = new BlockPos.Mutable();
-                    BlockPos.Mutable mutable2 = new BlockPos.Mutable();
-                    for (int y = 0; y < i; ++y) {
-                        for (int z = 0; z < i; ++z) {
+                    for (u = 0; u < i; ++u) {
+                        for (int v = 0; v < i; ++v) {
                             BlockState blockState;
-                            int aa = worldChunk.sampleHeightmap(Heightmap.Type.WORLD_SURFACE, y + u, z + v) + 1;
-                            if (aa > world.getBottomY() + 1) {
+                            mutable.set(r + u, 0, s + v);
+                            int w = worldChunk.sampleHeightmap(Heightmap.Type.WORLD_SURFACE, mutable.getX(), mutable.getZ()) + 1;
+                            if (w > world.getBottomY() + 1) {
                                 do {
-                                    mutable.set(chunkPos.getStartX() + y + u, --aa, chunkPos.getStartZ() + z + v);
-                                } while ((blockState = worldChunk.getBlockState(mutable)).getMapColor(world, mutable) == MapColor.CLEAR && aa > world.getBottomY());
-                                if (aa > world.getBottomY() && !blockState.getFluidState().isEmpty()) {
+                                    mutable.setY(--w);
+                                } while ((blockState = worldChunk.getBlockState(mutable)).getMapColor(world, mutable) == MapColor.CLEAR && w > world.getBottomY());
+                                if (w > world.getBottomY() && !blockState.getFluidState().isEmpty()) {
                                     BlockState blockState2;
-                                    int ab = aa - 1;
+                                    int x = w - 1;
                                     mutable2.set(mutable);
                                     do {
-                                        mutable2.setY(ab--);
+                                        mutable2.setY(x--);
                                         blockState2 = worldChunk.getBlockState(mutable2);
-                                        ++w;
-                                    } while (ab > world.getBottomY() && !blockState2.getFluidState().isEmpty());
+                                        ++t;
+                                    } while (x > world.getBottomY() && !blockState2.getFluidState().isEmpty());
                                     blockState = this.getFluidStateIfVisible(world, blockState, mutable);
                                 }
                             } else {
                                 blockState = Blocks.BEDROCK.getDefaultState();
                             }
-                            state.removeBanner(world, chunkPos.getStartX() + y + u, chunkPos.getStartZ() + z + v);
-                            e += (double)aa / (double)(i * i);
+                            state.removeBanner(world, mutable.getX(), mutable.getZ());
+                            e += (double)w / (double)(i * i);
                             multiset.add((Object)blockState.getMapColor(world, mutable));
                         }
                     }
                 }
                 MapColor mapColor = (MapColor)Iterables.getFirst((Iterable)Multisets.copyHighestCountFirst((Multiset)multiset), (Object)MapColor.CLEAR);
-                MapColor.Brightness brightness = mapColor == MapColor.WATER_BLUE ? ((f = (double)(w /= i * i) * 0.1 + (double)(o + p & 1) * 0.2) < 0.5 ? MapColor.Brightness.HIGH : (f > 0.9 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL)) : ((f = (e - d) * 4.0 / (double)(i + 4) + ((double)(o + p & 1) - 0.5) * 0.4) > 0.6 ? MapColor.Brightness.HIGH : (f < -0.6 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL));
+                MapColor.Brightness brightness = mapColor == MapColor.WATER_BLUE ? ((f = (double)(t /= i * i) * 0.1 + (double)(o + p & 1) * 0.2) < 0.5 ? MapColor.Brightness.HIGH : (f > 0.9 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL)) : ((f = (e - d) * 4.0 / (double)(i + 4) + ((double)(o + p & 1) - 0.5) * 0.4) > 0.6 ? MapColor.Brightness.HIGH : (f < -0.6 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL));
                 d = e;
-                if (p < 0 || q * q + r * r >= n * n || bl2 && (o + p & 1) == 0) continue;
+                if (p < 0 || q >= n * n || bl2 && (o + p & 1) == 0) continue;
                 bl |= state.putColor(o, p, mapColor.getRenderColorByte(brightness));
             }
         }
@@ -301,12 +300,12 @@ extends NetworkSyncedItem {
     @Override
     public void onCraft(ItemStack stack, World world, PlayerEntity player) {
         NbtCompound nbtCompound = stack.getNbt();
-        if (nbtCompound != null && nbtCompound.contains("map_scale_direction", 99)) {
-            FilledMapItem.scale(stack, world, nbtCompound.getInt("map_scale_direction"));
-            nbtCompound.remove("map_scale_direction");
-        } else if (nbtCompound != null && nbtCompound.contains("map_to_lock", 1) && nbtCompound.getBoolean("map_to_lock")) {
+        if (nbtCompound != null && nbtCompound.contains(MAP_SCALE_DIRECTION_KEY, 99)) {
+            FilledMapItem.scale(stack, world, nbtCompound.getInt(MAP_SCALE_DIRECTION_KEY));
+            nbtCompound.remove(MAP_SCALE_DIRECTION_KEY);
+        } else if (nbtCompound != null && nbtCompound.contains(MAP_TO_LOCK_KEY, 1) && nbtCompound.getBoolean(MAP_TO_LOCK_KEY)) {
             FilledMapItem.copyMap(world, stack);
-            nbtCompound.remove("map_to_lock");
+            nbtCompound.remove(MAP_TO_LOCK_KEY);
         }
     }
 
@@ -332,17 +331,29 @@ extends NetworkSyncedItem {
 
     @Override
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-        MapState mapState;
+        byte b;
+        boolean bl;
         Integer integer = FilledMapItem.getMapId(stack);
-        MapState mapState2 = mapState = world == null ? null : FilledMapItem.getMapState(integer, world);
-        if (mapState != null && mapState.locked) {
+        MapState mapState = world == null ? null : FilledMapItem.getMapState(integer, world);
+        NbtCompound nbtCompound = stack.getNbt();
+        if (nbtCompound != null) {
+            bl = nbtCompound.getBoolean(MAP_TO_LOCK_KEY);
+            b = nbtCompound.getByte(MAP_SCALE_DIRECTION_KEY);
+        } else {
+            bl = false;
+            b = 0;
+        }
+        if (mapState != null && (mapState.locked || bl)) {
             tooltip.add(Text.translatable("filled_map.locked", integer).formatted(Formatting.GRAY));
         }
         if (context.isAdvanced()) {
             if (mapState != null) {
-                tooltip.add(Text.translatable("filled_map.id", integer).formatted(Formatting.GRAY));
-                tooltip.add(Text.translatable("filled_map.scale", 1 << mapState.scale).formatted(Formatting.GRAY));
-                tooltip.add(Text.translatable("filled_map.level", mapState.scale, 4).formatted(Formatting.GRAY));
+                if (!bl && b == 0) {
+                    tooltip.add(Text.translatable("filled_map.id", integer).formatted(Formatting.GRAY));
+                }
+                int i = Math.min(mapState.scale + b, 4);
+                tooltip.add(Text.translatable("filled_map.scale", 1 << i).formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("filled_map.level", i, 4).formatted(Formatting.GRAY));
             } else {
                 tooltip.add(Text.translatable("filled_map.unknown").formatted(Formatting.GRAY));
             }

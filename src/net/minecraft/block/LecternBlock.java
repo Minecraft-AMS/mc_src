@@ -23,6 +23,7 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -32,7 +33,6 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -169,7 +169,7 @@ extends BlockWithEntity {
 
     public static void setPowered(World world, BlockPos pos, BlockState state) {
         LecternBlock.setPowered(world, pos, state, true);
-        world.createAndScheduleBlockTick(pos, state.getBlock(), 2);
+        world.scheduleBlockTick(pos, state.getBlock(), 2);
         world.syncWorldEvent(1043, pos, 0);
     }
 

@@ -85,7 +85,6 @@ extends Screen {
     @Override
     protected void init() {
         boolean bl;
-        this.client.keyboard.setRepeatEvents(true);
         this.poolField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 20, 300, 20, Text.translatable("jigsaw_block.pool"));
         this.poolField.setMaxLength(128);
         this.poolField.setText(this.jigsaw.getPool().getValue().toString());
@@ -130,12 +129,12 @@ extends Screen {
         this.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.keepJigsaws).build(this.width / 2 - 50, 180, 100, 20, Text.translatable("jigsaw_block.keep_jigsaws"), (button, keepJigsaws) -> {
             this.keepJigsaws = keepJigsaws;
         }));
-        this.generateButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 54, 180, 100, 20, Text.translatable("jigsaw_block.generate"), button -> {
+        this.generateButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("jigsaw_block.generate"), button -> {
             this.onDone();
             this.generate();
-        }));
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 4 - 150, 210, 150, 20, ScreenTexts.DONE, button -> this.onDone()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, 210, 150, 20, ScreenTexts.CANCEL, button -> this.onCancel()));
+        }).dimensions(this.width / 2 + 54, 180, 100, 20).build());
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.onDone()).dimensions(this.width / 2 - 4 - 150, 210, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.onCancel()).dimensions(this.width / 2 + 4, 210, 150, 20).build());
         this.setInitialFocus(this.poolField);
         this.updateDoneButtonState();
     }
@@ -162,11 +161,6 @@ extends Screen {
         this.generationDepth = i;
         this.joint = joint;
         this.jointRotationButton.setValue(joint);
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override

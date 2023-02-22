@@ -14,11 +14,11 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Objects;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryFixedCodec;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryFixedCodec;
 import net.minecraft.world.poi.PointOfInterestType;
 
 public class PointOfInterest {
@@ -28,18 +28,18 @@ public class PointOfInterest {
     private final Runnable updateListener;
 
     public static Codec<PointOfInterest> createCodec(Runnable updateListener) {
-        return RecordCodecBuilder.create(instance -> instance.group((App)BlockPos.CODEC.fieldOf("pos").forGetter(poi -> poi.pos), (App)RegistryFixedCodec.of(Registry.POINT_OF_INTEREST_TYPE_KEY).fieldOf("type").forGetter(poi -> poi.type), (App)Codec.INT.fieldOf("free_tickets").orElse((Object)0).forGetter(poi -> poi.freeTickets), (App)RecordCodecBuilder.point((Object)updateListener)).apply((Applicative)instance, PointOfInterest::new));
+        return RecordCodecBuilder.create(instance -> instance.group((App)BlockPos.CODEC.fieldOf("pos").forGetter(poi -> poi.pos), (App)RegistryFixedCodec.of(RegistryKeys.POINT_OF_INTEREST_TYPE).fieldOf("type").forGetter(poi -> poi.type), (App)Codec.INT.fieldOf("free_tickets").orElse((Object)0).forGetter(poi -> poi.freeTickets), (App)RecordCodecBuilder.point((Object)updateListener)).apply((Applicative)instance, PointOfInterest::new));
     }
 
-    private PointOfInterest(BlockPos pos, RegistryEntry<PointOfInterestType> registryEntry, int freeTickets, Runnable updateListener) {
+    private PointOfInterest(BlockPos pos, RegistryEntry<PointOfInterestType> type, int freeTickets, Runnable updateListener) {
         this.pos = pos.toImmutable();
-        this.type = registryEntry;
+        this.type = type;
         this.freeTickets = freeTickets;
         this.updateListener = updateListener;
     }
 
-    public PointOfInterest(BlockPos pos, RegistryEntry<PointOfInterestType> registryEntry, Runnable updateListener) {
-        this(pos, registryEntry, registryEntry.value().ticketCount(), updateListener);
+    public PointOfInterest(BlockPos pos, RegistryEntry<PointOfInterestType> type, Runnable updateListener) {
+        this(pos, type, type.value().ticketCount(), updateListener);
     }
 
     @Deprecated

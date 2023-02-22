@@ -12,12 +12,16 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.block.Block;
+import net.minecraft.resource.featuretoggle.FeatureFlag;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockFamily {
     private final Block baseBlock;
     final Map<Variant, Block> variants = Maps.newHashMap();
+    FeatureSet requiredFeatures = FeatureFlags.VANILLA_FEATURES;
     boolean generateModels = true;
     boolean generateRecipes = true;
     @Nullable
@@ -45,8 +49,8 @@ public class BlockFamily {
         return this.generateModels;
     }
 
-    public boolean shouldGenerateRecipes() {
-        return this.generateRecipes;
+    public boolean shouldGenerateRecipes(FeatureSet enabledFeatures) {
+        return this.generateRecipes && this.requiredFeatures.isSubsetOf(enabledFeatures);
     }
 
     public Optional<String> getGroup() {
@@ -84,6 +88,11 @@ public class BlockFamily {
             return this;
         }
 
+        public Builder mosaic(Block block) {
+            this.family.variants.put(Variant.MOSAIC, block);
+            return this;
+        }
+
         public Builder cracked(Block block) {
             this.family.variants.put(Variant.CRACKED, block);
             return this;
@@ -99,8 +108,18 @@ public class BlockFamily {
             return this;
         }
 
+        public Builder customFence(Block block) {
+            this.family.variants.put(Variant.CUSTOM_FENCE, block);
+            return this;
+        }
+
         public Builder fence(Block block) {
             this.family.variants.put(Variant.FENCE, block);
+            return this;
+        }
+
+        public Builder customFenceGate(Block block) {
+            this.family.variants.put(Variant.CUSTOM_FENCE_GATE, block);
             return this;
         }
 
@@ -155,6 +174,11 @@ public class BlockFamily {
             return this;
         }
 
+        public Builder requires(FeatureFlag ... features) {
+            this.family.requiredFeatures = FeatureFlags.FEATURE_MANAGER.featureSetOf(features);
+            return this;
+        }
+
         public Builder group(String group) {
             this.family.group = group;
             return this;
@@ -173,8 +197,11 @@ public class BlockFamily {
         public static final /* enum */ Variant CRACKED = new Variant("cracked");
         public static final /* enum */ Variant CUT = new Variant("cut");
         public static final /* enum */ Variant DOOR = new Variant("door");
+        public static final /* enum */ Variant CUSTOM_FENCE = new Variant("custom_fence");
         public static final /* enum */ Variant FENCE = new Variant("fence");
+        public static final /* enum */ Variant CUSTOM_FENCE_GATE = new Variant("custom_fence_gate");
         public static final /* enum */ Variant FENCE_GATE = new Variant("fence_gate");
+        public static final /* enum */ Variant MOSAIC = new Variant("mosaic");
         public static final /* enum */ Variant SIGN = new Variant("sign");
         public static final /* enum */ Variant SLAB = new Variant("slab");
         public static final /* enum */ Variant STAIRS = new Variant("stairs");
@@ -203,7 +230,7 @@ public class BlockFamily {
         }
 
         private static /* synthetic */ Variant[] method_36938() {
-            return new Variant[]{BUTTON, CHISELED, CRACKED, CUT, DOOR, FENCE, FENCE_GATE, SIGN, SLAB, STAIRS, PRESSURE_PLATE, POLISHED, TRAPDOOR, WALL, WALL_SIGN};
+            return new Variant[]{BUTTON, CHISELED, CRACKED, CUT, DOOR, CUSTOM_FENCE, FENCE, CUSTOM_FENCE_GATE, FENCE_GATE, MOSAIC, SIGN, SLAB, STAIRS, PRESSURE_PLATE, POLISHED, TRAPDOOR, WALL, WALL_SIGN};
         }
 
         static {

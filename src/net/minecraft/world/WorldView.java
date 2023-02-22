@@ -8,24 +8,29 @@ package net.minecraft.world;
 
 import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.ColorResolver;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.level.ColorResolver;
 import org.jetbrains.annotations.Nullable;
 
 public interface WorldView
@@ -225,6 +230,15 @@ BiomeAccess.Storage {
             }
         }
         return true;
+    }
+
+    public DynamicRegistryManager getRegistryManager();
+
+    public FeatureSet getEnabledFeatures();
+
+    default public <T> RegistryWrapper<T> createCommandRegistryWrapper(RegistryKey<? extends Registry<? extends T>> registryRef) {
+        Registry registry = this.getRegistryManager().get(registryRef);
+        return registry.getReadOnlyWrapper().withFeatureFilter(this.getEnabledFeatures());
     }
 }
 

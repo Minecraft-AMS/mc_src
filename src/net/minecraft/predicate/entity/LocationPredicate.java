@@ -24,12 +24,12 @@ import net.minecraft.predicate.BlockPredicate;
 import net.minecraft.predicate.FluidPredicate;
 import net.minecraft.predicate.LightPredicate;
 import net.minecraft.predicate.NumberRange;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.structure.Structure;
@@ -129,7 +129,7 @@ public class LocationPredicate {
             jsonObject.add("position", (JsonElement)jsonObject2);
         }
         if (this.dimension != null) {
-            World.CODEC.encodeStart((DynamicOps)JsonOps.INSTANCE, this.dimension).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(jsonElement -> jsonObject.add("dimension", jsonElement));
+            World.CODEC.encodeStart((DynamicOps)JsonOps.INSTANCE, this.dimension).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(json -> jsonObject.add("dimension", json));
         }
         if (this.feature != null) {
             jsonObject.addProperty("structure", this.feature.getValue().toString());
@@ -156,12 +156,12 @@ public class LocationPredicate {
         NumberRange.FloatRange floatRange = NumberRange.FloatRange.fromJson(jsonObject2.get("x"));
         NumberRange.FloatRange floatRange2 = NumberRange.FloatRange.fromJson(jsonObject2.get("y"));
         NumberRange.FloatRange floatRange3 = NumberRange.FloatRange.fromJson(jsonObject2.get("z"));
-        RegistryKey registryKey2 = jsonObject.has("dimension") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("dimension")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(Registry.WORLD_KEY, identifier)).orElse(null) : (registryKey = null);
-        RegistryKey registryKey22 = jsonObject.has("structure") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("structure")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(Registry.STRUCTURE_KEY, identifier)).orElse(null) : null;
+        RegistryKey registryKey2 = jsonObject.has("dimension") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("dimension")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(RegistryKeys.WORLD, identifier)).orElse(null) : (registryKey = null);
+        RegistryKey registryKey22 = jsonObject.has("structure") ? (RegistryKey)Identifier.CODEC.parse((DynamicOps)JsonOps.INSTANCE, (Object)jsonObject.get("structure")).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).map(identifier -> RegistryKey.of(RegistryKeys.STRUCTURE, identifier)).orElse(null) : null;
         RegistryKey<Biome> registryKey3 = null;
         if (jsonObject.has("biome")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "biome"));
-            registryKey3 = RegistryKey.of(Registry.BIOME_KEY, identifier2);
+            registryKey3 = RegistryKey.of(RegistryKeys.BIOME, identifier2);
         }
         Boolean boolean_ = jsonObject.has("smokey") ? Boolean.valueOf(jsonObject.get("smokey").getAsBoolean()) : null;
         LightPredicate lightPredicate = LightPredicate.fromJson(jsonObject.get("light"));

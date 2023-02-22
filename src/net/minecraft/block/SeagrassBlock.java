@@ -20,8 +20,8 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
@@ -29,6 +29,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class SeagrassBlock
@@ -66,13 +67,13 @@ FluidFillable {
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         BlockState blockState = super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
         if (!blockState.isAir()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return blockState;
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         return true;
     }
 

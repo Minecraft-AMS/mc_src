@@ -92,7 +92,7 @@ public class Raid {
     private static final Text DEFEAT_TITLE = EVENT_TEXT.copy().append(" - ").append(DEFEAT_SUFFIX_TEXT);
     private static final int MAX_ACTIVE_TICKS = 48000;
     public static final int field_30674 = 9216;
-    public static final int field_30675 = 12544;
+    public static final int SQUARED_MAX_RAIDER_DISTANCE = 12544;
     private final Map<Integer, RaiderEntity> waveToCaptain = Maps.newHashMap();
     private final Map<Integer, Set<RaiderEntity>> waveToRaiders = Maps.newHashMap();
     private final Set<UUID> heroesOfTheVillage = Sets.newHashSet();
@@ -460,10 +460,10 @@ public class Raid {
         LocalDifficulty localDifficulty = this.world.getLocalDifficulty(pos);
         boolean bl2 = this.isSpawningExtraWave();
         for (Member member : Member.VALUES) {
+            RaiderEntity raiderEntity;
             int j = this.getCount(member, i, bl2) + this.getBonusCount(member, this.random, i, localDifficulty, bl2);
             int k = 0;
-            for (int l = 0; l < j; ++l) {
-                RaiderEntity raiderEntity = member.type.create(this.world);
+            for (int l = 0; l < j && (raiderEntity = member.type.create(this.world)) != null; ++l) {
                 if (!bl && raiderEntity.canLead()) {
                     raiderEntity.setPatrolLeader(true);
                     this.setWaveCaptain(i, raiderEntity);

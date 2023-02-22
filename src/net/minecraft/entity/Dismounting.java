@@ -12,7 +12,7 @@ import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.tag.BlockTags;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -85,6 +85,9 @@ public class Dismounting {
         Iterable<VoxelShape> iterable = world.getBlockCollisions(null, box);
         for (VoxelShape voxelShape : iterable) {
             if (voxelShape.isEmpty()) continue;
+            return null;
+        }
+        if (entityType == EntityType.PLAYER && (world.getBlockState(pos).isIn(BlockTags.INVALID_SPAWN_INSIDE) || world.getBlockState(pos.up()).isIn(BlockTags.INVALID_SPAWN_INSIDE))) {
             return null;
         }
         if (!world.getWorldBorder().contains(box)) {

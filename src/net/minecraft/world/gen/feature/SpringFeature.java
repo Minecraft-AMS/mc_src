@@ -70,7 +70,7 @@ extends Feature<SpringFeatureConfig> {
         }
         if (j == springFeatureConfig.rockCount && k == springFeatureConfig.holeCount) {
             structureWorldAccess.setBlockState(blockPos, springFeatureConfig.state.getBlockState(), 2);
-            structureWorldAccess.createAndScheduleFluidTick(blockPos, springFeatureConfig.state.getFluid(), 0);
+            structureWorldAccess.scheduleFluidTick(blockPos, springFeatureConfig.state.getFluid(), 0);
             ++i;
         }
         return i > 0;

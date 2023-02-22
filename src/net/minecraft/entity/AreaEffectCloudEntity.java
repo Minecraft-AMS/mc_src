@@ -34,16 +34,14 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.network.Packet;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -57,6 +55,10 @@ extends Entity {
     private static final TrackedData<Boolean> WAITING = DataTracker.registerData(AreaEffectCloudEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<ParticleEffect> PARTICLE_ID = DataTracker.registerData(AreaEffectCloudEntity.class, TrackedDataHandlerRegistry.PARTICLE);
     private static final float MAX_RADIUS = 32.0f;
+    private static final float field_40730 = 0.5f;
+    private static final float field_40731 = 3.0f;
+    public static final float field_40732 = 6.0f;
+    public static final float field_40733 = 0.5f;
     private Potion potion = Potions.EMPTY;
     private final List<StatusEffectInstance> effects = Lists.newArrayList();
     private final Map<Entity, Integer> affectedEntities = Maps.newHashMap();
@@ -75,7 +77,6 @@ extends Entity {
     public AreaEffectCloudEntity(EntityType<? extends AreaEffectCloudEntity> entityType, World world) {
         super(entityType, world);
         this.noClip = true;
-        this.setRadius(3.0f);
     }
 
     public AreaEffectCloudEntity(World world, double x, double y, double z) {
@@ -86,7 +87,7 @@ extends Entity {
     @Override
     protected void initDataTracker() {
         this.getDataTracker().startTracking(COLOR, 0);
-        this.getDataTracker().startTracking(RADIUS, Float.valueOf(0.5f));
+        this.getDataTracker().startTracking(RADIUS, Float.valueOf(3.0f));
         this.getDataTracker().startTracking(WAITING, false);
         this.getDataTracker().startTracking(PARTICLE_ID, ParticleTypes.ENTITY_EFFECT);
     }
@@ -339,7 +340,7 @@ extends Entity {
         }
         if (nbt.contains("Particle", 8)) {
             try {
-                this.setParticleType(ParticleEffectArgumentType.readParameters(new StringReader(nbt.getString("Particle"))));
+                this.setParticleType(ParticleEffectArgumentType.readParameters(new StringReader(nbt.getString("Particle")), Registries.PARTICLE_TYPE.getReadOnlyWrapper()));
             }
             catch (CommandSyntaxException commandSyntaxException) {
                 LOGGER.warn("Couldn't load custom particle {}", (Object)nbt.getString("Particle"), (Object)commandSyntaxException);
@@ -380,7 +381,7 @@ extends Entity {
             nbt.putInt("Color", this.getColor());
         }
         if (this.potion != Potions.EMPTY) {
-            nbt.putString("Potion", Registry.POTION.getId(this.potion).toString());
+            nbt.putString("Potion", Registries.POTION.getId(this.potion).toString());
         }
         if (!this.effects.isEmpty()) {
             NbtList nbtList = new NbtList();
@@ -406,11 +407,6 @@ extends Entity {
     @Override
     public PistonBehavior getPistonBehavior() {
         return PistonBehavior.IGNORE;
-    }
-
-    @Override
-    public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this);
     }
 
     @Override

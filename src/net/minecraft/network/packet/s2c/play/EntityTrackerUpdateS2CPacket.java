@@ -1,43 +1,45 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import org.jetbrains.annotations.Nullable;
 
-public class EntityTrackerUpdateS2CPacket
-implements Packet<ClientPlayPacketListener> {
-    private final int id;
-    @Nullable
-    private final List<DataTracker.Entry<?>> trackedValues;
-
-    public EntityTrackerUpdateS2CPacket(int id, DataTracker tracker, boolean forceUpdateAll) {
-        this.id = id;
-        if (forceUpdateAll) {
-            this.trackedValues = tracker.getAllEntries();
-            tracker.clearDirty();
-        } else {
-            this.trackedValues = tracker.getDirtyEntries();
-        }
-    }
+public record EntityTrackerUpdateS2CPacket(int id, List<DataTracker.SerializedEntry<?>> trackedValues) implements Packet<ClientPlayPacketListener>
+{
+    public static final int MARKER_ID = 255;
 
     public EntityTrackerUpdateS2CPacket(PacketByteBuf buf) {
-        this.id = buf.readVarInt();
-        this.trackedValues = DataTracker.deserializePacket(buf);
+        this(buf.readVarInt(), EntityTrackerUpdateS2CPacket.read(buf));
+    }
+
+    private static void write(List<DataTracker.SerializedEntry<?>> trackedValues, PacketByteBuf buf) {
+        for (DataTracker.SerializedEntry<?> serializedEntry : trackedValues) {
+            serializedEntry.write(buf);
+        }
+        buf.writeByte(255);
+    }
+
+    private static List<DataTracker.SerializedEntry<?>> read(PacketByteBuf buf) {
+        short i;
+        ArrayList list = new ArrayList();
+        while ((i = buf.readUnsignedByte()) != 255) {
+            list.add(DataTracker.SerializedEntry.fromBuf(buf, i));
+        }
+        return list;
     }
 
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
-        DataTracker.entriesToPacket(this.trackedValues, buf);
+        EntityTrackerUpdateS2CPacket.write(this.trackedValues, buf);
     }
 
     @Override
@@ -45,13 +47,19 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onEntityTrackerUpdate(this);
     }
 
-    @Nullable
-    public List<DataTracker.Entry<?>> getTrackedValues() {
-        return this.trackedValues;
+    @Override
+    public final String toString() {
+        return ObjectMethods.bootstrap("toString", new MethodHandle[]{EntityTrackerUpdateS2CPacket.class, "id;packedItems", "id", "trackedValues"}, this);
     }
 
-    public int id() {
-        return this.id;
+    @Override
+    public final int hashCode() {
+        return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{EntityTrackerUpdateS2CPacket.class, "id;packedItems", "id", "trackedValues"}, this);
+    }
+
+    @Override
+    public final boolean equals(Object object) {
+        return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{EntityTrackerUpdateS2CPacket.class, "id;packedItems", "id", "trackedValues"}, this, object);
     }
 }
 

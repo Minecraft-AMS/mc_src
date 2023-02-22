@@ -20,22 +20,27 @@ import java.lang.runtime.ObjectMethods;
 import java.util.Optional;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import net.minecraft.util.collection.DataPool;
 import net.minecraft.util.dynamic.Range;
 
 public record MobSpawnerEntry(NbtCompound entity, Optional<CustomSpawnRules> customSpawnRules) {
-    public static final Codec<MobSpawnerEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)NbtCompound.CODEC.fieldOf("entity").forGetter(entry -> entry.entity), (App)CustomSpawnRules.CODEC.optionalFieldOf("custom_spawn_rules").forGetter(mobSpawnerEntry -> mobSpawnerEntry.customSpawnRules)).apply((Applicative)instance, MobSpawnerEntry::new));
-    public static final Codec<DataPool<MobSpawnerEntry>> DATA_POOL_CODEC = DataPool.method_39521(CODEC);
-    public static final String DEFAULT_ENTITY_ID = "minecraft:pig";
+    public static final String ENTITY_KEY = "entity";
+    public static final Codec<MobSpawnerEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)NbtCompound.CODEC.fieldOf(ENTITY_KEY).forGetter(entry -> entry.entity), (App)CustomSpawnRules.CODEC.optionalFieldOf("custom_spawn_rules").forGetter(entry -> entry.customSpawnRules)).apply((Applicative)instance, MobSpawnerEntry::new));
+    public static final Codec<DataPool<MobSpawnerEntry>> DATA_POOL_CODEC = DataPool.createEmptyAllowedCodec(CODEC);
 
     public MobSpawnerEntry() {
-        this(Util.make(new NbtCompound(), nbt -> nbt.putString("id", DEFAULT_ENTITY_ID)), Optional.empty());
+        this(new NbtCompound(), Optional.empty());
     }
 
     public MobSpawnerEntry {
-        Identifier identifier = Identifier.tryParse(nbtCompound.getString("id"));
-        nbtCompound.putString("id", identifier != null ? identifier.toString() : DEFAULT_ENTITY_ID);
+        if (nbtCompound.contains("id")) {
+            Identifier identifier = Identifier.tryParse(nbtCompound.getString("id"));
+            if (identifier != null) {
+                nbtCompound.putString("id", identifier.toString());
+            } else {
+                nbtCompound.remove("id");
+            }
+        }
     }
 
     public NbtCompound getNbt() {

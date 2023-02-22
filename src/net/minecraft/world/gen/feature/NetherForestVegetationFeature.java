@@ -8,7 +8,7 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.block.BlockState;
-import net.minecraft.tag.BlockTags;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
@@ -39,7 +39,7 @@ extends Feature<NetherForestVegetationFeatureConfig> {
         int j = 0;
         for (int k = 0; k < netherForestVegetationFeatureConfig.spreadWidth * netherForestVegetationFeatureConfig.spreadWidth; ++k) {
             BlockPos blockPos2 = blockPos.add(random.nextInt(netherForestVegetationFeatureConfig.spreadWidth) - random.nextInt(netherForestVegetationFeatureConfig.spreadWidth), random.nextInt(netherForestVegetationFeatureConfig.spreadHeight) - random.nextInt(netherForestVegetationFeatureConfig.spreadHeight), random.nextInt(netherForestVegetationFeatureConfig.spreadWidth) - random.nextInt(netherForestVegetationFeatureConfig.spreadWidth));
-            BlockState blockState2 = netherForestVegetationFeatureConfig.stateProvider.getBlockState(random, blockPos2);
+            BlockState blockState2 = netherForestVegetationFeatureConfig.stateProvider.get(random, blockPos2);
             if (!structureWorldAccess.isAir(blockPos2) || blockPos2.getY() <= structureWorldAccess.getBottomY() || !blockState2.canPlaceAt(structureWorldAccess, blockPos2)) continue;
             structureWorldAccess.setBlockState(blockPos2, blockState2, 2);
             ++j;

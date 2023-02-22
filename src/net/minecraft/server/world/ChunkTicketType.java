@@ -13,8 +13,8 @@ public class ChunkTicketType<T> {
     private final String name;
     private final Comparator<T> argumentComparator;
     private final long expiryTicks;
-    public static final ChunkTicketType<Unit> START = ChunkTicketType.create("start", (unit, unit2) -> 0);
-    public static final ChunkTicketType<Unit> DRAGON = ChunkTicketType.create("dragon", (unit, unit2) -> 0);
+    public static final ChunkTicketType<Unit> START = ChunkTicketType.create("start", (a, b) -> 0);
+    public static final ChunkTicketType<Unit> DRAGON = ChunkTicketType.create("dragon", (a, b) -> 0);
     public static final ChunkTicketType<ChunkPos> PLAYER = ChunkTicketType.create("player", Comparator.comparingLong(ChunkPos::toLong));
     public static final ChunkTicketType<ChunkPos> FORCED = ChunkTicketType.create("forced", Comparator.comparingLong(ChunkPos::toLong));
     public static final ChunkTicketType<ChunkPos> LIGHT = ChunkTicketType.create("light", Comparator.comparingLong(ChunkPos::toLong));

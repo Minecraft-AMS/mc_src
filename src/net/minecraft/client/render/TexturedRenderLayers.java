@@ -27,11 +27,11 @@ import net.minecraft.block.enums.ChestType;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.SpriteIdentifier;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.SignType;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 
 @Environment(value=EnvType.CLIENT)
 public class TexturedRenderLayers {
@@ -52,11 +52,12 @@ public class TexturedRenderLayers {
     private static final RenderLayer ITEM_ENTITY_TRANSLUCENT_CULL = RenderLayer.getItemEntityTranslucentCull(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
     private static final RenderLayer ENTITY_TRANSLUCENT_CULL = RenderLayer.getEntityTranslucentCull(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
     public static final SpriteIdentifier SHULKER_TEXTURE_ID = new SpriteIdentifier(SHULKER_BOXES_ATLAS_TEXTURE, new Identifier("entity/shulker/shulker"));
-    public static final List<SpriteIdentifier> COLORED_SHULKER_BOXES_TEXTURES = (List)Stream.of("white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black").map(string -> new SpriteIdentifier(SHULKER_BOXES_ATLAS_TEXTURE, new Identifier("entity/shulker/shulker_" + string))).collect(ImmutableList.toImmutableList());
-    public static final Map<SignType, SpriteIdentifier> WOOD_TYPE_TEXTURES = SignType.stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createSignTextureId));
-    public static final Map<RegistryKey<BannerPattern>, SpriteIdentifier> BANNER_PATTERN_TEXTURES = Registry.BANNER_PATTERN.getKeys().stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createBannerPatternTextureId));
-    public static final Map<RegistryKey<BannerPattern>, SpriteIdentifier> SHIELD_PATTERN_TEXTURES = Registry.BANNER_PATTERN.getKeys().stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createShieldPatternTextureId));
-    public static final SpriteIdentifier[] BED_TEXTURES = (SpriteIdentifier[])Arrays.stream(DyeColor.values()).sorted(Comparator.comparingInt(DyeColor::getId)).map(dyeColor -> new SpriteIdentifier(BEDS_ATLAS_TEXTURE, new Identifier("entity/bed/" + dyeColor.getName()))).toArray(SpriteIdentifier[]::new);
+    public static final List<SpriteIdentifier> COLORED_SHULKER_BOXES_TEXTURES = (List)Stream.of("white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black").map(colorName -> new SpriteIdentifier(SHULKER_BOXES_ATLAS_TEXTURE, new Identifier("entity/shulker/shulker_" + colorName))).collect(ImmutableList.toImmutableList());
+    public static final Map<SignType, SpriteIdentifier> SIGN_TYPE_TEXTURES = SignType.stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createSignTextureId));
+    public static final Map<SignType, SpriteIdentifier> HANGING_SIGN_TYPE_TEXTURES = SignType.stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createHangingSignTextureId));
+    public static final Map<RegistryKey<BannerPattern>, SpriteIdentifier> BANNER_PATTERN_TEXTURES = Registries.BANNER_PATTERN.getKeys().stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createBannerPatternTextureId));
+    public static final Map<RegistryKey<BannerPattern>, SpriteIdentifier> SHIELD_PATTERN_TEXTURES = Registries.BANNER_PATTERN.getKeys().stream().collect(Collectors.toMap(Function.identity(), TexturedRenderLayers::createShieldPatternTextureId));
+    public static final SpriteIdentifier[] BED_TEXTURES = (SpriteIdentifier[])Arrays.stream(DyeColor.values()).sorted(Comparator.comparingInt(DyeColor::getId)).map(color -> new SpriteIdentifier(BEDS_ATLAS_TEXTURE, new Identifier("entity/bed/" + color.getName()))).toArray(SpriteIdentifier[]::new);
     public static final SpriteIdentifier TRAPPED = TexturedRenderLayers.getChestTextureId("trapped");
     public static final SpriteIdentifier TRAPPED_LEFT = TexturedRenderLayers.getChestTextureId("trapped_left");
     public static final SpriteIdentifier TRAPPED_RIGHT = TexturedRenderLayers.getChestTextureId("trapped_right");
@@ -88,6 +89,10 @@ public class TexturedRenderLayers {
         return SIGN_RENDER_LAYER;
     }
 
+    public static RenderLayer getHangingSign() {
+        return SIGN_RENDER_LAYER;
+    }
+
     public static RenderLayer getChest() {
         return CHEST_RENDER_LAYER;
     }
@@ -113,7 +118,8 @@ public class TexturedRenderLayers {
         COLORED_SHULKER_BOXES_TEXTURES.forEach(adder);
         BANNER_PATTERN_TEXTURES.values().forEach(adder);
         SHIELD_PATTERN_TEXTURES.values().forEach(adder);
-        WOOD_TYPE_TEXTURES.values().forEach(adder);
+        SIGN_TYPE_TEXTURES.values().forEach(adder);
+        HANGING_SIGN_TYPE_TEXTURES.values().forEach(adder);
         for (SpriteIdentifier spriteIdentifier : BED_TEXTURES) {
             adder.accept(spriteIdentifier);
         }
@@ -133,8 +139,16 @@ public class TexturedRenderLayers {
         return new SpriteIdentifier(SIGNS_ATLAS_TEXTURE, new Identifier("entity/signs/" + type.getName()));
     }
 
+    private static SpriteIdentifier createHangingSignTextureId(SignType type) {
+        return new SpriteIdentifier(SIGNS_ATLAS_TEXTURE, new Identifier("entity/signs/hanging/" + type.getName()));
+    }
+
     public static SpriteIdentifier getSignTextureId(SignType signType) {
-        return WOOD_TYPE_TEXTURES.get(signType);
+        return SIGN_TYPE_TEXTURES.get(signType);
+    }
+
+    public static SpriteIdentifier getHangingSignTextureId(SignType signType) {
+        return HANGING_SIGN_TYPE_TEXTURES.get(signType);
     }
 
     private static SpriteIdentifier createBannerPatternTextureId(RegistryKey<BannerPattern> bannerPattern) {

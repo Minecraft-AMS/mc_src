@@ -19,13 +19,13 @@ import java.lang.runtime.ObjectMethods;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-import net.minecraft.util.dynamic.RegistryElementCodec;
+import net.minecraft.registry.RegistryCodecs;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryCodecs;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
@@ -35,9 +35,9 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public record PlacedFeature(RegistryEntry<ConfiguredFeature<?, ?>> feature, List<PlacementModifier> placementModifiers) {
     public static final Codec<PlacedFeature> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)ConfiguredFeature.REGISTRY_CODEC.fieldOf("feature").forGetter(placedFeature -> placedFeature.feature), (App)PlacementModifier.CODEC.listOf().fieldOf("placement").forGetter(placedFeature -> placedFeature.placementModifiers)).apply((Applicative)instance, PlacedFeature::new));
-    public static final Codec<RegistryEntry<PlacedFeature>> REGISTRY_CODEC = RegistryElementCodec.of(Registry.PLACED_FEATURE_KEY, CODEC);
-    public static final Codec<RegistryEntryList<PlacedFeature>> LIST_CODEC = RegistryCodecs.entryList(Registry.PLACED_FEATURE_KEY, CODEC);
-    public static final Codec<List<RegistryEntryList<PlacedFeature>>> LISTS_CODEC = RegistryCodecs.entryList(Registry.PLACED_FEATURE_KEY, CODEC, true).listOf();
+    public static final Codec<RegistryEntry<PlacedFeature>> REGISTRY_CODEC = RegistryElementCodec.of(RegistryKeys.PLACED_FEATURE, CODEC);
+    public static final Codec<RegistryEntryList<PlacedFeature>> LIST_CODEC = RegistryCodecs.entryList(RegistryKeys.PLACED_FEATURE, CODEC);
+    public static final Codec<List<RegistryEntryList<PlacedFeature>>> LISTS_CODEC = RegistryCodecs.entryList(RegistryKeys.PLACED_FEATURE, CODEC, true).listOf();
 
     public boolean generateUnregistered(StructureWorldAccess world, ChunkGenerator generator, Random random, BlockPos pos) {
         return this.generate(new FeaturePlacementContext(world, generator, Optional.empty()), random, pos);
@@ -79,9 +79,6 @@ public record PlacedFeature(RegistryEntry<ConfiguredFeature<?, ?>> feature, List
     @Override
     public final boolean equals(Object object) {
         return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{PlacedFeature.class, "feature;placement", "feature", "placementModifiers"}, this, object);
-    }
-
-    record class_6870(int a) {
     }
 }
 

@@ -216,7 +216,7 @@ extends Screen {
     }
 
     private void renderBackground() {
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
         RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
         int i = this.width;
         float f = -this.time * 0.5f;
@@ -253,7 +253,7 @@ extends Screen {
         int j = this.height + 50;
         float f = -this.time;
         matrices.push();
-        matrices.translate(0.0, f, 0.0);
+        matrices.translate(0.0f, f, 0.0f);
         RenderSystem.setShaderTexture(0, MINECRAFT_TITLE_TEXTURE);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
@@ -268,7 +268,7 @@ extends Screen {
         for (l = 0; l < this.credits.size(); ++l) {
             float g;
             if (l == this.credits.size() - 1 && (g = (float)k + f - (float)(this.height / 2 - 6)) < 0.0f) {
-                matrices.translate(0.0, -g, 0.0);
+                matrices.translate(0.0f, -g, 0.0f);
             }
             if ((float)k + f + 12.0f + 8.0f > 0.0f && (float)k + f < (float)this.height) {
                 OrderedText orderedText = this.credits.get(l);
@@ -281,7 +281,7 @@ extends Screen {
             k += 12;
         }
         matrices.pop();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
         RenderSystem.setShaderTexture(0, VIGNETTE_TEXTURE);
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE_MINUS_SRC_COLOR);

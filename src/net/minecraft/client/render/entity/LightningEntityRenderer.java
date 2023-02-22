@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.render.entity;
 
@@ -18,8 +19,8 @@ import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.random.Random;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class LightningEntityRenderer

@@ -43,7 +43,6 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -60,6 +59,7 @@ import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.SnowBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityInteraction;
 import net.minecraft.entity.EntityType;
@@ -94,6 +94,14 @@ import net.minecraft.network.packet.s2c.play.PlayerSpawnPositionS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ServerScoreboard;
 import net.minecraft.server.MinecraftServer;
@@ -109,7 +117,6 @@ import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.structure.StructureTemplateManager;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.CsvWriter;
@@ -119,6 +126,7 @@ import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.function.BooleanBiFunction;
+import net.minecraft.util.function.LazyIterationConsumer;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -128,11 +136,6 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.village.raid.Raid;
@@ -161,7 +164,7 @@ import net.minecraft.world.entity.EntityHandler;
 import net.minecraft.world.entity.EntityLookup;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.EntityGameEventHandler;
-import net.minecraft.world.event.listener.GameEventListener;
+import net.minecraft.world.event.listener.GameEventDispatchManager;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import net.minecraft.world.gen.StructureAccessor;
@@ -201,6 +204,7 @@ implements StructureWorldAccess {
     private final ServerWorldProperties worldProperties;
     final EntityList entityList = new EntityList();
     private final ServerEntityManager<Entity> entityManager;
+    private final GameEventDispatchManager gameEventDispatchManager;
     public boolean savingDisabled;
     private final SleepManager sleepManager;
     private int idleTimeout;
@@ -212,7 +216,6 @@ implements StructureWorldAccess {
     protected final RaidManager raidManager;
     private final ObjectLinkedOpenHashSet<BlockEvent> syncedBlockEventQueue = new ObjectLinkedOpenHashSet();
     private final List<BlockEvent> blockEventQueue = new ArrayList<BlockEvent>(64);
-    private List<GameEvent.Message> queuedEvents = new ArrayList<GameEvent.Message>();
     private boolean inBlockTick;
     private final List<Spawner> spawners;
     @Nullable
@@ -223,18 +226,18 @@ implements StructureWorldAccess {
     private final boolean shouldTickTime;
 
     public ServerWorld(MinecraftServer server, Executor workerExecutor, LevelStorage.Session session, ServerWorldProperties properties, RegistryKey<World> worldKey, DimensionOptions dimensionOptions, WorldGenerationProgressListener worldGenerationProgressListener, boolean debugWorld, long seed, List<Spawner> spawners, boolean shouldTickTime) {
-        super(properties, worldKey, dimensionOptions.getDimensionTypeEntry(), server::getProfiler, false, debugWorld, seed, server.getMaxChainedNeighborUpdates());
+        super(properties, worldKey, dimensionOptions.dimensionTypeEntry(), server::getProfiler, false, debugWorld, seed, server.getMaxChainedNeighborUpdates());
         this.shouldTickTime = shouldTickTime;
         this.server = server;
         this.spawners = spawners;
         this.worldProperties = properties;
-        ChunkGenerator chunkGenerator = dimensionOptions.getChunkGenerator();
+        ChunkGenerator chunkGenerator = dimensionOptions.chunkGenerator();
         boolean bl = server.syncChunkWrites();
         DataFixer dataFixer = server.getDataFixer();
         EntityChunkDataAccess chunkDataAccess = new EntityChunkDataAccess(this, session.getWorldDirectory(worldKey).resolve("entities"), dataFixer, bl, server);
         this.entityManager = new ServerEntityManager<Entity>(Entity.class, new ServerEntityHandler(), chunkDataAccess);
         this.chunkManager = new ServerChunkManager(this, session, dataFixer, server.getStructureTemplateManager(), workerExecutor, chunkGenerator, server.getPlayerManager().getViewDistance(), server.getPlayerManager().getSimulationDistance(), bl, worldGenerationProgressListener, this.entityManager::updateTrackingStatus, () -> server.getOverworld().getPersistentStateManager());
-        chunkGenerator.computeStructurePlacementsIfNeeded(this.chunkManager.getNoiseConfig());
+        this.chunkManager.getStructurePlacementCalculator().tryCalculate();
         this.portalForcer = new PortalForcer(this);
         this.calculateAmbientDarkness();
         this.initWeatherGradients();
@@ -248,6 +251,7 @@ implements StructureWorldAccess {
         this.structureAccessor = new StructureAccessor(this, server.getSaveProperties().getGeneratorOptions(), this.structureLocator);
         this.enderDragonFight = this.getRegistryKey() == World.END && this.getDimensionEntry().matchesKey(DimensionTypes.THE_END) ? new EnderDragonFight(this, l, server.getSaveProperties().getDragonFight()) : null;
         this.sleepManager = new SleepManager();
+        this.gameEventDispatchManager = new GameEventDispatchManager(this);
     }
 
     public void setWeather(int clearDuration, int rainDuration, boolean raining, boolean thundering) {
@@ -348,8 +352,6 @@ implements StructureWorldAccess {
         }
         profiler.push("entityManagement");
         this.entityManager.tick();
-        profiler.swap("gameEvents");
-        this.processEventQueue();
         profiler.pop();
     }
 
@@ -401,20 +403,22 @@ implements StructureWorldAccess {
         Profiler profiler = this.getProfiler();
         profiler.push("thunder");
         if (bl && this.isThundering() && this.random.nextInt(100000) == 0 && this.hasRain(blockPos = this.getLightningPos(this.getRandomPosInChunk(i, 0, j, 15)))) {
+            LightningEntity lightningEntity;
+            SkeletonHorseEntity skeletonHorseEntity;
             boolean bl2;
             LocalDifficulty localDifficulty = this.getLocalDifficulty(blockPos);
             boolean bl3 = bl2 = this.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && this.random.nextDouble() < (double)localDifficulty.getLocalDifficulty() * 0.01 && !this.getBlockState(blockPos.down()).isOf(Blocks.LIGHTNING_ROD);
-            if (bl2) {
-                SkeletonHorseEntity skeletonHorseEntity = EntityType.SKELETON_HORSE.create(this);
+            if (bl2 && (skeletonHorseEntity = EntityType.SKELETON_HORSE.create(this)) != null) {
                 skeletonHorseEntity.setTrapped(true);
                 skeletonHorseEntity.setBreedingAge(0);
                 skeletonHorseEntity.setPosition(blockPos.getX(), blockPos.getY(), blockPos.getZ());
                 this.spawnEntity(skeletonHorseEntity);
             }
-            LightningEntity lightningEntity = EntityType.LIGHTNING_BOLT.create(this);
-            lightningEntity.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(blockPos));
-            lightningEntity.setCosmetic(bl2);
-            this.spawnEntity(lightningEntity);
+            if ((lightningEntity = EntityType.LIGHTNING_BOLT.create(this)) != null) {
+                lightningEntity.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(blockPos));
+                lightningEntity.setCosmetic(bl2);
+                this.spawnEntity(lightningEntity);
+            }
         }
         profiler.swap("iceandsnow");
         if (this.random.nextInt(16) == 0) {
@@ -425,10 +429,22 @@ implements StructureWorldAccess {
                 this.setBlockState(blockPos2, Blocks.ICE.getDefaultState());
             }
             if (bl) {
-                if (biome.canSetSnow(this, blockPos)) {
-                    this.setBlockState(blockPos, Blocks.SNOW.getDefaultState());
+                BlockState blockState;
+                int k = this.getGameRules().getInt(GameRules.SNOW_ACCUMULATION_HEIGHT);
+                if (k > 0 && biome.canSetSnow(this, blockPos)) {
+                    blockState = this.getBlockState(blockPos);
+                    if (blockState.isOf(Blocks.SNOW)) {
+                        int l = blockState.get(SnowBlock.LAYERS);
+                        if (l < Math.min(k, 8)) {
+                            BlockState blockState2 = (BlockState)blockState.with(SnowBlock.LAYERS, l + 1);
+                            Block.pushEntitiesUpBeforeBlockChange(blockState, blockState2, this, blockPos);
+                            this.setBlockState(blockPos, blockState2);
+                        }
+                    } else {
+                        this.setBlockState(blockPos, Blocks.SNOW.getDefaultState());
+                    }
                 }
-                BlockState blockState = this.getBlockState(blockPos2);
+                blockState = this.getBlockState(blockPos2);
                 Biome.Precipitation precipitation = biome.getPrecipitation();
                 if (precipitation == Biome.Precipitation.RAIN && biome.isCold(blockPos2)) {
                     precipitation = Biome.Precipitation.SNOW;
@@ -440,16 +456,16 @@ implements StructureWorldAccess {
         if (randomTickSpeed > 0) {
             for (ChunkSection chunkSection : chunk.getSectionArray()) {
                 if (!chunkSection.hasRandomTicks()) continue;
-                int k = chunkSection.getYOffset();
+                int m = chunkSection.getYOffset();
                 for (int l = 0; l < randomTickSpeed; ++l) {
                     FluidState fluidState;
-                    BlockPos blockPos3 = this.getRandomPosInChunk(i, k, j, 15);
+                    BlockPos blockPos3 = this.getRandomPosInChunk(i, m, j, 15);
                     profiler.push("randomTick");
-                    BlockState blockState2 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - k, blockPos3.getZ() - j);
-                    if (blockState2.hasRandomTicks()) {
-                        blockState2.randomTick(this, blockPos3, this.random);
+                    BlockState blockState3 = chunkSection.getBlockState(blockPos3.getX() - i, blockPos3.getY() - m, blockPos3.getZ() - j);
+                    if (blockState3.hasRandomTicks()) {
+                        blockState3.randomTick(this, blockPos3, this.random);
                     }
-                    if ((fluidState = blockState2.getFluidState()).hasRandomTicks()) {
+                    if ((fluidState = blockState3.getFluidState()).hasRandomTicks()) {
                         fluidState.onRandomTick(this, blockPos3, this.random);
                     }
                     profiler.pop();
@@ -460,7 +476,7 @@ implements StructureWorldAccess {
     }
 
     private Optional<BlockPos> getLightningRodPos(BlockPos pos2) {
-        Optional<BlockPos> optional = this.getPointOfInterestStorage().getNearestPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.LIGHTNING_ROD), pos -> pos.getY() == this.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1, pos2, 128, PointOfInterestStorage.OccupationStatus.ANY);
+        Optional<BlockPos> optional = this.getPointOfInterestStorage().getNearestPosition(poiType -> poiType.matchesKey(PointOfInterestTypes.LIGHTNING_ROD), pos -> pos.getY() == this.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1, pos2, 128, PointOfInterestStorage.OccupationStatus.ANY);
         return optional.map(pos -> pos.up(1));
     }
 
@@ -604,7 +620,7 @@ implements StructureWorldAccess {
         entity.resetPosition();
         Profiler profiler = this.getProfiler();
         ++entity.age;
-        this.getProfiler().push(() -> Registry.ENTITY_TYPE.getId(entity.getType()).toString());
+        this.getProfiler().push(() -> Registries.ENTITY_TYPE.getId(entity.getType()).toString());
         profiler.visit("tickNonPassenger");
         entity.tick();
         this.getProfiler().pop();
@@ -624,7 +640,7 @@ implements StructureWorldAccess {
         passenger.resetPosition();
         ++passenger.age;
         Profiler profiler = this.getProfiler();
-        profiler.push(() -> Registry.ENTITY_TYPE.getId(passenger.getType()).toString());
+        profiler.push(() -> Registries.ENTITY_TYPE.getId(passenger.getType()).toString());
         profiler.visit("tickPassenger");
         passenger.tickRiding();
         profiler.pop();
@@ -667,12 +683,24 @@ implements StructureWorldAccess {
 
     public <T extends Entity> List<? extends T> getEntitiesByType(TypeFilter<Entity, T> filter, Predicate<? super T> predicate) {
         ArrayList list = Lists.newArrayList();
+        this.collectEntitiesByType(filter, predicate, list);
+        return list;
+    }
+
+    public <T extends Entity> void collectEntitiesByType(TypeFilter<Entity, T> filter, Predicate<? super T> predicate, List<? super T> result) {
+        this.collectEntitiesByType(filter, predicate, result, Integer.MAX_VALUE);
+    }
+
+    public <T extends Entity> void collectEntitiesByType(TypeFilter<Entity, T> filter, Predicate<? super T> predicate, List<? super T> result, int limit) {
         this.getEntityLookup().forEach(filter, entity -> {
             if (predicate.test(entity)) {
-                list.add(entity);
+                result.add((Object)entity);
+                if (result.size() >= limit) {
+                    return LazyIterationConsumer.NextIteration.ABORT;
+                }
             }
+            return LazyIterationConsumer.NextIteration.CONTINUE;
         });
-        return list;
     }
 
     public List<? extends EnderDragonEntity> getAliveEnderDragons() {
@@ -680,10 +708,16 @@ implements StructureWorldAccess {
     }
 
     public List<ServerPlayerEntity> getPlayers(Predicate<? super ServerPlayerEntity> predicate) {
+        return this.getPlayers(predicate, Integer.MAX_VALUE);
+    }
+
+    public List<ServerPlayerEntity> getPlayers(Predicate<? super ServerPlayerEntity> predicate, int limit) {
         ArrayList list = Lists.newArrayList();
         for (ServerPlayerEntity serverPlayerEntity : this.players) {
             if (!predicate.test(serverPlayerEntity)) continue;
             list.add(serverPlayerEntity);
+            if (list.size() < limit) continue;
+            return list;
         }
         return list;
     }
@@ -773,18 +807,22 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
-        this.server.getPlayerManager().sendToAround(except, x, y, z, sound.getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, RegistryEntry<SoundEvent> sound, SoundCategory category, float volume, float pitch, long seed) {
+        this.server.getPlayerManager().sendToAround(except, x, y, z, sound.value().getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
     }
 
     @Override
-    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
-        this.server.getPlayerManager().sendToAround(except, entity.getX(), entity.getY(), entity.getZ(), sound.getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundFromEntityS2CPacket(sound, category, entity, volume, pitch, seed));
+    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, RegistryEntry<SoundEvent> sound, SoundCategory category, float volume, float pitch, long seed) {
+        this.server.getPlayerManager().sendToAround(except, entity.getX(), entity.getY(), entity.getZ(), sound.value().getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundFromEntityS2CPacket(sound, category, entity, volume, pitch, seed));
     }
 
     @Override
     public void syncGlobalEvent(int eventId, BlockPos pos, int data) {
-        this.server.getPlayerManager().sendToAll(new WorldEventS2CPacket(eventId, pos, data, true));
+        if (this.getGameRules().getBoolean(GameRules.GLOBAL_SOUND_EVENTS)) {
+            this.server.getPlayerManager().sendToAll(new WorldEventS2CPacket(eventId, pos, data, true));
+        } else {
+            this.syncWorldEvent(null, eventId, pos, data);
+        }
     }
 
     @Override
@@ -798,48 +836,7 @@ implements StructureWorldAccess {
 
     @Override
     public void emitGameEvent(GameEvent event, Vec3d emitterPos, GameEvent.Emitter emitter) {
-        int i = event.getRange();
-        BlockPos blockPos = new BlockPos(emitterPos);
-        int j = ChunkSectionPos.getSectionCoord(blockPos.getX() - i);
-        int k = ChunkSectionPos.getSectionCoord(blockPos.getY() - i);
-        int l = ChunkSectionPos.getSectionCoord(blockPos.getZ() - i);
-        int m = ChunkSectionPos.getSectionCoord(blockPos.getX() + i);
-        int n = ChunkSectionPos.getSectionCoord(blockPos.getY() + i);
-        int o = ChunkSectionPos.getSectionCoord(blockPos.getZ() + i);
-        ArrayList<GameEvent.Message> list = new ArrayList<GameEvent.Message>();
-        boolean bl = false;
-        for (int p = j; p <= m; ++p) {
-            for (int q = l; q <= o; ++q) {
-                WorldChunk chunk = this.getChunkManager().getWorldChunk(p, q);
-                if (chunk == null) continue;
-                for (int r = k; r <= n; ++r) {
-                    bl |= ((Chunk)chunk).getGameEventDispatcher(r).dispatch(event, emitterPos, emitter, (listener, listenerPos) -> (listener.shouldListenImmediately() ? list : this.queuedEvents).add(new GameEvent.Message(event, emitterPos, emitter, (GameEventListener)listener, (Vec3d)listenerPos)));
-                }
-            }
-        }
-        if (!list.isEmpty()) {
-            this.processEvents(list);
-        }
-        if (bl) {
-            DebugInfoSender.sendGameEvent(this, event, emitterPos);
-        }
-    }
-
-    private void processEventQueue() {
-        if (this.queuedEvents.isEmpty()) {
-            return;
-        }
-        List<GameEvent.Message> list = this.queuedEvents;
-        this.queuedEvents = new ArrayList<GameEvent.Message>();
-        this.processEvents(list);
-    }
-
-    private void processEvents(List<GameEvent.Message> events) {
-        Collections.sort(events);
-        for (GameEvent.Message message : events) {
-            GameEventListener gameEventListener = message.getListener();
-            gameEventListener.listen(this, message);
-        }
+        this.gameEventDispatchManager.dispatch(event, emitterPos, emitter);
     }
 
     /*
@@ -905,11 +902,9 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType) {
-        Explosion explosion = new Explosion(this, entity, damageSource, behavior, x, y, z, power, createFire, destructionType);
-        explosion.collectBlocksAndDamageEntities();
-        explosion.affectWorld(false);
-        if (destructionType == Explosion.DestructionType.NONE) {
+    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, World.ExplosionSourceType explosionSourceType) {
+        Explosion explosion = this.createExplosion(entity, damageSource, behavior, x, y, z, power, createFire, explosionSourceType, false);
+        if (!explosion.shouldDestroy()) {
             explosion.clearAffectedBlocks();
         }
         for (ServerPlayerEntity serverPlayerEntity : this.players) {
@@ -1022,7 +1017,7 @@ implements StructureWorldAccess {
         if (!this.server.getSaveProperties().getGeneratorOptions().shouldGenerateStructures()) {
             return null;
         }
-        Optional<RegistryEntryList.Named<Structure>> optional = this.getRegistryManager().get(Registry.STRUCTURE_KEY).getEntryList(structureTag);
+        Optional<RegistryEntryList.Named<Structure>> optional = this.getRegistryManager().get(RegistryKeys.STRUCTURE).getEntryList(structureTag);
         if (optional.isEmpty()) {
             return null;
         }
@@ -1115,12 +1110,12 @@ implements StructureWorldAccess {
             return;
         }
         BlockPos blockPos = pos.toImmutable();
-        optional.ifPresent(registryEntry -> this.getServer().execute(() -> {
+        optional.ifPresent(oldPoiType -> this.getServer().execute(() -> {
             this.getPointOfInterestStorage().remove(blockPos);
             DebugInfoSender.sendPoiRemoval(this, blockPos);
         }));
-        optional2.ifPresent(registryEntry -> this.getServer().execute(() -> {
-            this.getPointOfInterestStorage().add(blockPos, (RegistryEntry<PointOfInterestType>)registryEntry);
+        optional2.ifPresent(newPoiType -> this.getServer().execute(() -> {
+            this.getPointOfInterestStorage().add(blockPos, (RegistryEntry<PointOfInterestType>)newPoiType);
             DebugInfoSender.sendPoiAddition(this, blockPos);
         }));
     }
@@ -1210,7 +1205,7 @@ implements StructureWorldAccess {
         for (Entity entity : entities) {
             Text text = entity.getCustomName();
             Text text2 = entity.getDisplayName();
-            csvWriter.printRow(entity.getX(), entity.getY(), entity.getZ(), entity.getUuid(), Registry.ENTITY_TYPE.getId(entity.getType()), entity.isAlive(), text2.getString(), text != null ? text.getString() : null);
+            csvWriter.printRow(entity.getX(), entity.getY(), entity.getZ(), entity.getUuid(), Registries.ENTITY_TYPE.getId(entity.getType()), entity.isAlive(), text2.getString(), text != null ? text.getString() : null);
         }
     }
 
@@ -1248,7 +1243,7 @@ implements StructureWorldAccess {
     }
 
     public boolean isFlat() {
-        return this.server.getSaveProperties().getGeneratorOptions().isFlatWorld();
+        return this.server.getSaveProperties().isFlatWorld();
     }
 
     @Override
@@ -1268,7 +1263,7 @@ implements StructureWorldAccess {
 
     @VisibleForTesting
     public String getDebugString() {
-        return String.format(Locale.ROOT, "players: %s, entities: %s [%s], block_entities: %d [%s], block_ticks: %d, fluid_ticks: %d, chunk_source: %s", this.players.size(), this.entityManager.getDebugString(), ServerWorld.getTopFive(this.entityManager.getLookup().iterate(), entity -> Registry.ENTITY_TYPE.getId(entity.getType()).toString()), this.blockEntityTickers.size(), ServerWorld.getTopFive(this.blockEntityTickers, BlockEntityTickInvoker::getName), ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount(), ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount(), this.asString());
+        return String.format(Locale.ROOT, "players: %s, entities: %s [%s], block_entities: %d [%s], block_ticks: %d, fluid_ticks: %d, chunk_source: %s", this.players.size(), this.entityManager.getDebugString(), ServerWorld.getTopFive(this.entityManager.getLookup().iterate(), entity -> Registries.ENTITY_TYPE.getId(entity.getType()).toString()), this.blockEntityTickers.size(), ServerWorld.getTopFive(this.blockEntityTickers, BlockEntityTickInvoker::getName), ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount(), ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount(), this.asString());
     }
 
     private static <T> String getTopFive(Iterable<T> items, Function<T, String> classifier) {
@@ -1344,6 +1339,11 @@ implements StructureWorldAccess {
 
     public boolean shouldTick(ChunkPos pos) {
         return this.entityManager.shouldTick(pos);
+    }
+
+    @Override
+    public FeatureSet getEnabledFeatures() {
+        return this.server.getSaveProperties().getEnabledFeatures();
     }
 
     @Override

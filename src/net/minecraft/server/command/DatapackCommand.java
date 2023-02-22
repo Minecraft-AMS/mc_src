@@ -9,6 +9,7 @@
  *  com.mojang.brigadier.builder.RequiredArgumentBuilder
  *  com.mojang.brigadier.context.CommandContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
+ *  com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType
  *  com.mojang.brigadier.exceptions.DynamicCommandExceptionType
  *  com.mojang.brigadier.suggestion.SuggestionProvider
  */
@@ -21,6 +22,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import java.util.ArrayList;
@@ -30,6 +32,8 @@ import java.util.stream.Collectors;
 import net.minecraft.command.CommandSource;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ReloadCommand;
 import net.minecraft.server.command.ServerCommandSource;
@@ -40,11 +44,13 @@ public class DatapackCommand {
     private static final DynamicCommandExceptionType UNKNOWN_DATAPACK_EXCEPTION = new DynamicCommandExceptionType(name -> Text.translatable("commands.datapack.unknown", name));
     private static final DynamicCommandExceptionType ALREADY_ENABLED_EXCEPTION = new DynamicCommandExceptionType(name -> Text.translatable("commands.datapack.enable.failed", name));
     private static final DynamicCommandExceptionType ALREADY_DISABLED_EXCEPTION = new DynamicCommandExceptionType(name -> Text.translatable("commands.datapack.disable.failed", name));
+    private static final Dynamic2CommandExceptionType NO_FLAGS_EXCEPTION = new Dynamic2CommandExceptionType((name, flags) -> Text.translatable("commands.datapack.enable.failed.no_flags", name, flags));
     private static final SuggestionProvider<ServerCommandSource> ENABLED_CONTAINERS_SUGGESTION_PROVIDER = (context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getDataPackManager().getEnabledNames().stream().map(StringArgumentType::escapeIfRequired), builder);
     private static final SuggestionProvider<ServerCommandSource> DISABLED_CONTAINERS_SUGGESTION_PROVIDER = (context, builder) -> {
         ResourcePackManager resourcePackManager = ((ServerCommandSource)context.getSource()).getServer().getDataPackManager();
         Collection<String> collection = resourcePackManager.getEnabledNames();
-        return CommandSource.suggestMatching(resourcePackManager.getNames().stream().filter(name -> !collection.contains(name)).map(StringArgumentType::escapeIfRequired), builder);
+        FeatureSet featureSet = ((ServerCommandSource)context.getSource()).getEnabledFeatures();
+        return CommandSource.suggestMatching(resourcePackManager.getProfiles().stream().filter(profile -> profile.getRequestedFeatures().isSubsetOf(featureSet)).map(ResourcePackProfile::getName).filter(name -> !collection.contains(name)).map(StringArgumentType::escapeIfRequired), builder);
     };
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -78,7 +84,8 @@ public class DatapackCommand {
         resourcePackManager.scanPacks();
         Collection<ResourcePackProfile> collection = resourcePackManager.getEnabledProfiles();
         Collection<ResourcePackProfile> collection2 = resourcePackManager.getProfiles();
-        List list = collection2.stream().filter(profile -> !collection.contains(profile)).collect(Collectors.toList());
+        FeatureSet featureSet = source.getEnabledFeatures();
+        List<ResourcePackProfile> list = collection2.stream().filter(profile -> !collection.contains(profile) && profile.getRequestedFeatures().isSubsetOf(featureSet)).toList();
         if (list.isEmpty()) {
             source.sendFeedback(Text.translatable("commands.datapack.list.available.none"), false);
         } else {
@@ -112,6 +119,11 @@ public class DatapackCommand {
         }
         if (!enable && !bl) {
             throw ALREADY_DISABLED_EXCEPTION.create((Object)string);
+        }
+        FeatureSet featureSet = ((ServerCommandSource)context.getSource()).getEnabledFeatures();
+        FeatureSet featureSet2 = resourcePackProfile.getRequestedFeatures();
+        if (!featureSet2.isSubsetOf(featureSet)) {
+            throw NO_FLAGS_EXCEPTION.create((Object)string, (Object)FeatureFlags.printMissingFlags(featureSet, featureSet2));
         }
         return resourcePackProfile;
     }

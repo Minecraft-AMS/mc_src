@@ -28,12 +28,16 @@ extends ChatScreen {
     @Override
     protected void init() {
         super.init();
-        this.stopSleepingButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 40, 200, 20, Text.translatable("multiplayer.stopSleeping"), button -> this.stopSleeping()));
+        this.stopSleepingButton = ButtonWidget.builder(Text.translatable("multiplayer.stopSleeping"), button -> this.stopSleeping()).dimensions(this.width / 2 - 100, this.height - 40, 200, 20).build();
+        this.addDrawableChild(this.stopSleepingButton);
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.stopSleepingButton.visible = this.getPreviewScreenText() == null;
+        if (!this.client.getChatRestriction().allowsChat(this.client.isInSingleplayer())) {
+            this.stopSleepingButton.render(matrices, mouseX, mouseY, delta);
+            return;
+        }
         super.render(matrices, mouseX, mouseY, delta);
     }
 
@@ -43,10 +47,22 @@ extends ChatScreen {
     }
 
     @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (!this.client.getChatRestriction().allowsChat(this.client.isInSingleplayer())) {
+            return true;
+        }
+        return super.charTyped(chr, modifiers);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.stopSleeping();
-        } else if (keyCode == 257 || keyCode == 335) {
+        }
+        if (!this.client.getChatRestriction().allowsChat(this.client.isInSingleplayer())) {
+            return true;
+        }
+        if (keyCode == 257 || keyCode == 335) {
             if (this.sendMessage(this.chatField.getText(), true)) {
                 this.client.setScreen(null);
                 this.chatField.setText("");

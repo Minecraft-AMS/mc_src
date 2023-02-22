@@ -73,8 +73,6 @@ extends Screen {
     private Text serverLabel;
     private int playerCount;
     private boolean initialized;
-    @Nullable
-    private Runnable onRendered;
 
     public SocialInteractionsScreen() {
         super(Text.translatable("gui.socialInteractions.title"));
@@ -113,7 +111,6 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.client.keyboard.setRepeatEvents(true);
         if (this.initialized) {
             this.playerList.updateSize(this.width, this.height, 88, this.getPlayerListBottom());
         } else {
@@ -125,9 +122,9 @@ extends Screen {
         int l = this.textRenderer.getWidth(BLOCKING_TEXT) + 40;
         int m = 64 + 16 * this.getRowCount();
         int n = (this.width - l) / 2 + 3;
-        this.allTabButton = this.addDrawableChild(new ButtonWidget(j, 45, i, 20, ALL_TAB_TITLE, button -> this.setCurrentTab(Tab.ALL)));
-        this.hiddenTabButton = this.addDrawableChild(new ButtonWidget((j + k - i) / 2 + 1, 45, i, 20, HIDDEN_TAB_TITLE, button -> this.setCurrentTab(Tab.HIDDEN)));
-        this.blockedTabButton = this.addDrawableChild(new ButtonWidget(k - i + 1, 45, i, 20, BLOCKED_TAB_TITLE, button -> this.setCurrentTab(Tab.BLOCKED)));
+        this.allTabButton = this.addDrawableChild(ButtonWidget.builder(ALL_TAB_TITLE, button -> this.setCurrentTab(Tab.ALL)).dimensions(j, 45, i, 20).build());
+        this.hiddenTabButton = this.addDrawableChild(ButtonWidget.builder(HIDDEN_TAB_TITLE, button -> this.setCurrentTab(Tab.HIDDEN)).dimensions((j + k - i) / 2 + 1, 45, i, 20).build());
+        this.blockedTabButton = this.addDrawableChild(ButtonWidget.builder(BLOCKED_TAB_TITLE, button -> this.setCurrentTab(Tab.BLOCKED)).dimensions(k - i + 1, 45, i, 20).build());
         String string = this.searchBox != null ? this.searchBox.getText() : "";
         this.searchBox = new TextFieldWidget(this.textRenderer, this.getSearchBoxX() + 28, 78, 196, 16, SEARCH_TEXT){
 
@@ -144,15 +141,16 @@ extends Screen {
         this.searchBox.setVisible(true);
         this.searchBox.setEditableColor(0xFFFFFF);
         this.searchBox.setText(string);
+        this.searchBox.setPlaceholder(SEARCH_TEXT);
         this.searchBox.setChangedListener(this::onSearchChange);
         this.addSelectableChild(this.searchBox);
         this.addSelectableChild(this.playerList);
-        this.blockingButton = this.addDrawableChild(new ButtonWidget(n, m, l, 20, BLOCKING_TEXT, button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
+        this.blockingButton = this.addDrawableChild(ButtonWidget.builder(BLOCKING_TEXT, button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
                 Util.getOperatingSystem().open(BLOCKING_URL);
             }
             this.client.setScreen(this);
-        }, BLOCKING_URL, true))));
+        }, BLOCKING_URL, true))).dimensions(n, m, l, 20).build());
         this.initialized = true;
         this.setCurrentTab(this.currentTab);
     }
@@ -198,11 +196,6 @@ extends Screen {
     }
 
     @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
-    }
-
-    @Override
     public void renderBackground(MatrixStack matrices) {
         int i = this.getSearchBoxX() + 3;
         super.renderBackground(matrices);
@@ -232,16 +225,9 @@ extends Screen {
         } else if (this.currentTab == Tab.BLOCKED) {
             SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
         }
-        if (!this.searchBox.isFocused() && this.searchBox.getText().isEmpty()) {
-            SocialInteractionsScreen.drawTextWithShadow(matrices, this.client.textRenderer, SEARCH_TEXT, this.searchBox.x, this.searchBox.y, -1);
-        } else {
-            this.searchBox.render(matrices, mouseX, mouseY, delta);
-        }
+        this.searchBox.render(matrices, mouseX, mouseY, delta);
         this.blockingButton.visible = this.currentTab == Tab.BLOCKED;
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.onRendered != null) {
-            this.onRendered.run();
-        }
     }
 
     @Override
@@ -295,10 +281,6 @@ extends Screen {
 
     public void setPlayerOffline(UUID uuid) {
         this.playerList.setPlayerOffline(uuid);
-    }
-
-    public void setOnRendered(@Nullable Runnable onRendered) {
-        this.onRendered = onRendered;
     }
 
     @Environment(value=EnvType.CLIENT)

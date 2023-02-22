@@ -11,12 +11,12 @@ import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.data.server.recipe.RecipeJsonProvider;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public interface CraftingRecipeJsonBuilder {
-    public static final Identifier field_39377 = new Identifier("recipes/root");
+    public static final Identifier ROOT = new Identifier("recipes/root");
 
     public CraftingRecipeJsonBuilder criterion(String var1, CriterionConditions var2);
 
@@ -40,7 +40,7 @@ public interface CraftingRecipeJsonBuilder {
     }
 
     public static Identifier getItemId(ItemConvertible item) {
-        return Registry.ITEM.getId(item.asItem());
+        return Registries.ITEM.getId(item.asItem());
     }
 }
 

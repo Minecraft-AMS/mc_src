@@ -4,6 +4,10 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix4f
+ *  org.joml.Vector3f
+ *  org.joml.Vector4f
  *  org.lwjgl.system.MemoryStack
  */
 package net.minecraft.client.render;
@@ -16,11 +20,11 @@ import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
-import net.minecraft.util.math.Vector4f;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 @Environment(value=EnvType.CLIENT)
@@ -78,9 +82,8 @@ public interface VertexConsumer {
         int[] is = new int[]{lights[0], lights[1], lights[2], lights[3]};
         int[] js = quad.getVertexData();
         Vec3i vec3i = quad.getFace().getVector();
-        Vec3f vec3f = new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
         Matrix4f matrix4f = matrixEntry.getPositionMatrix();
-        vec3f.transform(matrixEntry.getNormalMatrix());
+        Vector3f vector3f = matrixEntry.getNormalMatrix().transform(new Vector3f((float)vec3i.getX(), (float)vec3i.getY(), (float)vec3i.getZ()));
         int i = 8;
         int j = js.length / 8;
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
@@ -112,23 +115,20 @@ public interface VertexConsumer {
                 int r = is[k];
                 m = byteBuffer.getFloat(16);
                 n = byteBuffer.getFloat(20);
-                Vector4f vector4f = new Vector4f(f, g, h, 1.0f);
-                vector4f.transform(matrix4f);
-                this.vertex(vector4f.getX(), vector4f.getY(), vector4f.getZ(), o, p, q, 1.0f, m, n, overlay, r, vec3f.getX(), vec3f.getY(), vec3f.getZ());
+                Vector4f vector4f = matrix4f.transform(new Vector4f(f, g, h, 1.0f));
+                this.vertex(vector4f.x(), vector4f.y(), vector4f.z(), o, p, q, 1.0f, m, n, overlay, r, vector3f.x(), vector3f.y(), vector3f.z());
             }
         }
     }
 
     default public VertexConsumer vertex(Matrix4f matrix, float x, float y, float z) {
-        Vector4f vector4f = new Vector4f(x, y, z, 1.0f);
-        vector4f.transform(matrix);
-        return this.vertex(vector4f.getX(), vector4f.getY(), vector4f.getZ());
+        Vector4f vector4f = matrix.transform(new Vector4f(x, y, z, 1.0f));
+        return this.vertex(vector4f.x(), vector4f.y(), vector4f.z());
     }
 
     default public VertexConsumer normal(Matrix3f matrix, float x, float y, float z) {
-        Vec3f vec3f = new Vec3f(x, y, z);
-        vec3f.transform(matrix);
-        return this.normal(vec3f.getX(), vec3f.getY(), vec3f.getZ());
+        Vector3f vector3f = matrix.transform(new Vector3f(x, y, z));
+        return this.normal(vector3f.x(), vector3f.y(), vector3f.z());
     }
 }
 

@@ -20,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.FileNameUtil;
+import net.minecraft.util.PathUtil;
 import net.minecraft.util.StringHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
@@ -66,7 +66,7 @@ public abstract class GLImportProcessor {
                 }
                 ++context.line;
                 k = context.line;
-                List<String> list2 = this.parseImports((String)string5, context, bl ? FileNameUtil.getPosixFullPath(string4) : "");
+                List<String> list2 = this.parseImports((String)string5, context, bl ? PathUtil.getPosixFullPath(string4) : "");
                 list2.set(0, String.format(Locale.ROOT, "#line %d %d\n%s", 0, k, this.extractVersion(list2.get(0), context)));
                 if (!StringUtils.isBlank((CharSequence)string3)) {
                     list.add(string3);

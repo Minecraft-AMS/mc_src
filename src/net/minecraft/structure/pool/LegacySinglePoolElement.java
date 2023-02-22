@@ -13,6 +13,7 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.pool.SinglePoolElement;
@@ -23,7 +24,6 @@ import net.minecraft.structure.processor.StructureProcessorList;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
-import net.minecraft.util.registry.RegistryEntry;
 
 public class LegacySinglePoolElement
 extends SinglePoolElement {

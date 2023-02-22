@@ -40,13 +40,13 @@ extends GameOptionsScreen {
     protected void init() {
         this.controlsList = new ControlsListWidget(this, this.client);
         this.addSelectableChild(this.controlsList);
-        this.resetAllButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, Text.translatable("controls.resetAll"), button -> {
+        this.resetAllButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("controls.resetAll"), button -> {
             for (KeyBinding keyBinding : this.gameOptions.allKeys) {
                 keyBinding.setBoundKey(keyBinding.getDefaultKey());
             }
             KeyBinding.updateKeysByCode();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 29, 150, 20, ScreenTexts.DONE, button -> this.client.setScreen(this.parent)));
+        }).dimensions(this.width / 2 - 155, this.height - 29, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 155 + 160, this.height - 29, 150, 20).build());
     }
 
     @Override

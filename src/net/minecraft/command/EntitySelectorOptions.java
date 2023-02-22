@@ -21,6 +21,8 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
@@ -31,6 +33,7 @@ import net.minecraft.advancement.Advancement;
 import net.minecraft.advancement.PlayerAdvancementTracker;
 import net.minecraft.advancement.criterion.CriterionProgress;
 import net.minecraft.command.CommandSource;
+import net.minecraft.command.EntitySelector;
 import net.minecraft.command.EntitySelectorReader;
 import net.minecraft.command.FloatRangeArgument;
 import net.minecraft.entity.EntityType;
@@ -44,6 +47,9 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.predicate.NumberRange;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
@@ -51,11 +57,9 @@ import net.minecraft.scoreboard.ServerScoreboard;
 import net.minecraft.server.ServerAdvancementLoader;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
 
 public class EntitySelectorOptions {
@@ -156,7 +160,7 @@ public class EntitySelectorOptions {
                 case "nearest" -> EntitySelectorReader.NEAREST;
                 case "furthest" -> EntitySelectorReader.FURTHEST;
                 case "random" -> EntitySelectorReader.RANDOM;
-                case "arbitrary" -> EntitySelectorReader.ARBITRARY;
+                case "arbitrary" -> EntitySelector.ARBITRARY;
                 default -> {
                     reader.getReader().setCursor(i);
                     throw IRREVERSIBLE_SORT_EXCEPTION.createWithContext((ImmutableStringReader)reader.getReader(), (Object)string);
@@ -232,11 +236,11 @@ public class EntitySelectorOptions {
         }, reader -> !reader.selectsTeam(), Text.translatable("argument.entity.options.team.description"));
         EntitySelectorOptions.putOption("type", reader -> {
             reader.setSuggestionProvider((builder, consumer) -> {
-                CommandSource.suggestIdentifiers(Registry.ENTITY_TYPE.getIds(), builder, String.valueOf('!'));
-                CommandSource.suggestIdentifiers(Registry.ENTITY_TYPE.streamTags().map(TagKey::id), builder, "!#");
+                CommandSource.suggestIdentifiers(Registries.ENTITY_TYPE.getIds(), builder, String.valueOf('!'));
+                CommandSource.suggestIdentifiers(Registries.ENTITY_TYPE.streamTags().map(TagKey::id), builder, "!#");
                 if (!reader.excludesEntityType()) {
-                    CommandSource.suggestIdentifiers(Registry.ENTITY_TYPE.getIds(), builder);
-                    CommandSource.suggestIdentifiers(Registry.ENTITY_TYPE.streamTags().map(TagKey::id), builder, String.valueOf('#'));
+                    CommandSource.suggestIdentifiers(Registries.ENTITY_TYPE.getIds(), builder);
+                    CommandSource.suggestIdentifiers(Registries.ENTITY_TYPE.streamTags().map(TagKey::id), builder, String.valueOf('#'));
                 }
                 return builder.buildFuture();
             });
@@ -250,11 +254,11 @@ public class EntitySelectorOptions {
                 reader.setExcludesEntityType();
             }
             if (reader.readTagCharacter()) {
-                TagKey<EntityType<?>> tagKey = TagKey.of(Registry.ENTITY_TYPE_KEY, Identifier.fromCommandInput(reader.getReader()));
+                TagKey<EntityType<?>> tagKey = TagKey.of(RegistryKeys.ENTITY_TYPE, Identifier.fromCommandInput(reader.getReader()));
                 reader.setPredicate(entity -> entity.getType().isIn(tagKey) != bl);
             } else {
                 Identifier identifier = Identifier.fromCommandInput(reader.getReader());
-                EntityType<?> entityType = Registry.ENTITY_TYPE.getOrEmpty(identifier).orElseThrow(() -> {
+                EntityType entityType = (EntityType)Registries.ENTITY_TYPE.getOrEmpty(identifier).orElseThrow(() -> {
                     reader.getReader().setCursor(i);
                     return INVALID_TYPE_EXCEPTION.createWithContext((ImmutableStringReader)reader.getReader(), (Object)identifier.toString());
                 });
@@ -434,15 +438,43 @@ public class EntitySelectorOptions {
         }
     }
 
-    static class SelectorOption {
-        public final SelectorHandler handler;
-        public final Predicate<EntitySelectorReader> condition;
-        public final Text description;
+    static final class SelectorOption
+    extends Record {
+        final SelectorHandler handler;
+        final Predicate<EntitySelectorReader> condition;
+        final Text description;
 
         SelectorOption(SelectorHandler handler, Predicate<EntitySelectorReader> condition, Text description) {
             this.handler = handler;
             this.condition = condition;
             this.description = description;
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{SelectorOption.class, "modifier;canUse;description", "handler", "condition", "description"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{SelectorOption.class, "modifier;canUse;description", "handler", "condition", "description"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{SelectorOption.class, "modifier;canUse;description", "handler", "condition", "description"}, this, object);
+        }
+
+        public SelectorHandler handler() {
+            return this.handler;
+        }
+
+        public Predicate<EntitySelectorReader> condition() {
+            return this.condition;
+        }
+
+        public Text description() {
+            return this.description;
         }
     }
 

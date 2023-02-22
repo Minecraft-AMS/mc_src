@@ -4,6 +4,8 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.render.entity;
 
@@ -19,9 +21,9 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class ProjectileEntityRenderer<T extends PersistentProjectileEntity>
@@ -33,8 +35,8 @@ extends EntityRenderer<T> {
     @Override
     public void render(T persistentProjectileEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         matrixStack.push();
-        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(MathHelper.lerp(g, ((PersistentProjectileEntity)persistentProjectileEntity).prevYaw, ((Entity)persistentProjectileEntity).getYaw()) - 90.0f));
-        matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(MathHelper.lerp(g, ((PersistentProjectileEntity)persistentProjectileEntity).prevPitch, ((Entity)persistentProjectileEntity).getPitch())));
+        matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(MathHelper.lerp(g, ((PersistentProjectileEntity)persistentProjectileEntity).prevYaw, ((Entity)persistentProjectileEntity).getYaw()) - 90.0f));
+        matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(MathHelper.lerp(g, ((PersistentProjectileEntity)persistentProjectileEntity).prevPitch, ((Entity)persistentProjectileEntity).getPitch())));
         boolean j = false;
         float h = 0.0f;
         float k = 0.5f;
@@ -48,11 +50,11 @@ extends EntityRenderer<T> {
         float s = (float)((PersistentProjectileEntity)persistentProjectileEntity).shake - g;
         if (s > 0.0f) {
             float t = -MathHelper.sin(s * 3.0f) * s;
-            matrixStack.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(t));
+            matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(t));
         }
-        matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(45.0f));
+        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(45.0f));
         matrixStack.scale(0.05625f, 0.05625f, 0.05625f);
-        matrixStack.translate(-4.0, 0.0, 0.0);
+        matrixStack.translate(-4.0f, 0.0f, 0.0f);
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityCutout(this.getTexture(persistentProjectileEntity)));
         MatrixStack.Entry entry = matrixStack.peek();
         Matrix4f matrix4f = entry.getPositionMatrix();
@@ -66,7 +68,7 @@ extends EntityRenderer<T> {
         this.vertex(matrix4f, matrix3f, vertexConsumer, -7, -2, 2, 0.15625f, 0.3125f, 1, 0, 0, i);
         this.vertex(matrix4f, matrix3f, vertexConsumer, -7, -2, -2, 0.0f, 0.3125f, 1, 0, 0, i);
         for (int u = 0; u < 4; ++u) {
-            matrixStack.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90.0f));
+            matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90.0f));
             this.vertex(matrix4f, matrix3f, vertexConsumer, -8, -2, 0, 0.0f, 0.0f, 0, 1, 0, i);
             this.vertex(matrix4f, matrix3f, vertexConsumer, 8, -2, 0, 0.5f, 0.0f, 0, 1, 0, i);
             this.vertex(matrix4f, matrix3f, vertexConsumer, 8, 2, 0, 0.5f, 0.15625f, 0, 1, 0, i);

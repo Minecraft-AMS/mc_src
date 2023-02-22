@@ -9,7 +9,7 @@ package net.minecraft.world.gen.feature;
 import com.mojang.serialization.Codec;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
@@ -92,7 +92,7 @@ extends Feature<RootSystemFeatureConfig> {
         for (int j = 0; j < config.rootPlacementAttempts; ++j) {
             mutablePos.set(mutablePos, random.nextInt(i) - random.nextInt(i), 0, random.nextInt(i) - random.nextInt(i));
             if (predicate.test(world.getBlockState(mutablePos))) {
-                world.setBlockState(mutablePos, config.rootStateProvider.getBlockState(random, mutablePos), 2);
+                world.setBlockState(mutablePos, config.rootStateProvider.get(random, mutablePos), 2);
             }
             mutablePos.setX(x);
             mutablePos.setZ(z);
@@ -105,7 +105,7 @@ extends Feature<RootSystemFeatureConfig> {
         for (int k = 0; k < config.hangingRootPlacementAttempts; ++k) {
             BlockState blockState;
             mutablePos.set(pos, random.nextInt(i) - random.nextInt(i), random.nextInt(j) - random.nextInt(j), random.nextInt(i) - random.nextInt(i));
-            if (!world.isAir(mutablePos) || !(blockState = config.hangingRootStateProvider.getBlockState(random, mutablePos)).canPlaceAt(world, mutablePos) || !world.getBlockState((BlockPos)mutablePos.up()).isSideSolidFullSquare(world, mutablePos, Direction.DOWN)) continue;
+            if (!world.isAir(mutablePos) || !(blockState = config.hangingRootStateProvider.get(random, mutablePos)).canPlaceAt(world, mutablePos) || !world.getBlockState((BlockPos)mutablePos.up()).isSideSolidFullSquare(world, mutablePos, Direction.DOWN)) continue;
             world.setBlockState(mutablePos, blockState, 2);
         }
     }

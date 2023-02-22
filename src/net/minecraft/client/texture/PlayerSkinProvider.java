@@ -52,7 +52,7 @@ import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.Uuids;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -165,7 +165,7 @@ public class PlayerSkinProvider {
         if (minecraftProfileTexture != null) {
             return this.loadSkin(minecraftProfileTexture, MinecraftProfileTexture.Type.SKIN);
         }
-        return DefaultSkinHelper.getTexture(DynamicSerializableUuid.getUuidFromProfile(profile));
+        return DefaultSkinHelper.getTexture(Uuids.getUuidFromProfile(profile));
     }
 
     @Environment(value=EnvType.CLIENT)

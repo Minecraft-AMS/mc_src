@@ -33,12 +33,12 @@ import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtList
 extends AbstractNbtList<NbtElement> {
-    private static final int SIZE = 296;
+    private static final int SIZE = 37;
     public static final NbtType<NbtList> TYPE = new NbtType.OfVariableSize<NbtList>(){
 
         @Override
         public NbtList read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
-            nbtTagSizeTracker.add(296L);
+            nbtTagSizeTracker.add(37L);
             if (i > 512) {
                 throw new RuntimeException("Tried to read NBT tag with too high complexity, depth > 512");
             }
@@ -47,7 +47,7 @@ extends AbstractNbtList<NbtElement> {
             if (b == 0 && j > 0) {
                 throw new RuntimeException("Missing type on ListTag");
             }
-            nbtTagSizeTracker.add(32L * (long)j);
+            nbtTagSizeTracker.add(4L * (long)j);
             NbtType<?> nbtType = NbtTypes.byId(b);
             ArrayList list = Lists.newArrayListWithCapacity((int)j);
             for (int k = 0; k < j; ++k) {
@@ -64,7 +64,7 @@ extends AbstractNbtList<NbtElement> {
             /*
              * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
              * 
-             * org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]
+             * org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [4[SWITCH], 8[CASE]], but top level block is 9[SWITCH]
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.processEndingBlocks(Op04StructuredStatement.java:435)
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:484)
              *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
@@ -127,6 +127,16 @@ extends AbstractNbtList<NbtElement> {
         for (NbtElement nbtElement : this.value) {
             nbtElement.write(output);
         }
+    }
+
+    @Override
+    public int getSizeInBytes() {
+        int i = 37;
+        i += 4 * this.value.size();
+        for (NbtElement nbtElement : this.value) {
+            i += nbtElement.getSizeInBytes();
+        }
+        return i;
     }
 
     @Override

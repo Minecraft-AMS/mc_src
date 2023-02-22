@@ -60,24 +60,24 @@ implements NbtElement {
         }
         return DataResult.error((String)("Not a compound tag: " + nbtElement));
     }, nbt -> new Dynamic((DynamicOps)NbtOps.INSTANCE, nbt));
-    private static final int SIZE = 384;
-    private static final int field_33191 = 256;
+    private static final int SIZE = 48;
+    private static final int field_41719 = 32;
     public static final NbtType<NbtCompound> TYPE = new NbtType.OfVariableSize<NbtCompound>(){
 
         @Override
         public NbtCompound read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
             byte b;
-            nbtTagSizeTracker.add(384L);
+            nbtTagSizeTracker.add(48L);
             if (i > 512) {
                 throw new RuntimeException("Tried to read NBT tag with too high complexity, depth > 512");
             }
             HashMap map = Maps.newHashMap();
             while ((b = NbtCompound.readByte(dataInput, nbtTagSizeTracker)) != 0) {
                 String string = NbtCompound.readString(dataInput, nbtTagSizeTracker);
-                nbtTagSizeTracker.add(224 + 16 * string.length());
+                nbtTagSizeTracker.add(28 + 2 * string.length());
                 NbtElement nbtElement = NbtCompound.read(NbtTypes.byId(b), string, dataInput, i + 1, nbtTagSizeTracker);
-                if (map.put(string, nbtElement) == null) continue;
-                nbtTagSizeTracker.add(288L);
+                if (map.put(string, nbtElement) != null) continue;
+                nbtTagSizeTracker.add(36L);
             }
             return new NbtCompound(map);
         }
@@ -175,6 +175,17 @@ implements NbtElement {
             NbtCompound.write(string, nbtElement, output);
         }
         output.writeByte(0);
+    }
+
+    @Override
+    public int getSizeInBytes() {
+        int i = 48;
+        for (Map.Entry<String, NbtElement> entry : this.entries.entrySet()) {
+            i += 28 + 2 * entry.getKey().length();
+            i += 36;
+            i += entry.getValue().getSizeInBytes();
+        }
+        return i;
     }
 
     public Set<String> getKeys() {

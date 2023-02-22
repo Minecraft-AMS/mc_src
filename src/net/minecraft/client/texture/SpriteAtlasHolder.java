@@ -7,55 +7,45 @@
  */
 package net.minecraft.client.texture;
 
-import java.util.stream.Stream;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.texture.SpriteLoader;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SinglePreparationResourceReloader;
+import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.profiler.Profiler;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class SpriteAtlasHolder
-extends SinglePreparationResourceReloader<SpriteAtlasTexture.Data>
-implements AutoCloseable {
+implements ResourceReloader,
+AutoCloseable {
     private final SpriteAtlasTexture atlas;
-    private final String pathPrefix;
+    private final Identifier field_41425;
 
-    public SpriteAtlasHolder(TextureManager textureManager, Identifier atlasId, String pathPrefix) {
-        this.pathPrefix = pathPrefix;
+    public SpriteAtlasHolder(TextureManager textureManager, Identifier atlasId, Identifier identifier) {
+        this.field_41425 = identifier;
         this.atlas = new SpriteAtlasTexture(atlasId);
         textureManager.registerTexture(this.atlas.getId(), this.atlas);
     }
 
-    protected abstract Stream<Identifier> getSprites();
-
     protected Sprite getSprite(Identifier objectId) {
-        return this.atlas.getSprite(this.toSpriteId(objectId));
-    }
-
-    private Identifier toSpriteId(Identifier objectId) {
-        return new Identifier(objectId.getNamespace(), this.pathPrefix + "/" + objectId.getPath());
+        return this.atlas.getSprite(objectId);
     }
 
     @Override
-    protected SpriteAtlasTexture.Data prepare(ResourceManager resourceManager, Profiler profiler) {
-        profiler.startTick();
-        profiler.push("stitching");
-        SpriteAtlasTexture.Data data = this.atlas.stitch(resourceManager, this.getSprites().map(this::toSpriteId), profiler, 0);
-        profiler.pop();
-        profiler.endTick();
-        return data;
+    public final CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
+        return ((CompletableFuture)((CompletableFuture)SpriteLoader.fromAtlas(this.atlas).method_47661(manager, this.field_41425, 0, prepareExecutor).thenCompose(SpriteLoader.StitchResult::whenComplete)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(stitchResult -> this.afterReload((SpriteLoader.StitchResult)stitchResult, applyProfiler), applyExecutor);
     }
 
-    @Override
-    protected void apply(SpriteAtlasTexture.Data data, ResourceManager resourceManager, Profiler profiler) {
+    private void afterReload(SpriteLoader.StitchResult stitchResult, Profiler profiler) {
         profiler.startTick();
         profiler.push("upload");
-        this.atlas.upload(data);
+        this.atlas.upload(stitchResult);
         profiler.pop();
         profiler.endTick();
     }
@@ -63,11 +53,6 @@ implements AutoCloseable {
     @Override
     public void close() {
         this.atlas.clear();
-    }
-
-    @Override
-    protected /* synthetic */ Object prepare(ResourceManager manager, Profiler profiler) {
-        return this.prepare(manager, profiler);
     }
 }
 

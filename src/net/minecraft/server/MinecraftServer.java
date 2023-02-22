@@ -70,8 +70,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import net.minecraft.SharedConstants;
+import net.minecraft.block.Block;
 import net.minecraft.command.DataCommandStorage;
 import net.minecraft.entity.boss.BossBarManager;
 import net.minecraft.entity.player.PlayerEntity;
@@ -87,6 +89,14 @@ import net.minecraft.network.packet.s2c.play.DifficultyS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.registry.CombinedDynamicRegistries;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.ServerDynamicRegistryType;
+import net.minecraft.resource.DataConfiguration;
 import net.minecraft.resource.DataPackSettings;
 import net.minecraft.resource.LifecycledResourceManager;
 import net.minecraft.resource.LifecycledResourceManagerImpl;
@@ -95,6 +105,8 @@ import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.resource.ResourceType;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.scoreboard.ServerScoreboard;
 import net.minecraft.server.DataPackContents;
 import net.minecraft.server.OperatorEntry;
@@ -152,9 +164,6 @@ import net.minecraft.util.profiler.Recorder;
 import net.minecraft.util.profiler.ServerSamplerSource;
 import net.minecraft.util.profiling.jfr.Finishable;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.thread.ReentrantThreadExecutor;
 import net.minecraft.village.ZombieSiegeManager;
 import net.minecraft.world.Difficulty;
@@ -174,7 +183,6 @@ import net.minecraft.world.border.WorldBorderListener;
 import net.minecraft.world.dimension.DimensionOptions;
 import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.MiscConfiguredFeatures;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.ServerWorldProperties;
@@ -206,7 +214,7 @@ AutoCloseable {
     private static final int field_33220 = 6000;
     private static final int field_33221 = 3;
     public static final int MAX_WORLD_BORDER_RADIUS = 29999984;
-    public static final LevelInfo DEMO_LEVEL_INFO = new LevelInfo("Demo World", GameMode.SURVIVAL, false, Difficulty.NORMAL, false, new GameRules(), DataPackSettings.SAFE_MODE);
+    public static final LevelInfo DEMO_LEVEL_INFO = new LevelInfo("Demo World", GameMode.SURVIVAL, false, Difficulty.NORMAL, false, new GameRules(), DataConfiguration.SAFE_MODE);
     private static final long MILLISECONDS_PER_TICK = 50L;
     public static final GameProfile ANONYMOUS_PLAYER_PROFILE = new GameProfile(Util.NIL_UUID, "Anonymous Player");
     protected final LevelStorage.Session session;
@@ -227,7 +235,7 @@ AutoCloseable {
     private final DataFixer dataFixer;
     private String serverIp;
     private int serverPort = -1;
-    private final DynamicRegistryManager.Immutable registryManager;
+    private final CombinedDynamicRegistries<ServerDynamicRegistryType> combinedDynamicRegistries;
     private final Map<RegistryKey<World>, ServerWorld> worlds = Maps.newLinkedHashMap();
     private PlayerManager playerManager;
     private volatile boolean running = true;
@@ -287,9 +295,9 @@ AutoCloseable {
 
     public MinecraftServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, Proxy proxy, DataFixer dataFixer, ApiServices apiServices, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
         super("Server");
-        this.registryManager = saveLoader.dynamicRegistryManager();
+        this.combinedDynamicRegistries = saveLoader.combinedDynamicRegistries();
         this.saveProperties = saveLoader.saveProperties();
-        if (!this.saveProperties.getGeneratorOptions().getDimensions().contains(DimensionOptions.OVERWORLD)) {
+        if (!this.combinedDynamicRegistries.getCombinedRegistryManager().get(RegistryKeys.DIMENSION).contains(DimensionOptions.OVERWORLD)) {
             throw new IllegalStateException("Missing Overworld dimension data");
         }
         this.proxy = proxy;
@@ -305,7 +313,8 @@ AutoCloseable {
         this.saveHandler = session.createSaveHandler();
         this.dataFixer = dataFixer;
         this.commandFunctionManager = new CommandFunctionManager(this, this.resourceManagerHolder.dataPackContents.getFunctionLoader());
-        this.structureTemplateManager = new StructureTemplateManager(saveLoader.resourceManager(), session, dataFixer);
+        RegistryWrapper<Block> registryEntryLookup = this.combinedDynamicRegistries.getCombinedRegistryManager().get(RegistryKeys.BLOCK).getReadOnlyWrapper().withFeatureFilter(this.saveProperties.getEnabledFeatures());
+        this.structureTemplateManager = new StructureTemplateManager(saveLoader.resourceManager(), session, dataFixer, registryEntryLookup);
         this.serverThread = serverThread;
         this.workerExecutor = Util.getMainWorkerExecutor();
     }
@@ -345,12 +354,12 @@ AutoCloseable {
 
     protected void createWorlds(WorldGenerationProgressListener worldGenerationProgressListener) {
         ServerWorldProperties serverWorldProperties = this.saveProperties.getMainWorldProperties();
+        boolean bl = this.saveProperties.isDebugWorld();
+        Registry<DimensionOptions> registry = this.combinedDynamicRegistries.getCombinedRegistryManager().get(RegistryKeys.DIMENSION);
         GeneratorOptions generatorOptions = this.saveProperties.getGeneratorOptions();
-        boolean bl = generatorOptions.isDebugWorld();
         long l = generatorOptions.getSeed();
         long m = BiomeAccess.hashSeed(l);
         ImmutableList list = ImmutableList.of((Object)new PhantomSpawner(), (Object)new PatrolSpawner(), (Object)new CatSpawner(), (Object)new ZombieSiegeManager(), (Object)new WanderingTraderManager(serverWorldProperties));
-        Registry<DimensionOptions> registry = generatorOptions.getDimensions();
         DimensionOptions dimensionOptions = registry.get(DimensionOptions.OVERWORLD);
         ServerWorld serverWorld = new ServerWorld(this, this.workerExecutor, this.session, serverWorldProperties, World.OVERWORLD, dimensionOptions, worldGenerationProgressListener, bl, m, (List<Spawner>)list, true);
         this.worlds.put(World.OVERWORLD, serverWorld);
@@ -385,7 +394,7 @@ AutoCloseable {
         for (Map.Entry<RegistryKey<DimensionOptions>, DimensionOptions> entry : registry.getEntrySet()) {
             RegistryKey<DimensionOptions> registryKey = entry.getKey();
             if (registryKey == DimensionOptions.OVERWORLD) continue;
-            RegistryKey<World> registryKey2 = RegistryKey.of(Registry.WORLD_KEY, registryKey.getValue());
+            RegistryKey<World> registryKey2 = RegistryKey.of(RegistryKeys.WORLD, registryKey.getValue());
             UnmodifiableLevelProperties unmodifiableLevelProperties = new UnmodifiableLevelProperties(this.saveProperties, serverWorldProperties);
             ServerWorld serverWorld2 = new ServerWorld(this, this.workerExecutor, this.session, unmodifiableLevelProperties, registryKey2, entry.getValue(), worldGenerationProgressListener, bl, m, (List<Spawner>)ImmutableList.of(), false);
             worldBorder.addListener(new WorldBorderListener.WorldBorderSyncer(serverWorld2.getWorldBorder()));
@@ -427,8 +436,7 @@ AutoCloseable {
             k += m;
         }
         if (bonusChest) {
-            ConfiguredFeature<DefaultFeatureConfig, ?> configuredFeature = MiscConfiguredFeatures.BONUS_CHEST.value();
-            configuredFeature.generate(world, serverChunkManager.getChunkGenerator(), world.random, new BlockPos(worldProperties.getSpawnX(), worldProperties.getSpawnY(), worldProperties.getSpawnZ()));
+            world.getRegistryManager().getOptional(RegistryKeys.CONFIGURED_FEATURE).flatMap(featureRegistry -> featureRegistry.getEntry(MiscConfiguredFeatures.BONUS_CHEST)).ifPresent(feature -> ((ConfiguredFeature)feature.value()).generate(world, serverChunkManager.getChunkGenerator(), serverWorld.random, new BlockPos(worldProperties.getSpawnX(), worldProperties.getSpawnY(), worldProperties.getSpawnZ())));
         }
     }
 
@@ -591,9 +599,9 @@ AutoCloseable {
         return this.running;
     }
 
-    public void stop(boolean bl) {
+    public void stop(boolean waitForShutdown) {
         this.running = false;
-        if (bl) {
+        if (waitForShutdown) {
             try {
                 this.serverThread.join();
             }
@@ -613,7 +621,6 @@ AutoCloseable {
                     this.timeReference = Util.getMeasuringTimeMs();
                     this.metadata.setDescription(Text.literal(this.motd));
                     this.metadata.setVersion(new ServerMetadata.Version(SharedConstants.getGameVersion().getName(), SharedConstants.getGameVersion().getProtocolVersion()));
-                    this.metadata.setPreviewsChat(this.shouldPreviewChat());
                     this.metadata.setSecureChatEnforced(this.shouldEnforceSecureProfile());
                     this.setFavicon(this.metadata);
                     while (this.running) {
@@ -909,18 +916,8 @@ AutoCloseable {
         if (this.playerManager != null) {
             details.addSection("Player Count", () -> this.playerManager.getCurrentPlayerCount() + " / " + this.playerManager.getMaxPlayerCount() + "; " + this.playerManager.getPlayerList());
         }
-        details.addSection("Data Packs", () -> {
-            StringBuilder stringBuilder = new StringBuilder();
-            for (ResourcePackProfile resourcePackProfile : this.dataPackManager.getEnabledProfiles()) {
-                if (stringBuilder.length() > 0) {
-                    stringBuilder.append(", ");
-                }
-                stringBuilder.append(resourcePackProfile.getName());
-                if (resourcePackProfile.getCompatibility().isCompatible()) continue;
-                stringBuilder.append(" (incompatible)");
-            }
-            return stringBuilder.toString();
-        });
+        details.addSection("Data Packs", () -> this.dataPackManager.getEnabledProfiles().stream().map(profile -> profile.getName() + (profile.getCompatibility().isCompatible() ? "" : " (incompatible)")).collect(Collectors.joining(", ")));
+        details.addSection("Enabled Feature Flags", () -> FeatureFlags.FEATURE_MANAGER.toId(this.saveProperties.getEnabledFeatures()).stream().map(Identifier::toString).collect(Collectors.joining(", ")));
         details.addSection("World Generation", () -> this.saveProperties.getLifecycle().toString());
         if (this.serverId != null) {
             details.addSection("Server Id", () -> this.serverId);
@@ -1079,10 +1076,6 @@ AutoCloseable {
         this.motd = motd;
     }
 
-    public boolean shouldPreviewChat() {
-        return false;
-    }
-
     public boolean isStopped() {
         return this.stopped;
     }
@@ -1228,10 +1221,10 @@ AutoCloseable {
     }
 
     public CompletableFuture<Void> reloadResources(Collection<String> dataPacks) {
-        DynamicRegistryManager.Immutable immutable = this.getRegistryManager();
+        DynamicRegistryManager.Immutable immutable = this.combinedDynamicRegistries.getPrecedingRegistryManagers(ServerDynamicRegistryType.RELOADABLE);
         CompletionStage completableFuture = ((CompletableFuture)CompletableFuture.supplyAsync(() -> (ImmutableList)dataPacks.stream().map(this.dataPackManager::getProfile).filter(Objects::nonNull).map(ResourcePackProfile::createResourcePack).collect(ImmutableList.toImmutableList()), this).thenCompose(resourcePacks -> {
             LifecycledResourceManagerImpl lifecycledResourceManager = new LifecycledResourceManagerImpl(ResourceType.SERVER_DATA, (List<ResourcePack>)resourcePacks);
-            return ((CompletableFuture)DataPackContents.reload(lifecycledResourceManager, immutable, this.isDedicated() ? CommandManager.RegistrationEnvironment.DEDICATED : CommandManager.RegistrationEnvironment.INTEGRATED, this.getFunctionPermissionLevel(), this.workerExecutor, this).whenComplete((dataPackContents, throwable) -> {
+            return ((CompletableFuture)DataPackContents.reload(lifecycledResourceManager, immutable, this.saveProperties.getEnabledFeatures(), this.isDedicated() ? CommandManager.RegistrationEnvironment.DEDICATED : CommandManager.RegistrationEnvironment.INTEGRATED, this.getFunctionPermissionLevel(), this.workerExecutor, this).whenComplete((dataPackContents, throwable) -> {
                 if (throwable != null) {
                     lifecycledResourceManager.close();
                 }
@@ -1240,7 +1233,8 @@ AutoCloseable {
             this.resourceManagerHolder.close();
             this.resourceManagerHolder = resourceManagerHolder;
             this.dataPackManager.setEnabledProfiles(dataPacks);
-            this.saveProperties.updateLevelInfo(MinecraftServer.createDataPackSettings(this.dataPackManager));
+            DataConfiguration dataConfiguration = new DataConfiguration(MinecraftServer.createDataPackSettings(this.dataPackManager), this.saveProperties.getEnabledFeatures());
+            this.saveProperties.updateLevelInfo(dataConfiguration);
             this.resourceManagerHolder.dataPackContents.refresh(this.getRegistryManager());
             this.getPlayerManager().saveAllPlayerData();
             this.getPlayerManager().onDataPacksReloaded();
@@ -1253,11 +1247,11 @@ AutoCloseable {
         return completableFuture;
     }
 
-    public static DataPackSettings loadDataPacks(ResourcePackManager resourcePackManager, DataPackSettings dataPackSettings, boolean safeMode) {
+    public static DataConfiguration loadDataPacks(ResourcePackManager resourcePackManager, DataPackSettings dataPackSettings, boolean safeMode, FeatureSet enabledFeatures) {
         resourcePackManager.scanPacks();
         if (safeMode) {
             resourcePackManager.setEnabledProfiles(Collections.singleton(VANILLA));
-            return DataPackSettings.SAFE_MODE;
+            return DataConfiguration.SAFE_MODE;
         }
         LinkedHashSet set = Sets.newLinkedHashSet();
         for (String string : dataPackSettings.getEnabled()) {
@@ -1269,16 +1263,29 @@ AutoCloseable {
         }
         for (ResourcePackProfile resourcePackProfile : resourcePackManager.getProfiles()) {
             String string2 = resourcePackProfile.getName();
-            if (dataPackSettings.getDisabled().contains(string2) || set.contains(string2)) continue;
-            LOGGER.info("Found new data pack {}, loading it automatically", (Object)string2);
-            set.add(string2);
+            if (dataPackSettings.getDisabled().contains(string2)) continue;
+            FeatureSet featureSet = resourcePackProfile.getRequestedFeatures();
+            boolean bl = set.contains(string2);
+            if (!bl && resourcePackProfile.getSource().canBeEnabledLater()) {
+                if (featureSet.isSubsetOf(enabledFeatures)) {
+                    LOGGER.info("Found new data pack {}, loading it automatically", (Object)string2);
+                    set.add(string2);
+                } else {
+                    LOGGER.info("Found new data pack {}, but can't load it due to missing features {}", (Object)string2, (Object)FeatureFlags.printMissingFlags(enabledFeatures, featureSet));
+                }
+            }
+            if (!bl || featureSet.isSubsetOf(enabledFeatures)) continue;
+            LOGGER.warn("Pack {} requires features {} that are not enabled for this world, disabling pack.", (Object)string2, (Object)FeatureFlags.printMissingFlags(enabledFeatures, featureSet));
+            set.remove(string2);
         }
         if (set.isEmpty()) {
             LOGGER.info("No datapacks selected, forcing vanilla");
             set.add(VANILLA);
         }
         resourcePackManager.setEnabledProfiles(set);
-        return MinecraftServer.createDataPackSettings(resourcePackManager);
+        DataPackSettings dataPackSettings2 = MinecraftServer.createDataPackSettings(resourcePackManager);
+        FeatureSet featureSet2 = resourcePackManager.getRequestedFeatures();
+        return new DataConfiguration(dataPackSettings2, featureSet2);
     }
 
     private static DataPackSettings createDataPackSettings(ResourcePackManager dataPackManager) {
@@ -1568,7 +1575,11 @@ AutoCloseable {
     }
 
     public DynamicRegistryManager.Immutable getRegistryManager() {
-        return this.registryManager;
+        return this.combinedDynamicRegistries.getCombinedRegistryManager();
+    }
+
+    public CombinedDynamicRegistries<ServerDynamicRegistryType> getCombinedDynamicRegistries() {
+        return this.combinedDynamicRegistries;
     }
 
     public TextStream createFilterer(ServerPlayerEntity player) {

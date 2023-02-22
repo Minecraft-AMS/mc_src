@@ -59,10 +59,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
@@ -454,10 +454,11 @@ implements Angerable {
     }
 
     @Override
+    @Nullable
     public WolfEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
+        UUID uUID;
         WolfEntity wolfEntity = EntityType.WOLF.create(serverWorld);
-        UUID uUID = this.getOwnerUuid();
-        if (uUID != null) {
+        if (wolfEntity != null && (uUID = this.getOwnerUuid()) != null) {
             wolfEntity.setOwnerUuid(uUID);
             wolfEntity.setTamed(true);
         }
@@ -526,6 +527,7 @@ implements Angerable {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }

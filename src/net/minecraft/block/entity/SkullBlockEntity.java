@@ -24,6 +24,7 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.util.ApiServices;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.StringHelper;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.Util;
@@ -34,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 public class SkullBlockEntity
 extends BlockEntity {
     public static final String SKULL_OWNER_KEY = "SkullOwner";
+    public static final String NOTE_BLOCK_SOUND_KEY = "note_block_sound";
     @Nullable
     private static UserCache userCache;
     @Nullable
@@ -42,7 +44,9 @@ extends BlockEntity {
     private static Executor executor;
     @Nullable
     private GameProfile owner;
-    private int ticksPowered;
+    @Nullable
+    private Identifier noteBlockSound;
+    private int poweredTicks;
     private boolean powered;
 
     public SkullBlockEntity(BlockPos pos, BlockState state) {
@@ -69,6 +73,9 @@ extends BlockEntity {
             NbtHelper.writeGameProfile(nbtCompound, this.owner);
             nbt.put(SKULL_OWNER_KEY, nbtCompound);
         }
+        if (this.noteBlockSound != null) {
+            nbt.putString(NOTE_BLOCK_SOUND_KEY, this.noteBlockSound.toString());
+        }
     }
 
     @Override
@@ -80,27 +87,35 @@ extends BlockEntity {
         } else if (nbt.contains("ExtraType", 8) && !StringHelper.isEmpty(string = nbt.getString("ExtraType"))) {
             this.setOwner(new GameProfile(null, string));
         }
+        if (nbt.contains(NOTE_BLOCK_SOUND_KEY, 8)) {
+            this.noteBlockSound = Identifier.tryParse(nbt.getString(NOTE_BLOCK_SOUND_KEY));
+        }
     }
 
     public static void tick(World world, BlockPos pos, BlockState state, SkullBlockEntity blockEntity) {
         if (world.isReceivingRedstonePower(pos)) {
             blockEntity.powered = true;
-            ++blockEntity.ticksPowered;
+            ++blockEntity.poweredTicks;
         } else {
             blockEntity.powered = false;
         }
     }
 
-    public float getTicksPowered(float tickDelta) {
+    public float getPoweredTicks(float tickDelta) {
         if (this.powered) {
-            return (float)this.ticksPowered + tickDelta;
+            return (float)this.poweredTicks + tickDelta;
         }
-        return this.ticksPowered;
+        return this.poweredTicks;
     }
 
     @Nullable
     public GameProfile getOwner() {
         return this.owner;
+    }
+
+    @Nullable
+    public Identifier getNoteBlockSound() {
+        return this.noteBlockSound;
     }
 
     public BlockEntityUpdateS2CPacket toUpdatePacket() {

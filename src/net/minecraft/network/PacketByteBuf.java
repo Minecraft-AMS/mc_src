@@ -5,12 +5,12 @@
  *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.google.common.collect.Multimap
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.properties.Property
  *  com.mojang.authlib.properties.PropertyMap
  *  com.mojang.datafixers.util.Either
  *  com.mojang.serialization.Codec
- *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.ByteBufAllocator
@@ -28,12 +28,12 @@ package net.minecraft.network;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -58,9 +58,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,14 +74,21 @@ import java.util.function.IntFunction;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import net.minecraft.util.collection.IndexedIterable;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -87,9 +96,8 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.GlobalPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,7 +105,7 @@ public class PacketByteBuf
 extends ByteBuf {
     private static final int MAX_VAR_INT_LENGTH = 5;
     private static final int MAX_VAR_LONG_LENGTH = 10;
-    private static final int MAX_READ_NBT_SIZE = 0x200000;
+    public static final int MAX_READ_NBT_SIZE = 0x200000;
     private final ByteBuf parent;
     public static final short DEFAULT_MAX_STRING_LENGTH = Short.MAX_VALUE;
     public static final int MAX_TEXT_LENGTH = 262144;
@@ -125,21 +133,16 @@ extends ByteBuf {
         return 10;
     }
 
+    @Deprecated
     public <T> T decode(Codec<T> codec) {
         NbtCompound nbtCompound = this.readUnlimitedNbt();
-        DataResult dataResult = codec.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound);
-        dataResult.error().ifPresent(partial -> {
-            throw new EncoderException("Failed to decode: " + partial.message() + " " + nbtCompound);
-        });
-        return dataResult.result().get();
+        return Util.getResult(codec.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound), error -> new DecoderException("Failed to decode: " + error + " " + nbtCompound));
     }
 
+    @Deprecated
     public <T> void encode(Codec<T> codec, T object) {
-        DataResult dataResult = codec.encodeStart((DynamicOps)NbtOps.INSTANCE, object);
-        dataResult.error().ifPresent(partial -> {
-            throw new EncoderException("Failed to encode: " + partial.message() + " " + object);
-        });
-        this.writeNbt((NbtCompound)dataResult.result().get());
+        NbtElement nbtElement = (NbtElement)Util.getResult(codec.encodeStart((DynamicOps)NbtOps.INSTANCE, object), error -> new EncoderException("Failed to encode: " + error + " " + object));
+        this.writeNbt((NbtCompound)nbtElement);
     }
 
     public <T> void writeRegistryValue(IndexedIterable<T> registry, T value) {
@@ -150,10 +153,39 @@ extends ByteBuf {
         this.writeVarInt(i);
     }
 
+    public <T> void writeRegistryEntry(IndexedIterable<RegistryEntry<T>> registryEntries, RegistryEntry<T> entry, PacketWriter<T> writer) {
+        switch (entry.getType()) {
+            case REFERENCE: {
+                int i = registryEntries.getRawId(entry);
+                if (i == -1) {
+                    throw new IllegalArgumentException("Can't find id for '" + entry.value() + "' in map " + registryEntries);
+                }
+                this.writeVarInt(i + 1);
+                break;
+            }
+            case DIRECT: {
+                this.writeVarInt(0);
+                writer.accept(this, entry.value());
+            }
+        }
+    }
+
     @Nullable
     public <T> T readRegistryValue(IndexedIterable<T> registry) {
         int i = this.readVarInt();
         return registry.get(i);
+    }
+
+    public <T> RegistryEntry<T> readRegistryEntry(IndexedIterable<RegistryEntry<T>> registryEntries, PacketReader<T> reader) {
+        int i = this.readVarInt();
+        if (i == 0) {
+            return RegistryEntry.of(reader.apply(this));
+        }
+        RegistryEntry<T> registryEntry = registryEntries.get(i - 1);
+        if (registryEntry == null) {
+            throw new IllegalArgumentException("Can't find element with id " + i);
+        }
+        return registryEntry;
     }
 
     public static <T> IntFunction<T> getMaxValidator(IntFunction<T> applier, int max) {
@@ -227,6 +259,26 @@ extends ByteBuf {
         for (int j = 0; j < i; ++j) {
             consumer.accept(this);
         }
+    }
+
+    public <E extends Enum<E>> void writeEnumSet(EnumSet<E> enumSet, Class<E> type) {
+        Enum[] enums = (Enum[])type.getEnumConstants();
+        BitSet bitSet = new BitSet(enums.length);
+        for (int i = 0; i < enums.length; ++i) {
+            bitSet.set(i, enumSet.contains(enums[i]));
+        }
+        this.writeBitSet(bitSet, enums.length);
+    }
+
+    public <E extends Enum<E>> EnumSet<E> readEnumSet(Class<E> type) {
+        Enum[] enums = (Enum[])type.getEnumConstants();
+        BitSet bitSet = this.readBitSet(enums.length);
+        EnumSet<Enum> enumSet = EnumSet.noneOf(type);
+        for (int i = 0; i < enums.length; ++i) {
+            if (!bitSet.get(i)) continue;
+            enumSet.add(enums[i]);
+        }
+        return enumSet;
     }
 
     public <T> void writeOptional(Optional<T> value, PacketWriter<T> writer) {
@@ -389,7 +441,7 @@ extends ByteBuf {
     }
 
     public GlobalPos readGlobalPos() {
-        RegistryKey<World> registryKey = this.readRegistryKey(Registry.WORLD_KEY);
+        RegistryKey<World> registryKey = this.readRegistryKey(RegistryKeys.WORLD);
         BlockPos blockPos = this.readBlockPos();
         return GlobalPos.create(registryKey, blockPos);
     }
@@ -523,7 +575,7 @@ extends ByteBuf {
         } else {
             this.writeBoolean(true);
             Item item = stack.getItem();
-            this.writeRegistryValue(Registry.ITEM, item);
+            this.writeRegistryValue(Registries.ITEM, item);
             this.writeByte(stack.getCount());
             NbtCompound nbtCompound = null;
             if (item.isDamageable() || item.isNbtSynced()) {
@@ -538,7 +590,7 @@ extends ByteBuf {
         if (!this.readBoolean()) {
             return ItemStack.EMPTY;
         }
-        Item item = this.readRegistryValue(Registry.ITEM);
+        Item item = this.readRegistryValue(Registries.ITEM);
         byte i = this.readByte();
         ItemStack itemStack = new ItemStack(item, (int)i);
         itemStack.setNbt(this.readNbt());
@@ -666,22 +718,45 @@ extends ByteBuf {
         this.writeLongArray(bitSet.toLongArray());
     }
 
+    public BitSet readBitSet(int size) {
+        byte[] bs = new byte[MathHelper.ceilDiv(size, 8)];
+        this.readBytes(bs);
+        return BitSet.valueOf(bs);
+    }
+
+    public void writeBitSet(BitSet bitSet, int size) {
+        if (bitSet.length() > size) {
+            throw new EncoderException("BitSet is larger than expected size (" + bitSet.length() + ">" + size + ")");
+        }
+        byte[] bs = bitSet.toByteArray();
+        this.writeBytes(Arrays.copyOf(bs, MathHelper.ceilDiv(size, 8)));
+    }
+
     public GameProfile readGameProfile() {
         UUID uUID = this.readUuid();
         String string = this.readString(16);
         GameProfile gameProfile = new GameProfile(uUID, string);
-        PropertyMap propertyMap = gameProfile.getProperties();
-        this.forEachInCollection(buf -> {
-            Property property = this.readProperty();
-            propertyMap.put((Object)property.getName(), (Object)property);
-        });
+        gameProfile.getProperties().putAll((Multimap)this.readPropertyMap());
         return gameProfile;
     }
 
     public void writeGameProfile(GameProfile gameProfile) {
         this.writeUuid(gameProfile.getId());
         this.writeString(gameProfile.getName());
-        this.writeCollection(gameProfile.getProperties().values(), PacketByteBuf::writeProperty);
+        this.writePropertyMap(gameProfile.getProperties());
+    }
+
+    public PropertyMap readPropertyMap() {
+        PropertyMap propertyMap = new PropertyMap();
+        this.forEachInCollection(buf -> {
+            Property property = this.readProperty();
+            propertyMap.put((Object)property.getName(), (Object)property);
+        });
+        return propertyMap;
+    }
+
+    public void writePropertyMap(PropertyMap propertyMap) {
+        this.writeCollection(propertyMap.values(), PacketByteBuf::writeProperty);
     }
 
     public Property readProperty() {
@@ -1438,18 +1513,18 @@ extends ByteBuf {
     }
 
     @FunctionalInterface
-    public static interface PacketReader<T>
-    extends Function<PacketByteBuf, T> {
-        default public PacketReader<Optional<T>> asOptional() {
-            return buf -> buf.readOptional(this);
-        }
-    }
-
-    @FunctionalInterface
     public static interface PacketWriter<T>
     extends BiConsumer<PacketByteBuf, T> {
         default public PacketWriter<Optional<T>> asOptional() {
             return (buf, value) -> buf.writeOptional(value, this);
+        }
+    }
+
+    @FunctionalInterface
+    public static interface PacketReader<T>
+    extends Function<PacketByteBuf, T> {
+        default public PacketReader<Optional<T>> asOptional() {
+            return buf -> buf.readOptional(this);
         }
     }
 }

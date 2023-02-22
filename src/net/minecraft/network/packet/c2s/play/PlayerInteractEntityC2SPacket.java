@@ -162,7 +162,7 @@ implements Packet<ServerPlayPacketListener> {
     static final class InteractType
     extends Enum<InteractType> {
         public static final /* enum */ InteractType INTERACT = new InteractType(InteractHandler::new);
-        public static final /* enum */ InteractType ATTACK = new InteractType(packetByteBuf -> ATTACK);
+        public static final /* enum */ InteractType ATTACK = new InteractType(buf -> ATTACK);
         public static final /* enum */ InteractType INTERACT_AT = new InteractType(InteractAtHandler::new);
         final Function<PacketByteBuf, InteractTypeHandler> handlerGetter;
         private static final /* synthetic */ InteractType[] field_29175;

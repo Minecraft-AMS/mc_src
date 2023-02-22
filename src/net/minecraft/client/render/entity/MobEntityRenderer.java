@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.render.entity;
 
@@ -23,9 +24,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class MobEntityRenderer<T extends MobEntity, M extends EntityModel<T>>
@@ -68,7 +69,7 @@ extends LivingEntityRenderer<T, M> {
         matrices.push();
         Vec3d vec3d = holdingEntity.getLeashPos(tickDelta);
         double d = (double)(MathHelper.lerp(tickDelta, ((MobEntity)entity).prevBodyYaw, ((MobEntity)entity).bodyYaw) * ((float)Math.PI / 180)) + 1.5707963267948966;
-        Vec3d vec3d2 = ((Entity)entity).getLeashOffset();
+        Vec3d vec3d2 = ((Entity)entity).getLeashOffset(tickDelta);
         double e = Math.cos(d) * vec3d2.z + Math.sin(d) * vec3d2.x;
         double f = Math.sin(d) * vec3d2.z - Math.cos(d) * vec3d2.x;
         double g = MathHelper.lerp((double)tickDelta, ((MobEntity)entity).prevX, ((Entity)entity).getX()) + e;
@@ -113,6 +114,16 @@ extends LivingEntityRenderer<T, M> {
         float w = h * m;
         vertexConsumer.vertex(positionMatrix, u - k, v + j, w + l).color(r, s, t, 1.0f).light(p).next();
         vertexConsumer.vertex(positionMatrix, u + k, v + i - j, w - l).color(r, s, t, 1.0f).light(p).next();
+    }
+
+    @Override
+    protected /* synthetic */ boolean hasLabel(LivingEntity livingEntity) {
+        return this.hasLabel((T)((MobEntity)livingEntity));
+    }
+
+    @Override
+    protected /* synthetic */ boolean hasLabel(Entity entity) {
+        return this.hasLabel((T)((MobEntity)entity));
     }
 }
 

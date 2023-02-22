@@ -40,6 +40,7 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
@@ -47,7 +48,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.VillagerData;
 import net.minecraft.village.VillagerDataContainer;
@@ -62,7 +62,7 @@ import org.slf4j.Logger;
 public class ZombieVillagerEntity
 extends ZombieEntity
 implements VillagerDataContainer {
-    private static final Logger field_36334 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final TrackedData<Boolean> CONVERTING = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
     private static final int field_30523 = 3600;
@@ -80,7 +80,7 @@ implements VillagerDataContainer {
 
     public ZombieVillagerEntity(EntityType<? extends ZombieVillagerEntity> entityType, World world) {
         super((EntityType<? extends ZombieEntity>)entityType, world);
-        Registry.VILLAGER_PROFESSION.getRandom(this.random).ifPresent(registryEntry -> this.setVillagerData(this.getVillagerData().withProfession((VillagerProfession)registryEntry.value())));
+        Registries.VILLAGER_PROFESSION.getRandom(this.random).ifPresent(profession -> this.setVillagerData(this.getVillagerData().withProfession((VillagerProfession)profession.value())));
     }
 
     @Override
@@ -93,7 +93,7 @@ implements VillagerDataContainer {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)field_36334).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
+        VillagerData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.getVillagerData()).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(nbtElement -> nbt.put("VillagerData", (NbtElement)nbtElement));
         if (this.offerData != null) {
             nbt.put("Offers", this.offerData);
         }
@@ -112,12 +112,12 @@ implements VillagerDataContainer {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("VillagerData", 10)) {
             DataResult dataResult = VillagerData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("VillagerData")));
-            dataResult.resultOrPartial(arg_0 -> ((Logger)field_36334).error(arg_0)).ifPresent(this::setVillagerData);
+            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(this::setVillagerData);
         }
         if (nbt.contains("Offers", 10)) {
             this.offerData = nbt.getCompound("Offers");
         }
-        if (nbt.contains("Gossips", 10)) {
+        if (nbt.contains("Gossips", 9)) {
             this.gossipData = nbt.getList("Gossips", 10);
         }
         if (nbt.contains("ConversionTime", 99) && nbt.getInt("ConversionTime") > -1) {

@@ -35,6 +35,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ChunkHolder;
@@ -45,17 +49,16 @@ import net.minecraft.util.TypeFilter;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
+import net.minecraft.util.function.LazyIterationConsumer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
@@ -83,10 +86,10 @@ import org.jetbrains.annotations.Nullable;
 public abstract class World
 implements WorldAccess,
 AutoCloseable {
-    public static final Codec<RegistryKey<World>> CODEC = RegistryKey.createCodec(Registry.WORLD_KEY);
-    public static final RegistryKey<World> OVERWORLD = RegistryKey.of(Registry.WORLD_KEY, new Identifier("overworld"));
-    public static final RegistryKey<World> NETHER = RegistryKey.of(Registry.WORLD_KEY, new Identifier("the_nether"));
-    public static final RegistryKey<World> END = RegistryKey.of(Registry.WORLD_KEY, new Identifier("the_end"));
+    public static final Codec<RegistryKey<World>> CODEC = RegistryKey.createCodec(RegistryKeys.WORLD);
+    public static final RegistryKey<World> OVERWORLD = RegistryKey.of(RegistryKeys.WORLD, new Identifier("overworld"));
+    public static final RegistryKey<World> NETHER = RegistryKey.of(RegistryKeys.WORLD, new Identifier("the_nether"));
+    public static final RegistryKey<World> END = RegistryKey.of(RegistryKeys.WORLD, new Identifier("the_end"));
     public static final int HORIZONTAL_LIMIT = 30000000;
     public static final int MAX_UPDATE_DEPTH = 512;
     public static final int field_30967 = 32;
@@ -338,21 +341,34 @@ AutoCloseable {
         return !this.getDimension().hasFixedTime() && !this.isDay();
     }
 
+    public void playSound(@Nullable Entity except, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        PlayerEntity playerEntity;
+        this.playSound(except instanceof PlayerEntity ? (playerEntity = (PlayerEntity)except) : null, pos, sound, category, volume, pitch);
+    }
+
     @Override
-    public void playSound(@Nullable PlayerEntity player, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
-        this.playSound(player, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, sound, category, volume, pitch);
+    public void playSound(@Nullable PlayerEntity except, BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        this.playSound(except, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, sound, category, volume, pitch);
     }
 
-    public abstract void playSound(@Nullable PlayerEntity var1, double var2, double var4, double var6, SoundEvent var8, SoundCategory var9, float var10, float var11, long var12);
+    public abstract void playSound(@Nullable PlayerEntity var1, double var2, double var4, double var6, RegistryEntry<SoundEvent> var8, SoundCategory var9, float var10, float var11, long var12);
 
-    public abstract void playSoundFromEntity(@Nullable PlayerEntity var1, Entity var2, SoundEvent var3, SoundCategory var4, float var5, float var6, long var7);
-
-    public void playSound(@Nullable PlayerEntity player, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
-        this.playSound(player, x, y, z, sound, category, volume, pitch, this.threadSafeRandom.nextLong());
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
+        this.playSound(except, x, y, z, Registries.SOUND_EVENT.getEntry(sound), category, volume, pitch, seed);
     }
 
-    public void playSoundFromEntity(@Nullable PlayerEntity player, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch) {
-        this.playSoundFromEntity(player, entity, sound, category, volume, pitch, this.threadSafeRandom.nextLong());
+    public abstract void playSoundFromEntity(@Nullable PlayerEntity var1, Entity var2, RegistryEntry<SoundEvent> var3, SoundCategory var4, float var5, float var6, long var7);
+
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        this.playSound(except, x, y, z, sound, category, volume, pitch, this.threadSafeRandom.nextLong());
+    }
+
+    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        this.playSoundFromEntity(except, entity, Registries.SOUND_EVENT.getEntry(sound), category, volume, pitch, this.threadSafeRandom.nextLong());
+    }
+
+    public void playSoundAtBlockCenter(BlockPos pos, SoundEvent sound, SoundCategory category, float volume, float pitch, boolean useDistance) {
+        this.playSound((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, sound, category, volume, pitch, useDistance);
     }
 
     public void playSound(double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, boolean useDistance) {
@@ -426,19 +442,43 @@ AutoCloseable {
         return this.shouldTickBlocksInChunk(ChunkPos.toLong(pos));
     }
 
-    public Explosion createExplosion(@Nullable Entity entity, double x, double y, double z, float power, Explosion.DestructionType destructionType) {
-        return this.createExplosion(entity, null, null, x, y, z, power, false, destructionType);
+    public Explosion createExplosion(@Nullable Entity entity, double x, double y, double z, float power, ExplosionSourceType explosionSourceType) {
+        return this.createExplosion(entity, null, null, x, y, z, power, false, explosionSourceType);
     }
 
-    public Explosion createExplosion(@Nullable Entity entity, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType) {
-        return this.createExplosion(entity, null, null, x, y, z, power, createFire, destructionType);
+    public Explosion createExplosion(@Nullable Entity entity, double x, double y, double z, float power, boolean createFire, ExplosionSourceType explosionSourceType) {
+        return this.createExplosion(entity, null, null, x, y, z, power, createFire, explosionSourceType);
     }
 
-    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType) {
+    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, Vec3d pos, float power, boolean createFire, ExplosionSourceType explosionSourceType) {
+        return this.createExplosion(entity, damageSource, behavior, pos.getX(), pos.getY(), pos.getZ(), power, createFire, explosionSourceType);
+    }
+
+    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, ExplosionSourceType explosionSourceType) {
+        return this.createExplosion(entity, damageSource, behavior, x, y, z, power, createFire, explosionSourceType, true);
+    }
+
+    public Explosion createExplosion(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, ExplosionSourceType explosionSourceType, boolean particles) {
+        Explosion.DestructionType destructionType = switch (explosionSourceType) {
+            default -> throw new IncompatibleClassChangeError();
+            case ExplosionSourceType.NONE -> Explosion.DestructionType.KEEP;
+            case ExplosionSourceType.BLOCK -> this.getDestructionType(GameRules.BLOCK_EXPLOSION_DROP_DECAY);
+            case ExplosionSourceType.MOB -> {
+                if (this.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+                    yield this.getDestructionType(GameRules.MOB_EXPLOSION_DROP_DECAY);
+                }
+                yield Explosion.DestructionType.KEEP;
+            }
+            case ExplosionSourceType.TNT -> this.getDestructionType(GameRules.TNT_EXPLOSION_DROP_DECAY);
+        };
         Explosion explosion = new Explosion(this, entity, damageSource, behavior, x, y, z, power, createFire, destructionType);
         explosion.collectBlocksAndDamageEntities();
-        explosion.affectWorld(true);
+        explosion.affectWorld(particles);
         return explosion;
+    }
+
+    private Explosion.DestructionType getDestructionType(GameRules.Key<GameRules.BooleanRule> gameRuleKey) {
+        return this.getGameRules().getBoolean(gameRuleKey) ? Explosion.DestructionType.DESTROY_WITH_DECAY : Explosion.DestructionType.DESTROY;
     }
 
     public abstract String asString();
@@ -555,22 +595,36 @@ AutoCloseable {
 
     @Override
     public <T extends Entity> List<T> getEntitiesByType(TypeFilter<Entity, T> filter, Box box, Predicate<? super T> predicate) {
-        this.getProfiler().visit("getEntities");
         ArrayList list = Lists.newArrayList();
+        this.collectEntitiesByType(filter, box, predicate, list);
+        return list;
+    }
+
+    public <T extends Entity> void collectEntitiesByType(TypeFilter<Entity, T> filter, Box box, Predicate<? super T> predicate, List<? super T> result) {
+        this.collectEntitiesByType(filter, box, predicate, result, Integer.MAX_VALUE);
+    }
+
+    public <T extends Entity> void collectEntitiesByType(TypeFilter<Entity, T> filter, Box box, Predicate<? super T> predicate, List<? super T> result, int limit) {
+        this.getProfiler().visit("getEntities");
         this.getEntityLookup().forEachIntersects(filter, box, entity -> {
             if (predicate.test(entity)) {
-                list.add(entity);
+                result.add((Object)entity);
+                if (result.size() >= limit) {
+                    return LazyIterationConsumer.NextIteration.ABORT;
+                }
             }
             if (entity instanceof EnderDragonEntity) {
                 EnderDragonEntity enderDragonEntity = (EnderDragonEntity)entity;
                 for (EnderDragonPart enderDragonPart : enderDragonEntity.getBodyParts()) {
                     Entity entity2 = (Entity)filter.downcast(enderDragonPart);
                     if (entity2 == null || !predicate.test(entity2)) continue;
-                    list.add(entity2);
+                    result.add((Object)entity2);
+                    if (result.size() < limit) continue;
+                    return LazyIterationConsumer.NextIteration.ABORT;
                 }
             }
+            return LazyIterationConsumer.NextIteration.CONTINUE;
         });
-        return list;
     }
 
     @Nullable
@@ -880,6 +934,31 @@ AutoCloseable {
     @Override
     public /* synthetic */ Chunk getChunk(int chunkX, int chunkZ) {
         return this.getChunk(chunkX, chunkZ);
+    }
+
+    public static final class ExplosionSourceType
+    extends Enum<ExplosionSourceType> {
+        public static final /* enum */ ExplosionSourceType NONE = new ExplosionSourceType();
+        public static final /* enum */ ExplosionSourceType BLOCK = new ExplosionSourceType();
+        public static final /* enum */ ExplosionSourceType MOB = new ExplosionSourceType();
+        public static final /* enum */ ExplosionSourceType TNT = new ExplosionSourceType();
+        private static final /* synthetic */ ExplosionSourceType[] field_40892;
+
+        public static ExplosionSourceType[] values() {
+            return (ExplosionSourceType[])field_40892.clone();
+        }
+
+        public static ExplosionSourceType valueOf(String string) {
+            return Enum.valueOf(ExplosionSourceType.class, string);
+        }
+
+        private static /* synthetic */ ExplosionSourceType[] method_46670() {
+            return new ExplosionSourceType[]{NONE, BLOCK, MOB, TNT};
+        }
+
+        static {
+            field_40892 = ExplosionSourceType.method_46670();
+        }
     }
 }
 

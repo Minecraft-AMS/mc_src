@@ -88,6 +88,8 @@ import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkRenderDistanceCenterS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityAttachS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityPassengersSetS2CPacket;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.WorldGenerationProgressListener;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.network.EntityTrackerEntry;
@@ -113,7 +115,6 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.util.thread.MessageListener;
 import net.minecraft.util.thread.TaskExecutor;
 import net.minecraft.util.thread.ThreadExecutor;
@@ -132,6 +133,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
 import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
+import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
 import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.poi.PointOfInterestStorage;
@@ -163,7 +165,8 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     private final ServerLightingProvider lightingProvider;
     private final ThreadExecutor<Runnable> mainThreadExecutor;
     private ChunkGenerator chunkGenerator;
-    private NoiseConfig noiseConfig;
+    private final NoiseConfig noiseConfig;
+    private final StructurePlacementCalculator structurePlacementCalculator;
     private final Supplier<PersistentStateManager> persistentStateManagerFactory;
     private final PointOfInterestStorage pointOfInterestStorage;
     final LongSet unloadedChunks = new LongOpenHashSet();
@@ -191,12 +194,15 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         this.saveDir = path.getFileName().toString();
         this.world = world;
         this.chunkGenerator = chunkGenerator;
+        DynamicRegistryManager dynamicRegistryManager = world.getRegistryManager();
+        long l = world.getSeed();
         if (chunkGenerator instanceof NoiseChunkGenerator) {
             NoiseChunkGenerator noiseChunkGenerator = (NoiseChunkGenerator)chunkGenerator;
-            this.noiseConfig = NoiseConfig.create(noiseChunkGenerator.getSettings().value(), world.getRegistryManager().get(Registry.NOISE_KEY), world.getSeed());
+            this.noiseConfig = NoiseConfig.create(noiseChunkGenerator.getSettings().value(), dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.NOISE_PARAMETERS), l);
         } else {
-            this.noiseConfig = NoiseConfig.create(ChunkGeneratorSettings.createMissingSettings(), world.getRegistryManager().get(Registry.NOISE_KEY), world.getSeed());
+            this.noiseConfig = NoiseConfig.create(ChunkGeneratorSettings.createMissingSettings(), dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.NOISE_PARAMETERS), l);
         }
+        this.structurePlacementCalculator = chunkGenerator.createStructurePlacementCalculator(dynamicRegistryManager.getWrapperOrThrow(RegistryKeys.STRUCTURE_SET), this.noiseConfig, l);
         this.mainThreadExecutor = mainThreadExecutor;
         TaskExecutor<Runnable> taskExecutor = TaskExecutor.create(executor, "worldgen");
         MessageListener<Runnable> messageListener = MessageListener.create("main", mainThreadExecutor::send);
@@ -209,12 +215,16 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         this.lightingProvider = new ServerLightingProvider(chunkProvider, this, this.world.getDimension().hasSkyLight(), taskExecutor2, this.chunkTaskPrioritySystem.createExecutor(taskExecutor2, false));
         this.ticketManager = new TicketManager(executor, mainThreadExecutor);
         this.persistentStateManagerFactory = persistentStateManagerFactory;
-        this.pointOfInterestStorage = new PointOfInterestStorage(path.resolve("poi"), dataFixer, dsync, world.getRegistryManager(), world);
+        this.pointOfInterestStorage = new PointOfInterestStorage(path.resolve("poi"), dataFixer, dsync, dynamicRegistryManager, world);
         this.setViewDistance(viewDistance);
     }
 
     protected ChunkGenerator getChunkGenerator() {
         return this.chunkGenerator;
+    }
+
+    protected StructurePlacementCalculator getStructurePlacementCalculator() {
+        return this.structurePlacementCalculator;
     }
 
     protected NoiseConfig getNoiseConfig() {
@@ -585,7 +595,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
 
     private Chunk getProtoChunk(ChunkPos chunkPos) {
         this.markAsProtoChunk(chunkPos);
-        return new ProtoChunk(chunkPos, UpgradeData.NO_UPGRADE_DATA, this.world, this.world.getRegistryManager().get(Registry.BIOME_KEY), null);
+        return new ProtoChunk(chunkPos, UpgradeData.NO_UPGRADE_DATA, this.world, this.world.getRegistryManager().get(RegistryKeys.BIOME), null);
     }
 
     private void markAsProtoChunk(ChunkPos pos) {
@@ -825,7 +835,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
             ChunkHolder chunkHolder = (ChunkHolder)entry.getValue();
             Optional<Chunk> optional = Optional.ofNullable(chunkHolder.getCurrentChunk());
             Optional<Object> optional2 = optional.flatMap(chunk -> chunk instanceof WorldChunk ? Optional.of((WorldChunk)chunk) : Optional.empty());
-            csvWriter.printRow(chunkPos.x, chunkPos.z, chunkHolder.getLevel(), optional.isPresent(), optional.map(Chunk::getStatus).orElse(null), optional2.map(WorldChunk::getLevelType).orElse(null), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getAccessibleFuture()), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getTickingFuture()), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getEntityTickingFuture()), this.ticketManager.getTicket(l), this.shouldTick(chunkPos), optional2.map(worldChunk -> worldChunk.getBlockEntities().size()).orElse(0), simulationDistanceLevelPropagator.getTickingTicket(l), simulationDistanceLevelPropagator.getLevel(l), optional2.map(worldChunk -> worldChunk.getBlockTickScheduler().getTickCount()).orElse(0), optional2.map(worldChunk -> worldChunk.getFluidTickScheduler().getTickCount()).orElse(0));
+            csvWriter.printRow(chunkPos.x, chunkPos.z, chunkHolder.getLevel(), optional.isPresent(), optional.map(Chunk::getStatus).orElse(null), optional2.map(WorldChunk::getLevelType).orElse(null), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getAccessibleFuture()), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getTickingFuture()), ThreadedAnvilChunkStorage.getFutureStatus(chunkHolder.getEntityTickingFuture()), this.ticketManager.getTicket(l), this.shouldTick(chunkPos), optional2.map(chunk -> chunk.getBlockEntities().size()).orElse(0), simulationDistanceLevelPropagator.getTickingTicket(l), simulationDistanceLevelPropagator.getLevel(l), optional2.map(chunk -> chunk.getBlockTickScheduler().getTickCount()).orElse(0), optional2.map(chunk -> chunk.getFluidTickScheduler().getTickCount()).orElse(0));
         }
     }
 
@@ -1087,6 +1097,19 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         EntityTracker entityTracker = (EntityTracker)this.entityTrackers.get(entity.getId());
         if (entityTracker != null) {
             entityTracker.sendToNearbyPlayers(packet);
+        }
+    }
+
+    public void sendChunkPacketToWatchingPlayers(Chunk chunk) {
+        WorldChunk worldChunk;
+        ChunkPos chunkPos = chunk.getPos();
+        WorldChunk worldChunk2 = chunk instanceof WorldChunk ? (worldChunk = (WorldChunk)chunk) : this.world.getChunk(chunkPos.x, chunkPos.z);
+        MutableObject mutableObject = new MutableObject();
+        for (ServerPlayerEntity serverPlayerEntity : this.getPlayersWatchingChunk(chunkPos, false)) {
+            if (mutableObject.getValue() == null) {
+                mutableObject.setValue((Object)new ChunkDataS2CPacket(worldChunk2, this.lightingProvider, null, null, true));
+            }
+            serverPlayerEntity.sendChunkPacket(chunkPos, (Packet)mutableObject.getValue());
         }
     }
 

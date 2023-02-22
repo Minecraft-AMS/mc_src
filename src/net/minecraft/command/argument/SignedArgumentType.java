@@ -1,12 +1,14 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.brigadier.arguments.ArgumentType
  */
 package net.minecraft.command.argument;
 
-import net.minecraft.command.argument.DecoratableArgumentType;
+import com.mojang.brigadier.arguments.ArgumentType;
 
 public interface SignedArgumentType<T>
-extends DecoratableArgumentType<T> {
-    public String toSignedString(T var1);
+extends ArgumentType<T> {
 }
 

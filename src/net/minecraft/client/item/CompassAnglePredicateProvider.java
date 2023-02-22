@@ -10,7 +10,7 @@ package net.minecraft.client.item;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.item.UnclampedModelPredicateProvider;
+import net.minecraft.client.item.ClampedModelPredicateProvider;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class CompassAnglePredicateProvider
-implements UnclampedModelPredicateProvider {
+implements ClampedModelPredicateProvider {
     public static final int field_38798 = 0;
     private final AngleInterpolator aimedInterpolator = new AngleInterpolator();
     private final AngleInterpolator aimlessInterpolator = new AngleInterpolator();
@@ -67,8 +67,8 @@ implements UnclampedModelPredicateProvider {
     private float getAngleTo(Entity entity, long time, BlockPos pos) {
         double f;
         PlayerEntity playerEntity;
-        double d = this.method_43216(entity, pos);
-        double e = this.method_43213(entity);
+        double d = this.getAngleTo(entity, pos);
+        double e = this.getBodyYaw(entity);
         if (entity instanceof PlayerEntity && (playerEntity = (PlayerEntity)entity).isMainPlayer()) {
             if (this.aimedInterpolator.shouldUpdate(time)) {
                 this.aimedInterpolator.update(time, 0.5 - (e - 0.25));
@@ -92,12 +92,12 @@ implements UnclampedModelPredicateProvider {
         return pos != null && pos.getDimension() == entity.world.getRegistryKey() && !(pos.getPos().getSquaredDistance(entity.getPos()) < (double)1.0E-5f);
     }
 
-    private double method_43216(Entity entity, BlockPos blockPos) {
-        Vec3d vec3d = Vec3d.ofCenter(blockPos);
+    private double getAngleTo(Entity entity, BlockPos pos) {
+        Vec3d vec3d = Vec3d.ofCenter(pos);
         return Math.atan2(vec3d.getZ() - entity.getZ(), vec3d.getX() - entity.getX()) / 6.2831854820251465;
     }
 
-    private double method_43213(Entity entity) {
+    private double getBodyYaw(Entity entity) {
         return MathHelper.floorMod((double)(entity.getBodyYaw() / 360.0f), 1.0);
     }
 

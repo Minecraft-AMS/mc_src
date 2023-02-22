@@ -33,8 +33,6 @@ import java.util.function.BooleanSupplier;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.entity.SkullBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.Items;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
@@ -61,7 +59,6 @@ import net.minecraft.util.ApiServices;
 import net.minecraft.util.SystemDetails;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.Util;
-import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.logging.UncaughtExceptionHandler;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.math.BlockPos;
@@ -169,7 +166,7 @@ implements DedicatedServer {
         if (!ServerConfigHandler.checkSuccess(this)) {
             return false;
         }
-        this.setPlayerManager(new DedicatedPlayerManager(this, this.getRegistryManager(), this.saveHandler));
+        this.setPlayerManager(new DedicatedPlayerManager(this, this.getCombinedDynamicRegistries(), this.saveHandler));
         long l = Util.getMeasuringTimeNano();
         SkullBlockEntity.setServices(this.apiServices, this);
         UserCache.setUseRemote(this.isOnlineMode());
@@ -196,7 +193,6 @@ implements DedicatedServer {
             thread2.setDaemon(true);
             thread2.start();
         }
-        Items.AIR.appendStacks(ItemGroup.SEARCH, DefaultedList.of());
         if (serverPropertiesHandler.enableJmxMonitoring) {
             ServerMBean.register(this);
             LOGGER.info("JMX monitoring enabled");
@@ -246,7 +242,7 @@ implements DedicatedServer {
         ServerPropertiesHandler serverPropertiesHandler = this.getProperties();
         try (BufferedWriter writer = Files.newBufferedWriter(file, new OpenOption[0]);){
             writer.write(String.format(Locale.ROOT, "sync-chunk-writes=%s%n", serverPropertiesHandler.syncChunkWrites));
-            writer.write(String.format(Locale.ROOT, "gamemode=%s%n", new Object[]{serverPropertiesHandler.gameMode}));
+            writer.write(String.format(Locale.ROOT, "gamemode=%s%n", serverPropertiesHandler.gameMode));
             writer.write(String.format(Locale.ROOT, "spawn-monsters=%s%n", serverPropertiesHandler.spawnMonsters));
             writer.write(String.format(Locale.ROOT, "entity-broadcast-range-percentage=%d%n", serverPropertiesHandler.entityBroadcastRangePercentage));
             writer.write(String.format(Locale.ROOT, "max-world-size=%d%n", serverPropertiesHandler.maxWorldSize));
@@ -254,7 +250,7 @@ implements DedicatedServer {
             writer.write(String.format(Locale.ROOT, "view-distance=%d%n", serverPropertiesHandler.viewDistance));
             writer.write(String.format(Locale.ROOT, "simulation-distance=%d%n", serverPropertiesHandler.simulationDistance));
             writer.write(String.format(Locale.ROOT, "spawn-animals=%s%n", serverPropertiesHandler.spawnAnimals));
-            writer.write(String.format(Locale.ROOT, "generate-structures=%s%n", serverPropertiesHandler.getGeneratorOptions(this.getRegistryManager()).shouldGenerateStructures()));
+            writer.write(String.format(Locale.ROOT, "generate-structures=%s%n", serverPropertiesHandler.generatorOptions.shouldGenerateStructures()));
             writer.write(String.format(Locale.ROOT, "use-native=%s%n", serverPropertiesHandler.useNativeTransport));
             writer.write(String.format(Locale.ROOT, "rate-limit=%d%n", serverPropertiesHandler.rateLimit));
         }
@@ -311,11 +307,6 @@ implements DedicatedServer {
     @Override
     public boolean isUsingNativeTransport() {
         return this.getProperties().useNativeTransport;
-    }
-
-    @Override
-    public boolean shouldPreviewChat() {
-        return this.getProperties().previewsChat;
     }
 
     @Override

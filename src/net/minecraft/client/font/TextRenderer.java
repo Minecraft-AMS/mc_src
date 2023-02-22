@@ -9,6 +9,10 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
+ *  org.joml.Matrix4fc
+ *  org.joml.Vector3f
+ *  org.joml.Vector3fc
  */
 package net.minecraft.client.font;
 
@@ -25,7 +29,6 @@ import net.minecraft.client.font.FontStorage;
 import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.TextHandler;
-import net.minecraft.client.font.TextVisitFactory;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -36,19 +39,22 @@ import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.text.TextVisitFactory;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
 import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 @Environment(value=EnvType.CLIENT)
 public class TextRenderer {
     private static final float Z_INDEX = 0.01f;
-    private static final Vec3f FORWARD_SHIFT = new Vec3f(0.0f, 0.0f, 0.03f);
+    private static final Vector3f FORWARD_SHIFT = new Vector3f(0.0f, 0.0f, 0.03f);
     public static final int ARABIC_SHAPING_LETTERS_SHAPE = 8;
     public final int fontHeight = 9;
     public final Random random = Random.create();
@@ -175,10 +181,10 @@ public class TextRenderer {
             text = this.mirror(text);
         }
         color = TextRenderer.tweakTransparency(color);
-        Matrix4f matrix4f = matrix.copy();
+        Matrix4f matrix4f = new Matrix4f((Matrix4fc)matrix);
         if (shadow) {
             this.drawLayer(text, x, y, color, true, matrix, vertexConsumers, seeThrough, backgroundColor, light);
-            matrix4f.addToLastColumn(FORWARD_SHIFT);
+            matrix4f.translate((Vector3fc)FORWARD_SHIFT);
         }
         x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumers, seeThrough, backgroundColor, light);
         return (int)x + (shadow ? 1 : 0);
@@ -186,10 +192,10 @@ public class TextRenderer {
 
     private int drawInternal(OrderedText text, float x, float y, int color, boolean shadow, Matrix4f matrix, VertexConsumerProvider vertexConsumerProvider, boolean seeThrough, int backgroundColor, int light) {
         color = TextRenderer.tweakTransparency(color);
-        Matrix4f matrix4f = matrix.copy();
+        Matrix4f matrix4f = new Matrix4f((Matrix4fc)matrix);
         if (shadow) {
             this.drawLayer(text, x, y, color, true, matrix, vertexConsumerProvider, seeThrough, backgroundColor, light);
-            matrix4f.addToLastColumn(FORWARD_SHIFT);
+            matrix4f.translate((Vector3fc)FORWARD_SHIFT);
         }
         x = this.drawLayer(text, x, y, color, false, matrix4f, vertexConsumerProvider, seeThrough, backgroundColor, light);
         return (int)x + (shadow ? 1 : 0);

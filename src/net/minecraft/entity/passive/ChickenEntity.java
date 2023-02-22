@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
@@ -37,6 +40,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
+import org.jetbrains.annotations.Nullable;
 
 public class ChickenEntity
 extends AnimalEntity {
@@ -101,7 +105,7 @@ extends AnimalEntity {
     }
 
     @Override
-    protected boolean hasWings() {
+    protected boolean isFlappingWings() {
         return this.speed > this.field_28639;
     }
 
@@ -136,6 +140,7 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public ChickenEntity createChild(ServerWorld serverWorld, PassiveEntity passiveEntity) {
         return EntityType.CHICKEN.create(serverWorld);
     }
@@ -196,6 +201,7 @@ extends AnimalEntity {
     }
 
     @Override
+    @Nullable
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
     }

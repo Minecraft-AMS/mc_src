@@ -14,15 +14,14 @@ import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.BreedTask;
-import net.minecraft.entity.ai.brain.task.FollowMobTask;
-import net.minecraft.entity.ai.brain.task.GoTowardsLookTarget;
+import net.minecraft.entity.ai.brain.task.FollowMobWithIntervalTask;
+import net.minecraft.entity.ai.brain.task.GoTowardsLookTargetTask;
 import net.minecraft.entity.ai.brain.task.LeapingChargeTask;
 import net.minecraft.entity.ai.brain.task.LongJumpTask;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
@@ -34,7 +33,6 @@ import net.minecraft.entity.ai.brain.task.StrollTask;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.ai.brain.task.TemptTask;
 import net.minecraft.entity.ai.brain.task.TemptationCooldownTask;
-import net.minecraft.entity.ai.brain.task.TimeLimitedTask;
 import net.minecraft.entity.ai.brain.task.WaitTask;
 import net.minecraft.entity.ai.brain.task.WalkTask;
 import net.minecraft.entity.ai.brain.task.WalkTowardClosestAdultTask;
@@ -89,7 +87,7 @@ public class GoatBrain {
     }
 
     private static void addIdleActivities(Brain<GoatEntity> brain) {
-        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<GoatEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, new TimeLimitedTask<LivingEntity>(new FollowMobTask(EntityType.PLAYER, 6.0f), UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)0, (Object)new BreedTask(EntityType.GOAT, 1.0f)), (Object)Pair.of((Object)1, (Object)new TemptTask(goat -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, new WalkTowardClosestAdultTask(WALKING_SPEED, 1.25f)), (Object)Pair.of((Object)3, new RandomTask(ImmutableList.of((Object)Pair.of((Object)new StrollTask(1.0f), (Object)2), (Object)Pair.of((Object)new GoTowardsLookTarget(1.0f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.RAM_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
+        brain.setTaskList(Activity.IDLE, (ImmutableList<Pair<Integer, Task<GoatEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, FollowMobWithIntervalTask.follow(EntityType.PLAYER, 6.0f, UniformIntProvider.create(30, 60))), (Object)Pair.of((Object)0, (Object)new BreedTask(EntityType.GOAT, 1.0f)), (Object)Pair.of((Object)1, (Object)new TemptTask(goat -> Float.valueOf(1.25f))), (Object)Pair.of((Object)2, WalkTowardClosestAdultTask.create(WALKING_SPEED, 1.25f)), (Object)Pair.of((Object)3, new RandomTask(ImmutableList.of((Object)Pair.of(StrollTask.create(1.0f), (Object)2), (Object)Pair.of(GoTowardsLookTargetTask.create(1.0f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1))))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.RAM_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)), (Object)Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, (Object)((Object)MemoryModuleState.VALUE_ABSENT))));
     }
 
     private static void addLongJumpActivities(Brain<GoatEntity> brain) {

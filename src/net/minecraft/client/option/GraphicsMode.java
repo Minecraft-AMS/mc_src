@@ -7,12 +7,11 @@
  */
 package net.minecraft.client.option;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.function.IntFunction;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.TranslatableOption;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.function.ValueLists;
 
 @Environment(value=EnvType.CLIENT)
 public final class GraphicsMode
@@ -21,7 +20,7 @@ implements TranslatableOption {
     public static final /* enum */ GraphicsMode FAST = new GraphicsMode(0, "options.graphics.fast");
     public static final /* enum */ GraphicsMode FANCY = new GraphicsMode(1, "options.graphics.fancy");
     public static final /* enum */ GraphicsMode FABULOUS = new GraphicsMode(2, "options.graphics.fabulous");
-    private static final GraphicsMode[] VALUES;
+    private static final IntFunction<GraphicsMode> BY_ID;
     private final int id;
     private final String translationKey;
     private static final /* synthetic */ GraphicsMode[] field_25433;
@@ -50,22 +49,16 @@ implements TranslatableOption {
     }
 
     public String toString() {
-        switch (this) {
-            case FAST: {
-                return "fast";
-            }
-            case FANCY: {
-                return "fancy";
-            }
-            case FABULOUS: {
-                return "fabulous";
-            }
-        }
-        throw new IllegalArgumentException();
+        return switch (this) {
+            default -> throw new IncompatibleClassChangeError();
+            case FAST -> "fast";
+            case FANCY -> "fancy";
+            case FABULOUS -> "fabulous";
+        };
     }
 
     public static GraphicsMode byId(int id) {
-        return VALUES[MathHelper.floorMod(id, VALUES.length)];
+        return BY_ID.apply(id);
     }
 
     private static /* synthetic */ GraphicsMode[] method_36861() {
@@ -74,7 +67,7 @@ implements TranslatableOption {
 
     static {
         field_25433 = GraphicsMode.method_36861();
-        VALUES = (GraphicsMode[])Arrays.stream(GraphicsMode.values()).sorted(Comparator.comparingInt(GraphicsMode::getId)).toArray(GraphicsMode[]::new);
+        BY_ID = ValueLists.createIdToValueFunction(GraphicsMode::getId, GraphicsMode.values(), ValueLists.OutOfBoundsHandling.WRAP);
     }
 }
 

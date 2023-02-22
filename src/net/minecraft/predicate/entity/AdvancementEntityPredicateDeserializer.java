@@ -35,10 +35,10 @@ public class AdvancementEntityPredicateDeserializer {
 
     public final LootCondition[] loadConditions(JsonArray array, String key, LootContextType contextType) {
         LootCondition[] lootConditions = (LootCondition[])this.gson.fromJson((JsonElement)array, LootCondition[].class);
-        LootTableReporter lootTableReporter = new LootTableReporter(contextType, this.conditionManager::get, identifier -> null);
+        LootTableReporter lootTableReporter = new LootTableReporter(contextType, this.conditionManager::get, tableId -> null);
         for (LootCondition lootCondition : lootConditions) {
             lootCondition.validate(lootTableReporter);
-            lootTableReporter.getMessages().forEach((string2, string3) -> LOGGER.warn("Found validation problem in advancement trigger {}/{}: {}", new Object[]{key, string2, string3}));
+            lootTableReporter.getMessages().forEach((name, message) -> LOGGER.warn("Found validation problem in advancement trigger {}/{}: {}", new Object[]{key, name, message}));
         }
         return lootConditions;
     }

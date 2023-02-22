@@ -186,7 +186,7 @@ AutoCloseable {
                         result.nbt.accept(scanner);
                     }
                 } else {
-                    this.storage.method_39802(pos, scanner);
+                    this.storage.scanChunk(pos, scanner);
                 }
                 return Either.left(null);
             }

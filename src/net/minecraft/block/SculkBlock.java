@@ -6,7 +6,7 @@ package net.minecraft.block;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.OreBlock;
+import net.minecraft.block.ExperienceDroppingBlock;
 import net.minecraft.block.SculkShriekerBlock;
 import net.minecraft.block.SculkSpreadable;
 import net.minecraft.block.entity.SculkSpreadManager;
@@ -20,7 +20,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.WorldAccess;
 
 public class SculkBlock
-extends OreBlock
+extends ExperienceDroppingBlock
 implements SculkSpreadable {
     public SculkBlock(AbstractBlock.Settings settings) {
         super(settings, ConstantIntProvider.create(1));

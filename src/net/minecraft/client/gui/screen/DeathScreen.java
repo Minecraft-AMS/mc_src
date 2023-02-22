@@ -10,6 +10,7 @@
 package net.minecraft.client.gui.screen;
 
 import com.google.common.collect.Lists;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -18,9 +19,11 @@ import net.minecraft.client.gui.screen.MessageScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -34,6 +37,8 @@ extends Screen {
     private final boolean isHardcore;
     private Text scoreText;
     private final List<ButtonWidget> buttons = Lists.newArrayList();
+    @Nullable
+    private ButtonWidget titleScreenButton;
 
     public DeathScreen(@Nullable Text message, boolean isHardcore) {
         super(Text.translatable(isHardcore ? "deathScreen.title.hardcore" : "deathScreen.title"));
@@ -45,19 +50,13 @@ extends Screen {
     protected void init() {
         this.ticksSinceDeath = 0;
         this.buttons.clear();
-        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, this.isHardcore ? Text.translatable("deathScreen.spectate") : Text.translatable("deathScreen.respawn"), button -> {
+        MutableText text = this.isHardcore ? Text.translatable("deathScreen.spectate") : Text.translatable("deathScreen.respawn");
+        this.buttons.add(this.addDrawableChild(ButtonWidget.builder(text, button -> {
             this.client.player.requestRespawn();
             this.client.setScreen(null);
-        })));
-        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96, 200, 20, Text.translatable("deathScreen.titleScreen"), button -> {
-            if (this.isHardcore) {
-                this.quitLevel();
-                return;
-            }
-            ConfirmScreen confirmScreen = new ConfirmScreen(this::onConfirmQuit, Text.translatable("deathScreen.quit.confirm"), ScreenTexts.EMPTY, Text.translatable("deathScreen.titleScreen"), Text.translatable("deathScreen.respawn"));
-            this.client.setScreen(confirmScreen);
-            confirmScreen.disableButtons(20);
-        })));
+        }).dimensions(this.width / 2 - 100, this.height / 4 + 72, 200, 20).build()));
+        this.titleScreenButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("deathScreen.titleScreen"), button -> this.client.getAbuseReportContext().tryShowDraftScreen(this.client, this, this::onTitleScreenButtonClicked, true)).dimensions(this.width / 2 - 100, this.height / 4 + 96, 200, 20).build());
+        this.buttons.add(this.titleScreenButton);
         for (ButtonWidget buttonWidget : this.buttons) {
             buttonWidget.active = false;
         }
@@ -69,13 +68,21 @@ extends Screen {
         return false;
     }
 
-    private void onConfirmQuit(boolean quit) {
-        if (quit) {
+    private void onTitleScreenButtonClicked() {
+        if (this.isHardcore) {
             this.quitLevel();
-        } else {
-            this.client.player.requestRespawn();
-            this.client.setScreen(null);
+            return;
         }
+        ConfirmScreen confirmScreen = new ConfirmScreen(confirmed -> {
+            if (confirmed) {
+                this.quitLevel();
+            } else {
+                this.client.player.requestRespawn();
+                this.client.setScreen(null);
+            }
+        }, Text.translatable("deathScreen.quit.confirm"), ScreenTexts.EMPTY, Text.translatable("deathScreen.titleScreen"), Text.translatable("deathScreen.respawn"));
+        this.client.setScreen(confirmScreen);
+        confirmScreen.disableButtons(20);
     }
 
     private void quitLevel() {
@@ -102,6 +109,11 @@ extends Screen {
             this.renderTextHoverEffect(matrices, style, mouseX, mouseY);
         }
         super.render(matrices, mouseX, mouseY, delta);
+        if (this.titleScreenButton != null && this.client.getAbuseReportContext().hasDraft()) {
+            RenderSystem.setShaderTexture(0, ClickableWidget.WIDGETS_TEXTURE);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            this.drawTexture(matrices, this.titleScreenButton.getX() + this.titleScreenButton.getWidth() - 17, this.titleScreenButton.getY() + 3, 182, 24, 15, 15);
+        }
     }
 
     @Nullable

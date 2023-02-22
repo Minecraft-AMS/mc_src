@@ -20,7 +20,6 @@ import java.util.OptionalInt;
 import java.util.function.Predicate;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.WardenEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -32,11 +31,11 @@ import net.minecraft.util.math.Vec3d;
 
 public class SculkShriekerWarningManager {
     public static final Codec<SculkShriekerWarningManager> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codecs.NONNEGATIVE_INT.fieldOf("ticks_since_last_warning").orElse((Object)0).forGetter(manager -> manager.ticksSinceLastWarning), (App)Codecs.NONNEGATIVE_INT.fieldOf("warning_level").orElse((Object)0).forGetter(manager -> manager.warningLevel), (App)Codecs.NONNEGATIVE_INT.fieldOf("cooldown_ticks").orElse((Object)0).forGetter(manager -> manager.cooldownTicks)).apply((Applicative)instance, SculkShriekerWarningManager::new));
-    public static final int field_38184 = 4;
-    private static final double field_38738 = 16.0;
-    private static final int field_38186 = 48;
-    private static final int field_38187 = 12000;
-    private static final int field_38188 = 200;
+    public static final int MAX_WARNING_LEVEL = 4;
+    private static final double WARN_RANGE = 16.0;
+    private static final int WARN_WARDEN_RANGE = 48;
+    private static final int WARN_DECREASE_COOLDOWN = 12000;
+    private static final int WARN_INCREASE_COOLDOWN = 200;
     private int ticksSinceLastWarning;
     private int warningLevel;
     private int cooldownTicks;
@@ -65,31 +64,34 @@ public class SculkShriekerWarningManager {
         this.cooldownTicks = 0;
     }
 
-    public static OptionalInt warnNearbyPlayers(ServerWorld serverWorld, BlockPos blockPos, ServerPlayerEntity serverPlayerEntity2) {
-        if (SculkShriekerWarningManager.canIncreaseWarningLevel(serverWorld, blockPos)) {
+    public static OptionalInt warnNearbyPlayers(ServerWorld world, BlockPos pos, ServerPlayerEntity player2) {
+        if (SculkShriekerWarningManager.canIncreaseWarningLevel(world, pos)) {
             return OptionalInt.empty();
         }
-        List<ServerPlayerEntity> list = SculkShriekerWarningManager.getPlayersInRange(serverWorld, blockPos);
-        if (!list.contains(serverPlayerEntity2)) {
-            list.add(serverPlayerEntity2);
+        List<ServerPlayerEntity> list = SculkShriekerWarningManager.getPlayersInRange(world, pos);
+        if (!list.contains(player2)) {
+            list.add(player2);
         }
-        if (list.stream().anyMatch(serverPlayerEntity -> serverPlayerEntity.getSculkShriekerWarningManager().method_44003())) {
+        if (list.stream().anyMatch(nearbyPlayer -> nearbyPlayer.getSculkShriekerWarningManager().map(SculkShriekerWarningManager::isInCooldown).orElse(false))) {
             return OptionalInt.empty();
         }
-        Optional<SculkShriekerWarningManager> optional = list.stream().map(PlayerEntity::getSculkShriekerWarningManager).max(Comparator.comparingInt(manager -> manager.warningLevel));
-        SculkShriekerWarningManager sculkShriekerWarningManager = optional.get();
-        sculkShriekerWarningManager.increaseWarningLevel();
-        list.forEach(serverPlayerEntity -> serverPlayerEntity.getSculkShriekerWarningManager().copy(sculkShriekerWarningManager));
-        return OptionalInt.of(sculkShriekerWarningManager.warningLevel);
+        Optional<SculkShriekerWarningManager> optional = list.stream().flatMap(player -> player.getSculkShriekerWarningManager().stream()).max(Comparator.comparingInt(SculkShriekerWarningManager::getWarningLevel));
+        if (optional.isPresent()) {
+            SculkShriekerWarningManager sculkShriekerWarningManager = optional.get();
+            sculkShriekerWarningManager.increaseWarningLevel();
+            list.forEach(nearbyPlayer -> nearbyPlayer.getSculkShriekerWarningManager().ifPresent(warningManager -> warningManager.copy(sculkShriekerWarningManager)));
+            return OptionalInt.of(sculkShriekerWarningManager.warningLevel);
+        }
+        return OptionalInt.empty();
     }
 
-    private boolean method_44003() {
+    private boolean isInCooldown() {
         return this.cooldownTicks > 0;
     }
 
-    private static boolean canIncreaseWarningLevel(ServerWorld serverWorld, BlockPos blockPos) {
-        Box box = Box.of(Vec3d.ofCenter(blockPos), 48.0, 48.0, 48.0);
-        return !serverWorld.getNonSpectatingEntities(WardenEntity.class, box).isEmpty();
+    private static boolean canIncreaseWarningLevel(ServerWorld world, BlockPos pos) {
+        Box box = Box.of(Vec3d.ofCenter(pos), 48.0, 48.0, 48.0);
+        return !world.getNonSpectatingEntities(WardenEntity.class, box).isEmpty();
     }
 
     private static List<ServerPlayerEntity> getPlayersInRange(ServerWorld world, BlockPos pos) {
@@ -99,7 +101,7 @@ public class SculkShriekerWarningManager {
     }
 
     private void increaseWarningLevel() {
-        if (!this.method_44003()) {
+        if (!this.isInCooldown()) {
             this.ticksSinceLastWarning = 0;
             this.cooldownTicks = 200;
             this.setWarningLevel(this.getWarningLevel() + 1);

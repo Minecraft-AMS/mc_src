@@ -23,6 +23,7 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
@@ -36,6 +37,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.EndConfiguredFeatures;
 import net.minecraft.world.gen.feature.EndGatewayFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
@@ -111,7 +113,7 @@ extends EndPortalBlockEntity {
     }
 
     public static boolean canTeleport(Entity entity) {
-        return EntityPredicates.EXCEPT_SPECTATOR.test(entity) && !entity.getRootVehicle().hasPortalCooldownn();
+        return EntityPredicates.EXCEPT_SPECTATOR.test(entity) && !entity.getRootVehicle().hasPortalCooldown();
     }
 
     public boolean isRecentlyGenerated() {
@@ -204,14 +206,14 @@ extends EndPortalBlockEntity {
         WorldChunk worldChunk = EndGatewayBlockEntity.getChunk(world, vec3d);
         BlockPos blockPos = EndGatewayBlockEntity.findPortalPosition(worldChunk);
         if (blockPos == null) {
-            blockPos = new BlockPos(vec3d.x + 0.5, 75.0, vec3d.z + 0.5);
-            LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", (Object)blockPos);
-            EndConfiguredFeatures.END_ISLAND.value().generate(world, world.getChunkManager().getChunkGenerator(), Random.create(blockPos.asLong()), blockPos);
+            BlockPos blockPos2 = new BlockPos(vec3d.x + 0.5, 75.0, vec3d.z + 0.5);
+            LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", (Object)blockPos2);
+            world.getRegistryManager().getOptional(RegistryKeys.CONFIGURED_FEATURE).flatMap(registry -> registry.getEntry(EndConfiguredFeatures.END_ISLAND)).ifPresent(reference -> ((ConfiguredFeature)reference.value()).generate(world, world.getChunkManager().getChunkGenerator(), Random.create(blockPos2.asLong()), blockPos2));
+            blockPos = blockPos2;
         } else {
             LOGGER.debug("Found suitable block to teleport to: {}", (Object)blockPos);
         }
-        blockPos = EndGatewayBlockEntity.findExitPortalPos(world, blockPos, 16, true);
-        return blockPos;
+        return EndGatewayBlockEntity.findExitPortalPos(world, blockPos, 16, true);
     }
 
     private static Vec3d findTeleportLocation(ServerWorld world, BlockPos pos) {

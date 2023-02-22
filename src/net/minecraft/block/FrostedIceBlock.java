@@ -24,8 +24,8 @@ public class FrostedIceBlock
 extends IceBlock {
     public static final int MAX_AGE = 3;
     public static final IntProperty AGE = Properties.AGE_3;
-    private static final int field_31097 = 4;
-    private static final int field_31098 = 2;
+    private static final int NEIGHBORS_CHECKED_ON_SCHEDULED_TICK = 4;
+    private static final int NEIGHBORS_CHECKED_ON_NEIGHBOR_UPDATE = 2;
 
     public FrostedIceBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -45,11 +45,11 @@ extends IceBlock {
                 mutable.set((Vec3i)pos, direction);
                 BlockState blockState = world.getBlockState(mutable);
                 if (!blockState.isOf(this) || this.increaseAge(blockState, world, mutable)) continue;
-                world.createAndScheduleBlockTick(mutable, this, MathHelper.nextInt(random, 20, 40));
+                world.scheduleBlockTick(mutable, this, MathHelper.nextInt(random, 20, 40));
             }
             return;
         }
-        world.createAndScheduleBlockTick(pos, this, MathHelper.nextInt(random, 20, 40));
+        world.scheduleBlockTick(pos, this, MathHelper.nextInt(random, 20, 40));
     }
 
     private boolean increaseAge(BlockState state, World world, BlockPos pos) {

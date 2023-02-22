@@ -30,6 +30,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
 import java.nio.file.FileVisitResult;
@@ -53,8 +54,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import net.minecraft.SharedConstants;
@@ -68,22 +71,27 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.scanner.ExclusiveNbtCollector;
 import net.minecraft.nbt.scanner.NbtScanQuery;
 import net.minecraft.nbt.scanner.NbtScanner;
-import net.minecraft.resource.DataPackSettings;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.resource.DataConfiguration;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
-import net.minecraft.util.FileNameUtil;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.PathUtil;
 import net.minecraft.util.Util;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.crash.CrashMemoryReserve;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldSaveHandler;
+import net.minecraft.world.dimension.DimensionOptions;
+import net.minecraft.world.dimension.DimensionOptionsRegistryHolder;
 import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.gen.GeneratorOptions;
-import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
+import net.minecraft.world.level.WorldGenSettings;
 import net.minecraft.world.level.storage.LevelStorageException;
 import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.SaveVersionInfo;
@@ -103,7 +111,7 @@ public class LevelStorage {
     public LevelStorage(Path savesDirectory, Path backupsDirectory, DataFixer dataFixer) {
         this.dataFixer = dataFixer;
         try {
-            Files.createDirectories(Files.exists(savesDirectory, new LinkOption[0]) ? savesDirectory.toRealPath(new LinkOption[0]) : savesDirectory, new FileAttribute[0]);
+            PathUtil.createDirectories(savesDirectory);
         }
         catch (IOException iOException) {
             throw new RuntimeException(iOException);
@@ -116,7 +124,7 @@ public class LevelStorage {
         return new LevelStorage(path, path.resolve("../backups"), Schemas.getFixer());
     }
 
-    private static <T> Pair<GeneratorOptions, Lifecycle> readGeneratorProperties(Dynamic<T> levelData, DataFixer dataFixer, int version) {
+    private static <T> DataResult<WorldGenSettings> readGeneratorProperties(Dynamic<T> levelData, DataFixer dataFixer, int version) {
         Dynamic dynamic = levelData.get("WorldGenSettings").orElseEmptyMap();
         for (String string : GENERATOR_OPTION_KEYS) {
             Optional optional = levelData.get(string).result();
@@ -124,15 +132,11 @@ public class LevelStorage {
             dynamic = dynamic.set(string, (Dynamic)optional.get());
         }
         Dynamic dynamic2 = dataFixer.update(TypeReferences.WORLD_GEN_SETTINGS, dynamic, version, SharedConstants.getGameVersion().getWorldVersion());
-        DataResult dataResult = GeneratorOptions.CODEC.parse(dynamic2);
-        return Pair.of((Object)dataResult.resultOrPartial(Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseGet(() -> {
-            DynamicRegistryManager dynamicRegistryManager = DynamicRegistryManager.createDynamicRegistryManager(dynamic2);
-            return WorldPresets.createDefaultOptions(dynamicRegistryManager);
-        }), (Object)dataResult.lifecycle());
+        return WorldGenSettings.CODEC.parse(dynamic2);
     }
 
-    private static DataPackSettings parseDataPackSettings(Dynamic<?> dynamic) {
-        return DataPackSettings.CODEC.parse(dynamic).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElse(DataPackSettings.SAFE_MODE);
+    private static DataConfiguration parseDataPackSettings(Dynamic<?> dynamic) {
+        return DataConfiguration.CODEC.parse(dynamic).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElse(DataConfiguration.SAFE_MODE);
     }
 
     public String getFormatName() {
@@ -209,7 +213,7 @@ public class LevelStorage {
     }
 
     @Nullable
-    private static DataPackSettings readDataPackSettings(Path path, DataFixer dataFixer) {
+    private static DataConfiguration readDataPackSettings(Path path, DataFixer dataFixer) {
         try {
             NbtElement nbtElement = LevelStorage.loadCompactLevelData(path);
             if (nbtElement instanceof NbtCompound) {
@@ -217,7 +221,7 @@ public class LevelStorage {
                 NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
                 int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
                 Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
-                return dynamic.get("DataPacks").result().map(LevelStorage::parseDataPackSettings).orElse(DataPackSettings.SAFE_MODE);
+                return LevelStorage.parseDataPackSettings(dynamic);
             }
         }
         catch (Exception exception) {
@@ -226,25 +230,27 @@ public class LevelStorage {
         return null;
     }
 
-    static BiFunction<Path, DataFixer, LevelProperties> createLevelDataParser(DynamicOps<NbtElement> ops, DataPackSettings dataPackSettings, Lifecycle lifecycle) {
+    static BiFunction<Path, DataFixer, Pair<SaveProperties, DimensionOptionsRegistryHolder.DimensionsConfig>> createLevelDataParser(DynamicOps<NbtElement> ops, DataConfiguration dataConfiguration, Registry<DimensionOptions> dimensionOptionsRegistry, Lifecycle lifecycle) {
         return (path, dataFixer) -> {
+            NbtCompound nbtCompound;
             try {
-                NbtCompound nbtCompound = NbtIo.readCompressed(path.toFile());
-                NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
-                NbtCompound nbtCompound3 = nbtCompound2.contains("Player", 10) ? nbtCompound2.getCompound("Player") : null;
-                nbtCompound2.remove("Player");
-                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
-                Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic(ops, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
-                Pair<GeneratorOptions, Lifecycle> pair = LevelStorage.readGeneratorProperties(dynamic, dataFixer, i);
-                SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
-                LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataPackSettings);
-                Lifecycle lifecycle2 = ((Lifecycle)pair.getSecond()).add(lifecycle);
-                return LevelProperties.readProperties((Dynamic<NbtElement>)dynamic, dataFixer, i, nbtCompound3, levelInfo, saveVersionInfo, (GeneratorOptions)pair.getFirst(), lifecycle2);
+                nbtCompound = NbtIo.readCompressed(path.toFile());
             }
-            catch (Exception exception) {
-                LOGGER.error("Exception reading {}", path, (Object)exception);
-                return null;
+            catch (IOException iOException) {
+                throw new UncheckedIOException(iOException);
             }
+            NbtCompound nbtCompound2 = nbtCompound.getCompound(DATA_KEY);
+            NbtCompound nbtCompound3 = nbtCompound2.contains("Player", 10) ? nbtCompound2.getCompound("Player") : null;
+            nbtCompound2.remove("Player");
+            int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : -1;
+            Dynamic dynamic = dataFixer.update(DataFixTypes.LEVEL.getTypeReference(), new Dynamic(ops, (Object)nbtCompound2), i, SharedConstants.getGameVersion().getWorldVersion());
+            WorldGenSettings worldGenSettings = (WorldGenSettings)LevelStorage.readGeneratorProperties(dynamic, dataFixer, i).getOrThrow(false, Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0)));
+            SaveVersionInfo saveVersionInfo = SaveVersionInfo.fromDynamic(dynamic);
+            LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataConfiguration);
+            DimensionOptionsRegistryHolder.DimensionsConfig dimensionsConfig = worldGenSettings.dimensionOptionsRegistryHolder().toConfig(dimensionOptionsRegistry);
+            Lifecycle lifecycle2 = dimensionsConfig.getLifecycle().add(lifecycle);
+            LevelProperties levelProperties = LevelProperties.readProperties((Dynamic<NbtElement>)dynamic, dataFixer, i, nbtCompound3, levelInfo, saveVersionInfo, dimensionsConfig.specialWorldProperty(), worldGenSettings.generatorOptions(), lifecycle2);
+            return Pair.of((Object)levelProperties, (Object)dimensionsConfig);
         };
     }
 
@@ -262,9 +268,11 @@ public class LevelStorage {
                     if (j == 19132 || j == 19133) {
                         boolean bl2 = j != this.getCurrentVersion();
                         Path path2 = levelSave.getIconPath();
-                        DataPackSettings dataPackSettings = dynamic.get("DataPacks").result().map(LevelStorage::parseDataPackSettings).orElse(DataPackSettings.SAFE_MODE);
-                        LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataPackSettings);
-                        return new LevelSummary(levelInfo, saveVersionInfo, levelSave.getRootPath(), bl2, locked, path2);
+                        DataConfiguration dataConfiguration = LevelStorage.parseDataPackSettings(dynamic);
+                        LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataConfiguration);
+                        FeatureSet featureSet = LevelStorage.parseEnabledFeatures((Dynamic<NbtElement>)dynamic);
+                        boolean bl3 = FeatureFlags.isNotVanilla(featureSet);
+                        return new LevelSummary(levelInfo, saveVersionInfo, levelSave.getRootPath(), bl2, locked, bl3, path2);
                     }
                 } else {
                     LOGGER.warn("Invalid root tag in {}", path);
@@ -276,6 +284,11 @@ public class LevelStorage {
                 return null;
             }
         };
+    }
+
+    private static FeatureSet parseEnabledFeatures(Dynamic<NbtElement> levelData) {
+        Set<Identifier> set = levelData.get("enabled_features").asStream().flatMap(featureFlag -> featureFlag.asString().result().map(Identifier::tryParse).stream()).collect(Collectors.toSet());
+        return FeatureFlags.FEATURE_MANAGER.featureSetOf(set, id -> {});
     }
 
     @Nullable
@@ -424,13 +437,13 @@ public class LevelStorage {
         }
 
         @Nullable
-        public SaveProperties readLevelProperties(DynamicOps<NbtElement> ops, DataPackSettings dataPackSettings, Lifecycle lifecycle) {
+        public Pair<SaveProperties, DimensionOptionsRegistryHolder.DimensionsConfig> readLevelProperties(DynamicOps<NbtElement> ops, DataConfiguration dataConfiguration, Registry<DimensionOptions> dimensionOptionsRegistry, Lifecycle lifecycle) {
             this.checkValid();
-            return LevelStorage.this.readLevelProperties(this.directory, LevelStorage.createLevelDataParser(ops, dataPackSettings, lifecycle));
+            return LevelStorage.this.readLevelProperties(this.directory, LevelStorage.createLevelDataParser(ops, dataConfiguration, dimensionOptionsRegistry, lifecycle));
         }
 
         @Nullable
-        public DataPackSettings getDataPackSettings() {
+        public DataConfiguration getDataPackSettings() {
             this.checkValid();
             return LevelStorage.this.readLevelProperties(this.directory, LevelStorage::readDataPackSettings);
         }
@@ -536,12 +549,12 @@ public class LevelStorage {
             String string = LocalDateTime.now().format(TIME_FORMATTER) + "_" + this.directoryName;
             Path path = LevelStorage.this.getBackupsDirectory();
             try {
-                Files.createDirectories(Files.exists(path, new LinkOption[0]) ? path.toRealPath(new LinkOption[0]) : path, new FileAttribute[0]);
+                PathUtil.createDirectories(path);
             }
             catch (IOException iOException) {
                 throw new RuntimeException(iOException);
             }
-            Path path2 = path.resolve(FileNameUtil.getNextUniqueName(path, string, ".zip"));
+            Path path2 = path.resolve(PathUtil.getNextUniqueName(path, string, ".zip"));
             try (final ZipOutputStream zipOutputStream = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(path2, new OpenOption[0])));){
                 final Path path3 = Paths.get(this.directoryName, new String[0]);
                 Files.walkFileTree(this.directory.path(), (FileVisitor<? super Path>)new SimpleFileVisitor<Path>(){

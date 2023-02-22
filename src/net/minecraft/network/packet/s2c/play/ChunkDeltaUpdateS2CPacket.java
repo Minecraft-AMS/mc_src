@@ -71,12 +71,12 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onChunkDeltaUpdate(this);
     }
 
-    public void visitUpdates(BiConsumer<BlockPos, BlockState> biConsumer) {
+    public void visitUpdates(BiConsumer<BlockPos, BlockState> visitor) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int i = 0; i < this.positions.length; ++i) {
             short s = this.positions[i];
             mutable.set(this.sectionPos.unpackBlockX(s), this.sectionPos.unpackBlockY(s), this.sectionPos.unpackBlockZ(s));
-            biConsumer.accept(mutable, this.blockStates[i]);
+            visitor.accept(mutable, this.blockStates[i]);
         }
     }
 

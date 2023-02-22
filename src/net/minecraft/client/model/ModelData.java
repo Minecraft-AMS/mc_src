@@ -18,7 +18,7 @@ import net.minecraft.client.model.ModelTransform;
 
 @Environment(value=EnvType.CLIENT)
 public class ModelData {
-    private ModelPartData data = new ModelPartData((List<ModelCuboidData>)ImmutableList.of(), ModelTransform.NONE);
+    private final ModelPartData data = new ModelPartData((List<ModelCuboidData>)ImmutableList.of(), ModelTransform.NONE);
 
     public ModelPartData getRoot() {
         return this.data;

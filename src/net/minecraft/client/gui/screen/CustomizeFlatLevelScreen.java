@@ -71,7 +71,7 @@ extends Screen {
         this.heightText = Text.translatable("createWorld.customize.flat.height");
         this.layers = new SuperflatLayersListWidget();
         this.addSelectableChild(this.layers);
-        this.widgetButtonRemoveLayer = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 52, 150, 20, Text.translatable("createWorld.customize.flat.removeLayer"), button -> {
+        this.widgetButtonRemoveLayer = this.addDrawableChild(ButtonWidget.builder(Text.translatable("createWorld.customize.flat.removeLayer"), button -> {
             if (!this.hasLayerSelected()) {
                 return;
             }
@@ -83,21 +83,21 @@ extends Screen {
             this.config.updateLayerBlocks();
             this.layers.updateLayers();
             this.updateRemoveLayerButton();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, this.height - 52, 150, 20, Text.translatable("createWorld.customize.presets"), button -> {
+        }).dimensions(this.width / 2 - 155, this.height - 52, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("createWorld.customize.presets"), button -> {
             this.client.setScreen(new PresetsScreen(this));
             this.config.updateLayerBlocks();
             this.updateRemoveLayerButton();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 28, 150, 20, ScreenTexts.DONE, button -> {
+        }).dimensions(this.width / 2 + 5, this.height - 52, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> {
             this.configConsumer.accept(this.config);
             this.client.setScreen(this.parent);
             this.config.updateLayerBlocks();
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, this.height - 28, 150, 20, ScreenTexts.CANCEL, button -> {
+        }).dimensions(this.width / 2 - 155, this.height - 28, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> {
             this.client.setScreen(this.parent);
             this.config.updateLayerBlocks();
-        }));
+        }).dimensions(this.width / 2 + 5, this.height - 28, 150, 20).build());
         this.config.updateLayerBlocks();
         this.updateRemoveLayerButton();
     }

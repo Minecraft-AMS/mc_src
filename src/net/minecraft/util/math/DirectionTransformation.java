@@ -7,6 +7,8 @@
  *  it.unimi.dsi.fastutil.booleans.BooleanArrayList
  *  it.unimi.dsi.fastutil.booleans.BooleanList
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix3f
+ *  org.joml.Matrix3fc
  */
 package net.minecraft.util.math;
 
@@ -22,8 +24,9 @@ import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.AxisTransformation;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Matrix3f;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
+import org.joml.Matrix3fc;
 
 public final class DirectionTransformation
 extends Enum<DirectionTransformation>
@@ -102,11 +105,8 @@ implements StringIdentifiable {
         this.flipY = flipY;
         this.flipZ = flipZ;
         this.axisTransformation = axisTransformation;
-        this.matrix = new Matrix3f();
-        this.matrix.a00 = flipX ? -1.0f : 1.0f;
-        this.matrix.a11 = flipY ? -1.0f : 1.0f;
-        this.matrix.a22 = flipZ ? -1.0f : 1.0f;
-        this.matrix.multiply(axisTransformation.getMatrix());
+        this.matrix = new Matrix3f().scaling(flipX ? -1.0f : 1.0f, flipY ? -1.0f : 1.0f, flipZ ? -1.0f : 1.0f);
+        this.matrix.mul((Matrix3fc)axisTransformation.getMatrix());
     }
 
     private BooleanList getAxisFlips() {
@@ -122,7 +122,7 @@ implements StringIdentifiable {
     }
 
     public Matrix3f getMatrix() {
-        return this.matrix.copy();
+        return new Matrix3f((Matrix3fc)this.matrix);
     }
 
     public String toString() {
@@ -137,10 +137,11 @@ implements StringIdentifiable {
     public Direction map(Direction direction) {
         if (this.mappings == null) {
             this.mappings = Maps.newEnumMap(Direction.class);
+            Direction.Axis[] axiss = Direction.Axis.values();
             for (Direction direction2 : Direction.values()) {
                 Direction.Axis axis = direction2.getAxis();
                 Direction.AxisDirection axisDirection = direction2.getDirection();
-                Direction.Axis axis2 = Direction.Axis.values()[this.axisTransformation.map(axis.ordinal())];
+                Direction.Axis axis2 = axiss[this.axisTransformation.map(axis.ordinal())];
                 Direction.AxisDirection axisDirection2 = this.shouldFlipDirection(axis2) ? axisDirection.getOpposite() : axisDirection;
                 Direction direction3 = Direction.from(axis2, axisDirection2);
                 this.mappings.put(direction2, direction3);

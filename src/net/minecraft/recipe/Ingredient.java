@@ -37,11 +37,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.tag.TagKey;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import org.jetbrains.annotations.Nullable;
 
 public final class Ingredient
@@ -58,14 +59,10 @@ implements Predicate<ItemStack> {
     }
 
     public ItemStack[] getMatchingStacks() {
-        this.cacheMatchingStacks();
-        return this.matchingStacks;
-    }
-
-    private void cacheMatchingStacks() {
         if (this.matchingStacks == null) {
             this.matchingStacks = (ItemStack[])Arrays.stream(this.entries).flatMap(entry -> entry.getStacks().stream()).distinct().toArray(ItemStack[]::new);
         }
+        return this.matchingStacks;
     }
 
     @Override
@@ -73,11 +70,10 @@ implements Predicate<ItemStack> {
         if (itemStack == null) {
             return false;
         }
-        this.cacheMatchingStacks();
-        if (this.matchingStacks.length == 0) {
+        if (this.isEmpty()) {
             return itemStack.isEmpty();
         }
-        for (ItemStack itemStack2 : this.matchingStacks) {
+        for (ItemStack itemStack2 : this.getMatchingStacks()) {
             if (!itemStack2.isOf(itemStack.getItem())) continue;
             return true;
         }
@@ -86,9 +82,9 @@ implements Predicate<ItemStack> {
 
     public IntList getMatchingItemIds() {
         if (this.ids == null) {
-            this.cacheMatchingStacks();
-            this.ids = new IntArrayList(this.matchingStacks.length);
-            for (ItemStack itemStack : this.matchingStacks) {
+            ItemStack[] itemStacks = this.getMatchingStacks();
+            this.ids = new IntArrayList(itemStacks.length);
+            for (ItemStack itemStack : itemStacks) {
                 this.ids.add(RecipeMatcher.getItemId(itemStack));
             }
             this.ids.sort(IntComparators.NATURAL_COMPARATOR);
@@ -97,8 +93,7 @@ implements Predicate<ItemStack> {
     }
 
     public void write(PacketByteBuf buf) {
-        this.cacheMatchingStacks();
-        buf.writeCollection(Arrays.asList(this.matchingStacks), PacketByteBuf::writeItemStack);
+        buf.writeCollection(Arrays.asList(this.getMatchingStacks()), PacketByteBuf::writeItemStack);
     }
 
     public JsonElement toJson() {
@@ -113,12 +108,12 @@ implements Predicate<ItemStack> {
     }
 
     public boolean isEmpty() {
-        return !(this.entries.length != 0 || this.matchingStacks != null && this.matchingStacks.length != 0 || this.ids != null && !this.ids.isEmpty());
+        return this.entries.length == 0;
     }
 
     private static Ingredient ofEntries(Stream<? extends Entry> entries) {
         Ingredient ingredient = new Ingredient(entries);
-        return ingredient.entries.length == 0 ? EMPTY : ingredient;
+        return ingredient.isEmpty() ? EMPTY : ingredient;
     }
 
     public static Ingredient empty() {
@@ -172,7 +167,7 @@ implements Predicate<ItemStack> {
         }
         if (json.has("tag")) {
             Identifier identifier = new Identifier(JsonHelper.getString(json, "tag"));
-            TagKey<Item> tagKey = TagKey.of(Registry.ITEM_KEY, identifier);
+            TagKey<Item> tagKey = TagKey.of(RegistryKeys.ITEM, identifier);
             return new TagEntry(tagKey);
         }
         throw new JsonParseException("An ingredient entry needs either a tag or an item");
@@ -200,7 +195,7 @@ implements Predicate<ItemStack> {
         @Override
         public Collection<ItemStack> getStacks() {
             ArrayList list = Lists.newArrayList();
-            for (RegistryEntry<Item> registryEntry : Registry.ITEM.iterateEntries(this.tag)) {
+            for (RegistryEntry<Item> registryEntry : Registries.ITEM.iterateEntries(this.tag)) {
                 list.add(new ItemStack(registryEntry));
             }
             return list;
@@ -230,7 +225,7 @@ implements Predicate<ItemStack> {
         @Override
         public JsonObject toJson() {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("item", Registry.ITEM.getId(this.stack.getItem()).toString());
+            jsonObject.addProperty("item", Registries.ITEM.getId(this.stack.getItem()).toString());
             return jsonObject;
         }
     }

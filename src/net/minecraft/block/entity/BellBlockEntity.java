@@ -15,9 +15,9 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.EntityTypeTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.EntityTypeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ColorHelper;
@@ -28,13 +28,13 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 public class BellBlockEntity
 extends BlockEntity {
-    private static final int field_31316 = 50;
+    private static final int MAX_RINGING_TICKS = 50;
     private static final int field_31317 = 60;
     private static final int field_31318 = 60;
-    private static final int field_31319 = 40;
+    private static final int MAX_RESONATING_TICKS = 40;
     private static final int field_31320 = 5;
     private static final int field_31321 = 48;
-    private static final int field_31322 = 32;
+    private static final int MAX_BELL_HEARING_DISTANCE = 32;
     private static final int field_31323 = 48;
     private long lastRingTime;
     public int ringTicks;

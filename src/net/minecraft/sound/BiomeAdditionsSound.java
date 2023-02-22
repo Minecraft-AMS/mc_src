@@ -13,19 +13,20 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.sound.SoundEvent;
 
 public class BiomeAdditionsSound {
-    public static final Codec<BiomeAdditionsSound> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)SoundEvent.CODEC.fieldOf("sound").forGetter(biomeAdditionsSound -> biomeAdditionsSound.sound), (App)Codec.DOUBLE.fieldOf("tick_chance").forGetter(biomeAdditionsSound -> biomeAdditionsSound.chance)).apply((Applicative)instance, BiomeAdditionsSound::new));
-    private final SoundEvent sound;
+    public static final Codec<BiomeAdditionsSound> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)SoundEvent.ENTRY_CODEC.fieldOf("sound").forGetter(sound -> sound.sound), (App)Codec.DOUBLE.fieldOf("tick_chance").forGetter(sound -> sound.chance)).apply((Applicative)instance, BiomeAdditionsSound::new));
+    private final RegistryEntry<SoundEvent> sound;
     private final double chance;
 
-    public BiomeAdditionsSound(SoundEvent sound, double chance) {
+    public BiomeAdditionsSound(RegistryEntry<SoundEvent> sound, double chance) {
         this.sound = sound;
         this.chance = chance;
     }
 
-    public SoundEvent getSound() {
+    public RegistryEntry<SoundEvent> getSound() {
         return this.sound;
     }
 

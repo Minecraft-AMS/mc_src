@@ -8,7 +8,7 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.block.BlockState;
-import net.minecraft.tag.BlockTags;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
@@ -28,7 +28,7 @@ extends Feature<HugeMushroomFeatureConfig> {
         for (int i = 0; i < height; ++i) {
             mutablePos.set(pos).move(Direction.UP, i);
             if (world.getBlockState(mutablePos).isOpaqueFullCube(world, mutablePos)) continue;
-            this.setBlockState(world, mutablePos, config.stemProvider.getBlockState(random, pos));
+            this.setBlockState(world, mutablePos, config.stemProvider.get(random, pos));
         }
     }
 

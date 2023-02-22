@@ -34,15 +34,16 @@ import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.command.CommandSource;
 import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
 import net.minecraft.network.packet.s2c.play.ChatSuggestionsS2CPacket;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -94,8 +95,8 @@ implements CommandSource {
     }
 
     @Override
-    public Collection<Identifier> getSoundIds() {
-        return this.client.getSoundManager().getKeys();
+    public Stream<Identifier> getSoundIds() {
+        return this.client.getSoundManager().getKeys().stream();
     }
 
     @Override
@@ -164,6 +165,11 @@ implements CommandSource {
     @Override
     public DynamicRegistryManager getRegistryManager() {
         return this.networkHandler.getRegistryManager();
+    }
+
+    @Override
+    public FeatureSet getEnabledFeatures() {
+        return this.networkHandler.getEnabledFeatures();
     }
 
     public void onCommandSuggestions(int completionId, Suggestions suggestions) {

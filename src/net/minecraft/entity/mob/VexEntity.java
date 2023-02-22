@@ -8,6 +8,8 @@ package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
 import net.minecraft.entity.EntityData;
+import net.minecraft.entity.EntityDimensions;
+import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
@@ -52,6 +54,7 @@ extends HostileEntity {
     public static final int field_28645 = MathHelper.ceil(3.9269907f);
     protected static final TrackedData<Byte> VEX_FLAGS = DataTracker.registerData(VexEntity.class, TrackedDataHandlerRegistry.BYTE);
     private static final int CHARGING_FLAG = 1;
+    private static final double field_41597 = 0.4;
     @Nullable
     MobEntity owner;
     @Nullable
@@ -66,7 +69,12 @@ extends HostileEntity {
     }
 
     @Override
-    public boolean hasWings() {
+    protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
+        return dimensions.height - 0.28125f;
+    }
+
+    @Override
+    public boolean isFlappingWings() {
         return this.age % field_28645 == 0;
     }
 
@@ -210,6 +218,11 @@ extends HostileEntity {
     protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
         this.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0.0f);
+    }
+
+    @Override
+    public double getHeightOffset() {
+        return 0.4;
     }
 
     class VexMoveControl

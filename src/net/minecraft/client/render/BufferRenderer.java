@@ -21,7 +21,7 @@ public class BufferRenderer {
     @Nullable
     private static VertexBuffer currentVertexBuffer;
 
-    public static void unbindAll() {
+    public static void reset() {
         if (currentVertexBuffer != null) {
             BufferRenderer.resetCurrentVertexBuffer();
             VertexBuffer.unbind();
@@ -32,47 +32,47 @@ public class BufferRenderer {
         currentVertexBuffer = null;
     }
 
-    public static void drawWithShader(BufferBuilder.BuiltBuffer buffer) {
+    public static void drawWithGlobalProgram(BufferBuilder.BuiltBuffer buffer) {
         if (!RenderSystem.isOnRenderThreadOrInit()) {
-            RenderSystem.recordRenderCall(() -> BufferRenderer.drawWithShaderInternal(buffer));
+            RenderSystem.recordRenderCall(() -> BufferRenderer.drawWithGlobalProgramInternal(buffer));
         } else {
-            BufferRenderer.drawWithShaderInternal(buffer);
+            BufferRenderer.drawWithGlobalProgramInternal(buffer);
         }
     }
 
-    private static void drawWithShaderInternal(BufferBuilder.BuiltBuffer buffer) {
-        VertexBuffer vertexBuffer = BufferRenderer.getVertexBuffer(buffer);
+    private static void drawWithGlobalProgramInternal(BufferBuilder.BuiltBuffer buffer) {
+        VertexBuffer vertexBuffer = BufferRenderer.upload(buffer);
         if (vertexBuffer != null) {
             vertexBuffer.draw(RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
         }
     }
 
-    public static void drawWithoutShader(BufferBuilder.BuiltBuffer buffer) {
-        VertexBuffer vertexBuffer = BufferRenderer.getVertexBuffer(buffer);
+    public static void draw(BufferBuilder.BuiltBuffer buffer) {
+        VertexBuffer vertexBuffer = BufferRenderer.upload(buffer);
         if (vertexBuffer != null) {
-            vertexBuffer.drawElements();
+            vertexBuffer.draw();
         }
     }
 
     @Nullable
-    private static VertexBuffer getVertexBuffer(BufferBuilder.BuiltBuffer buffer) {
+    private static VertexBuffer upload(BufferBuilder.BuiltBuffer buffer) {
         RenderSystem.assertOnRenderThread();
         if (buffer.isEmpty()) {
             buffer.release();
             return null;
         }
-        VertexBuffer vertexBuffer = BufferRenderer.bindAndSet(buffer.getParameters().format());
+        VertexBuffer vertexBuffer = BufferRenderer.bind(buffer.getParameters().format());
         vertexBuffer.upload(buffer);
         return vertexBuffer;
     }
 
-    private static VertexBuffer bindAndSet(VertexFormat vertexFormat) {
+    private static VertexBuffer bind(VertexFormat vertexFormat) {
         VertexBuffer vertexBuffer = vertexFormat.getBuffer();
-        BufferRenderer.bindAndSet(vertexBuffer);
+        BufferRenderer.bind(vertexBuffer);
         return vertexBuffer;
     }
 
-    private static void bindAndSet(VertexBuffer vertexBuffer) {
+    private static void bind(VertexBuffer vertexBuffer) {
         if (vertexBuffer != currentVertexBuffer) {
             vertexBuffer.bind();
             currentVertexBuffer = vertexBuffer;

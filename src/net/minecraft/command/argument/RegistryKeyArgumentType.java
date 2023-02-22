@@ -28,22 +28,21 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
-import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.structure.Structure;
 
 public class RegistryKeyArgumentType<T>
 implements ArgumentType<RegistryKey<T>> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012");
-    private static final DynamicCommandExceptionType UNKNOWN_ATTRIBUTE_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("attribute.unknown", id));
     private static final DynamicCommandExceptionType INVALID_FEATURE_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("commands.place.feature.invalid", id));
     private static final DynamicCommandExceptionType INVALID_STRUCTURE_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("commands.place.structure.invalid", id));
     private static final DynamicCommandExceptionType INVALID_JIGSAW_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("commands.place.jigsaw.invalid", id));
@@ -67,26 +66,21 @@ implements ArgumentType<RegistryKey<T>> {
         return ((ServerCommandSource)context.getSource()).getServer().getRegistryManager().get(registryRef);
     }
 
-    private static <T> RegistryEntry<T> getRegistryEntry(CommandContext<ServerCommandSource> context, String name, RegistryKey<Registry<T>> registryRef, DynamicCommandExceptionType invalidException) throws CommandSyntaxException {
+    private static <T> RegistryEntry.Reference<T> getRegistryEntry(CommandContext<ServerCommandSource> context, String name, RegistryKey<Registry<T>> registryRef, DynamicCommandExceptionType invalidException) throws CommandSyntaxException {
         RegistryKey registryKey = RegistryKeyArgumentType.getKey(context, name, registryRef, invalidException);
         return RegistryKeyArgumentType.getRegistry(context, registryRef).getEntry(registryKey).orElseThrow(() -> invalidException.create((Object)registryKey.getValue()));
     }
 
-    public static EntityAttribute getAttribute(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        RegistryKey registryKey = RegistryKeyArgumentType.getKey(context, name, Registry.ATTRIBUTE_KEY, UNKNOWN_ATTRIBUTE_EXCEPTION);
-        return RegistryKeyArgumentType.getRegistry(context, Registry.ATTRIBUTE_KEY).getOrEmpty(registryKey).orElseThrow(() -> UNKNOWN_ATTRIBUTE_EXCEPTION.create((Object)registryKey.getValue()));
+    public static RegistryEntry.Reference<ConfiguredFeature<?, ?>> getConfiguredFeatureEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return RegistryKeyArgumentType.getRegistryEntry(context, name, RegistryKeys.CONFIGURED_FEATURE, INVALID_FEATURE_EXCEPTION);
     }
 
-    public static RegistryEntry<ConfiguredFeature<?, ?>> getConfiguredFeatureEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return RegistryKeyArgumentType.getRegistryEntry(context, name, Registry.CONFIGURED_FEATURE_KEY, INVALID_FEATURE_EXCEPTION);
+    public static RegistryEntry.Reference<Structure> getStructureEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return RegistryKeyArgumentType.getRegistryEntry(context, name, RegistryKeys.STRUCTURE, INVALID_STRUCTURE_EXCEPTION);
     }
 
-    public static RegistryEntry<Structure> getStructureEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return RegistryKeyArgumentType.getRegistryEntry(context, name, Registry.STRUCTURE_KEY, INVALID_STRUCTURE_EXCEPTION);
-    }
-
-    public static RegistryEntry<StructurePool> getStructurePoolEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return RegistryKeyArgumentType.getRegistryEntry(context, name, Registry.STRUCTURE_POOL_KEY, INVALID_JIGSAW_EXCEPTION);
+    public static RegistryEntry.Reference<StructurePool> getStructurePoolEntry(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return RegistryKeyArgumentType.getRegistryEntry(context, name, RegistryKeys.TEMPLATE_POOL, INVALID_JIGSAW_EXCEPTION);
     }
 
     public RegistryKey<T> parse(StringReader stringReader) throws CommandSyntaxException {

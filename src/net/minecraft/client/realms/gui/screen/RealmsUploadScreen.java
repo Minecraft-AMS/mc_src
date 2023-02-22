@@ -108,10 +108,9 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.client.keyboard.setRepeatEvents(true);
-        this.backButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 42, 200, 20, ScreenTexts.BACK, button -> this.onBack()));
+        this.backButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> this.onBack()).dimensions(this.width / 2 - 100, this.height - 42, 200, 20).build());
         this.backButton.visible = false;
-        this.cancelButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 42, 200, 20, ScreenTexts.CANCEL, button -> this.onCancel()));
+        this.cancelButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.onCancel()).dimensions(this.width / 2 - 100, this.height - 42, 200, 20).build());
         if (!this.uploadStarted) {
             if (this.parent.slot == -1) {
                 this.upload();
@@ -125,11 +124,6 @@ extends RealmsScreen {
                 });
             }
         }
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     private void onBack() {
@@ -185,7 +179,7 @@ extends RealmsScreen {
     private void drawProgressBar(MatrixStack matrices) {
         double d = Math.min((double)this.uploadStatus.bytesWritten / (double)this.uploadStatus.totalBytes, 1.0);
         this.progress = String.format(Locale.ROOT, "%.1f", d * 100.0);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableTexture();
         double e = this.width / 2 - 100;

@@ -3,6 +3,7 @@
  */
 package net.minecraft.item;
 
+import java.util.function.Consumer;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.decoration.ArmorStandEntity;
@@ -47,7 +48,8 @@ extends Item {
         }
         if (world instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
-            ArmorStandEntity armorStandEntity = EntityType.ARMOR_STAND.create(serverWorld, itemStack.getNbt(), null, context.getPlayer(), blockPos, SpawnReason.SPAWN_EGG, true, true);
+            Consumer<ArmorStandEntity> consumer = EntityType.nbtCopier(entity -> {}, serverWorld, itemStack, context.getPlayer());
+            ArmorStandEntity armorStandEntity = EntityType.ARMOR_STAND.create(serverWorld, itemStack.getNbt(), consumer, blockPos, SpawnReason.SPAWN_EGG, true, true);
             if (armorStandEntity == null) {
                 return ActionResult.FAIL;
             }

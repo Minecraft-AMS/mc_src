@@ -13,13 +13,14 @@ import net.minecraft.entity.effect.InstantStatusEffect;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Difficulty;
 
 public class StatusEffects {
-    private static final int field_38093 = 22;
+    private static final int DARKNESS_PADDING_DURATION = 22;
     public static final StatusEffect SPEED = StatusEffects.register(1, "speed", new StatusEffect(StatusEffectCategory.BENEFICIAL, 8171462).addAttributeModifier(EntityAttributes.GENERIC_MOVEMENT_SPEED, "91AEAA56-376B-4498-935B-2F7F68070635", 0.2f, EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     public static final StatusEffect SLOWNESS = StatusEffects.register(2, "slowness", new StatusEffect(StatusEffectCategory.HARMFUL, 5926017).addAttributeModifier(EntityAttributes.GENERIC_MOVEMENT_SPEED, "7107DE5E-7CE8-4030-940E-514C1F160890", -0.15f, EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     public static final StatusEffect HASTE = StatusEffects.register(3, "haste", new StatusEffect(StatusEffectCategory.BENEFICIAL, 14270531).addAttributeModifier(EntityAttributes.GENERIC_ATTACK_SPEED, "AF8B6E3F-3328-4C0A-AA36-5BA2BB9DBEF3", 0.1f, EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
@@ -75,7 +76,7 @@ public class StatusEffects {
     public static final StatusEffect DARKNESS = StatusEffects.register(33, "darkness", new StatusEffect(StatusEffectCategory.HARMFUL, 2696993).setFactorCalculationDataSupplier(() -> new StatusEffectInstance.FactorCalculationData(22)));
 
     private static StatusEffect register(int rawId, String id, StatusEffect entry) {
-        return Registry.register(Registry.STATUS_EFFECT, rawId, id, entry);
+        return Registry.register(Registries.STATUS_EFFECT, rawId, id, entry);
     }
 }
 

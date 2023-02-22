@@ -9,16 +9,8 @@ public class WorldEvents {
     public static final int DISPENSER_LAUNCHES_PROJECTILE = 1002;
     public static final int EYE_OF_ENDER_LAUNCHES = 1003;
     public static final int FIREWORK_ROCKET_SHOOTS = 1004;
-    public static final int IRON_DOOR_OPENS = 1005;
-    public static final int WOODEN_DOOR_OPENS = 1006;
-    public static final int WOODEN_TRAPDOOR_OPENS = 1007;
-    public static final int FENCE_GATE_OPENS = 1008;
     public static final int FIRE_EXTINGUISHED = 1009;
     public static final int MUSIC_DISC_PLAYED = 1010;
-    public static final int IRON_DOOR_CLOSES = 1011;
-    public static final int WOODEN_DOOR_CLOSES = 1012;
-    public static final int WOODEN_TRAPDOOR_CLOSES = 1013;
-    public static final int FENCE_GATE_CLOSES = 1014;
     public static final int GHAST_WARNS = 1015;
     public static final int GHAST_SHOOTS = 1016;
     public static final int ENDER_DRAGON_SHOOTS = 1017;
@@ -40,8 +32,6 @@ public class WorldEvents {
     public static final int CHORUS_FLOWER_GROWS = 1033;
     public static final int CHORUS_FLOWER_DIES = 1034;
     public static final int BREWING_STAND_BREWS = 1035;
-    public static final int IRON_TRAPDOOR_CLOSES = 1036;
-    public static final int IRON_TRAPDOOR_OPENS = 1037;
     public static final int END_PORTAL_OPENED = 1038;
     public static final int PHANTOM_BITES = 1039;
     public static final int ZOMBIE_CONVERTS_TO_DROWNED = 1040;

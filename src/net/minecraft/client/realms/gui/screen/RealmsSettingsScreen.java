@@ -47,12 +47,11 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.client.keyboard.setRepeatEvents(true);
         int i = this.width / 2 - 106;
-        this.doneButton = this.addDrawableChild(new ButtonWidget(i - 2, RealmsSettingsScreen.row(12), 106, 20, Text.translatable("mco.configure.world.buttons.done"), button -> this.save()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 2, RealmsSettingsScreen.row(12), 106, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.buttons.done"), button -> this.save()).dimensions(i - 2, RealmsSettingsScreen.row(12), 106, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 + 2, RealmsSettingsScreen.row(12), 106, 20).build());
         String string = this.serverData.state == RealmsServer.State.OPEN ? "mco.configure.world.buttons.close" : "mco.configure.world.buttons.open";
-        ButtonWidget buttonWidget = new ButtonWidget(this.width / 2 - 53, RealmsSettingsScreen.row(0), 106, 20, Text.translatable(string), button -> {
+        ButtonWidget buttonWidget = ButtonWidget.builder(Text.translatable(string), button -> {
             if (this.serverData.state == RealmsServer.State.OPEN) {
                 MutableText text = Text.translatable("mco.configure.world.close.question.line1");
                 MutableText text2 = Text.translatable("mco.configure.world.close.question.line2");
@@ -66,7 +65,7 @@ extends RealmsScreen {
             } else {
                 this.parent.openTheWorld(false, this);
             }
-        });
+        }).dimensions(this.width / 2 - 53, RealmsSettingsScreen.row(0), 106, 20).build();
         this.addDrawableChild(buttonWidget);
         this.nameEdit = new TextFieldWidget(this.client.textRenderer, i, RealmsSettingsScreen.row(4), 212, 20, null, Text.translatable("mco.configure.world.name"));
         this.nameEdit.setMaxLength(32);
@@ -77,11 +76,6 @@ extends RealmsScreen {
         this.descEdit.setMaxLength(32);
         this.descEdit.setText(this.serverData.getDescription());
         this.addSelectableChild(this.descEdit);
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override

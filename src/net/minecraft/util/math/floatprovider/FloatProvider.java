@@ -12,14 +12,14 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import java.util.function.Function;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.math.floatprovider.ConstantFloatProvider;
 import net.minecraft.util.math.floatprovider.FloatProviderType;
 import net.minecraft.util.math.floatprovider.FloatSupplier;
-import net.minecraft.util.registry.Registry;
 
 public abstract class FloatProvider
 implements FloatSupplier {
-    private static final Codec<Either<Float, FloatProvider>> FLOAT_CODEC = Codec.either((Codec)Codec.FLOAT, (Codec)Registry.FLOAT_PROVIDER_TYPE.getCodec().dispatch(FloatProvider::getType, FloatProviderType::codec));
+    private static final Codec<Either<Float, FloatProvider>> FLOAT_CODEC = Codec.either((Codec)Codec.FLOAT, (Codec)Registries.FLOAT_PROVIDER_TYPE.getCodec().dispatch(FloatProvider::getType, FloatProviderType::codec));
     public static final Codec<FloatProvider> VALUE_CODEC = FLOAT_CODEC.xmap(either -> (FloatProvider)either.map(ConstantFloatProvider::create, provider -> provider), provider -> provider.getType() == FloatProviderType.CONSTANT ? Either.left((Object)Float.valueOf(((ConstantFloatProvider)provider).getValue())) : Either.right((Object)provider));
 
     public static Codec<FloatProvider> createValidatedCodec(float min, float max) {

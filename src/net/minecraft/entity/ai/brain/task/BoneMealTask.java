@@ -18,7 +18,7 @@ import net.minecraft.entity.ai.brain.BlockPosLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
-import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.BoneMealItem;
@@ -28,7 +28,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 
 public class BoneMealTask
-extends Task<VillagerEntity> {
+extends MultiTickTask<VillagerEntity> {
     private static final int MAX_DURATION = 80;
     private long startTime;
     private long lastEndEntityAge;
@@ -125,8 +125,13 @@ extends Task<VillagerEntity> {
     }
 
     @Override
-    protected /* synthetic */ boolean shouldKeepRunning(ServerWorld world, LivingEntity entity, long time) {
-        return this.shouldKeepRunning(world, (VillagerEntity)entity, time);
+    protected /* synthetic */ void finishRunning(ServerWorld world, LivingEntity entity, long time) {
+        this.finishRunning(world, (VillagerEntity)entity, time);
+    }
+
+    @Override
+    protected /* synthetic */ void keepRunning(ServerWorld world, LivingEntity entity, long time) {
+        this.keepRunning(world, (VillagerEntity)entity, time);
     }
 
     @Override

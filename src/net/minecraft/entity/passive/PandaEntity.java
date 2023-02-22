@@ -6,10 +6,9 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -56,6 +55,8 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -232,8 +233,8 @@ extends AnimalEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putString("MainGene", this.getMainGene().getName());
-        nbt.putString("HiddenGene", this.getHiddenGene().getName());
+        nbt.putString("MainGene", this.getMainGene().asString());
+        nbt.putString("HiddenGene", this.getHiddenGene().asString());
     }
 
     @Override
@@ -247,10 +248,13 @@ extends AnimalEntity {
     @Nullable
     public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         PandaEntity pandaEntity = EntityType.PANDA.create(world);
-        if (entity instanceof PandaEntity) {
-            pandaEntity.initGenes(this, (PandaEntity)entity);
+        if (pandaEntity != null) {
+            if (entity instanceof PandaEntity) {
+                PandaEntity pandaEntity2 = (PandaEntity)entity;
+                pandaEntity.initGenes(this, pandaEntity2);
+            }
+            pandaEntity.resetAttributes();
         }
-        pandaEntity.resetAttributes();
         return pandaEntity;
     }
 
@@ -654,7 +658,8 @@ extends AnimalEntity {
     }
 
     public static final class Gene
-    extends Enum<Gene> {
+    extends Enum<Gene>
+    implements StringIdentifiable {
         public static final /* enum */ Gene NORMAL = new Gene(0, "normal", false);
         public static final /* enum */ Gene LAZY = new Gene(1, "lazy", false);
         public static final /* enum */ Gene WORRIED = new Gene(2, "worried", false);
@@ -662,7 +667,8 @@ extends AnimalEntity {
         public static final /* enum */ Gene BROWN = new Gene(4, "brown", true);
         public static final /* enum */ Gene WEAK = new Gene(5, "weak", true);
         public static final /* enum */ Gene AGGRESSIVE = new Gene(6, "aggressive", false);
-        private static final Gene[] VALUES;
+        public static final StringIdentifiable.Codec<Gene> CODEC;
+        private static final IntFunction<Gene> BY_ID;
         private static final int field_30350 = 6;
         private final int id;
         private final String name;
@@ -687,7 +693,8 @@ extends AnimalEntity {
             return this.id;
         }
 
-        public String getName() {
+        @Override
+        public String asString() {
             return this.name;
         }
 
@@ -706,18 +713,11 @@ extends AnimalEntity {
         }
 
         public static Gene byId(int id) {
-            if (id < 0 || id >= VALUES.length) {
-                id = 0;
-            }
-            return VALUES[id];
+            return BY_ID.apply(id);
         }
 
         public static Gene byName(String name) {
-            for (Gene gene : Gene.values()) {
-                if (!gene.name.equals(name)) continue;
-                return gene;
-            }
-            return NORMAL;
+            return CODEC.byId(name, NORMAL);
         }
 
         public static Gene createRandom(Random random) {
@@ -749,7 +749,8 @@ extends AnimalEntity {
 
         static {
             field_6796 = Gene.method_36642();
-            VALUES = (Gene[])Arrays.stream(Gene.values()).sorted(Comparator.comparingInt(Gene::getId)).toArray(Gene[]::new);
+            CODEC = StringIdentifiable.createCodec(Gene::values);
+            BY_ID = ValueLists.createIdToValueFunction(Gene::getId, Gene.values(), ValueLists.OutOfBoundsHandling.ZERO);
         }
     }
 

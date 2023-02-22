@@ -19,8 +19,8 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.block.entity.MobSpawnerBlockEntity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.loot.LootTables;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.structure.StructurePiece;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -125,7 +125,8 @@ extends Feature<DefaultFeatureConfig> {
         this.setBlockStateIf(structureWorldAccess, blockPos, Blocks.SPAWNER.getDefaultState(), predicate);
         BlockEntity blockEntity = structureWorldAccess.getBlockEntity(blockPos);
         if (blockEntity instanceof MobSpawnerBlockEntity) {
-            ((MobSpawnerBlockEntity)blockEntity).getLogic().setEntityId(this.getMobSpawnerEntity(random));
+            MobSpawnerBlockEntity mobSpawnerBlockEntity = (MobSpawnerBlockEntity)blockEntity;
+            mobSpawnerBlockEntity.setEntityType(this.getMobSpawnerEntity(random), random);
         } else {
             LOGGER.error("Failed to fetch mob spawner entity at ({}, {}, {})", new Object[]{blockPos.getX(), blockPos.getY(), blockPos.getZ()});
         }

@@ -42,9 +42,9 @@ extends Screen {
         super.init();
         this.wrappedText = MultilineText.create(this.textRenderer, (StringVisitable)this.subtitle, this.width - 50);
         int i = (this.wrappedText.count() + 1) * this.textRenderer.fontHeight;
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, 100 + i, 150, 20, Text.translatable("selectWorld.backupJoinConfirmButton"), button -> this.callback.proceed(true, this.eraseCacheCheckbox.isChecked())));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, 100 + i, 150, 20, Text.translatable("selectWorld.backupJoinSkipButton"), button -> this.callback.proceed(false, this.eraseCacheCheckbox.isChecked())));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 80, 124 + i, 150, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.backupJoinConfirmButton"), button -> this.callback.proceed(true, this.eraseCacheCheckbox.isChecked())).dimensions(this.width / 2 - 155, 100 + i, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectWorld.backupJoinSkipButton"), button -> this.callback.proceed(false, this.eraseCacheCheckbox.isChecked())).dimensions(this.width / 2 - 155 + 160, 100 + i, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(this.width / 2 - 155 + 80, 124 + i, 150, 20).build());
         this.eraseCacheCheckbox = new CheckboxWidget(this.width / 2 - 155 + 80, 76 + i, 150, 20, Text.translatable("selectWorld.backupEraseCache"), false);
         if (this.showEraseCacheCheckbox) {
             this.addDrawableChild(this.eraseCacheCheckbox);

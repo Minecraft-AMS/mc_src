@@ -13,6 +13,7 @@ import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.registry.Registries;
 import net.minecraft.structure.StructureTemplate;
 import org.slf4j.Logger;
 
@@ -42,12 +43,12 @@ implements SnbtProvider.Tweaker {
     private static NbtCompound internalUpdate(String name, NbtCompound nbt) {
         StructureTemplate structureTemplate = new StructureTemplate();
         int i = nbt.getInt("DataVersion");
-        int j = 3075;
-        if (i < 3075) {
-            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", new Object[]{i, 3075, name});
+        int j = 3200;
+        if (i < 3200) {
+            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", new Object[]{i, 3200, name});
         }
         NbtCompound nbtCompound = NbtHelper.update(Schemas.getFixer(), DataFixTypes.STRUCTURE, nbt, i);
-        structureTemplate.readNbt(nbtCompound);
+        structureTemplate.readNbt(Registries.BLOCK.getReadOnlyWrapper(), nbtCompound);
         return structureTemplate.writeNbt(new NbtCompound());
     }
 }

@@ -207,7 +207,7 @@ extends ConditionalLootFunction {
 
             @Override
             public void merge(NbtElement itemNbt, NbtPathArgumentType.NbtPath targetPath, List<NbtElement> sourceNbts) throws CommandSyntaxException {
-                targetPath.put(itemNbt, ((NbtElement)Iterables.getLast(sourceNbts))::copy);
+                targetPath.put(itemNbt, (NbtElement)Iterables.getLast(sourceNbts));
             }
         };
         public static final /* enum */ Operator APPEND = new Operator("append"){

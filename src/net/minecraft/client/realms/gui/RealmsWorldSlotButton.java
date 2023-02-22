@@ -32,7 +32,7 @@ public class RealmsWorldSlotButton
 extends ButtonWidget {
     public static final Identifier SLOT_FRAME = new Identifier("realms", "textures/gui/realms/slot_frame.png");
     public static final Identifier EMPTY_FRAME = new Identifier("realms", "textures/gui/realms/empty_frame.png");
-    public static final Identifier CHECKMARK = new Identifier("realms", "textures/gui/realms/checkmark.png");
+    public static final Identifier CHECKMARK = new Identifier("minecraft", "textures/gui/checkmark.png");
     public static final Identifier PANORAMA_0 = new Identifier("minecraft", "textures/gui/title/background/panorama_0.png");
     public static final Identifier PANORAMA_2 = new Identifier("minecraft", "textures/gui/title/background/panorama_2.png");
     public static final Identifier PANORAMA_3 = new Identifier("minecraft", "textures/gui/title/background/panorama_3.png");
@@ -46,7 +46,7 @@ extends ButtonWidget {
     private State state;
 
     public RealmsWorldSlotButton(int x, int y, int width, int height, Supplier<RealmsServer> serverDataProvider, Consumer<Text> tooltipSetter, int id, ButtonWidget.PressAction action) {
-        super(x, y, width, height, ScreenTexts.EMPTY, action);
+        super(x, y, width, height, ScreenTexts.EMPTY, action, DEFAULT_NARRATION_SUPPLIER);
         this.serverDataProvider = serverDataProvider;
         this.slotIndex = id;
         this.tooltipSetter = tooltipSetter;
@@ -119,7 +119,7 @@ extends ButtonWidget {
         if (this.state == null) {
             return;
         }
-        this.drawSlotFrame(matrices, this.x, this.y, mouseX, mouseY, this.state.isCurrentlyActiveSlot, this.state.slotName, this.slotIndex, this.state.imageId, this.state.image, this.state.empty, this.state.minigame, this.state.action, this.state.actionPrompt);
+        this.drawSlotFrame(matrices, this.getX(), this.getY(), mouseX, mouseY, this.state.isCurrentlyActiveSlot, this.state.slotName, this.slotIndex, this.state.imageId, this.state.image, this.state.empty, this.state.minigame, this.state.action, this.state.actionPrompt);
     }
 
     private void drawSlotFrame(MatrixStack matrices, int x, int y, int mouseX, int mouseY, boolean active, String slotName, int slotIndex, long imageId, @Nullable String image, boolean empty, boolean minigame, Action action, @Nullable Text actionPrompt) {

@@ -29,6 +29,7 @@ import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.RotationPropertyHelper;
 
 public class Properties {
     public static final BooleanProperty ATTACHED = BooleanProperty.of("attached");
@@ -135,8 +136,7 @@ public class Properties {
     public static final int CHARGES_MIN = 0;
     public static final int CHARGES_MAX = 4;
     public static final IntProperty CHARGES = IntProperty.of("charges", 0, 4);
-    public static final int ROTATION_MAX = 15;
-    public static final IntProperty ROTATION = IntProperty.of("rotation", 0, 15);
+    public static final IntProperty ROTATION = IntProperty.of("rotation", 0, RotationPropertyHelper.getMax());
     public static final EnumProperty<BedPart> BED_PART = EnumProperty.of("part", BedPart.class);
     public static final EnumProperty<ChestType> CHEST_TYPE = EnumProperty.of("type", ChestType.class);
     public static final EnumProperty<ComparatorMode> COMPARATOR_MODE = EnumProperty.of("mode", ComparatorMode.class);
@@ -151,5 +151,11 @@ public class Properties {
     public static final DirectionProperty VERTICAL_DIRECTION = DirectionProperty.of("vertical_direction", Direction.UP, Direction.DOWN);
     public static final EnumProperty<Thickness> THICKNESS = EnumProperty.of("thickness", Thickness.class);
     public static final EnumProperty<SculkSensorPhase> SCULK_SENSOR_PHASE = EnumProperty.of("sculk_sensor_phase", SculkSensorPhase.class);
+    public static final BooleanProperty SLOT_0_OCCUPIED = BooleanProperty.of("slot_0_occupied");
+    public static final BooleanProperty SLOT_1_OCCUPIED = BooleanProperty.of("slot_1_occupied");
+    public static final BooleanProperty SLOT_2_OCCUPIED = BooleanProperty.of("slot_2_occupied");
+    public static final BooleanProperty SLOT_3_OCCUPIED = BooleanProperty.of("slot_3_occupied");
+    public static final BooleanProperty SLOT_4_OCCUPIED = BooleanProperty.of("slot_4_occupied");
+    public static final BooleanProperty SLOT_5_OCCUPIED = BooleanProperty.of("slot_5_occupied");
 }
 

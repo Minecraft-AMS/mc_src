@@ -55,21 +55,21 @@ public class ScheduleCommand {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("schedule").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.literal("function").then(CommandManager.argument("function", CommandFunctionArgumentType.commandFunction()).suggests(FunctionCommand.SUGGESTION_PROVIDER).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("time", TimeArgumentType.time()).executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), true))).then(CommandManager.literal("append").executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), false)))).then(CommandManager.literal("replace").executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), true))))))).then(CommandManager.literal("clear").then(CommandManager.argument("function", StringArgumentType.greedyString()).suggests(SUGGESTION_PROVIDER).executes(context -> ScheduleCommand.clearEvent((ServerCommandSource)context.getSource(), StringArgumentType.getString((CommandContext)context, (String)"function"))))));
     }
 
-    private static int execute(ServerCommandSource source, Pair<Identifier, Either<CommandFunction, Collection<CommandFunction>>> function2, int time, boolean replace) throws CommandSyntaxException {
+    private static int execute(ServerCommandSource source, Pair<Identifier, Either<CommandFunction, Collection<CommandFunction>>> function, int time, boolean replace) throws CommandSyntaxException {
         if (time == 0) {
             throw SAME_TICK_EXCEPTION.create();
         }
         long l = source.getWorld().getTime() + (long)time;
-        Identifier identifier = (Identifier)function2.getFirst();
+        Identifier identifier = (Identifier)function.getFirst();
         Timer<MinecraftServer> timer = source.getServer().getSaveProperties().getMainWorldProperties().getScheduledEvents();
-        ((Either)function2.getSecond()).ifLeft(function -> {
+        ((Either)function.getSecond()).ifLeft(function2 -> {
             String string = identifier.toString();
             if (replace) {
                 timer.remove(string);
             }
             timer.setEvent(string, l, new FunctionTimerCallback(identifier));
             source.sendFeedback(Text.translatable("commands.schedule.created.function", identifier, time, l), true);
-        }).ifRight(collection -> {
+        }).ifRight(functions -> {
             String string = "#" + identifier;
             if (replace) {
                 timer.remove(string);

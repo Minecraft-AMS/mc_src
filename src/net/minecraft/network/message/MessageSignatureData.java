@@ -2,57 +2,49 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  it.unimi.dsi.fastutil.bytes.ByteArrays
+ *  com.google.common.base.Preconditions
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.message;
 
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import com.google.common.base.Preconditions;
+import com.mojang.serialization.Codec;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Optional;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.encryption.SignatureUpdatable;
 import net.minecraft.network.encryption.SignatureVerifier;
-import net.minecraft.network.message.MessageBody;
-import net.minecraft.network.message.MessageHeader;
+import net.minecraft.network.message.MessageSignatureStorage;
+import net.minecraft.util.dynamic.Codecs;
 import org.jetbrains.annotations.Nullable;
 
 public record MessageSignatureData(byte[] data) {
-    public static final MessageSignatureData EMPTY = new MessageSignatureData(ByteArrays.EMPTY_ARRAY);
+    public static final Codec<MessageSignatureData> CODEC = Codecs.BASE_64.xmap(MessageSignatureData::new, MessageSignatureData::data);
+    public static final int SIZE = 256;
 
-    public MessageSignatureData(PacketByteBuf buf) {
-        this(buf.readByteArray());
+    public MessageSignatureData {
+        Preconditions.checkState((bs.length == 256 ? 1 : 0) != 0, (Object)"Invalid message signature size");
     }
 
-    public void write(PacketByteBuf buf) {
-        buf.writeByteArray(this.data);
+    public static MessageSignatureData fromBuf(PacketByteBuf buf) {
+        byte[] bs = new byte[256];
+        buf.readBytes(bs);
+        return new MessageSignatureData(bs);
     }
 
-    public boolean verify(SignatureVerifier verifier, MessageHeader header, MessageBody body) {
-        if (!this.isEmpty()) {
-            byte[] bs = body.digest().asBytes();
-            return verifier.validate(updatable -> header.update(updatable, bs), this.data);
-        }
-        return false;
+    public static void write(PacketByteBuf buf, MessageSignatureData signature) {
+        buf.writeBytes(signature.data);
     }
 
-    public boolean verify(SignatureVerifier verifier, MessageHeader header, byte[] bodyDigest) {
-        if (!this.isEmpty()) {
-            return verifier.validate(updatable -> header.update(updatable, bodyDigest), this.data);
-        }
-        return false;
+    public boolean verify(SignatureVerifier verifier, SignatureUpdatable updatable) {
+        return verifier.validate(updatable, this.data);
     }
 
-    public boolean isEmpty() {
-        return this.data.length == 0;
-    }
-
-    @Nullable
     public ByteBuffer toByteBuffer() {
-        if (!this.isEmpty()) {
-            return ByteBuffer.wrap(this.data);
-        }
-        return null;
+        return ByteBuffer.wrap(this.data);
     }
 
     /*
@@ -75,10 +67,46 @@ public record MessageSignatureData(byte[] data) {
 
     @Override
     public String toString() {
-        if (!this.isEmpty()) {
-            return Base64.getEncoder().encodeToString(this.data);
+        return Base64.getEncoder().encodeToString(this.data);
+    }
+
+    public Indexed pack(MessageSignatureStorage storage) {
+        int i = storage.indexOf(this);
+        return i != -1 ? new Indexed(i) : new Indexed(this);
+    }
+
+    public record Indexed(int id, @Nullable MessageSignatureData fullSignature) {
+        public static final int MISSING_ID = -1;
+
+        public Indexed(MessageSignatureData signature) {
+            this(-1, signature);
         }
-        return "empty";
+
+        public Indexed(int id) {
+            this(id, null);
+        }
+
+        public static Indexed fromBuf(PacketByteBuf buf) {
+            int i = buf.readVarInt() - 1;
+            if (i == -1) {
+                return new Indexed(MessageSignatureData.fromBuf(buf));
+            }
+            return new Indexed(i);
+        }
+
+        public static void write(PacketByteBuf buf, Indexed indexed) {
+            buf.writeVarInt(indexed.id() + 1);
+            if (indexed.fullSignature() != null) {
+                MessageSignatureData.write(buf, indexed.fullSignature());
+            }
+        }
+
+        public Optional<MessageSignatureData> getSignature(MessageSignatureStorage storage) {
+            if (this.fullSignature != null) {
+                return Optional.of(this.fullSignature);
+            }
+            return Optional.ofNullable(storage.get(this.id));
+        }
     }
 }
 

@@ -423,7 +423,8 @@ public class NetherFortressGenerator {
                 world.setBlockState(blockPos, Blocks.SPAWNER.getDefaultState(), 2);
                 BlockEntity blockEntity = world.getBlockEntity(blockPos);
                 if (blockEntity instanceof MobSpawnerBlockEntity) {
-                    ((MobSpawnerBlockEntity)blockEntity).getLogic().setEntityId(EntityType.BLAZE);
+                    MobSpawnerBlockEntity mobSpawnerBlockEntity = (MobSpawnerBlockEntity)blockEntity;
+                    mobSpawnerBlockEntity.setEntityType(EntityType.BLAZE, random);
                 }
             }
             for (int i = 0; i <= 6; ++i) {
@@ -527,7 +528,7 @@ public class NetherFortressGenerator {
             this.addBlock(world, Blocks.LAVA.getDefaultState(), 6, 5, 6, chunkBox);
             BlockPos.Mutable blockPos = this.offsetPos(6, 5, 6);
             if (chunkBox.contains(blockPos)) {
-                world.createAndScheduleFluidTick(blockPos, Fluids.LAVA, 0);
+                world.scheduleFluidTick(blockPos, Fluids.LAVA, 0);
             }
         }
     }

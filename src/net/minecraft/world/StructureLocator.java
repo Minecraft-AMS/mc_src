@@ -34,13 +34,14 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.scanner.NbtScanQuery;
 import net.minecraft.nbt.scanner.SelectiveNbtCollector;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.StructurePresence;
 import net.minecraft.world.World;
@@ -83,8 +84,8 @@ public class StructureLocator {
         this.biomeSource = biomeSource;
         this.seed = seed;
         this.dataFixer = dataFixer;
-        this.biomeRegistry = registryManager.getManaged(Registry.BIOME_KEY);
-        this.structureRegistry = registryManager.getManaged(Registry.STRUCTURE_KEY);
+        this.biomeRegistry = registryManager.get(RegistryKeys.BIOME);
+        this.structureRegistry = registryManager.get(RegistryKeys.STRUCTURE);
     }
 
     public StructurePresence getStructurePresence(ChunkPos pos, Structure type, boolean skipReferencedStructures) {
@@ -105,7 +106,7 @@ public class StructureLocator {
     }
 
     private boolean isGenerationPossible(ChunkPos pos, Structure structure) {
-        return structure.getStructurePosition(new Structure.Context(this.registryManager, this.chunkGenerator, this.biomeSource, this.noiseConfig, this.structureTemplateManager, this.seed, pos, this.world, structure.getValidBiomes()::contains)).isPresent();
+        return structure.getValidStructurePosition(new Structure.Context(this.registryManager, this.chunkGenerator, this.biomeSource, this.noiseConfig, this.structureTemplateManager, this.seed, pos, this.world, structure.getValidBiomes()::contains)).isPresent();
     }
 
     @Nullable
@@ -158,7 +159,7 @@ public class StructureLocator {
             return Object2IntMaps.emptyMap();
         }
         Object2IntOpenHashMap object2IntMap = new Object2IntOpenHashMap();
-        Registry<Structure> registry = this.registryManager.get(Registry.STRUCTURE_KEY);
+        Registry<Structure> registry = this.registryManager.get(RegistryKeys.STRUCTURE);
         for (String string : nbtCompound2.getKeys()) {
             String string2;
             NbtCompound nbtCompound3;

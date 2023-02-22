@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import net.minecraft.item.Items;
 import net.minecraft.item.ToolMaterial;
 import net.minecraft.recipe.Ingredient;
-import net.minecraft.tag.ItemTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.Lazy;
 
 public final class ToolMaterials

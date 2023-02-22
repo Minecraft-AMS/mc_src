@@ -65,7 +65,7 @@ implements Toast {
 
     @Override
     public int getHeight() {
-        return 20 + this.lines.size() * 12;
+        return 20 + Math.max(this.lines.size(), 1) * 12;
     }
 
     @Override
@@ -162,7 +162,6 @@ implements Toast {
         public static final /* enum */ Type WORLD_ACCESS_FAILURE = new Type();
         public static final /* enum */ Type PACK_COPY_FAILURE = new Type();
         public static final /* enum */ Type PERIODIC_NOTIFICATION = new Type();
-        public static final /* enum */ Type CHAT_PREVIEW_WARNING = new Type(10000L);
         public static final /* enum */ Type UNSECURE_SERVER_WARNING = new Type(10000L);
         final long displayDuration;
         private static final /* synthetic */ Type[] field_2221;
@@ -184,7 +183,7 @@ implements Toast {
         }
 
         private static /* synthetic */ Type[] method_36871() {
-            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION, CHAT_PREVIEW_WARNING, UNSECURE_SERVER_WARNING};
+            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION, UNSECURE_SERVER_WARNING};
         }
 
         static {

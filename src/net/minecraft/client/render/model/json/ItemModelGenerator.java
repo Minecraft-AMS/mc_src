@@ -7,6 +7,7 @@
  *  com.mojang.datafixers.util.Either
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Vector3f
  */
 package net.minecraft.client.render.model.json;
 
@@ -24,9 +25,10 @@ import net.minecraft.client.render.model.json.ModelElement;
 import net.minecraft.client.render.model.json.ModelElementFace;
 import net.minecraft.client.render.model.json.ModelElementTexture;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.texture.SpriteContents;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3f;
+import org.joml.Vector3f;
 
 @Environment(value=EnvType.CLIENT)
 public class ItemModelGenerator {
@@ -41,8 +43,8 @@ public class ItemModelGenerator {
         for (int i = 0; i < LAYERS.size() && blockModel.textureExists(string = LAYERS.get(i)); ++i) {
             SpriteIdentifier spriteIdentifier = blockModel.resolveSprite(string);
             map.put(string, Either.left((Object)spriteIdentifier));
-            Sprite sprite = textureGetter.apply(spriteIdentifier);
-            list.addAll(this.addLayerElements(i, string, sprite));
+            SpriteContents spriteContents = textureGetter.apply(spriteIdentifier).getContents();
+            list.addAll(this.addLayerElements(i, string, spriteContents));
         }
         map.put("particle", blockModel.textureExists("particle") ? Either.left((Object)blockModel.resolveSprite("particle")) : (Either)map.get("layer0"));
         JsonUnbakedModel jsonUnbakedModel = new JsonUnbakedModel(null, list, map, false, blockModel.getGuiLight(), blockModel.getTransformations(), blockModel.getOverrides());
@@ -50,17 +52,17 @@ public class ItemModelGenerator {
         return jsonUnbakedModel;
     }
 
-    private List<ModelElement> addLayerElements(int layer, String key, Sprite sprite) {
+    private List<ModelElement> addLayerElements(int layer, String key, SpriteContents sprite) {
         HashMap map = Maps.newHashMap();
         map.put(Direction.SOUTH, new ModelElementFace(null, layer, key, new ModelElementTexture(new float[]{0.0f, 0.0f, 16.0f, 16.0f}, 0)));
         map.put(Direction.NORTH, new ModelElementFace(null, layer, key, new ModelElementTexture(new float[]{16.0f, 0.0f, 0.0f, 16.0f}, 0)));
         ArrayList list = Lists.newArrayList();
-        list.add(new ModelElement(new Vec3f(0.0f, 0.0f, 7.5f), new Vec3f(16.0f, 16.0f, 8.5f), map, null, true));
+        list.add(new ModelElement(new Vector3f(0.0f, 0.0f, 7.5f), new Vector3f(16.0f, 16.0f, 8.5f), map, null, true));
         list.addAll(this.addSubComponents(sprite, key, layer));
         return list;
     }
 
-    private List<ModelElement> addSubComponents(Sprite sprite, String key, int layer) {
+    private List<ModelElement> addSubComponents(SpriteContents sprite, String key, int layer) {
         float f = sprite.getWidth();
         float g = sprite.getHeight();
         ArrayList list = Lists.newArrayList();
@@ -124,26 +126,26 @@ public class ItemModelGenerator {
             map.put(side.getDirection(), new ModelElementFace(null, layer, key, new ModelElementTexture(new float[]{l *= p, n *= q, m *= p, o *= q}, 0)));
             switch (side) {
                 case UP: {
-                    list.add(new ModelElement(new Vec3f(h, i, 7.5f), new Vec3f(j, i, 8.5f), map, null, true));
+                    list.add(new ModelElement(new Vector3f(h, i, 7.5f), new Vector3f(j, i, 8.5f), map, null, true));
                     break;
                 }
                 case DOWN: {
-                    list.add(new ModelElement(new Vec3f(h, k, 7.5f), new Vec3f(j, k, 8.5f), map, null, true));
+                    list.add(new ModelElement(new Vector3f(h, k, 7.5f), new Vector3f(j, k, 8.5f), map, null, true));
                     break;
                 }
                 case LEFT: {
-                    list.add(new ModelElement(new Vec3f(h, i, 7.5f), new Vec3f(h, k, 8.5f), map, null, true));
+                    list.add(new ModelElement(new Vector3f(h, i, 7.5f), new Vector3f(h, k, 8.5f), map, null, true));
                     break;
                 }
                 case RIGHT: {
-                    list.add(new ModelElement(new Vec3f(j, i, 7.5f), new Vec3f(j, k, 8.5f), map, null, true));
+                    list.add(new ModelElement(new Vector3f(j, i, 7.5f), new Vector3f(j, k, 8.5f), map, null, true));
                 }
             }
         }
         return list;
     }
 
-    private List<Frame> getFrames(Sprite sprite) {
+    private List<Frame> getFrames(SpriteContents sprite) {
         int i = sprite.getWidth();
         int j = sprite.getHeight();
         ArrayList list = Lists.newArrayList();
@@ -161,7 +163,7 @@ public class ItemModelGenerator {
         return list;
     }
 
-    private void buildCube(Side side, List<Frame> cubes, Sprite sprite, int frame, int x, int y, int width, int height, boolean bl) {
+    private void buildCube(Side side, List<Frame> cubes, SpriteContents sprite, int frame, int x, int y, int width, int height, boolean bl) {
         boolean bl2;
         boolean bl3 = bl2 = this.isPixelTransparent(sprite, frame, x + side.getOffsetX(), y + side.getOffsetY(), width, height) && bl;
         if (bl2) {
@@ -189,7 +191,7 @@ public class ItemModelGenerator {
         }
     }
 
-    private boolean isPixelTransparent(Sprite sprite, int frame, int x, int y, int width, int height) {
+    private boolean isPixelTransparent(SpriteContents sprite, int frame, int x, int y, int width, int height) {
         if (x < 0 || y < 0 || x >= width || y >= height) {
             return true;
         }

@@ -1,16 +1,23 @@
-Summary for ./1.19.2.jar
+Summary for ./1.19.3.jar
 Decompiled with CFR 0.152
-
-
-net.minecraft.client.resource.Format4ResourcePack
-----------------------------
-
-openCroppedStream(java.io.InputStream java.io.InputStream int int int int int )
-  Loose catch block
 
 
 net.minecraft.nbt.NbtList
 ----------------------------
 
 doAccept(java.io.DataInput net.minecraft.nbt.scanner.NbtScanner )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [4[SWITCH], 8[CASE]], but top level block is 9[SWITCH]
+
+
+net.minecraft.entity.passive.RabbitEntity
+----------------------------
+
+createChild(net.minecraft.server.world.ServerWorld net.minecraft.entity.passive.PassiveEntity )
+  Unable to fully structure code
+
+
+net.minecraft.client.util.Window
+----------------------------
+
+readImage(net.minecraft.resource.InputSupplier<java.io.InputStream> java.nio.IntBuffer java.nio.IntBuffer java.nio.IntBuffer )
+  Loose catch block

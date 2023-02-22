@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class RealmsGetServerDetailsTask
 extends LongRunningTask {
-    private static final Logger field_36356 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final RealmsServer server;
     private final Screen lastScreen;
     private final RealmsMainScreen mainScreen;
@@ -62,7 +62,7 @@ extends LongRunningTask {
             realmsServerAddress = this.join();
         }
         catch (CancellationException cancellationException) {
-            field_36356.info("User aborted connecting to realms");
+            LOGGER.info("User aborted connecting to realms");
             return;
         }
         catch (RealmsServiceException realmsServiceException) {
@@ -78,7 +78,7 @@ extends LongRunningTask {
                 }
             }
             this.error(realmsServiceException.toString());
-            field_36356.error("Couldn't connect to world", (Throwable)realmsServiceException);
+            LOGGER.error("Couldn't connect to world", (Throwable)realmsServiceException);
             return;
         }
         catch (TimeoutException timeoutException) {
@@ -86,7 +86,7 @@ extends LongRunningTask {
             return;
         }
         catch (Exception exception) {
-            field_36356.error("Couldn't connect to world", (Throwable)exception);
+            LOGGER.error("Couldn't connect to world", (Throwable)exception);
             this.error(exception.getLocalizedMessage());
             return;
         }
@@ -124,8 +124,8 @@ extends LongRunningTask {
                     return;
                 }
                 ((CompletableFuture)this.downloadResourcePack(address).thenRun(() -> RealmsGetServerDetailsTask.setScreen((Screen)connectingScreenCreator.apply(address)))).exceptionally(throwable -> {
-                    MinecraftClient.getInstance().getResourcePackProvider().clear();
-                    field_36356.error("Failed to download resource pack from {}", (Object)address, throwable);
+                    MinecraftClient.getInstance().getServerResourcePackProvider().clear();
+                    LOGGER.error("Failed to download resource pack from {}", (Object)address, throwable);
                     RealmsGetServerDetailsTask.setScreen(new RealmsGenericErrorScreen(Text.literal("Failed to download resource pack!"), this.lastScreen));
                     return null;
                 });
@@ -141,7 +141,7 @@ extends LongRunningTask {
 
     private CompletableFuture<?> downloadResourcePack(RealmsServerAddress address) {
         try {
-            return MinecraftClient.getInstance().getResourcePackProvider().download(new URL(address.resourcePackUrl), address.resourcePackHash, false);
+            return MinecraftClient.getInstance().getServerResourcePackProvider().download(new URL(address.resourcePackUrl), address.resourcePackHash, false);
         }
         catch (Exception exception) {
             CompletableFuture completableFuture = new CompletableFuture();

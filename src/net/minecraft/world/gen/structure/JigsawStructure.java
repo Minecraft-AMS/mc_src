@@ -17,13 +17,12 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import java.util.function.Function;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolBasedGenerator;
-import net.minecraft.structure.pool.StructurePools;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.heightprovider.HeightProvider;
@@ -90,7 +89,6 @@ extends Structure {
         ChunkPos chunkPos = context.chunkPos();
         int i = this.startHeight.get(context.random(), new HeightContext(context.chunkGenerator(), context.world()));
         BlockPos blockPos = new BlockPos(chunkPos.getStartX(), i, chunkPos.getStartZ());
-        StructurePools.method_44111();
         return StructurePoolBasedGenerator.generate(context, this.startPool, this.startJigsawName, this.size, blockPos, this.useExpansionHack, this.projectStartToHeightmap, this.maxDistanceFromCenter);
     }
 

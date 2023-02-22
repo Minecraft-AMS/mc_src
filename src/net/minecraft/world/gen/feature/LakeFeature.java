@@ -16,8 +16,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.Material;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
@@ -69,7 +69,7 @@ extends Feature<Config> {
                 }
             }
         }
-        BlockState blockState = config.fluid().getBlockState(random, blockPos);
+        BlockState blockState = config.fluid().get(random, blockPos);
         for (s = 0; s < 16; ++s) {
             for (t = 0; t < 16; ++t) {
                 for (int u = 0; u < 8; ++u) {
@@ -93,12 +93,12 @@ extends Feature<Config> {
                     boolean bl2 = u >= 4;
                     structureWorldAccess.setBlockState(blockPos2, bl2 ? CAVE_AIR : blockState, 2);
                     if (!bl2) continue;
-                    structureWorldAccess.createAndScheduleBlockTick(blockPos2, CAVE_AIR.getBlock(), 0);
+                    structureWorldAccess.scheduleBlockTick(blockPos2, CAVE_AIR.getBlock(), 0);
                     this.markBlocksAboveForPostProcessing(structureWorldAccess, blockPos2);
                 }
             }
         }
-        BlockState blockState2 = config.barrier().getBlockState(random, blockPos);
+        BlockState blockState2 = config.barrier().get(random, blockPos);
         if (!blockState2.isAir()) {
             for (t = 0; t < 16; ++t) {
                 for (int u = 0; u < 16; ++u) {

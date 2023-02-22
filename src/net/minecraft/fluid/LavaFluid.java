@@ -19,11 +19,11 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class LavaFluid
 extends FlowableFluid {
-    public static final float field_31729 = 0.44444445f;
+    public static final float MIN_HEIGHT_TO_REPLACE = 0.44444445f;
 
     @Override
     public Fluid getFlowing() {
@@ -173,8 +173,8 @@ extends FlowableFluid {
     }
 
     @Override
-    protected boolean isInfinite() {
-        return false;
+    protected boolean isInfinite(World world) {
+        return world.getGameRules().getBoolean(GameRules.LAVA_SOURCE_CONVERSION);
     }
 
     @Override

@@ -37,14 +37,15 @@ import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.FluidTags;
-import net.minecraft.tag.ItemTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -58,7 +59,7 @@ import org.slf4j.Logger;
 
 public class FishingBobberEntity
 extends ProjectileEntity {
-    private static final Logger field_36336 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Random velocityRandom = Random.create();
     private boolean caughtFish;
     private int outOfOpenWaterTicks;
@@ -496,7 +497,7 @@ extends ProjectileEntity {
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
+    public Packet<ClientPlayPacketListener> createSpawnPacket() {
         Entity entity = this.getOwner();
         return new EntitySpawnS2CPacket(this, entity == null ? this.getId() : entity.getId());
     }
@@ -506,7 +507,7 @@ extends ProjectileEntity {
         super.onSpawnPacket(packet);
         if (this.getPlayerOwner() == null) {
             int i = packet.getEntityData();
-            field_36336.error("Failed to recreate fishing hook on client. {} (id: {}) is not a valid owner.", (Object)this.world.getEntityById(i), (Object)i);
+            LOGGER.error("Failed to recreate fishing hook on client. {} (id: {}) is not a valid owner.", (Object)this.world.getEntityById(i), (Object)i);
             this.kill();
         }
     }

@@ -39,7 +39,7 @@ public class ReloadCommand {
     private static Collection<String> findNewDataPacks(ResourcePackManager dataPackManager, SaveProperties saveProperties, Collection<String> enabledDataPacks) {
         dataPackManager.scanPacks();
         ArrayList collection = Lists.newArrayList(enabledDataPacks);
-        List<String> collection2 = saveProperties.getDataPackSettings().getDisabled();
+        List<String> collection2 = saveProperties.getDataConfiguration().dataPacks().getDisabled();
         for (String string : dataPackManager.getNames()) {
             if (collection2.contains(string) || collection.contains(string)) continue;
             collection.add(string);

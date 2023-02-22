@@ -51,7 +51,7 @@ extends FacingBlock {
             world.setBlockState(pos, (BlockState)state.with(POWERED, false), 2);
         } else {
             world.setBlockState(pos, (BlockState)state.with(POWERED, true), 2);
-            world.createAndScheduleBlockTick(pos, this, 2);
+            world.scheduleBlockTick(pos, this, 2);
         }
         this.updateNeighbors(world, pos, state);
     }
@@ -66,7 +66,7 @@ extends FacingBlock {
 
     private void scheduleTick(WorldAccess world, BlockPos pos) {
         if (!world.isClient() && !world.getBlockTickScheduler().isQueued(pos, this)) {
-            world.createAndScheduleBlockTick(pos, this, 2);
+            world.scheduleBlockTick(pos, this, 2);
         }
     }
 

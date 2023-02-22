@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.font;
 
@@ -13,7 +14,7 @@ import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Matrix4f;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class EmptyGlyphRenderer

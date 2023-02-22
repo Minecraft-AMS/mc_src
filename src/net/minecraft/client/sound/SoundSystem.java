@@ -11,6 +11,7 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Vector3f
  *  org.slf4j.Logger
  *  org.slf4j.Marker
  *  org.slf4j.MarkerFactory
@@ -48,16 +49,16 @@ import net.minecraft.client.sound.Source;
 import net.minecraft.client.sound.StaticSound;
 import net.minecraft.client.sound.TickableSoundInstance;
 import net.minecraft.client.sound.WeightedSoundSet;
-import net.minecraft.resource.ResourceManager;
+import net.minecraft.registry.Registries;
+import net.minecraft.resource.ResourceFactory;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3f;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -66,13 +67,13 @@ import org.slf4j.MarkerFactory;
 public class SoundSystem {
     private static final Marker MARKER = MarkerFactory.getMarker((String)"SOUNDS");
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final float field_33021 = 0.5f;
-    private static final float field_33022 = 2.0f;
-    private static final float field_33023 = 0.0f;
-    private static final float field_33024 = 1.0f;
+    private static final float MIN_PITCH = 0.5f;
+    private static final float MAX_PITCH = 2.0f;
+    private static final float MIN_VOLUME = 0.0f;
+    private static final float MAX_VOLUME = 1.0f;
     private static final int field_33025 = 20;
     private static final Set<Identifier> UNKNOWN_SOUNDS = Sets.newHashSet();
-    private static final long field_34966 = 1000L;
+    private static final long MIN_TIME_INTERVAL_TO_RELOAD_SOUNDS = 1000L;
     public static final String FOR_THE_DEBUG = "FOR THE DEBUG!";
     public static final String OPENAL_SOFT_ON = "OpenAL Soft on ";
     public static final int OPENAL_SOFT_ON_LENGTH = "OpenAL Soft on ".length();
@@ -96,18 +97,18 @@ public class SoundSystem {
     private final List<TickableSoundInstance> soundsToPlayNextTick = Lists.newArrayList();
     private final List<Sound> preloadedSounds = Lists.newArrayList();
 
-    public SoundSystem(SoundManager loader, GameOptions settings, ResourceManager resourceManager) {
+    public SoundSystem(SoundManager loader, GameOptions settings, ResourceFactory resourceFactory) {
         this.loader = loader;
         this.settings = settings;
-        this.soundLoader = new SoundLoader(resourceManager);
+        this.soundLoader = new SoundLoader(resourceFactory);
     }
 
     public void reloadSounds() {
         UNKNOWN_SOUNDS.clear();
-        for (SoundEvent soundEvent : Registry.SOUND_EVENT) {
+        for (SoundEvent soundEvent : Registries.SOUND_EVENT) {
             Identifier identifier = soundEvent.getId();
             if (this.loader.get(identifier) != null) continue;
-            LOGGER.warn("Missing sound for event: {}", (Object)Registry.SOUND_EVENT.getId(soundEvent));
+            LOGGER.warn("Missing sound for event: {}", (Object)Registries.SOUND_EVENT.getId(soundEvent));
             UNKNOWN_SOUNDS.add(identifier);
         }
         this.stop();
@@ -455,11 +456,11 @@ public class SoundSystem {
             return;
         }
         Vec3d vec3d = camera.getPos();
-        Vec3f vec3f = camera.getHorizontalPlane();
-        Vec3f vec3f2 = camera.getVerticalPlane();
+        Vector3f vector3f = camera.getHorizontalPlane();
+        Vector3f vector3f2 = camera.getVerticalPlane();
         this.taskQueue.execute(() -> {
             this.listener.setPosition(vec3d);
-            this.listener.setOrientation(vec3f, vec3f2);
+            this.listener.setOrientation(vector3f, vector3f2);
         });
     }
 

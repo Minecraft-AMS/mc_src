@@ -17,15 +17,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructureStart;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.StructureHolder;
 import net.minecraft.world.StructureLocator;
@@ -109,7 +110,7 @@ public class StructureAccessor {
     }
 
     public StructureStart getStructureContaining(BlockPos pos, RegistryKey<Structure> structure) {
-        Structure structure2 = this.getRegistryManager().get(Registry.STRUCTURE_KEY).get(structure);
+        Structure structure2 = this.getRegistryManager().get(RegistryKeys.STRUCTURE).get(structure);
         if (structure2 == null) {
             return StructureStart.DEFAULT;
         }
@@ -117,8 +118,8 @@ public class StructureAccessor {
     }
 
     public StructureStart getStructureContaining(BlockPos pos, TagKey<Structure> structureTag) {
-        Registry<Structure> registry = this.getRegistryManager().get(Registry.STRUCTURE_KEY);
-        for (StructureStart structureStart : this.getStructureStarts(new ChunkPos(pos), (Structure structure) -> registry.getEntry(registry.getRawId((Structure)structure)).map(registryEntry -> registryEntry.isIn(structureTag)).orElse(false))) {
+        Registry<Structure> registry = this.getRegistryManager().get(RegistryKeys.STRUCTURE);
+        for (StructureStart structureStart : this.getStructureStarts(new ChunkPos(pos), (Structure structure) -> registry.getEntry(registry.getRawId((Structure)structure)).map(reference -> reference.isIn(structureTag)).orElse(false))) {
             if (!this.structureContains(pos, structureStart)) continue;
             return structureStart;
         }

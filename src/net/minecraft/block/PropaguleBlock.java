@@ -84,7 +84,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (direction == Direction.UP && !state.canPlaceAt(world, pos)) {
             return Blocks.AIR.getDefaultState();
@@ -114,7 +114,7 @@ implements Waterloggable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         return !PropaguleBlock.isHanging(state) || !PropaguleBlock.isFullyGrown(state);
     }
 

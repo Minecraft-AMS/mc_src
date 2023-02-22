@@ -19,15 +19,15 @@ import java.lang.runtime.ObjectMethods;
 import java.util.Optional;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registerable;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Decoration;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.BuiltinRegistries;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 
 public record MessageType(Decoration chat, Decoration narration) {
@@ -42,17 +42,17 @@ public record MessageType(Decoration chat, Decoration narration) {
     public static final RegistryKey<MessageType> EMOTE_COMMAND = MessageType.register("emote_command");
 
     private static RegistryKey<MessageType> register(String id) {
-        return RegistryKey.of(Registry.MESSAGE_TYPE_KEY, new Identifier(id));
+        return RegistryKey.of(RegistryKeys.MESSAGE_TYPE, new Identifier(id));
     }
 
-    public static RegistryEntry<MessageType> initialize(Registry<MessageType> registry) {
-        BuiltinRegistries.add(registry, CHAT, new MessageType(CHAT_TEXT_DECORATION, Decoration.ofChat("chat.type.text.narrate")));
-        BuiltinRegistries.add(registry, SAY_COMMAND, new MessageType(Decoration.ofChat("chat.type.announcement"), Decoration.ofChat("chat.type.text.narrate")));
-        BuiltinRegistries.add(registry, MSG_COMMAND_INCOMING, new MessageType(Decoration.ofIncomingMessage("commands.message.display.incoming"), Decoration.ofChat("chat.type.text.narrate")));
-        BuiltinRegistries.add(registry, MSG_COMMAND_OUTGOING, new MessageType(Decoration.ofOutgoingMessage("commands.message.display.outgoing"), Decoration.ofChat("chat.type.text.narrate")));
-        BuiltinRegistries.add(registry, TEAM_MSG_COMMAND_INCOMING, new MessageType(Decoration.ofTeamMessage("chat.type.team.text"), Decoration.ofChat("chat.type.text.narrate")));
-        BuiltinRegistries.add(registry, TEAM_MSG_COMMAND_OUTGOING, new MessageType(Decoration.ofTeamMessage("chat.type.team.sent"), Decoration.ofChat("chat.type.text.narrate")));
-        return BuiltinRegistries.add(registry, EMOTE_COMMAND, new MessageType(Decoration.ofChat("chat.type.emote"), Decoration.ofChat("chat.type.emote")));
+    public static void bootstrap(Registerable<MessageType> messageTypeRegisterable) {
+        messageTypeRegisterable.register(CHAT, new MessageType(CHAT_TEXT_DECORATION, Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(SAY_COMMAND, new MessageType(Decoration.ofChat("chat.type.announcement"), Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(MSG_COMMAND_INCOMING, new MessageType(Decoration.ofIncomingMessage("commands.message.display.incoming"), Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(MSG_COMMAND_OUTGOING, new MessageType(Decoration.ofOutgoingMessage("commands.message.display.outgoing"), Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(TEAM_MSG_COMMAND_INCOMING, new MessageType(Decoration.ofTeamMessage("chat.type.team.text"), Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(TEAM_MSG_COMMAND_OUTGOING, new MessageType(Decoration.ofTeamMessage("chat.type.team.sent"), Decoration.ofChat("chat.type.text.narrate")));
+        messageTypeRegisterable.register(EMOTE_COMMAND, new MessageType(Decoration.ofChat("chat.type.emote"), Decoration.ofChat("chat.type.emote")));
     }
 
     public static Parameters params(RegistryKey<MessageType> typeKey, Entity entity) {
@@ -64,7 +64,7 @@ public record MessageType(Decoration chat, Decoration narration) {
     }
 
     public static Parameters params(RegistryKey<MessageType> typeKey, DynamicRegistryManager registryManager, Text name) {
-        Registry<MessageType> registry = registryManager.get(Registry.MESSAGE_TYPE_KEY);
+        Registry<MessageType> registry = registryManager.get(RegistryKeys.MESSAGE_TYPE);
         return registry.getOrThrow(typeKey).params(name);
     }
 
@@ -90,7 +90,7 @@ public record MessageType(Decoration chat, Decoration narration) {
         }
 
         public Serialized toSerialized(DynamicRegistryManager registryManager) {
-            Registry<MessageType> registry = registryManager.get(Registry.MESSAGE_TYPE_KEY);
+            Registry<MessageType> registry = registryManager.get(RegistryKeys.MESSAGE_TYPE);
             return new Serialized(registry.getRawId(this.type), this.name, this.targetName);
         }
 
@@ -122,7 +122,7 @@ public record MessageType(Decoration chat, Decoration narration) {
         }
 
         public Optional<Parameters> toParameters(DynamicRegistryManager registryManager) {
-            Registry<MessageType> registry = registryManager.get(Registry.MESSAGE_TYPE_KEY);
+            Registry<MessageType> registry = registryManager.get(RegistryKeys.MESSAGE_TYPE);
             MessageType messageType = (MessageType)registry.get(this.typeId);
             return Optional.ofNullable(messageType).map(type -> new Parameters((MessageType)type, this.name, this.targetName));
         }

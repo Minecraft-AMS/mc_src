@@ -41,11 +41,13 @@ import net.minecraft.recipe.RecipeManager;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.RecipeUnlocker;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.screen.PropertyDelegate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DefaultedList;
@@ -53,8 +55,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,18 +63,18 @@ extends LockableContainerBlockEntity
 implements SidedInventory,
 RecipeUnlocker,
 RecipeInputProvider {
-    protected static final int field_31286 = 0;
-    protected static final int field_31287 = 1;
-    protected static final int field_31288 = 2;
-    public static final int field_31289 = 0;
+    protected static final int INPUT_SLOT_INDEX = 0;
+    protected static final int FUEL_SLOT_INDEX = 1;
+    protected static final int OUTPUT_SLOT_INDEX = 2;
+    public static final int BURN_TIME_PROPERTY_INDEX = 0;
     private static final int[] TOP_SLOTS = new int[]{0};
     private static final int[] BOTTOM_SLOTS = new int[]{2, 1};
     private static final int[] SIDE_SLOTS = new int[]{1};
-    public static final int field_31290 = 1;
-    public static final int field_31291 = 2;
-    public static final int field_31292 = 3;
-    public static final int field_31293 = 4;
-    public static final int field_31294 = 200;
+    public static final int FUEL_TIME_PROPERTY_INDEX = 1;
+    public static final int COOK_TIME_PROPERTY_INDEX = 2;
+    public static final int COOK_TIME_TOTAL_PROPERTY_INDEX = 3;
+    public static final int PROPERTY_COUNT = 4;
+    public static final int DEFAULT_COOK_TIME = 200;
     public static final int field_31295 = 2;
     protected DefaultedList<ItemStack> inventory = DefaultedList.ofSize(3, ItemStack.EMPTY);
     int burnTime;
@@ -145,27 +145,20 @@ RecipeInputProvider {
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.COAL, 1600);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.CHARCOAL, 1600);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.LOGS, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.BAMBOO_BLOCKS, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.PLANKS, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BAMBOO_MOSAIC, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_STAIRS, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BAMBOO_MOSAIC_STAIRS, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_SLABS, 150);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BAMBOO_MOSAIC_SLAB, 150);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_TRAPDOORS, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_PRESSURE_PLATES, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.OAK_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BIRCH_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.SPRUCE_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.JUNGLE_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.DARK_OAK_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.ACACIA_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.MANGROVE_FENCE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.OAK_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BIRCH_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.SPRUCE_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.JUNGLE_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.DARK_OAK_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.ACACIA_FENCE_GATE, 300);
-        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.MANGROVE_FENCE_GATE, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.WOODEN_FENCES, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.FENCE_GATES, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.NOTE_BLOCK, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.BOOKSHELF, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.CHISELED_BOOKSHELF, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.LECTERN, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.JUKEBOX, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.CHEST, 300);
@@ -177,6 +170,7 @@ RecipeInputProvider {
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.FISHING_ROD, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.LADDER, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.SIGNS, 200);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, ItemTags.HANGING_SIGNS, 800);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.WOODEN_SHOVEL, 200);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.WOODEN_SWORD, 200);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Items.WOODEN_HOE, 200);
@@ -212,7 +206,7 @@ RecipeInputProvider {
     }
 
     private static void addFuel(Map<Item, Integer> fuelTimes, TagKey<Item> tag, int fuelTime) {
-        for (RegistryEntry<Item> registryEntry : Registry.ITEM.iterateEntries(tag)) {
+        for (RegistryEntry<Item> registryEntry : Registries.ITEM.iterateEntries(tag)) {
             if (AbstractFurnaceBlockEntity.isNonFlammableWood(registryEntry.value())) continue;
             fuelTimes.put(registryEntry.value(), fuelTime);
         }
@@ -325,7 +319,7 @@ RecipeInputProvider {
         if (itemStack2.isEmpty()) {
             return true;
         }
-        if (!itemStack2.isItemEqualIgnoreDamage(itemStack)) {
+        if (!itemStack2.isItemEqual(itemStack)) {
             return false;
         }
         if (itemStack2.getCount() < count && itemStack2.getCount() < itemStack2.getMaxCount()) {
@@ -425,7 +419,7 @@ RecipeInputProvider {
     @Override
     public void setStack(int slot, ItemStack stack) {
         ItemStack itemStack = this.inventory.get(slot);
-        boolean bl = !stack.isEmpty() && stack.isItemEqualIgnoreDamage(itemStack) && ItemStack.areNbtEqual(stack, itemStack);
+        boolean bl = !stack.isEmpty() && stack.isItemEqual(itemStack) && ItemStack.areNbtEqual(stack, itemStack);
         this.inventory.set(slot, stack);
         if (stack.getCount() > this.getMaxCountPerStack()) {
             stack.setCount(this.getMaxCountPerStack());

@@ -177,7 +177,7 @@ Merchant {
         if (!tradeOfferList.isEmpty()) {
             nbt.put("Offers", tradeOfferList.toNbt());
         }
-        nbt.put("Inventory", this.inventory.toNbtList());
+        this.writeInventory(nbt);
     }
 
     @Override
@@ -186,7 +186,7 @@ Merchant {
         if (nbt.contains("Offers", 10)) {
             this.offers = new TradeOfferList(nbt.getCompound("Offers"));
         }
-        this.inventory.readNbtList(nbt.getList("Inventory", 10));
+        this.readInventory(nbt);
     }
 
     @Override

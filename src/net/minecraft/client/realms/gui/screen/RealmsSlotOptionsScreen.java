@@ -37,9 +37,9 @@ import net.minecraft.world.GameMode;
 public class RealmsSlotOptionsScreen
 extends RealmsScreen {
     private static final int field_32125 = 2;
-    public static final List<Difficulty> DIFFICULTIES = ImmutableList.of((Object)((Object)Difficulty.PEACEFUL), (Object)((Object)Difficulty.EASY), (Object)((Object)Difficulty.NORMAL), (Object)((Object)Difficulty.HARD));
+    public static final List<Difficulty> DIFFICULTIES = ImmutableList.of((Object)Difficulty.PEACEFUL, (Object)Difficulty.EASY, (Object)Difficulty.NORMAL, (Object)Difficulty.HARD);
     private static final int field_32126 = 0;
-    public static final List<GameMode> GAME_MODES = ImmutableList.of((Object)((Object)GameMode.SURVIVAL), (Object)((Object)GameMode.CREATIVE), (Object)((Object)GameMode.ADVENTURE));
+    public static final List<GameMode> GAME_MODES = ImmutableList.of((Object)GameMode.SURVIVAL, (Object)GameMode.CREATIVE, (Object)GameMode.ADVENTURE);
     private static final Text EDIT_SLOT_NAME = Text.translatable("mco.configure.world.edit.slot.name");
     static final Text SPAWN_PROTECTION = Text.translatable("mco.configure.world.spawnProtection");
     private static final Text SPAWN_TOGGLE_TITLE = Text.translatable("mco.configure.world.spawn_toggle.title").formatted(Formatting.RED, Formatting.BOLD);
@@ -88,11 +88,6 @@ extends RealmsScreen {
             this.spawnNpcs = true;
             this.commandBlocks = true;
         }
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override
@@ -181,8 +176,8 @@ extends RealmsScreen {
         if (this.difficulty == Difficulty.PEACEFUL) {
             cyclingButtonWidget3.active = false;
         }
-        this.addDrawableChild(new ButtonWidget(this.column1_x, RealmsSlotOptionsScreen.row(13), this.column2_x, 20, Text.translatable("mco.configure.world.buttons.done"), button -> this.saveSettings()));
-        this.addDrawableChild(new ButtonWidget(i, RealmsSlotOptionsScreen.row(13), this.column2_x, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.buttons.done"), button -> this.saveSettings()).dimensions(this.column1_x, RealmsSlotOptionsScreen.row(13), this.column2_x, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)).dimensions(i, RealmsSlotOptionsScreen.row(13), this.column2_x, 20).build());
         this.addSelectableChild(this.nameEdit);
     }
 

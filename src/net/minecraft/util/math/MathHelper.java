@@ -46,6 +46,11 @@ public class MathHelper {
     private static final double[] ARCSINE_TABLE = new double[257];
     private static final double[] COSINE_TABLE = new double[257];
 
+    public static float ceil(float value, float digits) {
+        float f = (float)Math.pow(10.0, digits);
+        return (float)((int)(value * f)) / f;
+    }
+
     public static float sin(float value) {
         return SINE_TABLE[(int)(value * 10430.378f) & 0xFFFF];
     }
@@ -230,6 +235,10 @@ public class MathHelper {
 
     public static double floorMod(double dividend, double divisor) {
         return (dividend % divisor + divisor) % divisor;
+    }
+
+    public static boolean isMultipleOf(int a, int b) {
+        return a / b * b == a;
     }
 
     public static int wrapDegrees(int degrees) {
@@ -671,8 +680,8 @@ public class MathHelper {
         return MathHelper.lerp(deltaZ, MathHelper.lerp2(deltaX, deltaY, x0y0z0, x1y0z0, x0y1z0, x1y1z0), MathHelper.lerp2(deltaX, deltaY, x0y0z1, x1y0z1, x0y1z1, x1y1z1));
     }
 
-    public static float method_41303(float f, float g, float h, float i, float j) {
-        return 0.5f * (2.0f * h + (i - g) * f + (2.0f * g - 5.0f * h + 4.0f * i - j) * f * f + (3.0f * h - g - 3.0f * i + j) * f * f * f);
+    public static float catmullRom(float delta, float p0, float p1, float p2, float p3) {
+        return 0.5f * (2.0f * p1 + (p2 - p0) * delta + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * delta * delta + (3.0f * p1 - p0 - 3.0f * p2 + p3) * delta * delta * delta);
     }
 
     public static double perlinFade(double value) {
@@ -744,20 +753,20 @@ public class MathHelper {
         return n * n * n;
     }
 
-    public static double clampedLerpFromProgress(double lerpValue, double lerpStart, double lerpEnd, double start, double end) {
-        return MathHelper.clampedLerp(start, end, MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd));
+    public static double clampedMap(double value, double oldStart, double oldEnd, double newStart, double newEnd) {
+        return MathHelper.clampedLerp(newStart, newEnd, MathHelper.getLerpProgress(value, oldStart, oldEnd));
     }
 
-    public static float clampedLerpFromProgress(float lerpValue, float lerpStart, float lerpEnd, float start, float end) {
-        return MathHelper.clampedLerp(start, end, MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd));
+    public static float clampedMap(float value, float oldStart, float oldEnd, float newStart, float newEnd) {
+        return MathHelper.clampedLerp(newStart, newEnd, MathHelper.getLerpProgress(value, oldStart, oldEnd));
     }
 
-    public static double lerpFromProgress(double lerpValue, double lerpStart, double lerpEnd, double start, double end) {
-        return MathHelper.lerp(MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd), start, end);
+    public static double map(double value, double oldStart, double oldEnd, double newStart, double newEnd) {
+        return MathHelper.lerp(MathHelper.getLerpProgress(value, oldStart, oldEnd), newStart, newEnd);
     }
 
-    public static float lerpFromProgress(float lerpValue, float lerpStart, float lerpEnd, float start, float end) {
-        return MathHelper.lerp(MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd), start, end);
+    public static float map(float value, float oldStart, float oldEnd, float newStart, float newEnd) {
+        return MathHelper.lerp(MathHelper.getLerpProgress(value, oldStart, oldEnd), newStart, newEnd);
     }
 
     public static double method_34957(double d) {

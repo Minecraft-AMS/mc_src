@@ -2,23 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
- *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
  */
 package net.minecraft.scoreboard;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import net.minecraft.registry.Registries;
 import net.minecraft.stat.StatType;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.StringIdentifiable;
 
 public class ScoreboardCriterion {
     private static final Map<String, ScoreboardCriterion> SIMPLE_CRITERIA = Maps.newHashMap();
@@ -74,7 +72,7 @@ public class ScoreboardCriterion {
         if (i < 0) {
             return Optional.empty();
         }
-        return Registry.STAT_TYPE.getOrEmpty(Identifier.splitOn(name.substring(0, i), '.')).flatMap(type -> ScoreboardCriterion.getOrCreateStatCriterion(type, Identifier.splitOn(name.substring(i + 1), '.')));
+        return Registries.STAT_TYPE.getOrEmpty(Identifier.splitOn(name.substring(0, i), '.')).flatMap(type -> ScoreboardCriterion.getOrCreateStatCriterion(type, Identifier.splitOn(name.substring(i + 1), '.')));
     }
 
     private static <T> Optional<ScoreboardCriterion> getOrCreateStatCriterion(StatType<T> statType, Identifier id) {
@@ -94,11 +92,12 @@ public class ScoreboardCriterion {
     }
 
     public static final class RenderType
-    extends Enum<RenderType> {
+    extends Enum<RenderType>
+    implements StringIdentifiable {
         public static final /* enum */ RenderType INTEGER = new RenderType("integer");
         public static final /* enum */ RenderType HEARTS = new RenderType("hearts");
         private final String name;
-        private static final Map<String, RenderType> CRITERION_TYPES;
+        public static final StringIdentifiable.Codec<RenderType> CODEC;
         private static final /* synthetic */ RenderType[] field_1473;
 
         public static RenderType[] values() {
@@ -117,8 +116,13 @@ public class ScoreboardCriterion {
             return this.name;
         }
 
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         public static RenderType getType(String name) {
-            return CRITERION_TYPES.getOrDefault(name, INTEGER);
+            return CODEC.byId(name, INTEGER);
         }
 
         private static /* synthetic */ RenderType[] method_36799() {
@@ -127,11 +131,7 @@ public class ScoreboardCriterion {
 
         static {
             field_1473 = RenderType.method_36799();
-            ImmutableMap.Builder builder = ImmutableMap.builder();
-            for (RenderType renderType : RenderType.values()) {
-                builder.put((Object)renderType.name, (Object)renderType);
-            }
-            CRITERION_TYPES = builder.build();
+            CODEC = StringIdentifiable.createCodec(RenderType::values);
         }
     }
 }

@@ -17,11 +17,11 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class Enchantment {
@@ -33,7 +33,7 @@ public abstract class Enchantment {
 
     @Nullable
     public static Enchantment byRawId(int id) {
-        return (Enchantment)Registry.ENCHANTMENT.get(id);
+        return (Enchantment)Registries.ENCHANTMENT.get(id);
     }
 
     protected Enchantment(Rarity weight, EnchantmentTarget type, EquipmentSlot[] slotTypes) {
@@ -90,7 +90,7 @@ public abstract class Enchantment {
 
     protected String getOrCreateTranslationKey() {
         if (this.translationKey == null) {
-            this.translationKey = Util.createTranslationKey("enchantment", Registry.ENCHANTMENT.getId(this));
+            this.translationKey = Util.createTranslationKey("enchantment", Registries.ENCHANTMENT.getId(this));
         }
         return this.translationKey;
     }

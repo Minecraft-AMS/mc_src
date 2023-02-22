@@ -8,8 +8,8 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import java.util.stream.Stream;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.PlacedFeature;

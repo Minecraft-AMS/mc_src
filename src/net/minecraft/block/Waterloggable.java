@@ -23,7 +23,7 @@ extends FluidDrainable,
 FluidFillable {
     @Override
     default public boolean canFillWithFluid(BlockView world, BlockPos pos, BlockState state, Fluid fluid) {
-        return state.get(Properties.WATERLOGGED) == false && fluid == Fluids.WATER;
+        return fluid == Fluids.WATER;
     }
 
     @Override
@@ -31,7 +31,7 @@ FluidFillable {
         if (!state.get(Properties.WATERLOGGED).booleanValue() && fluidState.getFluid() == Fluids.WATER) {
             if (!world.isClient()) {
                 world.setBlockState(pos, (BlockState)state.with(Properties.WATERLOGGED, true), 3);
-                world.createAndScheduleFluidTick(pos, fluidState.getFluid(), fluidState.getFluid().getTickRate(world));
+                world.scheduleFluidTick(pos, fluidState.getFluid(), fluidState.getFluid().getTickRate(world));
             }
             return true;
         }

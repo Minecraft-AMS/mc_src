@@ -65,7 +65,7 @@ implements Monster {
     }
 
     @Override
-    public boolean hasWings() {
+    public boolean isFlappingWings() {
         return (this.method_33588() + this.age) % field_28641 == 0;
     }
 

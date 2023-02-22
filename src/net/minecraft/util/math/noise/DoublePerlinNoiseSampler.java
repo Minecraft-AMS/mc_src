@@ -24,12 +24,12 @@ import it.unimi.dsi.fastutil.doubles.DoubleListIterator;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
 import java.util.List;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Util;
-import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.noise.OctavePerlinNoiseSampler;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 
 public class DoublePerlinNoiseSampler {
     private static final double DOMAIN_SCALE = 1.0181268882175227;
@@ -37,8 +37,8 @@ public class DoublePerlinNoiseSampler {
     private final double amplitude;
     private final OctavePerlinNoiseSampler firstSampler;
     private final OctavePerlinNoiseSampler secondSampler;
-    private final double field_36631;
-    private final NoiseParameters field_37207;
+    private final double maxValue;
+    private final NoiseParameters parameters;
 
     @Deprecated
     public static DoublePerlinNoiseSampler createLegacy(Random random, NoiseParameters parameters) {
@@ -53,10 +53,10 @@ public class DoublePerlinNoiseSampler {
         return new DoublePerlinNoiseSampler(random, parameters, true);
     }
 
-    private DoublePerlinNoiseSampler(Random random, NoiseParameters noiseParameters, boolean bl) {
-        int i = noiseParameters.firstOctave;
-        DoubleList doubleList = noiseParameters.amplitudes;
-        this.field_37207 = noiseParameters;
+    private DoublePerlinNoiseSampler(Random random, NoiseParameters parameters, boolean bl) {
+        int i = parameters.firstOctave;
+        DoubleList doubleList = parameters.amplitudes;
+        this.parameters = parameters;
         if (bl) {
             this.firstSampler = OctavePerlinNoiseSampler.create(random, i, doubleList);
             this.secondSampler = OctavePerlinNoiseSampler.create(random, i, doubleList);
@@ -75,11 +75,11 @@ public class DoublePerlinNoiseSampler {
             k = Math.max(k, l);
         }
         this.amplitude = 0.16666666666666666 / DoublePerlinNoiseSampler.createAmplitude(k - j);
-        this.field_36631 = (this.firstSampler.method_40555() + this.secondSampler.method_40555()) * this.amplitude;
+        this.maxValue = (this.firstSampler.getMaxValue() + this.secondSampler.getMaxValue()) * this.amplitude;
     }
 
-    public double method_40554() {
-        return this.field_36631;
+    public double getMaxValue() {
+        return this.maxValue;
     }
 
     private static double createAmplitude(int octaves) {
@@ -94,7 +94,7 @@ public class DoublePerlinNoiseSampler {
     }
 
     public NoiseParameters copy() {
-        return this.field_37207;
+        return this.parameters;
     }
 
     @VisibleForTesting
@@ -112,7 +112,7 @@ public class DoublePerlinNoiseSampler {
         final int firstOctave;
         final DoubleList amplitudes;
         public static final Codec<NoiseParameters> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("firstOctave").forGetter(NoiseParameters::firstOctave), (App)Codec.DOUBLE.listOf().fieldOf("amplitudes").forGetter(NoiseParameters::amplitudes)).apply((Applicative)instance, NoiseParameters::new));
-        public static final Codec<RegistryEntry<NoiseParameters>> REGISTRY_ENTRY_CODEC = RegistryElementCodec.of(Registry.NOISE_KEY, CODEC);
+        public static final Codec<RegistryEntry<NoiseParameters>> REGISTRY_ENTRY_CODEC = RegistryElementCodec.of(RegistryKeys.NOISE_PARAMETERS, CODEC);
 
         public NoiseParameters(int firstOctave, List<Double> amplitudes) {
             this(firstOctave, (DoubleList)new DoubleArrayList(amplitudes));

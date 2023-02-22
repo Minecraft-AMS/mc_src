@@ -26,13 +26,13 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
@@ -298,7 +298,7 @@ extends Chunk {
     }
 
     public CarvingMask getOrCreateCarvingMask(GenerationStep.Carver step) {
-        return this.carvingMasks.computeIfAbsent(step, carver -> new CarvingMask(this.getHeight(), this.getBottomY()));
+        return this.carvingMasks.computeIfAbsent(step, step2 -> new CarvingMask(this.getHeight(), this.getBottomY()));
     }
 
     public void setCarvingMask(GenerationStep.Carver step, CarvingMask carvingMask) {

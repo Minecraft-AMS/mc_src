@@ -2,22 +2,30 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  org.jetbrains.annotations.Contract
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
+import java.util.function.IntFunction;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.text.Text;
+import net.minecraft.util.StringIdentifiable;
+import net.minecraft.util.function.ValueLists;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 public final class GameMode
-extends Enum<GameMode> {
+extends Enum<GameMode>
+implements StringIdentifiable {
     public static final /* enum */ GameMode SURVIVAL = new GameMode(0, "survival");
     public static final /* enum */ GameMode CREATIVE = new GameMode(1, "creative");
     public static final /* enum */ GameMode ADVENTURE = new GameMode(2, "adventure");
     public static final /* enum */ GameMode SPECTATOR = new GameMode(3, "spectator");
     public static final GameMode DEFAULT;
-    private static final int field_30964 = -1;
+    public static final StringIdentifiable.Codec<GameMode> CODEC;
+    private static final IntFunction<GameMode> BY_ID;
+    private static final int UNKNOWN = -1;
     private final int id;
     private final String name;
     private final Text simpleTranslatableName;
@@ -44,6 +52,11 @@ extends Enum<GameMode> {
     }
 
     public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public String asString() {
         return this.name;
     }
 
@@ -87,27 +100,18 @@ extends Enum<GameMode> {
     }
 
     public static GameMode byId(int id) {
-        return GameMode.byId(id, DEFAULT);
-    }
-
-    public static GameMode byId(int id, GameMode defaultMode) {
-        for (GameMode gameMode : GameMode.values()) {
-            if (gameMode.id != id) continue;
-            return gameMode;
-        }
-        return defaultMode;
+        return BY_ID.apply(id);
     }
 
     public static GameMode byName(String name) {
         return GameMode.byName(name, SURVIVAL);
     }
 
-    public static GameMode byName(String name, GameMode defaultMode) {
-        for (GameMode gameMode : GameMode.values()) {
-            if (!gameMode.name.equals(name)) continue;
-            return gameMode;
-        }
-        return defaultMode;
+    @Nullable
+    @Contract(value="_,!null->!null;_,null->_")
+    public static GameMode byName(String name, @Nullable GameMode defaultMode) {
+        GameMode gameMode = CODEC.byId(name);
+        return gameMode != null ? gameMode : defaultMode;
     }
 
     public static int getId(@Nullable GameMode gameMode) {
@@ -129,6 +133,8 @@ extends Enum<GameMode> {
     static {
         field_9222 = GameMode.method_36695();
         DEFAULT = SURVIVAL;
+        CODEC = StringIdentifiable.createCodec(GameMode::values);
+        BY_ID = ValueLists.createIdToValueFunction(GameMode::getId, GameMode.values(), ValueLists.OutOfBoundsHandling.ZERO);
     }
 }
 

@@ -36,46 +36,46 @@ import org.slf4j.Logger;
 public class Schema99
 extends Schema {
     private static final Logger LOGGER = LogUtils.getLogger();
-    static final Map<String, String> field_5748 = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
-        hashMap.put("minecraft:furnace", "Furnace");
-        hashMap.put("minecraft:lit_furnace", "Furnace");
-        hashMap.put("minecraft:chest", "Chest");
-        hashMap.put("minecraft:trapped_chest", "Chest");
-        hashMap.put("minecraft:ender_chest", "EnderChest");
-        hashMap.put("minecraft:jukebox", "RecordPlayer");
-        hashMap.put("minecraft:dispenser", "Trap");
-        hashMap.put("minecraft:dropper", "Dropper");
-        hashMap.put("minecraft:sign", "Sign");
-        hashMap.put("minecraft:mob_spawner", "MobSpawner");
-        hashMap.put("minecraft:noteblock", "Music");
-        hashMap.put("minecraft:brewing_stand", "Cauldron");
-        hashMap.put("minecraft:enhanting_table", "EnchantTable");
-        hashMap.put("minecraft:command_block", "CommandBlock");
-        hashMap.put("minecraft:beacon", "Beacon");
-        hashMap.put("minecraft:skull", "Skull");
-        hashMap.put("minecraft:daylight_detector", "DLDetector");
-        hashMap.put("minecraft:hopper", "Hopper");
-        hashMap.put("minecraft:banner", "Banner");
-        hashMap.put("minecraft:flower_pot", "FlowerPot");
-        hashMap.put("minecraft:repeating_command_block", "CommandBlock");
-        hashMap.put("minecraft:chain_command_block", "CommandBlock");
-        hashMap.put("minecraft:standing_sign", "Sign");
-        hashMap.put("minecraft:wall_sign", "Sign");
-        hashMap.put("minecraft:piston_head", "Piston");
-        hashMap.put("minecraft:daylight_detector_inverted", "DLDetector");
-        hashMap.put("minecraft:unpowered_comparator", "Comparator");
-        hashMap.put("minecraft:powered_comparator", "Comparator");
-        hashMap.put("minecraft:wall_banner", "Banner");
-        hashMap.put("minecraft:standing_banner", "Banner");
-        hashMap.put("minecraft:structure_block", "Structure");
-        hashMap.put("minecraft:end_portal", "Airportal");
-        hashMap.put("minecraft:end_gateway", "EndGateway");
-        hashMap.put("minecraft:shield", "Banner");
+    static final Map<String, String> field_5748 = (Map)DataFixUtils.make((Object)Maps.newHashMap(), map -> {
+        map.put("minecraft:furnace", "Furnace");
+        map.put("minecraft:lit_furnace", "Furnace");
+        map.put("minecraft:chest", "Chest");
+        map.put("minecraft:trapped_chest", "Chest");
+        map.put("minecraft:ender_chest", "EnderChest");
+        map.put("minecraft:jukebox", "RecordPlayer");
+        map.put("minecraft:dispenser", "Trap");
+        map.put("minecraft:dropper", "Dropper");
+        map.put("minecraft:sign", "Sign");
+        map.put("minecraft:mob_spawner", "MobSpawner");
+        map.put("minecraft:noteblock", "Music");
+        map.put("minecraft:brewing_stand", "Cauldron");
+        map.put("minecraft:enhanting_table", "EnchantTable");
+        map.put("minecraft:command_block", "CommandBlock");
+        map.put("minecraft:beacon", "Beacon");
+        map.put("minecraft:skull", "Skull");
+        map.put("minecraft:daylight_detector", "DLDetector");
+        map.put("minecraft:hopper", "Hopper");
+        map.put("minecraft:banner", "Banner");
+        map.put("minecraft:flower_pot", "FlowerPot");
+        map.put("minecraft:repeating_command_block", "CommandBlock");
+        map.put("minecraft:chain_command_block", "CommandBlock");
+        map.put("minecraft:standing_sign", "Sign");
+        map.put("minecraft:wall_sign", "Sign");
+        map.put("minecraft:piston_head", "Piston");
+        map.put("minecraft:daylight_detector_inverted", "DLDetector");
+        map.put("minecraft:unpowered_comparator", "Comparator");
+        map.put("minecraft:powered_comparator", "Comparator");
+        map.put("minecraft:wall_banner", "Banner");
+        map.put("minecraft:standing_banner", "Banner");
+        map.put("minecraft:structure_block", "Structure");
+        map.put("minecraft:end_portal", "Airportal");
+        map.put("minecraft:end_gateway", "EndGateway");
+        map.put("minecraft:shield", "Banner");
     });
     protected static final Hook.HookFunction field_5747 = new Hook.HookFunction(){
 
-        public <T> T apply(DynamicOps<T> dynamicOps, T object) {
-            return Schema99.method_5359(new Dynamic(dynamicOps, object), field_5748, "ArmorStand");
+        public <T> T apply(DynamicOps<T> ops, T value) {
+            return Schema99.method_5359(new Dynamic(ops, value), field_5748, "ArmorStand");
         }
     };
 
@@ -105,34 +105,34 @@ extends Schema {
 
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         HashMap map = Maps.newHashMap();
-        schema.register((Map)map, "Item", string -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register((Map)map, "Item", name -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         schema.registerSimple((Map)map, "XPOrb");
         Schema99.targetInTile(schema, map, "ThrownEgg");
         schema.registerSimple((Map)map, "LeashKnot");
         schema.registerSimple((Map)map, "Painting");
-        schema.register((Map)map, "Arrow", string -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
-        schema.register((Map)map, "TippedArrow", string -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
-        schema.register((Map)map, "SpectralArrow", string -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
+        schema.register((Map)map, "Arrow", name -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
+        schema.register((Map)map, "TippedArrow", name -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
+        schema.register((Map)map, "SpectralArrow", name -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema)));
         Schema99.targetInTile(schema, map, "Snowball");
         Schema99.targetInTile(schema, map, "Fireball");
         Schema99.targetInTile(schema, map, "SmallFireball");
         Schema99.targetInTile(schema, map, "ThrownEnderpearl");
         schema.registerSimple((Map)map, "EyeOfEnderSignal");
-        schema.register((Map)map, "ThrownPotion", string -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Potion", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register((Map)map, "ThrownPotion", name -> DSL.optionalFields((String)"inTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Potion", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         Schema99.targetInTile(schema, map, "ThrownExpBottle");
-        schema.register((Map)map, "ItemFrame", string -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register((Map)map, "ItemFrame", name -> DSL.optionalFields((String)"Item", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         Schema99.targetInTile(schema, map, "WitherSkull");
         schema.registerSimple((Map)map, "PrimedTnt");
-        schema.register((Map)map, "FallingSand", string -> DSL.optionalFields((String)"Block", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"TileEntityData", (TypeTemplate)TypeReferences.BLOCK_ENTITY.in(schema)));
-        schema.register((Map)map, "FireworksRocketEntity", string -> DSL.optionalFields((String)"FireworksItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register((Map)map, "FallingSand", name -> DSL.optionalFields((String)"Block", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"TileEntityData", (TypeTemplate)TypeReferences.BLOCK_ENTITY.in(schema)));
+        schema.register((Map)map, "FireworksRocketEntity", name -> DSL.optionalFields((String)"FireworksItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         schema.registerSimple((Map)map, "Boat");
         schema.register((Map)map, "Minecart", () -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
         Schema99.targetDisplayTile(schema, map, "MinecartRideable");
-        schema.register((Map)map, "MinecartChest", string -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
+        schema.register((Map)map, "MinecartChest", name -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
         Schema99.targetDisplayTile(schema, map, "MinecartFurnace");
         Schema99.targetDisplayTile(schema, map, "MinecartTNT");
         schema.register((Map)map, "MinecartSpawner", () -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)TypeReferences.UNTAGGED_SPAWNER.in(schema)));
-        schema.register((Map)map, "MinecartHopper", string -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
+        schema.register((Map)map, "MinecartHopper", name -> DSL.optionalFields((String)"DisplayTile", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
         Schema99.targetDisplayTile(schema, map, "MinecartCommandBlock");
         Schema99.targetEquipment(schema, map, "ArmorStand");
         Schema99.targetEquipment(schema, map, "Creeper");
@@ -143,7 +143,7 @@ extends Schema {
         Schema99.targetEquipment(schema, map, "Slime");
         Schema99.targetEquipment(schema, map, "Ghast");
         Schema99.targetEquipment(schema, map, "PigZombie");
-        schema.register((Map)map, "Enderman", string -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
+        schema.register((Map)map, "Enderman", name -> DSL.optionalFields((String)"carried", (TypeTemplate)TypeReferences.BLOCK_NAME.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
         Schema99.targetEquipment(schema, map, "CaveSpider");
         Schema99.targetEquipment(schema, map, "Silverfish");
         Schema99.targetEquipment(schema, map, "Blaze");
@@ -164,9 +164,9 @@ extends Schema {
         Schema99.targetEquipment(schema, map, "SnowMan");
         Schema99.targetEquipment(schema, map, "Ozelot");
         Schema99.targetEquipment(schema, map, "VillagerGolem");
-        schema.register((Map)map, "EntityHorse", string -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
+        schema.register((Map)map, "EntityHorse", name -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"ArmorItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"SaddleItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (TypeTemplate)Schema99.targetEquipment(schema)));
         Schema99.targetEquipment(schema, map, "Rabbit");
-        schema.register((Map)map, "Villager", string -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema99.targetEquipment(schema)));
+        schema.register((Map)map, "Villager", name -> DSL.optionalFields((String)"Inventory", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Offers", (TypeTemplate)DSL.optionalFields((String)"Recipes", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"buy", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"buyB", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema), (String)"sell", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)))), (TypeTemplate)Schema99.targetEquipment(schema)));
         schema.registerSimple((Map)map, "EnderCrystal");
         schema.registerSimple((Map)map, "AreaEffectCloud");
         schema.registerSimple((Map)map, "ShulkerBullet");
@@ -179,11 +179,11 @@ extends Schema {
         Schema99.targetItems(schema, map, "Furnace");
         Schema99.targetItems(schema, map, "Chest");
         schema.registerSimple((Map)map, "EnderChest");
-        schema.register((Map)map, "RecordPlayer", string -> DSL.optionalFields((String)"RecordItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
+        schema.register((Map)map, "RecordPlayer", name -> DSL.optionalFields((String)"RecordItem", (TypeTemplate)TypeReferences.ITEM_STACK.in(schema)));
         Schema99.targetItems(schema, map, "Trap");
         Schema99.targetItems(schema, map, "Dropper");
         schema.registerSimple((Map)map, "Sign");
-        schema.register((Map)map, "MobSpawner", string -> TypeReferences.UNTAGGED_SPAWNER.in(schema));
+        schema.register((Map)map, "MobSpawner", name -> TypeReferences.UNTAGGED_SPAWNER.in(schema));
         schema.registerSimple((Map)map, "Music");
         schema.registerSimple((Map)map, "Piston");
         Schema99.targetItems(schema, map, "Cauldron");
@@ -195,7 +195,7 @@ extends Schema {
         schema.registerSimple((Map)map, "DLDetector");
         Schema99.targetItems(schema, map, "Hopper");
         schema.registerSimple((Map)map, "Comparator");
-        schema.register((Map)map, "FlowerPot", string -> DSL.optionalFields((String)"Item", (TypeTemplate)DSL.or((TypeTemplate)DSL.constType((Type)DSL.intType()), (TypeTemplate)TypeReferences.ITEM_NAME.in(schema))));
+        schema.register((Map)map, "FlowerPot", name -> DSL.optionalFields((String)"Item", (TypeTemplate)DSL.or((TypeTemplate)DSL.constType((Type)DSL.intType()), (TypeTemplate)TypeReferences.ITEM_NAME.in(schema))));
         schema.registerSimple((Map)map, "Banner");
         schema.registerSimple((Map)map, "Structure");
         schema.registerSimple((Map)map, "EndGateway");
@@ -225,24 +225,24 @@ extends Schema {
         schema.registerType(false, TypeReferences.ENTITY_CHUNK, () -> DSL.optionalFields((String)"Entities", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ENTITY_TREE.in(schema))));
     }
 
-    protected static <T> T method_5359(Dynamic<T> dynamic, Map<String, String> map, String string) {
-        return (T)dynamic.update("tag", dynamic22 -> dynamic22.update("BlockEntityTag", dynamic2 -> {
-            String string = dynamic.get("id").asString().result().map(IdentifierNormalizingSchema::normalize).orElse("minecraft:air");
+    protected static <T> T method_5359(Dynamic<T> stack, Map<String, String> renames, String newArmorStandId) {
+        return (T)stack.update("tag", tag -> tag.update("BlockEntityTag", blockEntityTag -> {
+            String string = stack.get("id").asString().result().map(IdentifierNormalizingSchema::normalize).orElse("minecraft:air");
             if (!"minecraft:air".equals(string)) {
-                String string2 = (String)map.get(string);
+                String string2 = (String)renames.get(string);
                 if (string2 == null) {
                     LOGGER.warn("Unable to resolve BlockEntity for ItemStack: {}", (Object)string);
                 } else {
-                    return dynamic2.set("id", dynamic.createString(string2));
+                    return blockEntityTag.set("id", stack.createString(string2));
                 }
             }
-            return dynamic2;
-        }).update("EntityTag", dynamic2 -> {
-            String string2 = dynamic.get("id").asString("");
+            return blockEntityTag;
+        }).update("EntityTag", entityTag -> {
+            String string2 = stack.get("id").asString("");
             if ("minecraft:armor_stand".equals(IdentifierNormalizingSchema.normalize(string2))) {
-                return dynamic2.set("id", dynamic.createString(string));
+                return entityTag.set("id", stack.createString(newArmorStandId));
             }
-            return dynamic2;
+            return entityTag;
         })).getValue();
     }
 }

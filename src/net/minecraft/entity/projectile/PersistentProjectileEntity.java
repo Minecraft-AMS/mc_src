@@ -36,6 +36,8 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -47,7 +49,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
@@ -414,7 +415,7 @@ extends ProjectileEntity {
         nbt.putDouble("damage", this.damage);
         nbt.putBoolean("crit", this.isCritical());
         nbt.putByte("PierceLevel", this.getPierceLevel());
-        nbt.putString("SoundEvent", Registry.SOUND_EVENT.getId(this.sound).toString());
+        nbt.putString("SoundEvent", Registries.SOUND_EVENT.getId(this.sound).toString());
         nbt.putBoolean("ShotFromCrossbow", this.isShotFromCrossbow());
     }
 
@@ -423,7 +424,7 @@ extends ProjectileEntity {
         super.readCustomDataFromNbt(nbt);
         this.life = nbt.getShort("life");
         if (nbt.contains("inBlockState", 10)) {
-            this.inBlockState = NbtHelper.toBlockState(nbt.getCompound("inBlockState"));
+            this.inBlockState = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("inBlockState"));
         }
         this.shake = nbt.getByte("shake") & 0xFF;
         this.inGround = nbt.getBoolean("inGround");
@@ -434,7 +435,7 @@ extends ProjectileEntity {
         this.setCritical(nbt.getBoolean("crit"));
         this.setPierceLevel(nbt.getByte("PierceLevel"));
         if (nbt.contains("SoundEvent", 8)) {
-            this.sound = Registry.SOUND_EVENT.getOrEmpty(new Identifier(nbt.getString("SoundEvent"))).orElse(this.getHitSound());
+            this.sound = Registries.SOUND_EVENT.getOrEmpty(new Identifier(nbt.getString("SoundEvent"))).orElse(this.getHitSound());
         }
         this.setShotFromCrossbow(nbt.getBoolean("ShotFromCrossbow"));
     }

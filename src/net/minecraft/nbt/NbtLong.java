@@ -15,12 +15,12 @@ import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtLong
 extends AbstractNbtNumber {
-    private static final int SIZE = 128;
+    private static final int SIZE = 16;
     public static final NbtType<NbtLong> TYPE = new NbtType.OfFixedSize<NbtLong>(){
 
         @Override
         public NbtLong read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
-            nbtTagSizeTracker.add(128L);
+            nbtTagSizeTracker.add(16L);
             return NbtLong.of(dataInput.readLong());
         }
 
@@ -70,6 +70,11 @@ extends AbstractNbtNumber {
     @Override
     public void write(DataOutput output) throws IOException {
         output.writeLong(this.value);
+    }
+
+    @Override
+    public int getSizeInBytes() {
+        return 16;
     }
 
     @Override

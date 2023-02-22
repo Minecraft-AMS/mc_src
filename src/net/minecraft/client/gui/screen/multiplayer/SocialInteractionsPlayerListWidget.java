@@ -6,6 +6,7 @@
  *  com.google.common.base.Suppliers
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
+ *  it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -17,6 +18,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -33,6 +35,9 @@ import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsScreen;
 import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.report.log.ChatLog;
+import net.minecraft.client.report.log.ChatLogEntry;
+import net.minecraft.client.report.log.ReceivedMessage;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -72,14 +77,13 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
         for (UUID uUID : playerUuids) {
             PlayerListEntry playerListEntry = clientPlayNetworkHandler.getPlayerListEntry(uUID);
             if (playerListEntry == null) continue;
-            UUID uUID2 = playerListEntry.getProfile().getId();
-            boolean bl = playerListEntry.getPublicKeyData() != null;
-            entriesByUuids.put(uUID2, new SocialInteractionsPlayerListEntry(this.client, this.parent, uUID2, playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture, bl));
+            boolean bl = playerListEntry.hasPublicKey();
+            entriesByUuids.put(uUID, new SocialInteractionsPlayerListEntry(this.client, this.parent, uUID, playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture, bl));
         }
     }
 
     private void markOfflineMembers(Map<UUID, SocialInteractionsPlayerListEntry> entries, boolean includeOffline) {
-        Collection<GameProfile> collection = this.client.getAbuseReportContext().chatLog().streamBackward().collectSenderProfiles();
+        Collection<GameProfile> collection = SocialInteractionsPlayerListWidget.collectReportableProfiles(this.client.getAbuseReportContext().getChatLog());
         for (GameProfile gameProfile : collection) {
             SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry;
             if (includeOffline) {
@@ -96,18 +100,32 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
         }
     }
 
+    private static Collection<GameProfile> collectReportableProfiles(ChatLog log) {
+        ObjectLinkedOpenHashSet set = new ObjectLinkedOpenHashSet();
+        for (int i = log.getMaxIndex(); i >= log.getMinIndex(); --i) {
+            ReceivedMessage.ChatMessage chatMessage;
+            ChatLogEntry chatLogEntry = log.get(i);
+            if (!(chatLogEntry instanceof ReceivedMessage.ChatMessage) || !(chatMessage = (ReceivedMessage.ChatMessage)chatLogEntry).message().hasSignature()) continue;
+            set.add(chatMessage.profile());
+        }
+        return set;
+    }
+
     private void sortPlayers() {
         this.players.sort(Comparator.comparing(player -> {
             if (player.getUuid().equals(this.client.getSession().getUuidOrNull())) {
                 return 0;
             }
             if (player.getUuid().version() == 2) {
-                return 3;
+                return 4;
             }
-            if (player.hasSentMessage()) {
+            if (this.client.getAbuseReportContext().draftPlayerUuidEquals(player.getUuid())) {
                 return 1;
             }
-            return 2;
+            if (player.hasSentMessage()) {
+                return 2;
+            }
+            return 3;
         }).thenComparing(player -> {
             int i;
             if (!player.getName().isBlank() && ((i = player.getName().codePointAt(0)) == 95 || i >= 97 && i <= 122 || i >= 65 && i <= 90 || i >= 48 && i <= 57)) {
@@ -150,7 +168,7 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
         }
         if ((tab == SocialInteractionsScreen.Tab.ALL || this.client.getSocialInteractionsManager().isPlayerMuted(uUID)) && (Strings.isNullOrEmpty((String)this.currentSearch) || player.getProfile().getName().toLowerCase(Locale.ROOT).contains(this.currentSearch))) {
             SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry;
-            boolean bl = player.getPublicKeyData() != null;
+            boolean bl = player.hasPublicKey();
             socialInteractionsPlayerListEntry = new SocialInteractionsPlayerListEntry(this.client, this.parent, player.getProfile().getId(), player.getProfile().getName(), player::getSkinTexture, bl);
             this.addEntry(socialInteractionsPlayerListEntry);
             this.players.add(socialInteractionsPlayerListEntry);

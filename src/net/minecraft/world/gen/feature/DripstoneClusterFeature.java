@@ -11,8 +11,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -133,7 +133,7 @@ extends Feature<DripstoneClusterFeatureConfig> {
             return 0;
         }
         int i = Math.abs(localX) + Math.abs(localZ);
-        float f = (float)MathHelper.clampedLerpFromProgress((double)i, 0.0, (double)config.maxDistanceFromCenterAffectingHeightBias, (double)height / 2.0, 0.0);
+        float f = (float)MathHelper.clampedMap((double)i, 0.0, (double)config.maxDistanceFromCenterAffectingHeightBias, (double)height / 2.0, 0.0);
         return (int)DripstoneClusterFeature.clampedGaussian(random, 0.0f, height, f, config.heightDeviation);
     }
 
@@ -171,7 +171,7 @@ extends Feature<DripstoneClusterFeatureConfig> {
         int i = radiusX - Math.abs(localX);
         int j = radiusZ - Math.abs(localZ);
         int k = Math.min(i, j);
-        return MathHelper.clampedLerpFromProgress(k, 0.0f, config.maxDistanceFromCenterAffectingChanceOfDripstoneColumn, config.chanceOfDripstoneColumnAtMaxDistanceFromCenter, 1.0f);
+        return MathHelper.clampedMap(k, 0.0f, config.maxDistanceFromCenterAffectingChanceOfDripstoneColumn, config.chanceOfDripstoneColumnAtMaxDistanceFromCenter, 1.0f);
     }
 
     private static float clampedGaussian(Random random, float min, float max, float mean, float deviation) {

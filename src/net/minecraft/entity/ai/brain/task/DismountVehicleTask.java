@@ -11,11 +11,11 @@ import java.util.Map;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.server.world.ServerWorld;
 
 public class DismountVehicleTask
-extends Task<LivingEntity> {
+extends MultiTickTask<LivingEntity> {
     public DismountVehicleTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of());
     }

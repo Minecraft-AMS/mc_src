@@ -12,6 +12,8 @@ import com.mojang.logging.LogUtils;
 import java.util.List;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.structure.StructureContext;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePiecesList;
@@ -20,7 +22,6 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -53,7 +54,7 @@ public final class StructureStart {
         if (INVALID.equals(string)) {
             return DEFAULT;
         }
-        Registry<Structure> registry = context.registryManager().get(Registry.STRUCTURE_KEY);
+        Registry<Structure> registry = context.registryManager().get(RegistryKeys.STRUCTURE);
         Structure structure = registry.get(new Identifier(string));
         if (structure == null) {
             LOGGER.error("Unknown stucture id: {}", (Object)string);
@@ -104,7 +105,7 @@ public final class StructureStart {
             nbtCompound.putString("id", INVALID);
             return nbtCompound;
         }
-        nbtCompound.putString("id", context.registryManager().get(Registry.STRUCTURE_KEY).getId(this.structure).toString());
+        nbtCompound.putString("id", context.registryManager().get(RegistryKeys.STRUCTURE).getId(this.structure).toString());
         nbtCompound.putInt("ChunkX", chunkPos.x);
         nbtCompound.putInt("ChunkZ", chunkPos.z);
         nbtCompound.putInt("references", this.references);

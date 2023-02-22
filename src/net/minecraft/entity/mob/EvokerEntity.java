@@ -159,7 +159,6 @@ extends SpellcastingIllagerEntity {
     class LookAtTargetOrWololoTarget
     extends SpellcastingIllagerEntity.LookAtTargetGoal {
         LookAtTargetOrWololoTarget() {
-            super(EvokerEntity.this);
         }
 
         @Override
@@ -174,11 +173,9 @@ extends SpellcastingIllagerEntity {
 
     class SummonVexGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate closeVexPredicate;
+        private final TargetPredicate closeVexPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).ignoreVisibility().ignoreDistanceScalingFactor();
 
         SummonVexGoal() {
-            super(EvokerEntity.this);
-            this.closeVexPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).ignoreVisibility().ignoreDistanceScalingFactor();
         }
 
         @Override
@@ -206,6 +203,7 @@ extends SpellcastingIllagerEntity {
             for (int i = 0; i < 3; ++i) {
                 BlockPos blockPos = EvokerEntity.this.getBlockPos().add(-2 + EvokerEntity.this.random.nextInt(5), 1, -2 + EvokerEntity.this.random.nextInt(5));
                 VexEntity vexEntity = EntityType.VEX.create(EvokerEntity.this.world);
+                if (vexEntity == null) continue;
                 vexEntity.refreshPositionAndAngles(blockPos, 0.0f, 0.0f);
                 vexEntity.initialize(serverWorld, EvokerEntity.this.world.getLocalDifficulty(blockPos), SpawnReason.MOB_SUMMONED, null, null);
                 vexEntity.setOwner(EvokerEntity.this);
@@ -229,7 +227,6 @@ extends SpellcastingIllagerEntity {
     class ConjureFangsGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
         ConjureFangsGoal() {
-            super(EvokerEntity.this);
         }
 
         @Override
@@ -302,12 +299,7 @@ extends SpellcastingIllagerEntity {
 
     public class WololoGoal
     extends SpellcastingIllagerEntity.CastSpellGoal {
-        private final TargetPredicate convertibleSheepPredicate;
-
-        public WololoGoal() {
-            super(EvokerEntity.this);
-            this.convertibleSheepPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
-        }
+        private final TargetPredicate convertibleSheepPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(16.0).setPredicate(livingEntity -> ((SheepEntity)livingEntity).getColor() == DyeColor.BLUE);
 
         @Override
         public boolean canStart() {

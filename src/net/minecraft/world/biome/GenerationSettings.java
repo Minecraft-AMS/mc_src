@@ -36,10 +36,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import net.minecraft.registry.RegistryEntryLookup;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
@@ -59,7 +61,7 @@ public class GenerationSettings {
     GenerationSettings(Map<GenerationStep.Carver, RegistryEntryList<ConfiguredCarver<?>>> carvers, List<RegistryEntryList<PlacedFeature>> features) {
         this.carvers = carvers;
         this.features = features;
-        this.flowerFeatures = Suppliers.memoize(() -> (List)features.stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value).flatMap(PlacedFeature::getDecoratedFeatures).filter(configuredFeature -> configuredFeature.feature() == Feature.FLOWER).collect(ImmutableList.toImmutableList()));
+        this.flowerFeatures = Suppliers.memoize(() -> (List)features.stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value).flatMap(PlacedFeature::getDecoratedFeatures).filter(feature -> feature.feature() == Feature.FLOWER).collect(ImmutableList.toImmutableList()));
         this.allowedFeatures = Suppliers.memoize(() -> features.stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value).collect(Collectors.toSet()));
     }
 
@@ -79,33 +81,54 @@ public class GenerationSettings {
         return this.allowedFeatures.get().contains(feature);
     }
 
+    public static class LookupBackedBuilder
+    extends Builder {
+        private final RegistryEntryLookup<PlacedFeature> placedFeatureLookup;
+        private final RegistryEntryLookup<ConfiguredCarver<?>> configuredCarverLookup;
+
+        public LookupBackedBuilder(RegistryEntryLookup<PlacedFeature> placedFeatureLookup, RegistryEntryLookup<ConfiguredCarver<?>> configuredCarverLookup) {
+            this.placedFeatureLookup = placedFeatureLookup;
+            this.configuredCarverLookup = configuredCarverLookup;
+        }
+
+        public LookupBackedBuilder feature(GenerationStep.Feature featureStep, RegistryKey<PlacedFeature> featureKey) {
+            this.addFeature(featureStep.ordinal(), this.placedFeatureLookup.getOrThrow(featureKey));
+            return this;
+        }
+
+        public LookupBackedBuilder carver(GenerationStep.Carver carverStep, RegistryKey<ConfiguredCarver<?>> carverKey) {
+            this.carver(carverStep, this.configuredCarverLookup.getOrThrow(carverKey));
+            return this;
+        }
+    }
+
     public static class Builder {
-        private final Map<GenerationStep.Carver, List<RegistryEntry<ConfiguredCarver<?>>>> carvers = Maps.newLinkedHashMap();
-        private final List<List<RegistryEntry<PlacedFeature>>> features = Lists.newArrayList();
+        private final Map<GenerationStep.Carver, List<RegistryEntry<ConfiguredCarver<?>>>> carverStepsToCarvers = Maps.newLinkedHashMap();
+        private final List<List<RegistryEntry<PlacedFeature>>> indexedFeaturesList = Lists.newArrayList();
 
-        public Builder feature(GenerationStep.Feature featureStep, RegistryEntry<PlacedFeature> feature) {
-            return this.feature(featureStep.ordinal(), feature);
+        public Builder feature(GenerationStep.Feature featureStep, RegistryEntry<PlacedFeature> featureEntry) {
+            return this.addFeature(featureStep.ordinal(), featureEntry);
         }
 
-        public Builder feature(int stepIndex, RegistryEntry<PlacedFeature> featureEntry) {
-            this.addFeatureStep(stepIndex);
-            this.features.get(stepIndex).add(featureEntry);
+        public Builder addFeature(int ordinal, RegistryEntry<PlacedFeature> featureEntry) {
+            this.fillFeaturesList(ordinal);
+            this.indexedFeaturesList.get(ordinal).add(featureEntry);
             return this;
         }
 
-        public Builder carver(GenerationStep.Carver carverStep, RegistryEntry<? extends ConfiguredCarver<?>> carver2) {
-            this.carvers.computeIfAbsent(carverStep, carver -> Lists.newArrayList()).add(RegistryEntry.upcast(carver2));
+        public Builder carver(GenerationStep.Carver carverStep, RegistryEntry<ConfiguredCarver<?>> carverEntry) {
+            this.carverStepsToCarvers.computeIfAbsent(carverStep, step -> Lists.newArrayList()).add(carverEntry);
             return this;
         }
 
-        private void addFeatureStep(int stepIndex) {
-            while (this.features.size() <= stepIndex) {
-                this.features.add(Lists.newArrayList());
+        private void fillFeaturesList(int size) {
+            while (this.indexedFeaturesList.size() <= size) {
+                this.indexedFeaturesList.add(Lists.newArrayList());
             }
         }
 
         public GenerationSettings build() {
-            return new GenerationSettings((Map)this.carvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> RegistryEntryList.of((List)entry.getValue()))), (List)this.features.stream().map(RegistryEntryList::of).collect(ImmutableList.toImmutableList()));
+            return new GenerationSettings((Map)this.carverStepsToCarvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> RegistryEntryList.of((List)entry.getValue()))), (List)this.indexedFeaturesList.stream().map(RegistryEntryList::of).collect(ImmutableList.toImmutableList()));
         }
     }
 }

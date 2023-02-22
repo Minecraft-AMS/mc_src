@@ -5,6 +5,8 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
+ *  org.joml.Matrix4fc
  */
 package net.minecraft.client.gl;
 
@@ -14,13 +16,14 @@ import java.nio.ByteBuffer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
-import net.minecraft.client.render.Shader;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.util.Window;
-import net.minecraft.util.math.Matrix4f;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexBuffer
@@ -31,9 +34,9 @@ implements AutoCloseable {
     @Nullable
     private VertexFormat vertexFormat;
     @Nullable
-    private RenderSystem.IndexBuffer indexBuffer;
+    private RenderSystem.ShapeIndexBuffer sharedSequentialIndexBuffer;
     private VertexFormat.IndexType indexType;
-    private int vertexCount;
+    private int indexCount;
     private VertexFormat.DrawMode drawMode;
 
     public VertexBuffer() {
@@ -49,19 +52,19 @@ implements AutoCloseable {
         }
         RenderSystem.assertOnRenderThread();
         try {
-            BufferBuilder.DrawArrayParameters drawArrayParameters = buffer.getParameters();
-            this.vertexFormat = this.configureVertexFormat(drawArrayParameters, buffer.getVertexBuffer());
-            this.indexBuffer = this.configureIndexBuffer(drawArrayParameters, buffer.getIndexBuffer());
-            this.vertexCount = drawArrayParameters.indexCount();
-            this.indexType = drawArrayParameters.indexType();
-            this.drawMode = drawArrayParameters.mode();
+            BufferBuilder.DrawParameters drawParameters = buffer.getParameters();
+            this.vertexFormat = this.uploadVertexBuffer(drawParameters, buffer.getVertexBuffer());
+            this.sharedSequentialIndexBuffer = this.uploadIndexBuffer(drawParameters, buffer.getIndexBuffer());
+            this.indexCount = drawParameters.indexCount();
+            this.indexType = drawParameters.indexType();
+            this.drawMode = drawParameters.mode();
         }
         finally {
             buffer.release();
         }
     }
 
-    private VertexFormat configureVertexFormat(BufferBuilder.DrawArrayParameters parameters, ByteBuffer data) {
+    private VertexFormat uploadVertexBuffer(BufferBuilder.DrawParameters parameters, ByteBuffer vertexBuffer) {
         boolean bl = false;
         if (!parameters.format().equals(this.vertexFormat)) {
             if (this.vertexFormat != null) {
@@ -75,22 +78,22 @@ implements AutoCloseable {
             if (!bl) {
                 GlStateManager._glBindBuffer(34962, this.vertexBufferId);
             }
-            RenderSystem.glBufferData(34962, data, 35044);
+            RenderSystem.glBufferData(34962, vertexBuffer, 35044);
         }
         return parameters.format();
     }
 
     @Nullable
-    private RenderSystem.IndexBuffer configureIndexBuffer(BufferBuilder.DrawArrayParameters parameters, ByteBuffer data) {
+    private RenderSystem.ShapeIndexBuffer uploadIndexBuffer(BufferBuilder.DrawParameters parameters, ByteBuffer indexBuffer) {
         if (parameters.sequentialIndex()) {
-            RenderSystem.IndexBuffer indexBuffer = RenderSystem.getSequentialBuffer(parameters.mode());
-            if (indexBuffer != this.indexBuffer || !indexBuffer.isSizeLessThanOrEqual(parameters.indexCount())) {
-                indexBuffer.bindAndGrow(parameters.indexCount());
+            RenderSystem.ShapeIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(parameters.mode());
+            if (shapeIndexBuffer != this.sharedSequentialIndexBuffer || !shapeIndexBuffer.isLargeEnough(parameters.indexCount())) {
+                shapeIndexBuffer.bindAndGrow(parameters.indexCount());
             }
-            return indexBuffer;
+            return shapeIndexBuffer;
         }
         GlStateManager._glBindBuffer(34963, this.indexBufferId);
-        RenderSystem.glBufferData(34963, data, 35044);
+        RenderSystem.glBufferData(34963, indexBuffer, 35044);
         return null;
     }
 
@@ -104,69 +107,69 @@ implements AutoCloseable {
         GlStateManager._glBindVertexArray(0);
     }
 
-    public void drawElements() {
-        RenderSystem.drawElements(this.drawMode.glMode, this.vertexCount, this.getIndexType().glType);
+    public void draw() {
+        RenderSystem.drawElements(this.drawMode.glMode, this.indexCount, this.getIndexType().glType);
     }
 
     private VertexFormat.IndexType getIndexType() {
-        RenderSystem.IndexBuffer indexBuffer = this.indexBuffer;
-        return indexBuffer != null ? indexBuffer.getIndexType() : this.indexType;
+        RenderSystem.ShapeIndexBuffer shapeIndexBuffer = this.sharedSequentialIndexBuffer;
+        return shapeIndexBuffer != null ? shapeIndexBuffer.getIndexType() : this.indexType;
     }
 
-    public void draw(Matrix4f viewMatrix, Matrix4f projectionMatrix, Shader shader) {
+    public void draw(Matrix4f viewMatrix, Matrix4f projectionMatrix, ShaderProgram program) {
         if (!RenderSystem.isOnRenderThread()) {
-            RenderSystem.recordRenderCall(() -> this.drawInternal(viewMatrix.copy(), projectionMatrix.copy(), shader));
+            RenderSystem.recordRenderCall(() -> this.drawInternal(new Matrix4f((Matrix4fc)viewMatrix), new Matrix4f((Matrix4fc)projectionMatrix), program));
         } else {
-            this.drawInternal(viewMatrix, projectionMatrix, shader);
+            this.drawInternal(viewMatrix, projectionMatrix, program);
         }
     }
 
-    private void drawInternal(Matrix4f viewMatrix, Matrix4f projectionMatrix, Shader shader) {
+    private void drawInternal(Matrix4f viewMatrix, Matrix4f projectionMatrix, ShaderProgram program) {
         for (int i = 0; i < 12; ++i) {
             int j = RenderSystem.getShaderTexture(i);
-            shader.addSampler("Sampler" + i, j);
+            program.addSampler("Sampler" + i, j);
         }
-        if (shader.modelViewMat != null) {
-            shader.modelViewMat.set(viewMatrix);
+        if (program.modelViewMat != null) {
+            program.modelViewMat.set(viewMatrix);
         }
-        if (shader.projectionMat != null) {
-            shader.projectionMat.set(projectionMatrix);
+        if (program.projectionMat != null) {
+            program.projectionMat.set(projectionMatrix);
         }
-        if (shader.viewRotationMat != null) {
-            shader.viewRotationMat.set(RenderSystem.getInverseViewRotationMatrix());
+        if (program.viewRotationMat != null) {
+            program.viewRotationMat.set(RenderSystem.getInverseViewRotationMatrix());
         }
-        if (shader.colorModulator != null) {
-            shader.colorModulator.set(RenderSystem.getShaderColor());
+        if (program.colorModulator != null) {
+            program.colorModulator.set(RenderSystem.getShaderColor());
         }
-        if (shader.fogStart != null) {
-            shader.fogStart.set(RenderSystem.getShaderFogStart());
+        if (program.fogStart != null) {
+            program.fogStart.set(RenderSystem.getShaderFogStart());
         }
-        if (shader.fogEnd != null) {
-            shader.fogEnd.set(RenderSystem.getShaderFogEnd());
+        if (program.fogEnd != null) {
+            program.fogEnd.set(RenderSystem.getShaderFogEnd());
         }
-        if (shader.fogColor != null) {
-            shader.fogColor.set(RenderSystem.getShaderFogColor());
+        if (program.fogColor != null) {
+            program.fogColor.set(RenderSystem.getShaderFogColor());
         }
-        if (shader.fogShape != null) {
-            shader.fogShape.set(RenderSystem.getShaderFogShape().getId());
+        if (program.fogShape != null) {
+            program.fogShape.set(RenderSystem.getShaderFogShape().getId());
         }
-        if (shader.textureMat != null) {
-            shader.textureMat.set(RenderSystem.getTextureMatrix());
+        if (program.textureMat != null) {
+            program.textureMat.set(RenderSystem.getTextureMatrix());
         }
-        if (shader.gameTime != null) {
-            shader.gameTime.set(RenderSystem.getShaderGameTime());
+        if (program.gameTime != null) {
+            program.gameTime.set(RenderSystem.getShaderGameTime());
         }
-        if (shader.screenSize != null) {
+        if (program.screenSize != null) {
             Window window = MinecraftClient.getInstance().getWindow();
-            shader.screenSize.set((float)window.getFramebufferWidth(), (float)window.getFramebufferHeight());
+            program.screenSize.set((float)window.getFramebufferWidth(), (float)window.getFramebufferHeight());
         }
-        if (shader.lineWidth != null && (this.drawMode == VertexFormat.DrawMode.LINES || this.drawMode == VertexFormat.DrawMode.LINE_STRIP)) {
-            shader.lineWidth.set(RenderSystem.getShaderLineWidth());
+        if (program.lineWidth != null && (this.drawMode == VertexFormat.DrawMode.LINES || this.drawMode == VertexFormat.DrawMode.LINE_STRIP)) {
+            program.lineWidth.set(RenderSystem.getShaderLineWidth());
         }
-        RenderSystem.setupShaderLights(shader);
-        shader.bind();
-        this.drawElements();
-        shader.unbind();
+        RenderSystem.setupShaderLights(program);
+        program.bind();
+        this.draw();
+        program.unbind();
     }
 
     @Override

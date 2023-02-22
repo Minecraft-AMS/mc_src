@@ -61,14 +61,18 @@ import net.minecraft.nbt.NbtTypes;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.nbt.visitor.NbtOrderedStringFormatter;
 import net.minecraft.nbt.visitor.NbtTextFormatter;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryEntryLookup;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.state.State;
 import net.minecraft.state.StateManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.StringHelper;
-import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -196,7 +200,7 @@ public final class NbtHelper {
     }
 
     public static NbtIntArray fromUuid(UUID uuid) {
-        return new NbtIntArray(DynamicSerializableUuid.toIntArray(uuid));
+        return new NbtIntArray(Uuids.toIntArray(uuid));
     }
 
     public static UUID toUuid(NbtElement element) {
@@ -207,7 +211,7 @@ public final class NbtHelper {
         if (is.length != 4) {
             throw new IllegalArgumentException("Expected UUID-Array to be of length 4, but found " + is.length + ".");
         }
-        return DynamicSerializableUuid.toUuid(is);
+        return Uuids.toUuid(is);
     }
 
     public static BlockPos toBlockPos(NbtCompound nbt) {
@@ -222,11 +226,16 @@ public final class NbtHelper {
         return nbtCompound;
     }
 
-    public static BlockState toBlockState(NbtCompound nbt) {
+    public static BlockState toBlockState(RegistryEntryLookup<Block> blockLookup, NbtCompound nbt) {
         if (!nbt.contains("Name", 8)) {
             return Blocks.AIR.getDefaultState();
         }
-        Block block = Registry.BLOCK.get(new Identifier(nbt.getString("Name")));
+        Identifier identifier = new Identifier(nbt.getString("Name"));
+        Optional<RegistryEntry.Reference<Block>> optional = blockLookup.getOptional(RegistryKey.of(RegistryKeys.BLOCK, identifier));
+        if (optional.isEmpty()) {
+            return Blocks.AIR.getDefaultState();
+        }
+        Block block = (Block)((RegistryEntry)optional.get()).value();
         BlockState blockState = block.getDefaultState();
         if (nbt.contains("Properties", 10)) {
             NbtCompound nbtCompound = nbt.getCompound("Properties");
@@ -251,7 +260,7 @@ public final class NbtHelper {
 
     public static NbtCompound fromBlockState(BlockState state) {
         NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putString("Name", Registry.BLOCK.getId(state.getBlock()).toString());
+        nbtCompound.putString("Name", Registries.BLOCK.getId(state.getBlock()).toString());
         ImmutableMap<net.minecraft.state.property.Property<?>, Comparable<?>> immutableMap = state.getEntries();
         if (!immutableMap.isEmpty()) {
             NbtCompound nbtCompound2 = new NbtCompound();
@@ -266,7 +275,7 @@ public final class NbtHelper {
 
     public static NbtCompound fromFluidState(FluidState state) {
         NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putString("Name", Registry.FLUID.getId(state.getFluid()).toString());
+        nbtCompound.putString("Name", Registries.FLUID.getId(state.getFluid()).toString());
         ImmutableMap<net.minecraft.state.property.Property<?>, Comparable<?>> immutableMap = state.getEntries();
         if (!immutableMap.isEmpty()) {
             NbtCompound nbtCompound2 = new NbtCompound();
@@ -508,7 +517,7 @@ public final class NbtHelper {
             });
             compound.put("palettes", nbtList3);
         }
-        if (compound.contains("entities", 10)) {
+        if (compound.contains("entities", 9)) {
             nbtList3 = compound.getList("entities", 10);
             nbtList4 = nbtList3.stream().map(NbtCompound.class::cast).sorted(Comparator.comparing(nbt -> nbt.getList("pos", 6), ENTITY_POS_COMPARATOR)).collect(Collectors.toCollection(NbtList::new));
             compound.put("entities", nbtList4);

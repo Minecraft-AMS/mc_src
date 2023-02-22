@@ -5,6 +5,7 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -12,10 +13,12 @@ package net.minecraft.entity.passive;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -27,6 +30,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.VariantHolder;
 import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.control.FlightMoveControl;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
@@ -58,14 +62,16 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -81,7 +87,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ParrotEntity
 extends TameableShoulderEntity
-implements Flutterer {
+implements VariantHolder<Variant>,
+Flutterer {
     private static final TrackedData<Integer> VARIANT = DataTracker.registerData(ParrotEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final Predicate<MobEntity> CAN_IMITATE = new Predicate<MobEntity>(){
 
@@ -97,7 +104,6 @@ implements Flutterer {
     };
     private static final Item COOKIE = Items.COOKIE;
     private static final Set<Item> TAMING_INGREDIENTS = Sets.newHashSet((Object[])new Item[]{Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS});
-    private static final int field_30351 = 5;
     static final Map<EntityType<?>, SoundEvent> MOB_SOUNDS = Util.make(Maps.newHashMap(), map -> {
         map.put(EntityType.BLAZE, SoundEvents.ENTITY_PARROT_IMITATE_BLAZE);
         map.put(EntityType.CAVE_SPIDER, SoundEvents.ENTITY_PARROT_IMITATE_SPIDER);
@@ -155,7 +161,7 @@ implements Flutterer {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.setVariant(world.getRandom().nextInt(5));
+        this.setVariant(Util.getRandom(Variant.values(), world.getRandom()));
         if (entityData == null) {
             entityData = new PassiveEntity.PassiveData(false);
         }
@@ -357,7 +363,7 @@ implements Flutterer {
     }
 
     @Override
-    protected boolean hasWings() {
+    protected boolean isFlappingWings() {
         return this.speed > this.field_28640;
     }
 
@@ -405,12 +411,14 @@ implements Flutterer {
         return super.damage(source, amount);
     }
 
-    public int getVariant() {
-        return MathHelper.clamp(this.dataTracker.get(VARIANT), 0, 4);
+    @Override
+    public Variant getVariant() {
+        return Variant.byIndex(this.dataTracker.get(VARIANT));
     }
 
-    public void setVariant(int variant) {
-        this.dataTracker.set(VARIANT, variant);
+    @Override
+    public void setVariant(Variant variant) {
+        this.dataTracker.set(VARIANT, variant.id);
     }
 
     @Override
@@ -422,13 +430,13 @@ implements Flutterer {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("Variant", this.getVariant());
+        nbt.putInt("Variant", this.getVariant().id);
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.setVariant(nbt.getInt("Variant"));
+        this.setVariant(Variant.byIndex(nbt.getInt("Variant")));
     }
 
     @Override
@@ -439,6 +447,62 @@ implements Flutterer {
     @Override
     public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.5f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
+    }
+
+    @Override
+    public /* synthetic */ Object getVariant() {
+        return this.getVariant();
+    }
+
+    public static final class Variant
+    extends Enum<Variant>
+    implements StringIdentifiable {
+        public static final /* enum */ Variant RED_BLUE = new Variant(0, "red_blue");
+        public static final /* enum */ Variant BLUE = new Variant(1, "blue");
+        public static final /* enum */ Variant GREEN = new Variant(2, "green");
+        public static final /* enum */ Variant YELLOW_BLUE = new Variant(3, "yellow_blue");
+        public static final /* enum */ Variant GRAY = new Variant(4, "gray");
+        public static final Codec<Variant> CODEC;
+        private static final IntFunction<Variant> BY_ID;
+        final int id;
+        private final String name;
+        private static final /* synthetic */ Variant[] field_41559;
+
+        public static Variant[] values() {
+            return (Variant[])field_41559.clone();
+        }
+
+        public static Variant valueOf(String string) {
+            return Enum.valueOf(Variant.class, string);
+        }
+
+        private Variant(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public int getId() {
+            return this.id;
+        }
+
+        public static Variant byIndex(int index) {
+            return BY_ID.apply(index);
+        }
+
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
+        private static /* synthetic */ Variant[] method_47851() {
+            return new Variant[]{RED_BLUE, BLUE, GREEN, YELLOW_BLUE, GRAY};
+        }
+
+        static {
+            field_41559 = Variant.method_47851();
+            CODEC = StringIdentifiable.createCodec(Variant::values);
+            BY_ID = ValueLists.createIdToValueFunction(Variant::getId, Variant.values(), ValueLists.OutOfBoundsHandling.CLAMP);
+        }
     }
 
     static class FlyOntoTreeGoal

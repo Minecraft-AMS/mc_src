@@ -55,7 +55,7 @@ extends Screen {
     private final Set<AbstractRuleWidget> invalidRuleWidgets = Sets.newHashSet();
     private ButtonWidget doneButton;
     @Nullable
-    private List<OrderedText> tooltip;
+    private List<OrderedText> field_24297;
     private final GameRules gameRules;
 
     public EditGameRulesScreen(GameRules gameRules, Consumer<Optional<GameRules>> ruleSaveConsumer) {
@@ -66,17 +66,10 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.client.keyboard.setRepeatEvents(true);
-        super.init();
         this.ruleListWidget = new RuleListWidget(this.gameRules);
         this.addSelectableChild(this.ruleListWidget);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 29, 150, 20, ScreenTexts.CANCEL, button -> this.ruleSaver.accept(Optional.empty())));
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, ScreenTexts.DONE, button -> this.ruleSaver.accept(Optional.of(this.gameRules))));
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.ruleSaver.accept(Optional.of(this.gameRules))).dimensions(this.width / 2 - 155, this.height - 29, 150, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.ruleSaver.accept(Optional.empty())).dimensions(this.width / 2 - 155 + 160, this.height - 29, 150, 20).build());
     }
 
     @Override
@@ -86,17 +79,10 @@ extends Screen {
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        this.tooltip = null;
+        this.field_24297 = null;
         this.ruleListWidget.render(matrices, mouseX, mouseY, delta);
         EditGameRulesScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
-        if (this.tooltip != null) {
-            this.renderOrderedTooltip(matrices, this.tooltip, mouseX, mouseY);
-        }
-    }
-
-    void setTooltip(@Nullable List<OrderedText> tooltip) {
-        this.tooltip = tooltip;
     }
 
     private void updateDoneButton() {
@@ -163,7 +149,7 @@ extends Screen {
         public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
             super.render(matrices, mouseX, mouseY, delta);
             AbstractRuleWidget abstractRuleWidget = (AbstractRuleWidget)this.getHoveredEntry();
-            if (abstractRuleWidget != null) {
+            if (abstractRuleWidget != null && abstractRuleWidget.description != null) {
                 EditGameRulesScreen.this.setTooltip(abstractRuleWidget.description);
             }
         }
@@ -193,8 +179,8 @@ extends Screen {
         @Override
         public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             this.drawName(matrices, y, x);
-            this.valueWidget.x = x + entryWidth - 44;
-            this.valueWidget.y = y;
+            this.valueWidget.setX(x + entryWidth - 44);
+            this.valueWidget.setY(y);
             this.valueWidget.render(matrices, mouseX, mouseY, tickDelta);
         }
     }
@@ -213,8 +199,8 @@ extends Screen {
         @Override
         public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
             this.drawName(matrices, y, x);
-            this.toggleButton.x = x + entryWidth - 45;
-            this.toggleButton.y = y;
+            this.toggleButton.setX(x + entryWidth - 45);
+            this.toggleButton.setY(y);
             this.toggleButton.render(matrices, mouseX, mouseY, tickDelta);
         }
     }

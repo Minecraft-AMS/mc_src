@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ServerLightingProvider;
 import net.minecraft.server.world.ServerWorld;
@@ -31,7 +33,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.jfr.Finishable;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.BelowZeroRetrogen;
@@ -59,7 +60,7 @@ public class ChunkStatus {
     public static final ChunkStatus STRUCTURE_STARTS = ChunkStatus.register("structure_starts", EMPTY, 0, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (targetStatus, executor, world, generator, structureTemplateManager, lightingProvider, fullChunkConverter, chunks, chunk, regenerate) -> {
         if (!chunk.getStatus().isAtLeast(targetStatus)) {
             if (world.getServer().getSaveProperties().getGeneratorOptions().shouldGenerateStructures()) {
-                generator.setStructureStarts(world.getRegistryManager(), world.getChunkManager().getNoiseConfig(), world.getStructureAccessor(), chunk, structureTemplateManager, world.getSeed());
+                generator.setStructureStarts(world.getRegistryManager(), world.getChunkManager().getStructurePlacementCalculator(), world.getStructureAccessor(), chunk, structureTemplateManager);
             }
             if (chunk instanceof ProtoChunk) {
                 ProtoChunk protoChunk = (ProtoChunk)chunk;
@@ -85,7 +86,7 @@ public class ChunkStatus {
     public static final ChunkStatus BIOMES = ChunkStatus.register("biomes", STRUCTURE_REFERENCES, 8, PRE_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureTemplateManager structureTemplateManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> fullChunkConverter, List<Chunk> chunks, Chunk chunk2, boolean regenerate) -> {
         if (regenerate || !chunk2.getStatus().isAtLeast(targetStatus)) {
             ChunkRegion chunkRegion = new ChunkRegion(world, chunks, targetStatus, -1);
-            return generator.populateBiomes(world.getRegistryManager().get(Registry.BIOME_KEY), executor, world.getChunkManager().getNoiseConfig(), Blender.getBlender(chunkRegion), world.getStructureAccessor().forRegion(chunkRegion), chunk2).thenApply(chunk -> {
+            return generator.populateBiomes(executor, world.getChunkManager().getNoiseConfig(), Blender.getBlender(chunkRegion), world.getStructureAccessor().forRegion(chunkRegion), chunk2).thenApply(chunk -> {
                 if (chunk instanceof ProtoChunk) {
                     ((ProtoChunk)chunk).setStatus(targetStatus);
                 }
@@ -148,13 +149,13 @@ public class ChunkStatus {
     public static final ChunkStatus HEIGHTMAPS = ChunkStatus.register("heightmaps", SPAWN, 0, POST_CARVER_HEIGHTMAPS, ChunkType.PROTOCHUNK, (ChunkStatus targetStatus, ServerWorld world, ChunkGenerator generator, List<Chunk> chunks, Chunk chunk) -> {});
     public static final ChunkStatus FULL = ChunkStatus.register("full", HEIGHTMAPS, 0, POST_CARVER_HEIGHTMAPS, ChunkType.LEVELCHUNK, (targetStatus, executor, world, generator, structureTemplateManager, lightingProvider, fullChunkConverter, chunks, chunk, regenerate) -> (CompletableFuture)fullChunkConverter.apply(chunk), (targetStatus, world, structureTemplateManager, lightingProvider, fullChunkConverter, chunk) -> (CompletableFuture)fullChunkConverter.apply(chunk));
     private static final List<ChunkStatus> DISTANCE_TO_STATUS = ImmutableList.of((Object)FULL, (Object)FEATURES, (Object)LIQUID_CARVERS, (Object)BIOMES, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object)STRUCTURE_STARTS, (Object[])new ChunkStatus[0]);
-    private static final IntList STATUS_TO_DISTANCE = (IntList)Util.make(new IntArrayList(ChunkStatus.createOrderedList().size()), intArrayList -> {
+    private static final IntList STATUS_TO_DISTANCE = (IntList)Util.make(new IntArrayList(ChunkStatus.createOrderedList().size()), statusToDistance -> {
         int i = 0;
         for (int j = ChunkStatus.createOrderedList().size() - 1; j >= 0; --j) {
             while (i + 1 < DISTANCE_TO_STATUS.size() && j <= DISTANCE_TO_STATUS.get(i + 1).getIndex()) {
                 ++i;
             }
-            intArrayList.add(0, i);
+            statusToDistance.add(0, i);
         }
     });
     private final String id;
@@ -183,7 +184,7 @@ public class ChunkStatus {
     }
 
     private static ChunkStatus register(String id, @Nullable ChunkStatus previous, int taskMargin, EnumSet<Heightmap.Type> heightMapTypes, ChunkType chunkType, GenerationTask task, LoadTask loadTask) {
-        return Registry.register(Registry.CHUNK_STATUS, id, new ChunkStatus(id, previous, taskMargin, heightMapTypes, chunkType, task, loadTask));
+        return Registry.register(Registries.CHUNK_STATUS, id, new ChunkStatus(id, previous, taskMargin, heightMapTypes, chunkType, task, loadTask));
     }
 
     public static List<ChunkStatus> createOrderedList() {
@@ -265,7 +266,7 @@ public class ChunkStatus {
     }
 
     public static ChunkStatus byId(String id) {
-        return Registry.CHUNK_STATUS.get(Identifier.tryParse(id));
+        return Registries.CHUNK_STATUS.get(Identifier.tryParse(id));
     }
 
     public EnumSet<Heightmap.Type> getHeightmapTypes() {
@@ -277,7 +278,7 @@ public class ChunkStatus {
     }
 
     public String toString() {
-        return Registry.CHUNK_STATUS.getId(this).toString();
+        return Registries.CHUNK_STATUS.getId(this).toString();
     }
 
     public static final class ChunkType

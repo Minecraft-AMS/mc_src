@@ -11,11 +11,12 @@ package net.minecraft.server.dedicated;
 import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
+import net.minecraft.registry.CombinedDynamicRegistries;
+import net.minecraft.registry.ServerDynamicRegistryType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.server.dedicated.ServerPropertiesHandler;
-import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.WorldSaveHandler;
 import org.slf4j.Logger;
 
@@ -23,7 +24,7 @@ public class DedicatedPlayerManager
 extends PlayerManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public DedicatedPlayerManager(MinecraftDedicatedServer server, DynamicRegistryManager.Immutable tracker, WorldSaveHandler saveHandler) {
+    public DedicatedPlayerManager(MinecraftDedicatedServer server, CombinedDynamicRegistries<ServerDynamicRegistryType> tracker, WorldSaveHandler saveHandler) {
         super(server, tracker, saveHandler, server.getProperties().maxPlayers);
         ServerPropertiesHandler serverPropertiesHandler = server.getProperties();
         this.setViewDistance(serverPropertiesHandler.viewDistance);

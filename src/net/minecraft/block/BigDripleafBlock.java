@@ -28,6 +28,7 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -36,7 +37,6 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.Util;
 import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
@@ -141,7 +141,7 @@ Waterloggable {
             return Blocks.AIR.getDefaultState();
         }
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (direction == Direction.UP && neighborState.isOf(this)) {
             return Blocks.BIG_DRIPLEAF_STEM.getStateWithProperties(state);
@@ -150,7 +150,7 @@ Waterloggable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         BlockState blockState = world.getBlockState(pos.up());
         return BigDripleafBlock.canGrowInto(blockState);
     }
@@ -220,7 +220,7 @@ Waterloggable {
             BigDripleafBlock.playTiltSound(world, pos, sound);
         }
         if ((i = NEXT_TILT_DELAYS.getInt((Object)tilt)) != -1) {
-            world.createAndScheduleBlockTick(pos, this, i);
+            world.scheduleBlockTick(pos, this, i);
         }
     }
 

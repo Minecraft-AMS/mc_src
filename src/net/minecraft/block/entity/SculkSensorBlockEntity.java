@@ -34,13 +34,13 @@ import org.slf4j.Logger;
 public class SculkSensorBlockEntity
 extends BlockEntity
 implements VibrationListener.Callback {
-    private static final Logger field_38236 = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private VibrationListener listener;
     private int lastVibrationFrequency;
 
     public SculkSensorBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityType.SCULK_SENSOR, pos, state);
-        this.listener = new VibrationListener(new BlockPositionSource(this.pos), ((SculkSensorBlock)state.getBlock()).getRange(), this, null, 0.0f, 0);
+        this.listener = new VibrationListener(new BlockPositionSource(this.pos), ((SculkSensorBlock)state.getBlock()).getRange(), this);
     }
 
     @Override
@@ -48,7 +48,7 @@ implements VibrationListener.Callback {
         super.readNbt(nbt);
         this.lastVibrationFrequency = nbt.getInt("last_vibration_frequency");
         if (nbt.contains("listener", 10)) {
-            VibrationListener.createCodec(this).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)field_38236).error(arg_0)).ifPresent(listener -> {
+            VibrationListener.createCodec(this).parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("listener"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(listener -> {
                 this.listener = listener;
             });
         }
@@ -58,7 +58,7 @@ implements VibrationListener.Callback {
     protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         nbt.putInt("last_vibration_frequency", this.lastVibrationFrequency);
-        VibrationListener.createCodec(this).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.listener).resultOrPartial(arg_0 -> ((Logger)field_38236).error(arg_0)).ifPresent(listenerNbt -> nbt.put("listener", (NbtElement)listenerNbt));
+        VibrationListener.createCodec(this).encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.listener).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(listenerNbt -> nbt.put("listener", (NbtElement)listenerNbt));
     }
 
     public VibrationListener getEventListener() {
@@ -76,7 +76,7 @@ implements VibrationListener.Callback {
 
     @Override
     public boolean accepts(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, @Nullable GameEvent.Emitter emitter) {
-        if (this.isRemoved() || pos.equals(this.getPos()) && (event == GameEvent.BLOCK_DESTROY || event == GameEvent.BLOCK_PLACE)) {
+        if (pos.equals(this.getPos()) && (event == GameEvent.BLOCK_DESTROY || event == GameEvent.BLOCK_PLACE)) {
             return false;
         }
         return SculkSensorBlock.isInactive(this.getCachedState());
@@ -86,7 +86,7 @@ implements VibrationListener.Callback {
     public void accept(ServerWorld world, GameEventListener listener, BlockPos pos, GameEvent event, @Nullable Entity entity, @Nullable Entity sourceEntity, float distance) {
         BlockState blockState = this.getCachedState();
         if (SculkSensorBlock.isInactive(blockState)) {
-            this.lastVibrationFrequency = SculkSensorBlock.FREQUENCIES.getInt((Object)event);
+            this.lastVibrationFrequency = VibrationListener.getFrequency(event);
             SculkSensorBlock.setActive(entity, world, this.pos, blockState, SculkSensorBlockEntity.getPower(distance, listener.getRange()));
         }
     }

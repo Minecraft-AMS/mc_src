@@ -14,6 +14,7 @@ import java.util.function.Predicate;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
@@ -48,17 +49,21 @@ import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.loot.context.LootContext;
+import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -200,7 +205,7 @@ implements Angerable {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         BlockState blockState = null;
-        if (nbt.contains("carriedBlockState", 10) && (blockState = NbtHelper.toBlockState(nbt.getCompound("carriedBlockState"))).isAir()) {
+        if (nbt.contains("carriedBlockState", 10) && (blockState = NbtHelper.toBlockState(this.world.createCommandRegistryWrapper(RegistryKeys.BLOCK), nbt.getCompound("carriedBlockState"))).isAir()) {
             blockState = null;
         }
         this.setCarriedBlock(blockState);
@@ -319,7 +324,13 @@ implements Angerable {
         super.dropEquipment(source, lootingMultiplier, allowDrops);
         BlockState blockState = this.getCarriedBlock();
         if (blockState != null) {
-            this.dropItem(blockState.getBlock());
+            ItemStack itemStack = new ItemStack(Items.DIAMOND_AXE);
+            itemStack.addEnchantment(Enchantments.SILK_TOUCH, 1);
+            LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).random(this.world.getRandom()).parameter(LootContextParameters.ORIGIN, this.getPos()).parameter(LootContextParameters.TOOL, itemStack).optionalParameter(LootContextParameters.THIS_ENTITY, this);
+            List<ItemStack> list = blockState.getDroppedStacks(builder);
+            for (ItemStack itemStack2 : list) {
+                this.dropStack(itemStack2);
+            }
         }
     }
 
@@ -512,11 +523,13 @@ implements Angerable {
         private int ticksSinceUnseenTeleport;
         private final TargetPredicate staringPlayerPredicate;
         private final TargetPredicate validTargetPredicate = TargetPredicate.createAttackable().ignoreVisibility();
+        private final Predicate<LivingEntity> angerPredicate;
 
         public TeleportTowardsPlayerGoal(EndermanEntity enderman, @Nullable Predicate<LivingEntity> targetPredicate) {
             super(enderman, PlayerEntity.class, 10, false, false, targetPredicate);
             this.enderman = enderman;
-            this.staringPlayerPredicate = TargetPredicate.createAttackable().setBaseMaxDistance(this.getFollowRange()).setPredicate(playerEntity -> enderman.isPlayerStaring((PlayerEntity)playerEntity));
+            this.angerPredicate = playerEntity -> enderman.isPlayerStaring((PlayerEntity)playerEntity) || enderman.shouldAngerAt((LivingEntity)playerEntity);
+            this.staringPlayerPredicate = TargetPredicate.createAttackable().setBaseMaxDistance(this.getFollowRange()).setPredicate(this.angerPredicate);
         }
 
         @Override
@@ -541,7 +554,7 @@ implements Angerable {
         @Override
         public boolean shouldContinue() {
             if (this.targetPlayer != null) {
-                if (!this.enderman.isPlayerStaring(this.targetPlayer)) {
+                if (!this.angerPredicate.test(this.targetPlayer)) {
                     return false;
                 }
                 this.enderman.lookAtEntity(this.targetPlayer, 10.0f, 10.0f);

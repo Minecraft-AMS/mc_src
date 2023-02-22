@@ -2,6 +2,8 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.hash.HashCode
  *  com.google.common.hash.Hashing
  *  com.mojang.logging.LogUtils
@@ -11,6 +13,7 @@
  */
 package net.minecraft.data;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.mojang.logging.LogUtils;
@@ -28,15 +31,18 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import net.minecraft.GameVersion;
-import net.minecraft.data.DataProvider;
 import net.minecraft.data.DataWriter;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
@@ -48,27 +54,28 @@ public class DataCache {
     private final Path root;
     private final Path cachePath;
     private final String versionName;
-    private final Map<DataProvider, CachedData> cachedDatas;
-    private final Map<DataProvider, CachedDataWriter> dataWriters = new HashMap<DataProvider, CachedDataWriter>();
+    private final Map<String, CachedData> cachedDatas;
+    private final Set<String> dataWriters = new HashSet<String>();
     private final Set<Path> paths = new HashSet<Path>();
     private final int totalSize;
+    private int totalCacheMissCount;
 
-    private Path getPath(DataProvider dataProvider) {
-        return this.cachePath.resolve(Hashing.sha1().hashString((CharSequence)dataProvider.getName(), StandardCharsets.UTF_8).toString());
+    private Path getPath(String providerName) {
+        return this.cachePath.resolve(Hashing.sha1().hashString((CharSequence)providerName, StandardCharsets.UTF_8).toString());
     }
 
-    public DataCache(Path root, List<DataProvider> dataProviders, GameVersion gameVersion) throws IOException {
+    public DataCache(Path root, Collection<String> providerNames, GameVersion gameVersion) throws IOException {
         this.versionName = gameVersion.getName();
         this.root = root;
         this.cachePath = root.resolve(".cache");
         Files.createDirectories(this.cachePath, new FileAttribute[0]);
-        HashMap<DataProvider, CachedData> map = new HashMap<DataProvider, CachedData>();
+        HashMap<String, CachedData> map = new HashMap<String, CachedData>();
         int i = 0;
-        for (DataProvider dataProvider : dataProviders) {
-            Path path = this.getPath(dataProvider);
+        for (String string : providerNames) {
+            Path path = this.getPath(string);
             this.paths.add(path);
             CachedData cachedData = DataCache.parseOrCreateCache(root, path);
-            map.put(dataProvider, cachedData);
+            map.put(string, cachedData);
             i += cachedData.size();
         }
         this.cachedDatas = map;
@@ -84,38 +91,41 @@ public class DataCache {
                 LOGGER.warn("Failed to parse cache {}, discarding", (Object)dataProviderPath, (Object)exception);
             }
         }
-        return new CachedData("unknown");
+        return new CachedData("unknown", (ImmutableMap<Path, HashCode>)ImmutableMap.of());
     }
 
-    public boolean isVersionDifferent(DataProvider dataProvider) {
-        CachedData cachedData = this.cachedDatas.get(dataProvider);
+    public boolean isVersionDifferent(String providerName) {
+        CachedData cachedData = this.cachedDatas.get(providerName);
         return cachedData == null || !cachedData.version.equals(this.versionName);
     }
 
-    public DataWriter getOrCreateWriter(DataProvider dataProvider) {
-        return this.dataWriters.computeIfAbsent(dataProvider, provider -> {
-            CachedData cachedData = this.cachedDatas.get(provider);
-            if (cachedData == null) {
-                throw new IllegalStateException("Provider not registered: " + provider.getName());
-            }
-            CachedDataWriter cachedDataWriter = new CachedDataWriter(this.versionName, cachedData);
-            this.cachedDatas.put((DataProvider)provider, cachedDataWriter.newCache);
-            return cachedDataWriter;
-        });
+    public CompletableFuture<RunResult> run(String providerName, Runner runner) {
+        CachedData cachedData = this.cachedDatas.get(providerName);
+        if (cachedData == null) {
+            throw new IllegalStateException("Provider not registered: " + providerName);
+        }
+        CachedDataWriter cachedDataWriter = new CachedDataWriter(providerName, this.versionName, cachedData);
+        return runner.update(cachedDataWriter).thenApply(void_ -> cachedDataWriter.finish());
+    }
+
+    public void store(RunResult runResult) {
+        this.cachedDatas.put(runResult.providerName(), runResult.cache());
+        this.dataWriters.add(runResult.providerName());
+        this.totalCacheMissCount += runResult.cacheMissCount();
     }
 
     public void write() throws IOException {
-        MutableInt mutableInt = new MutableInt();
-        this.dataWriters.forEach((dataProvider, writer) -> {
-            Path path = this.getPath((DataProvider)dataProvider);
-            writer.newCache.write(this.root, path, DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now()) + "\t" + dataProvider.getName());
-            mutableInt.add(writer.cacheMissCount);
-        });
         HashSet<Path> set = new HashSet<Path>();
-        this.cachedDatas.values().forEach(cachedData -> set.addAll(cachedData.data().keySet()));
+        this.cachedDatas.forEach((providerName, cachedData) -> {
+            if (this.dataWriters.contains(providerName)) {
+                Path path = this.getPath((String)providerName);
+                cachedData.write(this.root, path, DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now()) + "\t" + providerName);
+            }
+            set.addAll((Collection<Path>)cachedData.data().keySet());
+        });
         set.add(this.root.resolve("version.json"));
+        MutableInt mutableInt = new MutableInt();
         MutableInt mutableInt2 = new MutableInt();
-        MutableInt mutableInt3 = new MutableInt();
         try (Stream<Path> stream = Files.walk(this.root, new FileVisitOption[0]);){
             stream.forEach(path -> {
                 if (Files.isDirectory(path, new LinkOption[0])) {
@@ -124,7 +134,7 @@ public class DataCache {
                 if (this.paths.contains(path)) {
                     return;
                 }
-                mutableInt2.increment();
+                mutableInt.increment();
                 if (set.contains(path)) {
                     return;
                 }
@@ -134,33 +144,25 @@ public class DataCache {
                 catch (IOException iOException) {
                     LOGGER.warn("Failed to delete file {}", path, (Object)iOException);
                 }
-                mutableInt3.increment();
+                mutableInt2.increment();
             });
         }
-        LOGGER.info("Caching: total files: {}, old count: {}, new count: {}, removed stale: {}, written: {}", new Object[]{mutableInt2, this.totalSize, set.size(), mutableInt3, mutableInt});
+        LOGGER.info("Caching: total files: {}, old count: {}, new count: {}, removed stale: {}, written: {}", new Object[]{mutableInt, this.totalSize, set.size(), mutableInt2, this.totalCacheMissCount});
     }
 
     static final class CachedData
     extends Record {
         final String version;
-        private final Map<Path, HashCode> data;
+        private final ImmutableMap<Path, HashCode> data;
 
-        CachedData(String version) {
-            this(version, new HashMap<Path, HashCode>());
-        }
-
-        private CachedData(String string, Map<Path, HashCode> map) {
+        CachedData(String string, ImmutableMap<Path, HashCode> immutableMap) {
             this.version = string;
-            this.data = map;
+            this.data = immutableMap;
         }
 
         @Nullable
         public HashCode get(Path path) {
-            return this.data.get(path);
-        }
-
-        public void put(Path path, HashCode hashCode) {
-            this.data.put(path, hashCode);
+            return (HashCode)this.data.get((Object)path);
         }
 
         public int size() {
@@ -175,12 +177,12 @@ public class DataCache {
                 }
                 String[] strings = string.substring(DataCache.HEADER.length()).split("\t", 2);
                 String string2 = strings[0];
-                HashMap map = new HashMap();
+                ImmutableMap.Builder builder = ImmutableMap.builder();
                 bufferedReader.lines().forEach(line -> {
                     int i = line.indexOf(32);
-                    map.put(root.resolve(line.substring(i + 1)), HashCode.fromString((String)line.substring(0, i)));
+                    builder.put((Object)root.resolve(line.substring(i + 1)), (Object)HashCode.fromString((String)line.substring(0, i)));
                 });
-                CachedData cachedData = new CachedData(string2, Map.copyOf(map));
+                CachedData cachedData = new CachedData(string2, (ImmutableMap<Path, HashCode>)builder.build());
                 return cachedData;
             }
         }
@@ -192,10 +194,10 @@ public class DataCache {
                 bufferedWriter.write(9);
                 bufferedWriter.write(description);
                 bufferedWriter.newLine();
-                for (Map.Entry<Path, HashCode> entry : this.data.entrySet()) {
-                    bufferedWriter.write(entry.getValue().toString());
+                for (Map.Entry entry : this.data.entrySet()) {
+                    bufferedWriter.write(((HashCode)entry.getValue()).toString());
                     bufferedWriter.write(32);
-                    bufferedWriter.write(root.relativize(entry.getKey()).toString());
+                    bufferedWriter.write(root.relativize((Path)entry.getKey()).toString());
                     bufferedWriter.newLine();
                 }
             }
@@ -223,20 +225,23 @@ public class DataCache {
             return this.version;
         }
 
-        public Map<Path, HashCode> data() {
+        public ImmutableMap<Path, HashCode> data() {
             return this.data;
         }
     }
 
-    static class CachedDataWriter
+    class CachedDataWriter
     implements DataWriter {
+        private final String providerName;
         private final CachedData oldCache;
-        final CachedData newCache;
-        int cacheMissCount;
+        private final IntermediaryCache newCache;
+        private final AtomicInteger cacheMissCount = new AtomicInteger();
+        private volatile boolean closed;
 
-        CachedDataWriter(String versionName, CachedData cachedData) {
-            this.oldCache = cachedData;
-            this.newCache = new CachedData(versionName);
+        CachedDataWriter(String providerName, String version, CachedData oldCache) {
+            this.providerName = providerName;
+            this.oldCache = oldCache;
+            this.newCache = new IntermediaryCache(version);
         }
 
         private boolean isCacheInvalid(Path path, HashCode hashCode) {
@@ -245,12 +250,56 @@ public class DataCache {
 
         @Override
         public void write(Path path, byte[] data, HashCode hashCode) throws IOException {
+            if (this.closed) {
+                throw new IllegalStateException("Cannot write to cache as it has already been closed");
+            }
             if (this.isCacheInvalid(path, hashCode)) {
-                ++this.cacheMissCount;
+                this.cacheMissCount.incrementAndGet();
                 Files.createDirectories(path.getParent(), new FileAttribute[0]);
                 Files.write(path, data, new OpenOption[0]);
             }
             this.newCache.put(path, hashCode);
+        }
+
+        public RunResult finish() {
+            this.closed = true;
+            return new RunResult(this.providerName, this.newCache.toCachedData(), this.cacheMissCount.get());
+        }
+    }
+
+    @FunctionalInterface
+    public static interface Runner {
+        public CompletableFuture<?> update(DataWriter var1);
+    }
+
+    public record RunResult(String providerName, CachedData cache, int cacheMissCount) {
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{RunResult.class, "providerId;cache;writes", "providerName", "cache", "cacheMissCount"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{RunResult.class, "providerId;cache;writes", "providerName", "cache", "cacheMissCount"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{RunResult.class, "providerId;cache;writes", "providerName", "cache", "cacheMissCount"}, this, object);
+        }
+    }
+
+    record IntermediaryCache(String version, ConcurrentMap<Path, HashCode> data) {
+        IntermediaryCache(String version) {
+            this(version, new ConcurrentHashMap<Path, HashCode>());
+        }
+
+        public void put(Path path, HashCode hashCode) {
+            this.data.put(path, hashCode);
+        }
+
+        public CachedData toCachedData() {
+            return new CachedData(this.version, (ImmutableMap<Path, HashCode>)ImmutableMap.copyOf(this.data));
         }
     }
 }

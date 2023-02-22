@@ -80,23 +80,22 @@ extends RealmsScreen {
         this.column1_x = this.width / 2 - 160;
         this.column_width = 150;
         this.column2_x = this.width / 2 + 12;
-        this.client.keyboard.setRepeatEvents(true);
         this.invitedObjectSelectionList = new InvitedObjectSelectionList();
         this.invitedObjectSelectionList.setLeftPos(this.column1_x);
         this.addSelectableChild(this.invitedObjectSelectionList);
         for (PlayerInfo playerInfo : this.serverData.players) {
             this.invitedObjectSelectionList.addEntry(playerInfo);
         }
-        this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(1), this.column_width + 10, 20, Text.translatable("mco.configure.world.buttons.invite"), button -> this.client.setScreen(new RealmsInviteScreen(this.parent, this, this.serverData))));
-        this.removeButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(7), this.column_width + 10, 20, Text.translatable("mco.configure.world.invites.remove.tooltip"), button -> this.uninvite(this.player)));
-        this.opdeopButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(9), this.column_width + 10, 20, Text.translatable("mco.configure.world.invites.ops.tooltip"), button -> {
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.buttons.invite"), button -> this.client.setScreen(new RealmsInviteScreen(this.parent, this, this.serverData))).dimensions(this.column2_x, RealmsPlayerScreen.row(1), this.column_width + 10, 20).build());
+        this.removeButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.invites.remove.tooltip"), button -> this.uninvite(this.player)).dimensions(this.column2_x, RealmsPlayerScreen.row(7), this.column_width + 10, 20).build());
+        this.opdeopButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("mco.configure.world.invites.ops.tooltip"), button -> {
             if (this.serverData.players.get(this.player).isOperator()) {
                 this.deop(this.player);
             } else {
                 this.op(this.player);
             }
-        }));
-        this.addDrawableChild(new ButtonWidget(this.column2_x + this.column_width / 2 + 2, RealmsPlayerScreen.row(12), this.column_width / 2 + 10 - 2, 20, ScreenTexts.BACK, button -> this.backButtonClicked()));
+        }).dimensions(this.column2_x, RealmsPlayerScreen.row(9), this.column_width + 10, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, button -> this.backButtonClicked()).dimensions(this.column2_x + this.column_width / 2 + 2, RealmsPlayerScreen.row(12), this.column_width / 2 + 10 - 2, 20).build());
         this.updateButtonStates();
     }
 
@@ -107,11 +106,6 @@ extends RealmsScreen {
 
     private boolean shouldRemoveAndOpdeopButtonBeVisible(int player) {
         return player != -1;
-    }
-
-    @Override
-    public void removed() {
-        this.client.keyboard.setRepeatEvents(false);
     }
 
     @Override
@@ -203,7 +197,7 @@ extends RealmsScreen {
         int i = RealmsPlayerScreen.row(12) + 20;
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
         RenderSystem.setShaderTexture(0, OPTIONS_BACKGROUND);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         float f = 32.0f;

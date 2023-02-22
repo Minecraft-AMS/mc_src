@@ -3,49 +3,63 @@
  */
 package net.minecraft.command;
 
-import java.util.Optional;
-import net.minecraft.command.CommandRegistryWrapper;
-import net.minecraft.tag.TagKey;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.registry.DynamicRegistryManager;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.resource.featuretoggle.FeatureSet;
 
-public final class CommandRegistryAccess {
-    private final DynamicRegistryManager dynamicRegistryManager;
-    EntryListCreationPolicy entryListCreationPolicy = EntryListCreationPolicy.FAIL;
+public interface CommandRegistryAccess {
+    public <T> RegistryWrapper<T> createWrapper(RegistryKey<? extends Registry<T>> var1);
 
-    public CommandRegistryAccess(DynamicRegistryManager dynamicRegistryManager) {
-        this.dynamicRegistryManager = dynamicRegistryManager;
-    }
-
-    public void setEntryListCreationPolicy(EntryListCreationPolicy entryListCreationPolicy) {
-        this.entryListCreationPolicy = entryListCreationPolicy;
-    }
-
-    public <T> CommandRegistryWrapper<T> createWrapper(RegistryKey<? extends Registry<T>> registryRef) {
-        return new CommandRegistryWrapper.Impl<T>(this.dynamicRegistryManager.get(registryRef)){
+    public static CommandRegistryAccess of(final RegistryWrapper.WrapperLookup wrapperLookup, final FeatureSet enabledFeatures) {
+        return new CommandRegistryAccess(){
 
             @Override
-            public Optional<? extends RegistryEntryList<T>> getEntryList(TagKey<T> tag) {
-                return switch (CommandRegistryAccess.this.entryListCreationPolicy) {
-                    default -> throw new IncompatibleClassChangeError();
-                    case EntryListCreationPolicy.FAIL -> this.registry.getEntryList(tag);
-                    case EntryListCreationPolicy.CREATE_NEW -> Optional.of(this.registry.getOrCreateEntryList(tag));
-                    case EntryListCreationPolicy.RETURN_EMPTY -> {
-                        Optional optional = this.registry.getEntryList(tag);
-                        yield Optional.of(optional.isPresent() ? (RegistryEntryList.Direct)((Object)optional.get()) : RegistryEntryList.of(new RegistryEntry[0]));
-                    }
-                };
+            public <T> RegistryWrapper<T> createWrapper(RegistryKey<? extends Registry<T>> registryRef) {
+                return wrapperLookup.getWrapperOrThrow(registryRef).withFeatureFilter(enabledFeatures);
             }
         };
+    }
+
+    public static EntryListCreationPolicySettable of(final DynamicRegistryManager registryManager, final FeatureSet enabledFeatures) {
+        return new EntryListCreationPolicySettable(){
+            EntryListCreationPolicy entryListCreationPolicy = EntryListCreationPolicy.FAIL;
+
+            @Override
+            public void setEntryListCreationPolicy(EntryListCreationPolicy entryListCreationPolicy) {
+                this.entryListCreationPolicy = entryListCreationPolicy;
+            }
+
+            @Override
+            public <T> RegistryWrapper<T> createWrapper(RegistryKey<? extends Registry<T>> registryRef) {
+                Registry registry = registryManager.get(registryRef);
+                final RegistryWrapper.Impl impl = registry.getReadOnlyWrapper();
+                final RegistryWrapper.Impl impl2 = registry.getTagCreatingWrapper();
+                RegistryWrapper.Impl.Delegating impl3 = new RegistryWrapper.Impl.Delegating<T>(){
+
+                    @Override
+                    protected RegistryWrapper.Impl<T> getBase() {
+                        return switch (entryListCreationPolicy) {
+                            default -> throw new IncompatibleClassChangeError();
+                            case EntryListCreationPolicy.FAIL -> impl;
+                            case EntryListCreationPolicy.CREATE_NEW -> impl2;
+                        };
+                    }
+                };
+                return impl3.withFeatureFilter(enabledFeatures);
+            }
+        };
+    }
+
+    public static interface EntryListCreationPolicySettable
+    extends CommandRegistryAccess {
+        public void setEntryListCreationPolicy(EntryListCreationPolicy var1);
     }
 
     public static final class EntryListCreationPolicy
     extends Enum<EntryListCreationPolicy> {
         public static final /* enum */ EntryListCreationPolicy CREATE_NEW = new EntryListCreationPolicy();
-        public static final /* enum */ EntryListCreationPolicy RETURN_EMPTY = new EntryListCreationPolicy();
         public static final /* enum */ EntryListCreationPolicy FAIL = new EntryListCreationPolicy();
         private static final /* synthetic */ EntryListCreationPolicy[] field_37827;
 
@@ -58,7 +72,7 @@ public final class CommandRegistryAccess {
         }
 
         private static /* synthetic */ EntryListCreationPolicy[] method_41701() {
-            return new EntryListCreationPolicy[]{CREATE_NEW, RETURN_EMPTY, FAIL};
+            return new EntryListCreationPolicy[]{CREATE_NEW, FAIL};
         }
 
         static {

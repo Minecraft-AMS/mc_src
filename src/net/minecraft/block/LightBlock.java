@@ -51,7 +51,7 @@ implements Waterloggable {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (!world.isClient) {
+        if (!world.isClient && player.isCreativeLevelTwoOp()) {
             world.setBlockState(pos, (BlockState)state.cycle(LEVEL_15), 2);
             return ActionResult.SUCCESS;
         }
@@ -81,7 +81,7 @@ implements Waterloggable {
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         if (state.get(WATERLOGGED).booleanValue()) {
-            world.createAndScheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
@@ -96,13 +96,16 @@ implements Waterloggable {
 
     @Override
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
-        ItemStack itemStack = super.getPickStack(world, pos, state);
-        if (state.get(LEVEL_15) != 15) {
+        return LightBlock.addNbtForLevel(super.getPickStack(world, pos, state), state.get(LEVEL_15));
+    }
+
+    public static ItemStack addNbtForLevel(ItemStack stack, int level) {
+        if (level != 15) {
             NbtCompound nbtCompound = new NbtCompound();
-            nbtCompound.putString(LEVEL_15.getName(), String.valueOf(state.get(LEVEL_15)));
-            itemStack.setSubNbt("BlockStateTag", nbtCompound);
+            nbtCompound.putString(LEVEL_15.getName(), String.valueOf(level));
+            stack.setSubNbt("BlockStateTag", nbtCompound);
         }
-        return itemStack;
+        return stack;
     }
 }
 

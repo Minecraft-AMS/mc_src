@@ -13,9 +13,9 @@ import java.util.Map;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.registry.Registries;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatType;
-import net.minecraft.util.registry.Registry;
 
 public class StatisticsS2CPacket
 implements Packet<ClientPlayPacketListener> {
@@ -27,7 +27,7 @@ implements Packet<ClientPlayPacketListener> {
 
     public StatisticsS2CPacket(PacketByteBuf buf2) {
         this.stats = (Object2IntMap)buf2.readMap(Object2IntOpenHashMap::new, buf -> {
-            StatType<?> statType = buf.readRegistryValue(Registry.STAT_TYPE);
+            StatType<?> statType = buf.readRegistryValue(Registries.STAT_TYPE);
             return StatisticsS2CPacket.getOrCreateStat(buf2, statType);
         }, PacketByteBuf::readVarInt);
     }
@@ -47,7 +47,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     private static <T> void write(PacketByteBuf buf, Stat<T> stat) {
-        buf.writeRegistryValue(Registry.STAT_TYPE, stat.getType());
+        buf.writeRegistryValue(Registries.STAT_TYPE, stat.getType());
         buf.writeRegistryValue(stat.getType().getRegistry(), stat.getValue());
     }
 

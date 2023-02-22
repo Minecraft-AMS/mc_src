@@ -198,8 +198,8 @@ public interface CauldronBehavior {
         behavior.put(Items.POWDER_SNOW_BUCKET, FILL_WITH_POWDER_SNOW);
     }
 
-    public static ActionResult emptyCauldron(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, ItemStack stack, ItemStack output, Predicate<BlockState> predicate, SoundEvent soundEvent) {
-        if (!predicate.test(state)) {
+    public static ActionResult emptyCauldron(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, ItemStack stack, ItemStack output, Predicate<BlockState> fullPredicate, SoundEvent soundEvent) {
+        if (!fullPredicate.test(state)) {
             return ActionResult.PASS;
         }
         if (!world.isClient) {

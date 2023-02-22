@@ -7,12 +7,14 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Queues
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.particle;
 
@@ -22,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -29,13 +32,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
@@ -105,9 +109,9 @@ import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.texture.SpriteLoader;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
@@ -115,10 +119,14 @@ import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
+import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
@@ -128,13 +136,16 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ParticleManager
 implements ResourceReloader {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final ResourceFinder FINDER = ResourceFinder.json("particles");
+    private static final Identifier PARTICLES_PATH = new Identifier("particles");
     private static final int MAX_PARTICLE_COUNT = 16384;
     private static final List<ParticleTextureSheet> PARTICLE_TEXTURE_SHEETS = ImmutableList.of((Object)ParticleTextureSheet.TERRAIN_SHEET, (Object)ParticleTextureSheet.PARTICLE_SHEET_OPAQUE, (Object)ParticleTextureSheet.PARTICLE_SHEET_LIT, (Object)ParticleTextureSheet.PARTICLE_SHEET_TRANSLUCENT, (Object)ParticleTextureSheet.CUSTOM);
     protected ClientWorld world;
@@ -253,49 +264,45 @@ implements ResourceReloader {
     }
 
     private <T extends ParticleEffect> void registerFactory(ParticleType<T> type, ParticleFactory<T> factory) {
-        this.factories.put(Registry.PARTICLE_TYPE.getRawId(type), factory);
+        this.factories.put(Registries.PARTICLE_TYPE.getRawId(type), factory);
     }
 
     private <T extends ParticleEffect> void registerFactory(ParticleType<T> type, SpriteAwareFactory<T> factory) {
         SimpleSpriteProvider simpleSpriteProvider = new SimpleSpriteProvider();
-        this.spriteAwareFactories.put(Registry.PARTICLE_TYPE.getId(type), simpleSpriteProvider);
-        this.factories.put(Registry.PARTICLE_TYPE.getRawId(type), factory.create(simpleSpriteProvider));
+        this.spriteAwareFactories.put(Registries.PARTICLE_TYPE.getId(type), simpleSpriteProvider);
+        this.factories.put(Registries.PARTICLE_TYPE.getRawId(type), factory.create(simpleSpriteProvider));
     }
 
     @Override
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
-        ConcurrentMap map = Maps.newConcurrentMap();
-        CompletableFuture[] completableFutures = (CompletableFuture[])Registry.PARTICLE_TYPE.getIds().stream().map(id -> CompletableFuture.runAsync(() -> this.loadTextureList(manager, (Identifier)id, map), prepareExecutor)).toArray(CompletableFuture[]::new);
-        return ((CompletableFuture)((CompletableFuture)CompletableFuture.allOf(completableFutures).thenApplyAsync(v -> {
-            prepareProfiler.startTick();
-            prepareProfiler.push("stitching");
-            SpriteAtlasTexture.Data data = this.particleAtlasTexture.stitch(manager, map.values().stream().flatMap(Collection::stream), prepareProfiler, 0);
-            prepareProfiler.pop();
-            prepareProfiler.endTick();
-            return data;
-        }, prepareExecutor)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(data -> {
-            this.particles.clear();
-            applyProfiler.startTick();
-            applyProfiler.push("upload");
-            this.particleAtlasTexture.upload((SpriteAtlasTexture.Data)data);
-            applyProfiler.swap("bindSpriteSets");
-            Sprite sprite = this.particleAtlasTexture.getSprite(MissingSprite.getMissingSpriteId());
-            map.forEach((identifier, list) -> {
-                ImmutableList immutableList = list.isEmpty() ? ImmutableList.of((Object)sprite) : (ImmutableList)list.stream().map(this.particleAtlasTexture::getSprite).collect(ImmutableList.toImmutableList());
-                this.spriteAwareFactories.get(identifier).setSprites((List<Sprite>)immutableList);
+        CompletionStage completableFuture = CompletableFuture.supplyAsync(() -> FINDER.findResources(manager), prepareExecutor).thenCompose(particles -> {
+            ArrayList list = new ArrayList(particles.size());
+            particles.forEach((id, resource) -> {
+                Identifier identifier = FINDER.toResourceId((Identifier)id);
+                list.add(CompletableFuture.supplyAsync(() -> {
+                    @Environment(value=EnvType.CLIENT)
+                    record ReloadResult(Identifier id, Optional<List<Identifier>> sprites) {
+                    }
+                    return new ReloadResult(identifier, this.loadTextureList(identifier, (Resource)resource));
+                }, prepareExecutor));
             });
-            applyProfiler.pop();
-            applyProfiler.endTick();
-        }, applyExecutor);
+            return Util.combineSafe(list);
+        });
+        CompletionStage completableFuture2 = SpriteLoader.fromAtlas(this.particleAtlasTexture).method_47661(manager, PARTICLES_PATH, 0, prepareExecutor).thenCompose(SpriteLoader.StitchResult::whenComplete);
+        return ((CompletableFuture)CompletableFuture.allOf(new CompletableFuture[]{completableFuture2, completableFuture}).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(arg_0 -> this.method_45766(applyProfiler, (CompletableFuture)completableFuture2, (CompletableFuture)completableFuture, arg_0), applyExecutor);
     }
 
     public void clearAtlas() {
         this.particleAtlasTexture.clear();
     }
 
-    private void loadTextureList(ResourceManager resourceManager, Identifier id, Map<Identifier, List<Identifier>> result) {
-        Identifier identifier2 = new Identifier(id.getNamespace(), "particles/" + id.getPath() + ".json");
-        try (BufferedReader reader = resourceManager.openAsReader(identifier2);){
+    /*
+     * Enabled aggressive block sorting
+     * Enabled unnecessary exception pruning
+     * Enabled aggressive exception aggregation
+     */
+    private Optional<List<Identifier>> loadTextureList(Identifier id, Resource resource) {
+        try (BufferedReader reader = resource.getReader();){
             ParticleTextureData particleTextureData = ParticleTextureData.load(JsonHelper.deserialize(reader));
             List<Identifier> list = particleTextureData.getTextureList();
             boolean bl = this.spriteAwareFactories.containsKey(id);
@@ -303,12 +310,14 @@ implements ResourceReloader {
                 if (bl) {
                     throw new IllegalStateException("Missing texture list for particle " + id);
                 }
-            } else {
-                if (!bl) {
-                    throw new IllegalStateException("Redundant texture list for particle " + id);
-                }
-                result.put(id, list.stream().map(identifier -> new Identifier(identifier.getNamespace(), "particle/" + identifier.getPath())).collect(Collectors.toList()));
+                Optional<List<Identifier>> optional2 = Optional.empty();
+                return optional2;
             }
+            if (!bl) {
+                throw new IllegalStateException("Redundant texture list for particle " + id);
+            }
+            Optional<List<Identifier>> optional = Optional.of(list);
+            return optional;
         }
         catch (IOException iOException) {
             throw new IllegalStateException("Failed to load description for particle " + id, iOException);
@@ -335,7 +344,7 @@ implements ResourceReloader {
 
     @Nullable
     private <T extends ParticleEffect> Particle createParticle(T parameters, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        ParticleFactory particleFactory = (ParticleFactory)this.factories.get(Registry.PARTICLE_TYPE.getRawId(parameters.getType()));
+        ParticleFactory particleFactory = (ParticleFactory)this.factories.get(Registries.PARTICLE_TYPE.getRawId(parameters.getType()));
         if (particleFactory == null) {
             return null;
         }
@@ -417,7 +426,7 @@ implements ResourceReloader {
         for (ParticleTextureSheet particleTextureSheet : PARTICLE_TEXTURE_SHEETS) {
             Iterable iterable = this.particles.get(particleTextureSheet);
             if (iterable == null) continue;
-            RenderSystem.setShader(GameRenderer::getParticleShader);
+            RenderSystem.setShader(GameRenderer::getParticleProgram);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             Tessellator tessellator = Tessellator.getInstance();
             BufferBuilder bufferBuilder = tessellator.getBuffer();
@@ -445,13 +454,12 @@ implements ResourceReloader {
 
     public void setWorld(@Nullable ClientWorld world) {
         this.world = world;
-        this.particles.clear();
+        this.clearParticles();
         this.newEmitterParticles.clear();
-        this.groupCounts.clear();
     }
 
     public void addBlockBreakParticles(BlockPos pos, BlockState state) {
-        if (state.isAir()) {
+        if (state.isAir() || !state.hasBlockBreakParticles()) {
             return;
         }
         VoxelShape voxelShape = state.getOutlineShape(this.world, pos);
@@ -521,6 +529,47 @@ implements ResourceReloader {
         return this.groupCounts.getInt((Object)group) < group.getMaxCount();
     }
 
+    private void clearParticles() {
+        this.particles.clear();
+        this.groupCounts.clear();
+    }
+
+    private /* synthetic */ void method_45766(Profiler profiler, CompletableFuture completableFuture, CompletableFuture completableFuture2, Void void_) {
+        this.clearParticles();
+        profiler.startTick();
+        profiler.push("upload");
+        SpriteLoader.StitchResult stitchResult = (SpriteLoader.StitchResult)completableFuture.join();
+        this.particleAtlasTexture.upload(stitchResult);
+        profiler.swap("bindSpriteSets");
+        HashSet set = new HashSet();
+        Sprite sprite = stitchResult.missing();
+        ((List)completableFuture2.join()).forEach(result -> {
+            Optional<List<Identifier>> optional = result.sprites();
+            if (optional.isEmpty()) {
+                return;
+            }
+            ArrayList<Sprite> list = new ArrayList<Sprite>();
+            for (Identifier identifier : optional.get()) {
+                Sprite sprite2 = stitchResult.regions().get(identifier);
+                if (sprite2 == null) {
+                    set.add(identifier);
+                    list.add(sprite);
+                    continue;
+                }
+                list.add(sprite2);
+            }
+            if (list.isEmpty()) {
+                list.add(sprite);
+            }
+            this.spriteAwareFactories.get(result.id()).setSprites(list);
+        });
+        if (!set.isEmpty()) {
+            LOGGER.warn("Missing particle sprites: {}", (Object)set.stream().sorted().map(Identifier::toString).collect(Collectors.joining(",")));
+        }
+        profiler.pop();
+        profiler.endTick();
+    }
+
     @FunctionalInterface
     @Environment(value=EnvType.CLIENT)
     static interface SpriteAwareFactory<T extends ParticleEffect> {
@@ -536,8 +585,8 @@ implements ResourceReloader {
         }
 
         @Override
-        public Sprite getSprite(int i, int j) {
-            return this.sprites.get(i * (this.sprites.size() - 1) / j);
+        public Sprite getSprite(int age, int maxAge) {
+            return this.sprites.get(age * (this.sprites.size() - 1) / maxAge);
         }
 
         @Override

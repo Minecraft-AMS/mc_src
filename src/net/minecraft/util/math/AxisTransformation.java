@@ -1,11 +1,14 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.joml.Matrix3f
  */
 package net.minecraft.util.math;
 
 import java.util.Arrays;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.Matrix3f;
+import org.joml.Matrix3f;
 
 public final class AxisTransformation
 extends Enum<AxisTransformation> {
@@ -32,9 +35,9 @@ extends Enum<AxisTransformation> {
     private AxisTransformation(int xMapping, int yMapping, int zMapping) {
         this.mappings = new int[]{xMapping, yMapping, zMapping};
         this.matrix = new Matrix3f();
-        this.matrix.set(0, this.map(0), 1.0f);
-        this.matrix.set(1, this.map(1), 1.0f);
-        this.matrix.set(2, this.map(2), 1.0f);
+        this.matrix.set(this.map(0), 0, 1.0f);
+        this.matrix.set(this.map(1), 1, 1.0f);
+        this.matrix.set(this.map(2), 2, 1.0f);
     }
 
     public AxisTransformation prepend(AxisTransformation transformation) {

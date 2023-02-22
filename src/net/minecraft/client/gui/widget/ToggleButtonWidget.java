@@ -48,19 +48,14 @@ extends ClickableWidget {
         return this.toggled;
     }
 
-    public void setPos(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
-
     @Override
-    public void appendNarrations(NarrationMessageBuilder builder) {
+    public void appendClickableNarrations(NarrationMessageBuilder builder) {
         this.appendDefaultNarrations(builder);
     }
 
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.setShaderTexture(0, this.texture);
         RenderSystem.disableDepthTest();
         int i = this.u;
@@ -71,7 +66,7 @@ extends ClickableWidget {
         if (this.isHovered()) {
             j += this.hoverVOffset;
         }
-        this.drawTexture(matrices, this.x, this.y, i, j, this.width, this.height);
+        this.drawTexture(matrices, this.getX(), this.getY(), i, j, this.width, this.height);
         RenderSystem.enableDepthTest();
     }
 }

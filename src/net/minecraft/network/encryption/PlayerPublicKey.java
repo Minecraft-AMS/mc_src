@@ -20,6 +20,7 @@ import java.nio.ByteOrder;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.UUID;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
@@ -29,18 +30,17 @@ import net.minecraft.util.TextifiedException;
 import net.minecraft.util.dynamic.Codecs;
 
 public record PlayerPublicKey(PublicKeyData data) {
-    public static final Text field_39953 = Text.translatable("multiplayer.disconnect.missing_public_key");
-    public static final Text field_39954 = Text.translatable("multiplayer.disconnect.expired_public_key");
-    private static final Text field_39956 = Text.translatable("multiplayer.disconnect.invalid_public_key_signature");
-    public static final Duration field_39955 = Duration.ofHours(8L);
+    public static final Text EXPIRED_PUBLIC_KEY_TEXT = Text.translatable("multiplayer.disconnect.expired_public_key");
+    private static final Text INVALID_PUBLIC_KEY_SIGNATURE_TEXT = Text.translatable("multiplayer.disconnect.invalid_public_key_signature");
+    public static final Duration EXPIRATION_GRACE_PERIOD = Duration.ofHours(8L);
     public static final Codec<PlayerPublicKey> CODEC = PublicKeyData.CODEC.xmap(PlayerPublicKey::new, PlayerPublicKey::data);
 
-    public static PlayerPublicKey verifyAndDecode(SignatureVerifier servicesSignatureVerifier, UUID playerUuid, PublicKeyData publicKeyData, Duration duration) throws class_7652 {
-        if (publicKeyData.method_45103(duration)) {
-            throw new class_7652(field_39954);
+    public static PlayerPublicKey verifyAndDecode(SignatureVerifier servicesSignatureVerifier, UUID playerUuid, PublicKeyData publicKeyData, Duration gracePeriod) throws PublicKeyException {
+        if (publicKeyData.isExpired(gracePeriod)) {
+            throw new PublicKeyException(EXPIRED_PUBLIC_KEY_TEXT);
         }
         if (!publicKeyData.verifyKey(servicesSignatureVerifier, playerUuid)) {
-            throw new class_7652(field_39956);
+            throw new PublicKeyException(INVALID_PUBLIC_KEY_SIGNATURE_TEXT);
         }
         return new PlayerPublicKey(publicKeyData);
     }
@@ -89,8 +89,17 @@ public record PlayerPublicKey(PublicKeyData data) {
             return this.expiresAt.isBefore(Instant.now());
         }
 
-        public boolean method_45103(Duration duration) {
-            return this.expiresAt.plus(duration).isBefore(Instant.now());
+        public boolean isExpired(Duration gracePeriod) {
+            return this.expiresAt.plus(gracePeriod).isBefore(Instant.now());
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof PublicKeyData) {
+                PublicKeyData publicKeyData = (PublicKeyData)o;
+                return this.expiresAt.equals(publicKeyData.expiresAt) && this.key.equals(publicKeyData.key) && Arrays.equals(this.keySignature, publicKeyData.keySignature);
+            }
+            return false;
         }
 
         @Override
@@ -101,11 +110,6 @@ public record PlayerPublicKey(PublicKeyData data) {
         @Override
         public final int hashCode() {
             return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{PublicKeyData.class, "expiresAt;key;keySignature", "expiresAt", "key", "keySignature"}, this);
-        }
-
-        @Override
-        public final boolean equals(Object object) {
-            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{PublicKeyData.class, "expiresAt;key;keySignature", "expiresAt", "key", "keySignature"}, this, object);
         }
 
         public Instant expiresAt() {
@@ -121,9 +125,9 @@ public record PlayerPublicKey(PublicKeyData data) {
         }
     }
 
-    public static class class_7652
+    public static class PublicKeyException
     extends TextifiedException {
-        public class_7652(Text text) {
+        public PublicKeyException(Text text) {
             super(text);
         }
     }

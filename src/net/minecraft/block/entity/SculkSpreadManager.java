@@ -46,11 +46,11 @@ import net.minecraft.block.SculkVeinBlock;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
-import net.minecraft.tag.TagKey;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -62,9 +62,9 @@ import org.slf4j.Logger;
 
 public class SculkSpreadManager {
     public static final int field_37609 = 24;
-    public static final int field_37610 = 1000;
+    public static final int MAX_CHARGE = 1000;
     public static final float field_37611 = 0.5f;
-    private static final int field_37613 = 32;
+    private static final int MAX_CURSORS = 32;
     public static final int field_37612 = 11;
     final boolean worldGen;
     private final TagKey<Block> replaceableTag;

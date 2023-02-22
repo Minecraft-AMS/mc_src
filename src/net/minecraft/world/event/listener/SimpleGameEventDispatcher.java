@@ -13,7 +13,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Vec3d;
@@ -61,7 +60,7 @@ implements GameEventDispatcher {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     @Override
-    public boolean dispatch(GameEvent event, Vec3d pos, GameEvent.Emitter emitter, BiConsumer<GameEventListener, Vec3d> onListenerAccept) {
+    public boolean dispatch(GameEvent event, Vec3d pos, GameEvent.Emitter emitter, GameEventDispatcher.DispatchCallback callback) {
         this.dispatching = true;
         boolean bl = false;
         try {
@@ -74,7 +73,7 @@ implements GameEventDispatcher {
                 }
                 Optional<Vec3d> optional = SimpleGameEventDispatcher.dispatchTo(this.world, pos, gameEventListener);
                 if (!optional.isPresent()) continue;
-                onListenerAccept.accept(gameEventListener, optional.get());
+                callback.visit(gameEventListener, optional.get());
                 bl = true;
             }
         }

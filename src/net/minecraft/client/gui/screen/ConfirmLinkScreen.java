@@ -56,12 +56,12 @@ extends ConfirmScreen {
 
     @Override
     protected void addButtons(int y) {
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 50 - 105, y, 100, 20, this.yesText, button -> this.callback.accept(true)));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, y, 100, 20, COPY, button -> {
+        this.addDrawableChild(ButtonWidget.builder(this.yesText, button -> this.callback.accept(true)).dimensions(this.width / 2 - 50 - 105, y, 100, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(COPY, button -> {
             this.copyToClipboard();
             this.callback.accept(false);
-        }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 50 + 105, y, 100, 20, this.noText, button -> this.callback.accept(false)));
+        }).dimensions(this.width / 2 - 50, y, 100, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(this.noText, button -> this.callback.accept(false)).dimensions(this.width / 2 - 50 + 105, y, 100, 20).build());
     }
 
     public void copyToClipboard() {

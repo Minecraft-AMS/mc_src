@@ -16,11 +16,11 @@ import net.minecraft.block.PlantBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -28,6 +28,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 
 public class StemBlock
 extends PlantBlock
@@ -85,7 +86,7 @@ implements Fertilizable {
     }
 
     @Override
-    public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isFertilizable(WorldView world, BlockPos pos, BlockState state, boolean isClient) {
         return state.get(AGE) != 7;
     }
 

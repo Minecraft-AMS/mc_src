@@ -8,8 +8,8 @@ import net.minecraft.block.dispenser.ItemDispenserBehavior;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.ChestBoatEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPointer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -46,7 +46,7 @@ extends ItemDispenserBehavior {
             return this.itemDispenser.dispense(pointer, stack);
         }
         BoatEntity boatEntity = this.chest ? new ChestBoatEntity(world, d, e + g, f) : new BoatEntity(world, d, e + g, f);
-        boatEntity.setBoatType(this.boatType);
+        boatEntity.setVariant(this.boatType);
         boatEntity.setYaw(direction.asRotation());
         world.spawnEntity(boatEntity);
         stack.decrement(1);

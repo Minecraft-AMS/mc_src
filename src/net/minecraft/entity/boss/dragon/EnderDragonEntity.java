@@ -43,11 +43,11 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -121,7 +121,7 @@ implements Monster {
     }
 
     @Override
-    public boolean hasWings() {
+    public boolean isFlappingWings() {
         float f = MathHelper.cos(this.wingPosition * ((float)Math.PI * 2));
         float g = MathHelper.cos(this.prevWingPosition * ((float)Math.PI * 2));
         return g <= -0.3f && f >= -0.3f;
@@ -740,7 +740,7 @@ implements Monster {
     public void crystalDestroyed(EndCrystalEntity crystal, BlockPos pos, DamageSource source) {
         PlayerEntity playerEntity = source.getAttacker() instanceof PlayerEntity ? (PlayerEntity)source.getAttacker() : this.world.getClosestPlayer(CLOSE_PLAYER_PREDICATE, pos.getX(), pos.getY(), pos.getZ());
         if (crystal == this.connectedCrystal) {
-            this.damagePart(this.head, DamageSource.explosion(playerEntity), 10.0f);
+            this.damagePart(this.head, DamageSource.explosion(crystal, playerEntity), 10.0f);
         }
         this.phaseManager.getCurrent().crystalDestroyed(crystal, pos, source, playerEntity);
     }

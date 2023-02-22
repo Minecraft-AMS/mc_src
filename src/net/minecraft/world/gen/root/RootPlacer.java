@@ -18,12 +18,12 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.state.property.Properties;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.TreeFeature;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
@@ -32,7 +32,7 @@ import net.minecraft.world.gen.root.RootPlacerType;
 import net.minecraft.world.gen.stateprovider.BlockStateProvider;
 
 public abstract class RootPlacer {
-    public static final Codec<RootPlacer> TYPE_CODEC = Registry.ROOT_PLACER_TYPE.getCodec().dispatch(RootPlacer::getType, RootPlacerType::getCodec);
+    public static final Codec<RootPlacer> TYPE_CODEC = Registries.ROOT_PLACER_TYPE.getCodec().dispatch(RootPlacer::getType, RootPlacerType::getCodec);
     protected final IntProvider trunkOffsetY;
     protected final BlockStateProvider rootProvider;
     protected final Optional<AboveRootPlacement> aboveRootPlacement;
@@ -59,12 +59,12 @@ public abstract class RootPlacer {
         if (!this.canGrowThrough(world, pos)) {
             return;
         }
-        replacer.accept(pos, this.applyWaterlogging(world, pos, this.rootProvider.getBlockState(random, pos)));
+        replacer.accept(pos, this.applyWaterlogging(world, pos, this.rootProvider.get(random, pos)));
         if (this.aboveRootPlacement.isPresent()) {
             AboveRootPlacement aboveRootPlacement = this.aboveRootPlacement.get();
             BlockPos blockPos = pos.up();
             if (random.nextFloat() < aboveRootPlacement.aboveRootPlacementChance() && world.testBlockState(blockPos, AbstractBlock.AbstractBlockState::isAir)) {
-                replacer.accept(blockPos, this.applyWaterlogging(world, blockPos, aboveRootPlacement.aboveRootProvider().getBlockState(random, blockPos)));
+                replacer.accept(blockPos, this.applyWaterlogging(world, blockPos, aboveRootPlacement.aboveRootProvider().get(random, blockPos)));
             }
         }
     }

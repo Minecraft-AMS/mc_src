@@ -5,6 +5,7 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.joml.Matrix4f
  */
 package net.minecraft.client.gui.hud;
 
@@ -26,13 +27,13 @@ import net.minecraft.client.render.model.ModelLoader;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.tag.FluidTags;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.RotationAxis;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class InGameOverlayRenderer {
@@ -70,8 +71,8 @@ public class InGameOverlayRenderer {
     }
 
     private static void renderInWallOverlay(Sprite sprite, MatrixStack matrices) {
-        RenderSystem.setShaderTexture(0, sprite.getAtlas().getId());
-        RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
+        RenderSystem.setShaderTexture(0, sprite.getAtlasId());
+        RenderSystem.setShader(GameRenderer::getPositionColorTexProgram);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         float f = 0.1f;
         float g = -1.0f;
@@ -89,11 +90,11 @@ public class InGameOverlayRenderer {
         bufferBuilder.vertex(matrix4f, 1.0f, -1.0f, -0.5f).color(0.1f, 0.1f, 0.1f, 1.0f).texture(l, o).next();
         bufferBuilder.vertex(matrix4f, 1.0f, 1.0f, -0.5f).color(0.1f, 0.1f, 0.1f, 1.0f).texture(l, n).next();
         bufferBuilder.vertex(matrix4f, -1.0f, 1.0f, -0.5f).color(0.1f, 0.1f, 0.1f, 1.0f).texture(m, n).next();
-        BufferRenderer.drawWithShader(bufferBuilder.end());
+        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
     }
 
     private static void renderUnderwaterOverlay(MinecraftClient client, MatrixStack matrices) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
         RenderSystem.enableTexture();
         RenderSystem.setShaderTexture(0, UNDERWATER_TEXTURE);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
@@ -116,20 +117,20 @@ public class InGameOverlayRenderer {
         bufferBuilder.vertex(matrix4f, 1.0f, -1.0f, -0.5f).texture(0.0f + m, 4.0f + n).next();
         bufferBuilder.vertex(matrix4f, 1.0f, 1.0f, -0.5f).texture(0.0f + m, 0.0f + n).next();
         bufferBuilder.vertex(matrix4f, -1.0f, 1.0f, -0.5f).texture(4.0f + m, 0.0f + n).next();
-        BufferRenderer.drawWithShader(bufferBuilder.end());
+        BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
         RenderSystem.disableBlend();
     }
 
     private static void renderFireOverlay(MinecraftClient client, MatrixStack matrices) {
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-        RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
+        RenderSystem.setShader(GameRenderer::getPositionColorTexProgram);
         RenderSystem.depthFunc(519);
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableTexture();
         Sprite sprite = ModelLoader.FIRE_1.getSprite();
-        RenderSystem.setShaderTexture(0, sprite.getAtlas().getId());
+        RenderSystem.setShaderTexture(0, sprite.getAtlasId());
         float f = sprite.getMinU();
         float g = sprite.getMaxU();
         float h = (f + g) / 2.0f;
@@ -149,15 +150,15 @@ public class InGameOverlayRenderer {
             float u = -0.5f;
             float v = 0.5f;
             float w = -0.5f;
-            matrices.translate((float)(-(r * 2 - 1)) * 0.24f, -0.3f, 0.0);
-            matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion((float)(r * 2 - 1) * 10.0f));
+            matrices.translate((float)(-(r * 2 - 1)) * 0.24f, -0.3f, 0.0f);
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float)(r * 2 - 1) * 10.0f));
             Matrix4f matrix4f = matrices.peek().getPositionMatrix();
             bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR_TEXTURE);
             bufferBuilder.vertex(matrix4f, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 0.9f).texture(n, p).next();
             bufferBuilder.vertex(matrix4f, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 0.9f).texture(m, p).next();
             bufferBuilder.vertex(matrix4f, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 0.9f).texture(m, o).next();
             bufferBuilder.vertex(matrix4f, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 0.9f).texture(n, o).next();
-            BufferRenderer.drawWithShader(bufferBuilder.end());
+            BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
             matrices.pop();
         }
         RenderSystem.disableBlend();

@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.hash.Hashing
+ *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -17,6 +18,7 @@ package net.minecraft.client.gui.screen.world;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,8 +60,8 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.screen.ScreenTexts;
-import net.minecraft.server.SaveLoader;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
@@ -69,7 +71,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.crash.CrashReport;
-import net.minecraft.world.gen.GeneratorOptions;
+import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.level.storage.LevelStorageException;
 import net.minecraft.world.level.storage.LevelSummary;
@@ -327,7 +329,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
             this.client.textRenderer.draw(matrices, (String)string, (float)(x + 32 + 3), (float)(y + 1), 0xFFFFFF);
             this.client.textRenderer.draw(matrices, string2, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + 3), 0x808080);
             this.client.textRenderer.draw(matrices, text, (float)(x + 32 + 3), (float)(y + this.client.textRenderer.fontHeight + this.client.textRenderer.fontHeight + 3), 0x808080);
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexProgram);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.setShaderTexture(0, this.icon != null ? this.iconLocation : UNKNOWN_SERVER_LOCATION);
             RenderSystem.enableBlend();
@@ -337,7 +339,7 @@ extends AlwaysSelectedEntryListWidget<Entry> {
                 int j;
                 RenderSystem.setShaderTexture(0, WORLD_SELECTION_LOCATION);
                 DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
-                RenderSystem.setShader(GameRenderer::getPositionTexShader);
+                RenderSystem.setShader(GameRenderer::getPositionTexProgram);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 int i = mouseX - x;
                 boolean bl = i < 32;
@@ -485,14 +487,15 @@ extends AlwaysSelectedEntryListWidget<Entry> {
 
         public void recreate() {
             this.openReadingWorldScreen();
-            try (LevelStorage.Session session = this.client.getLevelStorage().createSession(this.level.getName());
-                 SaveLoader saveLoader = this.client.createIntegratedServerLoader().createSaveLoader(session, false);){
-                GeneratorOptions generatorOptions = saveLoader.saveProperties().getGeneratorOptions();
+            try (LevelStorage.Session session = this.client.getLevelStorage().createSession(this.level.getName());){
+                Pair<LevelInfo, GeneratorOptionsHolder> pair = this.client.createIntegratedServerLoader().loadForRecreation(session);
+                LevelInfo levelInfo = (LevelInfo)pair.getFirst();
+                GeneratorOptionsHolder generatorOptionsHolder = (GeneratorOptionsHolder)pair.getSecond();
                 Path path = CreateWorldScreen.copyDataPack(session.getDirectory(WorldSavePath.DATAPACKS), this.client);
-                if (generatorOptions.isLegacyCustomizedType()) {
-                    this.client.setScreen(new ConfirmScreen(confirmed -> this.client.setScreen(confirmed ? CreateWorldScreen.create(this.screen, saveLoader, path) : this.screen), Text.translatable("selectWorld.recreate.customized.title"), Text.translatable("selectWorld.recreate.customized.text"), ScreenTexts.PROCEED, ScreenTexts.CANCEL));
+                if (generatorOptionsHolder.generatorOptions().isLegacyCustomizedType()) {
+                    this.client.setScreen(new ConfirmScreen(confirmed -> this.client.setScreen(confirmed ? CreateWorldScreen.create(this.screen, levelInfo, generatorOptionsHolder, path) : this.screen), Text.translatable("selectWorld.recreate.customized.title"), Text.translatable("selectWorld.recreate.customized.text"), ScreenTexts.PROCEED, ScreenTexts.CANCEL));
                 } else {
-                    this.client.setScreen(CreateWorldScreen.create(this.screen, saveLoader, path));
+                    this.client.setScreen(CreateWorldScreen.create(this.screen, levelInfo, generatorOptionsHolder, path));
                 }
             }
             catch (Exception exception) {

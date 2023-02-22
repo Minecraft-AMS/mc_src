@@ -16,8 +16,6 @@ package net.minecraft.client.gui.screen.pack;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hashing;
 import com.mojang.logging.LogUtils;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
@@ -41,12 +39,14 @@ import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.pack.PackListWidget;
 import net.minecraft.client.gui.screen.pack.ResourcePackOrganizer;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.resource.InputSupplier;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
@@ -65,7 +65,7 @@ extends Screen {
     static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32395 = 200;
     private static final Text DROP_INFO = Text.translatable("pack.dropInfo").formatted(Formatting.GRAY);
-    static final Text FOLDER_INFO = Text.translatable("pack.folderInfo");
+    private static final Text FOLDER_INFO = Text.translatable("pack.folderInfo");
     private static final int field_32396 = 20;
     private static final Identifier UNKNOWN_PACK = new Identifier("textures/misc/unknown_pack.png");
     private final ResourcePackOrganizer organizer;
@@ -75,11 +75,11 @@ extends Screen {
     private long refreshTimeout;
     private PackListWidget availablePackList;
     private PackListWidget selectedPackList;
-    private final File file;
+    private final Path file;
     private ButtonWidget doneButton;
     private final Map<String, Identifier> iconTextures = Maps.newHashMap();
 
-    public PackScreen(Screen parent, ResourcePackManager packManager, Consumer<ResourcePackManager> applier, File file, Text title) {
+    public PackScreen(Screen parent, ResourcePackManager packManager, Consumer<ResourcePackManager> applier, Path file, Text title) {
         super(title);
         this.parent = parent;
         this.organizer = new ResourcePackOrganizer(this::updatePackLists, this::getPackIconTexture, packManager, applier);
@@ -108,25 +108,14 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, button -> this.close()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, Text.translatable("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file), new ButtonWidget.TooltipSupplier(){
-
-            @Override
-            public void onTooltip(ButtonWidget buttonWidget, MatrixStack matrixStack, int i, int j) {
-                PackScreen.this.renderTooltip(matrixStack, FOLDER_INFO, i, j);
-            }
-
-            @Override
-            public void supply(Consumer<Text> consumer) {
-                consumer.accept(FOLDER_INFO);
-            }
-        }));
-        this.availablePackList = new PackListWidget(this.client, 200, this.height, Text.translatable("pack.available.title"));
+        this.availablePackList = new PackListWidget(this.client, this, 200, this.height, Text.translatable("pack.available.title"));
         this.availablePackList.setLeftPos(this.width / 2 - 4 - 200);
         this.addSelectableChild(this.availablePackList);
-        this.selectedPackList = new PackListWidget(this.client, 200, this.height, Text.translatable("pack.selected.title"));
+        this.selectedPackList = new PackListWidget(this.client, this, 200, this.height, Text.translatable("pack.selected.title"));
         this.selectedPackList.setLeftPos(this.width / 2 + 4);
         this.addSelectableChild(this.selectedPackList);
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file.toUri())).dimensions(this.width / 2 - 154, this.height - 48, 150, 20).tooltip(Tooltip.of(FOLDER_INFO)).build());
+        this.doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> this.close()).dimensions(this.width / 2 + 4, this.height - 48, 150, 20).build());
         this.refresh();
     }
 
@@ -156,6 +145,7 @@ extends Screen {
 
     private void updatePackList(PackListWidget widget, Stream<ResourcePackOrganizer.Pack> packs) {
         widget.children().clear();
+        widget.setSelected(null);
         packs.forEach(pack -> widget.children().add(new PackListWidget.ResourcePackEntry(this.client, widget, this, (ResourcePackOrganizer.Pack)pack)));
     }
 
@@ -205,7 +195,7 @@ extends Screen {
         String string = paths.stream().map(Path::getFileName).map(Path::toString).collect(Collectors.joining(", "));
         this.client.setScreen(new ConfirmScreen(confirmed -> {
             if (confirmed) {
-                PackScreen.copyPacks(this.client, paths, this.file.toPath());
+                PackScreen.copyPacks(this.client, paths, this.file);
                 this.refresh();
             }
             this.client.setScreen(this);
@@ -216,50 +206,42 @@ extends Screen {
      * Enabled aggressive exception aggregation
      */
     private Identifier loadPackIcon(TextureManager textureManager, ResourcePackProfile resourcePackProfile) {
-        try (ResourcePack resourcePack2 = resourcePackProfile.createResourcePack();){
+        try (ResourcePack resourcePack = resourcePackProfile.createResourcePack();){
             Identifier identifier;
-            block19: {
-                InputStream inputStream;
-                block17: {
-                    Identifier identifier2;
-                    block18: {
-                        inputStream = resourcePack2.openRoot("pack.png");
-                        try {
-                            if (inputStream != null) break block17;
-                            identifier2 = UNKNOWN_PACK;
-                            if (inputStream == null) break block18;
-                        }
-                        catch (Throwable throwable) {
-                            if (inputStream != null) {
-                                try {
-                                    inputStream.close();
-                                }
-                                catch (Throwable throwable2) {
-                                    throwable.addSuppressed(throwable2);
-                                }
-                            }
-                            throw throwable;
-                        }
-                        inputStream.close();
-                    }
+            block16: {
+                InputSupplier<InputStream> inputSupplier = resourcePack.openRoot("pack.png");
+                if (inputSupplier == null) {
+                    Identifier identifier2 = UNKNOWN_PACK;
                     return identifier2;
                 }
                 String string = resourcePackProfile.getName();
                 Identifier identifier3 = new Identifier("minecraft", "pack/" + Util.replaceInvalidChars(string, Identifier::isPathCharacterValid) + "/" + Hashing.sha1().hashUnencodedChars((CharSequence)string) + "/icon");
-                NativeImage nativeImage = NativeImage.read(inputStream);
-                textureManager.registerTexture(identifier3, new NativeImageBackedTexture(nativeImage));
-                identifier = identifier3;
-                if (inputStream == null) break block19;
+                InputStream inputStream = inputSupplier.get();
+                try {
+                    NativeImage nativeImage = NativeImage.read(inputStream);
+                    textureManager.registerTexture(identifier3, new NativeImageBackedTexture(nativeImage));
+                    identifier = identifier3;
+                    if (inputStream == null) break block16;
+                }
+                catch (Throwable throwable) {
+                    if (inputStream != null) {
+                        try {
+                            inputStream.close();
+                        }
+                        catch (Throwable throwable2) {
+                            throwable.addSuppressed(throwable2);
+                        }
+                    }
+                    throw throwable;
+                }
                 inputStream.close();
             }
             return identifier;
         }
-        catch (FileNotFoundException resourcePack2) {
-        }
         catch (Exception exception) {
             LOGGER.warn("Failed to load icon from pack {}", (Object)resourcePackProfile.getName(), (Object)exception);
+            return UNKNOWN_PACK;
         }
-        return UNKNOWN_PACK;
     }
 
     private Identifier getPackIconTexture(ResourcePackProfile resourcePackProfile) {
@@ -272,15 +254,15 @@ extends Screen {
         private final WatchService watchService;
         private final Path path;
 
-        public DirectoryWatcher(File file) throws IOException {
-            this.path = file.toPath();
-            this.watchService = this.path.getFileSystem().newWatchService();
+        public DirectoryWatcher(Path path) throws IOException {
+            this.path = path;
+            this.watchService = path.getFileSystem().newWatchService();
             try {
-                this.watchDirectory(this.path);
-                try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(this.path);){
-                    for (Path path : directoryStream) {
-                        if (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) continue;
-                        this.watchDirectory(path);
+                this.watchDirectory(path);
+                try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path);){
+                    for (Path path2 : directoryStream) {
+                        if (!Files.isDirectory(path2, LinkOption.NOFOLLOW_LINKS)) continue;
+                        this.watchDirectory(path2);
                     }
                 }
             }
@@ -291,12 +273,12 @@ extends Screen {
         }
 
         @Nullable
-        public static DirectoryWatcher create(File file) {
+        public static DirectoryWatcher create(Path path) {
             try {
-                return new DirectoryWatcher(file);
+                return new DirectoryWatcher(path);
             }
             catch (IOException iOException) {
-                LOGGER.warn("Failed to initialize pack directory {} monitoring", (Object)file, (Object)iOException);
+                LOGGER.warn("Failed to initialize pack directory {} monitoring", (Object)path, (Object)iOException);
                 return null;
             }
         }
