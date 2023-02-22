@@ -1,0 +1,223 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package net.minecraft.block;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockPlacementEnvironment;
+import net.minecraft.block.BlockRenderType;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.BlockWithEntity;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.Hopper;
+import net.minecraft.block.entity.HopperBlockEntity;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.container.Container;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityContext;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.stat.Stats;
+import net.minecraft.state.StateManager;
+import net.minecraft.state.property.BooleanProperty;
+import net.minecraft.state.property.DirectionProperty;
+import net.minecraft.state.property.Properties;
+import net.minecraft.util.BlockMirror;
+import net.minecraft.util.BlockRotation;
+import net.minecraft.util.BooleanBiFunction;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ItemScatterer;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.world.BlockView;
+import net.minecraft.world.World;
+
+public class HopperBlock
+extends BlockWithEntity {
+    public static final DirectionProperty FACING = Properties.HOPPER_FACING;
+    public static final BooleanProperty ENABLED = Properties.ENABLED;
+    private static final VoxelShape TOP_SHAPE = Block.createCuboidShape(0.0, 10.0, 0.0, 16.0, 16.0, 16.0);
+    private static final VoxelShape MIDDLE_SHAPE = Block.createCuboidShape(4.0, 4.0, 4.0, 12.0, 10.0, 12.0);
+    private static final VoxelShape OUTSIDE_SHAPE = VoxelShapes.union(MIDDLE_SHAPE, TOP_SHAPE);
+    private static final VoxelShape DEFAULT_SHAPE = VoxelShapes.combineAndSimplify(OUTSIDE_SHAPE, Hopper.INSIDE_SHAPE, BooleanBiFunction.ONLY_FIRST);
+    private static final VoxelShape DOWN_SHAPE = VoxelShapes.union(DEFAULT_SHAPE, Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 4.0, 10.0));
+    private static final VoxelShape EAST_SHAPE = VoxelShapes.union(DEFAULT_SHAPE, Block.createCuboidShape(12.0, 4.0, 6.0, 16.0, 8.0, 10.0));
+    private static final VoxelShape NORTH_SHAPE = VoxelShapes.union(DEFAULT_SHAPE, Block.createCuboidShape(6.0, 4.0, 0.0, 10.0, 8.0, 4.0));
+    private static final VoxelShape SOUTH_SHAPE = VoxelShapes.union(DEFAULT_SHAPE, Block.createCuboidShape(6.0, 4.0, 12.0, 10.0, 8.0, 16.0));
+    private static final VoxelShape WEST_SHAPE = VoxelShapes.union(DEFAULT_SHAPE, Block.createCuboidShape(0.0, 4.0, 6.0, 4.0, 8.0, 10.0));
+    private static final VoxelShape DOWN_RAY_TRACE_SHAPE = Hopper.INSIDE_SHAPE;
+    private static final VoxelShape EAST_RAY_TRACE_SHAPE = VoxelShapes.union(Hopper.INSIDE_SHAPE, Block.createCuboidShape(12.0, 8.0, 6.0, 16.0, 10.0, 10.0));
+    private static final VoxelShape NORTH_RAY_TRACE_SHAPE = VoxelShapes.union(Hopper.INSIDE_SHAPE, Block.createCuboidShape(6.0, 8.0, 0.0, 10.0, 10.0, 4.0));
+    private static final VoxelShape SOUTH_RAY_TRACE_SHAPE = VoxelShapes.union(Hopper.INSIDE_SHAPE, Block.createCuboidShape(6.0, 8.0, 12.0, 10.0, 10.0, 16.0));
+    private static final VoxelShape WEST_RAY_TRACE_SHAPE = VoxelShapes.union(Hopper.INSIDE_SHAPE, Block.createCuboidShape(0.0, 8.0, 6.0, 4.0, 10.0, 10.0));
+
+    public HopperBlock(Block.Settings settings) {
+        super(settings);
+        this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.DOWN)).with(ENABLED, true));
+    }
+
+    @Override
+    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, EntityContext context) {
+        switch (state.get(FACING)) {
+            case DOWN: {
+                return DOWN_SHAPE;
+            }
+            case NORTH: {
+                return NORTH_SHAPE;
+            }
+            case SOUTH: {
+                return SOUTH_SHAPE;
+            }
+            case WEST: {
+                return WEST_SHAPE;
+            }
+            case EAST: {
+                return EAST_SHAPE;
+            }
+        }
+        return DEFAULT_SHAPE;
+    }
+
+    @Override
+    public VoxelShape getRayTraceShape(BlockState state, BlockView view, BlockPos pos) {
+        switch (state.get(FACING)) {
+            case DOWN: {
+                return DOWN_RAY_TRACE_SHAPE;
+            }
+            case NORTH: {
+                return NORTH_RAY_TRACE_SHAPE;
+            }
+            case SOUTH: {
+                return SOUTH_RAY_TRACE_SHAPE;
+            }
+            case WEST: {
+                return WEST_RAY_TRACE_SHAPE;
+            }
+            case EAST: {
+                return EAST_RAY_TRACE_SHAPE;
+            }
+        }
+        return Hopper.INSIDE_SHAPE;
+    }
+
+    @Override
+    public BlockState getPlacementState(ItemPlacementContext ctx) {
+        Direction direction = ctx.getSide().getOpposite();
+        return (BlockState)((BlockState)this.getDefaultState().with(FACING, direction.getAxis() == Direction.Axis.Y ? Direction.DOWN : direction)).with(ENABLED, true);
+    }
+
+    @Override
+    public BlockEntity createBlockEntity(BlockView view) {
+        return new HopperBlockEntity();
+    }
+
+    @Override
+    public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack itemStack) {
+        BlockEntity blockEntity;
+        if (itemStack.hasCustomName() && (blockEntity = world.getBlockEntity(pos)) instanceof HopperBlockEntity) {
+            ((HopperBlockEntity)blockEntity).setCustomName(itemStack.getName());
+        }
+    }
+
+    @Override
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean moved) {
+        if (oldState.getBlock() == state.getBlock()) {
+            return;
+        }
+        this.updateEnabled(world, pos, state);
+    }
+
+    @Override
+    public boolean activate(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (world.isClient) {
+            return true;
+        }
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof HopperBlockEntity) {
+            player.openContainer((HopperBlockEntity)blockEntity);
+            player.incrementStat(Stats.INSPECT_HOPPER);
+        }
+        return true;
+    }
+
+    @Override
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos neighborPos, boolean moved) {
+        this.updateEnabled(world, pos, state);
+    }
+
+    private void updateEnabled(World world, BlockPos pos, BlockState state) {
+        boolean bl;
+        boolean bl2 = bl = !world.isReceivingRedstonePower(pos);
+        if (bl != state.get(ENABLED)) {
+            world.setBlockState(pos, (BlockState)state.with(ENABLED, bl), 4);
+        }
+    }
+
+    @Override
+    public void onBlockRemoved(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (state.getBlock() == newState.getBlock()) {
+            return;
+        }
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof HopperBlockEntity) {
+            ItemScatterer.spawn(world, pos, (Inventory)((HopperBlockEntity)blockEntity));
+            world.updateHorizontalAdjacent(pos, this);
+        }
+        super.onBlockRemoved(state, world, pos, newState, moved);
+    }
+
+    @Override
+    public BlockRenderType getRenderType(BlockState state) {
+        return BlockRenderType.MODEL;
+    }
+
+    @Override
+    public boolean hasComparatorOutput(BlockState state) {
+        return true;
+    }
+
+    @Override
+    public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+        return Container.calculateComparatorOutput(world.getBlockEntity(pos));
+    }
+
+    @Override
+    public RenderLayer getRenderLayer() {
+        return RenderLayer.CUTOUT_MIPPED;
+    }
+
+    @Override
+    public BlockState rotate(BlockState state, BlockRotation rotation) {
+        return (BlockState)state.with(FACING, rotation.rotate(state.get(FACING)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, BlockMirror mirror) {
+        return state.rotate(mirror.getRotation(state.get(FACING)));
+    }
+
+    @Override
+    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(FACING, ENABLED);
+    }
+
+    @Override
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof HopperBlockEntity) {
+            ((HopperBlockEntity)blockEntity).onEntityCollided(entity);
+        }
+    }
+
+    @Override
+    public boolean canPlaceAtSide(BlockState world, BlockView view, BlockPos pos, BlockPlacementEnvironment env) {
+        return false;
+    }
+}
+

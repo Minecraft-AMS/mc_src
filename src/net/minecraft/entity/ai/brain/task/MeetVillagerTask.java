@@ -1,0 +1,48 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
+ */
+package net.minecraft.entity.ai.brain.task;
+
+import com.google.common.collect.ImmutableMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.brain.EntityPosWrapper;
+import net.minecraft.entity.ai.brain.MemoryModuleState;
+import net.minecraft.entity.ai.brain.MemoryModuleType;
+import net.minecraft.entity.ai.brain.WalkTarget;
+import net.minecraft.entity.ai.brain.task.Task;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.GlobalPos;
+
+public class MeetVillagerTask
+extends Task<LivingEntity> {
+    public MeetVillagerTask() {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.MEETING_POINT, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.VISIBLE_MOBS, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.INTERACTION_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)));
+    }
+
+    @Override
+    protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
+        Brain<?> brain = entity.getBrain();
+        Optional<GlobalPos> optional = brain.getOptionalMemory(MemoryModuleType.MEETING_POINT);
+        return world.getRandom().nextInt(100) == 0 && optional.isPresent() && Objects.equals(world.getDimension().getType(), optional.get().getDimension()) && optional.get().getPos().isWithinDistance(entity.getPos(), 4.0) && brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get().stream().anyMatch(livingEntity -> EntityType.VILLAGER.equals(livingEntity.getType()));
+    }
+
+    @Override
+    protected void run(ServerWorld world, LivingEntity entity, long time) {
+        Brain<?> brain = entity.getBrain();
+        brain.getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).ifPresent(list -> list.stream().filter(livingEntity -> EntityType.VILLAGER.equals(livingEntity.getType())).filter(livingEntity2 -> livingEntity2.squaredDistanceTo(entity) <= 32.0).findFirst().ifPresent(livingEntity -> {
+            brain.putMemory(MemoryModuleType.INTERACTION_TARGET, livingEntity);
+            brain.putMemory(MemoryModuleType.LOOK_TARGET, new EntityPosWrapper((Entity)livingEntity));
+            brain.putMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityPosWrapper((Entity)livingEntity), 0.3f, 1));
+        }));
+    }
+}
+

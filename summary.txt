@@ -1,0 +1,23 @@
+Summary for ./1.14.4.jar
+Decompiled with CFR 0.152
+
+
+net.minecraft.MinecraftVersion
+----------------------------
+
+create()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 4 blocks at once
+
+
+net.minecraft.client.util.RawTextureDataLoader
+----------------------------
+
+loadRawTextureData(net.minecraft.resource.ResourceManager net.minecraft.util.Identifier )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+net.minecraft.client.resource.SplashTextResourceSupplier
+----------------------------
+
+prepare(net.minecraft.resource.ResourceManager net.minecraft.util.profiler.Profiler )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
