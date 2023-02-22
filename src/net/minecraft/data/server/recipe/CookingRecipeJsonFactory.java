@@ -14,6 +14,7 @@ import net.minecraft.advancement.AdvancementRewards;
 import net.minecraft.advancement.CriterionMerger;
 import net.minecraft.advancement.criterion.CriterionConditions;
 import net.minecraft.advancement.criterion.RecipeUnlockedCriterion;
+import net.minecraft.data.server.recipe.CraftingRecipeJsonFactory;
 import net.minecraft.data.server.recipe.RecipeJsonProvider;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
@@ -25,12 +26,14 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
-public class CookingRecipeJsonFactory {
+public class CookingRecipeJsonFactory
+implements CraftingRecipeJsonFactory {
     private final Item output;
     private final Ingredient input;
     private final float experience;
     private final int cookingTime;
     private final Advancement.Task builder = Advancement.Task.create();
+    @Nullable
     private String group;
     private final CookingRecipeSerializer<?> serializer;
 
@@ -46,6 +49,10 @@ public class CookingRecipeJsonFactory {
         return new CookingRecipeJsonFactory(result, ingredient, experience, cookingTime, serializer);
     }
 
+    public static CookingRecipeJsonFactory create(Ingredient result, ItemConvertible ingredient, float experience, int cookingTime) {
+        return CookingRecipeJsonFactory.create(result, ingredient, experience, cookingTime, RecipeSerializer.CAMPFIRE_COOKING);
+    }
+
     public static CookingRecipeJsonFactory createBlasting(Ingredient ingredient, ItemConvertible result, float experience, int cookingTime) {
         return CookingRecipeJsonFactory.create(ingredient, result, experience, cookingTime, RecipeSerializer.BLASTING);
     }
@@ -54,24 +61,28 @@ public class CookingRecipeJsonFactory {
         return CookingRecipeJsonFactory.create(ingredient, result, experience, cookingTime, RecipeSerializer.SMELTING);
     }
 
-    public CookingRecipeJsonFactory criterion(String criterionName, CriterionConditions conditions) {
-        this.builder.criterion(criterionName, conditions);
+    public static CookingRecipeJsonFactory createSmoking(Ingredient result, ItemConvertible ingredient, float experience, int cookingTime) {
+        return CookingRecipeJsonFactory.create(result, ingredient, experience, cookingTime, RecipeSerializer.SMOKING);
+    }
+
+    @Override
+    public CookingRecipeJsonFactory criterion(String string, CriterionConditions criterionConditions) {
+        this.builder.criterion(string, criterionConditions);
         return this;
     }
 
-    public void offerTo(Consumer<RecipeJsonProvider> exporter) {
-        this.offerTo(exporter, Registry.ITEM.getId(this.output));
+    @Override
+    public CookingRecipeJsonFactory group(@Nullable String string) {
+        this.group = string;
+        return this;
     }
 
-    public void offerTo(Consumer<RecipeJsonProvider> exporter, String recipeIdStr) {
-        Identifier identifier2 = new Identifier(recipeIdStr);
-        Identifier identifier = Registry.ITEM.getId(this.output);
-        if (identifier2.equals(identifier)) {
-            throw new IllegalStateException("Recipe " + identifier2 + " should remove its 'save' argument");
-        }
-        this.offerTo(exporter, identifier2);
+    @Override
+    public Item getOutputItem() {
+        return this.output;
     }
 
+    @Override
     public void offerTo(Consumer<RecipeJsonProvider> exporter, Identifier recipeId) {
         this.validate(recipeId);
         this.builder.parent(new Identifier("recipes/root")).criterion("has_the_recipe", RecipeUnlockedCriterion.create(recipeId)).rewards(AdvancementRewards.Builder.recipe(recipeId)).criteriaMerger(CriterionMerger.OR);
@@ -84,11 +95,21 @@ public class CookingRecipeJsonFactory {
         }
     }
 
+    @Override
+    public /* synthetic */ CraftingRecipeJsonFactory group(@Nullable String group) {
+        return this.group(group);
+    }
+
+    @Override
+    public /* synthetic */ CraftingRecipeJsonFactory criterion(String name, CriterionConditions conditions) {
+        return this.criterion(name, conditions);
+    }
+
     public static class CookingRecipeJsonProvider
     implements RecipeJsonProvider {
         private final Identifier recipeId;
         private final String group;
-        private final Ingredient ingredient;
+        private final Ingredient input;
         private final Item result;
         private final float experience;
         private final int cookingTime;
@@ -96,10 +117,10 @@ public class CookingRecipeJsonFactory {
         private final Identifier advancementId;
         private final RecipeSerializer<? extends AbstractCookingRecipe> serializer;
 
-        public CookingRecipeJsonProvider(Identifier recipeId, String group, Ingredient ingredient, Item result, float experience, int cookingTime, Advancement.Task builder, Identifier advancementId, RecipeSerializer<? extends AbstractCookingRecipe> serializer) {
+        public CookingRecipeJsonProvider(Identifier recipeId, String group, Ingredient input, Item result, float experience, int cookingTime, Advancement.Task builder, Identifier advancementId, RecipeSerializer<? extends AbstractCookingRecipe> serializer) {
             this.recipeId = recipeId;
             this.group = group;
-            this.ingredient = ingredient;
+            this.input = input;
             this.result = result;
             this.experience = experience;
             this.cookingTime = cookingTime;
@@ -113,7 +134,7 @@ public class CookingRecipeJsonFactory {
             if (!this.group.isEmpty()) {
                 json.addProperty("group", this.group);
             }
-            json.add("ingredient", this.ingredient.toJson());
+            json.add("ingredient", this.input.toJson());
             json.addProperty("result", Registry.ITEM.getId(this.result).toString());
             json.addProperty("experience", (Number)Float.valueOf(this.experience));
             json.addProperty("cookingtime", (Number)this.cookingTime);

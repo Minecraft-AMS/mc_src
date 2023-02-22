@@ -2,29 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.mojang.datafixers.kinds.App
- *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
- *  com.mojang.serialization.codecs.RecordCodecBuilder
  */
 package net.minecraft.world.gen.decorator;
 
-import com.mojang.datafixers.kinds.App;
-import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.decorator.DecoratorConfig;
 
 public class CarvingMaskDecoratorConfig
 implements DecoratorConfig {
-    public static final Codec<CarvingMaskDecoratorConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)GenerationStep.Carver.CODEC.fieldOf("step").forGetter(carvingMaskDecoratorConfig -> carvingMaskDecoratorConfig.step), (App)Codec.FLOAT.fieldOf("probability").forGetter(carvingMaskDecoratorConfig -> Float.valueOf(carvingMaskDecoratorConfig.probability))).apply((Applicative)instance, CarvingMaskDecoratorConfig::new));
-    protected final GenerationStep.Carver step;
-    protected final float probability;
+    public static final Codec<CarvingMaskDecoratorConfig> CODEC = GenerationStep.Carver.CODEC.fieldOf("step").xmap(CarvingMaskDecoratorConfig::new, config -> config.carver).codec();
+    protected final GenerationStep.Carver carver;
 
-    public CarvingMaskDecoratorConfig(GenerationStep.Carver step, float probability) {
-        this.step = step;
-        this.probability = probability;
+    public CarvingMaskDecoratorConfig(GenerationStep.Carver carver) {
+        this.carver = carver;
     }
 }
 

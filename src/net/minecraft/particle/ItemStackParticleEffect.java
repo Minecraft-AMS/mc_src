@@ -5,16 +5,12 @@
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.serialization.Codec
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.particle;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
@@ -69,14 +65,13 @@ implements ParticleEffect {
 
     @Override
     public String asString() {
-        return Registry.PARTICLE_TYPE.getId(this.getType()) + " " + new ItemStackArgument(this.stack.getItem(), this.stack.getTag()).asString();
+        return Registry.PARTICLE_TYPE.getId(this.getType()) + " " + new ItemStackArgument(this.stack.getItem(), this.stack.getNbt()).asString();
     }
 
     public ParticleType<ItemStackParticleEffect> getType() {
         return this.type;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getItemStack() {
         return this.stack;
     }

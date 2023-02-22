@@ -3,35 +3,34 @@
  */
 package net.minecraft.network.packet.s2c.query;
 
-import java.io.IOException;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientQueryPacketListener;
 
 public class QueryPongS2CPacket
 implements Packet<ClientQueryPacketListener> {
-    private long startTime;
-
-    public QueryPongS2CPacket() {
-    }
+    private final long startTime;
 
     public QueryPongS2CPacket(long startTime) {
         this.startTime = startTime;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public QueryPongS2CPacket(PacketByteBuf buf) {
         this.startTime = buf.readLong();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeLong(this.startTime);
     }
 
     @Override
     public void apply(ClientQueryPacketListener clientQueryPacketListener) {
         clientQueryPacketListener.onPong(this);
+    }
+
+    public long getStartTime() {
+        return this.startTime;
     }
 }
 

@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
@@ -70,7 +66,6 @@ implements Palette<T> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void fromPacket(PacketByteBuf buf) {
         this.size = buf.readVarInt();
         for (int i = 0; i < this.size; ++i) {
@@ -88,14 +83,15 @@ implements Palette<T> {
 
     @Override
     public int getPacketSize() {
-        int i = PacketByteBuf.getVarIntLength(this.getSize());
-        for (int j = 0; j < this.getSize(); ++j) {
+        int i = PacketByteBuf.getVarIntLength(this.getIndexBits());
+        for (int j = 0; j < this.getIndexBits(); ++j) {
             i += PacketByteBuf.getVarIntLength(this.idList.getRawId(this.array[j]));
         }
         return i;
     }
 
-    public int getSize() {
+    @Override
+    public int getIndexBits() {
         return this.size;
     }
 

@@ -2,24 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Strings
  *  com.google.common.collect.Iterables
  *  com.google.common.collect.Lists
- *  it.unimi.dsi.fastutil.bytes.ByteOpenHashSet
- *  it.unimi.dsi.fastutil.bytes.ByteSet
  */
 package net.minecraft.nbt;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.bytes.ByteOpenHashSet;
-import it.unimi.dsi.fastutil.bytes.ByteSet;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.nbt.AbstractNbtList;
@@ -29,15 +22,16 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtFloat;
 import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.NbtIntArray;
+import net.minecraft.nbt.NbtLongArray;
 import net.minecraft.nbt.NbtShort;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.NbtTypes;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtList
 extends AbstractNbtList<NbtElement> {
+    private static final int field_33199 = 296;
     public static final NbtType<NbtList> TYPE = new NbtType<NbtList>(){
 
         @Override
@@ -75,11 +69,10 @@ extends AbstractNbtList<NbtElement> {
             return this.read(input, depth, tracker);
         }
     };
-    private static final ByteSet NBT_NUMBER_TYPES = new ByteOpenHashSet(Arrays.asList((byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6));
     private final List<NbtElement> value;
     private byte type;
 
-    private NbtList(List<NbtElement> list, byte type) {
+    NbtList(List<NbtElement> list, byte type) {
         this.value = list;
         this.type = type;
     }
@@ -109,14 +102,7 @@ extends AbstractNbtList<NbtElement> {
 
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder("[");
-        for (int i = 0; i < this.value.size(); ++i) {
-            if (i != 0) {
-                stringBuilder.append(',');
-            }
-            stringBuilder.append(this.value.get(i));
-        }
-        return stringBuilder.append(']').toString();
+        return this.asString();
     }
 
     private void forgetTypeIfEmpty() {
@@ -175,6 +161,14 @@ extends AbstractNbtList<NbtElement> {
             return ((NbtIntArray)nbtElement).getIntArray();
         }
         return new int[0];
+    }
+
+    public long[] getLongArray(int index) {
+        NbtElement nbtElement;
+        if (index >= 0 && index < this.value.size() && (nbtElement = this.value.get(index)).getType() == 11) {
+            return ((NbtLongArray)nbtElement).getLongArray();
+        }
+        return new long[0];
     }
 
     public double getDouble(int index) {
@@ -280,40 +274,8 @@ extends AbstractNbtList<NbtElement> {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        if (this.isEmpty()) {
-            return new LiteralText("[]");
-        }
-        if (NBT_NUMBER_TYPES.contains(this.type) && this.size() <= 8) {
-            String string = ", ";
-            LiteralText mutableText = new LiteralText("[");
-            for (int i = 0; i < this.value.size(); ++i) {
-                if (i != 0) {
-                    mutableText.append(", ");
-                }
-                mutableText.append(this.value.get(i).toText());
-            }
-            mutableText.append("]");
-            return mutableText;
-        }
-        LiteralText mutableText2 = new LiteralText("[");
-        if (!indent.isEmpty()) {
-            mutableText2.append("\n");
-        }
-        String string2 = String.valueOf(',');
-        for (int i = 0; i < this.value.size(); ++i) {
-            LiteralText mutableText3 = new LiteralText(Strings.repeat((String)indent, (int)(depth + 1)));
-            mutableText3.append(this.value.get(i).toText(indent, depth + 1));
-            if (i != this.value.size() - 1) {
-                mutableText3.append(string2).append(indent.isEmpty() ? " " : "\n");
-            }
-            mutableText2.append(mutableText3);
-        }
-        if (!indent.isEmpty()) {
-            mutableText2.append("\n").append(Strings.repeat((String)indent, (int)depth));
-        }
-        mutableText2.append("]");
-        return mutableText2;
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitList(this);
     }
 
     @Override
@@ -348,8 +310,8 @@ extends AbstractNbtList<NbtElement> {
     }
 
     @Override
-    public /* synthetic */ Object get(int i) {
-        return this.get(i);
+    public /* synthetic */ Object get(int index) {
+        return this.get(index);
     }
 }
 

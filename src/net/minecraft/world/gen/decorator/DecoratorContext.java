@@ -11,27 +11,20 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 
-public class DecoratorContext {
+public class DecoratorContext
+extends HeightContext {
     private final StructureWorldAccess world;
-    private final ChunkGenerator generator;
 
     public DecoratorContext(StructureWorldAccess world, ChunkGenerator generator) {
+        super(generator, world);
         this.world = world;
-        this.generator = generator;
     }
 
     public int getTopY(Heightmap.Type heightmap, int x, int z) {
         return this.world.getTopY(heightmap, x, z);
-    }
-
-    public int getMaxY() {
-        return this.generator.getWorldHeight();
-    }
-
-    public int getSeaLevel() {
-        return this.generator.getSeaLevel();
     }
 
     public BitSet getOrCreateCarvingMask(ChunkPos chunkPos, GenerationStep.Carver carver) {
@@ -40,6 +33,14 @@ public class DecoratorContext {
 
     public BlockState getBlockState(BlockPos pos) {
         return this.world.getBlockState(pos);
+    }
+
+    public int getBottomY() {
+        return this.world.getBottomY();
+    }
+
+    public StructureWorldAccess getWorld() {
+        return this.world;
     }
 }
 

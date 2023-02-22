@@ -14,23 +14,28 @@ import net.minecraft.world.PersistentState;
 
 public class ChunkUpdateState
 extends PersistentState {
-    private LongSet all = new LongOpenHashSet();
-    private LongSet remaining = new LongOpenHashSet();
+    private static final String REMAINING_KEY = "Remaining";
+    private static final String ALL_KEY = "All";
+    private final LongSet all;
+    private final LongSet remaining;
 
-    public ChunkUpdateState(String string) {
-        super(string);
+    private ChunkUpdateState(LongSet all, LongSet remaining) {
+        this.all = all;
+        this.remaining = remaining;
     }
 
-    @Override
-    public void fromTag(NbtCompound tag) {
-        this.all = new LongOpenHashSet(tag.getLongArray("All"));
-        this.remaining = new LongOpenHashSet(tag.getLongArray("Remaining"));
+    public ChunkUpdateState() {
+        this((LongSet)new LongOpenHashSet(), (LongSet)new LongOpenHashSet());
+    }
+
+    public static ChunkUpdateState fromNbt(NbtCompound nbt) {
+        return new ChunkUpdateState((LongSet)new LongOpenHashSet(nbt.getLongArray(ALL_KEY)), (LongSet)new LongOpenHashSet(nbt.getLongArray(REMAINING_KEY)));
     }
 
     @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
-        nbt.putLongArray("All", this.all.toLongArray());
-        nbt.putLongArray("Remaining", this.remaining.toLongArray());
+        nbt.putLongArray(ALL_KEY, this.all.toLongArray());
+        nbt.putLongArray(REMAINING_KEY, this.remaining.toLongArray());
         return nbt;
     }
 

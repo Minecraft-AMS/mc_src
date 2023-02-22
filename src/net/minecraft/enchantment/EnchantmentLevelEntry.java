@@ -4,10 +4,10 @@
 package net.minecraft.enchantment;
 
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.util.collection.WeightedPicker;
+import net.minecraft.util.collection.Weighted;
 
 public class EnchantmentLevelEntry
-extends WeightedPicker.Entry {
+extends Weighted.Absent {
     public final Enchantment enchantment;
     public final int level;
 

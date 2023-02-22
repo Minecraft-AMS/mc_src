@@ -11,11 +11,20 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
-public enum AdvancementObtainedStatus {
-    OBTAINED(0),
-    UNOBTAINED(1);
-
+public final class AdvancementObtainedStatus
+extends Enum<AdvancementObtainedStatus> {
+    public static final /* enum */ AdvancementObtainedStatus OBTAINED = new AdvancementObtainedStatus(0);
+    public static final /* enum */ AdvancementObtainedStatus UNOBTAINED = new AdvancementObtainedStatus(1);
     private final int spriteIndex;
+    private static final /* synthetic */ AdvancementObtainedStatus[] field_2698;
+
+    public static AdvancementObtainedStatus[] values() {
+        return (AdvancementObtainedStatus[])field_2698.clone();
+    }
+
+    public static AdvancementObtainedStatus valueOf(String string) {
+        return Enum.valueOf(AdvancementObtainedStatus.class, string);
+    }
 
     private AdvancementObtainedStatus(int spriteIndex) {
         this.spriteIndex = spriteIndex;
@@ -23,6 +32,14 @@ public enum AdvancementObtainedStatus {
 
     public int getSpriteIndex() {
         return this.spriteIndex;
+    }
+
+    private static /* synthetic */ AdvancementObtainedStatus[] method_36884() {
+        return new AdvancementObtainedStatus[]{OBTAINED, UNOBTAINED};
+    }
+
+    static {
+        field_2698 = AdvancementObtainedStatus.method_36884();
     }
 }
 

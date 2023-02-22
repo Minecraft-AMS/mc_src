@@ -3,35 +3,38 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.snooper;
 
 import com.google.common.collect.Maps;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.minecraft.SharedConstants;
+import net.minecraft.util.Util;
 import net.minecraft.util.snooper.SnooperListener;
 
 public class Snooper {
-    private final Map<String, Object> initialInfo = Maps.newHashMap();
-    private final Map<String, Object> info = Maps.newHashMap();
-    private final String token = UUID.randomUUID().toString();
-    private final URL snooperUrl;
-    private final SnooperListener listener;
+    private static final String BASE_URL = "http://snoop.minecraft.net/";
+    private static final long field_29958 = 900000L;
+    private static final int VERSION = 2;
+    final Map<String, Object> initialInfo = Maps.newHashMap();
+    final Map<String, Object> info = Maps.newHashMap();
+    final String token = UUID.randomUUID().toString();
+    final URL snooperUrl;
+    final SnooperListener listener;
     private final Timer timer = new Timer("Snooper Timer", true);
-    private final Object syncObject = new Object();
+    final Object syncObject = new Object();
     private final long startTime;
     private boolean active;
+    int field_29960;
 
     public Snooper(String urlPath, SnooperListener listener, long startTime) {
         try {
-            this.snooperUrl = new URL("http://snoop.minecraft.net/" + urlPath + "?version=" + 2);
+            this.snooperUrl = new URL(BASE_URL + urlPath + "?version=2");
         }
         catch (MalformedURLException malformedURLException) {
             throw new IllegalArgumentException();
@@ -44,6 +47,28 @@ public class Snooper {
         if (!this.active) {
             // empty if block
         }
+    }
+
+    private void addInfo() {
+        this.addJvmFlags();
+        this.addInfo("snooper_token", this.token);
+        this.addInitialInfo("snooper_token", this.token);
+        this.addInitialInfo("os_name", System.getProperty("os.name"));
+        this.addInitialInfo("os_version", System.getProperty("os.version"));
+        this.addInitialInfo("os_architecture", System.getProperty("os.arch"));
+        this.addInitialInfo("java_version", System.getProperty("java.version"));
+        this.addInfo("version", SharedConstants.getGameVersion().getId());
+        this.listener.addInitialSnooperInfo(this);
+    }
+
+    private void addJvmFlags() {
+        int[] is = new int[]{0};
+        Util.getJVMFlags().forEach(flag -> {
+            int n = is[0];
+            is[0] = n + 1;
+            this.addInfo("jvm_arg[" + n + "]", flag);
+        });
+        this.addInfo("jvm_args", is[0]);
     }
 
     public void update() {
@@ -74,6 +99,24 @@ public class Snooper {
         }
     }
 
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    public Map<String, String> getInfo() {
+        LinkedHashMap map = Maps.newLinkedHashMap();
+        Object object = this.syncObject;
+        synchronized (object) {
+            this.update();
+            for (Map.Entry<String, Object> entry : this.initialInfo.entrySet()) {
+                map.put(entry.getKey(), entry.getValue().toString());
+            }
+            for (Map.Entry<String, Object> entry : this.info.entrySet()) {
+                map.put(entry.getKey(), entry.getValue().toString());
+            }
+        }
+        return map;
+    }
+
     public boolean isActive() {
         return this.active;
     }
@@ -82,7 +125,6 @@ public class Snooper {
         this.timer.cancel();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public String getToken() {
         return this.token;
     }

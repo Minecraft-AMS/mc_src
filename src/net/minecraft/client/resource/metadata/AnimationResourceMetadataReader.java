@@ -2,7 +2,8 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  com.google.common.collect.ImmutableList
+ *  com.google.common.collect.ImmutableList$Builder
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
@@ -10,15 +11,16 @@
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.Validate
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.resource.metadata;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import java.util.ArrayList;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.metadata.AnimationFrameResourceMetadata;
@@ -26,6 +28,7 @@ import net.minecraft.client.resource.metadata.AnimationResourceMetadata;
 import net.minecraft.resource.metadata.ResourceMetadataReader;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.lang3.Validate;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class AnimationResourceMetadataReader
@@ -33,7 +36,7 @@ implements ResourceMetadataReader<AnimationResourceMetadata> {
     @Override
     public AnimationResourceMetadata fromJson(JsonObject jsonObject) {
         int j;
-        ArrayList list = Lists.newArrayList();
+        ImmutableList.Builder builder = ImmutableList.builder();
         int i = JsonHelper.getInt(jsonObject, "frametime", 1);
         if (i != 1) {
             Validate.inclusiveBetween((long)1L, (long)Integer.MAX_VALUE, (long)i, (String)"Invalid default frame time");
@@ -45,7 +48,7 @@ implements ResourceMetadataReader<AnimationResourceMetadata> {
                     JsonElement jsonElement = jsonArray.get(j);
                     AnimationFrameResourceMetadata animationFrameResourceMetadata = this.readFrameMetadata(j, jsonElement);
                     if (animationFrameResourceMetadata == null) continue;
-                    list.add(animationFrameResourceMetadata);
+                    builder.add((Object)animationFrameResourceMetadata);
                 }
             }
             catch (ClassCastException classCastException) {
@@ -61,9 +64,10 @@ implements ResourceMetadataReader<AnimationResourceMetadata> {
             Validate.inclusiveBetween((long)1L, (long)Integer.MAX_VALUE, (long)j, (String)"Invalid height");
         }
         boolean bl = JsonHelper.getBoolean(jsonObject, "interpolate", false);
-        return new AnimationResourceMetadata(list, k, j, i, bl);
+        return new AnimationResourceMetadata((List<AnimationFrameResourceMetadata>)builder.build(), k, j, i, bl);
     }
 
+    @Nullable
     private AnimationFrameResourceMetadata readFrameMetadata(int frame, JsonElement json) {
         if (json.isJsonPrimitive()) {
             return new AnimationFrameResourceMetadata(JsonHelper.asInt(json, "frames[" + frame + "]"));

@@ -18,26 +18,30 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextCollector {
-    private final List<StringVisitable> field_25260 = Lists.newArrayList();
+    private final List<StringVisitable> texts = Lists.newArrayList();
 
     public void add(StringVisitable text) {
-        this.field_25260.add(text);
+        this.texts.add(text);
     }
 
     @Nullable
     public StringVisitable getRawCombined() {
-        if (this.field_25260.isEmpty()) {
+        if (this.texts.isEmpty()) {
             return null;
         }
-        if (this.field_25260.size() == 1) {
-            return this.field_25260.get(0);
+        if (this.texts.size() == 1) {
+            return this.texts.get(0);
         }
-        return StringVisitable.concat(this.field_25260);
+        return StringVisitable.concat(this.texts);
     }
 
     public StringVisitable getCombined() {
         StringVisitable stringVisitable = this.getRawCombined();
         return stringVisitable != null ? stringVisitable : StringVisitable.EMPTY;
+    }
+
+    public void clear() {
+        this.texts.clear();
     }
 }
 

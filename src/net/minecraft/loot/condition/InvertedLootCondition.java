@@ -23,9 +23,9 @@ import net.minecraft.util.JsonSerializer;
 
 public class InvertedLootCondition
 implements LootCondition {
-    private final LootCondition term;
+    final LootCondition term;
 
-    private InvertedLootCondition(LootCondition term) {
+    InvertedLootCondition(LootCondition term) {
         this.term = term;
     }
 

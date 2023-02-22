@@ -27,11 +27,11 @@ import net.minecraft.util.JsonHelper;
 
 public class SetNbtLootFunction
 extends ConditionalLootFunction {
-    private final NbtCompound nbt;
+    final NbtCompound nbt;
 
-    private SetNbtLootFunction(LootCondition[] conditions, NbtCompound tag) {
-        super(conditions);
-        this.nbt = tag;
+    SetNbtLootFunction(LootCondition[] lootConditions, NbtCompound nbtCompound) {
+        super(lootConditions);
+        this.nbt = nbtCompound;
     }
 
     @Override
@@ -41,7 +41,7 @@ extends ConditionalLootFunction {
 
     @Override
     public ItemStack process(ItemStack stack, LootContext context) {
-        stack.getOrCreateTag().copyFrom(this.nbt);
+        stack.getOrCreateNbt().copyFrom(this.nbt);
         return stack;
     }
 

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.player;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.FoodComponent;
@@ -97,12 +91,20 @@ public class HungerManager {
         return this.foodLevel;
     }
 
+    public int getPrevFoodLevel() {
+        return this.prevFoodLevel;
+    }
+
     public boolean isNotFull() {
         return this.foodLevel < 20;
     }
 
     public void addExhaustion(float exhaustion) {
         this.exhaustion = Math.min(this.exhaustion + exhaustion, 40.0f);
+    }
+
+    public float getExhaustion() {
+        return this.exhaustion;
     }
 
     public float getSaturationLevel() {
@@ -113,9 +115,12 @@ public class HungerManager {
         this.foodLevel = foodLevel;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setSaturationLevel(float saturationLevel) {
         this.foodSaturationLevel = saturationLevel;
+    }
+
+    public void setExhaustion(float exhaustion) {
+        this.exhaustion = exhaustion;
     }
 }
 

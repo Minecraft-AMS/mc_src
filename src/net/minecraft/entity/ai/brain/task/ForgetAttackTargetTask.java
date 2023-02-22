@@ -9,30 +9,46 @@ package net.minecraft.entity.ai.brain.task;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
 
 public class ForgetAttackTargetTask<E extends MobEntity>
 extends Task<E> {
+    private static final int REMEMBER_TIME = 200;
     private final Predicate<LivingEntity> alternativeCondition;
+    private final Consumer<E> forgetCallback;
+
+    public ForgetAttackTargetTask(Predicate<LivingEntity> condition, Consumer<E> forgetCallback) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED)));
+        this.alternativeCondition = condition;
+        this.forgetCallback = forgetCallback;
+    }
 
     public ForgetAttackTargetTask(Predicate<LivingEntity> alternativeCondition) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED)));
-        this.alternativeCondition = alternativeCondition;
+        this(alternativeCondition, mobEntity -> {});
+    }
+
+    public ForgetAttackTargetTask(Consumer<E> forgetCallback) {
+        this((LivingEntity livingEntity) -> false, forgetCallback);
     }
 
     public ForgetAttackTargetTask() {
-        this((LivingEntity livingEntity) -> false);
+        this((LivingEntity livingEntity) -> false, mobEntity -> {});
     }
 
     @Override
     protected void run(ServerWorld serverWorld, E mobEntity, long l) {
+        LivingEntity livingEntity = this.getAttackTarget(mobEntity);
+        if (!((LivingEntity)mobEntity).canTarget(livingEntity)) {
+            this.forgetAttackTarget(mobEntity);
+            return;
+        }
         if (ForgetAttackTargetTask.cannotReachTarget(mobEntity)) {
             this.forgetAttackTarget(mobEntity);
             return;
@@ -42,10 +58,6 @@ extends Task<E> {
             return;
         }
         if (this.isAttackTargetInAnotherWorld(mobEntity)) {
-            this.forgetAttackTarget(mobEntity);
-            return;
-        }
-        if (!EntityPredicates.EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL.test(this.getAttackTarget(mobEntity))) {
             this.forgetAttackTarget(mobEntity);
             return;
         }
@@ -73,7 +85,8 @@ extends Task<E> {
         return optional.isPresent() && !optional.get().isAlive();
     }
 
-    private void forgetAttackTarget(E entity) {
+    protected void forgetAttackTarget(E entity) {
+        this.forgetCallback.accept(entity);
         ((LivingEntity)entity).getBrain().forget(MemoryModuleType.ATTACK_TARGET);
     }
 }

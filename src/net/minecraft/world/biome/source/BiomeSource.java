@@ -6,8 +6,6 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.mojang.serialization.Codec
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.biome.source;
@@ -25,13 +23,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.CheckerboardBiomeSource;
 import net.minecraft.world.biome.source.FixedBiomeSource;
 import net.minecraft.world.biome.source.MultiNoiseBiomeSource;
@@ -57,7 +54,6 @@ implements BiomeAccess.Storage {
 
     protected abstract Codec<? extends BiomeSource> getCodec();
 
-    @Environment(value=EnvType.CLIENT)
     public abstract BiomeSource withSeed(long var1);
 
     public List<Biome> getBiomes() {
@@ -65,12 +61,12 @@ implements BiomeAccess.Storage {
     }
 
     public Set<Biome> getBiomesInArea(int x, int y, int z, int radius) {
-        int i = x - radius >> 2;
-        int j = y - radius >> 2;
-        int k = z - radius >> 2;
-        int l = x + radius >> 2;
-        int m = y + radius >> 2;
-        int n = z + radius >> 2;
+        int i = BiomeCoords.fromBlock(x - radius);
+        int j = BiomeCoords.fromBlock(y - radius);
+        int k = BiomeCoords.fromBlock(z - radius);
+        int l = BiomeCoords.fromBlock(x + radius);
+        int m = BiomeCoords.fromBlock(y + radius);
+        int n = BiomeCoords.fromBlock(z + radius);
         int o = l - i + 1;
         int p = m - j + 1;
         int q = n - k + 1;
@@ -96,10 +92,10 @@ implements BiomeAccess.Storage {
     @Nullable
     public BlockPos locateBiome(int x, int y, int z, int radius, int i, Predicate<Biome> predicate, Random random, boolean bl) {
         int o;
-        int j = x >> 2;
-        int k = z >> 2;
-        int l = radius >> 2;
-        int m = y >> 2;
+        int j = BiomeCoords.fromBlock(x);
+        int k = BiomeCoords.fromBlock(z);
+        int l = BiomeCoords.fromBlock(radius);
+        int m = BiomeCoords.fromBlock(y);
         BlockPos blockPos = null;
         int n = 0;
         for (int p = o = bl ? 0 : l; p <= l; p += i) {
@@ -115,7 +111,7 @@ implements BiomeAccess.Storage {
                     }
                     if (!predicate.test(this.getBiomeForNoiseGen(s = j + r, m, t = k + q))) continue;
                     if (blockPos == null || random.nextInt(n + 1) == 0) {
-                        blockPos = new BlockPos(s << 2, y, t << 2);
+                        blockPos = new BlockPos(BiomeCoords.toBlock(s), y, BiomeCoords.toBlock(t));
                         if (bl) {
                             return blockPos;
                         }

@@ -2,82 +2,72 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.ParrotEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class ParrotEntityModel
-extends CompositeEntityModel<ParrotEntity> {
+extends SinglePartEntityModel<ParrotEntity> {
+    private static final String FEATHER = "feather";
+    private final ModelPart root;
     private final ModelPart body;
     private final ModelPart tail;
     private final ModelPart leftWing;
     private final ModelPart rightWing;
     private final ModelPart head;
-    private final ModelPart forehead;
-    private final ModelPart innerBeak;
-    private final ModelPart outerBeak;
     private final ModelPart feather;
     private final ModelPart leftLeg;
     private final ModelPart rightLeg;
 
-    public ParrotEntityModel() {
-        this.textureWidth = 32;
-        this.textureHeight = 32;
-        this.body = new ModelPart(this, 2, 8);
-        this.body.addCuboid(-1.5f, 0.0f, -1.5f, 3.0f, 6.0f, 3.0f);
-        this.body.setPivot(0.0f, 16.5f, -3.0f);
-        this.tail = new ModelPart(this, 22, 1);
-        this.tail.addCuboid(-1.5f, -1.0f, -1.0f, 3.0f, 4.0f, 1.0f);
-        this.tail.setPivot(0.0f, 21.07f, 1.16f);
-        this.leftWing = new ModelPart(this, 19, 8);
-        this.leftWing.addCuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f);
-        this.leftWing.setPivot(1.5f, 16.94f, -2.76f);
-        this.rightWing = new ModelPart(this, 19, 8);
-        this.rightWing.addCuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f);
-        this.rightWing.setPivot(-1.5f, 16.94f, -2.76f);
-        this.head = new ModelPart(this, 2, 2);
-        this.head.addCuboid(-1.0f, -1.5f, -1.0f, 2.0f, 3.0f, 2.0f);
-        this.head.setPivot(0.0f, 15.69f, -2.76f);
-        this.forehead = new ModelPart(this, 10, 0);
-        this.forehead.addCuboid(-1.0f, -0.5f, -2.0f, 2.0f, 1.0f, 4.0f);
-        this.forehead.setPivot(0.0f, -2.0f, -1.0f);
-        this.head.addChild(this.forehead);
-        this.innerBeak = new ModelPart(this, 11, 7);
-        this.innerBeak.addCuboid(-0.5f, -1.0f, -0.5f, 1.0f, 2.0f, 1.0f);
-        this.innerBeak.setPivot(0.0f, -0.5f, -1.5f);
-        this.head.addChild(this.innerBeak);
-        this.outerBeak = new ModelPart(this, 16, 7);
-        this.outerBeak.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
-        this.outerBeak.setPivot(0.0f, -1.75f, -2.45f);
-        this.head.addChild(this.outerBeak);
-        this.feather = new ModelPart(this, 2, 18);
-        this.feather.addCuboid(0.0f, -4.0f, -2.0f, 0.0f, 5.0f, 4.0f);
-        this.feather.setPivot(0.0f, -2.15f, 0.15f);
-        this.head.addChild(this.feather);
-        this.leftLeg = new ModelPart(this, 14, 18);
-        this.leftLeg.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
-        this.leftLeg.setPivot(1.0f, 22.0f, -1.05f);
-        this.rightLeg = new ModelPart(this, 14, 18);
-        this.rightLeg.addCuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
-        this.rightLeg.setPivot(-1.0f, 22.0f, -1.05f);
+    public ParrotEntityModel(ModelPart root) {
+        this.root = root;
+        this.body = root.getChild("body");
+        this.tail = root.getChild("tail");
+        this.leftWing = root.getChild("left_wing");
+        this.rightWing = root.getChild("right_wing");
+        this.head = root.getChild("head");
+        this.feather = this.head.getChild(FEATHER);
+        this.leftLeg = root.getChild("left_leg");
+        this.rightLeg = root.getChild("right_leg");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(2, 8).cuboid(-1.5f, 0.0f, -1.5f, 3.0f, 6.0f, 3.0f), ModelTransform.pivot(0.0f, 16.5f, -3.0f));
+        modelPartData.addChild("tail", ModelPartBuilder.create().uv(22, 1).cuboid(-1.5f, -1.0f, -1.0f, 3.0f, 4.0f, 1.0f), ModelTransform.pivot(0.0f, 21.07f, 1.16f));
+        modelPartData.addChild("left_wing", ModelPartBuilder.create().uv(19, 8).cuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f), ModelTransform.pivot(1.5f, 16.94f, -2.76f));
+        modelPartData.addChild("right_wing", ModelPartBuilder.create().uv(19, 8).cuboid(-0.5f, 0.0f, -1.5f, 1.0f, 5.0f, 3.0f), ModelTransform.pivot(-1.5f, 16.94f, -2.76f));
+        ModelPartData modelPartData2 = modelPartData.addChild("head", ModelPartBuilder.create().uv(2, 2).cuboid(-1.0f, -1.5f, -1.0f, 2.0f, 3.0f, 2.0f), ModelTransform.pivot(0.0f, 15.69f, -2.76f));
+        modelPartData2.addChild("head2", ModelPartBuilder.create().uv(10, 0).cuboid(-1.0f, -0.5f, -2.0f, 2.0f, 1.0f, 4.0f), ModelTransform.pivot(0.0f, -2.0f, -1.0f));
+        modelPartData2.addChild("beak1", ModelPartBuilder.create().uv(11, 7).cuboid(-0.5f, -1.0f, -0.5f, 1.0f, 2.0f, 1.0f), ModelTransform.pivot(0.0f, -0.5f, -1.5f));
+        modelPartData2.addChild("beak2", ModelPartBuilder.create().uv(16, 7).cuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f), ModelTransform.pivot(0.0f, -1.75f, -2.45f));
+        modelPartData2.addChild(FEATHER, ModelPartBuilder.create().uv(2, 18).cuboid(0.0f, -4.0f, -2.0f, 0.0f, 5.0f, 4.0f), ModelTransform.pivot(0.0f, -2.15f, 0.15f));
+        ModelPartBuilder modelPartBuilder = ModelPartBuilder.create().uv(14, 18).cuboid(-0.5f, 0.0f, -0.5f, 1.0f, 2.0f, 1.0f);
+        modelPartData.addChild("left_leg", modelPartBuilder, ModelTransform.pivot(1.0f, 22.0f, -1.05f));
+        modelPartData.addChild("right_leg", modelPartBuilder, ModelTransform.pivot(-1.0f, 22.0f, -1.05f));
+        return TexturedModelData.of(modelData, 32, 32);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.body, (Object)this.leftWing, (Object)this.rightWing, (Object)this.tail, (Object)this.head, (Object)this.leftLeg, (Object)this.rightLeg);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override
@@ -93,7 +83,7 @@ extends CompositeEntityModel<ParrotEntity> {
     public void poseOnShoulder(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float limbAngle, float limbDistance, float headYaw, float headPitch, int danceAngle) {
         this.animateModel(Pose.ON_SHOULDER);
         this.setAngles(Pose.ON_SHOULDER, danceAngle, limbAngle, limbDistance, 0.0f, headYaw, headPitch);
-        this.getParts().forEach(modelPart -> modelPart.render(matrices, vertexConsumer, light, overlay));
+        this.root.render(matrices, vertexConsumer, light, overlay);
     }
 
     private void setAngles(Pose pose, int danceAngle, float limbAngle, float limbDistance, float age, float headYaw, float headPitch) {
@@ -206,13 +196,30 @@ extends CompositeEntityModel<ParrotEntity> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Pose {
-        FLYING,
-        STANDING,
-        SITTING,
-        PARTY,
-        ON_SHOULDER;
+    public static final class Pose
+    extends Enum<Pose> {
+        public static final /* enum */ Pose FLYING = new Pose();
+        public static final /* enum */ Pose STANDING = new Pose();
+        public static final /* enum */ Pose SITTING = new Pose();
+        public static final /* enum */ Pose PARTY = new Pose();
+        public static final /* enum */ Pose ON_SHOULDER = new Pose();
+        private static final /* synthetic */ Pose[] field_3467;
 
+        public static Pose[] values() {
+            return (Pose[])field_3467.clone();
+        }
+
+        public static Pose valueOf(String string) {
+            return Enum.valueOf(Pose.class, string);
+        }
+
+        private static /* synthetic */ Pose[] method_36893() {
+            return new Pose[]{FLYING, STANDING, SITTING, PARTY, ON_SHOULDER};
+        }
+
+        static {
+            field_3467 = Pose.method_36893();
+        }
     }
 }
 

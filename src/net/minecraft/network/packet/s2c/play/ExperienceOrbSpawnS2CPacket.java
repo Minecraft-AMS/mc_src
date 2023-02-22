@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -17,25 +10,21 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class ExperienceOrbSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private double x;
-    private double y;
-    private double z;
-    private int experience;
-
-    public ExperienceOrbSpawnS2CPacket() {
-    }
+    private final int id;
+    private final double x;
+    private final double y;
+    private final double z;
+    private final int experience;
 
     public ExperienceOrbSpawnS2CPacket(ExperienceOrbEntity experienceOrbEntity) {
-        this.id = experienceOrbEntity.getEntityId();
+        this.id = experienceOrbEntity.getId();
         this.x = experienceOrbEntity.getX();
         this.y = experienceOrbEntity.getY();
         this.z = experienceOrbEntity.getZ();
         this.experience = experienceOrbEntity.getExperienceAmount();
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ExperienceOrbSpawnS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.x = buf.readDouble();
         this.y = buf.readDouble();
@@ -44,7 +33,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeDouble(this.x);
         buf.writeDouble(this.y);
@@ -57,27 +46,22 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onExperienceOrbSpawn(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getExperience() {
         return this.experience;
     }

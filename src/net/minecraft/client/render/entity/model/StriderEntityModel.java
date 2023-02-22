@@ -2,129 +2,117 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.passive.StriderEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class StriderEntityModel<T extends StriderEntity>
-extends CompositeEntityModel<T> {
-    private final ModelPart field_23353;
-    private final ModelPart field_23354;
-    private final ModelPart field_23355;
-    private final ModelPart field_23356;
-    private final ModelPart field_23357;
-    private final ModelPart field_23358;
-    private final ModelPart field_23359;
-    private final ModelPart field_23360;
-    private final ModelPart field_23361;
+extends SinglePartEntityModel<T> {
+    private static final String RIGHT_BOTTOM_BRISTLE = "right_bottom_bristle";
+    private static final String RIGHT_MIDDLE_BRISTLE = "right_middle_bristle";
+    private static final String RIGHT_TOP_BRISTLE = "right_top_bristle";
+    private static final String LEFT_TOP_BRISTLE = "left_top_bristle";
+    private static final String LEFT_MIDDLE_BRISTLE = "left_middle_bristle";
+    private static final String LEFT_BOTTOM_BRISTLE = "left_bottom_bristle";
+    private final ModelPart root;
+    private final ModelPart rightLeg;
+    private final ModelPart leftLeg;
+    private final ModelPart body;
+    private final ModelPart rightBottomBristle;
+    private final ModelPart rightMiddleBristle;
+    private final ModelPart rightTopBristle;
+    private final ModelPart leftTopBristle;
+    private final ModelPart leftMiddleBristle;
+    private final ModelPart leftBottomBristle;
 
-    public StriderEntityModel() {
-        this.textureWidth = 64;
-        this.textureHeight = 128;
-        this.field_23353 = new ModelPart(this, 0, 32);
-        this.field_23353.setPivot(-4.0f, 8.0f, 0.0f);
-        this.field_23353.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 16.0f, 4.0f, 0.0f);
-        this.field_23354 = new ModelPart(this, 0, 55);
-        this.field_23354.setPivot(4.0f, 8.0f, 0.0f);
-        this.field_23354.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 16.0f, 4.0f, 0.0f);
-        this.field_23355 = new ModelPart(this, 0, 0);
-        this.field_23355.setPivot(0.0f, 1.0f, 0.0f);
-        this.field_23355.addCuboid(-8.0f, -6.0f, -8.0f, 16.0f, 14.0f, 16.0f, 0.0f);
-        this.field_23356 = new ModelPart(this, 16, 65);
-        this.field_23356.setPivot(-8.0f, 4.0f, -8.0f);
-        this.field_23356.addCuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f, true);
-        this.method_26415(this.field_23356, 0.0f, 0.0f, -1.2217305f);
-        this.field_23357 = new ModelPart(this, 16, 49);
-        this.field_23357.setPivot(-8.0f, -1.0f, -8.0f);
-        this.field_23357.addCuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f, true);
-        this.method_26415(this.field_23357, 0.0f, 0.0f, -1.134464f);
-        this.field_23358 = new ModelPart(this, 16, 33);
-        this.field_23358.setPivot(-8.0f, -5.0f, -8.0f);
-        this.field_23358.addCuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f, true);
-        this.method_26415(this.field_23358, 0.0f, 0.0f, -0.87266463f);
-        this.field_23359 = new ModelPart(this, 16, 33);
-        this.field_23359.setPivot(8.0f, -6.0f, -8.0f);
-        this.field_23359.addCuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f);
-        this.method_26415(this.field_23359, 0.0f, 0.0f, 0.87266463f);
-        this.field_23360 = new ModelPart(this, 16, 49);
-        this.field_23360.setPivot(8.0f, -2.0f, -8.0f);
-        this.field_23360.addCuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f);
-        this.method_26415(this.field_23360, 0.0f, 0.0f, 1.134464f);
-        this.field_23361 = new ModelPart(this, 16, 65);
-        this.field_23361.setPivot(8.0f, 3.0f, -8.0f);
-        this.field_23361.addCuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, 0.0f);
-        this.method_26415(this.field_23361, 0.0f, 0.0f, 1.2217305f);
-        this.field_23355.addChild(this.field_23356);
-        this.field_23355.addChild(this.field_23357);
-        this.field_23355.addChild(this.field_23358);
-        this.field_23355.addChild(this.field_23359);
-        this.field_23355.addChild(this.field_23360);
-        this.field_23355.addChild(this.field_23361);
+    public StriderEntityModel(ModelPart root) {
+        this.root = root;
+        this.rightLeg = root.getChild("right_leg");
+        this.leftLeg = root.getChild("left_leg");
+        this.body = root.getChild("body");
+        this.rightBottomBristle = this.body.getChild(RIGHT_BOTTOM_BRISTLE);
+        this.rightMiddleBristle = this.body.getChild(RIGHT_MIDDLE_BRISTLE);
+        this.rightTopBristle = this.body.getChild(RIGHT_TOP_BRISTLE);
+        this.leftTopBristle = this.body.getChild(LEFT_TOP_BRISTLE);
+        this.leftMiddleBristle = this.body.getChild(LEFT_MIDDLE_BRISTLE);
+        this.leftBottomBristle = this.body.getChild(LEFT_BOTTOM_BRISTLE);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("right_leg", ModelPartBuilder.create().uv(0, 32).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 16.0f, 4.0f), ModelTransform.pivot(-4.0f, 8.0f, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(0, 55).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 16.0f, 4.0f), ModelTransform.pivot(4.0f, 8.0f, 0.0f));
+        ModelPartData modelPartData2 = modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-8.0f, -6.0f, -8.0f, 16.0f, 14.0f, 16.0f), ModelTransform.pivot(0.0f, 1.0f, 0.0f));
+        modelPartData2.addChild(RIGHT_BOTTOM_BRISTLE, ModelPartBuilder.create().uv(16, 65).cuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, true), ModelTransform.of(-8.0f, 4.0f, -8.0f, 0.0f, 0.0f, -1.2217305f));
+        modelPartData2.addChild(RIGHT_MIDDLE_BRISTLE, ModelPartBuilder.create().uv(16, 49).cuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, true), ModelTransform.of(-8.0f, -1.0f, -8.0f, 0.0f, 0.0f, -1.134464f));
+        modelPartData2.addChild(RIGHT_TOP_BRISTLE, ModelPartBuilder.create().uv(16, 33).cuboid(-12.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f, true), ModelTransform.of(-8.0f, -5.0f, -8.0f, 0.0f, 0.0f, -0.87266463f));
+        modelPartData2.addChild(LEFT_TOP_BRISTLE, ModelPartBuilder.create().uv(16, 33).cuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f), ModelTransform.of(8.0f, -6.0f, -8.0f, 0.0f, 0.0f, 0.87266463f));
+        modelPartData2.addChild(LEFT_MIDDLE_BRISTLE, ModelPartBuilder.create().uv(16, 49).cuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f), ModelTransform.of(8.0f, -2.0f, -8.0f, 0.0f, 0.0f, 1.134464f));
+        modelPartData2.addChild(LEFT_BOTTOM_BRISTLE, ModelPartBuilder.create().uv(16, 65).cuboid(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, 16.0f), ModelTransform.of(8.0f, 3.0f, -8.0f, 0.0f, 0.0f, 1.2217305f));
+        return TexturedModelData.of(modelData, 64, 128);
     }
 
     @Override
     public void setAngles(StriderEntity striderEntity, float f, float g, float h, float i, float j) {
         g = Math.min(0.25f, g);
-        if (striderEntity.getPassengerList().size() <= 0) {
-            this.field_23355.pitch = j * ((float)Math.PI / 180);
-            this.field_23355.yaw = i * ((float)Math.PI / 180);
+        if (!striderEntity.hasPassengers()) {
+            this.body.pitch = j * ((float)Math.PI / 180);
+            this.body.yaw = i * ((float)Math.PI / 180);
         } else {
-            this.field_23355.pitch = 0.0f;
-            this.field_23355.yaw = 0.0f;
+            this.body.pitch = 0.0f;
+            this.body.yaw = 0.0f;
         }
         float k = 1.5f;
-        this.field_23355.roll = 0.1f * MathHelper.sin(f * 1.5f) * 4.0f * g;
-        this.field_23355.pivotY = 2.0f;
-        this.field_23355.pivotY -= 2.0f * MathHelper.cos(f * 1.5f) * 2.0f * g;
-        this.field_23354.pitch = MathHelper.sin(f * 1.5f * 0.5f) * 2.0f * g;
-        this.field_23353.pitch = MathHelper.sin(f * 1.5f * 0.5f + (float)Math.PI) * 2.0f * g;
-        this.field_23354.roll = 0.17453292f * MathHelper.cos(f * 1.5f * 0.5f) * g;
-        this.field_23353.roll = 0.17453292f * MathHelper.cos(f * 1.5f * 0.5f + (float)Math.PI) * g;
-        this.field_23354.pivotY = 8.0f + 2.0f * MathHelper.sin(f * 1.5f * 0.5f + (float)Math.PI) * 2.0f * g;
-        this.field_23353.pivotY = 8.0f + 2.0f * MathHelper.sin(f * 1.5f * 0.5f) * 2.0f * g;
-        this.field_23356.roll = -1.2217305f;
-        this.field_23357.roll = -1.134464f;
-        this.field_23358.roll = -0.87266463f;
-        this.field_23359.roll = 0.87266463f;
-        this.field_23360.roll = 1.134464f;
-        this.field_23361.roll = 1.2217305f;
+        this.body.roll = 0.1f * MathHelper.sin(f * 1.5f) * 4.0f * g;
+        this.body.pivotY = 2.0f;
+        this.body.pivotY -= 2.0f * MathHelper.cos(f * 1.5f) * 2.0f * g;
+        this.leftLeg.pitch = MathHelper.sin(f * 1.5f * 0.5f) * 2.0f * g;
+        this.rightLeg.pitch = MathHelper.sin(f * 1.5f * 0.5f + (float)Math.PI) * 2.0f * g;
+        this.leftLeg.roll = 0.17453292f * MathHelper.cos(f * 1.5f * 0.5f) * g;
+        this.rightLeg.roll = 0.17453292f * MathHelper.cos(f * 1.5f * 0.5f + (float)Math.PI) * g;
+        this.leftLeg.pivotY = 8.0f + 2.0f * MathHelper.sin(f * 1.5f * 0.5f + (float)Math.PI) * 2.0f * g;
+        this.rightLeg.pivotY = 8.0f + 2.0f * MathHelper.sin(f * 1.5f * 0.5f) * 2.0f * g;
+        this.rightBottomBristle.roll = -1.2217305f;
+        this.rightMiddleBristle.roll = -1.134464f;
+        this.rightTopBristle.roll = -0.87266463f;
+        this.leftTopBristle.roll = 0.87266463f;
+        this.leftMiddleBristle.roll = 1.134464f;
+        this.leftBottomBristle.roll = 1.2217305f;
         float l = MathHelper.cos(f * 1.5f + (float)Math.PI) * g;
-        this.field_23356.roll += l * 1.3f;
-        this.field_23357.roll += l * 1.2f;
-        this.field_23358.roll += l * 0.6f;
-        this.field_23359.roll += l * 0.6f;
-        this.field_23360.roll += l * 1.2f;
-        this.field_23361.roll += l * 1.3f;
+        this.rightBottomBristle.roll += l * 1.3f;
+        this.rightMiddleBristle.roll += l * 1.2f;
+        this.rightTopBristle.roll += l * 0.6f;
+        this.leftTopBristle.roll += l * 0.6f;
+        this.leftMiddleBristle.roll += l * 1.2f;
+        this.leftBottomBristle.roll += l * 1.3f;
         float m = 1.0f;
         float n = 1.0f;
-        this.field_23356.roll += 0.05f * MathHelper.sin(h * 1.0f * -0.4f);
-        this.field_23357.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.2f);
-        this.field_23358.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.4f);
-        this.field_23359.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.4f);
-        this.field_23360.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.2f);
-        this.field_23361.roll += 0.05f * MathHelper.sin(h * 1.0f * -0.4f);
-    }
-
-    public void method_26415(ModelPart modelPart, float f, float g, float h) {
-        modelPart.pitch = f;
-        modelPart.yaw = g;
-        modelPart.roll = h;
+        this.rightBottomBristle.roll += 0.05f * MathHelper.sin(h * 1.0f * -0.4f);
+        this.rightMiddleBristle.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.2f);
+        this.rightTopBristle.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.4f);
+        this.leftTopBristle.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.4f);
+        this.leftMiddleBristle.roll += 0.1f * MathHelper.sin(h * 1.0f * 0.2f);
+        this.leftBottomBristle.roll += 0.05f * MathHelper.sin(h * 1.0f * -0.4f);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.field_23355, (Object)this.field_23354, (Object)this.field_23353);
+    public ModelPart getPart() {
+        return this.root;
     }
 }
 

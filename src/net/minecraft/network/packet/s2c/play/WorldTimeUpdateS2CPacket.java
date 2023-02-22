@@ -1,46 +1,33 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class WorldTimeUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private long time;
-    private long timeOfDay;
-
-    public WorldTimeUpdateS2CPacket() {
-    }
+    private final long time;
+    private final long timeOfDay;
 
     public WorldTimeUpdateS2CPacket(long time, long timeOfDay, boolean doDaylightCycle) {
         this.time = time;
-        this.timeOfDay = timeOfDay;
-        if (!doDaylightCycle) {
-            this.timeOfDay = -this.timeOfDay;
-            if (this.timeOfDay == 0L) {
-                this.timeOfDay = -1L;
-            }
+        long l = timeOfDay;
+        if (!doDaylightCycle && (l = -l) == 0L) {
+            l = -1L;
         }
+        this.timeOfDay = l;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public WorldTimeUpdateS2CPacket(PacketByteBuf buf) {
         this.time = buf.readLong();
         this.timeOfDay = buf.readLong();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeLong(this.time);
         buf.writeLong(this.timeOfDay);
     }
@@ -50,12 +37,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onWorldTimeUpdate(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public long getTime() {
         return this.time;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public long getTimeOfDay() {
         return this.timeOfDay;
     }

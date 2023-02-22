@@ -15,13 +15,22 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.DirectionTransformation;
 
-public enum BlockRotation {
-    NONE(DirectionTransformation.IDENTITY),
-    CLOCKWISE_90(DirectionTransformation.ROT_90_Y_NEG),
-    CLOCKWISE_180(DirectionTransformation.ROT_180_FACE_XZ),
-    COUNTERCLOCKWISE_90(DirectionTransformation.ROT_90_Y_POS);
-
+public final class BlockRotation
+extends Enum<BlockRotation> {
+    public static final /* enum */ BlockRotation NONE = new BlockRotation(DirectionTransformation.IDENTITY);
+    public static final /* enum */ BlockRotation CLOCKWISE_90 = new BlockRotation(DirectionTransformation.ROT_90_Y_NEG);
+    public static final /* enum */ BlockRotation CLOCKWISE_180 = new BlockRotation(DirectionTransformation.ROT_180_FACE_XZ);
+    public static final /* enum */ BlockRotation COUNTERCLOCKWISE_90 = new BlockRotation(DirectionTransformation.ROT_90_Y_POS);
     private final DirectionTransformation directionTransformation;
+    private static final /* synthetic */ BlockRotation[] field_11466;
+
+    public static BlockRotation[] values() {
+        return (BlockRotation[])field_11466.clone();
+    }
+
+    public static BlockRotation valueOf(String string) {
+        return Enum.valueOf(BlockRotation.class, string);
+    }
 
     private BlockRotation(DirectionTransformation directionTransformation) {
         this.directionTransformation = directionTransformation;
@@ -126,6 +135,14 @@ public enum BlockRotation {
         ArrayList list = Lists.newArrayList((Object[])BlockRotation.values());
         Collections.shuffle(list, random);
         return list;
+    }
+
+    private static /* synthetic */ BlockRotation[] method_36709() {
+        return new BlockRotation[]{NONE, CLOCKWISE_90, CLOCKWISE_180, COUNTERCLOCKWISE_90};
+    }
+
+    static {
+        field_11466 = BlockRotation.method_36709();
     }
 }
 

@@ -32,10 +32,10 @@ import net.minecraft.util.registry.Registry;
 
 public class BlockStatePropertyLootCondition
 implements LootCondition {
-    private final Block block;
-    private final StatePredicate properties;
+    final Block block;
+    final StatePredicate properties;
 
-    private BlockStatePropertyLootCondition(Block block, StatePredicate properties) {
+    BlockStatePropertyLootCondition(Block block, StatePredicate properties) {
         this.block = block;
         this.properties = properties;
     }
@@ -53,7 +53,7 @@ implements LootCondition {
     @Override
     public boolean test(LootContext lootContext) {
         BlockState blockState = lootContext.get(LootContextParameters.BLOCK_STATE);
-        return blockState != null && this.block == blockState.getBlock() && this.properties.test(blockState);
+        return blockState != null && blockState.isOf(this.block) && this.properties.test(blockState);
     }
 
     public static Builder builder(Block block) {
@@ -63,31 +63,6 @@ implements LootCondition {
     @Override
     public /* synthetic */ boolean test(Object context) {
         return this.test((LootContext)context);
-    }
-
-    public static class Serializer
-    implements JsonSerializer<BlockStatePropertyLootCondition> {
-        @Override
-        public void toJson(JsonObject jsonObject, BlockStatePropertyLootCondition blockStatePropertyLootCondition, JsonSerializationContext jsonSerializationContext) {
-            jsonObject.addProperty("block", Registry.BLOCK.getId(blockStatePropertyLootCondition.block).toString());
-            jsonObject.add("properties", blockStatePropertyLootCondition.properties.toJson());
-        }
-
-        @Override
-        public BlockStatePropertyLootCondition fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
-            Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "block"));
-            Block block = Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
-            StatePredicate statePredicate = StatePredicate.fromJson(jsonObject.get("properties"));
-            statePredicate.check(block.getStateManager(), string -> {
-                throw new JsonSyntaxException("Block " + block + " has no property " + string);
-            });
-            return new BlockStatePropertyLootCondition(block, statePredicate);
-        }
-
-        @Override
-        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
-            return this.fromJson(json, context);
-        }
     }
 
     public static class Builder
@@ -107,6 +82,31 @@ implements LootCondition {
         @Override
         public LootCondition build() {
             return new BlockStatePropertyLootCondition(this.block, this.propertyValues);
+        }
+    }
+
+    public static class Serializer
+    implements JsonSerializer<BlockStatePropertyLootCondition> {
+        @Override
+        public void toJson(JsonObject jsonObject, BlockStatePropertyLootCondition blockStatePropertyLootCondition, JsonSerializationContext jsonSerializationContext) {
+            jsonObject.addProperty("block", Registry.BLOCK.getId(blockStatePropertyLootCondition.block).toString());
+            jsonObject.add("properties", blockStatePropertyLootCondition.properties.toJson());
+        }
+
+        @Override
+        public BlockStatePropertyLootCondition fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) {
+            Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "block"));
+            Block block = Registry.BLOCK.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Can't find block " + identifier));
+            StatePredicate statePredicate = StatePredicate.fromJson(jsonObject.get("properties"));
+            statePredicate.check(block.getStateManager(), propertyName -> {
+                throw new JsonSyntaxException("Block " + block + " has no property " + propertyName);
+            });
+            return new BlockStatePropertyLootCondition(block, statePredicate);
+        }
+
+        @Override
+        public /* synthetic */ Object fromJson(JsonObject json, JsonDeserializationContext context) {
+            return this.fromJson(json, context);
         }
     }
 }

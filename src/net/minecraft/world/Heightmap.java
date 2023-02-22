@@ -6,8 +6,8 @@
  *  com.mojang.serialization.Codec
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.apache.logging.log4j.LogManager
+ *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
@@ -16,11 +16,10 @@ import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
@@ -28,19 +27,25 @@ import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.PackedIntegerArray;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.Chunk;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class Heightmap {
-    private static final Predicate<BlockState> NOT_AIR = blockState -> !blockState.isAir();
-    private static final Predicate<BlockState> SUFFOCATES = blockState -> blockState.getMaterial().blocksMovement();
-    private final PackedIntegerArray storage = new PackedIntegerArray(9, 256);
+    private static final Logger LOGGER = LogManager.getLogger();
+    static final Predicate<BlockState> NOT_AIR = state -> !state.isAir();
+    static final Predicate<BlockState> SUFFOCATES = state -> state.getMaterial().blocksMovement();
+    private final PackedIntegerArray storage;
     private final Predicate<BlockState> blockPredicate;
     private final Chunk chunk;
 
     public Heightmap(Chunk chunk, Type type) {
         this.blockPredicate = type.getBlockPredicate();
         this.chunk = chunk;
+        int i = MathHelper.log2DeBruijn(chunk.getHeight() + 1);
+        this.storage = new PackedIntegerArray(i, 256);
     }
 
     public static void populateHeightmaps(Chunk chunk, Set<Type> types) {
@@ -54,7 +59,7 @@ public class Heightmap {
                 for (Type type : types) {
                     objectList.add((Object)chunk.getHeightmap(type));
                 }
-                for (int m = j - 1; m >= 0; --m) {
+                for (int m = j - 1; m >= chunk.getBottomY(); --m) {
                     mutable.set(k, m, l);
                     BlockState blockState = chunk.getBlockState(mutable);
                     if (blockState.isOf(Blocks.AIR)) continue;
@@ -83,13 +88,13 @@ public class Heightmap {
             }
         } else if (i - 1 == y) {
             BlockPos.Mutable mutable = new BlockPos.Mutable();
-            for (int j = y - 1; j >= 0; --j) {
+            for (int j = y - 1; j >= this.chunk.getBottomY(); --j) {
                 mutable.set(x, j, z);
                 if (!this.blockPredicate.test(this.chunk.getBlockState(mutable))) continue;
                 this.set(x, z, j + 1);
                 return true;
             }
-            this.set(x, z, 0);
+            this.set(x, z, this.chunk.getBottomY());
             return true;
         }
         return false;
@@ -99,16 +104,26 @@ public class Heightmap {
         return this.get(Heightmap.toIndex(x, z));
     }
 
+    public int method_35334(int i, int j) {
+        return this.get(Heightmap.toIndex(i, j)) - 1;
+    }
+
     private int get(int index) {
-        return this.storage.get(index);
+        return this.storage.get(index) + this.chunk.getBottomY();
     }
 
     private void set(int x, int z, int height) {
-        this.storage.set(Heightmap.toIndex(x, z), height);
+        this.storage.set(Heightmap.toIndex(x, z), height - this.chunk.getBottomY());
     }
 
-    public void setTo(long[] heightmap) {
-        System.arraycopy(heightmap, 0, this.storage.getStorage(), 0, heightmap.length);
+    public void setTo(Chunk chunk, Type type, long[] ls) {
+        long[] ms = this.storage.getStorage();
+        if (ms.length == ls.length) {
+            System.arraycopy(ls, 0, ms, 0, ls.length);
+            return;
+        }
+        LOGGER.warn("Ignoring heightmap data for chunk " + chunk.getPos() + ", size does not match; expected: " + ms.length + ", got: " + ls.length);
+        Heightmap.populateHeightmaps(chunk, EnumSet.of(type));
     }
 
     public long[] asLongArray() {
@@ -119,28 +134,29 @@ public class Heightmap {
         return x + z * 16;
     }
 
-    static /* synthetic */ Predicate method_16683() {
-        return NOT_AIR;
-    }
-
-    static /* synthetic */ Predicate method_16681() {
-        return SUFFOCATES;
-    }
-
-    public static enum Type implements StringIdentifiable
-    {
-        WORLD_SURFACE_WG("WORLD_SURFACE_WG", Purpose.WORLDGEN, Heightmap.method_16683()),
-        WORLD_SURFACE("WORLD_SURFACE", Purpose.CLIENT, Heightmap.method_16683()),
-        OCEAN_FLOOR_WG("OCEAN_FLOOR_WG", Purpose.WORLDGEN, Heightmap.method_16681()),
-        OCEAN_FLOOR("OCEAN_FLOOR", Purpose.LIVE_WORLD, Heightmap.method_16681()),
-        MOTION_BLOCKING("MOTION_BLOCKING", Purpose.CLIENT, blockState -> blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()),
-        MOTION_BLOCKING_NO_LEAVES("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, blockState -> (blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()) && !(blockState.getBlock() instanceof LeavesBlock));
-
+    public static final class Type
+    extends Enum<Type>
+    implements StringIdentifiable {
+        public static final /* enum */ Type WORLD_SURFACE_WG = new Type("WORLD_SURFACE_WG", Purpose.WORLDGEN, NOT_AIR);
+        public static final /* enum */ Type WORLD_SURFACE = new Type("WORLD_SURFACE", Purpose.CLIENT, NOT_AIR);
+        public static final /* enum */ Type OCEAN_FLOOR_WG = new Type("OCEAN_FLOOR_WG", Purpose.WORLDGEN, SUFFOCATES);
+        public static final /* enum */ Type OCEAN_FLOOR = new Type("OCEAN_FLOOR", Purpose.LIVE_WORLD, SUFFOCATES);
+        public static final /* enum */ Type MOTION_BLOCKING = new Type("MOTION_BLOCKING", Purpose.CLIENT, blockState -> blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty());
+        public static final /* enum */ Type MOTION_BLOCKING_NO_LEAVES = new Type("MOTION_BLOCKING_NO_LEAVES", Purpose.LIVE_WORLD, blockState -> (blockState.getMaterial().blocksMovement() || !blockState.getFluidState().isEmpty()) && !(blockState.getBlock() instanceof LeavesBlock));
         public static final Codec<Type> CODEC;
         private final String name;
         private final Purpose purpose;
         private final Predicate<BlockState> blockPredicate;
         private static final Map<String, Type> BY_NAME;
+        private static final /* synthetic */ Type[] field_13199;
+
+        public static Type[] values() {
+            return (Type[])field_13199.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
 
         private Type(String name, Purpose purpose, Predicate<BlockState> blockPredicate) {
             this.name = name;
@@ -156,7 +172,6 @@ public class Heightmap {
             return this.purpose == Purpose.CLIENT;
         }
 
-        @Environment(value=EnvType.CLIENT)
         public boolean isStoredServerSide() {
             return this.purpose != Purpose.WORLDGEN;
         }
@@ -175,7 +190,12 @@ public class Heightmap {
             return this.name;
         }
 
+        private static /* synthetic */ Type[] method_36752() {
+            return new Type[]{WORLD_SURFACE_WG, WORLD_SURFACE, OCEAN_FLOOR_WG, OCEAN_FLOOR, MOTION_BLOCKING, MOTION_BLOCKING_NO_LEAVES};
+        }
+
         static {
+            field_13199 = Type.method_36752();
             CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
             BY_NAME = Util.make(Maps.newHashMap(), hashMap -> {
                 for (Type type : Type.values()) {
@@ -185,11 +205,28 @@ public class Heightmap {
         }
     }
 
-    public static enum Purpose {
-        WORLDGEN,
-        LIVE_WORLD,
-        CLIENT;
+    public static final class Purpose
+    extends Enum<Purpose> {
+        public static final /* enum */ Purpose WORLDGEN = new Purpose();
+        public static final /* enum */ Purpose LIVE_WORLD = new Purpose();
+        public static final /* enum */ Purpose CLIENT = new Purpose();
+        private static final /* synthetic */ Purpose[] field_13208;
 
+        public static Purpose[] values() {
+            return (Purpose[])field_13208.clone();
+        }
+
+        public static Purpose valueOf(String string) {
+            return Enum.valueOf(Purpose.class, string);
+        }
+
+        private static /* synthetic */ Purpose[] method_36753() {
+            return new Purpose[]{WORLDGEN, LIVE_WORLD, CLIENT};
+        }
+
+        static {
+            field_13208 = Purpose.method_36753();
+        }
     }
 }
 

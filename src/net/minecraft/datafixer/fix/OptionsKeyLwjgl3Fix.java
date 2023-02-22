@@ -28,8 +28,9 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class OptionsKeyLwjgl3Fix
 extends DataFix {
+    public static final String field_29906 = "key.unknown";
     private static final Int2ObjectMap<String> NUMERICAL_KEY_IDS_TO_KEY_NAMES = (Int2ObjectMap)DataFixUtils.make((Object)new Int2ObjectOpenHashMap(), int2ObjectOpenHashMap -> {
-        int2ObjectOpenHashMap.put(0, (Object)"key.unknown");
+        int2ObjectOpenHashMap.put(0, (Object)field_29906);
         int2ObjectOpenHashMap.put(11, (Object)"key.0");
         int2ObjectOpenHashMap.put(2, (Object)"key.1");
         int2ObjectOpenHashMap.put(3, (Object)"key.2");
@@ -153,13 +154,13 @@ extends DataFix {
                 int i = Integer.parseInt(((Dynamic)entry.getValue()).asString(""));
                 if (i < 0) {
                     int j = i + 100;
-                    String string = j == 0 ? "key.mouse.left" : (j == 1 ? "key.mouse.right" : (j == 2 ? "key.mouse.middle" : "key.mouse." + (j + 1)));
-                    return Pair.of(entry.getKey(), (Object)((Dynamic)entry.getValue()).createString(string));
+                    Object string = j == 0 ? "key.mouse.left" : (j == 1 ? "key.mouse.right" : (j == 2 ? "key.mouse.middle" : "key.mouse." + (j + 1)));
+                    return Pair.of((Object)((Dynamic)entry.getKey()), (Object)((Dynamic)entry.getValue()).createString((String)string));
                 }
-                String string2 = (String)NUMERICAL_KEY_IDS_TO_KEY_NAMES.getOrDefault(i, (Object)"key.unknown");
-                return Pair.of(entry.getKey(), (Object)((Dynamic)entry.getValue()).createString(string2));
+                String string2 = (String)NUMERICAL_KEY_IDS_TO_KEY_NAMES.getOrDefault(i, (Object)field_29906);
+                return Pair.of((Object)((Dynamic)entry.getKey()), (Object)((Dynamic)entry.getValue()).createString(string2));
             }
-            return Pair.of(entry.getKey(), entry.getValue());
+            return Pair.of((Object)((Dynamic)entry.getKey()), (Object)((Dynamic)entry.getValue()));
         }).collect(Collectors.toMap(Pair::getFirst, Pair::getSecond)))).result().orElse(dynamic)));
     }
 }

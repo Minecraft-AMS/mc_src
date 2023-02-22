@@ -29,7 +29,7 @@ public interface Phase {
 
     public float getMaxYAcceleration();
 
-    public float method_6847();
+    public float getYawAcceleration();
 
     public PhaseType<? extends Phase> getType();
 

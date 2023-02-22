@@ -32,11 +32,11 @@ public class PardonCommand {
     private static final SimpleCommandExceptionType ALREADY_UNBANNED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.pardon.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("pardon").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((commandContext, suggestionsBuilder) -> CommandSource.suggestMatching(((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().getUserBanList().getNames(), suggestionsBuilder)).executes(commandContext -> PardonCommand.pardon((ServerCommandSource)commandContext.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)commandContext, "targets")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("pardon").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getPlayerManager().getUserBanList().getNames(), builder)).executes(context -> PardonCommand.pardon((ServerCommandSource)context.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)context, "targets")))));
     }
 
     private static int pardon(ServerCommandSource source, Collection<GameProfile> targets) throws CommandSyntaxException {
-        BannedPlayerList bannedPlayerList = source.getMinecraftServer().getPlayerManager().getUserBanList();
+        BannedPlayerList bannedPlayerList = source.getServer().getPlayerManager().getUserBanList();
         int i = 0;
         for (GameProfile gameProfile : targets) {
             if (!bannedPlayerList.contains(gameProfile)) continue;

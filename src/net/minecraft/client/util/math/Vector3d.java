@@ -1,16 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.util.math;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-
-@Environment(value=EnvType.CLIENT)
 public class Vector3d {
     public double x;
     public double y;
@@ -20,6 +12,30 @@ public class Vector3d {
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+
+    public void copy(Vector3d vector3d) {
+        this.x = vector3d.x;
+        this.y = vector3d.y;
+        this.z = vector3d.z;
+    }
+
+    public void set(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    public void multiply(double amount) {
+        this.x *= amount;
+        this.y *= amount;
+        this.z *= amount;
+    }
+
+    public void add(Vector3d vector3d) {
+        this.x += vector3d.x;
+        this.y += vector3d.y;
+        this.z += vector3d.z;
     }
 }
 

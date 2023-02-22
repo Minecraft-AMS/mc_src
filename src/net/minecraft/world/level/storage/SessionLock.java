@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.Charsets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.level.storage;
 
@@ -13,28 +11,29 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 public class SessionLock
 implements AutoCloseable {
+    public static final String SESSION_LOCK = "session.lock";
     private final FileChannel channel;
     private final FileLock lock;
-    private static final ByteBuffer field_25353;
+    private static final ByteBuffer SNOWMAN;
 
     public static SessionLock create(Path path) throws IOException {
-        Path path2 = path.resolve("session.lock");
+        Path path2 = path.resolve(SESSION_LOCK);
         if (!Files.isDirectory(path, new LinkOption[0])) {
             Files.createDirectories(path, new FileAttribute[0]);
         }
         FileChannel fileChannel = FileChannel.open(path2, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         try {
-            fileChannel.write(field_25353.duplicate());
+            fileChannel.write(SNOWMAN.duplicate());
             fileChannel.force(true);
             FileLock fileLock = fileChannel.tryLock();
             if (fileLock == null) {
@@ -77,37 +76,46 @@ implements AutoCloseable {
     }
 
     /*
-     * Exception decompiling
+     * Enabled aggressive exception aggregation
      */
-    @Environment(value=EnvType.CLIENT)
     public static boolean isLocked(Path path) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+        Path path2 = path.resolve(SESSION_LOCK);
+        try (FileChannel fileChannel = FileChannel.open(path2, StandardOpenOption.WRITE);){
+            boolean bl;
+            block15: {
+                FileLock fileLock = fileChannel.tryLock();
+                try {
+                    boolean bl2 = bl = fileLock == null;
+                    if (fileLock == null) break block15;
+                }
+                catch (Throwable throwable) {
+                    if (fileLock != null) {
+                        try {
+                            fileLock.close();
+                        }
+                        catch (Throwable throwable2) {
+                            throwable.addSuppressed(throwable2);
+                        }
+                    }
+                    throw throwable;
+                }
+                fileLock.close();
+            }
+            return bl;
+        }
+        catch (AccessDeniedException accessDeniedException) {
+            return true;
+        }
+        catch (NoSuchFileException noSuchFileException) {
+            return false;
+        }
     }
 
     static {
         byte[] bs = "\u2603".getBytes(Charsets.UTF_8);
-        field_25353 = ByteBuffer.allocateDirect(bs.length);
-        field_25353.put(bs);
-        field_25353.flip();
+        SNOWMAN = ByteBuffer.allocateDirect(bs.length);
+        SNOWMAN.put(bs);
+        SNOWMAN.flip();
     }
 
     public static class AlreadyLockedException

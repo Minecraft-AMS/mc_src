@@ -2,28 +2,21 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Function
- *  com.google.common.base.Functions
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.advancement;
 
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +30,6 @@ public class AdvancementManager {
     private final Set<Advancement> dependents = Sets.newLinkedHashSet();
     private Listener listener;
 
-    @Environment(value=EnvType.CLIENT)
     private void remove(Advancement advancement) {
         for (Advancement advancement2 : advancement.getChildren()) {
             this.remove(advancement2);
@@ -57,7 +49,6 @@ public class AdvancementManager {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void removeAll(Set<Identifier> advancements) {
         for (Identifier identifier : advancements) {
             Advancement advancement = this.advancements.get(identifier);
@@ -70,15 +61,15 @@ public class AdvancementManager {
     }
 
     public void load(Map<Identifier, Advancement.Task> map) {
-        Function function = Functions.forMap(this.advancements, null);
-        while (!map.isEmpty()) {
+        HashMap map2 = Maps.newHashMap(map);
+        while (!map2.isEmpty()) {
             boolean bl = false;
-            Iterator<Map.Entry<Identifier, Advancement.Task>> iterator = map.entrySet().iterator();
+            Iterator iterator = map2.entrySet().iterator();
             while (iterator.hasNext()) {
-                Map.Entry<Identifier, Advancement.Task> entry = iterator.next();
-                Identifier identifier = entry.getKey();
-                Advancement.Task task = entry.getValue();
-                if (!task.findParent((java.util.function.Function<Identifier, Advancement>)function)) continue;
+                Map.Entry entry = iterator.next();
+                Identifier identifier = (Identifier)entry.getKey();
+                Advancement.Task task = (Advancement.Task)entry.getValue();
+                if (!task.findParent(this.advancements::get)) continue;
                 Advancement advancement = task.build(identifier);
                 this.advancements.put(identifier, advancement);
                 bl = true;
@@ -94,14 +85,13 @@ public class AdvancementManager {
                 this.listener.onDependentAdded(advancement);
             }
             if (bl) continue;
-            for (Map.Entry<Identifier, Advancement.Task> entry : map.entrySet()) {
-                LOGGER.error("Couldn't load advancement {}: {}", (Object)entry.getKey(), (Object)entry.getValue());
+            for (Map.Entry entry : map2.entrySet()) {
+                LOGGER.error("Couldn't load advancement {}: {}", entry.getKey(), entry.getValue());
             }
         }
         LOGGER.info("Loaded {} advancements", (Object)this.advancements.size());
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void clear() {
         this.advancements.clear();
         this.roots.clear();
@@ -124,7 +114,6 @@ public class AdvancementManager {
         return this.advancements.get(id);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setListener(@Nullable Listener listener) {
         this.listener = listener;
         if (listener != null) {
@@ -140,15 +129,12 @@ public class AdvancementManager {
     public static interface Listener {
         public void onRootAdded(Advancement var1);
 
-        @Environment(value=EnvType.CLIENT)
         public void onRootRemoved(Advancement var1);
 
         public void onDependentAdded(Advancement var1);
 
-        @Environment(value=EnvType.CLIENT)
         public void onDependentRemoved(Advancement var1);
 
-        @Environment(value=EnvType.CLIENT)
         public void onClear();
     }
 }

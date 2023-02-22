@@ -18,11 +18,17 @@ import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ForgingScreenHandler
 extends ScreenHandler {
+    public static final int FIRST_INPUT_SLOT_INDEX = 0;
+    public static final int SECOND_INPUT_SLOT_INDEX = 1;
+    public static final int OUTPUT_SLOT_INDEX = 2;
+    private static final int PLAYER_INVENTORY_START_INDEX = 3;
+    private static final int field_30817 = 30;
+    private static final int field_30818 = 30;
+    private static final int PLAYER_INVENTORY_END_INDEX = 39;
     protected final CraftingResultInventory output = new CraftingResultInventory();
     protected final Inventory input = new SimpleInventory(2){
 
@@ -37,7 +43,7 @@ extends ScreenHandler {
 
     protected abstract boolean canTakeOutput(PlayerEntity var1, boolean var2);
 
-    protected abstract ItemStack onTakeOutput(PlayerEntity var1, ItemStack var2);
+    protected abstract void onTakeOutput(PlayerEntity var1, ItemStack var2);
 
     protected abstract boolean canUse(BlockState var1);
 
@@ -61,8 +67,8 @@ extends ScreenHandler {
             }
 
             @Override
-            public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
-                return ForgingScreenHandler.this.onTakeOutput(player, stack);
+            public void onTakeItem(PlayerEntity player, ItemStack stack) {
+                ForgingScreenHandler.this.onTakeOutput(player, stack);
             }
         });
         for (i = 0; i < 3; ++i) {
@@ -88,20 +94,20 @@ extends ScreenHandler {
     @Override
     public void close(PlayerEntity player) {
         super.close(player);
-        this.context.run((world, blockPos) -> this.dropInventory(player, (World)world, this.input));
+        this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 
     @Override
     public boolean canUse(PlayerEntity player) {
-        return this.context.get((world, blockPos) -> {
-            if (!this.canUse(world.getBlockState((BlockPos)blockPos))) {
+        return this.context.get((world, pos) -> {
+            if (!this.canUse(world.getBlockState((BlockPos)pos))) {
                 return false;
             }
-            return player.squaredDistanceTo((double)blockPos.getX() + 0.5, (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5) <= 64.0;
+            return player.squaredDistanceTo((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5) <= 64.0;
         }, true);
     }
 
-    protected boolean method_30025(ItemStack itemStack) {
+    protected boolean isUsableAsAddition(ItemStack stack) {
         return false;
     }
 
@@ -123,7 +129,7 @@ extends ScreenHandler {
                 }
             } else if (index >= 3 && index < 39) {
                 int i;
-                int n = i = this.method_30025(itemStack) ? 1 : 0;
+                int n = i = this.isUsableAsAddition(itemStack) ? 1 : 0;
                 if (!this.insertItem(itemStack2, i, 2, false)) {
                     return ItemStack.EMPTY;
                 }

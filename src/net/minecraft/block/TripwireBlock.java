@@ -29,6 +29,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 
 public class TripwireBlock
 extends Block {
@@ -42,6 +43,7 @@ extends Block {
     private static final Map<Direction, BooleanProperty> FACING_PROPERTIES = HorizontalConnectingBlock.FACING_PROPERTIES;
     protected static final VoxelShape ATTACHED_SHAPE = Block.createCuboidShape(0.0, 1.0, 0.0, 16.0, 2.5, 16.0);
     protected static final VoxelShape DETACHED_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
+    private static final int SCHEDULED_TICK_DELAY = 10;
     private final TripwireHookBlock hookBlock;
 
     public TripwireBlock(TripwireHookBlock hookBlock, AbstractBlock.Settings settings) {
@@ -88,8 +90,9 @@ extends Block {
 
     @Override
     public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        if (!world.isClient && !player.getMainHandStack().isEmpty() && player.getMainHandStack().getItem() == Items.SHEARS) {
+        if (!world.isClient && !player.getMainHandStack().isEmpty() && player.getMainHandStack().isOf(Items.SHEARS)) {
             world.setBlockState(pos, (BlockState)state.with(DISARMED, true), 4);
+            world.emitGameEvent((Entity)player, GameEvent.SHEAR, pos);
         }
         super.onBreak(world, pos, state, player);
     }
@@ -151,11 +154,10 @@ extends Block {
     }
 
     public boolean shouldConnectTo(BlockState state, Direction facing) {
-        Block block = state.getBlock();
-        if (block == this.hookBlock) {
+        if (state.isOf(this.hookBlock)) {
             return state.get(TripwireHookBlock.FACING) == facing.getOpposite();
         }
-        return block == this;
+        return state.isOf(this);
     }
 
     @Override

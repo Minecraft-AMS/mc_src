@@ -7,13 +7,12 @@
 package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.SpringFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class SpringFeature
 extends Feature<SpringFeatureConfig> {
@@ -22,8 +21,11 @@ extends Feature<SpringFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, SpringFeatureConfig springFeatureConfig) {
-        if (!springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.up()).getBlock())) {
+    public boolean generate(FeatureContext<SpringFeatureConfig> context) {
+        BlockPos blockPos;
+        SpringFeatureConfig springFeatureConfig = context.getConfig();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        if (!springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState((blockPos = context.getOrigin()).up()).getBlock())) {
             return false;
         }
         if (springFeatureConfig.requiresBlockBelow && !springFeatureConfig.validBlocks.contains(structureWorldAccess.getBlockState(blockPos.down()).getBlock())) {

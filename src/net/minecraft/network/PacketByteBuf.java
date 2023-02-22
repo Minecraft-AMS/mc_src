@@ -2,9 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
+ *  com.google.common.collect.Lists
+ *  com.google.common.collect.Maps
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
- *  com.mojang.serialization.DataResult$PartialResult
  *  com.mojang.serialization.DynamicOps
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.ByteBufAllocator
@@ -13,12 +15,15 @@
  *  io.netty.handler.codec.DecoderException
  *  io.netty.handler.codec.EncoderException
  *  io.netty.util.ByteProcessor
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  it.unimi.dsi.fastutil.ints.IntArrayList
+ *  it.unimi.dsi.fastutil.ints.IntList
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
@@ -29,6 +34,8 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.ByteProcessor;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -41,10 +48,17 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.BitSet;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.IntFunction;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
@@ -55,6 +69,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -62,10 +77,15 @@ import org.jetbrains.annotations.Nullable;
 
 public class PacketByteBuf
 extends ByteBuf {
+    private static final int MAX_VAR_INT_LENGTH = 5;
+    private static final int MAX_VAR_LONG_LENGTH = 10;
+    private static final int MAX_READ_NBT_SIZE = 0x200000;
     private final ByteBuf parent;
+    public static final short DEFAULT_MAX_STRING_LENGTH = Short.MAX_VALUE;
+    public static final int MAX_TEXT_LENGTH = 262144;
 
-    public PacketByteBuf(ByteBuf byteBuf) {
-        this.parent = byteBuf;
+    public PacketByteBuf(ByteBuf parent) {
+        this.parent = parent;
     }
 
     public static int getVarIntLength(int value) {
@@ -76,31 +96,128 @@ extends ByteBuf {
         return 5;
     }
 
-    public <T> T decode(Codec<T> codec) throws IOException {
+    public static int getVarLongLength(long value) {
+        for (int i = 1; i < 10; ++i) {
+            if ((value & -1L << i * 7) != 0L) continue;
+            return i;
+        }
+        return 10;
+    }
+
+    public <T> T decode(Codec<T> codec) {
         NbtCompound nbtCompound = this.readUnlimitedNbt();
         DataResult dataResult = codec.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbtCompound);
-        if (dataResult.error().isPresent()) {
-            throw new IOException("Failed to decode: " + ((DataResult.PartialResult)dataResult.error().get()).message() + " " + nbtCompound);
-        }
+        dataResult.error().ifPresent(partialResult -> {
+            throw new EncoderException("Failed to decode: " + partialResult.message() + " " + nbtCompound);
+        });
         return dataResult.result().get();
     }
 
-    public <T> void encode(Codec<T> codec, T object) throws IOException {
+    public <T> void encode(Codec<T> codec, T object) {
         DataResult dataResult = codec.encodeStart((DynamicOps)NbtOps.INSTANCE, object);
-        if (dataResult.error().isPresent()) {
-            throw new IOException("Failed to encode: " + ((DataResult.PartialResult)dataResult.error().get()).message() + " " + object);
-        }
+        dataResult.error().ifPresent(partialResult -> {
+            throw new EncoderException("Failed to encode: " + partialResult.message() + " " + object);
+        });
         this.writeNbt((NbtCompound)dataResult.result().get());
+    }
+
+    public static <T> IntFunction<T> getMaxValidator(IntFunction<T> applier, int max) {
+        return value -> {
+            if (value > max) {
+                throw new DecoderException("Value " + value + " is larger than limit " + max);
+            }
+            return applier.apply(value);
+        };
+    }
+
+    public <T, C extends Collection<T>> C readCollection(IntFunction<C> collectionFactory, Function<PacketByteBuf, T> entryParser) {
+        int i = this.readVarInt();
+        Collection collection = (Collection)collectionFactory.apply(i);
+        for (int j = 0; j < i; ++j) {
+            collection.add(entryParser.apply(this));
+        }
+        return (C)collection;
+    }
+
+    public <T> void writeCollection(Collection<T> collection, BiConsumer<PacketByteBuf, T> entrySerializer) {
+        this.writeVarInt(collection.size());
+        for (T object : collection) {
+            entrySerializer.accept(this, (PacketByteBuf)((Object)object));
+        }
+    }
+
+    public <T> List<T> readList(Function<PacketByteBuf, T> entryParser) {
+        return this.readCollection(Lists::newArrayListWithCapacity, entryParser);
+    }
+
+    public IntList readIntList() {
+        int i = this.readVarInt();
+        IntArrayList intList = new IntArrayList();
+        for (int j = 0; j < i; ++j) {
+            intList.add(this.readVarInt());
+        }
+        return intList;
+    }
+
+    public void writeIntList(IntList list) {
+        this.writeVarInt(list.size());
+        list.forEach(this::writeVarInt);
+    }
+
+    public <K, V, M extends Map<K, V>> M readMap(IntFunction<M> mapFactory, Function<PacketByteBuf, K> keyParser, Function<PacketByteBuf, V> valueParser) {
+        int i = this.readVarInt();
+        Map map = (Map)mapFactory.apply(i);
+        for (int j = 0; j < i; ++j) {
+            K object = keyParser.apply(this);
+            V object2 = valueParser.apply(this);
+            map.put(object, object2);
+        }
+        return (M)map;
+    }
+
+    public <K, V> Map<K, V> readMap(Function<PacketByteBuf, K> keyParser, Function<PacketByteBuf, V> valueParser) {
+        return this.readMap(Maps::newHashMapWithExpectedSize, keyParser, valueParser);
+    }
+
+    public <K, V> void writeMap(Map<K, V> map, BiConsumer<PacketByteBuf, K> keySerializer, BiConsumer<PacketByteBuf, V> valueSerializer) {
+        this.writeVarInt(map.size());
+        map.forEach((key, value) -> {
+            keySerializer.accept(this, key);
+            valueSerializer.accept(this, value);
+        });
+    }
+
+    public void forEachInCollection(Consumer<PacketByteBuf> consumer) {
+        int i = this.readVarInt();
+        for (int j = 0; j < i; ++j) {
+            consumer.accept(this);
+        }
+    }
+
+    public <T> void writeOptional(Optional<T> value, BiConsumer<PacketByteBuf, T> serializer) {
+        if (value.isPresent()) {
+            this.writeBoolean(true);
+            serializer.accept(this, (PacketByteBuf)((Object)value.get()));
+        } else {
+            this.writeBoolean(false);
+        }
+    }
+
+    public <T> Optional<T> readOptional(Function<PacketByteBuf, T> parser) {
+        if (this.readBoolean()) {
+            return Optional.of(parser.apply(this));
+        }
+        return Optional.empty();
+    }
+
+    public byte[] readByteArray() {
+        return this.readByteArray(this.readableBytes());
     }
 
     public PacketByteBuf writeByteArray(byte[] array) {
         this.writeVarInt(array.length);
         this.writeBytes(array);
         return this;
-    }
-
-    public byte[] readByteArray() {
-        return this.readByteArray(this.readableBytes());
     }
 
     public byte[] readByteArray(int maxSize) {
@@ -145,12 +262,14 @@ extends ByteBuf {
         return this;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public long[] readLongArray() {
+        return this.readLongArray(null);
+    }
+
     public long[] readLongArray(@Nullable long[] toArray) {
         return this.readLongArray(toArray, this.readableBytes() / 8);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public long[] readLongArray(@Nullable long[] toArray, int maxSize) {
         int i = this.readVarInt();
         if (toArray == null || toArray.length != i) {
@@ -165,6 +284,14 @@ extends ByteBuf {
         return toArray;
     }
 
+    @VisibleForTesting
+    public byte[] getWrittenBytes() {
+        int i = this.writerIndex();
+        byte[] bs = new byte[i];
+        this.getBytes(0, bs);
+        return bs;
+    }
+
     public BlockPos readBlockPos() {
         return BlockPos.fromLong(this.readLong());
     }
@@ -174,9 +301,22 @@ extends ByteBuf {
         return this;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public ChunkPos readChunkPos() {
+        return new ChunkPos(this.readLong());
+    }
+
+    public PacketByteBuf writeChunkPos(ChunkPos pos) {
+        this.writeLong(pos.toLong());
+        return this;
+    }
+
     public ChunkSectionPos readChunkSectionPos() {
         return ChunkSectionPos.from(this.readLong());
+    }
+
+    public PacketByteBuf writeChunkSectionPos(ChunkSectionPos pos) {
+        this.writeLong(pos.asLong());
+        return this;
     }
 
     public Text readText() {
@@ -302,8 +442,8 @@ extends ByteBuf {
             this.writeVarInt(Item.getRawId(item));
             this.writeByte(stack.getCount());
             NbtCompound nbtCompound = null;
-            if (item.isDamageable() || item.shouldSyncTagToClient()) {
-                nbtCompound = stack.getTag();
+            if (item.isDamageable() || item.isNbtSynced()) {
+                nbtCompound = stack.getNbt();
             }
             this.writeNbt(nbtCompound);
         }
@@ -317,11 +457,10 @@ extends ByteBuf {
         int i = this.readVarInt();
         byte j = this.readByte();
         ItemStack itemStack = new ItemStack(Item.byRawId(i), j);
-        itemStack.setTag(this.readNbt());
+        itemStack.setNbt(this.readNbt());
         return itemStack;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public String readString() {
         return this.readString(Short.MAX_VALUE);
     }
@@ -393,6 +532,14 @@ extends ByteBuf {
         this.writeFloat((float)(vec3d.y - (double)blockPos.getY()));
         this.writeFloat((float)(vec3d.z - (double)blockPos.getZ()));
         this.writeBoolean(hitResult.isInsideBlock());
+    }
+
+    public BitSet readBitSet() {
+        return BitSet.valueOf(this.readLongArray());
+    }
+
+    public void writeBitSet(BitSet bitSet) {
+        this.writeLongArray(bitSet.toLongArray());
     }
 
     public int capacity() {
@@ -1087,8 +1234,8 @@ extends ByteBuf {
         return this.parent.hashCode();
     }
 
-    public boolean equals(Object object) {
-        return this.parent.equals(object);
+    public boolean equals(Object o) {
+        return this.parent.equals(o);
     }
 
     public int compareTo(ByteBuf byteBuf) {

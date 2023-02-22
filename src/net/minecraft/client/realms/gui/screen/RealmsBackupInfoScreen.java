@@ -23,15 +23,18 @@ import net.minecraft.client.realms.gui.screen.RealmsSlotOptionsScreen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsBackupInfoScreen
 extends RealmsScreen {
+    private static final Text UNKNOWN = new LiteralText("UNKNOWN");
     private final Screen parent;
-    private final Backup backup;
+    final Backup backup;
     private BackupInfoList backupInfoList;
 
     public RealmsBackupInfoScreen(Screen parent, Backup backup) {
+        super(new LiteralText("Changes from last backup"));
         this.parent = parent;
         this.backup = backup;
     }
@@ -43,9 +46,9 @@ extends RealmsScreen {
     @Override
     public void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 24, 200, 20, ScreenTexts.BACK, buttonWidget -> this.client.openScreen(this.parent)));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 24, 200, 20, ScreenTexts.BACK, button -> this.client.setScreen(this.parent)));
         this.backupInfoList = new BackupInfoList(this.client);
-        this.addChild(this.backupInfoList);
+        this.addSelectableChild(this.backupInfoList);
         this.focusOn(this.backupInfoList);
     }
 
@@ -57,7 +60,7 @@ extends RealmsScreen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
-            this.client.openScreen(this.parent);
+            this.client.setScreen(this.parent);
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -66,12 +69,12 @@ extends RealmsScreen {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        RealmsBackupInfoScreen.drawCenteredText(matrices, this.textRenderer, "Changes from last backup", this.width / 2, 10, 0xFFFFFF);
         this.backupInfoList.render(matrices, mouseX, mouseY, delta);
+        RealmsBackupInfoScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
-    private Text checkForSpecificMetadata(String key, String value) {
+    Text checkForSpecificMetadata(String key, String value) {
         String string = key.toLowerCase(Locale.ROOT);
         if (string.contains("game") && string.contains("mode")) {
             return this.gameModeMetadata(value);
@@ -84,30 +87,30 @@ extends RealmsScreen {
 
     private Text gameDifficultyMetadata(String value) {
         try {
-            return RealmsSlotOptionsScreen.DIFFICULTIES[Integer.parseInt(value)];
+            return RealmsSlotOptionsScreen.DIFFICULTIES.get(Integer.parseInt(value)).getTranslatableName();
         }
         catch (Exception exception) {
-            return new LiteralText("UNKNOWN");
+            return UNKNOWN;
         }
     }
 
     private Text gameModeMetadata(String value) {
         try {
-            return RealmsSlotOptionsScreen.GAME_MODES[Integer.parseInt(value)];
+            return RealmsSlotOptionsScreen.GAME_MODES.get(Integer.parseInt(value)).getSimpleTranslatableName();
         }
         catch (Exception exception) {
-            return new LiteralText("UNKNOWN");
+            return UNKNOWN;
         }
     }
 
     @Environment(value=EnvType.CLIENT)
     class BackupInfoList
     extends AlwaysSelectedEntryListWidget<BackupInfoListEntry> {
-        public BackupInfoList(MinecraftClient minecraftClient) {
-            super(minecraftClient, RealmsBackupInfoScreen.this.width, RealmsBackupInfoScreen.this.height, 32, RealmsBackupInfoScreen.this.height - 64, 36);
+        public BackupInfoList(MinecraftClient client) {
+            super(client, RealmsBackupInfoScreen.this.width, RealmsBackupInfoScreen.this.height, 32, RealmsBackupInfoScreen.this.height - 64, 36);
             this.setRenderSelection(false);
-            if (((RealmsBackupInfoScreen)RealmsBackupInfoScreen.this).backup.changeList != null) {
-                ((RealmsBackupInfoScreen)RealmsBackupInfoScreen.this).backup.changeList.forEach((key, value) -> this.addEntry(new BackupInfoListEntry((String)key, (String)value)));
+            if (RealmsBackupInfoScreen.this.backup.changeList != null) {
+                RealmsBackupInfoScreen.this.backup.changeList.forEach((key, value) -> this.addEntry(new BackupInfoListEntry((String)key, (String)value)));
             }
         }
     }
@@ -128,6 +131,11 @@ extends RealmsScreen {
             TextRenderer textRenderer = ((RealmsBackupInfoScreen)RealmsBackupInfoScreen.this).client.textRenderer;
             DrawableHelper.drawStringWithShadow(matrices, textRenderer, this.key, x, y, 0xA0A0A0);
             DrawableHelper.drawTextWithShadow(matrices, textRenderer, RealmsBackupInfoScreen.this.checkForSpecificMetadata(this.key, this.value), x, y + 12, 0xFFFFFF);
+        }
+
+        @Override
+        public Text getNarration() {
+            return new TranslatableText("narrator.select", this.key + " " + this.value);
         }
     }
 }

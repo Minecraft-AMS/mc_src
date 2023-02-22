@@ -50,6 +50,12 @@ implements Waterloggable {
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     private final Map<BlockState, VoxelShape> shapeMap;
     private final Map<BlockState, VoxelShape> collisionShapeMap;
+    private static final int field_31276 = 3;
+    private static final int field_31277 = 14;
+    private static final int field_31278 = 4;
+    private static final int field_31279 = 1;
+    private static final int field_31280 = 7;
+    private static final int field_31281 = 9;
     private static final VoxelShape TALL_POST_SHAPE = Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 16.0, 9.0);
     private static final VoxelShape TALL_NORTH_SHAPE = Block.createCuboidShape(7.0, 0.0, 0.0, 9.0, 16.0, 9.0);
     private static final VoxelShape TALL_SOUTH_SHAPE = Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 16.0, 16.0);
@@ -102,8 +108,8 @@ implements Waterloggable {
                                 voxelShape10 = VoxelShapes.union(voxelShape10, voxelShape);
                             }
                             BlockState blockState = (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(UP, boolean_)).with(EAST_SHAPE, wallShape)).with(WEST_SHAPE, wallShape3)).with(NORTH_SHAPE, wallShape2)).with(SOUTH_SHAPE, wallShape4);
-                            builder.put(blockState.with(WATERLOGGED, false), (Object)voxelShape10);
-                            builder.put(blockState.with(WATERLOGGED, true), (Object)voxelShape10);
+                            builder.put((Object)((BlockState)blockState.with(WATERLOGGED, false)), (Object)voxelShape10);
+                            builder.put((Object)((BlockState)blockState.with(WATERLOGGED, true)), (Object)voxelShape10);
                         }
                     }
                 }
@@ -130,7 +136,7 @@ implements Waterloggable {
     private boolean shouldConnectTo(BlockState state, boolean faceFullSquare, Direction side) {
         Block block = state.getBlock();
         boolean bl = block instanceof FenceGateBlock && FenceGateBlock.canWallConnect(state, side);
-        return state.isIn(BlockTags.WALLS) || !WallBlock.cannotConnect(block) && faceFullSquare || block instanceof PaneBlock || bl;
+        return state.isIn(BlockTags.WALLS) || !WallBlock.cannotConnect(state) && faceFullSquare || block instanceof PaneBlock || bl;
     }
 
     @Override
@@ -227,7 +233,7 @@ implements Waterloggable {
         if (bl7) {
             return false;
         }
-        return blockState2.getBlock().isIn(BlockTags.WALL_POST_OVERRIDE) || WallBlock.method_24427(voxelShape, TALL_POST_SHAPE);
+        return blockState2.isIn(BlockTags.WALL_POST_OVERRIDE) || WallBlock.method_24427(voxelShape, TALL_POST_SHAPE);
     }
 
     private BlockState method_24425(BlockState blockState, boolean bl, boolean bl2, boolean bl3, boolean bl4, VoxelShape voxelShape) {

@@ -4,14 +4,14 @@
  * Could not load the following classes:
  *  com.google.common.collect.Iterators
  *  com.google.common.collect.Lists
+ *  com.google.common.collect.Maps
  *  com.google.common.util.concurrent.MoreExecutors
  *  com.mojang.datafixers.DSL$TypeReference
  *  com.mojang.datafixers.DataFixUtils
  *  com.mojang.datafixers.types.Type
+ *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.DataResult
  *  it.unimi.dsi.fastutil.Hash$Strategy
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.io.IOUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -21,10 +21,12 @@ package net.minecraft.util;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.types.Type;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.Hash;
 import java.io.File;
@@ -40,6 +42,7 @@ import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.spi.FileSystemProvider;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.time.Instant;
@@ -62,16 +65,16 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.util.CharPredicate;
@@ -93,7 +96,8 @@ public class Util {
     private static final ExecutorService IO_WORKER_EXECUTOR = Util.createIoWorker();
     public static LongSupplier nanoTimeSupplier = System::nanoTime;
     public static final UUID NIL_UUID = new UUID(0L, 0L);
-    private static final Logger LOGGER = LogManager.getLogger();
+    public static final FileSystemProvider JAR_FILE_SYSTEM_PROVIDER = FileSystemProvider.installedProviders().stream().filter(fileSystemProvider -> fileSystemProvider.getScheme().equalsIgnoreCase("jar")).findFirst().orElseThrow(() -> new IllegalStateException("No jar file system provider found"));
+    static final Logger LOGGER = LogManager.getLogger();
 
     public static <K, V> Collector<Map.Entry<? extends K, ? extends V>, ?, Map<K, V>> toMap() {
         return Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue);
@@ -107,7 +111,7 @@ public class Util {
         if (id == null) {
             return type + ".unregistered_sadface";
         }
-        return type + '.' + id.getNamespace() + '.' + id.getPath().replace('/', '.');
+        return type + "." + id.getNamespace() + "." + id.getPath().replace('/', '.');
     }
 
     public static long getMeasuringTimeMs() {
@@ -139,7 +143,7 @@ public class Util {
             };
             forkJoinWorkerThread.setName("Worker-" + name + "-" + NEXT_WORKER_ID.getAndIncrement());
             return forkJoinWorkerThread;
-        }, Util::method_18347, true);
+        }, Util::uncaughtExceptionHandler, true);
         return executorService;
     }
 
@@ -178,33 +182,31 @@ public class Util {
         return Executors.newCachedThreadPool(runnable -> {
             Thread thread = new Thread(runnable);
             thread.setName("IO-Worker-" + NEXT_WORKER_ID.getAndIncrement());
-            thread.setUncaughtExceptionHandler(Util::method_18347);
+            thread.setUncaughtExceptionHandler(Util::uncaughtExceptionHandler);
             return thread;
         });
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static <T> CompletableFuture<T> completeExceptionally(Throwable throwable) {
         CompletableFuture completableFuture = new CompletableFuture();
         completableFuture.completeExceptionally(throwable);
         return completableFuture;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static void throwUnchecked(Throwable t) {
         throw t instanceof RuntimeException ? (RuntimeException)t : new RuntimeException(t);
     }
 
-    private static void method_18347(Thread thread, Throwable throwable) {
-        Util.throwOrPause(throwable);
-        if (throwable instanceof CompletionException) {
-            throwable = throwable.getCause();
+    private static void uncaughtExceptionHandler(Thread thread, Throwable t) {
+        Util.throwOrPause(t);
+        if (t instanceof CompletionException) {
+            t = t.getCause();
         }
-        if (throwable instanceof CrashException) {
-            Bootstrap.println(((CrashException)throwable).getReport().asString());
+        if (t instanceof CrashException) {
+            Bootstrap.println(((CrashException)t).getReport().asString());
             System.exit(-1);
         }
-        LOGGER.error(String.format("Caught exception in thread %s", thread), throwable);
+        LOGGER.error(String.format("Caught exception in thread %s", thread), t);
     }
 
     @Nullable
@@ -232,6 +234,23 @@ public class Util {
         return type;
     }
 
+    public static Runnable debugRunnable(String activeThreadName, Runnable task) {
+        if (SharedConstants.isDevelopment) {
+            return () -> {
+                Thread thread = Thread.currentThread();
+                String string2 = thread.getName();
+                thread.setName(activeThreadName);
+                try {
+                    task.run();
+                }
+                finally {
+                    thread.setName(string2);
+                }
+            };
+        }
+        return task;
+    }
+
     public static OperatingSystem getOperatingSystem() {
         String string = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         if (string.contains("win")) {
@@ -257,7 +276,7 @@ public class Util {
 
     public static Stream<String> getJVMFlags() {
         RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        return runtimeMXBean.getInputArguments().stream().filter(string -> string.startsWith("-X"));
+        return runtimeMXBean.getInputArguments().stream().filter(runtimeArg -> runtimeArg.startsWith("-X"));
     }
 
     public static <T> T getLast(List<T> list) {
@@ -309,14 +328,28 @@ public class Util {
         return IdentityHashStrategy.INSTANCE;
     }
 
+    public static <V> CompletableFuture<List<V>> combineSafe(List<? extends CompletableFuture<? extends V>> futures) {
+        return futures.stream().reduce(CompletableFuture.completedFuture(Lists.newArrayList()), (completableFuture, completableFuture2) -> completableFuture2.thenCombine((CompletionStage)completableFuture, (object, list) -> {
+            ArrayList list2 = Lists.newArrayListWithCapacity((int)(list.size() + 1));
+            list2.addAll(list);
+            list2.add(object);
+            return list2;
+        }), (completableFuture, completableFuture2) -> completableFuture.thenCombine((CompletionStage)completableFuture2, (list, list2) -> {
+            ArrayList list3 = Lists.newArrayListWithCapacity((int)(list.size() + list2.size()));
+            list3.addAll(list);
+            list3.addAll(list2);
+            return list3;
+        }));
+    }
+
     public static <V> CompletableFuture<List<V>> combine(List<? extends CompletableFuture<? extends V>> futures) {
         ArrayList list = Lists.newArrayListWithCapacity((int)futures.size());
         CompletableFuture[] completableFutures = new CompletableFuture[futures.size()];
         CompletableFuture completableFuture = new CompletableFuture();
-        futures.forEach(completableFuture2 -> {
+        futures.forEach(future -> {
             int i = list.size();
             list.add(null);
-            completableFutures[i] = completableFuture2.whenComplete((object, throwable) -> {
+            completableFutures[i] = future.whenComplete((object, throwable) -> {
                 if (throwable != null) {
                     completableFuture.completeExceptionally((Throwable)throwable);
                 } else {
@@ -344,20 +377,31 @@ public class Util {
         return runnable;
     }
 
+    public static void error(String message) {
+        LOGGER.error(message);
+        if (SharedConstants.isDevelopment) {
+            Util.pause();
+        }
+    }
+
     public static <T extends Throwable> T throwOrPause(T t) {
         if (SharedConstants.isDevelopment) {
             LOGGER.error("Trying to throw a fatal exception, pausing in IDE", t);
-            try {
-                while (true) {
-                    Thread.sleep(1000L);
-                    LOGGER.error("paused");
-                }
-            }
-            catch (InterruptedException interruptedException) {
-                return t;
-            }
+            Util.pause();
         }
         return t;
+    }
+
+    private static void pause() {
+        try {
+            while (true) {
+                Thread.sleep(1000L);
+                LOGGER.error("paused");
+            }
+        }
+        catch (InterruptedException interruptedException) {
+            return;
+        }
     }
 
     public static String getInnermostMessage(Throwable t) {
@@ -376,6 +420,10 @@ public class Util {
 
     public static int getRandom(int[] array, Random random) {
         return array[random.nextInt(array.length)];
+    }
+
+    public static <T> T getRandom(List<T> list, Random random) {
+        return list.get(random.nextInt(list.size()));
     }
 
     private static BooleanSupplier renameTask(final Path src, final Path dest) {
@@ -485,7 +533,6 @@ public class Util {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static int moveCursor(String string, int cursor, int delta) {
         int i = string.length();
         if (delta >= 0) {
@@ -502,8 +549,8 @@ public class Util {
         return cursor;
     }
 
-    public static Consumer<String> method_29188(String string, Consumer<String> consumer) {
-        return string2 -> consumer.accept(string + string2);
+    public static Consumer<String> addPrefix(String prefix, Consumer<String> consumer) {
+        return string -> consumer.accept(prefix + string);
     }
 
     public static DataResult<int[]> toArray(IntStream stream, int length) {
@@ -516,6 +563,17 @@ public class Util {
             return DataResult.error((String)string);
         }
         return DataResult.success((Object)is);
+    }
+
+    public static <T> DataResult<List<T>> toArray(List<T> list, int length) {
+        if (list.size() != length) {
+            String string = "Input is not a list of " + length + " elements";
+            if (list.size() >= length) {
+                return DataResult.error((String)string, list.subList(0, length));
+            }
+            return DataResult.error((String)string);
+        }
+        return DataResult.success(list);
     }
 
     public static void startTimerHack() {
@@ -539,57 +597,75 @@ public class Util {
         thread.start();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static void relativeCopy(Path src, Path dest, Path toCopy) throws IOException {
         Path path = src.relativize(toCopy);
         Path path2 = dest.resolve(path);
         Files.copy(toCopy, path2, new CopyOption[0]);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static String replaceInvalidChars(String string, CharPredicate predicate) {
-        return string.toLowerCase(Locale.ROOT).chars().mapToObj(i -> predicate.test((char)i) ? Character.toString((char)i) : "_").collect(Collectors.joining());
+        return string.toLowerCase(Locale.ROOT).chars().mapToObj(charCode -> predicate.test((char)charCode) ? Character.toString((char)charCode) : "_").collect(Collectors.joining());
     }
 
-    static enum IdentityHashStrategy implements Hash.Strategy<Object>
-    {
-        INSTANCE;
-
-
-        public int hashCode(Object object) {
-            return System.identityHashCode(object);
-        }
-
-        public boolean equals(Object object, Object object2) {
-            return object == object2;
-        }
-    }
-
-    public static enum OperatingSystem {
-        LINUX,
-        SOLARIS,
-        WINDOWS{
+    public static <T, R> Function<T, R> memoize(final Function<T, R> function) {
+        return new Function<T, R>(){
+            private final Map<T, R> cache = Maps.newHashMap();
 
             @Override
-            @Environment(value=EnvType.CLIENT)
+            public R apply(T object) {
+                return this.cache.computeIfAbsent(object, function);
+            }
+
+            public String toString() {
+                return "memoize/1[function=" + function + ", size=" + this.cache.size() + "]";
+            }
+        };
+    }
+
+    public static <T, U, R> BiFunction<T, U, R> memoize(final BiFunction<T, U, R> biFunction) {
+        return new BiFunction<T, U, R>(){
+            private final Map<Pair<T, U>, R> cache = Maps.newHashMap();
+
+            @Override
+            public R apply(T object, U object2) {
+                return this.cache.computeIfAbsent(Pair.of(object, object2), pair -> biFunction.apply(pair.getFirst(), pair.getSecond()));
+            }
+
+            public String toString() {
+                return "memoize/2[function=" + biFunction + ", size=" + this.cache.size() + "]";
+            }
+        };
+    }
+
+    public static class OperatingSystem
+    extends Enum<OperatingSystem> {
+        public static final /* enum */ OperatingSystem LINUX = new OperatingSystem();
+        public static final /* enum */ OperatingSystem SOLARIS = new OperatingSystem();
+        public static final /* enum */ OperatingSystem WINDOWS = new OperatingSystem(){
+
+            @Override
             protected String[] getURLOpenCommand(URL url) {
                 return new String[]{"rundll32", "url.dll,FileProtocolHandler", url.toString()};
             }
-        }
-        ,
-        OSX{
+        };
+        public static final /* enum */ OperatingSystem OSX = new OperatingSystem(){
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             protected String[] getURLOpenCommand(URL url) {
                 return new String[]{"open", url.toString()};
             }
+        };
+        public static final /* enum */ OperatingSystem UNKNOWN = new OperatingSystem();
+        private static final /* synthetic */ OperatingSystem[] field_1136;
+
+        public static OperatingSystem[] values() {
+            return (OperatingSystem[])field_1136.clone();
         }
-        ,
-        UNKNOWN;
 
+        public static OperatingSystem valueOf(String string) {
+            return Enum.valueOf(OperatingSystem.class, string);
+        }
 
-        @Environment(value=EnvType.CLIENT)
         public void open(URL url) {
             try {
                 Process process = AccessController.doPrivileged(() -> Runtime.getRuntime().exec(this.getURLOpenCommand(url)));
@@ -605,17 +681,15 @@ public class Util {
             }
         }
 
-        @Environment(value=EnvType.CLIENT)
-        public void open(URI uRI) {
+        public void open(URI uri) {
             try {
-                this.open(uRI.toURL());
+                this.open(uri.toURL());
             }
             catch (MalformedURLException malformedURLException) {
-                LOGGER.error("Couldn't open uri '{}'", (Object)uRI, (Object)malformedURLException);
+                LOGGER.error("Couldn't open uri '{}'", (Object)uri, (Object)malformedURLException);
             }
         }
 
-        @Environment(value=EnvType.CLIENT)
         public void open(File file) {
             try {
                 this.open(file.toURI().toURL());
@@ -625,7 +699,6 @@ public class Util {
             }
         }
 
-        @Environment(value=EnvType.CLIENT)
         protected String[] getURLOpenCommand(URL url) {
             String string = url.toString();
             if ("file".equals(url.getProtocol())) {
@@ -634,14 +707,52 @@ public class Util {
             return new String[]{"xdg-open", string};
         }
 
-        @Environment(value=EnvType.CLIENT)
-        public void open(String string) {
+        public void open(String uri) {
             try {
-                this.open(new URI(string).toURL());
+                this.open(new URI(uri).toURL());
             }
             catch (IllegalArgumentException | MalformedURLException | URISyntaxException exception) {
-                LOGGER.error("Couldn't open uri '{}'", (Object)string, (Object)exception);
+                LOGGER.error("Couldn't open uri '{}'", (Object)uri, (Object)exception);
             }
+        }
+
+        private static /* synthetic */ OperatingSystem[] method_36579() {
+            return new OperatingSystem[]{LINUX, SOLARIS, WINDOWS, OSX, UNKNOWN};
+        }
+
+        static {
+            field_1136 = OperatingSystem.method_36579();
+        }
+    }
+
+    static final class IdentityHashStrategy
+    extends Enum<IdentityHashStrategy>
+    implements Hash.Strategy<Object> {
+        public static final /* enum */ IdentityHashStrategy INSTANCE = new IdentityHashStrategy();
+        private static final /* synthetic */ IdentityHashStrategy[] field_1131;
+
+        public static IdentityHashStrategy[] values() {
+            return (IdentityHashStrategy[])field_1131.clone();
+        }
+
+        public static IdentityHashStrategy valueOf(String string) {
+            return Enum.valueOf(IdentityHashStrategy.class, string);
+        }
+
+        public int hashCode(Object object) {
+            return System.identityHashCode(object);
+        }
+
+        public boolean equals(Object object, Object object2) {
+            return object == object2;
+        }
+
+        private static /* synthetic */ IdentityHashStrategy[] method_36578() {
+            return new IdentityHashStrategy[]{INSTANCE};
+        }
+
+        static {
+            field_1131 = IdentityHashStrategy.method_36578();
         }
     }
 }

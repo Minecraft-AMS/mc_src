@@ -47,7 +47,7 @@ extends Enchantment {
         if (this.protectionType == Type.FIRE && source.isFire()) {
             return level * 2;
         }
-        if (this.protectionType == Type.FALL && source == DamageSource.FALL) {
+        if (this.protectionType == Type.FALL && source.isFromFalling()) {
             return level * 3;
         }
         if (this.protectionType == Type.EXPLOSION && source.isExplosive()) {
@@ -87,19 +87,26 @@ extends Enchantment {
         return velocity;
     }
 
-    public static enum Type {
-        ALL("all", 1, 11),
-        FIRE("fire", 10, 8),
-        FALL("fall", 5, 6),
-        EXPLOSION("explosion", 5, 8),
-        PROJECTILE("projectile", 3, 6);
-
-        private final String name;
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type ALL = new Type(1, 11);
+        public static final /* enum */ Type FIRE = new Type(10, 8);
+        public static final /* enum */ Type FALL = new Type(5, 6);
+        public static final /* enum */ Type EXPLOSION = new Type(5, 8);
+        public static final /* enum */ Type PROJECTILE = new Type(3, 6);
         private final int basePower;
         private final int powerPerLevel;
+        private static final /* synthetic */ Type[] field_9136;
 
-        private Type(String name, int basePower, int powerPerLevel) {
-            this.name = name;
+        public static Type[] values() {
+            return (Type[])field_9136.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private Type(int basePower, int powerPerLevel) {
             this.basePower = basePower;
             this.powerPerLevel = powerPerLevel;
         }
@@ -110,6 +117,14 @@ extends Enchantment {
 
         public int getPowerPerLevel() {
             return this.powerPerLevel;
+        }
+
+        private static /* synthetic */ Type[] method_36689() {
+            return new Type[]{ALL, FIRE, FALL, EXPLOSION, PROJECTILE};
+        }
+
+        static {
+            field_9136 = Type.method_36689();
         }
     }
 }

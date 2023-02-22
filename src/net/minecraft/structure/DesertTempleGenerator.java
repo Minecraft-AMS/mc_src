@@ -9,7 +9,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.StairsBlock;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.structure.StructureManager;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePieceWithDimensions;
 import net.minecraft.util.math.BlockBox;
@@ -25,24 +25,24 @@ extends StructurePieceWithDimensions {
     private final boolean[] hasPlacedChest = new boolean[4];
 
     public DesertTempleGenerator(Random random, int x, int z) {
-        super(StructurePieceType.DESERT_TEMPLE, random, x, 64, z, 21, 15, 21);
+        super(StructurePieceType.DESERT_TEMPLE, x, 64, z, 21, 15, 21, DesertTempleGenerator.getRandomHorizontalDirection(random));
     }
 
-    public DesertTempleGenerator(StructureManager manager, NbtCompound tag) {
-        super(StructurePieceType.DESERT_TEMPLE, tag);
-        this.hasPlacedChest[0] = tag.getBoolean("hasPlacedChest0");
-        this.hasPlacedChest[1] = tag.getBoolean("hasPlacedChest1");
-        this.hasPlacedChest[2] = tag.getBoolean("hasPlacedChest2");
-        this.hasPlacedChest[3] = tag.getBoolean("hasPlacedChest3");
+    public DesertTempleGenerator(ServerWorld world, NbtCompound nbt) {
+        super(StructurePieceType.DESERT_TEMPLE, nbt);
+        this.hasPlacedChest[0] = nbt.getBoolean("hasPlacedChest0");
+        this.hasPlacedChest[1] = nbt.getBoolean("hasPlacedChest1");
+        this.hasPlacedChest[2] = nbt.getBoolean("hasPlacedChest2");
+        this.hasPlacedChest[3] = nbt.getBoolean("hasPlacedChest3");
     }
 
     @Override
-    protected void toNbt(NbtCompound tag) {
-        super.toNbt(tag);
-        tag.putBoolean("hasPlacedChest0", this.hasPlacedChest[0]);
-        tag.putBoolean("hasPlacedChest1", this.hasPlacedChest[1]);
-        tag.putBoolean("hasPlacedChest2", this.hasPlacedChest[2]);
-        tag.putBoolean("hasPlacedChest3", this.hasPlacedChest[3]);
+    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+        super.writeNbt(world, nbt);
+        nbt.putBoolean("hasPlacedChest0", this.hasPlacedChest[0]);
+        nbt.putBoolean("hasPlacedChest1", this.hasPlacedChest[1]);
+        nbt.putBoolean("hasPlacedChest2", this.hasPlacedChest[2]);
+        nbt.putBoolean("hasPlacedChest3", this.hasPlacedChest[3]);
     }
 
     @Override

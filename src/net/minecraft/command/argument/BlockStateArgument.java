@@ -36,6 +36,10 @@ implements Predicate<CachedBlockPosition> {
         return this.state;
     }
 
+    public Set<Property<?>> getProperties() {
+        return this.properties;
+    }
+
     @Override
     public boolean test(CachedBlockPosition cachedBlockPosition) {
         BlockState blockState = cachedBlockPosition.getBlockState();
@@ -53,6 +57,10 @@ implements Predicate<CachedBlockPosition> {
         return true;
     }
 
+    public boolean test(ServerWorld world, BlockPos pos) {
+        return this.test(new CachedBlockPosition(world, pos, false));
+    }
+
     public boolean setBlockState(ServerWorld world, BlockPos pos, int flags) {
         BlockEntity blockEntity;
         BlockState blockState = Block.postProcessState(this.state, world, pos);
@@ -67,7 +75,7 @@ implements Predicate<CachedBlockPosition> {
             nbtCompound.putInt("x", pos.getX());
             nbtCompound.putInt("y", pos.getY());
             nbtCompound.putInt("z", pos.getZ());
-            blockEntity.fromTag(blockState, nbtCompound);
+            blockEntity.readNbt(nbtCompound);
         }
         return true;
     }

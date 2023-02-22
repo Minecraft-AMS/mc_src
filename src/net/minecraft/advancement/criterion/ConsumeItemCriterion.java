@@ -2,13 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableSet
  *  com.google.gson.JsonObject
  */
 package net.minecraft.advancement.criterion;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonObject;
+import java.util.Set;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.predicate.NbtPredicate;
@@ -23,7 +27,7 @@ import net.minecraft.util.Identifier;
 
 public class ConsumeItemCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("consume_item");
+    static final Identifier ID = new Identifier("consume_item");
 
     @Override
     public Identifier getId() {
@@ -36,7 +40,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack stack) {
-        this.test(player, conditions -> conditions.matches(stack));
+        this.trigger(player, (T conditions) -> conditions.matches(stack));
     }
 
     @Override
@@ -57,8 +61,12 @@ extends AbstractCriterion<Conditions> {
             return new Conditions(EntityPredicate.Extended.EMPTY, ItemPredicate.ANY);
         }
 
+        public static Conditions predicate(ItemPredicate predicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, predicate);
+        }
+
         public static Conditions item(ItemConvertible item) {
-            return new Conditions(EntityPredicate.Extended.EMPTY, new ItemPredicate(null, item.asItem(), NumberRange.IntRange.ANY, NumberRange.IntRange.ANY, EnchantmentPredicate.ARRAY_OF_ANY, EnchantmentPredicate.ARRAY_OF_ANY, null, NbtPredicate.ANY));
+            return new Conditions(EntityPredicate.Extended.EMPTY, new ItemPredicate(null, (Set<Item>)ImmutableSet.of((Object)item.asItem()), NumberRange.IntRange.ANY, NumberRange.IntRange.ANY, EnchantmentPredicate.ARRAY_OF_ANY, EnchantmentPredicate.ARRAY_OF_ANY, null, NbtPredicate.ANY));
         }
 
         public boolean matches(ItemStack stack) {

@@ -21,7 +21,7 @@ import net.minecraft.util.Identifier;
 
 public class VillagerTradeCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("villager_trade");
+    static final Identifier ID = new Identifier("villager_trade");
 
     @Override
     public Identifier getId() {
@@ -35,9 +35,9 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, extended2, itemPredicate);
     }
 
-    public void handle(ServerPlayerEntity player, MerchantEntity merchant, ItemStack stack) {
+    public void trigger(ServerPlayerEntity player, MerchantEntity merchant, ItemStack stack) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, merchant);
-        this.test(player, conditions -> conditions.matches(lootContext, stack));
+        this.trigger(player, conditions -> conditions.matches(lootContext, stack));
     }
 
     @Override

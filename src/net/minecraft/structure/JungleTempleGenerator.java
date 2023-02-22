@@ -18,7 +18,7 @@ import net.minecraft.block.enums.WallMountLocation;
 import net.minecraft.block.enums.WireConnection;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.structure.StructureManager;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePieceWithDimensions;
@@ -39,31 +39,31 @@ extends StructurePieceWithDimensions {
     private static final CobblestoneRandomizer COBBLESTONE_RANDOMIZER = new CobblestoneRandomizer();
 
     public JungleTempleGenerator(Random random, int x, int z) {
-        super(StructurePieceType.JUNGLE_TEMPLE, random, x, 64, z, 12, 10, 15);
+        super(StructurePieceType.JUNGLE_TEMPLE, x, 64, z, 12, 10, 15, JungleTempleGenerator.getRandomHorizontalDirection(random));
     }
 
-    public JungleTempleGenerator(StructureManager manager, NbtCompound tag) {
-        super(StructurePieceType.JUNGLE_TEMPLE, tag);
-        this.placedMainChest = tag.getBoolean("placedMainChest");
-        this.placedHiddenChest = tag.getBoolean("placedHiddenChest");
-        this.placedTrap1 = tag.getBoolean("placedTrap1");
-        this.placedTrap2 = tag.getBoolean("placedTrap2");
+    public JungleTempleGenerator(ServerWorld world, NbtCompound nbt) {
+        super(StructurePieceType.JUNGLE_TEMPLE, nbt);
+        this.placedMainChest = nbt.getBoolean("placedMainChest");
+        this.placedHiddenChest = nbt.getBoolean("placedHiddenChest");
+        this.placedTrap1 = nbt.getBoolean("placedTrap1");
+        this.placedTrap2 = nbt.getBoolean("placedTrap2");
     }
 
     @Override
-    protected void toNbt(NbtCompound tag) {
-        super.toNbt(tag);
-        tag.putBoolean("placedMainChest", this.placedMainChest);
-        tag.putBoolean("placedHiddenChest", this.placedHiddenChest);
-        tag.putBoolean("placedTrap1", this.placedTrap1);
-        tag.putBoolean("placedTrap2", this.placedTrap2);
+    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+        super.writeNbt(world, nbt);
+        nbt.putBoolean("placedMainChest", this.placedMainChest);
+        nbt.putBoolean("placedHiddenChest", this.placedHiddenChest);
+        nbt.putBoolean("placedTrap1", this.placedTrap1);
+        nbt.putBoolean("placedTrap2", this.placedTrap2);
     }
 
     @Override
     public boolean generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox boundingBox, ChunkPos chunkPos, BlockPos pos) {
         int k;
         int i;
-        if (!this.method_14839(world, boundingBox, 0)) {
+        if (!this.adjustToAverageHeight(world, boundingBox, 0)) {
             return false;
         }
         this.fillWithOutline(world, boundingBox, 0, -4, 0, this.width - 1, 0, this.depth - 1, false, random, COBBLESTONE_RANDOMIZER);
@@ -229,7 +229,7 @@ extends StructurePieceWithDimensions {
 
     static class CobblestoneRandomizer
     extends StructurePiece.BlockRandomizer {
-        private CobblestoneRandomizer() {
+        CobblestoneRandomizer() {
         }
 
         @Override

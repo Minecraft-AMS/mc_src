@@ -31,15 +31,16 @@ import net.minecraft.command.argument.LookingPosArgument;
 import net.minecraft.command.argument.PosArgument;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 public class BlockPosArgumentType
 implements ArgumentType<PosArgument> {
     private static final Collection<String> EXAMPLES = Arrays.asList("0 0 0", "~ ~ ~", "^ ^ ^", "^1 ^ ^-5", "~0.5 ~1 ~-5");
     public static final SimpleCommandExceptionType UNLOADED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.unloaded"));
     public static final SimpleCommandExceptionType OUT_OF_WORLD_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.outofworld"));
+    public static final SimpleCommandExceptionType OUT_OF_BOUNDS_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.outofbounds"));
 
     public static BlockPosArgumentType blockPos() {
         return new BlockPosArgumentType();
@@ -50,15 +51,18 @@ implements ArgumentType<PosArgument> {
         if (!((ServerCommandSource)context.getSource()).getWorld().isChunkLoaded(blockPos)) {
             throw UNLOADED_EXCEPTION.create();
         }
-        ((ServerCommandSource)context.getSource()).getWorld();
-        if (!ServerWorld.isInBuildLimit(blockPos)) {
+        if (!((ServerCommandSource)context.getSource()).getWorld().isInBuildLimit(blockPos)) {
             throw OUT_OF_WORLD_EXCEPTION.create();
         }
         return blockPos;
     }
 
     public static BlockPos getBlockPos(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return ((PosArgument)context.getArgument(name, PosArgument.class)).toAbsoluteBlockPos((ServerCommandSource)context.getSource());
+        BlockPos blockPos = ((PosArgument)context.getArgument(name, PosArgument.class)).toAbsoluteBlockPos((ServerCommandSource)context.getSource());
+        if (!World.isValid(blockPos)) {
+            throw OUT_OF_BOUNDS_EXCEPTION.create();
+        }
+        return blockPos;
     }
 
     public PosArgument parse(StringReader stringReader) throws CommandSyntaxException {
@@ -81,8 +85,8 @@ implements ArgumentType<PosArgument> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

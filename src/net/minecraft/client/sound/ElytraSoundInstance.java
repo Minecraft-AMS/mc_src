@@ -18,6 +18,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class ElytraSoundInstance
 extends MovingSoundInstance {
+    public static final int field_32996 = 20;
     private final ClientPlayerEntity player;
     private int tickCount;
 
@@ -32,7 +33,7 @@ extends MovingSoundInstance {
     @Override
     public void tick() {
         ++this.tickCount;
-        if (this.player.removed || this.tickCount > 20 && !this.player.isFallFlying()) {
+        if (this.player.isRemoved() || this.tickCount > 20 && !this.player.isFallFlying()) {
             this.setDone();
             return;
         }

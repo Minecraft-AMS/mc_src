@@ -27,12 +27,12 @@ public class BlockModels {
     private final Map<BlockState, BakedModel> models = Maps.newIdentityHashMap();
     private final BakedModelManager modelManager;
 
-    public BlockModels(BakedModelManager bakedModelManager) {
-        this.modelManager = bakedModelManager;
+    public BlockModels(BakedModelManager modelManager) {
+        this.modelManager = modelManager;
     }
 
-    public Sprite getSprite(BlockState state) {
-        return this.getModel(state).getSprite();
+    public Sprite getModelParticleSprite(BlockState state) {
+        return this.getModel(state).getParticleSprite();
     }
 
     public BakedModel getModel(BlockState state) {
@@ -50,7 +50,7 @@ public class BlockModels {
     public void reload() {
         this.models.clear();
         for (Block block : Registry.BLOCK) {
-            block.getStateManager().getStates().forEach(blockState -> this.models.put((BlockState)blockState, this.modelManager.getModel(BlockModels.getModelId(blockState))));
+            block.getStateManager().getStates().forEach(state -> this.models.put((BlockState)state, this.modelManager.getModel(BlockModels.getModelId(state))));
         }
     }
 
@@ -76,8 +76,8 @@ public class BlockModels {
         return stringBuilder.toString();
     }
 
-    private static <T extends Comparable<T>> String propertyValueToString(Property<T> property, Comparable<?> comparable) {
-        return property.name(comparable);
+    private static <T extends Comparable<T>> String propertyValueToString(Property<T> property, Comparable<?> value) {
+        return property.name(value);
     }
 }
 

@@ -108,6 +108,7 @@ public class ModelLoader {
     public static final SpriteIdentifier BANNER_BASE = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, new Identifier("entity/banner_base"));
     public static final SpriteIdentifier SHIELD_BASE = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, new Identifier("entity/shield_base"));
     public static final SpriteIdentifier SHIELD_BASE_NO_PATTERN = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, new Identifier("entity/shield_base_nopattern"));
+    public static final int field_32983 = 10;
     public static final List<Identifier> BLOCK_DESTRUCTION_STAGES = IntStream.range(0, 10).mapToObj(i -> new Identifier("block/destroy_stage_" + i)).collect(Collectors.toList());
     public static final List<Identifier> BLOCK_DESTRUCTION_STAGE_TEXTURES = BLOCK_DESTRUCTION_STAGES.stream().map(identifier -> new Identifier("textures/" + identifier.getPath() + ".png")).collect(Collectors.toList());
     public static final List<RenderLayer> BLOCK_DESTRUCTION_RENDER_LAYERS = BLOCK_DESTRUCTION_STAGE_TEXTURES.stream().map(RenderLayer::getBlockBreaking).collect(Collectors.toList());
@@ -138,7 +139,13 @@ public class ModelLoader {
         hashSet.add(new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, PlayerScreenHandler.EMPTY_OFFHAND_ARMOR_SLOT));
         TexturedRenderLayers.addDefaultTextures(hashSet::add);
     });
+    static final int field_32984 = -1;
+    private static final int field_32985 = 0;
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String BUILTIN = "builtin/";
+    private static final String BUILTIN_GENERATED = "builtin/generated";
+    private static final String BUILTIN_ENTITY = "builtin/entity";
+    private static final String MISSING = "missing";
     public static final ModelIdentifier MISSING_ID = new ModelIdentifier("builtin/missing", "missing");
     private static final String field_21773 = MISSING_ID.toString();
     @VisibleForTesting
@@ -154,7 +161,7 @@ public class ModelLoader {
     });
     private static final StateManager<Block, BlockState> ITEM_FRAME_STATE_FACTORY = new StateManager.Builder(Blocks.AIR).add(BooleanProperty.of("map")).build(Block::getDefaultState, BlockState::new);
     private static final ItemModelGenerator ITEM_MODEL_GENERATOR = new ItemModelGenerator();
-    private static final Map<Identifier, StateManager<Block, BlockState>> STATIC_DEFINITIONS = ImmutableMap.of((Object)new Identifier("item_frame"), ITEM_FRAME_STATE_FACTORY);
+    private static final Map<Identifier, StateManager<Block, BlockState>> STATIC_DEFINITIONS = ImmutableMap.of((Object)new Identifier("item_frame"), ITEM_FRAME_STATE_FACTORY, (Object)new Identifier("glow_item_frame"), ITEM_FRAME_STATE_FACTORY);
     private final ResourceManager resourceManager;
     @Nullable
     private SpriteAtlasManager spriteAtlasManager;
@@ -193,6 +200,7 @@ public class ModelLoader {
         }
         profiler.swap("special");
         this.addModel(new ModelIdentifier("minecraft:trident_in_hand#inventory"));
+        this.addModel(new ModelIdentifier("minecraft:spyglass_in_hand#inventory"));
         profiler.swap("textures");
         LinkedHashSet set = Sets.newLinkedHashSet();
         Set set2 = this.modelsToBake.values().stream().flatMap(unbakedModel -> unbakedModel.getTextureDependencies(this::getOrLoadModel, set).stream()).collect(Collectors.toSet());
@@ -258,7 +266,7 @@ public class ModelLoader {
         }
         Block block = stateFactory.getOwner();
         return blockState -> {
-            if (blockState == null || block != blockState.getBlock()) {
+            if (blockState == null || !blockState.isOf(block)) {
                 return false;
             }
             for (Map.Entry entry : map.entrySet()) {
@@ -335,13 +343,32 @@ public class ModelLoader {
                 List list2;
                 try {
                     list2 = this.resourceManager.getAllResources(identifier2).stream().map(resource -> {
-                        try (InputStream inputStream = resource.getInputStream();){
-                            Pair pair = Pair.of((Object)resource.getResourcePackName(), (Object)ModelVariantMap.fromJson(this.variantMapDeserializationContext, new InputStreamReader(inputStream, StandardCharsets.UTF_8)));
-                            return pair;
+                        Pair pair;
+                        block8: {
+                            InputStream inputStream = resource.getInputStream();
+                            try {
+                                pair = Pair.of((Object)resource.getResourcePackName(), (Object)ModelVariantMap.fromJson(this.variantMapDeserializationContext, new InputStreamReader(inputStream, StandardCharsets.UTF_8)));
+                                if (inputStream == null) break block8;
+                            }
+                            catch (Throwable throwable) {
+                                try {
+                                    if (inputStream != null) {
+                                        try {
+                                            inputStream.close();
+                                        }
+                                        catch (Throwable throwable2) {
+                                            throwable.addSuppressed(throwable2);
+                                        }
+                                    }
+                                    throw throwable;
+                                }
+                                catch (Exception exception) {
+                                    throw new ModelLoaderException(String.format("Exception loading blockstate definition: '%s' in resourcepack: '%s': %s", resource.getId(), resource.getResourcePackName(), exception.getMessage()));
+                                }
+                            }
+                            inputStream.close();
                         }
-                        catch (Exception exception) {
-                            throw new ModelLoaderException(String.format("Exception loading blockstate definition: '%s' in resourcepack: '%s': %s", resource.getId(), resource.getResourcePackName(), exception.getMessage()));
-                        }
+                        return pair;
                     }).collect(Collectors.toList());
                 }
                 catch (IOException iOException) {
@@ -478,7 +505,7 @@ public class ModelLoader {
                 resource = null;
                 try {
                     string = id.getPath();
-                    if (!"builtin/generated".equals(string)) break block7;
+                    if (!BUILTIN_GENERATED.equals(string)) break block7;
                     jsonUnbakedModel = GENERATION_MARKER;
                 }
                 catch (Throwable throwable) {
@@ -490,14 +517,14 @@ public class ModelLoader {
                 IOUtils.closeQuietly(resource);
                 return jsonUnbakedModel;
             }
-            if (!"builtin/entity".equals(string)) break block8;
+            if (!BUILTIN_ENTITY.equals(string)) break block8;
             JsonUnbakedModel jsonUnbakedModel = BLOCK_ENTITY_MARKER;
             IOUtils.closeQuietly(reader);
             IOUtils.closeQuietly(resource);
             return jsonUnbakedModel;
         }
-        if (string.startsWith("builtin/")) {
-            String string2 = string.substring("builtin/".length());
+        if (string.startsWith(BUILTIN)) {
+            String string2 = string.substring(BUILTIN.length());
             String string3 = BUILTIN_MODEL_DEFINITIONS.get(string2);
             if (string3 == null) {
                 throw new FileNotFoundException(id.toString());
@@ -543,6 +570,14 @@ public class ModelLoader {
     }
 
     @Environment(value=EnvType.CLIENT)
+    static class ModelLoaderException
+    extends RuntimeException {
+        public ModelLoaderException(String message) {
+            super(message);
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
     static class ModelDefinition {
         private final List<UnbakedModel> components;
         private final List<Object> values;
@@ -581,14 +616,6 @@ public class ModelLoader {
 
         private static List<Object> getStateValues(BlockState state, Collection<Property<?>> properties) {
             return (List)properties.stream().map(state::get).collect(ImmutableList.toImmutableList());
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static class ModelLoaderException
-    extends RuntimeException {
-        public ModelLoaderException(String message) {
-            super(message);
         }
     }
 }

@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -14,9 +12,6 @@ package net.minecraft.entity.boss.dragon;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Material;
 import net.minecraft.entity.Entity;
@@ -46,6 +41,7 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
@@ -70,7 +66,12 @@ extends MobEntity
 implements Monster {
     private static final Logger LOGGER = LogManager.getLogger();
     public static final TrackedData<Integer> PHASE_TYPE = DataTracker.registerData(EnderDragonEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TargetPredicate CLOSE_PLAYER_PREDICATE = new TargetPredicate().setBaseMaxDistance(64.0);
+    private static final TargetPredicate CLOSE_PLAYER_PREDICATE = TargetPredicate.createAttackable().setBaseMaxDistance(64.0);
+    private static final int MAX_HEALTH = 200;
+    private static final int field_30429 = 400;
+    private static final float TAKEOFF_THRESHOLD = 0.25f;
+    private static final String DRAGON_DEATH_TIME_KEY = "DragonDeathTime";
+    private static final String DRAGON_PHASE_KEY = "DragonPhase";
     public final double[][] segmentCircularBuffer = new double[64][3];
     public int latestSegment = -1;
     private final EnderDragonPart[] parts;
@@ -86,14 +87,14 @@ implements Monster {
     public float wingPosition;
     public boolean slowedDownByBlock;
     public int ticksSinceDeath;
-    public float field_20865;
+    public float yawAcceleration;
     @Nullable
     public EndCrystalEntity connectedCrystal;
     @Nullable
     private final EnderDragonFight fight;
     private final PhaseManager phaseManager;
     private int ticksUntilNextGrowl = 100;
-    private int field_7029;
+    private int damageDuringSitting;
     private final PathNode[] pathNodes = new PathNode[24];
     private final int[] pathNodeConnections = new int[24];
     private final PathMinHeap pathHeap = new PathMinHeap();
@@ -118,6 +119,20 @@ implements Monster {
 
     public static DefaultAttributeContainer.Builder createEnderDragonAttributes() {
         return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 200.0);
+    }
+
+    @Override
+    public boolean hasWings() {
+        float f = MathHelper.cos(this.wingPosition * ((float)Math.PI * 2));
+        float g = MathHelper.cos(this.prevWingPosition * ((float)Math.PI * 2));
+        return g <= -0.3f && f >= -0.3f;
+    }
+
+    @Override
+    public void addFlapEffects() {
+        if (this.world.isClient && !this.isSilent()) {
+            this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, this.getSoundCategory(), 5.0f, 0.8f + this.random.nextFloat() * 0.3f, false);
+        }
     }
 
     @Override
@@ -147,66 +162,56 @@ implements Monster {
     @Override
     public void tickMovement() {
         int ad;
+        float r;
         float q;
-        float p;
-        double k;
-        double j;
-        double e;
-        float g;
-        float f;
+        float o;
+        this.addAirTravelEffects();
         if (this.world.isClient) {
             this.setHealth(this.getHealth());
-            if (!this.isSilent()) {
-                f = MathHelper.cos(this.wingPosition * ((float)Math.PI * 2));
-                g = MathHelper.cos(this.prevWingPosition * ((float)Math.PI * 2));
-                if (g <= -0.3f && f >= -0.3f) {
-                    this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_FLAP, this.getSoundCategory(), 5.0f, 0.8f + this.random.nextFloat() * 0.3f, false);
-                }
-                if (!this.phaseManager.getCurrent().isSittingOrHovering() && --this.ticksUntilNextGrowl < 0) {
-                    this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, this.getSoundCategory(), 2.5f, 0.8f + this.random.nextFloat() * 0.3f, false);
-                    this.ticksUntilNextGrowl = 200 + this.random.nextInt(200);
-                }
+            if (!this.isSilent() && !this.phaseManager.getCurrent().isSittingOrHovering() && --this.ticksUntilNextGrowl < 0) {
+                this.world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ENDER_DRAGON_GROWL, this.getSoundCategory(), 2.5f, 0.8f + this.random.nextFloat() * 0.3f, false);
+                this.ticksUntilNextGrowl = 200 + this.random.nextInt(200);
             }
         }
         this.prevWingPosition = this.wingPosition;
         if (this.isDead()) {
-            f = (this.random.nextFloat() - 0.5f) * 8.0f;
-            g = (this.random.nextFloat() - 0.5f) * 4.0f;
+            float f = (this.random.nextFloat() - 0.5f) * 8.0f;
+            float g = (this.random.nextFloat() - 0.5f) * 4.0f;
             float h = (this.random.nextFloat() - 0.5f) * 8.0f;
             this.world.addParticle(ParticleTypes.EXPLOSION, this.getX() + (double)f, this.getY() + 2.0 + (double)g, this.getZ() + (double)h, 0.0, 0.0, 0.0);
             return;
         }
         this.tickWithEndCrystals();
         Vec3d vec3d = this.getVelocity();
-        g = 0.2f / (MathHelper.sqrt(EnderDragonEntity.squaredHorizontalLength(vec3d)) * 10.0f + 1.0f);
+        float g = 0.2f / ((float)vec3d.horizontalLength() * 10.0f + 1.0f);
         this.wingPosition = this.phaseManager.getCurrent().isSittingOrHovering() ? (this.wingPosition += 0.1f) : (this.slowedDownByBlock ? (this.wingPosition += g * 0.5f) : (this.wingPosition += (g *= (float)Math.pow(2.0, vec3d.y))));
-        this.yaw = MathHelper.wrapDegrees(this.yaw);
+        this.setYaw(MathHelper.wrapDegrees(this.getYaw()));
         if (this.isAiDisabled()) {
             this.wingPosition = 0.5f;
             return;
         }
         if (this.latestSegment < 0) {
             for (int i = 0; i < this.segmentCircularBuffer.length; ++i) {
-                this.segmentCircularBuffer[i][0] = this.yaw;
+                this.segmentCircularBuffer[i][0] = this.getYaw();
                 this.segmentCircularBuffer[i][1] = this.getY();
             }
         }
         if (++this.latestSegment == this.segmentCircularBuffer.length) {
             this.latestSegment = 0;
         }
-        this.segmentCircularBuffer[this.latestSegment][0] = this.yaw;
+        this.segmentCircularBuffer[this.latestSegment][0] = this.getYaw();
         this.segmentCircularBuffer[this.latestSegment][1] = this.getY();
         if (this.world.isClient) {
             if (this.bodyTrackingIncrements > 0) {
                 double d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
                 e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
                 j = this.getZ() + (this.serverZ - this.getZ()) / (double)this.bodyTrackingIncrements;
-                k = MathHelper.wrapDegrees(this.serverYaw - (double)this.yaw);
-                this.yaw = (float)((double)this.yaw + k / (double)this.bodyTrackingIncrements);
-                this.pitch = (float)((double)this.pitch + (this.serverPitch - (double)this.pitch) / (double)this.bodyTrackingIncrements);
+                k = MathHelper.wrapDegrees(this.serverYaw - (double)this.getYaw());
+                this.setYaw(this.getYaw() + (float)k / (float)this.bodyTrackingIncrements);
+                this.setPitch(this.getPitch() + (float)(this.serverPitch - (double)this.getPitch()) / (float)this.bodyTrackingIncrements);
                 --this.bodyTrackingIncrements;
                 this.setPosition(d, e, j);
-                this.setRotation(this.yaw, this.pitch);
+                this.setRotation(this.getYaw(), this.getPitch());
             }
             this.phaseManager.getCurrent().clientTick();
         } else {
@@ -223,22 +228,24 @@ implements Monster {
                 k = vec3d2.z - this.getZ();
                 double l = e * e + j * j + k * k;
                 float m = phase.getMaxYAcceleration();
-                double n = MathHelper.sqrt(e * e + k * k);
+                double n = Math.sqrt(e * e + k * k);
                 if (n > 0.0) {
                     j = MathHelper.clamp(j / n, (double)(-m), (double)m);
                 }
                 this.setVelocity(this.getVelocity().add(0.0, j * 0.01, 0.0));
-                this.yaw = MathHelper.wrapDegrees(this.yaw);
-                double o = MathHelper.clamp(MathHelper.wrapDegrees(180.0 - MathHelper.atan2(e, k) * 57.2957763671875 - (double)this.yaw), -50.0, 50.0);
+                this.setYaw(MathHelper.wrapDegrees(this.getYaw()));
                 Vec3d vec3d3 = vec3d2.subtract(this.getX(), this.getY(), this.getZ()).normalize();
-                Vec3d vec3d4 = new Vec3d(MathHelper.sin(this.yaw * ((float)Math.PI / 180)), this.getVelocity().y, -MathHelper.cos(this.yaw * ((float)Math.PI / 180))).normalize();
-                p = Math.max(((float)vec3d4.dotProduct(vec3d3) + 0.5f) / 1.5f, 0.0f);
-                this.field_20865 *= 0.8f;
-                this.field_20865 = (float)((double)this.field_20865 + o * (double)phase.method_6847());
-                this.yaw += this.field_20865 * 0.1f;
+                Vec3d vec3d4 = new Vec3d(MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)), this.getVelocity().y, -MathHelper.cos(this.getYaw() * ((float)Math.PI / 180))).normalize();
+                o = Math.max(((float)vec3d4.dotProduct(vec3d3) + 0.5f) / 1.5f, 0.0f);
+                if (Math.abs(e) > (double)1.0E-5f || Math.abs(k) > (double)1.0E-5f) {
+                    double p = MathHelper.clamp(MathHelper.wrapDegrees(180.0 - MathHelper.atan2(e, k) * 57.2957763671875 - (double)this.getYaw()), -50.0, 50.0);
+                    this.yawAcceleration *= 0.8f;
+                    this.yawAcceleration = (float)((double)this.yawAcceleration + p * (double)phase.getYawAcceleration());
+                    this.setYaw(this.getYaw() + this.yawAcceleration * 0.1f);
+                }
                 q = (float)(2.0 / (l + 1.0));
-                float r = 0.06f;
-                this.updateVelocity(0.06f * (p * q + (1.0f - q)), new Vec3d(0.0, 0.0, -1.0));
+                r = 0.06f;
+                this.updateVelocity(0.06f * (o * q + (1.0f - q)), new Vec3d(0.0, 0.0, -1.0));
                 if (this.slowedDownByBlock) {
                     this.move(MovementType.SELF, this.getVelocity().multiply(0.8f));
                 } else {
@@ -249,7 +256,7 @@ implements Monster {
                 this.setVelocity(this.getVelocity().multiply(s, 0.91f, s));
             }
         }
-        this.bodyYaw = this.yaw;
+        this.bodyYaw = this.getYaw();
         Vec3d[] vec3ds = new Vec3d[this.parts.length];
         for (int t = 0; t < this.parts.length; ++t) {
             vec3ds[t] = new Vec3d(this.parts[t].getX(), this.parts[t].getY(), this.parts[t].getZ());
@@ -257,7 +264,7 @@ implements Monster {
         float u = (float)(this.getSegmentProperties(5, 1.0f)[1] - this.getSegmentProperties(10, 1.0f)[1]) * 10.0f * ((float)Math.PI / 180);
         float v = MathHelper.cos(u);
         float w = MathHelper.sin(u);
-        float x = this.yaw * ((float)Math.PI / 180);
+        float x = this.getYaw() * ((float)Math.PI / 180);
         float y = MathHelper.sin(x);
         float z = MathHelper.cos(x);
         this.movePart(this.body, y * 0.5f, 0.0, -z * 0.5f);
@@ -269,9 +276,9 @@ implements Monster {
             this.damageLivingEntities(this.world.getOtherEntities(this, this.head.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
             this.damageLivingEntities(this.world.getOtherEntities(this, this.neck.getBoundingBox().expand(1.0), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
         }
-        float aa = MathHelper.sin(this.yaw * ((float)Math.PI / 180) - this.field_20865 * 0.01f);
-        float ab = MathHelper.cos(this.yaw * ((float)Math.PI / 180) - this.field_20865 * 0.01f);
-        float ac = this.method_6820();
+        float aa = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180) - this.yawAcceleration * 0.01f);
+        float ab = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180) - this.yawAcceleration * 0.01f);
+        float ac = this.getHeadVerticalMovement();
         this.movePart(this.head, aa * 6.5f * v, ac + w * 6.5f, -ab * 6.5f * v);
         this.movePart(this.neck, aa * 5.5f * v, ac + w * 5.5f, -ab * 5.5f * v);
         double[] ds = this.getSegmentProperties(5, 1.0f);
@@ -287,12 +294,12 @@ implements Monster {
                 enderDragonPart = this.tail3;
             }
             double[] es = this.getSegmentProperties(12 + ad * 2, 1.0f);
-            float ae = this.yaw * ((float)Math.PI / 180) + this.wrapYawChange(es[0] - ds[0]) * ((float)Math.PI / 180);
-            float af = MathHelper.sin(ae);
-            float ag = MathHelper.cos(ae);
-            p = 1.5f;
-            q = (float)(ad + 1) * 2.0f;
-            this.movePart(enderDragonPart, -(y * 1.5f + af * q) * v, es[1] - ds[1] - (double)((q + 1.5f) * w) + 1.5, (z * 1.5f + ag * q) * v);
+            float ae = this.getYaw() * ((float)Math.PI / 180) + this.wrapYawChange(es[0] - ds[0]) * ((float)Math.PI / 180);
+            o = MathHelper.sin(ae);
+            q = MathHelper.cos(ae);
+            r = 1.5f;
+            float af = (float)(ad + 1) * 2.0f;
+            this.movePart(enderDragonPart, -(y * 1.5f + o * af) * v, es[1] - ds[1] - (double)((af + 1.5f) * w) + 1.5, (z * 1.5f + q * af) * v);
         }
         if (!this.world.isClient) {
             this.slowedDownByBlock = this.destroyBlocks(this.head.getBoundingBox()) | this.destroyBlocks(this.neck.getBoundingBox()) | this.destroyBlocks(this.body.getBoundingBox());
@@ -314,7 +321,7 @@ implements Monster {
         enderDragonPart.setPosition(this.getX() + dx, this.getY() + dy, this.getZ() + dz);
     }
 
-    private float method_6820() {
+    private float getHeadVerticalMovement() {
         if (this.phaseManager.getCurrent().isSittingOrHovering()) {
             return -1.0f;
         }
@@ -325,7 +332,7 @@ implements Monster {
 
     private void tickWithEndCrystals() {
         if (this.connectedCrystal != null) {
-            if (this.connectedCrystal.removed) {
+            if (this.connectedCrystal.isRemoved()) {
                 this.connectedCrystal = null;
             } else if (this.age % 10 == 0 && this.getHealth() < this.getMaxHealth()) {
                 this.setHealth(this.getHealth() + 1.0f);
@@ -356,7 +363,7 @@ implements Monster {
             entity.addVelocity(f / h * 4.0, 0.2f, g / h * 4.0);
             if (this.phaseManager.getCurrent().isSittingOrHovering() || ((LivingEntity)entity).getLastAttackedTime() >= entity.age - 2) continue;
             entity.damage(DamageSource.mob(this), 5.0f);
-            this.dealDamage(this, entity);
+            this.applyDamageEffects(this, entity);
         }
     }
 
@@ -364,7 +371,7 @@ implements Monster {
         for (Entity entity : entities) {
             if (!(entity instanceof LivingEntity)) continue;
             entity.damage(DamageSource.mob(this), 10.0f);
-            this.dealDamage(this, entity);
+            this.applyDamageEffects(this, entity);
         }
     }
 
@@ -386,9 +393,8 @@ implements Monster {
                 for (int q = k; q <= n; ++q) {
                     BlockPos blockPos = new BlockPos(o, p, q);
                     BlockState blockState = this.world.getBlockState(blockPos);
-                    Block block = blockState.getBlock();
                     if (blockState.isAir() || blockState.getMaterial() == Material.FIRE) continue;
-                    if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) || BlockTags.DRAGON_IMMUNE.contains(block)) {
+                    if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) || blockState.isIn(BlockTags.DRAGON_IMMUNE)) {
                         bl = true;
                         continue;
                     }
@@ -422,9 +428,9 @@ implements Monster {
                 this.phaseManager.setPhase(PhaseType.DYING);
             }
             if (this.phaseManager.getCurrent().isSittingOrHovering()) {
-                this.field_7029 = (int)((float)this.field_7029 + (f - this.getHealth()));
-                if ((float)this.field_7029 > 0.25f * this.getMaxHealth()) {
-                    this.field_7029 = 0;
+                this.damageDuringSitting = (int)((float)this.damageDuringSitting + (f - this.getHealth()));
+                if ((float)this.damageDuringSitting > 0.25f * this.getMaxHealth()) {
+                    this.damageDuringSitting = 0;
                     this.phaseManager.setPhase(PhaseType.TAKEOFF);
                 }
             }
@@ -446,7 +452,7 @@ implements Monster {
 
     @Override
     public void kill() {
-        this.remove();
+        this.remove(Entity.RemovalReason.KILLED);
         if (this.fight != null) {
             this.fight.updateFight(this);
             this.fight.dragonKilled(this);
@@ -470,33 +476,25 @@ implements Monster {
         if (this.fight != null && !this.fight.hasPreviouslyKilled()) {
             i = 12000;
         }
-        if (!this.world.isClient) {
+        if (this.world instanceof ServerWorld) {
             if (this.ticksSinceDeath > 150 && this.ticksSinceDeath % 5 == 0 && bl) {
-                this.awardExperience(MathHelper.floor((float)i * 0.08f));
+                ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), MathHelper.floor((float)i * 0.08f));
             }
             if (this.ticksSinceDeath == 1 && !this.isSilent()) {
                 this.world.syncGlobalEvent(1028, this.getBlockPos(), 0);
             }
         }
         this.move(MovementType.SELF, new Vec3d(0.0, 0.1f, 0.0));
-        this.yaw += 20.0f;
-        this.bodyYaw = this.yaw;
-        if (this.ticksSinceDeath == 200 && !this.world.isClient) {
+        this.setYaw(this.getYaw() + 20.0f);
+        this.bodyYaw = this.getYaw();
+        if (this.ticksSinceDeath == 200 && this.world instanceof ServerWorld) {
             if (bl) {
-                this.awardExperience(MathHelper.floor((float)i * 0.2f));
+                ExperienceOrbEntity.spawn((ServerWorld)this.world, this.getPos(), MathHelper.floor((float)i * 0.2f));
             }
             if (this.fight != null) {
                 this.fight.dragonKilled(this);
             }
-            this.remove();
-        }
-    }
-
-    private void awardExperience(int amount) {
-        while (amount > 0) {
-            int i = ExperienceOrbEntity.roundToOrbSize(amount);
-            amount -= i;
-            this.world.spawnEntity(new ExperienceOrbEntity(this.world, this.getX(), this.getY(), this.getZ(), i));
+            this.remove(Entity.RemovalReason.KILLED);
         }
     }
 
@@ -651,14 +649,18 @@ implements Monster {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("DragonPhase", this.phaseManager.getCurrent().getType().getTypeId());
+        nbt.putInt(DRAGON_PHASE_KEY, this.phaseManager.getCurrent().getType().getTypeId());
+        nbt.putInt(DRAGON_DEATH_TIME_KEY, this.ticksSinceDeath);
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        if (nbt.contains("DragonPhase")) {
-            this.phaseManager.setPhase(PhaseType.getFromId(nbt.getInt("DragonPhase")));
+        if (nbt.contains(DRAGON_PHASE_KEY)) {
+            this.phaseManager.setPhase(PhaseType.getFromId(nbt.getInt(DRAGON_PHASE_KEY)));
+        }
+        if (nbt.contains(DRAGON_DEATH_TIME_KEY)) {
+            this.ticksSinceDeath = nbt.getInt(DRAGON_DEATH_TIME_KEY);
         }
     }
 
@@ -695,19 +697,18 @@ implements Monster {
         return 5.0f;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getChangeInNeckPitch(int segmentOffset, double[] segment1, double[] segment2) {
-        double d;
+        double e;
         Phase phase = this.phaseManager.getCurrent();
         PhaseType<? extends Phase> phaseType = phase.getType();
         if (phaseType == PhaseType.LANDING || phaseType == PhaseType.TAKEOFF) {
             BlockPos blockPos = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
-            float f = Math.max(MathHelper.sqrt(blockPos.getSquaredDistance(this.getPos(), true)) / 4.0f, 1.0f);
-            d = (float)segmentOffset / f;
+            double d = Math.max(Math.sqrt(blockPos.getSquaredDistance(this.getPos(), true)) / 4.0, 1.0);
+            e = (double)segmentOffset / d;
         } else {
-            d = phase.isSittingOrHovering() ? (double)segmentOffset : (segmentOffset == 6 ? 0.0 : segment2[1] - segment1[1]);
+            e = phase.isSittingOrHovering() ? (double)segmentOffset : (segmentOffset == 6 ? 0.0 : segment2[1] - segment1[1]);
         }
-        return (float)d;
+        return (float)e;
     }
 
     public Vec3d getRotationVectorFromPhase(float tickDelta) {
@@ -716,19 +717,19 @@ implements Monster {
         PhaseType<? extends Phase> phaseType = phase.getType();
         if (phaseType == PhaseType.LANDING || phaseType == PhaseType.TAKEOFF) {
             BlockPos blockPos = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
-            float f = Math.max(MathHelper.sqrt(blockPos.getSquaredDistance(this.getPos(), true)) / 4.0f, 1.0f);
+            float f = Math.max((float)Math.sqrt(blockPos.getSquaredDistance(this.getPos(), true)) / 4.0f, 1.0f);
             float g = 6.0f / f;
-            float h = this.pitch;
+            float h = this.getPitch();
             float i = 1.5f;
-            this.pitch = -g * 1.5f * 5.0f;
+            this.setPitch(-g * 1.5f * 5.0f);
             vec3d = this.getRotationVec(tickDelta);
-            this.pitch = h;
+            this.setPitch(h);
         } else if (phase.isSittingOrHovering()) {
-            float j = this.pitch;
+            float j = this.getPitch();
             float f = 1.5f;
-            this.pitch = -45.0f;
+            this.setPitch(-45.0f);
             vec3d = this.getRotationVec(tickDelta);
-            this.pitch = j;
+            this.setPitch(j);
         } else {
             vec3d = this.getRotationVec(tickDelta);
         }
@@ -761,7 +762,7 @@ implements Monster {
     }
 
     @Override
-    public boolean addStatusEffect(StatusEffectInstance effect) {
+    public boolean addStatusEffect(StatusEffectInstance effect, @Nullable Entity source) {
         return false;
     }
 
@@ -773,6 +774,20 @@ implements Monster {
     @Override
     public boolean canUsePortals() {
         return false;
+    }
+
+    @Override
+    public void readFromPacket(MobSpawnS2CPacket packet) {
+        super.readFromPacket(packet);
+        EnderDragonPart[] enderDragonParts = this.getBodyParts();
+        for (int i = 0; i < enderDragonParts.length; ++i) {
+            enderDragonParts[i].setId(i + packet.getId());
+        }
+    }
+
+    @Override
+    public boolean canTarget(LivingEntity target) {
+        return target.canTakeDamage();
     }
 }
 

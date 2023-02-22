@@ -32,7 +32,6 @@ import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -55,20 +54,20 @@ import org.jetbrains.annotations.Nullable;
 
 public class WanderingTraderEntity
 extends MerchantEntity {
+    private static final int field_30629 = 5;
     @Nullable
     private BlockPos wanderTarget;
     private int despawnDelay;
 
     public WanderingTraderEntity(EntityType<? extends WanderingTraderEntity> entityType, World world) {
         super((EntityType<? extends MerchantEntity>)entityType, world);
-        this.teleporting = true;
     }
 
     @Override
     protected void initGoals() {
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.INVISIBILITY), SoundEvents.ENTITY_WANDERING_TRADER_DISAPPEARED, wanderingTraderEntity -> this.world.isNight() && !wanderingTraderEntity.isInvisible()));
-        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, new ItemStack(Items.MILK_BUCKET), SoundEvents.ENTITY_WANDERING_TRADER_REAPPEARED, wanderingTraderEntity -> this.world.isDay() && wanderingTraderEntity.isInvisible()));
+        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.INVISIBILITY), SoundEvents.ENTITY_WANDERING_TRADER_DISAPPEARED, wanderingTrader -> this.world.isNight() && !wanderingTrader.isInvisible()));
+        this.goalSelector.add(0, new HoldInHandsGoal<WanderingTraderEntity>(this, new ItemStack(Items.MILK_BUCKET), SoundEvents.ENTITY_WANDERING_TRADER_REAPPEARED, wanderingTrader -> this.world.isDay() && wanderingTrader.isInvisible()));
         this.goalSelector.add(1, new StopFollowingCustomerGoal(this));
         this.goalSelector.add(1, new FleeEntityGoal<ZombieEntity>(this, ZombieEntity.class, 8.0f, 0.5, 0.5));
         this.goalSelector.add(1, new FleeEntityGoal<EvokerEntity>(this, EvokerEntity.class, 12.0f, 0.5, 0.5));
@@ -100,7 +99,7 @@ extends MerchantEntity {
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() != Items.VILLAGER_SPAWN_EGG && this.isAlive() && !this.hasCustomer() && !this.isBaby()) {
+        if (!itemStack.isOf(Items.VILLAGER_SPAWN_EGG) && this.isAlive() && !this.hasCustomer() && !this.isBaby()) {
             if (hand == Hand.MAIN_HAND) {
                 player.incrementStat(Stats.TALKED_TO_VILLAGER);
             }
@@ -187,8 +186,7 @@ extends MerchantEntity {
 
     @Override
     protected SoundEvent getDrinkSound(ItemStack stack) {
-        Item item = stack.getItem();
-        if (item == Items.MILK_BUCKET) {
+        if (stack.isOf(Items.MILK_BUCKET)) {
             return SoundEvents.ENTITY_WANDERING_TRADER_DRINK_MILK;
         }
         return SoundEvents.ENTITY_WANDERING_TRADER_DRINK_POTION;
@@ -222,7 +220,7 @@ extends MerchantEntity {
 
     private void tickDespawnDelay() {
         if (this.despawnDelay > 0 && !this.hasCustomer() && --this.despawnDelay == 0) {
-            this.remove();
+            this.discard();
         }
     }
 
@@ -231,7 +229,7 @@ extends MerchantEntity {
     }
 
     @Nullable
-    private BlockPos getWanderTarget() {
+    BlockPos getWanderTarget() {
         return this.wanderTarget;
     }
 

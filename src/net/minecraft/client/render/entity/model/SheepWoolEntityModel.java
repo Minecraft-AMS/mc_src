@@ -9,49 +9,49 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.QuadrupedEntityModel;
 import net.minecraft.entity.passive.SheepEntity;
 
 @Environment(value=EnvType.CLIENT)
 public class SheepWoolEntityModel<T extends SheepEntity>
 extends QuadrupedEntityModel<T> {
-    private float field_3541;
+    private float headAngle;
 
-    public SheepWoolEntityModel() {
-        super(12, 0.0f, false, 8.0f, 4.0f, 2.0f, 2.0f, 24);
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-3.0f, -4.0f, -4.0f, 6.0f, 6.0f, 6.0f, 0.6f);
-        this.head.setPivot(0.0f, 6.0f, -8.0f);
-        this.body = new ModelPart(this, 28, 8);
-        this.body.addCuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, 1.75f);
-        this.body.setPivot(0.0f, 5.0f, 2.0f);
-        float f = 0.5f;
-        this.backRightLeg = new ModelPart(this, 0, 16);
-        this.backRightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, 0.5f);
-        this.backRightLeg.setPivot(-3.0f, 12.0f, 7.0f);
-        this.backLeftLeg = new ModelPart(this, 0, 16);
-        this.backLeftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, 0.5f);
-        this.backLeftLeg.setPivot(3.0f, 12.0f, 7.0f);
-        this.frontRightLeg = new ModelPart(this, 0, 16);
-        this.frontRightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, 0.5f);
-        this.frontRightLeg.setPivot(-3.0f, 12.0f, -5.0f);
-        this.frontLeftLeg = new ModelPart(this, 0, 16);
-        this.frontLeftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, 0.5f);
-        this.frontLeftLeg.setPivot(3.0f, 12.0f, -5.0f);
+    public SheepWoolEntityModel(ModelPart root) {
+        super(root, false, 8.0f, 4.0f, 2.0f, 2.0f, 24);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-3.0f, -4.0f, -4.0f, 6.0f, 6.0f, 6.0f, new Dilation(0.6f)), ModelTransform.pivot(0.0f, 6.0f, -8.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(28, 8).cuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, new Dilation(1.75f)), ModelTransform.of(0.0f, 5.0f, 2.0f, 1.5707964f, 0.0f, 0.0f));
+        ModelPartBuilder modelPartBuilder = ModelPartBuilder.create().uv(0, 16).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 6.0f, 4.0f, new Dilation(0.5f));
+        modelPartData.addChild("right_hind_leg", modelPartBuilder, ModelTransform.pivot(-3.0f, 12.0f, 7.0f));
+        modelPartData.addChild("left_hind_leg", modelPartBuilder, ModelTransform.pivot(3.0f, 12.0f, 7.0f));
+        modelPartData.addChild("right_front_leg", modelPartBuilder, ModelTransform.pivot(-3.0f, 12.0f, -5.0f));
+        modelPartData.addChild("left_front_leg", modelPartBuilder, ModelTransform.pivot(3.0f, 12.0f, -5.0f));
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override
     public void animateModel(T sheepEntity, float f, float g, float h) {
         super.animateModel(sheepEntity, f, g, h);
         this.head.pivotY = 6.0f + ((SheepEntity)sheepEntity).getNeckAngle(h) * 9.0f;
-        this.field_3541 = ((SheepEntity)sheepEntity).getHeadAngle(h);
+        this.headAngle = ((SheepEntity)sheepEntity).getHeadAngle(h);
     }
 
     @Override
     public void setAngles(T sheepEntity, float f, float g, float h, float i, float j) {
         super.setAngles(sheepEntity, f, g, h, i, j);
-        this.head.pitch = this.field_3541;
+        this.head.pitch = this.headAngle;
     }
 }
 

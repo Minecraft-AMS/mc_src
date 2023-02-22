@@ -22,13 +22,23 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public class GrindstoneScreenHandler
 extends ScreenHandler {
+    public static final int field_30793 = 35;
+    public static final int field_30794 = 0;
+    public static final int field_30795 = 1;
+    public static final int field_30796 = 2;
+    private static final int field_30797 = 3;
+    private static final int field_30798 = 30;
+    private static final int field_30799 = 30;
+    private static final int field_30800 = 39;
     private final Inventory result = new CraftingResultInventory();
-    private final Inventory input = new SimpleInventory(2){
+    final Inventory input = new SimpleInventory(2){
 
         @Override
         public void markDirty() {
@@ -50,14 +60,14 @@ extends ScreenHandler {
 
             @Override
             public boolean canInsert(ItemStack stack) {
-                return stack.isDamageable() || stack.getItem() == Items.ENCHANTED_BOOK || stack.hasEnchantments();
+                return stack.isDamageable() || stack.isOf(Items.ENCHANTED_BOOK) || stack.hasEnchantments();
             }
         });
         this.addSlot(new Slot(this.input, 1, 49, 40){
 
             @Override
             public boolean canInsert(ItemStack stack) {
-                return stack.isDamageable() || stack.getItem() == Items.ENCHANTED_BOOK || stack.hasEnchantments();
+                return stack.isDamageable() || stack.isOf(Items.ENCHANTED_BOOK) || stack.hasEnchantments();
             }
         });
         this.addSlot(new Slot(this.result, 2, 129, 34){
@@ -68,18 +78,15 @@ extends ScreenHandler {
             }
 
             @Override
-            public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
-                context.run((world, blockPos) -> {
-                    int j;
-                    for (int i = this.getExperience((World)world); i > 0; i -= j) {
-                        j = ExperienceOrbEntity.roundToOrbSize(i);
-                        world.spawnEntity(new ExperienceOrbEntity((World)world, blockPos.getX(), (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5, j));
+            public void onTakeItem(PlayerEntity player, ItemStack stack) {
+                context.run((world, pos) -> {
+                    if (world instanceof ServerWorld) {
+                        ExperienceOrbEntity.spawn((ServerWorld)world, Vec3d.ofCenter(pos), this.getExperience((World)world));
                     }
-                    world.syncWorldEvent(1042, (BlockPos)blockPos, 0);
+                    world.syncWorldEvent(1042, (BlockPos)pos, 0);
                 });
                 GrindstoneScreenHandler.this.input.setStack(0, ItemStack.EMPTY);
                 GrindstoneScreenHandler.this.input.setStack(1, ItemStack.EMPTY);
-                return stack;
             }
 
             private int getExperience(World world) {
@@ -135,7 +142,7 @@ extends ScreenHandler {
             ItemStack itemStack3;
             int m;
             boolean bl32;
-            boolean bl4 = bl32 = !itemStack.isEmpty() && itemStack.getItem() != Items.ENCHANTED_BOOK && !itemStack.hasEnchantments() || !itemStack2.isEmpty() && itemStack2.getItem() != Items.ENCHANTED_BOOK && !itemStack2.hasEnchantments();
+            boolean bl4 = bl32 = !itemStack.isEmpty() && !itemStack.isOf(Items.ENCHANTED_BOOK) && !itemStack.hasEnchantments() || !itemStack2.isEmpty() && !itemStack2.isOf(Items.ENCHANTED_BOOK) && !itemStack2.hasEnchantments();
             if (itemStack.getCount() > 1 || itemStack2.getCount() > 1 || !bl2 && bl32) {
                 this.result.setStack(0, ItemStack.EMPTY);
                 this.sendContentUpdates();
@@ -143,7 +150,7 @@ extends ScreenHandler {
             }
             int i = 1;
             if (bl2) {
-                if (itemStack.getItem() != itemStack2.getItem()) {
+                if (!itemStack.isOf(itemStack2.getItem())) {
                     this.result.setStack(0, ItemStack.EMPTY);
                     this.sendContentUpdates();
                     return;
@@ -187,18 +194,18 @@ extends ScreenHandler {
 
     private ItemStack grind(ItemStack item, int damage, int amount) {
         ItemStack itemStack = item.copy();
-        itemStack.removeSubTag("Enchantments");
-        itemStack.removeSubTag("StoredEnchantments");
+        itemStack.removeSubNbt("Enchantments");
+        itemStack.removeSubNbt("StoredEnchantments");
         if (damage > 0) {
             itemStack.setDamage(damage);
         } else {
-            itemStack.removeSubTag("Damage");
+            itemStack.removeSubNbt("Damage");
         }
         itemStack.setCount(amount);
         Map<Enchantment, Integer> map = EnchantmentHelper.get(item).entrySet().stream().filter(entry -> ((Enchantment)entry.getKey()).isCursed()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         EnchantmentHelper.set(map, itemStack);
         itemStack.setRepairCost(0);
-        if (itemStack.getItem() == Items.ENCHANTED_BOOK && map.size() == 0) {
+        if (itemStack.isOf(Items.ENCHANTED_BOOK) && map.size() == 0) {
             itemStack = new ItemStack(Items.BOOK);
             if (item.hasCustomName()) {
                 itemStack.setCustomName(item.getName());
@@ -213,7 +220,7 @@ extends ScreenHandler {
     @Override
     public void close(PlayerEntity player) {
         super.close(player);
-        this.context.run((world, blockPos) -> this.dropInventory(player, (World)world, this.input));
+        this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 
     @Override

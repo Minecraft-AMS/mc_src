@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -20,19 +13,16 @@ import net.minecraft.util.registry.Registry;
 
 public class ParticleS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private double x;
-    private double y;
-    private double z;
-    private float offsetX;
-    private float offsetY;
-    private float offsetZ;
-    private float speed;
-    private int count;
-    private boolean longDistance;
-    private ParticleEffect parameters;
-
-    public ParticleS2CPacket() {
-    }
+    private final double x;
+    private final double y;
+    private final double z;
+    private final float offsetX;
+    private final float offsetY;
+    private final float offsetZ;
+    private final float speed;
+    private final int count;
+    private final boolean longDistance;
+    private final ParticleEffect parameters;
 
     public <T extends ParticleEffect> ParticleS2CPacket(T parameters, boolean longDistance, double x, double y, double z, float offsetX, float offsetY, float offsetZ, float speed, int count) {
         this.parameters = parameters;
@@ -47,8 +37,7 @@ implements Packet<ClientPlayPacketListener> {
         this.count = count;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ParticleS2CPacket(PacketByteBuf buf) {
         ParticleType particleType = (ParticleType)Registry.PARTICLE_TYPE.get(buf.readInt());
         if (particleType == null) {
             particleType = ParticleTypes.BARRIER;
@@ -70,7 +59,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeInt(Registry.PARTICLE_TYPE.getRawId(this.parameters.getType()));
         buf.writeBoolean(this.longDistance);
         buf.writeDouble(this.x);
@@ -84,52 +73,42 @@ implements Packet<ClientPlayPacketListener> {
         this.parameters.write(buf);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isLongDistance() {
         return this.longDistance;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getOffsetX() {
         return this.offsetX;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getOffsetY() {
         return this.offsetY;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getOffsetZ() {
         return this.offsetZ;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getSpeed() {
         return this.speed;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getCount() {
         return this.count;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ParticleEffect getParameters() {
         return this.parameters;
     }

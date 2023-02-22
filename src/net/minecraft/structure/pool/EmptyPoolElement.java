@@ -18,6 +18,7 @@ import net.minecraft.structure.pool.StructurePoolElementType;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -32,13 +33,18 @@ extends StructurePoolElement {
     }
 
     @Override
+    public Vec3i getStart(StructureManager structureManager, BlockRotation rotation) {
+        return Vec3i.ZERO;
+    }
+
+    @Override
     public List<Structure.StructureBlockInfo> getStructureBlockInfos(StructureManager structureManager, BlockPos pos, BlockRotation rotation, Random random) {
         return Collections.emptyList();
     }
 
     @Override
     public BlockBox getBoundingBox(StructureManager structureManager, BlockPos pos, BlockRotation rotation) {
-        return BlockBox.empty();
+        throw new IllegalStateException("Invalid call to EmtyPoolElement.getBoundingBox, filter me!");
     }
 
     @Override

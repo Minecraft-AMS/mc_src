@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Iterables
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
@@ -15,13 +13,12 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.MobSpawnerBlockEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.mob.MobEntity;
@@ -44,16 +41,17 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.MobSpawnerLogic;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class SpawnEggItem
 extends Item {
-    private static final Map<EntityType<?>, SpawnEggItem> SPAWN_EGGS = Maps.newIdentityHashMap();
+    private static final Map<EntityType<? extends MobEntity>, SpawnEggItem> SPAWN_EGGS = Maps.newIdentityHashMap();
     private final int primaryColor;
     private final int secondaryColor;
     private final EntityType<?> type;
 
-    public SpawnEggItem(EntityType<?> type, int primaryColor, int secondaryColor, Item.Settings settings) {
+    public SpawnEggItem(EntityType<? extends MobEntity> type, int primaryColor, int secondaryColor, Item.Settings settings) {
         super(settings);
         this.type = type;
         this.primaryColor = primaryColor;
@@ -74,7 +72,7 @@ extends Item {
         BlockState blockState = world.getBlockState(blockPos);
         if (blockState.isOf(Blocks.SPAWNER) && (blockEntity = world.getBlockEntity(blockPos)) instanceof MobSpawnerBlockEntity) {
             MobSpawnerLogic mobSpawnerLogic = ((MobSpawnerBlockEntity)blockEntity).getLogic();
-            EntityType<?> entityType = this.getEntityType(itemStack.getTag());
+            EntityType<?> entityType = this.getEntityType(itemStack.getNbt());
             mobSpawnerLogic.setEntityId(entityType);
             blockEntity.markDirty();
             world.updateListeners(blockPos, blockState, blockState, 3);
@@ -82,9 +80,10 @@ extends Item {
             return ActionResult.CONSUME;
         }
         BlockPos blockPos2 = blockState.getCollisionShape(world, blockPos).isEmpty() ? blockPos : blockPos.offset(direction);
-        EntityType<?> entityType2 = this.getEntityType(itemStack.getTag());
+        EntityType<?> entityType2 = this.getEntityType(itemStack.getNbt());
         if (entityType2.spawnFromItemStack((ServerWorld)world, itemStack, context.getPlayer(), blockPos2, SpawnReason.SPAWN_EGG, true, !Objects.equals(blockPos, blockPos2) && direction == Direction.UP) != null) {
             itemStack.decrement(1);
+            world.emitGameEvent((Entity)context.getPlayer(), GameEvent.ENTITY_PLACE, blockPos);
         }
         return ActionResult.CONSUME;
     }
@@ -107,14 +106,15 @@ extends Item {
         if (!world.canPlayerModifyAt(user, blockPos) || !user.canPlaceOn(blockPos, blockHitResult.getSide(), itemStack)) {
             return TypedActionResult.fail(itemStack);
         }
-        EntityType<?> entityType = this.getEntityType(itemStack.getTag());
+        EntityType<?> entityType = this.getEntityType(itemStack.getNbt());
         if (entityType.spawnFromItemStack((ServerWorld)world, itemStack, user, blockPos, SpawnReason.SPAWN_EGG, false, false) == null) {
             return TypedActionResult.pass(itemStack);
         }
-        if (!user.abilities.creativeMode) {
+        if (!user.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
         user.incrementStat(Stats.USED.getOrCreateStat(this));
+        world.emitGameEvent(GameEvent.ENTITY_PLACE, user);
         return TypedActionResult.consume(itemStack);
     }
 
@@ -122,13 +122,11 @@ extends Item {
         return Objects.equals(this.getEntityType(nbt), type);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public int getColor(int num) {
-        return num == 0 ? this.primaryColor : this.secondaryColor;
+    public int getColor(int tintIndex) {
+        return tintIndex == 0 ? this.primaryColor : this.secondaryColor;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static SpawnEggItem forEntity(@Nullable EntityType<?> type) {
         return SPAWN_EGGS.get(type);
     }
@@ -146,7 +144,7 @@ extends Item {
     }
 
     public Optional<MobEntity> spawnBaby(PlayerEntity user, MobEntity entity, EntityType<? extends MobEntity> entityType, ServerWorld world, Vec3d pos, ItemStack stack) {
-        if (!this.isOfSameEntityType(stack.getTag(), entityType)) {
+        if (!this.isOfSameEntityType(stack.getNbt(), entityType)) {
             return Optional.empty();
         }
         MobEntity mobEntity = entity instanceof PassiveEntity ? ((PassiveEntity)entity).createChild(world, (PassiveEntity)entity) : entityType.create(world);
@@ -162,7 +160,7 @@ extends Item {
         if (stack.hasCustomName()) {
             mobEntity.setCustomName(stack.getName());
         }
-        if (!user.abilities.creativeMode) {
+        if (!user.getAbilities().creativeMode) {
             stack.decrement(1);
         }
         return Optional.of(mobEntity);

@@ -7,17 +7,28 @@ import net.minecraft.world.biome.layer.type.ParentedLayer;
 import net.minecraft.world.biome.layer.util.LayerSampleContext;
 import net.minecraft.world.biome.layer.util.LayerSampler;
 
-public enum ScaleLayer implements ParentedLayer
-{
-    NORMAL,
-    FUZZY{
+public class ScaleLayer
+extends Enum<ScaleLayer>
+implements ParentedLayer {
+    public static final /* enum */ ScaleLayer NORMAL = new ScaleLayer();
+    public static final /* enum */ ScaleLayer FUZZY = new ScaleLayer(){
 
         @Override
         protected int sample(LayerSampleContext<?> context, int tl, int tr, int bl, int br) {
             return context.choose(tl, tr, bl, br);
         }
     };
+    private static final int field_31805 = 1;
+    private static final int field_31806 = 1;
+    private static final /* synthetic */ ScaleLayer[] field_16197;
 
+    public static ScaleLayer[] values() {
+        return (ScaleLayer[])field_16197.clone();
+    }
+
+    public static ScaleLayer valueOf(String string) {
+        return Enum.valueOf(ScaleLayer.class, string);
+    }
 
     @Override
     public int transformX(int x) {
@@ -84,6 +95,14 @@ public enum ScaleLayer implements ParentedLayer
             return bl;
         }
         return context.choose(tl, tr, bl, br);
+    }
+
+    private static /* synthetic */ ScaleLayer[] method_36787() {
+        return new ScaleLayer[]{NORMAL, FUZZY};
+    }
+
+    static {
+        field_16197 = ScaleLayer.method_36787();
     }
 }
 

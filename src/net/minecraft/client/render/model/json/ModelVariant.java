@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.gson.JsonDeserializationContext
  *  com.google.gson.JsonDeserializer
  *  com.google.gson.JsonElement
@@ -12,6 +13,7 @@
  */
 package net.minecraft.client.render.model.json;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -61,7 +63,7 @@ implements ModelBakeSettings {
     }
 
     public String toString() {
-        return "Variant{modelLocation=" + this.location + ", rotation=" + this.rotation + ", uvLock=" + this.uvLock + ", weight=" + this.weight + '}';
+        return "Variant{modelLocation=" + this.location + ", rotation=" + this.rotation + ", uvLock=" + this.uvLock + ", weight=" + this.weight + "}";
     }
 
     public boolean equals(Object o) {
@@ -86,6 +88,15 @@ implements ModelBakeSettings {
     @Environment(value=EnvType.CLIENT)
     public static class Deserializer
     implements JsonDeserializer<ModelVariant> {
+        @VisibleForTesting
+        static final boolean DEFAULT_UV_LOCK = false;
+        @VisibleForTesting
+        static final int DEFAULT_WEIGHT = 1;
+        @VisibleForTesting
+        static final int DEFAULT_X_ROTATION = 0;
+        @VisibleForTesting
+        static final int DEFAULT_Y_ROTATION = 0;
+
         public ModelVariant deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             Identifier identifier = this.deserializeModel(jsonObject);

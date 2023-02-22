@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -18,6 +12,7 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
@@ -59,7 +54,7 @@ extends FallingBlock {
         for (Direction direction : Direction.values()) {
             BlockState blockState = world.getBlockState(mutable);
             if (direction == Direction.DOWN && !ConcretePowderBlock.hardensIn(blockState)) continue;
-            mutable.set(pos, direction);
+            mutable.set((Vec3i)pos, direction);
             blockState = world.getBlockState(mutable);
             if (!ConcretePowderBlock.hardensIn(blockState) || blockState.isSideSolidFullSquare(world, pos, direction.getOpposite())) continue;
             bl = true;
@@ -81,9 +76,8 @@ extends FallingBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public int getColor(BlockState state, BlockView world, BlockPos pos) {
-        return state.getTopMaterialColor((BlockView)world, (BlockPos)pos).color;
+        return state.getMapColor((BlockView)world, (BlockPos)pos).color;
     }
 }
 

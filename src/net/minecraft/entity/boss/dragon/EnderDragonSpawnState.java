@@ -18,8 +18,9 @@ import net.minecraft.world.gen.feature.EndSpikeFeature;
 import net.minecraft.world.gen.feature.EndSpikeFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 
-public enum EnderDragonSpawnState {
-    START{
+public abstract class EnderDragonSpawnState
+extends Enum<EnderDragonSpawnState> {
+    public static final /* enum */ EnderDragonSpawnState START = new EnderDragonSpawnState(){
 
         @Override
         public void run(ServerWorld world, EnderDragonFight fight, List<EndCrystalEntity> crystals, int i, BlockPos pos) {
@@ -29,9 +30,8 @@ public enum EnderDragonSpawnState {
             }
             fight.setSpawnState(PREPARING_TO_SUMMON_PILLARS);
         }
-    }
-    ,
-    PREPARING_TO_SUMMON_PILLARS{
+    };
+    public static final /* enum */ EnderDragonSpawnState PREPARING_TO_SUMMON_PILLARS = new EnderDragonSpawnState(){
 
         @Override
         public void run(ServerWorld world, EnderDragonFight fight, List<EndCrystalEntity> crystals, int i, BlockPos pos) {
@@ -43,9 +43,8 @@ public enum EnderDragonSpawnState {
                 fight.setSpawnState(SUMMONING_PILLARS);
             }
         }
-    }
-    ,
-    SUMMONING_PILLARS{
+    };
+    public static final /* enum */ EnderDragonSpawnState SUMMONING_PILLARS = new EnderDragonSpawnState(){
 
         @Override
         public void run(ServerWorld world, EnderDragonFight fight, List<EndCrystalEntity> crystals, int i, BlockPos pos) {
@@ -76,9 +75,8 @@ public enum EnderDragonSpawnState {
                 }
             }
         }
-    }
-    ,
-    SUMMONING_DRAGON{
+    };
+    public static final /* enum */ EnderDragonSpawnState SUMMONING_DRAGON = new EnderDragonSpawnState(){
 
         @Override
         public void run(ServerWorld world, EnderDragonFight fight, List<EndCrystalEntity> crystals, int i, BlockPos pos) {
@@ -88,7 +86,7 @@ public enum EnderDragonSpawnState {
                 for (EndCrystalEntity endCrystalEntity : crystals) {
                     endCrystalEntity.setBeamTarget(null);
                     world.createExplosion(endCrystalEntity, endCrystalEntity.getX(), endCrystalEntity.getY(), endCrystalEntity.getZ(), 6.0f, Explosion.DestructionType.NONE);
-                    endCrystalEntity.remove();
+                    endCrystalEntity.discard();
                 }
             } else if (i >= 80) {
                 world.syncWorldEvent(3001, new BlockPos(0, 128, 0), 0);
@@ -100,16 +98,31 @@ public enum EnderDragonSpawnState {
                 world.syncWorldEvent(3001, new BlockPos(0, 128, 0), 0);
             }
         }
-    }
-    ,
-    END{
+    };
+    public static final /* enum */ EnderDragonSpawnState END = new EnderDragonSpawnState(){
 
         @Override
         public void run(ServerWorld world, EnderDragonFight fight, List<EndCrystalEntity> crystals, int i, BlockPos pos) {
         }
     };
+    private static final /* synthetic */ EnderDragonSpawnState[] field_13096;
 
+    public static EnderDragonSpawnState[] values() {
+        return (EnderDragonSpawnState[])field_13096.clone();
+    }
+
+    public static EnderDragonSpawnState valueOf(String string) {
+        return Enum.valueOf(EnderDragonSpawnState.class, string);
+    }
 
     public abstract void run(ServerWorld var1, EnderDragonFight var2, List<EndCrystalEntity> var3, int var4, BlockPos var5);
+
+    private static /* synthetic */ EnderDragonSpawnState[] method_36745() {
+        return new EnderDragonSpawnState[]{START, PREPARING_TO_SUMMON_PILLARS, SUMMONING_PILLARS, SUMMONING_DRAGON, END};
+    }
+
+    static {
+        field_13096 = EnderDragonSpawnState.method_36745();
+    }
 }
 

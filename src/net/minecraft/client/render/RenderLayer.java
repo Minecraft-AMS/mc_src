@@ -3,21 +3,17 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
- *  it.unimi.dsi.fastutil.Hash$Strategy
- *  it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render;
 
 import com.google.common.collect.ImmutableList;
-import it.unimi.dsi.fastutil.Hash;
-import it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.BufferBuilder;
@@ -28,31 +24,110 @@ import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.block.entity.EndPortalBlockEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class RenderLayer
 extends RenderPhase {
-    private static final RenderLayer SOLID = RenderLayer.of("solid", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 0x200000, true, false, MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).build(true));
-    private static final RenderLayer CUTOUT_MIPPED = RenderLayer.of("cutout_mipped", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 131072, true, false, MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).alpha(HALF_ALPHA).build(true));
-    private static final RenderLayer CUTOUT = RenderLayer.of("cutout", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 131072, true, false, MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(BLOCK_ATLAS_TEXTURE).alpha(HALF_ALPHA).build(true));
-    private static final RenderLayer TRANSLUCENT = RenderLayer.of("translucent", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 262144, true, true, RenderLayer.createTranslucentPhaseData());
-    private static final RenderLayer TRANSLUCENT_MOVING_BLOCK = RenderLayer.of("translucent_moving_block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 262144, false, true, RenderLayer.getItemPhaseData());
-    private static final RenderLayer TRANSLUCENT_NO_CRUMBLING = RenderLayer.of("translucent_no_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 262144, false, true, RenderLayer.createTranslucentPhaseData());
-    private static final RenderLayer LEASH = RenderLayer.of("leash", VertexFormats.POSITION_COLOR_LIGHT, 7, 256, MultiPhaseParameters.builder().texture(NO_TEXTURE).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).build(false));
-    private static final RenderLayer WATER_MASK = RenderLayer.of("water_mask", VertexFormats.POSITION, 7, 256, MultiPhaseParameters.builder().texture(NO_TEXTURE).writeMaskState(DEPTH_MASK).build(false));
-    private static final RenderLayer ARMOR_GLINT = RenderLayer.of("armor_glint", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).layering(VIEW_OFFSET_Z_LAYERING).build(false));
-    private static final RenderLayer ARMOR_ENTITY_GLINT = RenderLayer.of("armor_entity_glint", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(ENTITY_GLINT_TEXTURING).layering(VIEW_OFFSET_Z_LAYERING).build(false));
-    private static final RenderLayer GLINT_TRANSLUCENT = RenderLayer.of("glint_translucent", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).target(ITEM_TARGET).build(false));
-    private static final RenderLayer GLINT = RenderLayer.of("glint", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).build(false));
-    private static final RenderLayer DIRECT_GLINT = RenderLayer.of("glint_direct", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).build(false));
-    private static final RenderLayer ENTITY_GLINT = RenderLayer.of("entity_glint", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).target(ITEM_TARGET).texturing(ENTITY_GLINT_TEXTURING).build(false));
-    private static final RenderLayer DIRECT_ENTITY_GLINT = RenderLayer.of("entity_glint_direct", VertexFormats.POSITION_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(ENTITY_GLINT_TEXTURING).build(false));
-    private static final RenderLayer LIGHTNING = RenderLayer.of("lightning", VertexFormats.POSITION_COLOR, 7, 256, false, true, MultiPhaseParameters.builder().writeMaskState(ALL_MASK).transparency(LIGHTNING_TRANSPARENCY).target(WEATHER_TARGET).shadeModel(SMOOTH_SHADE_MODEL).build(false));
-    private static final RenderLayer TRIPWIRE = RenderLayer.of("tripwire", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 262144, true, true, RenderLayer.getTripwirePhaseData());
-    public static final MultiPhase LINES = RenderLayer.of("lines", VertexFormats.POSITION_COLOR, 1, 256, MultiPhaseParameters.builder().lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).build(false));
+    private static final int field_32776 = 4;
+    private static final int field_32777 = 0x100000;
+    public static final int SOLID_BUFFER_SIZE = 0x200000;
+    public static final int TRANSLUCENT_BUFFER_SIZE = 262144;
+    public static final int CUTOUT_BUFFER_SIZE = 131072;
+    public static final int DEFAULT_BUFFER_SIZE = 256;
+    private static final RenderLayer SOLID = RenderLayer.of("solid", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 0x200000, true, false, MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(SOLID_SHADER).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).build(true));
+    private static final RenderLayer CUTOUT_MIPPED = RenderLayer.of("cutout_mipped", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 131072, true, false, MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(CUTOUT_MIPPED_SHADER).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).build(true));
+    private static final RenderLayer CUTOUT = RenderLayer.of("cutout", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 131072, true, false, MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(CUTOUT_SHADER).texture(BLOCK_ATLAS_TEXTURE).build(true));
+    private static final RenderLayer TRANSLUCENT = RenderLayer.of("translucent", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 0x200000, true, true, RenderLayer.of(TRANSLUCENT_SHADER));
+    private static final RenderLayer TRANSLUCENT_MOVING_BLOCK = RenderLayer.of("translucent_moving_block", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 262144, false, true, RenderLayer.getItemPhaseData());
+    private static final RenderLayer TRANSLUCENT_NO_CRUMBLING = RenderLayer.of("translucent_no_crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 262144, false, true, RenderLayer.of(TRANSLUCENT_NO_CRUMBLING_SHADER));
+    private static final Function<Identifier, RenderLayer> ARMOR_CUTOUT_NO_CULL = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ARMOR_CUTOUT_NO_CULL_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(NO_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).layering(VIEW_OFFSET_Z_LAYERING).build(true);
+        return RenderLayer.of("armor_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, false, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_SOLID = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_SOLID_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(NO_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
+        return RenderLayer.of("entity_solid", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, false, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_CUTOUT = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_CUTOUT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(NO_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
+        return RenderLayer.of("entity_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, false, multiPhaseParameters);
+    });
+    private static final BiFunction<Identifier, Boolean, RenderLayer> ENTITY_CUTOUT_NO_CULL = Util.memoize((texture, affectsOutline) -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_CUTOUT_NONULL_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(NO_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build((boolean)affectsOutline);
+        return RenderLayer.of("entity_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, false, multiPhaseParameters);
+    });
+    private static final BiFunction<Identifier, Boolean, RenderLayer> ENTITY_CUTOUT_NO_CULL_Z_OFFSET = Util.memoize((texture, affectsOutline) -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_CUTOUT_NONULL_OFFSET_Z_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(NO_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).layering(VIEW_OFFSET_Z_LAYERING).build((boolean)affectsOutline);
+        return RenderLayer.of("entity_cutout_no_cull_z_offset", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, false, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ITEM_ENTITY_TRANSLUCENT_CULL = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ITEM_ENTITY_TRANSLUCENT_CULL_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(RenderPhase.ALL_MASK).build(true);
+        return RenderLayer.of("item_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, true, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_TRANSLUCENT_CULL = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_TRANSLUCENT_CULL_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
+        return RenderLayer.of("entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, true, multiPhaseParameters);
+    });
+    private static final BiFunction<Identifier, Boolean, RenderLayer> ENTITY_TRANSLUCENT = Util.memoize((texture, affectsOutline) -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_TRANSLUCENT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build((boolean)affectsOutline);
+        return RenderLayer.of("entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, true, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_SMOOTH_CUTOUT = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_SMOOTH_CUTOUT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).build(true);
+        return RenderLayer.of("entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, multiPhaseParameters);
+    });
+    private static final BiFunction<Identifier, Boolean, RenderLayer> BEACON_BEAM = Util.memoize((texture, affectsOutline) -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(BEACON_BEAM_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(affectsOutline != false ? TRANSLUCENT_TRANSPARENCY : NO_TRANSPARENCY).writeMaskState(affectsOutline != false ? COLOR_MASK : ALL_MASK).build(false);
+        return RenderLayer.of("beacon_beam", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, true, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_DECAL = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_DECAL_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).depthTest(EQUAL_DEPTH_TEST).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(false);
+        return RenderLayer.of("entity_decal", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_NO_OUTLINE = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_NO_OUTLINE_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(COLOR_MASK).build(false);
+        return RenderLayer.of("entity_no_outline", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, true, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_SHADOW = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_SHADOW_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).cull(ENABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(COLOR_MASK).depthTest(LEQUAL_DEPTH_TEST).layering(VIEW_OFFSET_Z_LAYERING).build(false);
+        return RenderLayer.of("entity_shadow", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, false, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> ENTITY_ALPHA = Util.memoize(texture -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_ALPHA_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).cull(DISABLE_CULLING).build(true);
+        return RenderLayer.of("entity_alpha", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, multiPhaseParameters);
+    });
+    private static final Function<Identifier, RenderLayer> EYES = Util.memoize(texture -> {
+        RenderPhase.Texture texture2 = new RenderPhase.Texture((Identifier)texture, false, false);
+        return RenderLayer.of("eyes", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(EYES_SHADER).texture(texture2).transparency(ADDITIVE_TRANSPARENCY).writeMaskState(COLOR_MASK).build(false));
+    });
+    private static final RenderLayer LEASH = RenderLayer.of("leash", VertexFormats.POSITION_COLOR_LIGHT, VertexFormat.DrawMode.TRIANGLE_STRIP, 256, MultiPhaseParameters.builder().shader(LEASH_SHADER).texture(NO_TEXTURE).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).build(false));
+    private static final RenderLayer WATER_MASK = RenderLayer.of("water_mask", VertexFormats.POSITION, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(WATER_MASK_SHADER).texture(NO_TEXTURE).writeMaskState(DEPTH_MASK).build(false));
+    private static final RenderLayer ARMOR_GLINT = RenderLayer.of("armor_glint", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(ARMOR_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).layering(VIEW_OFFSET_Z_LAYERING).build(false));
+    private static final RenderLayer ARMOR_ENTITY_GLINT = RenderLayer.of("armor_entity_glint", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(ARMOR_ENTITY_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(ENTITY_GLINT_TEXTURING).layering(VIEW_OFFSET_Z_LAYERING).build(false));
+    private static final RenderLayer GLINT_TRANSLUCENT = RenderLayer.of("glint_translucent", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(TRANSLUCENT_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).target(ITEM_TARGET).build(false));
+    private static final RenderLayer GLINT = RenderLayer.of("glint", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).build(false));
+    private static final RenderLayer DIRECT_GLINT = RenderLayer.of("glint_direct", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(DIRECT_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(GLINT_TEXTURING).build(false));
+    private static final RenderLayer ENTITY_GLINT = RenderLayer.of("entity_glint", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(ENTITY_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).target(ITEM_TARGET).texturing(ENTITY_GLINT_TEXTURING).build(false));
+    private static final RenderLayer DIRECT_ENTITY_GLINT = RenderLayer.of("entity_glint_direct", VertexFormats.POSITION_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(DIRECT_ENTITY_GLINT_SHADER).texture(new RenderPhase.Texture(ItemRenderer.ENCHANTED_ITEM_GLINT, true, false)).writeMaskState(COLOR_MASK).cull(DISABLE_CULLING).depthTest(EQUAL_DEPTH_TEST).transparency(GLINT_TRANSPARENCY).texturing(ENTITY_GLINT_TEXTURING).build(false));
+    private static final Function<Identifier, RenderLayer> CRUMBLING = Util.memoize(texture -> {
+        RenderPhase.Texture texture2 = new RenderPhase.Texture((Identifier)texture, false, false);
+        return RenderLayer.of("crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(CRUMBLING_SHADER).texture(texture2).transparency(CRUMBLING_TRANSPARENCY).writeMaskState(COLOR_MASK).layering(POLYGON_OFFSET_LAYERING).build(false));
+    });
+    private static final Function<Identifier, RenderLayer> TEXT = Util.memoize(texture -> RenderLayer.of("text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TEXT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).build(false)));
+    private static final Function<Identifier, RenderLayer> TEXT_INTENSITY = Util.memoize(texture -> RenderLayer.of("text_intensity", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TEXT_INTENSITY_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).build(false)));
+    private static final Function<Identifier, RenderLayer> TEXT_POLYGON_OFFSET = Util.memoize(texture -> RenderLayer.of("text_polygon_offset", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TEXT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).layering(POLYGON_OFFSET_LAYERING).build(false)));
+    private static final Function<Identifier, RenderLayer> TEXT_INTENSITY_POLYGON_OFFSET = Util.memoize(texture -> RenderLayer.of("text_intensity_polygon_offset", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TEXT_INTENSITY_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).layering(POLYGON_OFFSET_LAYERING).build(false)));
+    private static final Function<Identifier, RenderLayer> TEXT_SEE_THROUGH = Util.memoize(texture -> RenderLayer.of("text_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TRANSPARENT_TEXT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).depthTest(ALWAYS_DEPTH_TEST).writeMaskState(COLOR_MASK).build(false)));
+    private static final Function<Identifier, RenderLayer> TEXT_INTENSITY_SEE_THROUGH = Util.memoize(texture -> RenderLayer.of("text_intensity_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(TRANSPARENT_TEXT_INTENSITY_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).depthTest(ALWAYS_DEPTH_TEST).writeMaskState(COLOR_MASK).build(false)));
+    private static final RenderLayer LIGHTNING = RenderLayer.of("lightning", VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(LIGHTNING_SHADER).writeMaskState(ALL_MASK).transparency(LIGHTNING_TRANSPARENCY).target(WEATHER_TARGET).build(false));
+    private static final RenderLayer TRIPWIRE = RenderLayer.of("tripwire", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 262144, true, true, RenderLayer.getTripwirePhaseData());
+    private static final RenderLayer END_PORTAL = RenderLayer.of("end_portal", VertexFormats.POSITION, VertexFormat.DrawMode.QUADS, 256, false, false, MultiPhaseParameters.builder().shader(END_PORTAL_SHADER).texture(RenderPhase.Textures.create().add(EndPortalBlockEntityRenderer.SKY_TEXTURE, false, false).add(EndPortalBlockEntityRenderer.PORTAL_TEXTURE, false, false).build()).build(false));
+    private static final RenderLayer END_GATEWAY = RenderLayer.of("end_gateway", VertexFormats.POSITION, VertexFormat.DrawMode.QUADS, 256, false, false, MultiPhaseParameters.builder().shader(END_GATEWAY_SHADER).texture(RenderPhase.Textures.create().add(EndPortalBlockEntityRenderer.SKY_TEXTURE, false, false).add(EndPortalBlockEntityRenderer.PORTAL_TEXTURE, false, false).build()).build(false));
+    public static final MultiPhase LINES = RenderLayer.of("lines", VertexFormats.LINES, VertexFormat.DrawMode.LINES, 256, MultiPhaseParameters.builder().shader(LINES_SHADER).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
+    public static final MultiPhase LINE_STRIP = RenderLayer.of("line_strip", VertexFormats.LINES, VertexFormat.DrawMode.LINE_STRIP, 256, MultiPhaseParameters.builder().shader(LINES_SHADER).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
     private final VertexFormat vertexFormat;
-    private final int drawMode;
+    private final VertexFormat.DrawMode drawMode;
     private final int expectedBufferSize;
     private final boolean hasCrumbling;
     private final boolean translucent;
@@ -70,8 +145,8 @@ extends RenderPhase {
         return CUTOUT;
     }
 
-    private static MultiPhaseParameters createTranslucentPhaseData() {
-        return MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(TRANSLUCENT_TARGET).build(true);
+    private static MultiPhaseParameters of(RenderPhase.Shader shader) {
+        return MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(shader).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(TRANSLUCENT_TARGET).build(true);
     }
 
     public static RenderLayer getTranslucent() {
@@ -79,7 +154,7 @@ extends RenderPhase {
     }
 
     private static MultiPhaseParameters getItemPhaseData() {
-        return MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).build(true);
+        return MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(TRANSLUCENT_MOVING_BLOCK_SHADER).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).build(true);
     }
 
     public static RenderLayer getTranslucentMovingBlock() {
@@ -91,23 +166,19 @@ extends RenderPhase {
     }
 
     public static RenderLayer getArmorCutoutNoCull(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(NO_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).layering(VIEW_OFFSET_Z_LAYERING).build(true);
-        return RenderLayer.of("armor_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, false, multiPhaseParameters);
+        return ARMOR_CUTOUT_NO_CULL.apply(texture);
     }
 
     public static RenderLayer getEntitySolid(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(NO_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
-        return RenderLayer.of("entity_solid", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, false, multiPhaseParameters);
+        return ENTITY_SOLID.apply(texture);
     }
 
     public static RenderLayer getEntityCutout(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(NO_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
-        return RenderLayer.of("entity_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, false, multiPhaseParameters);
+        return ENTITY_CUTOUT.apply(texture);
     }
 
     public static RenderLayer getEntityCutoutNoCull(Identifier texture, boolean affectsOutline) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(NO_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(affectsOutline);
-        return RenderLayer.of("entity_cutout_no_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, false, multiPhaseParameters);
+        return ENTITY_CUTOUT_NO_CULL.apply(texture, affectsOutline);
     }
 
     public static RenderLayer getEntityCutoutNoCull(Identifier texture) {
@@ -115,8 +186,7 @@ extends RenderPhase {
     }
 
     public static RenderLayer getEntityCutoutNoCullZOffset(Identifier texture, boolean affectsOutline) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(NO_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).layering(VIEW_OFFSET_Z_LAYERING).build(affectsOutline);
-        return RenderLayer.of("entity_cutout_no_cull_z_offset", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, false, multiPhaseParameters);
+        return ENTITY_CUTOUT_NO_CULL_Z_OFFSET.apply(texture, affectsOutline);
     }
 
     public static RenderLayer getEntityCutoutNoCullZOffset(Identifier texture) {
@@ -124,18 +194,15 @@ extends RenderPhase {
     }
 
     public static RenderLayer getItemEntityTranslucentCull(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(RenderPhase.ALL_MASK).build(true);
-        return RenderLayer.of("item_entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, true, multiPhaseParameters);
+        return ITEM_ENTITY_TRANSLUCENT_CULL.apply(texture);
     }
 
     public static RenderLayer getEntityTranslucentCull(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(true);
-        return RenderLayer.of("entity_translucent_cull", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, true, multiPhaseParameters);
+        return ENTITY_TRANSLUCENT_CULL.apply(texture);
     }
 
     public static RenderLayer getEntityTranslucent(Identifier texture, boolean affectsOutline) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(affectsOutline);
-        return RenderLayer.of("entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, true, true, multiPhaseParameters);
+        return ENTITY_TRANSLUCENT.apply(texture, affectsOutline);
     }
 
     public static RenderLayer getEntityTranslucent(Identifier texture) {
@@ -143,42 +210,35 @@ extends RenderPhase {
     }
 
     public static RenderLayer getEntitySmoothCutout(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).alpha(HALF_ALPHA).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).shadeModel(SMOOTH_SHADE_MODEL).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).build(true);
-        return RenderLayer.of("entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, multiPhaseParameters);
+        return ENTITY_SMOOTH_CUTOUT.apply(texture);
     }
 
     public static RenderLayer getBeaconBeam(Identifier texture, boolean translucent) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(translucent ? TRANSLUCENT_TRANSPARENCY : NO_TRANSPARENCY).writeMaskState(translucent ? COLOR_MASK : ALL_MASK).fog(NO_FOG).build(false);
-        return RenderLayer.of("beacon_beam", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 256, false, true, multiPhaseParameters);
+        return BEACON_BEAM.apply(texture, translucent);
     }
 
     public static RenderLayer getEntityDecal(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).depthTest(EQUAL_DEPTH_TEST).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(false);
-        return RenderLayer.of("entity_decal", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, multiPhaseParameters);
+        return ENTITY_DECAL.apply(texture);
     }
 
     public static RenderLayer getEntityNoOutline(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(COLOR_MASK).build(false);
-        return RenderLayer.of("entity_no_outline", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, false, true, multiPhaseParameters);
+        return ENTITY_NO_OUTLINE.apply(texture);
     }
 
     public static RenderLayer getEntityShadow(Identifier texture) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(ENABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).writeMaskState(COLOR_MASK).depthTest(LEQUAL_DEPTH_TEST).layering(VIEW_OFFSET_Z_LAYERING).build(false);
-        return RenderLayer.of("entity_shadow", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, false, false, multiPhaseParameters);
+        return ENTITY_SHADOW.apply(texture);
     }
 
-    public static RenderLayer getEntityAlpha(Identifier texture, float alpha) {
-        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).alpha(new RenderPhase.Alpha(alpha)).cull(DISABLE_CULLING).build(true);
-        return RenderLayer.of("entity_alpha", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, multiPhaseParameters);
+    public static RenderLayer getEntityAlpha(Identifier texture) {
+        return ENTITY_ALPHA.apply(texture);
     }
 
     public static RenderLayer getEyes(Identifier texture) {
-        RenderPhase.Texture texture2 = new RenderPhase.Texture(texture, false, false);
-        return RenderLayer.of("eyes", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, false, true, MultiPhaseParameters.builder().texture(texture2).transparency(ADDITIVE_TRANSPARENCY).writeMaskState(COLOR_MASK).fog(BLACK_FOG).build(false));
+        return EYES.apply(texture);
     }
 
     public static RenderLayer getEnergySwirl(Identifier texture, float x, float y) {
-        return RenderLayer.of("energy_swirl", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, 7, 256, false, true, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).texturing(new RenderPhase.OffsetTexturing(x, y)).fog(BLACK_FOG).transparency(ADDITIVE_TRANSPARENCY).diffuseLighting(ENABLE_DIFFUSE_LIGHTING).alpha(ONE_TENTH_ALPHA).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(false));
+        return RenderLayer.of("energy_swirl", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, false, true, MultiPhaseParameters.builder().shader(ENERGY_SWIRL_SHADER).texture(new RenderPhase.Texture(texture, false, false)).texturing(new RenderPhase.OffsetTexturing(x, y)).transparency(ADDITIVE_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build(false));
     }
 
     public static RenderLayer getLeash() {
@@ -190,11 +250,7 @@ extends RenderPhase {
     }
 
     public static RenderLayer getOutline(Identifier texture) {
-        return RenderLayer.getOutline(texture, DISABLE_CULLING);
-    }
-
-    public static RenderLayer getOutline(Identifier texture, RenderPhase.Cull cull) {
-        return RenderLayer.of("outline", VertexFormats.POSITION_COLOR_TEXTURE, 7, 256, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).cull(cull).depthTest(ALWAYS_DEPTH_TEST).alpha(ONE_TENTH_ALPHA).texturing(OUTLINE_TEXTURING).fog(NO_FOG).target(OUTLINE_TARGET).build(OutlineMode.IS_OUTLINE));
+        return MultiPhase.CULLING_LAYERS.apply(texture, DISABLE_CULLING);
     }
 
     public static RenderLayer getArmorGlint() {
@@ -205,7 +261,7 @@ extends RenderPhase {
         return ARMOR_ENTITY_GLINT;
     }
 
-    public static RenderLayer method_30676() {
+    public static RenderLayer getGlintTranslucent() {
         return GLINT_TRANSLUCENT;
     }
 
@@ -226,16 +282,31 @@ extends RenderPhase {
     }
 
     public static RenderLayer getBlockBreaking(Identifier texture) {
-        RenderPhase.Texture texture2 = new RenderPhase.Texture(texture, false, false);
-        return RenderLayer.of("crumbling", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, 7, 256, false, true, MultiPhaseParameters.builder().texture(texture2).alpha(ONE_TENTH_ALPHA).transparency(CRUMBLING_TRANSPARENCY).writeMaskState(COLOR_MASK).layering(POLYGON_OFFSET_LAYERING).build(false));
+        return CRUMBLING.apply(texture);
     }
 
     public static RenderLayer getText(Identifier texture) {
-        return RenderLayer.of("text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, 7, 256, false, true, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).alpha(ONE_TENTH_ALPHA).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).build(false));
+        return TEXT.apply(texture);
+    }
+
+    public static RenderLayer getTextIntensity(Identifier texture) {
+        return TEXT_INTENSITY.apply(texture);
+    }
+
+    public static RenderLayer getTextPolygonOffset(Identifier texture) {
+        return TEXT_POLYGON_OFFSET.apply(texture);
+    }
+
+    public static RenderLayer getTextIntensityPolygonOffset(Identifier texture) {
+        return TEXT_INTENSITY_POLYGON_OFFSET.apply(texture);
     }
 
     public static RenderLayer getTextSeeThrough(Identifier texture) {
-        return RenderLayer.of("text_see_through", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT, 7, 256, false, true, MultiPhaseParameters.builder().texture(new RenderPhase.Texture(texture, false, false)).alpha(ONE_TENTH_ALPHA).transparency(TRANSLUCENT_TRANSPARENCY).lightmap(ENABLE_LIGHTMAP).depthTest(ALWAYS_DEPTH_TEST).writeMaskState(COLOR_MASK).build(false));
+        return TEXT_SEE_THROUGH.apply(texture);
+    }
+
+    public static RenderLayer getTextIntensitySeeThrough(Identifier texture) {
+        return TEXT_INTENSITY_SEE_THROUGH.apply(texture);
     }
 
     public static RenderLayer getLightning() {
@@ -243,31 +314,30 @@ extends RenderPhase {
     }
 
     private static MultiPhaseParameters getTripwirePhaseData() {
-        return MultiPhaseParameters.builder().shadeModel(SMOOTH_SHADE_MODEL).lightmap(ENABLE_LIGHTMAP).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(WEATHER_TARGET).build(true);
+        return MultiPhaseParameters.builder().lightmap(ENABLE_LIGHTMAP).shader(TRIPWIRE_SHADER).texture(MIPMAP_BLOCK_ATLAS_TEXTURE).transparency(TRANSLUCENT_TRANSPARENCY).target(WEATHER_TARGET).build(true);
     }
 
     public static RenderLayer getTripwire() {
         return TRIPWIRE;
     }
 
-    public static RenderLayer getEndPortal(int layer) {
-        RenderPhase.Texture texture;
-        RenderPhase.Transparency transparency;
-        if (layer <= 1) {
-            transparency = TRANSLUCENT_TRANSPARENCY;
-            texture = new RenderPhase.Texture(EndPortalBlockEntityRenderer.SKY_TEXTURE, false, false);
-        } else {
-            transparency = ADDITIVE_TRANSPARENCY;
-            texture = new RenderPhase.Texture(EndPortalBlockEntityRenderer.PORTAL_TEXTURE, false, false);
-        }
-        return RenderLayer.of("end_portal", VertexFormats.POSITION_COLOR, 7, 256, false, true, MultiPhaseParameters.builder().transparency(transparency).texture(texture).texturing(new RenderPhase.PortalTexturing(layer)).fog(BLACK_FOG).build(false));
+    public static RenderLayer getEndPortal() {
+        return END_PORTAL;
+    }
+
+    public static RenderLayer getEndGateway() {
+        return END_GATEWAY;
     }
 
     public static RenderLayer getLines() {
         return LINES;
     }
 
-    public RenderLayer(String name, VertexFormat vertexFormat, int drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, Runnable startAction, Runnable endAction) {
+    public static RenderLayer getLineStrip() {
+        return LINE_STRIP;
+    }
+
+    public RenderLayer(String name, VertexFormat vertexFormat, VertexFormat.DrawMode drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, Runnable startAction, Runnable endAction) {
         super(name, startAction, endAction);
         this.vertexFormat = vertexFormat;
         this.drawMode = drawMode;
@@ -277,12 +347,12 @@ extends RenderPhase {
         this.optionalThis = Optional.of(this);
     }
 
-    public static MultiPhase of(String name, VertexFormat vertexFormat, int drawMode, int expectedBufferSize, MultiPhaseParameters phaseData) {
+    static MultiPhase of(String name, VertexFormat vertexFormat, VertexFormat.DrawMode drawMode, int expectedBufferSize, MultiPhaseParameters phaseData) {
         return RenderLayer.of(name, vertexFormat, drawMode, expectedBufferSize, false, false, phaseData);
     }
 
-    public static MultiPhase of(String name, VertexFormat vertexFormat, int drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, MultiPhaseParameters phases) {
-        return MultiPhase.of(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, phases);
+    private static MultiPhase of(String name, VertexFormat vertexFormat, VertexFormat.DrawMode drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, MultiPhaseParameters phases) {
+        return new MultiPhase(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, phases);
     }
 
     public void draw(BufferBuilder buffer, int cameraX, int cameraY, int cameraZ) {
@@ -290,7 +360,7 @@ extends RenderPhase {
             return;
         }
         if (this.translucent) {
-            buffer.sortQuads(cameraX, cameraY, cameraZ);
+            buffer.setCameraPosition(cameraX, cameraY, cameraZ);
         }
         buffer.end();
         this.startDrawing();
@@ -315,7 +385,7 @@ extends RenderPhase {
         return this.vertexFormat;
     }
 
-    public int getDrawMode() {
+    public VertexFormat.DrawMode getDrawMode() {
         return this.drawMode;
     }
 
@@ -336,141 +406,41 @@ extends RenderPhase {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static final class MultiPhase
-    extends RenderLayer {
-        private static final ObjectOpenCustomHashSet<MultiPhase> CACHE = new ObjectOpenCustomHashSet((Hash.Strategy)HashStrategy.INSTANCE);
-        private final MultiPhaseParameters phases;
-        private final int hash;
-        private final Optional<RenderLayer> affectedOutline;
-        private final boolean outline;
-
-        private MultiPhase(String name, VertexFormat vertexFormat, int drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, MultiPhaseParameters phases) {
-            super(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, () -> phases.phases.forEach(RenderPhase::startDrawing), () -> phases.phases.forEach(RenderPhase::endDrawing));
-            this.phases = phases;
-            this.affectedOutline = phases.outlineMode == OutlineMode.AFFECTS_OUTLINE ? phases.texture.getId().map(identifier -> MultiPhase.getOutline(identifier, phases.cull)) : Optional.empty();
-            this.outline = phases.outlineMode == OutlineMode.IS_OUTLINE;
-            this.hash = Objects.hash(super.hashCode(), phases);
-        }
-
-        private static MultiPhase of(String name, VertexFormat vertexFormat, int drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, MultiPhaseParameters phases) {
-            return (MultiPhase)CACHE.addOrGet((Object)new MultiPhase(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, phases));
-        }
-
-        @Override
-        public Optional<RenderLayer> getAffectedOutline() {
-            return this.affectedOutline;
-        }
-
-        @Override
-        public boolean isOutline() {
-            return this.outline;
-        }
-
-        @Override
-        public boolean equals(@Nullable Object object) {
-            return this == object;
-        }
-
-        @Override
-        public int hashCode() {
-            return this.hash;
-        }
-
-        @Override
-        public String toString() {
-            return "RenderType[" + this.phases + ']';
-        }
-
-        @Environment(value=EnvType.CLIENT)
-        static enum HashStrategy implements Hash.Strategy<MultiPhase>
-        {
-            INSTANCE;
-
-
-            public int hashCode(@Nullable MultiPhase multiPhase) {
-                if (multiPhase == null) {
-                    return 0;
-                }
-                return multiPhase.hash;
-            }
-
-            public boolean equals(@Nullable MultiPhase multiPhase, @Nullable MultiPhase multiPhase2) {
-                if (multiPhase == multiPhase2) {
-                    return true;
-                }
-                if (multiPhase == null || multiPhase2 == null) {
-                    return false;
-                }
-                return Objects.equals(multiPhase.phases, multiPhase2.phases);
-            }
-
-            public /* synthetic */ boolean equals(@Nullable Object object, @Nullable Object object2) {
-                return this.equals((MultiPhase)object, (MultiPhase)object2);
-            }
-
-            public /* synthetic */ int hashCode(@Nullable Object object) {
-                return this.hashCode((MultiPhase)object);
-            }
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static final class MultiPhaseParameters {
-        private final RenderPhase.Texture texture;
+    protected static final class MultiPhaseParameters {
+        final RenderPhase.TextureBase texture;
+        private final RenderPhase.Shader shader;
         private final RenderPhase.Transparency transparency;
-        private final RenderPhase.DiffuseLighting diffuseLighting;
-        private final RenderPhase.ShadeModel shadeModel;
-        private final RenderPhase.Alpha alpha;
         private final RenderPhase.DepthTest depthTest;
-        private final RenderPhase.Cull cull;
+        final RenderPhase.Cull cull;
         private final RenderPhase.Lightmap lightmap;
         private final RenderPhase.Overlay overlay;
-        private final RenderPhase.Fog fog;
         private final RenderPhase.Layering layering;
         private final RenderPhase.Target target;
         private final RenderPhase.Texturing texturing;
         private final RenderPhase.WriteMaskState writeMaskState;
         private final RenderPhase.LineWidth lineWidth;
-        private final OutlineMode outlineMode;
-        private final ImmutableList<RenderPhase> phases;
+        final OutlineMode outlineMode;
+        final ImmutableList<RenderPhase> phases;
 
-        private MultiPhaseParameters(RenderPhase.Texture texture, RenderPhase.Transparency transparency, RenderPhase.DiffuseLighting diffuseLighting, RenderPhase.ShadeModel shadeModel, RenderPhase.Alpha alpha, RenderPhase.DepthTest depthTest, RenderPhase.Cull cull, RenderPhase.Lightmap lightmap, RenderPhase.Overlay overlay, RenderPhase.Fog fog, RenderPhase.Layering layering, RenderPhase.Target target, RenderPhase.Texturing texturing, RenderPhase.WriteMaskState writeMaskState, RenderPhase.LineWidth lineWidth, OutlineMode outlineMode) {
+        MultiPhaseParameters(RenderPhase.TextureBase texture, RenderPhase.Shader shader, RenderPhase.Transparency transparency, RenderPhase.DepthTest depthTest, RenderPhase.Cull cull, RenderPhase.Lightmap lightmap, RenderPhase.Overlay overlay, RenderPhase.Layering layering, RenderPhase.Target target, RenderPhase.Texturing texturing, RenderPhase.WriteMaskState writeMaskState, RenderPhase.LineWidth lineWidth, OutlineMode outlineMode) {
             this.texture = texture;
+            this.shader = shader;
             this.transparency = transparency;
-            this.diffuseLighting = diffuseLighting;
-            this.shadeModel = shadeModel;
-            this.alpha = alpha;
             this.depthTest = depthTest;
             this.cull = cull;
             this.lightmap = lightmap;
             this.overlay = overlay;
-            this.fog = fog;
             this.layering = layering;
             this.target = target;
             this.texturing = texturing;
             this.writeMaskState = writeMaskState;
             this.lineWidth = lineWidth;
             this.outlineMode = outlineMode;
-            this.phases = ImmutableList.of((Object)this.texture, (Object)this.transparency, (Object)this.diffuseLighting, (Object)this.shadeModel, (Object)this.alpha, (Object)this.depthTest, (Object)this.cull, (Object)this.lightmap, (Object)this.overlay, (Object)this.fog, (Object)this.layering, (Object)this.target, (Object[])new RenderPhase[]{this.texturing, this.writeMaskState, this.lineWidth});
-        }
-
-        public boolean equals(Object object) {
-            if (this == object) {
-                return true;
-            }
-            if (object == null || this.getClass() != object.getClass()) {
-                return false;
-            }
-            MultiPhaseParameters multiPhaseParameters = (MultiPhaseParameters)object;
-            return this.outlineMode == multiPhaseParameters.outlineMode && this.phases.equals(multiPhaseParameters.phases);
-        }
-
-        public int hashCode() {
-            return Objects.hash(new Object[]{this.phases, this.outlineMode});
+            this.phases = ImmutableList.of((Object)this.texture, (Object)this.shader, (Object)this.transparency, (Object)this.depthTest, (Object)this.cull, (Object)this.lightmap, (Object)this.overlay, (Object)this.layering, (Object)this.target, (Object)this.texturing, (Object)this.writeMaskState, (Object)this.lineWidth, (Object[])new RenderPhase[0]);
         }
 
         public String toString() {
-            return "CompositeState[" + this.phases + ", outlineProperty=" + (Object)((Object)this.outlineMode) + ']';
+            return "CompositeState[" + this.phases + ", outlineProperty=" + this.outlineMode + "]";
         }
 
         public static Builder builder() {
@@ -479,47 +449,34 @@ extends RenderPhase {
 
         @Environment(value=EnvType.CLIENT)
         public static class Builder {
-            private RenderPhase.Texture texture = RenderPhase.NO_TEXTURE;
+            private RenderPhase.TextureBase texture = RenderPhase.NO_TEXTURE;
+            private RenderPhase.Shader shader = RenderPhase.NO_SHADER;
             private RenderPhase.Transparency transparency = RenderPhase.NO_TRANSPARENCY;
-            private RenderPhase.DiffuseLighting diffuseLighting = RenderPhase.DISABLE_DIFFUSE_LIGHTING;
-            private RenderPhase.ShadeModel shadeModel = RenderPhase.SHADE_MODEL;
-            private RenderPhase.Alpha alpha = RenderPhase.ZERO_ALPHA;
             private RenderPhase.DepthTest depthTest = RenderPhase.LEQUAL_DEPTH_TEST;
             private RenderPhase.Cull cull = RenderPhase.ENABLE_CULLING;
             private RenderPhase.Lightmap lightmap = RenderPhase.DISABLE_LIGHTMAP;
             private RenderPhase.Overlay overlay = RenderPhase.DISABLE_OVERLAY_COLOR;
-            private RenderPhase.Fog fog = RenderPhase.FOG;
             private RenderPhase.Layering layering = RenderPhase.NO_LAYERING;
             private RenderPhase.Target target = RenderPhase.MAIN_TARGET;
             private RenderPhase.Texturing texturing = RenderPhase.DEFAULT_TEXTURING;
             private RenderPhase.WriteMaskState writeMaskState = RenderPhase.ALL_MASK;
             private RenderPhase.LineWidth lineWidth = RenderPhase.FULL_LINE_WIDTH;
 
-            private Builder() {
+            Builder() {
             }
 
-            public Builder texture(RenderPhase.Texture texture) {
+            public Builder texture(RenderPhase.TextureBase texture) {
                 this.texture = texture;
+                return this;
+            }
+
+            public Builder shader(RenderPhase.Shader shader) {
+                this.shader = shader;
                 return this;
             }
 
             public Builder transparency(RenderPhase.Transparency transparency) {
                 this.transparency = transparency;
-                return this;
-            }
-
-            public Builder diffuseLighting(RenderPhase.DiffuseLighting diffuseLighting) {
-                this.diffuseLighting = diffuseLighting;
-                return this;
-            }
-
-            public Builder shadeModel(RenderPhase.ShadeModel shadeModel) {
-                this.shadeModel = shadeModel;
-                return this;
-            }
-
-            public Builder alpha(RenderPhase.Alpha alpha) {
-                this.alpha = alpha;
                 return this;
             }
 
@@ -540,11 +497,6 @@ extends RenderPhase {
 
             public Builder overlay(RenderPhase.Overlay overlay) {
                 this.overlay = overlay;
-                return this;
-            }
-
-            public Builder fog(RenderPhase.Fog fog) {
-                this.fog = fog;
                 return this;
             }
 
@@ -578,18 +530,62 @@ extends RenderPhase {
             }
 
             public MultiPhaseParameters build(OutlineMode outlineMode) {
-                return new MultiPhaseParameters(this.texture, this.transparency, this.diffuseLighting, this.shadeModel, this.alpha, this.depthTest, this.cull, this.lightmap, this.overlay, this.fog, this.layering, this.target, this.texturing, this.writeMaskState, this.lineWidth, outlineMode);
+                return new MultiPhaseParameters(this.texture, this.shader, this.transparency, this.depthTest, this.cull, this.lightmap, this.overlay, this.layering, this.target, this.texturing, this.writeMaskState, this.lineWidth, outlineMode);
             }
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    static enum OutlineMode {
-        NONE("none"),
-        IS_OUTLINE("is_outline"),
-        AFFECTS_OUTLINE("affects_outline");
+    static final class MultiPhase
+    extends RenderLayer {
+        static final BiFunction<Identifier, RenderPhase.Cull, RenderLayer> CULLING_LAYERS = Util.memoize((texture, culling) -> RenderLayer.of("outline", VertexFormats.POSITION_COLOR_TEXTURE, VertexFormat.DrawMode.QUADS, 256, MultiPhaseParameters.builder().shader(OUTLINE_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).cull((RenderPhase.Cull)culling).depthTest(ALWAYS_DEPTH_TEST).target(OUTLINE_TARGET).build(OutlineMode.IS_OUTLINE)));
+        private final MultiPhaseParameters phases;
+        private final Optional<RenderLayer> affectedOutline;
+        private final boolean outline;
 
+        MultiPhase(String name, VertexFormat vertexFormat, VertexFormat.DrawMode drawMode, int expectedBufferSize, boolean hasCrumbling, boolean translucent, MultiPhaseParameters phases) {
+            super(name, vertexFormat, drawMode, expectedBufferSize, hasCrumbling, translucent, () -> multiPhaseParameters.phases.forEach(RenderPhase::startDrawing), () -> multiPhaseParameters.phases.forEach(RenderPhase::endDrawing));
+            this.phases = phases;
+            this.affectedOutline = phases.outlineMode == OutlineMode.AFFECTS_OUTLINE ? phases.texture.getId().map(texture -> CULLING_LAYERS.apply((Identifier)texture, multiPhaseParameters.cull)) : Optional.empty();
+            this.outline = phases.outlineMode == OutlineMode.IS_OUTLINE;
+        }
+
+        @Override
+        public Optional<RenderLayer> getAffectedOutline() {
+            return this.affectedOutline;
+        }
+
+        @Override
+        public boolean isOutline() {
+            return this.outline;
+        }
+
+        protected final MultiPhaseParameters getPhases() {
+            return this.phases;
+        }
+
+        @Override
+        public String toString() {
+            return "RenderType[" + this.name + ":" + this.phases + "]";
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static final class OutlineMode
+    extends Enum<OutlineMode> {
+        public static final /* enum */ OutlineMode NONE = new OutlineMode("none");
+        public static final /* enum */ OutlineMode IS_OUTLINE = new OutlineMode("is_outline");
+        public static final /* enum */ OutlineMode AFFECTS_OUTLINE = new OutlineMode("affects_outline");
         private final String name;
+        private static final /* synthetic */ OutlineMode[] field_21856;
+
+        public static OutlineMode[] values() {
+            return (OutlineMode[])field_21856.clone();
+        }
+
+        public static OutlineMode valueOf(String string) {
+            return Enum.valueOf(OutlineMode.class, string);
+        }
 
         private OutlineMode(String name) {
             this.name = name;
@@ -597,6 +593,14 @@ extends RenderPhase {
 
         public String toString() {
             return this.name;
+        }
+
+        private static /* synthetic */ OutlineMode[] method_36916() {
+            return new OutlineMode[]{NONE, IS_OUTLINE, AFFECTS_OUTLINE};
+        }
+
+        static {
+            field_21856 = OutlineMode.method_36916();
         }
     }
 }

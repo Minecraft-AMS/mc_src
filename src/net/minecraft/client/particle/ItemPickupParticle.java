@@ -26,6 +26,7 @@ import net.minecraft.util.math.Vec3d;
 @Environment(value=EnvType.CLIENT)
 public class ItemPickupParticle
 extends Particle {
+    private static final int field_32656 = 3;
     private final BufferBuilderStorage bufferStorage;
     private final Entity itemEntity;
     private final Entity interactingEntity;
@@ -39,16 +40,16 @@ extends Particle {
     private ItemPickupParticle(EntityRenderDispatcher dispatcher, BufferBuilderStorage bufferStorage, ClientWorld world, Entity itemEntity, Entity interactingEntity, Vec3d velocity) {
         super(world, itemEntity.getX(), itemEntity.getY(), itemEntity.getZ(), velocity.x, velocity.y, velocity.z);
         this.bufferStorage = bufferStorage;
-        this.itemEntity = this.method_29358(itemEntity);
+        this.itemEntity = this.getOrCopy(itemEntity);
         this.interactingEntity = interactingEntity;
         this.dispatcher = dispatcher;
     }
 
-    private Entity method_29358(Entity entity) {
+    private Entity getOrCopy(Entity entity) {
         if (!(entity instanceof ItemEntity)) {
             return entity;
         }
-        return ((ItemEntity)entity).method_29271();
+        return ((ItemEntity)entity).copy();
     }
 
     @Override
@@ -68,7 +69,7 @@ extends Particle {
         double j = MathHelper.lerp((double)f, this.itemEntity.getZ(), g);
         VertexConsumerProvider.Immediate immediate = this.bufferStorage.getEntityVertexConsumers();
         Vec3d vec3d = camera.getPos();
-        this.dispatcher.render(this.itemEntity, h - vec3d.getX(), i - vec3d.getY(), j - vec3d.getZ(), this.itemEntity.yaw, tickDelta, new MatrixStack(), immediate, this.dispatcher.getLight(this.itemEntity, tickDelta));
+        this.dispatcher.render(this.itemEntity, h - vec3d.getX(), i - vec3d.getY(), j - vec3d.getZ(), this.itemEntity.getYaw(), tickDelta, new MatrixStack(), immediate, this.dispatcher.getLight(this.itemEntity, tickDelta));
         immediate.draw();
     }
 

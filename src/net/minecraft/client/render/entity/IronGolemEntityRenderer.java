@@ -9,10 +9,11 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.IronGolemCrackFeatureRenderer;
 import net.minecraft.client.render.entity.feature.IronGolemFlowerFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.IronGolemEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.IronGolemEntity;
@@ -24,8 +25,8 @@ public class IronGolemEntityRenderer
 extends MobEntityRenderer<IronGolemEntity, IronGolemEntityModel<IronGolemEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/iron_golem/iron_golem.png");
 
-    public IronGolemEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new IronGolemEntityModel(), 0.7f);
+    public IronGolemEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new IronGolemEntityModel(context.getPart(EntityModelLayers.IRON_GOLEM)), 0.7f);
         this.addFeature(new IronGolemCrackFeatureRenderer(this));
         this.addFeature(new IronGolemFlowerFeatureRenderer(this));
     }

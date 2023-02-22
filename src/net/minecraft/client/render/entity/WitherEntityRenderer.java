@@ -9,9 +9,10 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.WitherArmorFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.WitherEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.boss.WitherEntity;
@@ -24,9 +25,9 @@ extends MobEntityRenderer<WitherEntity, WitherEntityModel<WitherEntity>> {
     private static final Identifier INVULNERABLE_TEXTURE = new Identifier("textures/entity/wither/wither_invulnerable.png");
     private static final Identifier TEXTURE = new Identifier("textures/entity/wither/wither.png");
 
-    public WitherEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new WitherEntityModel(0.0f), 1.0f);
-        this.addFeature(new WitherArmorFeatureRenderer(this));
+    public WitherEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new WitherEntityModel(context.getPart(EntityModelLayers.WITHER)), 1.0f);
+        this.addFeature(new WitherArmorFeatureRenderer(this, context.getModelLoader()));
     }
 
     @Override

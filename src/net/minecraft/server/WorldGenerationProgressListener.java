@@ -15,6 +15,8 @@ public interface WorldGenerationProgressListener {
 
     public void setChunkStatus(ChunkPos var1, @Nullable ChunkStatus var2);
 
+    public void start();
+
     public void stop();
 }
 

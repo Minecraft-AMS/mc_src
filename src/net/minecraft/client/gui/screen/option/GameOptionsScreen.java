@@ -2,12 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen.option;
 
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
@@ -19,7 +20,6 @@ import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.util.OrderableTooltip;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class GameOptionsScreen
@@ -40,17 +40,15 @@ extends Screen {
 
     @Override
     public void onClose() {
-        this.client.openScreen(this.parent);
+        this.client.setScreen(this.parent);
     }
 
-    @Nullable
     public static List<OrderedText> getHoveredButtonTooltip(ButtonListWidget buttonList, int mouseX, int mouseY) {
         Optional<ClickableWidget> optional = buttonList.getHoveredButton(mouseX, mouseY);
         if (optional.isPresent() && optional.get() instanceof OrderableTooltip) {
-            Optional<List<OrderedText>> optional2 = ((OrderableTooltip)((Object)optional.get())).getOrderedTooltip();
-            return optional2.orElse(null);
+            return ((OrderableTooltip)((Object)optional.get())).getOrderedTooltip();
         }
-        return null;
+        return ImmutableList.of();
     }
 }
 

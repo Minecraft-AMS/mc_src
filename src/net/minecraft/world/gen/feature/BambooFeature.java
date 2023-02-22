@@ -17,8 +17,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.ProbabilityConfig;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class BambooFeature
 extends Feature<ProbabilityConfig> {
@@ -32,8 +32,12 @@ extends Feature<ProbabilityConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, ProbabilityConfig probabilityConfig) {
+    public boolean generate(FeatureContext<ProbabilityConfig> context) {
         int i = 0;
+        BlockPos blockPos = context.getOrigin();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        Random random = context.getRandom();
+        ProbabilityConfig probabilityConfig = context.getConfig();
         BlockPos.Mutable mutable = blockPos.mutableCopy();
         BlockPos.Mutable mutable2 = blockPos.mutableCopy();
         if (structureWorldAccess.isAir(mutable)) {
@@ -48,7 +52,7 @@ extends Feature<ProbabilityConfig> {
                             int n = l - blockPos.getX();
                             if (n * n + (o = m - blockPos.getZ()) * o > k * k) continue;
                             mutable2.set(l, structureWorldAccess.getTopY(Heightmap.Type.WORLD_SURFACE, l, m) - 1, m);
-                            if (!BambooFeature.isSoil(structureWorldAccess.getBlockState(mutable2).getBlock())) continue;
+                            if (!BambooFeature.isSoil(structureWorldAccess.getBlockState(mutable2))) continue;
                             structureWorldAccess.setBlockState(mutable2, Blocks.PODZOL.getDefaultState(), 2);
                         }
                     }

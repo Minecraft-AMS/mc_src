@@ -27,19 +27,27 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.world.BlockView;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.gen.chunk.VerticalBlockSample;
 import net.minecraft.world.gen.feature.RuinedPortalFeatureConfig;
 import net.minecraft.world.gen.feature.StructureFeature;
 
 public class RuinedPortalFeature
 extends StructureFeature<RuinedPortalFeatureConfig> {
-    private static final String[] COMMON_PORTAL_STRUCTURE_IDS = new String[]{"ruined_portal/portal_1", "ruined_portal/portal_2", "ruined_portal/portal_3", "ruined_portal/portal_4", "ruined_portal/portal_5", "ruined_portal/portal_6", "ruined_portal/portal_7", "ruined_portal/portal_8", "ruined_portal/portal_9", "ruined_portal/portal_10"};
-    private static final String[] RARE_PORTAL_STRUCTURE_IDS = new String[]{"ruined_portal/giant_portal_1", "ruined_portal/giant_portal_2", "ruined_portal/giant_portal_3"};
+    static final String[] COMMON_PORTAL_STRUCTURE_IDS = new String[]{"ruined_portal/portal_1", "ruined_portal/portal_2", "ruined_portal/portal_3", "ruined_portal/portal_4", "ruined_portal/portal_5", "ruined_portal/portal_6", "ruined_portal/portal_7", "ruined_portal/portal_8", "ruined_portal/portal_9", "ruined_portal/portal_10"};
+    static final String[] RARE_PORTAL_STRUCTURE_IDS = new String[]{"ruined_portal/giant_portal_1", "ruined_portal/giant_portal_2", "ruined_portal/giant_portal_3"};
+    private static final float field_31512 = 0.05f;
+    private static final float field_31513 = 0.5f;
+    private static final float field_31514 = 0.5f;
+    private static final float field_31508 = 0.8f;
+    private static final float field_31509 = 0.8f;
+    private static final float field_31510 = 0.5f;
+    private static final int field_31511 = 15;
 
     public RuinedPortalFeature(Codec<RuinedPortalFeatureConfig> codec) {
         super(codec);
@@ -50,65 +58,68 @@ extends StructureFeature<RuinedPortalFeatureConfig> {
         return Start::new;
     }
 
-    private static boolean method_27209(BlockPos blockPos, Biome biome) {
-        return biome.getTemperature(blockPos) < 0.15f;
+    static boolean isColdAt(BlockPos pos, Biome biome) {
+        return biome.getTemperature(pos) < 0.15f;
     }
 
-    private static int method_27211(Random random, ChunkGenerator chunkGenerator, RuinedPortalStructurePiece.VerticalPlacement verticalPlacement, boolean bl, int i, int j, BlockBox blockBox) {
-        int m;
-        int l;
+    static int getFloorHeight(Random random, ChunkGenerator chunkGenerator, RuinedPortalStructurePiece.VerticalPlacement verticalPlacement, boolean airPocket, int height, int blockCountY, BlockBox box, HeightLimitView world) {
         int k;
         if (verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.IN_NETHER) {
-            k = bl ? RuinedPortalFeature.choose(random, 32, 100) : (random.nextFloat() < 0.5f ? RuinedPortalFeature.choose(random, 27, 29) : RuinedPortalFeature.choose(random, 29, 100));
+            i = airPocket ? MathHelper.nextBetween(random, 32, 100) : (random.nextFloat() < 0.5f ? MathHelper.nextBetween(random, 27, 29) : MathHelper.nextBetween(random, 29, 100));
         } else if (verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.IN_MOUNTAIN) {
-            l = i - j;
-            k = RuinedPortalFeature.choosePlacementHeight(random, 70, l);
+            j = height - blockCountY;
+            i = RuinedPortalFeature.choosePlacementHeight(random, 70, j);
         } else if (verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.UNDERGROUND) {
-            l = i - j;
-            k = RuinedPortalFeature.choosePlacementHeight(random, 15, l);
+            j = height - blockCountY;
+            i = RuinedPortalFeature.choosePlacementHeight(random, 15, j);
         } else {
-            k = verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.PARTLY_BURIED ? i - j + RuinedPortalFeature.choose(random, 2, 8) : i;
+            i = verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.PARTLY_BURIED ? height - blockCountY + MathHelper.nextBetween(random, 2, 8) : height;
         }
-        ImmutableList list = ImmutableList.of((Object)new BlockPos(blockBox.minX, 0, blockBox.minZ), (Object)new BlockPos(blockBox.maxX, 0, blockBox.minZ), (Object)new BlockPos(blockBox.minX, 0, blockBox.maxZ), (Object)new BlockPos(blockBox.maxX, 0, blockBox.maxZ));
-        List list2 = list.stream().map(blockPos -> chunkGenerator.getColumnSample(blockPos.getX(), blockPos.getZ())).collect(Collectors.toList());
+        ImmutableList list = ImmutableList.of((Object)new BlockPos(box.getMinX(), 0, box.getMinZ()), (Object)new BlockPos(box.getMaxX(), 0, box.getMinZ()), (Object)new BlockPos(box.getMinX(), 0, box.getMaxZ()), (Object)new BlockPos(box.getMaxX(), 0, box.getMaxZ()));
+        List list2 = list.stream().map(blockPos -> chunkGenerator.getColumnSample(blockPos.getX(), blockPos.getZ(), world)).collect(Collectors.toList());
         Heightmap.Type type = verticalPlacement == RuinedPortalStructurePiece.VerticalPlacement.ON_OCEAN_FLOOR ? Heightmap.Type.OCEAN_FLOOR_WG : Heightmap.Type.WORLD_SURFACE_WG;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        block0: for (m = k; m > 15; --m) {
-            int n = 0;
-            mutable.set(0, m, 0);
-            for (BlockView blockView : list2) {
-                BlockState blockState = blockView.getBlockState(mutable);
-                if (blockState == null || !type.getBlockPredicate().test(blockState) || ++n != 3) continue;
+        block0: for (k = i; k > 15; --k) {
+            int l = 0;
+            mutable.set(0, k, 0);
+            for (VerticalBlockSample verticalBlockSample : list2) {
+                BlockState blockState = verticalBlockSample.getState(mutable);
+                if (!type.getBlockPredicate().test(blockState) || ++l != 3) continue;
                 break block0;
             }
         }
-        return m;
-    }
-
-    private static int choose(Random random, int min, int max) {
-        return random.nextInt(max - min + 1) + min;
+        return k;
     }
 
     private static int choosePlacementHeight(Random random, int min, int max) {
         if (min < max) {
-            return RuinedPortalFeature.choose(random, min, max);
+            return MathHelper.nextBetween(random, min, max);
         }
         return max;
     }
 
-    public static enum Type implements StringIdentifiable
-    {
-        STANDARD("standard"),
-        DESERT("desert"),
-        JUNGLE("jungle"),
-        SWAMP("swamp"),
-        MOUNTAIN("mountain"),
-        OCEAN("ocean"),
-        NETHER("nether");
-
+    public static final class Type
+    extends Enum<Type>
+    implements StringIdentifiable {
+        public static final /* enum */ Type STANDARD = new Type("standard");
+        public static final /* enum */ Type DESERT = new Type("desert");
+        public static final /* enum */ Type JUNGLE = new Type("jungle");
+        public static final /* enum */ Type SWAMP = new Type("swamp");
+        public static final /* enum */ Type MOUNTAIN = new Type("mountain");
+        public static final /* enum */ Type OCEAN = new Type("ocean");
+        public static final /* enum */ Type NETHER = new Type("nether");
         public static final Codec<Type> CODEC;
         private static final Map<String, Type> BY_NAME;
         private final String name;
+        private static final /* synthetic */ Type[] field_24009;
+
+        public static Type[] values() {
+            return (Type[])field_24009.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
 
         private Type(String name) {
             this.name = name;
@@ -127,7 +138,12 @@ extends StructureFeature<RuinedPortalFeatureConfig> {
             return this.name;
         }
 
+        private static /* synthetic */ Type[] method_36757() {
+            return new Type[]{STANDARD, DESERT, JUNGLE, SWAMP, MOUNTAIN, OCEAN, NETHER};
+        }
+
         static {
+            field_24009 = Type.method_36757();
             CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
             BY_NAME = Arrays.stream(Type.values()).collect(Collectors.toMap(Type::getName, type -> type));
         }
@@ -135,13 +151,12 @@ extends StructureFeature<RuinedPortalFeatureConfig> {
 
     public static class Start
     extends StructureStart<RuinedPortalFeatureConfig> {
-        protected Start(StructureFeature<RuinedPortalFeatureConfig> structureFeature, int i, int j, BlockBox blockBox, int k, long l) {
-            super(structureFeature, i, j, blockBox, k, l);
+        protected Start(StructureFeature<RuinedPortalFeatureConfig> structureFeature, ChunkPos chunkPos, int i, long l) {
+            super(structureFeature, chunkPos, i, l);
         }
 
         @Override
-        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, int i, int j, Biome biome, RuinedPortalFeatureConfig ruinedPortalFeatureConfig) {
-            boolean bl;
+        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, ChunkPos chunkPos, Biome biome, RuinedPortalFeatureConfig ruinedPortalFeatureConfig, HeightLimitView heightLimitView) {
             RuinedPortalStructurePiece.VerticalPlacement verticalPlacement;
             RuinedPortalStructurePiece.Properties properties = new RuinedPortalStructurePiece.Properties();
             if (ruinedPortalFeatureConfig.portalType == Type.DESERT) {
@@ -182,19 +197,18 @@ extends StructureFeature<RuinedPortalFeatureConfig> {
             BlockRotation blockRotation = Util.getRandom(BlockRotation.values(), (Random)this.random);
             BlockMirror blockMirror = this.random.nextFloat() < 0.5f ? BlockMirror.NONE : BlockMirror.FRONT_BACK;
             BlockPos blockPos = new BlockPos(structure.getSize().getX() / 2, 0, structure.getSize().getZ() / 2);
-            BlockPos blockPos2 = new ChunkPos(i, j).getStartPos();
-            BlockBox blockBox = structure.method_27267(blockPos2, blockRotation, blockPos, blockMirror);
-            Vec3i vec3i = blockBox.getCenter();
-            int k = vec3i.getX();
-            int l = vec3i.getZ();
-            int m = chunkGenerator.getHeight(k, l, RuinedPortalStructurePiece.getHeightmapType(verticalPlacement)) - 1;
-            int n = RuinedPortalFeature.method_27211(this.random, chunkGenerator, verticalPlacement, properties.airPocket, m, blockBox.getBlockCountY(), blockBox);
-            BlockPos blockPos3 = new BlockPos(blockPos2.getX(), n, blockPos2.getZ());
+            BlockPos blockPos2 = chunkPos.getStartPos();
+            BlockBox blockBox = structure.calculateBoundingBox(blockPos2, blockRotation, blockPos, blockMirror);
+            BlockPos blockPos3 = blockBox.getCenter();
+            int i = blockPos3.getX();
+            int j = blockPos3.getZ();
+            int k = chunkGenerator.getHeight(i, j, RuinedPortalStructurePiece.getHeightmapType(verticalPlacement), heightLimitView) - 1;
+            int l = RuinedPortalFeature.getFloorHeight(this.random, chunkGenerator, verticalPlacement, properties.airPocket, k, blockBox.getBlockCountY(), blockBox, heightLimitView);
+            BlockPos blockPos4 = new BlockPos(blockPos2.getX(), l, blockPos2.getZ());
             if (ruinedPortalFeatureConfig.portalType == Type.MOUNTAIN || ruinedPortalFeatureConfig.portalType == Type.OCEAN || ruinedPortalFeatureConfig.portalType == Type.STANDARD) {
-                properties.cold = RuinedPortalFeature.method_27209(blockPos3, biome);
+                properties.cold = RuinedPortalFeature.isColdAt(blockPos4, biome);
             }
-            this.children.add(new RuinedPortalStructurePiece(blockPos3, verticalPlacement, properties, identifier, structure, blockRotation, blockMirror, blockPos));
-            this.setBoundingBoxFromChildren();
+            this.addPiece(new RuinedPortalStructurePiece(structureManager, blockPos4, verticalPlacement, properties, identifier, structure, blockRotation, blockMirror, blockPos));
         }
     }
 }

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.ai.pathing;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.network.PacketByteBuf;
@@ -23,7 +17,6 @@ extends PathNode {
         super(node.x, node.y, node.z);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public TargetPathNode(int i, int j, int k) {
         super(i, j, k);
     }
@@ -43,7 +36,10 @@ extends PathNode {
         this.reached = true;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public boolean isReached() {
+        return this.reached;
+    }
+
     public static TargetPathNode fromBuffer(PacketByteBuf buffer) {
         TargetPathNode targetPathNode = new TargetPathNode(buffer.readInt(), buffer.readInt(), buffer.readInt());
         targetPathNode.pathLength = buffer.readFloat();

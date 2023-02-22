@@ -32,7 +32,7 @@ public class PardonIpCommand {
     private static final SimpleCommandExceptionType ALREADY_UNBANNED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.pardonip.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("pardon-ip").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(CommandManager.argument("target", StringArgumentType.word()).suggests((commandContext, suggestionsBuilder) -> CommandSource.suggestMatching(((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().getIpBanList().getNames(), suggestionsBuilder)).executes(commandContext -> PardonIpCommand.pardonIp((ServerCommandSource)commandContext.getSource(), StringArgumentType.getString((CommandContext)commandContext, (String)"target")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("pardon-ip").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("target", StringArgumentType.word()).suggests((context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getPlayerManager().getIpBanList().getNames(), builder)).executes(context -> PardonIpCommand.pardonIp((ServerCommandSource)context.getSource(), StringArgumentType.getString((CommandContext)context, (String)"target")))));
     }
 
     private static int pardonIp(ServerCommandSource source, String target) throws CommandSyntaxException {
@@ -40,7 +40,7 @@ public class PardonIpCommand {
         if (!matcher.matches()) {
             throw INVALID_IP_EXCEPTION.create();
         }
-        BannedIpList bannedIpList = source.getMinecraftServer().getPlayerManager().getIpBanList();
+        BannedIpList bannedIpList = source.getServer().getPlayerManager().getIpBanList();
         if (!bannedIpList.isBanned(target)) {
             throw ALREADY_UNBANNED_EXCEPTION.create();
         }

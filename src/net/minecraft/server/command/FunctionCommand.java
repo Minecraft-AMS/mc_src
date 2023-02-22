@@ -23,20 +23,20 @@ import net.minecraft.server.function.CommandFunctionManager;
 import net.minecraft.text.TranslatableText;
 
 public class FunctionCommand {
-    public static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (commandContext, suggestionsBuilder) -> {
-        CommandFunctionManager commandFunctionManager = ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getCommandFunctionManager();
-        CommandSource.suggestIdentifiers(commandFunctionManager.method_29464(), suggestionsBuilder, "#");
-        return CommandSource.suggestIdentifiers(commandFunctionManager.method_29463(), suggestionsBuilder);
+    public static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (context, builder) -> {
+        CommandFunctionManager commandFunctionManager = ((ServerCommandSource)context.getSource()).getServer().getCommandFunctionManager();
+        CommandSource.suggestIdentifiers(commandFunctionManager.getFunctionTags(), builder, "#");
+        return CommandSource.suggestIdentifiers(commandFunctionManager.getAllFunctions(), builder);
     };
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("function").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("name", CommandFunctionArgumentType.commandFunction()).suggests(SUGGESTION_PROVIDER).executes(commandContext -> FunctionCommand.execute((ServerCommandSource)commandContext.getSource(), CommandFunctionArgumentType.getFunctions((CommandContext<ServerCommandSource>)commandContext, "name")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("function").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.argument("name", CommandFunctionArgumentType.commandFunction()).suggests(SUGGESTION_PROVIDER).executes(context -> FunctionCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctions((CommandContext<ServerCommandSource>)context, "name")))));
     }
 
     private static int execute(ServerCommandSource source, Collection<CommandFunction> functions) {
         int i = 0;
         for (CommandFunction commandFunction : functions) {
-            i += source.getMinecraftServer().getCommandFunctionManager().execute(commandFunction, source.withSilent().withMaxLevel(2));
+            i += source.getServer().getCommandFunctionManager().execute(commandFunction, source.withSilent().withMaxLevel(2));
         }
         if (functions.size() == 1) {
             source.sendFeedback(new TranslatableText("commands.function.success.single", i, functions.iterator().next().getId()), true);

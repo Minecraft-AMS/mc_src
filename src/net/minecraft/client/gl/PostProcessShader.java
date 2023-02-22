@@ -21,6 +21,7 @@ import net.minecraft.client.gl.JsonEffectGlShader;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.math.Matrix4f;
@@ -48,6 +49,10 @@ implements AutoCloseable {
         this.program.close();
     }
 
+    public final String getName() {
+        return this.program.getName();
+    }
+
     public void addAuxTarget(String name, IntSupplier valueSupplier, int width, int height) {
         this.samplerNames.add(this.samplerNames.size(), name);
         this.samplerValues.add(this.samplerValues.size(), valueSupplier);
@@ -67,26 +72,26 @@ implements AutoCloseable {
         this.program.bindSampler("DiffuseSampler", this.input::getColorAttachment);
         for (int i = 0; i < this.samplerValues.size(); ++i) {
             this.program.bindSampler(this.samplerNames.get(i), this.samplerValues.get(i));
-            this.program.getUniformByNameOrDummy("AuxSize" + i).set(this.samplerWidths.get(i).intValue(), this.samplerHeights.get(i).intValue());
+            this.program.getUniformByNameOrDummy("AuxSize" + i).set((float)this.samplerWidths.get(i).intValue(), (float)this.samplerHeights.get(i).intValue());
         }
         this.program.getUniformByNameOrDummy("ProjMat").set(this.projectionMatrix);
-        this.program.getUniformByNameOrDummy("InSize").set(this.input.textureWidth, this.input.textureHeight);
+        this.program.getUniformByNameOrDummy("InSize").set((float)this.input.textureWidth, (float)this.input.textureHeight);
         this.program.getUniformByNameOrDummy("OutSize").set(f, g);
         this.program.getUniformByNameOrDummy("Time").set(time);
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        this.program.getUniformByNameOrDummy("ScreenSize").set(minecraftClient.getWindow().getFramebufferWidth(), minecraftClient.getWindow().getFramebufferHeight());
+        this.program.getUniformByNameOrDummy("ScreenSize").set((float)minecraftClient.getWindow().getFramebufferWidth(), (float)minecraftClient.getWindow().getFramebufferHeight());
         this.program.enable();
         this.output.clear(MinecraftClient.IS_SYSTEM_MAC);
         this.output.beginWrite(false);
         RenderSystem.depthFunc(519);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
-        bufferBuilder.vertex(0.0, 0.0, 500.0).color(255, 255, 255, 255).next();
-        bufferBuilder.vertex(f, 0.0, 500.0).color(255, 255, 255, 255).next();
-        bufferBuilder.vertex(f, g, 500.0).color(255, 255, 255, 255).next();
-        bufferBuilder.vertex(0.0, g, 500.0).color(255, 255, 255, 255).next();
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
+        bufferBuilder.vertex(0.0, 0.0, 500.0).next();
+        bufferBuilder.vertex(f, 0.0, 500.0).next();
+        bufferBuilder.vertex(f, g, 500.0).next();
+        bufferBuilder.vertex(0.0, g, 500.0).next();
         bufferBuilder.end();
-        BufferRenderer.draw(bufferBuilder);
+        BufferRenderer.postDraw(bufferBuilder);
         RenderSystem.depthFunc(515);
         this.program.disable();
         this.output.endWrite();

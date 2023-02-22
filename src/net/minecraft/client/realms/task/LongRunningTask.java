@@ -23,21 +23,23 @@ import org.apache.logging.log4j.Logger;
 public abstract class LongRunningTask
 implements Errable,
 Runnable {
+    protected static final int MAX_RETRIES = 25;
     public static final Logger LOGGER = LogManager.getLogger();
     protected RealmsLongRunningMcoTaskScreen longRunningMcoTaskScreen;
 
-    protected static void pause(int seconds) {
+    protected static void pause(long seconds) {
         try {
-            Thread.sleep(seconds * 1000);
+            Thread.sleep(seconds * 1000L);
         }
         catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
             LOGGER.error("", (Throwable)interruptedException);
         }
     }
 
     public static void setScreen(Screen screen) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        minecraftClient.execute(() -> minecraftClient.openScreen(screen));
+        minecraftClient.execute(() -> minecraftClient.setScreen(screen));
     }
 
     public void setScreen(RealmsLongRunningMcoTaskScreen longRunningMcoTaskScreen) {

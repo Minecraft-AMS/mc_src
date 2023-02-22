@@ -10,6 +10,7 @@
  *  com.google.common.collect.Queues
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+ *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -25,6 +26,7 @@ import com.google.common.collect.Queues;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +46,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.particle.AshParticle;
-import net.minecraft.client.particle.BarrierParticle;
 import net.minecraft.client.particle.BlockDustParticle;
 import net.minecraft.client.particle.BlockFallingDustParticle;
 import net.minecraft.client.particle.BlockLeakParticle;
@@ -55,6 +57,7 @@ import net.minecraft.client.particle.CrackParticle;
 import net.minecraft.client.particle.CurrentDownParticle;
 import net.minecraft.client.particle.DamageParticle;
 import net.minecraft.client.particle.DragonBreathParticle;
+import net.minecraft.client.particle.DustColorTransitionParticle;
 import net.minecraft.client.particle.ElderGuardianAppearanceParticle;
 import net.minecraft.client.particle.EmitterParticle;
 import net.minecraft.client.particle.EmotionParticle;
@@ -67,17 +70,21 @@ import net.minecraft.client.particle.FireSmokeParticle;
 import net.minecraft.client.particle.FireworksSparkParticle;
 import net.minecraft.client.particle.FishingParticle;
 import net.minecraft.client.particle.FlameParticle;
+import net.minecraft.client.particle.GlowParticle;
+import net.minecraft.client.particle.ItemBillboardParticle;
 import net.minecraft.client.particle.LargeFireSmokeParticle;
 import net.minecraft.client.particle.LavaEmberParticle;
 import net.minecraft.client.particle.NoteParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleFactory;
+import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleTextureData;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.particle.PortalParticle;
 import net.minecraft.client.particle.RainSplashParticle;
 import net.minecraft.client.particle.RedDustParticle;
 import net.minecraft.client.particle.ReversePortalParticle;
+import net.minecraft.client.particle.SnowflakeParticle;
 import net.minecraft.client.particle.SoulParticle;
 import net.minecraft.client.particle.SpellParticle;
 import net.minecraft.client.particle.SpitParticle;
@@ -86,12 +93,14 @@ import net.minecraft.client.particle.SquidInkParticle;
 import net.minecraft.client.particle.SuspendParticle;
 import net.minecraft.client.particle.SweepAttackParticle;
 import net.minecraft.client.particle.TotemParticle;
+import net.minecraft.client.particle.VibrationParticle;
 import net.minecraft.client.particle.WaterBubbleParticle;
 import net.minecraft.client.particle.WaterSplashParticle;
 import net.minecraft.client.particle.WaterSuspendParticle;
 import net.minecraft.client.particle.WhiteAshParticle;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -125,6 +134,7 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class ParticleManager
 implements ResourceReloader {
+    private static final int MAX_PARTICLE_COUNT = 16384;
     private static final List<ParticleTextureSheet> PARTICLE_TEXTURE_SHEETS = ImmutableList.of((Object)ParticleTextureSheet.TERRAIN_SHEET, (Object)ParticleTextureSheet.PARTICLE_SHEET_OPAQUE, (Object)ParticleTextureSheet.PARTICLE_SHEET_LIT, (Object)ParticleTextureSheet.PARTICLE_SHEET_TRANSLUCENT, (Object)ParticleTextureSheet.CUSTOM);
     protected ClientWorld world;
     private final Map<ParticleTextureSheet, Queue<Particle>> particles = Maps.newIdentityHashMap();
@@ -134,9 +144,11 @@ implements ResourceReloader {
     private final Int2ObjectMap<ParticleFactory<?>> factories = new Int2ObjectOpenHashMap();
     private final Queue<Particle> newParticles = Queues.newArrayDeque();
     private final Map<Identifier, SimpleSpriteProvider> spriteAwareFactories = Maps.newHashMap();
-    private final SpriteAtlasTexture particleAtlasTexture = new SpriteAtlasTexture(SpriteAtlasTexture.PARTICLE_ATLAS_TEXTURE);
+    private final SpriteAtlasTexture particleAtlasTexture;
+    private final Object2IntOpenHashMap<ParticleGroup> groupCounts = new Object2IntOpenHashMap();
 
     public ParticleManager(ClientWorld world, TextureManager textureManager) {
+        this.particleAtlasTexture = new SpriteAtlasTexture(SpriteAtlasTexture.PARTICLE_ATLAS_TEXTURE);
         textureManager.registerTexture(this.particleAtlasTexture.getId(), this.particleAtlasTexture);
         this.world = world;
         this.textureManager = textureManager;
@@ -146,7 +158,8 @@ implements ResourceReloader {
     private void registerDefaultFactories() {
         this.registerFactory(ParticleTypes.AMBIENT_ENTITY_EFFECT, SpellParticle.EntityAmbientFactory::new);
         this.registerFactory(ParticleTypes.ANGRY_VILLAGER, EmotionParticle.AngryVillagerFactory::new);
-        this.registerFactory(ParticleTypes.BARRIER, new BarrierParticle.Factory());
+        this.registerFactory(ParticleTypes.BARRIER, new ItemBillboardParticle.BarrierFactory());
+        this.registerFactory(ParticleTypes.LIGHT, new ItemBillboardParticle.LightFactory());
         this.registerFactory(ParticleTypes.BLOCK, new BlockDustParticle.Factory());
         this.registerFactory(ParticleTypes.BUBBLE, WaterBubbleParticle.Factory::new);
         this.registerFactory(ParticleTypes.BUBBLE_COLUMN_UP, BubbleColumnUpParticle.Factory::new);
@@ -166,6 +179,7 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.DRIPPING_WATER, BlockLeakParticle.DrippingWaterFactory::new);
         this.registerFactory(ParticleTypes.FALLING_WATER, BlockLeakParticle.FallingWaterFactory::new);
         this.registerFactory(ParticleTypes.DUST, RedDustParticle.Factory::new);
+        this.registerFactory(ParticleTypes.DUST_COLOR_TRANSITION, DustColorTransitionParticle.Factory::new);
         this.registerFactory(ParticleTypes.EFFECT, SpellParticle.DefaultFactory::new);
         this.registerFactory(ParticleTypes.ELDER_GUARDIAN, new ElderGuardianAppearanceParticle.Factory());
         this.registerFactory(ParticleTypes.ENCHANTED_HIT, DamageParticle.EnchantedHitFactory::new);
@@ -197,6 +211,7 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.RAIN, RainSplashParticle.Factory::new);
         this.registerFactory(ParticleTypes.SMOKE, FireSmokeParticle.Factory::new);
         this.registerFactory(ParticleTypes.SNEEZE, CloudParticle.SneezeFactory::new);
+        this.registerFactory(ParticleTypes.SNOWFLAKE, SnowflakeParticle.Factory::new);
         this.registerFactory(ParticleTypes.SPIT, SpitParticle.Factory::new);
         this.registerFactory(ParticleTypes.SWEEP_ATTACK, SweepAttackParticle.Factory::new);
         this.registerFactory(ParticleTypes.TOTEM_OF_UNDYING, TotemParticle.Factory::new);
@@ -208,6 +223,8 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.FALLING_HONEY, BlockLeakParticle.FallingHoneyFactory::new);
         this.registerFactory(ParticleTypes.LANDING_HONEY, BlockLeakParticle.LandingHoneyFactory::new);
         this.registerFactory(ParticleTypes.FALLING_NECTAR, BlockLeakParticle.FallingNectarFactory::new);
+        this.registerFactory(ParticleTypes.FALLING_SPORE_BLOSSOM, BlockLeakParticle.FallingSporeBlossomFactory::new);
+        this.registerFactory(ParticleTypes.SPORE_BLOSSOM_AIR, WaterSuspendParticle.SporeBlossomAirFactory::new);
         this.registerFactory(ParticleTypes.ASH, AshParticle.Factory::new);
         this.registerFactory(ParticleTypes.CRIMSON_SPORE, WaterSuspendParticle.CrimsonSporeFactory::new);
         this.registerFactory(ParticleTypes.WARPED_SPORE, WaterSuspendParticle.WarpedSporeFactory::new);
@@ -216,6 +233,18 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.LANDING_OBSIDIAN_TEAR, BlockLeakParticle.LandingObsidianTearFactory::new);
         this.registerFactory(ParticleTypes.REVERSE_PORTAL, ReversePortalParticle.Factory::new);
         this.registerFactory(ParticleTypes.WHITE_ASH, WhiteAshParticle.Factory::new);
+        this.registerFactory(ParticleTypes.SMALL_FLAME, FlameParticle.SmallFactory::new);
+        this.registerFactory(ParticleTypes.DRIPPING_DRIPSTONE_WATER, BlockLeakParticle.FallingDripstoneWaterFactory::new);
+        this.registerFactory(ParticleTypes.FALLING_DRIPSTONE_WATER, BlockLeakParticle.DripstoneLavaSplashFactory::new);
+        this.registerFactory(ParticleTypes.DRIPPING_DRIPSTONE_LAVA, BlockLeakParticle.FallingDripstoneLavaFactory::new);
+        this.registerFactory(ParticleTypes.FALLING_DRIPSTONE_LAVA, BlockLeakParticle.LandingDripstoneLavaFactory::new);
+        this.registerFactory(ParticleTypes.VIBRATION, VibrationParticle.Factory::new);
+        this.registerFactory(ParticleTypes.GLOW_SQUID_INK, SquidInkParticle.GlowSquidInkFactory::new);
+        this.registerFactory(ParticleTypes.GLOW, GlowParticle.GlowFactory::new);
+        this.registerFactory(ParticleTypes.WAX_ON, GlowParticle.WaxOnFactory::new);
+        this.registerFactory(ParticleTypes.WAX_OFF, GlowParticle.WaxOffFactory::new);
+        this.registerFactory(ParticleTypes.ELECTRIC_SPARK, GlowParticle.ElectricSparkFactory::new);
+        this.registerFactory(ParticleTypes.SCRAPE, GlowParticle.ScrapeFactory::new);
     }
 
     private <T extends ParticleEffect> void registerFactory(ParticleType<T> type, ParticleFactory<T> factory) {
@@ -310,12 +339,20 @@ implements ResourceReloader {
     }
 
     public void addParticle(Particle particle) {
-        this.newParticles.add(particle);
+        Optional<ParticleGroup> optional = particle.getGroup();
+        if (optional.isPresent()) {
+            if (this.canAdd(optional.get())) {
+                this.newParticles.add(particle);
+                this.addTo(optional.get(), 1);
+            }
+        } else {
+            this.newParticles.add(particle);
+        }
     }
 
     public void tick() {
-        this.particles.forEach((particleTextureSheet, queue) -> {
-            this.world.getProfiler().push(particleTextureSheet.toString());
+        this.particles.forEach((sheet, queue) -> {
+            this.world.getProfiler().push(sheet.toString());
             this.tickParticles((Collection<Particle>)queue);
             this.world.getProfiler().pop();
         });
@@ -343,9 +380,14 @@ implements ResourceReloader {
                 Particle particle = iterator.next();
                 this.tickParticle(particle);
                 if (particle.isAlive()) continue;
+                particle.getGroup().ifPresent(group -> this.addTo((ParticleGroup)group, -1));
                 iterator.remove();
             }
         }
+    }
+
+    private void addTo(ParticleGroup group, int count) {
+        this.groupCounts.addTo((Object)group, count);
     }
 
     private void tickParticle(Particle particle) {
@@ -363,16 +405,16 @@ implements ResourceReloader {
 
     public void renderParticles(MatrixStack matrices, VertexConsumerProvider.Immediate immediate, LightmapTextureManager lightmapTextureManager, Camera camera, float f) {
         lightmapTextureManager.enable();
-        RenderSystem.enableAlphaTest();
-        RenderSystem.defaultAlphaFunc();
         RenderSystem.enableDepthTest();
-        RenderSystem.enableFog();
-        RenderSystem.pushMatrix();
-        RenderSystem.multMatrix(matrices.peek().getModel());
+        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
+        matrixStack.method_34425(matrices.peek().getModel());
+        RenderSystem.applyModelViewMatrix();
         for (ParticleTextureSheet particleTextureSheet : PARTICLE_TEXTURE_SHEETS) {
             Iterable iterable = this.particles.get(particleTextureSheet);
             if (iterable == null) continue;
-            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.setShader(GameRenderer::getParticleShader);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             Tessellator tessellator = Tessellator.getInstance();
             BufferBuilder bufferBuilder = tessellator.getBuffer();
             particleTextureSheet.begin(bufferBuilder, this.textureManager);
@@ -390,19 +432,18 @@ implements ResourceReloader {
             }
             particleTextureSheet.draw(tessellator);
         }
-        RenderSystem.popMatrix();
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
         RenderSystem.depthMask(true);
-        RenderSystem.depthFunc(515);
         RenderSystem.disableBlend();
-        RenderSystem.defaultAlphaFunc();
         lightmapTextureManager.disable();
-        RenderSystem.disableFog();
     }
 
     public void setWorld(@Nullable ClientWorld world) {
         this.world = world;
         this.particles.clear();
         this.newEmitterParticles.clear();
+        this.groupCounts.clear();
     }
 
     public void addBlockBreakParticles(BlockPos pos, BlockState state) {
@@ -427,7 +468,7 @@ implements ResourceReloader {
                         double v = s * j + d;
                         double w = t * k + e;
                         double x = u * l + f;
-                        this.addParticle(new BlockDustParticle(this.world, (double)pos.getX() + v, (double)pos.getY() + w, (double)pos.getZ() + x, s - 0.5, t - 0.5, u - 0.5, state).setBlockPos(pos));
+                        this.addParticle(new BlockDustParticle(this.world, (double)pos.getX() + v, (double)pos.getY() + w, (double)pos.getZ() + x, s - 0.5, t - 0.5, u - 0.5, state, pos));
                     }
                 }
             }
@@ -465,11 +506,21 @@ implements ResourceReloader {
         if (direction == Direction.EAST) {
             d = (double)i + box.maxX + (double)0.1f;
         }
-        this.addParticle(new BlockDustParticle(this.world, d, e, g, 0.0, 0.0, 0.0, blockState).setBlockPos(pos).move(0.2f).scale(0.6f));
+        this.addParticle(new BlockDustParticle(this.world, d, e, g, 0.0, 0.0, 0.0, blockState, pos).move(0.2f).scale(0.6f));
     }
 
     public String getDebugString() {
         return String.valueOf(this.particles.values().stream().mapToInt(Collection::size).sum());
+    }
+
+    private boolean canAdd(ParticleGroup group) {
+        return this.groupCounts.getInt((Object)group) < group.getMaxCount();
+    }
+
+    @FunctionalInterface
+    @Environment(value=EnvType.CLIENT)
+    static interface SpriteAwareFactory<T extends ParticleEffect> {
+        public ParticleFactory<T> create(SpriteProvider var1);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -477,7 +528,7 @@ implements ResourceReloader {
     implements SpriteProvider {
         private List<Sprite> sprites;
 
-        private SimpleSpriteProvider() {
+        SimpleSpriteProvider() {
         }
 
         @Override
@@ -493,12 +544,6 @@ implements ResourceReloader {
         public void setSprites(List<Sprite> sprites) {
             this.sprites = ImmutableList.copyOf(sprites);
         }
-    }
-
-    @FunctionalInterface
-    @Environment(value=EnvType.CLIENT)
-    static interface SpriteAwareFactory<T extends ParticleEffect> {
-        public ParticleFactory<T> create(SpriteProvider var1);
     }
 }
 

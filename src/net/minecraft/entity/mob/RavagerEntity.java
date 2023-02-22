@@ -2,23 +2,19 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
 import java.util.List;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -54,11 +50,20 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class RavagerEntity
 extends RaiderEntity {
     private static final Predicate<Entity> IS_NOT_RAVAGER = entity -> entity.isAlive() && !(entity instanceof RavagerEntity);
+    private static final double field_30480 = 0.3;
+    private static final double field_30481 = 0.35;
+    private static final int field_30482 = 8356754;
+    private static final double field_30483 = 0.5725490196078431;
+    private static final double field_30484 = 0.5137254901960784;
+    private static final double field_30485 = 0.4980392156862745;
+    private static final int field_30486 = 10;
+    public static final int field_30479 = 40;
     private int attackTick;
     private int stunTick;
     private int roarTick;
@@ -78,9 +83,9 @@ extends RaiderEntity {
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
         this.targetSelector.add(2, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(4, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, true));
-        this.targetSelector.add(4, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(4, new ActiveTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, true));
+        this.targetSelector.add(4, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
     }
 
     @Override
@@ -141,10 +146,7 @@ extends RaiderEntity {
     @Override
     @Nullable
     public Entity getPrimaryPassenger() {
-        if (this.getPassengerList().isEmpty()) {
-            return null;
-        }
-        return this.getPassengerList().get(0);
+        return this.getFirstPassenger();
     }
 
     @Override
@@ -229,22 +231,29 @@ extends RaiderEntity {
         }
     }
 
+    /*
+     * WARNING - void declaration
+     */
     private void roar() {
         if (this.isAlive()) {
+            void var3_5;
             List<Entity> list = this.world.getEntitiesByClass(LivingEntity.class, this.getBoundingBox().expand(4.0), IS_NOT_RAVAGER);
-            for (Entity entity : list) {
-                if (!(entity instanceof IllagerEntity)) {
-                    entity.damage(DamageSource.mob(this), 6.0f);
+            for (LivingEntity livingEntity : list) {
+                if (!(livingEntity instanceof IllagerEntity)) {
+                    livingEntity.damage(DamageSource.mob(this), 6.0f);
                 }
-                this.knockBack(entity);
+                this.knockBack(livingEntity);
             }
             Vec3d vec3d = this.getBoundingBox().getCenter();
-            for (int i = 0; i < 40; ++i) {
+            boolean bl = false;
+            while (var3_5 < 40) {
                 double d = this.random.nextGaussian() * 0.2;
                 double e = this.random.nextGaussian() * 0.2;
                 double f = this.random.nextGaussian() * 0.2;
                 this.world.addParticle(ParticleTypes.POOF, vec3d.x, vec3d.y, vec3d.z, d, e, f);
+                ++var3_5;
             }
+            this.world.emitGameEvent((Entity)this, GameEvent.RAVAGER_ROAR, this.getCameraBlockPos());
         }
     }
 
@@ -256,7 +265,6 @@ extends RaiderEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 4) {
             this.attackTick = 10;
@@ -267,17 +275,14 @@ extends RaiderEntity {
         super.handleStatus(status);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getAttackTick() {
         return this.attackTick;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getStunTick() {
         return this.stunTick;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getRoarTick() {
         return this.roarTick;
     }
@@ -325,17 +330,16 @@ extends RaiderEntity {
         return false;
     }
 
-    static class PathNodeMaker
-    extends LandPathNodeMaker {
-        private PathNodeMaker() {
+    class AttackGoal
+    extends MeleeAttackGoal {
+        public AttackGoal() {
+            super(RavagerEntity.this, 1.0, true);
         }
 
         @Override
-        protected PathNodeType adjustNodeType(BlockView world, boolean canOpenDoors, boolean canEnterOpenDoors, BlockPos pos, PathNodeType type) {
-            if (type == PathNodeType.LEAVES) {
-                return PathNodeType.OPEN;
-            }
-            return super.adjustNodeType(world, canOpenDoors, canEnterOpenDoors, pos, type);
+        protected double getSquaredMaxAttackDistance(LivingEntity entity) {
+            float f = RavagerEntity.this.getWidth() - 0.1f;
+            return f * 2.0f * (f * 2.0f) + entity.getWidth();
         }
     }
 
@@ -352,16 +356,17 @@ extends RaiderEntity {
         }
     }
 
-    class AttackGoal
-    extends MeleeAttackGoal {
-        public AttackGoal() {
-            super(RavagerEntity.this, 1.0, true);
+    static class PathNodeMaker
+    extends LandPathNodeMaker {
+        PathNodeMaker() {
         }
 
         @Override
-        protected double getSquaredMaxAttackDistance(LivingEntity entity) {
-            float f = RavagerEntity.this.getWidth() - 0.1f;
-            return f * 2.0f * (f * 2.0f) + entity.getWidth();
+        protected PathNodeType adjustNodeType(BlockView world, boolean canOpenDoors, boolean canEnterOpenDoors, BlockPos pos, PathNodeType type) {
+            if (type == PathNodeType.LEAVES) {
+                return PathNodeType.OPEN;
+            }
+            return super.adjustNodeType(world, canOpenDoors, canEnterOpenDoors, pos, type);
         }
     }
 }

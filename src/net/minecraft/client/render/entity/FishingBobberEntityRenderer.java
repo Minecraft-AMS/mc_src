@@ -14,8 +14,8 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.FishingBobberEntity;
@@ -34,9 +34,10 @@ public class FishingBobberEntityRenderer
 extends EntityRenderer<FishingBobberEntity> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/fishing_hook.png");
     private static final RenderLayer LAYER = RenderLayer.getEntityCutout(TEXTURE);
+    private static final double field_33632 = 960.0;
 
-    public FishingBobberEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public FishingBobberEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
     }
 
     @Override
@@ -59,14 +60,14 @@ extends EntityRenderer<FishingBobberEntity> {
         Matrix4f matrix4f = entry.getModel();
         Matrix3f matrix3f = entry.getNormal();
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(LAYER);
-        FishingBobberEntityRenderer.method_23840(vertexConsumer, matrix4f, matrix3f, i, 0.0f, 0, 0, 1);
-        FishingBobberEntityRenderer.method_23840(vertexConsumer, matrix4f, matrix3f, i, 1.0f, 0, 1, 1);
-        FishingBobberEntityRenderer.method_23840(vertexConsumer, matrix4f, matrix3f, i, 1.0f, 1, 1, 0);
-        FishingBobberEntityRenderer.method_23840(vertexConsumer, matrix4f, matrix3f, i, 0.0f, 1, 0, 0);
+        FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 0.0f, 0, 0, 1);
+        FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 1.0f, 0, 1, 1);
+        FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 1.0f, 1, 1, 0);
+        FishingBobberEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, i, 0.0f, 1, 0, 0);
         matrixStack.pop();
         int j = playerEntity.getMainArm() == Arm.RIGHT ? 1 : -1;
         ItemStack itemStack = playerEntity.getMainHandStack();
-        if (itemStack.getItem() != Items.FISHING_ROD) {
+        if (!itemStack.isOf(Items.FISHING_ROD)) {
             j = -j;
         }
         float h = playerEntity.getHandSwingProgress(g);
@@ -82,10 +83,9 @@ extends EntityRenderer<FishingBobberEntity> {
             q = MathHelper.lerp((double)g, playerEntity.prevZ, playerEntity.getZ()) - d * m + e * 0.8;
             r = playerEntity.isInSneakingPose() ? -0.1875f : 0.0f;
         } else {
-            s = this.dispatcher.gameOptions.fov;
-            Vec3d vec3d = new Vec3d((double)j * -0.36 * (s /= 100.0), -0.045 * s, 0.4);
-            vec3d = vec3d.rotateX(-MathHelper.lerp(g, playerEntity.prevPitch, playerEntity.pitch) * ((float)Math.PI / 180));
-            vec3d = vec3d.rotateY(-MathHelper.lerp(g, playerEntity.prevYaw, playerEntity.yaw) * ((float)Math.PI / 180));
+            s = 960.0 / this.dispatcher.gameOptions.fov;
+            Vec3d vec3d = this.dispatcher.camera.getProjection().getPosition((float)j * 0.525f, -0.1f);
+            vec3d = vec3d.multiply(s);
             vec3d = vec3d.rotateY(k * 0.5f);
             vec3d = vec3d.rotateX(-k * 0.7f);
             o = MathHelper.lerp((double)g, playerEntity.prevX, playerEntity.getX()) + vec3d.x;
@@ -99,27 +99,33 @@ extends EntityRenderer<FishingBobberEntity> {
         float v = (float)(o - s);
         float w = (float)(p - t) + r;
         float x = (float)(q - u);
-        VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(RenderLayer.getLines());
-        Matrix4f matrix4f2 = matrixStack.peek().getModel();
+        VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(RenderLayer.getLineStrip());
+        MatrixStack.Entry entry2 = matrixStack.peek();
         int y = 16;
-        for (int z = 0; z < 16; ++z) {
-            FishingBobberEntityRenderer.method_23172(v, w, x, vertexConsumer2, matrix4f2, FishingBobberEntityRenderer.method_23954(z, 16));
-            FishingBobberEntityRenderer.method_23172(v, w, x, vertexConsumer2, matrix4f2, FishingBobberEntityRenderer.method_23954(z + 1, 16));
+        for (int z = 0; z <= 16; ++z) {
+            FishingBobberEntityRenderer.method_23172(v, w, x, vertexConsumer2, entry2, FishingBobberEntityRenderer.percentage(z, 16), FishingBobberEntityRenderer.percentage(z + 1, 16));
         }
         matrixStack.pop();
         super.render(fishingBobberEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
-    private static float method_23954(int i, int j) {
-        return (float)i / (float)j;
+    private static float percentage(int value, int max) {
+        return (float)value / (float)max;
     }
 
-    private static void method_23840(VertexConsumer vertexConsumer, Matrix4f matrix4f, Matrix3f matrix3f, int i, float f, int j, int k, int l) {
-        vertexConsumer.vertex(matrix4f, f - 0.5f, (float)j - 0.5f, 0.0f).color(255, 255, 255, 255).texture(k, l).overlay(OverlayTexture.DEFAULT_UV).light(i).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+    private static void vertex(VertexConsumer buffer, Matrix4f matrix, Matrix3f normalMatrix, int light, float x, int y, int u, int v) {
+        buffer.vertex(matrix, x - 0.5f, (float)y - 0.5f, 0.0f).color(255, 255, 255, 255).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(normalMatrix, 0.0f, 1.0f, 0.0f).next();
     }
 
-    private static void method_23172(float f, float g, float h, VertexConsumer vertexConsumer, Matrix4f matrix4f, float i) {
-        vertexConsumer.vertex(matrix4f, f * i, g * (i * i + i) * 0.5f + 0.25f, h * i).color(0, 0, 0, 255).next();
+    private static void method_23172(float x, float y, float z, VertexConsumer buffer, MatrixStack.Entry normal, float f, float g) {
+        float h = x * f;
+        float i = y * (f * f + f) * 0.5f + 0.25f;
+        float j = z * f;
+        float k = x * g - h;
+        float l = y * (g * g + g) * 0.5f + 0.25f - i;
+        float m = z * g - j;
+        float n = MathHelper.sqrt(k * k + l * l + m * m);
+        buffer.vertex(normal.getModel(), h, i, j).color(0, 0, 0, 255).normal(normal.getNormal(), k /= n, l /= n, m /= n).next();
     }
 
     @Override

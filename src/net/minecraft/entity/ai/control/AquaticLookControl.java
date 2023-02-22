@@ -10,6 +10,8 @@ import net.minecraft.util.math.MathHelper;
 public class AquaticLookControl
 extends LookControl {
     private final int maxYawDifference;
+    private static final int ADDED_PITCH = 10;
+    private static final int ADDED_YAW = 20;
 
     public AquaticLookControl(MobEntity entity, int maxYawDifference) {
         super(entity);
@@ -20,11 +22,13 @@ extends LookControl {
     public void tick() {
         if (this.active) {
             this.active = false;
-            this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.getTargetYaw() + 20.0f, this.yawSpeed);
-            this.entity.pitch = this.changeAngle(this.entity.pitch, this.getTargetPitch() + 10.0f, this.pitchSpeed);
+            this.getTargetYaw().ifPresent(float_ -> {
+                this.entity.headYaw = this.changeAngle(this.entity.headYaw, float_.floatValue() + 20.0f, this.yawSpeed);
+            });
+            this.getTargetPitch().ifPresent(float_ -> this.entity.setPitch(this.changeAngle(this.entity.getPitch(), float_.floatValue() + 10.0f, this.pitchSpeed)));
         } else {
             if (this.entity.getNavigation().isIdle()) {
-                this.entity.pitch = this.changeAngle(this.entity.pitch, 0.0f, 5.0f);
+                this.entity.setPitch(this.changeAngle(this.entity.getPitch(), 0.0f, 5.0f));
             }
             this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.entity.bodyYaw, this.yawSpeed);
         }

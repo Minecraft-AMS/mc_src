@@ -21,7 +21,7 @@ import net.minecraft.util.math.Vec3d;
 
 public class TargetHitCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("target_hit");
+    static final Identifier ID = new Identifier("target_hit");
 
     @Override
     public Identifier getId() {
@@ -37,7 +37,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, Entity projectile, Vec3d hitPos, int signalStrength) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, projectile);
-        this.test(player, conditions -> conditions.test(lootContext, hitPos, signalStrength));
+        this.trigger(player, conditions -> conditions.test(lootContext, hitPos, signalStrength));
     }
 
     @Override
@@ -56,8 +56,8 @@ extends AbstractCriterion<Conditions> {
             this.projectile = projectile;
         }
 
-        public static Conditions create(NumberRange.IntRange signalStrength, EntityPredicate.Extended extended) {
-            return new Conditions(EntityPredicate.Extended.EMPTY, signalStrength, extended);
+        public static Conditions create(NumberRange.IntRange signalStrength, EntityPredicate.Extended projectile) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, signalStrength, projectile);
         }
 
         @Override

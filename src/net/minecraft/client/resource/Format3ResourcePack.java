@@ -35,9 +35,9 @@ implements ResourcePack {
     private final Map<Identifier, Identifier> idMap;
     public static final Map<Identifier, Identifier> NEW_TO_OLD_MAP = (Map)Util.make(() -> {
         ImmutableMap.Builder builder = ImmutableMap.builder();
-        BiConsumer<String, String> biConsumer = (string, string2) -> {
-            Identifier identifier = new Identifier((String)string);
-            Identifier identifier2 = new Identifier((String)string2);
+        BiConsumer<String, String> biConsumer = (newId, oldId) -> {
+            Identifier identifier = new Identifier((String)newId);
+            Identifier identifier2 = new Identifier((String)oldId);
             builder.put((Object)identifier, (Object)identifier2);
             builder.put((Object)Format3ResourcePack.getMetadataLocation(identifier), (Object)Format3ResourcePack.getMetadataLocation(identifier2));
         };
@@ -902,9 +902,9 @@ implements ResourcePack {
         return new Identifier(id.getNamespace(), id.getPath() + ".mcmeta");
     }
 
-    public Format3ResourcePack(ResourcePack resourcePack, Map<Identifier, Identifier> map) {
-        this.parent = resourcePack;
-        this.idMap = map;
+    public Format3ResourcePack(ResourcePack parent, Map<Identifier, Identifier> idMap) {
+        this.parent = parent;
+        this.idMap = idMap;
     }
 
     private Identifier getRedirectedId(Identifier id) {

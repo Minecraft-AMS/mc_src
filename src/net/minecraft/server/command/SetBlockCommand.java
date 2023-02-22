@@ -39,7 +39,7 @@ public class SetBlockCommand {
     private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.setblock.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("setblock").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("pos", BlockPosArgumentType.blockPos()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("block", BlockStateArgumentType.blockState()).executes(commandContext -> SetBlockCommand.execute((ServerCommandSource)commandContext.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)commandContext, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)commandContext, "block"), Mode.REPLACE, null))).then(CommandManager.literal("destroy").executes(commandContext -> SetBlockCommand.execute((ServerCommandSource)commandContext.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)commandContext, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)commandContext, "block"), Mode.DESTROY, null)))).then(CommandManager.literal("keep").executes(commandContext -> SetBlockCommand.execute((ServerCommandSource)commandContext.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)commandContext, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)commandContext, "block"), Mode.REPLACE, cachedBlockPosition -> cachedBlockPosition.getWorld().isAir(cachedBlockPosition.getBlockPos()))))).then(CommandManager.literal("replace").executes(commandContext -> SetBlockCommand.execute((ServerCommandSource)commandContext.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)commandContext, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)commandContext, "block"), Mode.REPLACE, null))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("setblock").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.argument("pos", BlockPosArgumentType.blockPos()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("block", BlockStateArgumentType.blockState()).executes(context -> SetBlockCommand.execute((ServerCommandSource)context.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)context, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)context, "block"), Mode.REPLACE, null))).then(CommandManager.literal("destroy").executes(context -> SetBlockCommand.execute((ServerCommandSource)context.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)context, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)context, "block"), Mode.DESTROY, null)))).then(CommandManager.literal("keep").executes(context -> SetBlockCommand.execute((ServerCommandSource)context.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)context, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)context, "block"), Mode.REPLACE, pos -> pos.getWorld().isAir(pos.getBlockPos()))))).then(CommandManager.literal("replace").executes(context -> SetBlockCommand.execute((ServerCommandSource)context.getSource(), BlockPosArgumentType.getLoadedBlockPos((CommandContext<ServerCommandSource>)context, "pos"), BlockStateArgumentType.getBlockState((CommandContext<ServerCommandSource>)context, "block"), Mode.REPLACE, null))))));
     }
 
     private static int execute(ServerCommandSource source, BlockPos pos, BlockStateArgument block, Mode mode, @Nullable Predicate<CachedBlockPosition> condition) throws CommandSyntaxException {
@@ -64,15 +64,32 @@ public class SetBlockCommand {
         return 1;
     }
 
+    public static final class Mode
+    extends Enum<Mode> {
+        public static final /* enum */ Mode REPLACE = new Mode();
+        public static final /* enum */ Mode DESTROY = new Mode();
+        private static final /* synthetic */ Mode[] field_13720;
+
+        public static Mode[] values() {
+            return (Mode[])field_13720.clone();
+        }
+
+        public static Mode valueOf(String string) {
+            return Enum.valueOf(Mode.class, string);
+        }
+
+        private static /* synthetic */ Mode[] method_36969() {
+            return new Mode[]{REPLACE, DESTROY};
+        }
+
+        static {
+            field_13720 = Mode.method_36969();
+        }
+    }
+
     public static interface Filter {
         @Nullable
         public BlockStateArgument filter(BlockBox var1, BlockPos var2, BlockStateArgument var3, ServerWorld var4);
-    }
-
-    public static enum Mode {
-        REPLACE,
-        DESTROY;
-
     }
 }
 

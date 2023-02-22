@@ -40,14 +40,14 @@ import org.jetbrains.annotations.Nullable;
 public class SetNameLootFunction
 extends ConditionalLootFunction {
     private static final Logger LOGGER = LogManager.getLogger();
-    private final Text name;
+    final Text name;
     @Nullable
-    private final LootContext.EntityTarget entity;
+    final LootContext.EntityTarget entity;
 
-    private SetNameLootFunction(LootCondition[] conditions, @Nullable Text name, @Nullable LootContext.EntityTarget entity) {
-        super(conditions);
-        this.name = name;
-        this.entity = entity;
+    SetNameLootFunction(LootCondition[] lootConditions, @Nullable Text text, @Nullable LootContext.EntityTarget entityTarget) {
+        super(lootConditions);
+        this.name = text;
+        this.entity = entityTarget;
     }
 
     @Override
@@ -83,6 +83,14 @@ extends ConditionalLootFunction {
             stack.setCustomName((Text)SetNameLootFunction.applySourceEntity(context, this.entity).apply(this.name));
         }
         return stack;
+    }
+
+    public static ConditionalLootFunction.Builder<?> builder(Text name) {
+        return SetNameLootFunction.builder((LootCondition[] conditions) -> new SetNameLootFunction((LootCondition[])conditions, name, null));
+    }
+
+    public static ConditionalLootFunction.Builder<?> builder(Text name, LootContext.EntityTarget target) {
+        return SetNameLootFunction.builder((LootCondition[] conditions) -> new SetNameLootFunction((LootCondition[])conditions, name, target));
     }
 
     public static class Serializer

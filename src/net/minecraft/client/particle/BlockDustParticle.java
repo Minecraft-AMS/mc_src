@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.particle;
 
@@ -21,24 +20,32 @@ import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.util.math.BlockPos;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class BlockDustParticle
 extends SpriteBillboardParticle {
-    private final BlockState blockState;
-    private BlockPos blockPos;
+    private final BlockPos blockPos;
     private final float sampleU;
     private final float sampleV;
 
     public BlockDustParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, BlockState state) {
+        this(world, x, y, z, velocityX, velocityY, velocityZ, state, new BlockPos(x, y, z));
+    }
+
+    public BlockDustParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, BlockState state, BlockPos blockPos) {
         super(world, x, y, z, velocityX, velocityY, velocityZ);
-        this.blockState = state;
-        this.setSprite(MinecraftClient.getInstance().getBlockRenderManager().getModels().getSprite(state));
+        this.blockPos = blockPos;
+        this.setSprite(MinecraftClient.getInstance().getBlockRenderManager().getModels().getModelParticleSprite(state));
         this.gravityStrength = 1.0f;
         this.colorRed = 0.6f;
         this.colorGreen = 0.6f;
         this.colorBlue = 0.6f;
+        if (!state.isOf(Blocks.GRASS_BLOCK)) {
+            int i = MinecraftClient.getInstance().getBlockColors().getColor(state, world, blockPos, 0);
+            this.colorRed *= (float)(i >> 16 & 0xFF) / 255.0f;
+            this.colorGreen *= (float)(i >> 8 & 0xFF) / 255.0f;
+            this.colorBlue *= (float)(i & 0xFF) / 255.0f;
+        }
         this.scale /= 2.0f;
         this.sampleU = this.random.nextFloat() * 3.0f;
         this.sampleV = this.random.nextFloat() * 3.0f;
@@ -47,31 +54,6 @@ extends SpriteBillboardParticle {
     @Override
     public ParticleTextureSheet getType() {
         return ParticleTextureSheet.TERRAIN_SHEET;
-    }
-
-    public BlockDustParticle setBlockPos(BlockPos blockPos) {
-        this.blockPos = blockPos;
-        if (this.blockState.isOf(Blocks.GRASS_BLOCK)) {
-            return this;
-        }
-        this.updateColor(blockPos);
-        return this;
-    }
-
-    public BlockDustParticle setBlockPosFromPosition() {
-        this.blockPos = new BlockPos(this.x, this.y, this.z);
-        if (this.blockState.isOf(Blocks.GRASS_BLOCK)) {
-            return this;
-        }
-        this.updateColor(this.blockPos);
-        return this;
-    }
-
-    protected void updateColor(@Nullable BlockPos blockPos) {
-        int i = MinecraftClient.getInstance().getBlockColors().getColor(this.blockState, this.world, blockPos, 0);
-        this.colorRed *= (float)(i >> 16 & 0xFF) / 255.0f;
-        this.colorGreen *= (float)(i >> 8 & 0xFF) / 255.0f;
-        this.colorBlue *= (float)(i & 0xFF) / 255.0f;
     }
 
     @Override
@@ -97,11 +79,10 @@ extends SpriteBillboardParticle {
     @Override
     public int getBrightness(float tint) {
         int i = super.getBrightness(tint);
-        int j = 0;
-        if (this.world.isChunkLoaded(this.blockPos)) {
-            j = WorldRenderer.getLightmapCoordinates(this.world, this.blockPos);
+        if (i == 0 && this.world.isChunkLoaded(this.blockPos)) {
+            return WorldRenderer.getLightmapCoordinates(this.world, this.blockPos);
         }
-        return i == 0 ? j : i;
+        return i;
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -113,7 +94,7 @@ extends SpriteBillboardParticle {
             if (blockState.isAir() || blockState.isOf(Blocks.MOVING_PISTON)) {
                 return null;
             }
-            return new BlockDustParticle(clientWorld, d, e, f, g, h, i, blockState).setBlockPosFromPosition();
+            return new BlockDustParticle(clientWorld, d, e, f, g, h, i, blockState);
         }
     }
 }

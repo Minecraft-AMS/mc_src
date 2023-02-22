@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile.thrown;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -44,14 +38,12 @@ extends ThrownItemEntity {
         return Items.SNOWBALL;
     }
 
-    @Environment(value=EnvType.CLIENT)
     private ParticleEffect getParticleParameters() {
         ItemStack itemStack = this.getItem();
         return itemStack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL : new ItemStackParticleEffect(ParticleTypes.ITEM, itemStack);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 3) {
             ParticleEffect particleEffect = this.getParticleParameters();
@@ -74,7 +66,7 @@ extends ThrownItemEntity {
         super.onCollision(hitResult);
         if (!this.world.isClient) {
             this.world.sendEntityStatus(this, (byte)3);
-            this.remove();
+            this.discard();
         }
     }
 }

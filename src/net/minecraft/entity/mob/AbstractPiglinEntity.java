@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.NavigationConditions;
@@ -35,7 +31,8 @@ import org.jetbrains.annotations.Nullable;
 public abstract class AbstractPiglinEntity
 extends HostileEntity {
     protected static final TrackedData<Boolean> IMMUNE_TO_ZOMBIFICATION = DataTracker.registerData(AbstractPiglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    protected int timeInOverworld = 0;
+    protected static final int TIME_TO_ZOMBIFY = 300;
+    protected int timeInOverworld;
 
     public AbstractPiglinEntity(EntityType<? extends AbstractPiglinEntity> entityType, World world) {
         super((EntityType<? extends HostileEntity>)entityType, world);
@@ -103,7 +100,7 @@ extends HostileEntity {
     }
 
     protected void zombify(ServerWorld world) {
-        ZombifiedPiglinEntity zombifiedPiglinEntity = this.method_29243(EntityType.ZOMBIFIED_PIGLIN, true);
+        ZombifiedPiglinEntity zombifiedPiglinEntity = this.convertTo(EntityType.ZOMBIFIED_PIGLIN, true);
         if (zombifiedPiglinEntity != null) {
             zombifiedPiglinEntity.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 0));
         }
@@ -113,7 +110,6 @@ extends HostileEntity {
         return !this.isBaby();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public abstract PiglinActivity getActivity();
 
     @Override

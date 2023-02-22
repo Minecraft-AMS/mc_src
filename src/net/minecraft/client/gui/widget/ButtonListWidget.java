@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
+ *  com.google.common.collect.ImmutableMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -10,15 +11,17 @@
 package net.minecraft.client.gui.widget;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
-import net.minecraft.client.gui.widget.OptionButtonWidget;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.Option;
 import net.minecraft.client.util.math.MatrixStack;
@@ -59,10 +62,9 @@ extends ElementListWidget<ButtonEntry> {
     @Nullable
     public ClickableWidget getButtonFor(Option option) {
         for (ButtonEntry buttonEntry : this.children()) {
-            for (ClickableWidget clickableWidget : buttonEntry.buttons) {
-                if (!(clickableWidget instanceof OptionButtonWidget) || ((OptionButtonWidget)clickableWidget).getOption() != option) continue;
-                return clickableWidget;
-            }
+            ClickableWidget clickableWidget = buttonEntry.optionsToButtons.get(option);
+            if (clickableWidget == null) continue;
+            return clickableWidget;
         }
         return null;
     }
@@ -78,24 +80,26 @@ extends ElementListWidget<ButtonEntry> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class ButtonEntry
+    protected static class ButtonEntry
     extends ElementListWidget.Entry<ButtonEntry> {
-        private final List<ClickableWidget> buttons;
+        final Map<Option, ClickableWidget> optionsToButtons;
+        final List<ClickableWidget> buttons;
 
-        private ButtonEntry(List<ClickableWidget> buttons) {
-            this.buttons = buttons;
+        private ButtonEntry(Map<Option, ClickableWidget> optionsToButtons) {
+            this.optionsToButtons = optionsToButtons;
+            this.buttons = ImmutableList.copyOf(optionsToButtons.values());
         }
 
         public static ButtonEntry create(GameOptions options, int width, Option option) {
-            return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)option.createButton(options, width / 2 - 155, 0, 310)));
+            return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)option, (Object)option.createButton(options, width / 2 - 155, 0, 310)));
         }
 
         public static ButtonEntry create(GameOptions options, int width, Option firstOption, @Nullable Option secondOption) {
             ClickableWidget clickableWidget = firstOption.createButton(options, width / 2 - 155, 0, 150);
             if (secondOption == null) {
-                return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)clickableWidget));
+                return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)firstOption, (Object)clickableWidget));
             }
-            return new ButtonEntry((List<ClickableWidget>)ImmutableList.of((Object)clickableWidget, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
+            return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)firstOption, (Object)clickableWidget, (Object)secondOption, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
         }
 
         @Override
@@ -108,6 +112,11 @@ extends ElementListWidget<ButtonEntry> {
 
         @Override
         public List<? extends Element> children() {
+            return this.buttons;
+        }
+
+        @Override
+        public List<? extends Selectable> selectableChildren() {
             return this.buttons;
         }
     }

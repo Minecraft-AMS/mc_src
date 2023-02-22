@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.datafixers.util.Pair
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.entity;
@@ -14,9 +12,6 @@ import com.google.common.collect.Lists;
 import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBannerBlock;
 import net.minecraft.block.BannerBlock;
 import net.minecraft.block.BlockState;
@@ -31,42 +26,45 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Nameable;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public class BannerBlockEntity
 extends BlockEntity
 implements Nameable {
+    public static final int field_31296 = 6;
+    public static final String PATTERNS_KEY = "Patterns";
+    public static final String PATTERN_KEY = "Pattern";
+    public static final String COLOR_KEY = "Color";
     @Nullable
     private Text customName;
-    @Nullable
-    private DyeColor baseColor = DyeColor.WHITE;
+    private DyeColor baseColor;
     @Nullable
     private NbtList patternListTag;
     private boolean patternListTagRead;
     @Nullable
     private List<Pair<BannerPattern, DyeColor>> patterns;
 
-    public BannerBlockEntity() {
-        super(BlockEntityType.BANNER);
+    public BannerBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.BANNER, pos, state);
+        this.baseColor = ((AbstractBannerBlock)state.getBlock()).getColor();
     }
 
-    public BannerBlockEntity(DyeColor baseColor) {
-        this();
+    public BannerBlockEntity(BlockPos pos, BlockState state, DyeColor baseColor) {
+        this(pos, state);
         this.baseColor = baseColor;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static NbtList getPatternListTag(ItemStack stack) {
         NbtList nbtList = null;
-        NbtCompound nbtCompound = stack.getSubTag("BlockEntityTag");
-        if (nbtCompound != null && nbtCompound.contains("Patterns", 9)) {
-            nbtList = nbtCompound.getList("Patterns", 10).copy();
+        NbtCompound nbtCompound = stack.getSubNbt("BlockEntityTag");
+        if (nbtCompound != null && nbtCompound.contains(PATTERNS_KEY, 9)) {
+            nbtList = nbtCompound.getList(PATTERNS_KEY, 10).copy();
         }
         return nbtList;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void readFrom(ItemStack stack, DyeColor baseColor) {
         this.patternListTag = BannerBlockEntity.getPatternListTag(stack);
         this.baseColor = baseColor;
@@ -97,7 +95,7 @@ implements Nameable {
     public NbtCompound writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
         if (this.patternListTag != null) {
-            nbt.put("Patterns", this.patternListTag);
+            nbt.put(PATTERNS_KEY, this.patternListTag);
         }
         if (this.customName != null) {
             nbt.putString("CustomName", Text.Serializer.toJson(this.customName));
@@ -106,13 +104,12 @@ implements Nameable {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        if (tag.contains("CustomName", 8)) {
-            this.customName = Text.Serializer.fromJson(tag.getString("CustomName"));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        if (nbt.contains("CustomName", 8)) {
+            this.customName = Text.Serializer.fromJson(nbt.getString("CustomName"));
         }
-        this.baseColor = this.hasWorld() ? ((AbstractBannerBlock)this.getCachedState().getBlock()).getColor() : null;
-        this.patternListTag = tag.getList("Patterns", 10);
+        this.patternListTag = nbt.getList(PATTERNS_KEY, 10);
         this.patterns = null;
         this.patternListTagRead = true;
     }
@@ -129,31 +126,29 @@ implements Nameable {
     }
 
     public static int getPatternCount(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getSubTag("BlockEntityTag");
-        if (nbtCompound != null && nbtCompound.contains("Patterns")) {
-            return nbtCompound.getList("Patterns", 10).size();
+        NbtCompound nbtCompound = stack.getSubNbt("BlockEntityTag");
+        if (nbtCompound != null && nbtCompound.contains(PATTERNS_KEY)) {
+            return nbtCompound.getList(PATTERNS_KEY, 10).size();
         }
         return 0;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public List<Pair<BannerPattern, DyeColor>> getPatterns() {
         if (this.patterns == null && this.patternListTagRead) {
-            this.patterns = BannerBlockEntity.method_24280(this.getColorForState(this::getCachedState), this.patternListTag);
+            this.patterns = BannerBlockEntity.getPatternsFromNbt(this.baseColor, this.patternListTag);
         }
         return this.patterns;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public static List<Pair<BannerPattern, DyeColor>> method_24280(DyeColor dyeColor, @Nullable NbtList nbtList) {
+    public static List<Pair<BannerPattern, DyeColor>> getPatternsFromNbt(DyeColor baseColor, @Nullable NbtList patternListTag) {
         ArrayList list = Lists.newArrayList();
-        list.add(Pair.of((Object)((Object)BannerPattern.BASE), (Object)dyeColor));
-        if (nbtList != null) {
-            for (int i = 0; i < nbtList.size(); ++i) {
-                NbtCompound nbtCompound = nbtList.getCompound(i);
-                BannerPattern bannerPattern = BannerPattern.byId(nbtCompound.getString("Pattern"));
+        list.add(Pair.of((Object)((Object)BannerPattern.BASE), (Object)baseColor));
+        if (patternListTag != null) {
+            for (int i = 0; i < patternListTag.size(); ++i) {
+                NbtCompound nbtCompound = patternListTag.getCompound(i);
+                BannerPattern bannerPattern = BannerPattern.byId(nbtCompound.getString(PATTERN_KEY));
                 if (bannerPattern == null) continue;
-                int j = nbtCompound.getInt("Color");
+                int j = nbtCompound.getInt(COLOR_KEY);
                 list.add(Pair.of((Object)((Object)bannerPattern), (Object)DyeColor.byId(j)));
             }
         }
@@ -161,25 +156,24 @@ implements Nameable {
     }
 
     public static void loadFromItemStack(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getSubTag("BlockEntityTag");
-        if (nbtCompound == null || !nbtCompound.contains("Patterns", 9)) {
+        NbtCompound nbtCompound = stack.getSubNbt("BlockEntityTag");
+        if (nbtCompound == null || !nbtCompound.contains(PATTERNS_KEY, 9)) {
             return;
         }
-        NbtList nbtList = nbtCompound.getList("Patterns", 10);
+        NbtList nbtList = nbtCompound.getList(PATTERNS_KEY, 10);
         if (nbtList.isEmpty()) {
             return;
         }
         nbtList.remove(nbtList.size() - 1);
         if (nbtList.isEmpty()) {
-            stack.removeSubTag("BlockEntityTag");
+            stack.removeSubNbt("BlockEntityTag");
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ItemStack getPickStack(BlockState state) {
-        ItemStack itemStack = new ItemStack(BannerBlock.getForColor(this.getColorForState(() -> state)));
+    public ItemStack getPickStack() {
+        ItemStack itemStack = new ItemStack(BannerBlock.getForColor(this.baseColor));
         if (this.patternListTag != null && !this.patternListTag.isEmpty()) {
-            itemStack.getOrCreateSubTag("BlockEntityTag").put("Patterns", this.patternListTag.copy());
+            itemStack.getOrCreateSubNbt("BlockEntityTag").put(PATTERNS_KEY, this.patternListTag.copy());
         }
         if (this.customName != null) {
             itemStack.setCustomName(this.customName);
@@ -187,10 +181,7 @@ implements Nameable {
         return itemStack;
     }
 
-    public DyeColor getColorForState(Supplier<BlockState> supplier) {
-        if (this.baseColor == null) {
-            this.baseColor = ((AbstractBannerBlock)supplier.get().getBlock()).getColor();
-        }
+    public DyeColor getColorForState() {
         return this.baseColor;
     }
 }

@@ -12,12 +12,15 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.debug.DebugRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.ChunkPos;
 
 @Environment(value=EnvType.CLIENT)
 public class ChunkBorderDebugRenderer
@@ -32,20 +35,19 @@ implements DebugRenderer.Renderer {
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         int i;
         RenderSystem.enableDepthTest();
-        RenderSystem.shadeModel(7425);
-        RenderSystem.enableAlphaTest();
-        RenderSystem.defaultAlphaFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         Entity entity = this.client.gameRenderer.getCamera().getFocusedEntity();
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        double d = 0.0 - cameraY;
-        double e = 256.0 - cameraY;
+        double d = (double)this.client.world.getBottomY() - cameraY;
+        double e = (double)this.client.world.getTopY() - cameraY;
         RenderSystem.disableTexture();
         RenderSystem.disableBlend();
-        double f = (double)(entity.chunkX << 4) - cameraX;
-        double g = (double)(entity.chunkZ << 4) - cameraZ;
+        ChunkPos chunkPos = entity.getChunkPos();
+        double f = (double)chunkPos.getStartX() - cameraX;
+        double g = (double)chunkPos.getStartZ() - cameraZ;
         RenderSystem.lineWidth(1.0f);
-        bufferBuilder.begin(3, VertexFormats.POSITION_COLOR);
+        bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
         for (i = -16; i <= 32; i += 16) {
             for (int j = -16; j <= 32; j += 16) {
                 bufferBuilder.vertex(f + (double)i, d, g + (double)j).color(1.0f, 0.0f, 0.0f, 0.0f).next();
@@ -74,7 +76,7 @@ implements DebugRenderer.Renderer {
             bufferBuilder.vertex(f + 16.0, e, g + (double)i).color(1.0f, 1.0f, 0.0f, 1.0f).next();
             bufferBuilder.vertex(f + 16.0, e, g + (double)i).color(1.0f, 1.0f, 0.0f, 0.0f).next();
         }
-        for (i = 0; i <= 256; i += 2) {
+        for (i = this.client.world.getBottomY(); i <= this.client.world.getTopY(); i += 2) {
             double h = (double)i - cameraY;
             bufferBuilder.vertex(f, h, g).color(1.0f, 1.0f, 0.0f, 0.0f).next();
             bufferBuilder.vertex(f, h, g).color(1.0f, 1.0f, 0.0f, 1.0f).next();
@@ -86,7 +88,7 @@ implements DebugRenderer.Renderer {
         }
         tessellator.draw();
         RenderSystem.lineWidth(2.0f);
-        bufferBuilder.begin(3, VertexFormats.POSITION_COLOR);
+        bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
         for (i = 0; i <= 16; i += 16) {
             for (int j = 0; j <= 16; j += 16) {
                 bufferBuilder.vertex(f + (double)i, d, g + (double)j).color(0.25f, 0.25f, 1.0f, 0.0f).next();
@@ -95,7 +97,7 @@ implements DebugRenderer.Renderer {
                 bufferBuilder.vertex(f + (double)i, e, g + (double)j).color(0.25f, 0.25f, 1.0f, 0.0f).next();
             }
         }
-        for (i = 0; i <= 256; i += 16) {
+        for (i = this.client.world.getBottomY(); i <= this.client.world.getTopY(); i += 16) {
             double h = (double)i - cameraY;
             bufferBuilder.vertex(f, h, g).color(0.25f, 0.25f, 1.0f, 0.0f).next();
             bufferBuilder.vertex(f, h, g).color(0.25f, 0.25f, 1.0f, 1.0f).next();
@@ -109,7 +111,6 @@ implements DebugRenderer.Renderer {
         RenderSystem.lineWidth(1.0f);
         RenderSystem.enableBlend();
         RenderSystem.enableTexture();
-        RenderSystem.shadeModel(7424);
     }
 }
 

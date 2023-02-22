@@ -1,37 +1,26 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class ChunkLoadDistanceS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int distance;
-
-    public ChunkLoadDistanceS2CPacket() {
-    }
+    private final int distance;
 
     public ChunkLoadDistanceS2CPacket(int distance) {
         this.distance = distance;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ChunkLoadDistanceS2CPacket(PacketByteBuf buf) {
         this.distance = buf.readVarInt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.distance);
     }
 
@@ -40,7 +29,6 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onChunkLoadDistance(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getDistance() {
         return this.distance;
     }

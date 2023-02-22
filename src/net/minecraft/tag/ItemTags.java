@@ -3,17 +3,15 @@
  */
 package net.minecraft.tag;
 
-import java.util.List;
 import net.minecraft.item.Item;
 import net.minecraft.tag.RequiredTagList;
 import net.minecraft.tag.RequiredTagListRegistry;
 import net.minecraft.tag.Tag;
 import net.minecraft.tag.TagGroup;
-import net.minecraft.tag.TagManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
 
 public final class ItemTags {
-    protected static final RequiredTagList<Item> REQUIRED_TAGS = RequiredTagListRegistry.register(new Identifier("item"), TagManager::getItems);
+    protected static final RequiredTagList<Item> REQUIRED_TAGS = RequiredTagListRegistry.register(Registry.ITEM_KEY, "tags/items");
     public static final Tag.Identified<Item> WOOL = ItemTags.register("wool");
     public static final Tag.Identified<Item> PLANKS = ItemTags.register("planks");
     public static final Tag.Identified<Item> STONE_BRICKS = ItemTags.register("stone_bricks");
@@ -54,9 +52,20 @@ public final class ItemTags {
     public static final Tag.Identified<Item> FLOWERS = ItemTags.register("flowers");
     public static final Tag.Identified<Item> PIGLIN_REPELLENTS = ItemTags.register("piglin_repellents");
     public static final Tag.Identified<Item> PIGLIN_LOVED = ItemTags.register("piglin_loved");
+    public static final Tag.Identified<Item> IGNORED_BY_PIGLIN_BABIES = ItemTags.register("ignored_by_piglin_babies");
+    public static final Tag.Identified<Item> PIGLIN_FOOD = ItemTags.register("piglin_food");
+    public static final Tag.Identified<Item> FOX_FOOD = ItemTags.register("fox_food");
     public static final Tag.Identified<Item> GOLD_ORES = ItemTags.register("gold_ores");
+    public static final Tag.Identified<Item> IRON_ORES = ItemTags.register("iron_ores");
+    public static final Tag.Identified<Item> DIAMOND_ORES = ItemTags.register("diamond_ores");
+    public static final Tag.Identified<Item> REDSTONE_ORES = ItemTags.register("redstone_ores");
+    public static final Tag.Identified<Item> LAPIS_ORES = ItemTags.register("lapis_ores");
+    public static final Tag.Identified<Item> COAL_ORES = ItemTags.register("coal_ores");
+    public static final Tag.Identified<Item> EMERALD_ORES = ItemTags.register("emerald_ores");
+    public static final Tag.Identified<Item> COPPER_ORES = ItemTags.register("copper_ores");
     public static final Tag.Identified<Item> NON_FLAMMABLE_WOOD = ItemTags.register("non_flammable_wood");
     public static final Tag.Identified<Item> SOUL_FIRE_BASE_BLOCKS = ItemTags.register("soul_fire_base_blocks");
+    public static final Tag.Identified<Item> CANDLES = ItemTags.register("candles");
     public static final Tag.Identified<Item> BOATS = ItemTags.register("boats");
     public static final Tag.Identified<Item> FISHES = ItemTags.register("fishes");
     public static final Tag.Identified<Item> SIGNS = ItemTags.register("signs");
@@ -68,6 +77,13 @@ public final class ItemTags {
     public static final Tag.Identified<Item> BEACON_PAYMENT_ITEMS = ItemTags.register("beacon_payment_items");
     public static final Tag.Identified<Item> STONE_TOOL_MATERIALS = ItemTags.register("stone_tool_materials");
     public static final Tag.Identified<Item> STONE_CRAFTING_MATERIALS = ItemTags.register("stone_crafting_materials");
+    public static final Tag.Identified<Item> FREEZE_IMMUNE_WEARABLES = ItemTags.register("freeze_immune_wearables");
+    public static final Tag.Identified<Item> AXOLOTL_TEMPT_ITEMS = ItemTags.register("axolotl_tempt_items");
+    public static final Tag.Identified<Item> OCCLUDES_VIBRATION_SIGNALS = ItemTags.register("occludes_vibration_signals");
+    public static final Tag.Identified<Item> CLUSTER_MAX_HARVESTABLES = ItemTags.register("cluster_max_harvestables");
+
+    private ItemTags() {
+    }
 
     private static Tag.Identified<Item> register(String id) {
         return REQUIRED_TAGS.add(id);
@@ -75,10 +91,6 @@ public final class ItemTags {
 
     public static TagGroup<Item> getTagGroup() {
         return REQUIRED_TAGS.getGroup();
-    }
-
-    public static List<? extends Tag.Identified<Item>> getRequiredTags() {
-        return REQUIRED_TAGS.getTags();
     }
 }
 

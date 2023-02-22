@@ -1,27 +1,17 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class ItemPickupAnimationS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int entityId;
-    private int collectorEntityId;
-    private int stackAmount;
-
-    public ItemPickupAnimationS2CPacket() {
-    }
+    private final int entityId;
+    private final int collectorEntityId;
+    private final int stackAmount;
 
     public ItemPickupAnimationS2CPacket(int entityId, int collectorId, int stackAmount) {
         this.entityId = entityId;
@@ -29,15 +19,14 @@ implements Packet<ClientPlayPacketListener> {
         this.stackAmount = stackAmount;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ItemPickupAnimationS2CPacket(PacketByteBuf buf) {
         this.entityId = buf.readVarInt();
         this.collectorEntityId = buf.readVarInt();
         this.stackAmount = buf.readVarInt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.entityId);
         buf.writeVarInt(this.collectorEntityId);
         buf.writeVarInt(this.stackAmount);
@@ -48,17 +37,14 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onItemPickupAnimation(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getEntityId() {
         return this.entityId;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getCollectorEntityId() {
         return this.collectorEntityId;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getStackAmount() {
         return this.stackAmount;
     }

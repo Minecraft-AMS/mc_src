@@ -2,13 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.google.common.collect.Lists;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ConfirmScreen;
@@ -16,7 +18,6 @@ import net.minecraft.client.gui.screen.SaveLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.LiteralText;
@@ -33,6 +34,7 @@ extends Screen {
     private final Text message;
     private final boolean isHardcore;
     private Text scoreText;
+    private final List<ButtonWidget> buttons = Lists.newArrayList();
 
     public DeathScreen(@Nullable Text message, boolean isHardcore) {
         super(new TranslatableText(isHardcore ? "deathScreen.title.hardcore" : "deathScreen.title"));
@@ -43,24 +45,22 @@ extends Screen {
     @Override
     protected void init() {
         this.ticksSinceDeath = 0;
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, this.isHardcore ? new TranslatableText("deathScreen.spectate") : new TranslatableText("deathScreen.respawn"), buttonWidget -> {
+        this.buttons.clear();
+        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, this.isHardcore ? new TranslatableText("deathScreen.spectate") : new TranslatableText("deathScreen.respawn"), button -> {
             this.client.player.requestRespawn();
-            this.client.openScreen(null);
-        }));
-        ButtonWidget buttonWidget2 = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96, 200, 20, new TranslatableText("deathScreen.titleScreen"), buttonWidget -> {
+            this.client.setScreen(null);
+        })));
+        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96, 200, 20, new TranslatableText("deathScreen.titleScreen"), button -> {
             if (this.isHardcore) {
                 this.quitLevel();
                 return;
             }
             ConfirmScreen confirmScreen = new ConfirmScreen(this::onConfirmQuit, new TranslatableText("deathScreen.quit.confirm"), LiteralText.EMPTY, new TranslatableText("deathScreen.titleScreen"), new TranslatableText("deathScreen.respawn"));
-            this.client.openScreen(confirmScreen);
+            this.client.setScreen(confirmScreen);
             confirmScreen.disableButtons(20);
-        }));
-        if (!this.isHardcore && this.client.getSession() == null) {
-            buttonWidget2.active = false;
-        }
-        for (ClickableWidget clickableWidget : this.buttons) {
-            clickableWidget.active = false;
+        })));
+        for (ButtonWidget buttonWidget : this.buttons) {
+            buttonWidget.active = false;
         }
         this.scoreText = new TranslatableText("deathScreen.score").append(": ").append(new LiteralText(Integer.toString(this.client.player.getScore())).formatted(Formatting.YELLOW));
     }
@@ -75,7 +75,7 @@ extends Screen {
             this.quitLevel();
         } else {
             this.client.player.requestRespawn();
-            this.client.openScreen(null);
+            this.client.setScreen(null);
         }
     }
 
@@ -84,16 +84,16 @@ extends Screen {
             this.client.world.disconnect();
         }
         this.client.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel")));
-        this.client.openScreen(new TitleScreen());
+        this.client.setScreen(new TitleScreen());
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.fillGradient(matrices, 0, 0, this.width, this.height, 0x60500000, -1602211792);
-        RenderSystem.pushMatrix();
-        RenderSystem.scalef(2.0f, 2.0f, 2.0f);
+        matrices.push();
+        matrices.scale(2.0f, 2.0f, 2.0f);
         DeathScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2 / 2, 30, 0xFFFFFF);
-        RenderSystem.popMatrix();
+        matrices.pop();
         if (this.message != null) {
             DeathScreen.drawCenteredText(matrices, this.textRenderer, this.message, this.width / 2, 85, 0xFFFFFF);
         }
@@ -139,8 +139,8 @@ extends Screen {
         super.tick();
         ++this.ticksSinceDeath;
         if (this.ticksSinceDeath == 20) {
-            for (ClickableWidget clickableWidget : this.buttons) {
-                clickableWidget.active = true;
+            for (ButtonWidget buttonWidget : this.buttons) {
+                buttonWidget.active = true;
             }
         }
     }

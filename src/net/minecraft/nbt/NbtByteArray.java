@@ -17,13 +17,12 @@ import net.minecraft.nbt.NbtByte;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class NbtByteArray
 extends AbstractNbtList<NbtByte> {
+    private static final int field_33188 = 192;
     public static final NbtType<NbtByteArray> TYPE = new NbtType<NbtByteArray>(){
 
         @Override
@@ -87,14 +86,7 @@ extends AbstractNbtList<NbtByte> {
 
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder("[B;");
-        for (int i = 0; i < this.value.length; ++i) {
-            if (i != 0) {
-                stringBuilder.append(',');
-            }
-            stringBuilder.append(this.value[i]).append('B');
-        }
-        return stringBuilder.append(']').toString();
+        return this.asString();
     }
 
     @Override
@@ -118,17 +110,8 @@ extends AbstractNbtList<NbtByte> {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("B").formatted(RED);
-        MutableText mutableText = new LiteralText("[").append(text).append(";");
-        for (int i = 0; i < this.value.length; ++i) {
-            MutableText mutableText2 = new LiteralText(String.valueOf(this.value[i])).formatted(GOLD);
-            mutableText.append(" ").append(mutableText2).append(text);
-            if (i == this.value.length - 1) continue;
-            mutableText.append(",");
-        }
-        mutableText.append("]");
-        return mutableText;
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitByteArray(this);
     }
 
     public byte[] getByteArray() {
@@ -221,8 +204,8 @@ extends AbstractNbtList<NbtByte> {
     }
 
     @Override
-    public /* synthetic */ Object get(int i) {
-        return this.get(i);
+    public /* synthetic */ Object get(int index) {
+        return this.get(index);
     }
 }
 

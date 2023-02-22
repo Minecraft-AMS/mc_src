@@ -3,11 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  io.netty.handler.codec.DecoderException
  *  io.netty.handler.codec.EncoderException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
+ *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+ *  it.unimi.dsi.fastutil.objects.Object2IntMap
+ *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  org.apache.commons.lang3.ObjectUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -16,18 +17,17 @@
 package net.minecraft.entity.data;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
-import java.io.IOException;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandler;
@@ -43,9 +43,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class DataTracker {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Map<Class<? extends Entity>, Integer> TRACKED_ENTITIES = Maps.newHashMap();
+    private static final Object2IntMap<Class<? extends Entity>> TRACKED_ENTITIES = new Object2IntOpenHashMap();
+    private static final int field_33377 = 255;
+    private static final int field_33378 = 254;
     private final Entity trackedEntity;
-    private final Map<Integer, Entry<?>> entries = Maps.newHashMap();
+    private final Int2ObjectMap<Entry<?>> entries = new Int2ObjectOpenHashMap();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private boolean empty = true;
     private boolean dirty;
@@ -68,19 +70,19 @@ public class DataTracker {
             }
         }
         if (TRACKED_ENTITIES.containsKey(entityClass)) {
-            i = TRACKED_ENTITIES.get(entityClass) + 1;
+            i = TRACKED_ENTITIES.getInt(entityClass) + 1;
         } else {
             int j = 0;
             Class<? extends Entity> class2 = entityClass;
             while (class2 != Entity.class) {
                 if (!TRACKED_ENTITIES.containsKey(class2 = class2.getSuperclass())) continue;
-                j = TRACKED_ENTITIES.get(class2) + 1;
+                j = TRACKED_ENTITIES.getInt(class2) + 1;
                 break;
             }
             i = j;
         }
         if (i > 254) {
-            throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is " + 254 + ")");
+            throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is 254)");
         }
         TRACKED_ENTITIES.put(entityClass, i);
         return dataHandler.create(i);
@@ -89,7 +91,7 @@ public class DataTracker {
     public <T> void startTracking(TrackedData<T> key, T initialValue) {
         int i = key.getId();
         if (i > 254) {
-            throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is " + 254 + ")");
+            throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is 254)");
         }
         if (this.entries.containsKey(i)) {
             throw new IllegalArgumentException("Duplicate id value for " + i + "!");
@@ -109,10 +111,10 @@ public class DataTracker {
     }
 
     private <T> Entry<T> getEntry(TrackedData<T> trackedData) {
-        Entry<?> entry;
+        Entry entry;
         this.lock.readLock().lock();
         try {
-            entry = this.entries.get(trackedData.getId());
+            entry = (Entry)this.entries.get(trackedData.getId());
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Getting synched entity data");
@@ -144,11 +146,10 @@ public class DataTracker {
         return this.dirty;
     }
 
-    public static void entriesToPacket(List<Entry<?>> list, PacketByteBuf packetByteBuf) throws IOException {
+    public static void entriesToPacket(@Nullable List<Entry<?>> list, PacketByteBuf packetByteBuf) {
         if (list != null) {
-            int j = list.size();
-            for (int i = 0; i < j; ++i) {
-                DataTracker.writeEntryToPacket(packetByteBuf, list.get(i));
+            for (Entry<?> entry : list) {
+                DataTracker.writeEntryToPacket(packetByteBuf, entry);
             }
         }
         packetByteBuf.writeByte(255);
@@ -159,7 +160,7 @@ public class DataTracker {
         ArrayList list = null;
         if (this.dirty) {
             this.lock.readLock().lock();
-            for (Entry<?> entry : this.entries.values()) {
+            for (Entry entry : this.entries.values()) {
                 if (!entry.isDirty()) continue;
                 entry.setDirty(false);
                 if (list == null) {
@@ -177,7 +178,7 @@ public class DataTracker {
     public List<Entry<?>> getAllEntries() {
         ArrayList list = null;
         this.lock.readLock().lock();
-        for (Entry<?> entry : this.entries.values()) {
+        for (Entry entry : this.entries.values()) {
             if (list == null) {
                 list = Lists.newArrayList();
             }
@@ -187,7 +188,7 @@ public class DataTracker {
         return list;
     }
 
-    private static <T> void writeEntryToPacket(PacketByteBuf buf, Entry<T> entry) throws IOException {
+    private static <T> void writeEntryToPacket(PacketByteBuf buf, Entry<T> entry) {
         TrackedData<T> trackedData = entry.getData();
         int i = TrackedDataHandlerRegistry.getId(trackedData.getType());
         if (i < 0) {
@@ -199,7 +200,7 @@ public class DataTracker {
     }
 
     @Nullable
-    public static List<Entry<?>> deserializePacket(PacketByteBuf buf) throws IOException {
+    public static List<Entry<?>> deserializePacket(PacketByteBuf buf) {
         short i;
         ArrayList list = null;
         while ((i = buf.readUnsignedByte()) != 255) {
@@ -220,23 +221,28 @@ public class DataTracker {
         return new Entry<T>(trackedDataHandler.create(i), trackedDataHandler.read(buf));
     }
 
-    @Environment(value=EnvType.CLIENT)
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     public void writeUpdatedEntries(List<Entry<?>> list) {
         this.lock.writeLock().lock();
-        for (Entry<?> entry : list) {
-            Entry<?> entry2 = this.entries.get(entry.getData().getId());
-            if (entry2 == null) continue;
-            this.copyToFrom(entry2, entry);
-            this.trackedEntity.onTrackedDataSet(entry.getData());
+        try {
+            for (Entry<?> entry : list) {
+                Entry entry2 = (Entry)this.entries.get(entry.getData().getId());
+                if (entry2 == null) continue;
+                this.copyToFrom(entry2, entry);
+                this.trackedEntity.onTrackedDataSet(entry.getData());
+            }
         }
-        this.lock.writeLock().unlock();
+        finally {
+            this.lock.writeLock().unlock();
+        }
         this.dirty = true;
     }
 
-    @Environment(value=EnvType.CLIENT)
     private <T> void copyToFrom(Entry<T> entry, Entry<?> entry2) {
-        if (!Objects.equals(((Entry)entry2).data.getType(), ((Entry)entry).data.getType())) {
-            throw new IllegalStateException(String.format("Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", ((Entry)entry).data.getId(), this.trackedEntity, ((Entry)entry).value, ((Entry)entry).value.getClass(), ((Entry)entry2).value, ((Entry)entry2).value.getClass()));
+        if (!Objects.equals(entry2.data.getType(), entry.data.getType())) {
+            throw new IllegalStateException(String.format("Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", entry.data.getId(), this.trackedEntity, entry.value, entry.value.getClass(), entry2.value, entry2.value.getClass()));
         }
         entry.set(entry2.get());
     }
@@ -248,15 +254,15 @@ public class DataTracker {
     public void clearDirty() {
         this.dirty = false;
         this.lock.readLock().lock();
-        for (Entry<?> entry : this.entries.values()) {
+        for (Entry entry : this.entries.values()) {
             entry.setDirty(false);
         }
         this.lock.readLock().unlock();
     }
 
     public static class Entry<T> {
-        private final TrackedData<T> data;
-        private T value;
+        final TrackedData<T> data;
+        T value;
         private boolean dirty;
 
         public Entry(TrackedData<T> data, T value) {

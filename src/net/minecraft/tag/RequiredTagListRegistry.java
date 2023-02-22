@@ -3,67 +3,88 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.HashMultimap
- *  com.google.common.collect.Maps
+ *  com.google.common.collect.ImmutableSet
+ *  com.google.common.collect.Lists
  *  com.google.common.collect.Multimap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  com.google.common.collect.Sets
  */
 package net.minecraft.tag;
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import com.google.common.collect.Sets;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.EntityTypeTags;
 import net.minecraft.tag.FluidTags;
+import net.minecraft.tag.GameEventTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.tag.RequiredTagList;
-import net.minecraft.tag.TagGroup;
 import net.minecraft.tag.TagManager;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 
 public class RequiredTagListRegistry {
-    private static final Map<Identifier, RequiredTagList<?>> REQUIRED_TAG_LISTS = Maps.newHashMap();
+    private static final Set<RegistryKey<?>> REQUIRED_LIST_KEYS = Sets.newHashSet();
+    private static final List<RequiredTagList<?>> ALL = Lists.newArrayList();
 
-    public static <T> RequiredTagList<T> register(Identifier id, Function<TagManager, TagGroup<T>> containerGetter) {
-        RequiredTagList<T> requiredTagList = new RequiredTagList<T>(containerGetter);
-        RequiredTagList<T> requiredTagList2 = REQUIRED_TAG_LISTS.putIfAbsent(id, requiredTagList);
-        if (requiredTagList2 != null) {
-            throw new IllegalStateException("Duplicate entry for static tag collection: " + id);
+    public static <T> RequiredTagList<T> register(RegistryKey<? extends Registry<T>> registryKey, String dataType) {
+        if (!REQUIRED_LIST_KEYS.add(registryKey)) {
+            throw new IllegalStateException("Duplicate entry for static tag collection: " + registryKey);
         }
+        RequiredTagList requiredTagList = new RequiredTagList(registryKey, dataType);
+        ALL.add(requiredTagList);
         return requiredTagList;
     }
 
     public static void updateTagManager(TagManager tagManager) {
-        REQUIRED_TAG_LISTS.values().forEach(list -> list.updateTagManager(tagManager));
+        ALL.forEach(list -> list.updateTagManager(tagManager));
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static void clearAllTags() {
-        REQUIRED_TAG_LISTS.values().forEach(RequiredTagList::clearAllTags);
+        ALL.forEach(RequiredTagList::clearAllTags);
     }
 
-    public static Multimap<Identifier, Identifier> getMissingTags(TagManager tagManager) {
+    public static Multimap<RegistryKey<? extends Registry<?>>, Identifier> getMissingTags(TagManager tagManager) {
         HashMultimap multimap = HashMultimap.create();
-        REQUIRED_TAG_LISTS.forEach((arg_0, arg_1) -> RequiredTagListRegistry.method_30200((Multimap)multimap, tagManager, arg_0, arg_1));
+        ALL.forEach(arg_0 -> RequiredTagListRegistry.method_30200((Multimap)multimap, tagManager, arg_0));
         return multimap;
     }
 
     public static void validateRegistrations() {
-        RequiredTagList[] requiredTagLists = new RequiredTagList[]{BlockTags.REQUIRED_TAGS, ItemTags.REQUIRED_TAGS, FluidTags.REQUIRED_TAGS, EntityTypeTags.REQUIRED_TAGS};
-        boolean bl = Stream.of(requiredTagLists).anyMatch(list -> !REQUIRED_TAG_LISTS.containsValue(list));
-        if (bl) {
+        RequiredTagListRegistry.validate();
+    }
+
+    private static Set<RequiredTagList<?>> getBuiltinTags() {
+        return ImmutableSet.of(BlockTags.REQUIRED_TAGS, ItemTags.REQUIRED_TAGS, FluidTags.REQUIRED_TAGS, EntityTypeTags.REQUIRED_TAGS, GameEventTags.REQUIRED_TAGS);
+    }
+
+    private static void validate() {
+        Set set = RequiredTagListRegistry.getBuiltinTags().stream().map(RequiredTagList::getRegistryKey).collect(Collectors.toSet());
+        if (!Sets.difference(REQUIRED_LIST_KEYS, set).isEmpty()) {
             throw new IllegalStateException("Missing helper registrations");
         }
     }
 
-    private static /* synthetic */ void method_30200(Multimap multimap, TagManager tagManager, Identifier id, RequiredTagList list) {
-        multimap.putAll((Object)id, list.getMissingTags(tagManager));
+    public static void forEach(Consumer<RequiredTagList<?>> consumer) {
+        ALL.forEach(consumer);
+    }
+
+    public static TagManager createBuiltinTagManager() {
+        TagManager.Builder builder = new TagManager.Builder();
+        RequiredTagListRegistry.validate();
+        ALL.forEach(list -> list.addToManager(builder));
+        return builder.build();
+    }
+
+    private static /* synthetic */ void method_30200(Multimap multimap, TagManager tagManager, RequiredTagList list) {
+        multimap.putAll(list.getRegistryKey(), list.getMissingTags(tagManager));
     }
 }
 

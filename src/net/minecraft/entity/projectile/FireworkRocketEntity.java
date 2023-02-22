@@ -2,20 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile;
 
 import java.util.List;
 import java.util.OptionalInt;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
@@ -31,8 +23,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.network.Packet;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -43,9 +33,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=FlyingItemEntity.class)})
 public class FireworkRocketEntity
 extends ProjectileEntity
 implements FlyingItemEntity {
@@ -54,6 +44,7 @@ implements FlyingItemEntity {
     private static final TrackedData<Boolean> SHOT_AT_ANGLE = DataTracker.registerData(FireworkRocketEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private int life;
     private int lifeTime;
+    @Nullable
     private LivingEntity shooter;
 
     public FireworkRocketEntity(EntityType<? extends FireworkRocketEntity> entityType, World world) {
@@ -65,9 +56,9 @@ implements FlyingItemEntity {
         this.life = 0;
         this.setPosition(x, y, z);
         int i = 1;
-        if (!stack.isEmpty() && stack.hasTag()) {
+        if (!stack.isEmpty() && stack.hasNbt()) {
             this.dataTracker.set(ITEM, stack.copy());
-            i += stack.getOrCreateSubTag("Fireworks").getByte("Flight");
+            i += stack.getOrCreateSubNbt("Fireworks").getByte("Flight");
         }
         this.setVelocity(this.random.nextGaussian() * 0.001, 0.05, this.random.nextGaussian() * 0.001);
         this.lifeTime = 10 * i + this.random.nextInt(6) + this.random.nextInt(7);
@@ -80,7 +71,7 @@ implements FlyingItemEntity {
 
     public FireworkRocketEntity(World world, ItemStack stack, LivingEntity shooter) {
         this(world, shooter, shooter.getX(), shooter.getY(), shooter.getZ(), stack);
-        this.dataTracker.set(SHOOTER_ENTITY_ID, OptionalInt.of(shooter.getEntityId()));
+        this.dataTracker.set(SHOOTER_ENTITY_ID, OptionalInt.of(shooter.getId()));
         this.shooter = shooter;
     }
 
@@ -102,20 +93,17 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         return distance < 4096.0 && !this.wasShotByEntity();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double cameraX, double cameraY, double cameraZ) {
         return super.shouldRender(cameraX, cameraY, cameraZ) && !this.wasShotByEntity();
     }
 
     @Override
     public void tick() {
-        Vec3d vec3d;
         super.tick();
         if (this.wasShotByEntity()) {
             if (this.shooter == null) {
@@ -146,12 +134,12 @@ implements FlyingItemEntity {
             this.move(MovementType.SELF, vec3d);
             this.setVelocity(vec3d);
         }
-        HitResult hitResult = ProjectileUtil.getCollision(this, this::method_26958);
+        HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
         if (!this.noClip) {
             this.onCollision(hitResult);
             this.velocityDirty = true;
         }
-        this.method_26962();
+        this.updateRotation();
         if (this.life == 0 && !this.isSilent()) {
             this.world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3.0f, 1.0f);
         }
@@ -166,8 +154,9 @@ implements FlyingItemEntity {
 
     private void explodeAndRemove() {
         this.world.sendEntityStatus(this, (byte)17);
+        this.emitGameEvent(GameEvent.EXPLODE, this.getOwner());
         this.explode();
-        this.remove();
+        this.discard();
     }
 
     @Override
@@ -191,7 +180,7 @@ implements FlyingItemEntity {
 
     private boolean hasExplosionEffects() {
         ItemStack itemStack = this.dataTracker.get(ITEM);
-        NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubTag("Fireworks");
+        NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubNbt("Fireworks");
         NbtList nbtList = nbtCompound != null ? nbtCompound.getList("Explosions", 10) : null;
         return nbtList != null && !nbtList.isEmpty();
     }
@@ -200,7 +189,7 @@ implements FlyingItemEntity {
         NbtList nbtList;
         float f = 0.0f;
         ItemStack itemStack = this.dataTracker.get(ITEM);
-        NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubTag("Fireworks");
+        NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubNbt("Fireworks");
         NbtList nbtList2 = nbtList = nbtCompound != null ? nbtCompound.getList("Explosions", 10) : null;
         if (nbtList != null && !nbtList.isEmpty()) {
             f = 5.0f + (float)(nbtList.size() * 2);
@@ -238,7 +227,6 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 17 && this.world.isClient) {
             if (!this.hasExplosionEffects()) {
@@ -247,7 +235,7 @@ implements FlyingItemEntity {
                 }
             } else {
                 ItemStack itemStack = this.dataTracker.get(ITEM);
-                NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubTag("Fireworks");
+                NbtCompound nbtCompound = itemStack.isEmpty() ? null : itemStack.getSubNbt("Fireworks");
                 Vec3d vec3d = this.getVelocity();
                 this.world.addFireworkParticle(this.getX(), this.getY(), this.getZ(), vec3d.x, vec3d.y, vec3d.z, nbtCompound);
             }
@@ -282,7 +270,6 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getStack() {
         ItemStack itemStack = this.dataTracker.get(ITEM);
         return itemStack.isEmpty() ? new ItemStack(Items.FIREWORK_ROCKET) : itemStack;
@@ -291,11 +278,6 @@ implements FlyingItemEntity {
     @Override
     public boolean isAttackable() {
         return false;
-    }
-
-    @Override
-    public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this);
     }
 }
 

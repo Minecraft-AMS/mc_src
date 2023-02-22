@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -9,8 +10,10 @@
  */
 package net.minecraft.client.gui.screen.recipebook;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import java.util.List;
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -19,6 +22,7 @@ import net.minecraft.client.gui.screen.recipebook.RecipeAlternativesWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeDisplayListener;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.recipe.Recipe;
@@ -27,18 +31,22 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeBookResults {
+    public static final int field_32411 = 20;
     private final List<AnimatedResultButton> resultButtons = Lists.newArrayListWithCapacity((int)20);
+    @Nullable
     private AnimatedResultButton hoveredResultButton;
     private final RecipeAlternativesWidget alternatesWidget = new RecipeAlternativesWidget();
     private MinecraftClient client;
     private final List<RecipeDisplayListener> recipeDisplayListeners = Lists.newArrayList();
-    private List<RecipeResultCollection> resultCollections;
+    private List<RecipeResultCollection> resultCollections = ImmutableList.of();
     private ToggleButtonWidget nextPageButton;
     private ToggleButtonWidget prevPageButton;
     private int pageCount;
     private int currentPage;
     private RecipeBook recipeBook;
+    @Nullable
     private Recipe<?> lastClickedRecipe;
+    @Nullable
     private RecipeResultCollection resultCollection;
 
     public RecipeBookResults() {
@@ -59,14 +67,14 @@ public class RecipeBookResults {
         this.prevPageButton.setTextureUV(1, 208, 13, 18, RecipeBookWidget.TEXTURE);
     }
 
-    public void setGui(RecipeBookWidget recipeBookWidget) {
-        this.recipeDisplayListeners.remove(recipeBookWidget);
-        this.recipeDisplayListeners.add(recipeBookWidget);
+    public void setGui(RecipeBookWidget widget) {
+        this.recipeDisplayListeners.remove(widget);
+        this.recipeDisplayListeners.add(widget);
     }
 
-    public void setResults(List<RecipeResultCollection> list, boolean resetCurrentPage) {
-        this.resultCollections = list;
-        this.pageCount = (int)Math.ceil((double)list.size() / 20.0);
+    public void setResults(List<RecipeResultCollection> resultCollections, boolean resetCurrentPage) {
+        this.resultCollections = resultCollections;
+        this.pageCount = (int)Math.ceil((double)resultCollections.size() / 20.0);
         if (this.pageCount <= this.currentPage || resetCurrentPage) {
             this.currentPage = 0;
         }
@@ -93,26 +101,26 @@ public class RecipeBookResults {
         this.prevPageButton.visible = this.pageCount > 1 && this.currentPage > 0;
     }
 
-    public void draw(MatrixStack matrices, int i, int j, int k, int l, float f) {
+    public void draw(MatrixStack matrices, int x, int y, int mouseX, int mouseY, float delta) {
         if (this.pageCount > 1) {
             String string = this.currentPage + 1 + "/" + this.pageCount;
-            int m = this.client.textRenderer.getWidth(string);
-            this.client.textRenderer.draw(matrices, string, (float)(i - m / 2 + 73), (float)(j + 141), -1);
+            int i = this.client.textRenderer.getWidth(string);
+            this.client.textRenderer.draw(matrices, string, (float)(x - i / 2 + 73), (float)(y + 141), -1);
         }
         this.hoveredResultButton = null;
         for (AnimatedResultButton animatedResultButton : this.resultButtons) {
-            animatedResultButton.render(matrices, k, l, f);
+            animatedResultButton.render(matrices, mouseX, mouseY, delta);
             if (!animatedResultButton.visible || !animatedResultButton.isHovered()) continue;
             this.hoveredResultButton = animatedResultButton;
         }
-        this.prevPageButton.render(matrices, k, l, f);
-        this.nextPageButton.render(matrices, k, l, f);
-        this.alternatesWidget.render(matrices, k, l, f);
+        this.prevPageButton.render(matrices, mouseX, mouseY, delta);
+        this.nextPageButton.render(matrices, mouseX, mouseY, delta);
+        this.alternatesWidget.render(matrices, mouseX, mouseY, delta);
     }
 
-    public void drawTooltip(MatrixStack matrices, int i, int j) {
+    public void drawTooltip(MatrixStack matrices, int x, int y) {
         if (this.client.currentScreen != null && this.hoveredResultButton != null && !this.alternatesWidget.isVisible()) {
-            this.client.currentScreen.renderTooltip(matrices, this.hoveredResultButton.getTooltip(this.client.currentScreen), i, j);
+            this.client.currentScreen.renderTooltip(matrices, this.hoveredResultButton.getTooltip(this.client.currentScreen), x, y);
         }
     }
 
@@ -177,6 +185,12 @@ public class RecipeBookResults {
 
     public RecipeBook getRecipeBook() {
         return this.recipeBook;
+    }
+
+    protected void forEachButton(Consumer<ClickableWidget> consumer) {
+        consumer.accept(this.nextPageButton);
+        consumer.accept(this.prevPageButton);
+        this.resultButtons.forEach(consumer);
     }
 }
 

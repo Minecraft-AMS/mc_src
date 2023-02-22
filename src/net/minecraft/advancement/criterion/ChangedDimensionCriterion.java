@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ChangedDimensionCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("changed_dimension");
+    static final Identifier ID = new Identifier("changed_dimension");
 
     @Override
     public Identifier getId() {
@@ -38,7 +38,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, RegistryKey<World> from, RegistryKey<World> to) {
-        this.test(player, conditions -> conditions.matches(from, to));
+        this.trigger(player, conditions -> conditions.matches(from, to));
     }
 
     @Override
@@ -59,8 +59,20 @@ extends AbstractCriterion<Conditions> {
             this.to = to;
         }
 
+        public static Conditions create() {
+            return new Conditions(EntityPredicate.Extended.EMPTY, null, null);
+        }
+
+        public static Conditions create(RegistryKey<World> from, RegistryKey<World> to) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, from, to);
+        }
+
         public static Conditions to(RegistryKey<World> to) {
             return new Conditions(EntityPredicate.Extended.EMPTY, null, to);
+        }
+
+        public static Conditions from(RegistryKey<World> from) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, from, null);
         }
 
         public boolean matches(RegistryKey<World> from, RegistryKey<World> to) {

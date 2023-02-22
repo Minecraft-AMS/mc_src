@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.scoreboard;
@@ -19,8 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -34,6 +30,13 @@ import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 public class Scoreboard {
+    public static final int LIST_DISPLAY_SLOT_ID = 0;
+    public static final int SIDEBAR_DISPLAY_SLOT_ID = 1;
+    public static final int BELOW_NAME_DISPLAY_SLOT_ID = 2;
+    public static final int MIN_SIDEBAR_TEAM_DISPLAY_SLOT_ID = 3;
+    public static final int MAX_SIDEBAR_TEAM_DISPLAY_SLOT_ID = 18;
+    public static final int DISPLAY_SLOT_COUNT = 19;
+    public static final int MAX_NAME_LENGTH = 40;
     private final Map<String, ScoreboardObjective> objectives = Maps.newHashMap();
     private final Map<ScoreboardCriterion, List<ScoreboardObjective>> objectivesByCriterion = Maps.newHashMap();
     private final Map<String, Map<ScoreboardObjective, ScoreboardPlayerScore>> playerObjectives = Maps.newHashMap();
@@ -42,7 +45,6 @@ public class Scoreboard {
     private final Map<String, Team> teamsByPlayer = Maps.newHashMap();
     private static String[] displaySlotNames;
 
-    @Environment(value=EnvType.CLIENT)
     public boolean containsObjective(String name) {
         return this.objectives.containsKey(name);
     }
@@ -173,6 +175,7 @@ public class Scoreboard {
         return this.objectiveSlots[slot];
     }
 
+    @Nullable
     public Team getTeam(String name) {
         return this.teams.get(name);
     }

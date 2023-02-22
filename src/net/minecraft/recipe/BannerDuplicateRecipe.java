@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.BannerItem;
@@ -34,8 +28,11 @@ extends SpecialCraftingRecipe {
         ItemStack itemStack2 = null;
         for (int i = 0; i < craftingInventory.size(); ++i) {
             ItemStack itemStack3 = craftingInventory.getStack(i);
+            if (itemStack3.isEmpty()) continue;
             Item item = itemStack3.getItem();
-            if (!(item instanceof BannerItem)) continue;
+            if (!(item instanceof BannerItem)) {
+                return false;
+            }
             BannerItem bannerItem = (BannerItem)item;
             if (dyeColor == null) {
                 dyeColor = bannerItem.getColor();
@@ -85,7 +82,7 @@ extends SpecialCraftingRecipe {
                 defaultedList.set(i, new ItemStack(itemStack.getItem().getRecipeRemainder()));
                 continue;
             }
-            if (!itemStack.hasTag() || BannerBlockEntity.getPatternCount(itemStack) <= 0) continue;
+            if (!itemStack.hasNbt() || BannerBlockEntity.getPatternCount(itemStack) <= 0) continue;
             ItemStack itemStack2 = itemStack.copy();
             itemStack2.setCount(1);
             defaultedList.set(i, itemStack2);
@@ -99,7 +96,6 @@ extends SpecialCraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= 2;
     }

@@ -21,7 +21,7 @@ import net.minecraft.util.math.Vec3d;
 
 public class NetherTravelCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("nether_travel");
+    static final Identifier ID = new Identifier("nether_travel");
 
     @Override
     public Identifier getId() {
@@ -37,7 +37,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, Vec3d enteredPos) {
-        this.test(player, conditions -> conditions.matches(player.getServerWorld(), enteredPos, player.getX(), player.getY(), player.getZ()));
+        this.trigger(player, (T conditions) -> conditions.matches(player.getServerWorld(), enteredPos, player.getX(), player.getY(), player.getZ()));
     }
 
     @Override

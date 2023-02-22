@@ -3,22 +3,19 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import com.google.common.collect.Sets;
 import java.util.HashSet;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.Npc;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.pathing.PathNodeType;
@@ -28,7 +25,9 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.inventory.StackReference;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleEffect;
@@ -49,9 +48,12 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class MerchantEntity
 extends PassiveEntity
-implements Npc,
+implements InventoryOwner,
+Npc,
 Merchant {
     private static final TrackedData<Integer> HEAD_ROLLING_TIME_LEFT = DataTracker.registerData(MerchantEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    public static final int field_30599 = 300;
+    private static final int INVENTORY_SIZE = 8;
     @Nullable
     private PlayerEntity customer;
     @Nullable
@@ -124,7 +126,6 @@ Merchant {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void setOffersFromServer(@Nullable TradeOfferList offers) {
     }
 
@@ -138,7 +139,7 @@ Merchant {
         this.ambientSoundChance = -this.getMinAmbientSoundDelay();
         this.afterUsing(offer);
         if (this.customer instanceof ServerPlayerEntity) {
-            Criteria.VILLAGER_TRADE.handle((ServerPlayerEntity)this.customer, this, offer.getSellItem());
+            Criteria.VILLAGER_TRADE.trigger((ServerPlayerEntity)this.customer, this, offer.getSellItem());
         }
     }
 
@@ -206,7 +207,6 @@ Merchant {
         this.resetCustomer();
     }
 
-    @Environment(value=EnvType.CLIENT)
     protected void produceParticles(ParticleEffect parameters) {
         for (int i = 0; i < 5; ++i) {
             double d = this.random.nextGaussian() * 0.02;
@@ -221,21 +221,18 @@ Merchant {
         return false;
     }
 
+    @Override
     public SimpleInventory getInventory() {
         return this.inventory;
     }
 
     @Override
-    public boolean equip(int slot, ItemStack item) {
-        if (super.equip(slot, item)) {
-            return true;
-        }
-        int i = slot - 300;
+    public StackReference getStackReference(int mappedIndex) {
+        int i = mappedIndex - 300;
         if (i >= 0 && i < this.inventory.size()) {
-            this.inventory.setStack(i, item);
-            return true;
+            return StackReference.of(this.inventory, i);
         }
-        return false;
+        return super.getStackReference(mappedIndex);
     }
 
     @Override
@@ -265,11 +262,15 @@ Merchant {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Vec3d method_30951(float f) {
         float g = MathHelper.lerp(f, this.prevBodyYaw, this.bodyYaw) * ((float)Math.PI / 180);
         Vec3d vec3d = new Vec3d(0.0, this.getBoundingBox().getYLength() - 1.0, 0.2);
-        return this.method_30950(f).add(vec3d.rotateY(-g));
+        return this.getLerpedPos(f).add(vec3d.rotateY(-g));
+    }
+
+    @Override
+    public /* synthetic */ Inventory getInventory() {
+        return this.getInventory();
     }
 }
 

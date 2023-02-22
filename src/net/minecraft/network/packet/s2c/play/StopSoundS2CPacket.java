@@ -2,15 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -20,30 +15,26 @@ import org.jetbrains.annotations.Nullable;
 
 public class StopSoundS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private Identifier soundId;
-    private SoundCategory category;
-
-    public StopSoundS2CPacket() {
-    }
+    private static final int CATEGORY_MASK = 1;
+    private static final int SOUND_ID_MASK = 2;
+    @Nullable
+    private final Identifier soundId;
+    @Nullable
+    private final SoundCategory category;
 
     public StopSoundS2CPacket(@Nullable Identifier soundId, @Nullable SoundCategory category) {
         this.soundId = soundId;
         this.category = category;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public StopSoundS2CPacket(PacketByteBuf buf) {
         byte i = buf.readByte();
-        if ((i & 1) > 0) {
-            this.category = buf.readEnumConstant(SoundCategory.class);
-        }
-        if ((i & 2) > 0) {
-            this.soundId = buf.readIdentifier();
-        }
+        this.category = (i & 1) > 0 ? buf.readEnumConstant(SoundCategory.class) : null;
+        this.soundId = (i & 2) > 0 ? buf.readIdentifier() : null;
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         if (this.category != null) {
             if (this.soundId != null) {
                 buf.writeByte(3);
@@ -62,13 +53,11 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public Identifier getSoundId() {
         return this.soundId;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public SoundCategory getCategory() {
         return this.category;
     }

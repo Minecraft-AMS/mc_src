@@ -30,7 +30,7 @@ extends VillagerHeldItemFeatureRenderer<T, WitchEntityModel<T>> {
     public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, T livingEntity, float f, float g, float h, float j, float k, float l) {
         ItemStack itemStack = ((LivingEntity)livingEntity).getMainHandStack();
         matrixStack.push();
-        if (itemStack.getItem() == Items.POTION) {
+        if (itemStack.isOf(Items.POTION)) {
             ((WitchEntityModel)this.getContextModel()).getHead().rotate(matrixStack);
             ((WitchEntityModel)this.getContextModel()).getNose().rotate(matrixStack);
             matrixStack.translate(0.0625, 0.25, 0.0);

@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.mojang.brigadier.ResultConsumer
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
@@ -13,8 +11,6 @@ import com.mojang.brigadier.ResultConsumer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
@@ -168,7 +164,6 @@ implements CommandOutput {
         this.trackOutput = trackOutput;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isTrackingOutput() {
         return this.trackOutput;
     }
@@ -183,7 +178,6 @@ implements CommandOutput {
         return ActionResult.success(player.world.isClient);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public abstract Vec3d getPos();
 
     public abstract ServerCommandSource getSource();

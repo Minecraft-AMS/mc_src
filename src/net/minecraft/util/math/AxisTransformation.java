@@ -7,17 +7,27 @@ import java.util.Arrays;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.Matrix3f;
 
-public enum AxisTransformation {
-    P123(0, 1, 2),
-    P213(1, 0, 2),
-    P132(0, 2, 1),
-    P231(1, 2, 0),
-    P312(2, 0, 1),
-    P321(2, 1, 0);
-
+public final class AxisTransformation
+extends Enum<AxisTransformation> {
+    public static final /* enum */ AxisTransformation P123 = new AxisTransformation(0, 1, 2);
+    public static final /* enum */ AxisTransformation P213 = new AxisTransformation(1, 0, 2);
+    public static final /* enum */ AxisTransformation P132 = new AxisTransformation(0, 2, 1);
+    public static final /* enum */ AxisTransformation P231 = new AxisTransformation(1, 2, 0);
+    public static final /* enum */ AxisTransformation P312 = new AxisTransformation(2, 0, 1);
+    public static final /* enum */ AxisTransformation P321 = new AxisTransformation(2, 1, 0);
     private final int[] mappings;
     private final Matrix3f matrix;
+    private static final int field_33113 = 3;
     private static final AxisTransformation[][] COMBINATIONS;
+    private static final /* synthetic */ AxisTransformation[] field_23371;
+
+    public static AxisTransformation[] values() {
+        return (AxisTransformation[])field_23371.clone();
+    }
+
+    public static AxisTransformation valueOf(String string) {
+        return Enum.valueOf(AxisTransformation.class, string);
+    }
 
     private AxisTransformation(int xMapping, int yMapping, int zMapping) {
         this.mappings = new int[]{xMapping, yMapping, zMapping};
@@ -39,7 +49,12 @@ public enum AxisTransformation {
         return this.matrix;
     }
 
+    private static /* synthetic */ AxisTransformation[] method_36937() {
+        return new AxisTransformation[]{P123, P213, P132, P231, P312, P321};
+    }
+
     static {
+        field_23371 = AxisTransformation.method_36937();
         COMBINATIONS = Util.make(new AxisTransformation[AxisTransformation.values().length][AxisTransformation.values().length], axisTransformations -> {
             for (AxisTransformation axisTransformation2 : AxisTransformation.values()) {
                 for (AxisTransformation axisTransformation22 : AxisTransformation.values()) {

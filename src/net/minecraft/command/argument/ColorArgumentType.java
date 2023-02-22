@@ -30,7 +30,7 @@ import net.minecraft.util.Formatting;
 public class ColorArgumentType
 implements ArgumentType<Formatting> {
     private static final Collection<String> EXAMPLES = Arrays.asList("red", "green");
-    public static final DynamicCommandExceptionType INVALID_COLOR_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.color.invalid", object));
+    public static final DynamicCommandExceptionType INVALID_COLOR_EXCEPTION = new DynamicCommandExceptionType(color -> new TranslatableText("argument.color.invalid", color));
 
     private ColorArgumentType() {
     }
@@ -60,8 +60,8 @@ implements ArgumentType<Formatting> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

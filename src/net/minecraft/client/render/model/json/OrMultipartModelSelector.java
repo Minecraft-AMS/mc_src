@@ -22,6 +22,7 @@ import net.minecraft.state.StateManager;
 @Environment(value=EnvType.CLIENT)
 public class OrMultipartModelSelector
 implements MultipartModelSelector {
+    public static final String KEY = "OR";
     private final Iterable<? extends MultipartModelSelector> selectors;
 
     public OrMultipartModelSelector(Iterable<? extends MultipartModelSelector> selectors) {

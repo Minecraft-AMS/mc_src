@@ -27,12 +27,12 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
-import net.minecraft.world.GameMode;
 
 @Environment(value=EnvType.CLIENT)
 public class FindTreeTutorialStepHandler
 implements TutorialStepHandler {
-    private static final Set<Block> TREE_BLOCKS = Sets.newHashSet((Object[])new Block[]{Blocks.OAK_LOG, Blocks.SPRUCE_LOG, Blocks.BIRCH_LOG, Blocks.JUNGLE_LOG, Blocks.ACACIA_LOG, Blocks.DARK_OAK_LOG, Blocks.WARPED_STEM, Blocks.CRIMSON_STEM, Blocks.OAK_WOOD, Blocks.SPRUCE_WOOD, Blocks.BIRCH_WOOD, Blocks.JUNGLE_WOOD, Blocks.ACACIA_WOOD, Blocks.DARK_OAK_WOOD, Blocks.WARPED_HYPHAE, Blocks.CRIMSON_HYPHAE, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.BIRCH_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.NETHER_WART_BLOCK, Blocks.WARPED_WART_BLOCK});
+    private static final int DELAY = 6000;
+    private static final Set<Block> TREE_BLOCKS = Sets.newHashSet((Object[])new Block[]{Blocks.OAK_LOG, Blocks.SPRUCE_LOG, Blocks.BIRCH_LOG, Blocks.JUNGLE_LOG, Blocks.ACACIA_LOG, Blocks.DARK_OAK_LOG, Blocks.WARPED_STEM, Blocks.CRIMSON_STEM, Blocks.OAK_WOOD, Blocks.SPRUCE_WOOD, Blocks.BIRCH_WOOD, Blocks.JUNGLE_WOOD, Blocks.ACACIA_WOOD, Blocks.DARK_OAK_WOOD, Blocks.WARPED_HYPHAE, Blocks.CRIMSON_HYPHAE, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.BIRCH_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.NETHER_WART_BLOCK, Blocks.WARPED_WART_BLOCK, Blocks.AZALEA_LEAVES, Blocks.FLOWERING_AZALEA_LEAVES});
     private static final Text TITLE = new TranslatableText("tutorial.find_tree.title");
     private static final Text DESCRIPTION = new TranslatableText("tutorial.find_tree.description");
     private final TutorialManager manager;
@@ -47,13 +47,13 @@ implements TutorialStepHandler {
     public void tick() {
         ClientPlayerEntity clientPlayerEntity;
         ++this.ticks;
-        if (this.manager.getGameMode() != GameMode.SURVIVAL) {
+        if (!this.manager.isInSurvival()) {
             this.manager.setStep(TutorialStep.NONE);
             return;
         }
         if (this.ticks == 1 && (clientPlayerEntity = this.manager.getClient().player) != null) {
             for (Block block : TREE_BLOCKS) {
-                if (!clientPlayerEntity.inventory.contains(new ItemStack(block))) continue;
+                if (!clientPlayerEntity.getInventory().contains(new ItemStack(block))) continue;
                 this.manager.setStep(TutorialStep.CRAFT_PLANKS);
                 return;
             }
@@ -87,7 +87,7 @@ implements TutorialStepHandler {
     @Override
     public void onSlotUpdate(ItemStack stack) {
         for (Block block : TREE_BLOCKS) {
-            if (stack.getItem() != block.asItem()) continue;
+            if (!stack.isOf(block.asItem())) continue;
             this.manager.setStep(TutorialStep.CRAFT_PLANKS);
             return;
         }

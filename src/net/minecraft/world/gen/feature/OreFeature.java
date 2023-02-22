@@ -9,14 +9,19 @@ package net.minecraft.world.gen.feature;
 import com.mojang.serialization.Codec;
 import java.util.BitSet;
 import java.util.Random;
+import java.util.function.Function;
+import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.ChunkSectionCache;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.WorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.chunk.ChunkSection;
+import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.OreFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class OreFeature
 extends Feature<OreFeatureConfig> {
@@ -25,7 +30,11 @@ extends Feature<OreFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, OreFeatureConfig oreFeatureConfig) {
+    public boolean generate(FeatureContext<OreFeatureConfig> context) {
+        Random random = context.getRandom();
+        BlockPos blockPos = context.getOrigin();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        OreFeatureConfig oreFeatureConfig = context.getConfig();
         float f = random.nextFloat() * (float)Math.PI;
         float g = (float)oreFeatureConfig.size / 8.0f;
         int i = MathHelper.ceil(((float)oreFeatureConfig.size / 16.0f * 2.0f + 1.0f) / 2.0f);
@@ -50,7 +59,7 @@ extends Feature<OreFeatureConfig> {
         return false;
     }
 
-    protected boolean generateVeinPart(WorldAccess world, Random random, OreFeatureConfig config, double startX, double endX, double startZ, double endZ, double startY, double endY, int x, int y, int z, int horizontalSize, int verticalSize) {
+    protected boolean generateVeinPart(StructureWorldAccess structureWorldAccess, Random random, OreFeatureConfig config, double startX, double endX, double startZ, double endZ, double startY, double endY, int x, int y, int z, int horizontalSize, int verticalSize) {
         double h;
         double g;
         double e;
@@ -84,38 +93,69 @@ extends Feature<OreFeatureConfig> {
                 ds[k * 4 + 3] = -1.0;
             }
         }
-        for (k = 0; k < j; ++k) {
-            double n = ds[k * 4 + 3];
-            if (n < 0.0) continue;
-            double o = ds[k * 4 + 0];
-            double p = ds[k * 4 + 1];
-            double q = ds[k * 4 + 2];
-            int r = Math.max(MathHelper.floor(o - n), x);
-            int s = Math.max(MathHelper.floor(p - n), y);
-            int t = Math.max(MathHelper.floor(q - n), z);
-            int u = Math.max(MathHelper.floor(o + n), r);
-            int v = Math.max(MathHelper.floor(p + n), s);
-            int w = Math.max(MathHelper.floor(q + n), t);
-            for (int aa = r; aa <= u; ++aa) {
-                double ab = ((double)aa + 0.5 - o) / n;
-                if (!(ab * ab < 1.0)) continue;
-                for (int ac = s; ac <= v; ++ac) {
-                    double ad = ((double)ac + 0.5 - p) / n;
-                    if (!(ab * ab + ad * ad < 1.0)) continue;
-                    for (int ae = t; ae <= w; ++ae) {
-                        int ag;
-                        double af = ((double)ae + 0.5 - q) / n;
-                        if (!(ab * ab + ad * ad + af * af < 1.0) || bitSet.get(ag = aa - x + (ac - y) * horizontalSize + (ae - z) * horizontalSize * verticalSize)) continue;
-                        bitSet.set(ag);
-                        mutable.set(aa, ac, ae);
-                        if (!config.target.test(world.getBlockState(mutable), random)) continue;
-                        world.setBlockState(mutable, config.state, 2);
-                        ++i;
+        try (ChunkSectionCache chunkSectionCache = new ChunkSectionCache(structureWorldAccess);){
+            for (int m = 0; m < j; ++m) {
+                d = ds[m * 4 + 3];
+                if (d < 0.0) continue;
+                e = ds[m * 4 + 0];
+                g = ds[m * 4 + 1];
+                h = ds[m * 4 + 2];
+                int n = Math.max(MathHelper.floor(e - d), x);
+                int o = Math.max(MathHelper.floor(g - d), y);
+                int p = Math.max(MathHelper.floor(h - d), z);
+                int q = Math.max(MathHelper.floor(e + d), n);
+                int r = Math.max(MathHelper.floor(g + d), o);
+                int s = Math.max(MathHelper.floor(h + d), p);
+                for (int t = n; t <= q; ++t) {
+                    double u = ((double)t + 0.5 - e) / d;
+                    if (!(u * u < 1.0)) continue;
+                    for (int v = o; v <= r; ++v) {
+                        double w = ((double)v + 0.5 - g) / d;
+                        if (!(u * u + w * w < 1.0)) continue;
+                        block11: for (int aa = p; aa <= s; ++aa) {
+                            ChunkSection chunkSection;
+                            int ac;
+                            double ab = ((double)aa + 0.5 - h) / d;
+                            if (!(u * u + w * w + ab * ab < 1.0) || structureWorldAccess.isOutOfHeightLimit(v) || bitSet.get(ac = t - x + (v - y) * horizontalSize + (aa - z) * horizontalSize * verticalSize)) continue;
+                            bitSet.set(ac);
+                            mutable.set(t, v, aa);
+                            if (!structureWorldAccess.isValidForSetBlock(mutable) || (chunkSection = chunkSectionCache.getSection(mutable)) == WorldChunk.EMPTY_SECTION) continue;
+                            int ad = ChunkSectionPos.getLocalCoord(t);
+                            int ae = ChunkSectionPos.getLocalCoord(v);
+                            int af = ChunkSectionPos.getLocalCoord(aa);
+                            BlockState blockState = chunkSection.getBlockState(ad, ae, af);
+                            for (OreFeatureConfig.Target target : config.targets) {
+                                if (!OreFeature.shouldPlace(blockState, chunkSectionCache::getBlockState, random, config, target, mutable)) continue;
+                                chunkSection.setBlockState(ad, ae, af, target.state, false);
+                                ++i;
+                                continue block11;
+                            }
+                        }
                     }
                 }
             }
         }
         return i > 0;
+    }
+
+    public static boolean shouldPlace(BlockState state, Function<BlockPos, BlockState> posToState, Random random, OreFeatureConfig config, OreFeatureConfig.Target target, BlockPos.Mutable pos) {
+        if (!target.target.test(state, random)) {
+            return false;
+        }
+        if (OreFeature.shouldNotDiscard(random, config.discardOnAirChance)) {
+            return true;
+        }
+        return !OreFeature.isExposedToAir(posToState, pos);
+    }
+
+    protected static boolean shouldNotDiscard(Random random, float chance) {
+        if (chance <= 0.0f) {
+            return true;
+        }
+        if (chance >= 1.0f) {
+            return false;
+        }
+        return random.nextFloat() >= chance;
     }
 }
 

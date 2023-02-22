@@ -3,17 +3,14 @@
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 
 public class ChatMessageC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private String chatMessage;
-
-    public ChatMessageC2SPacket() {
-    }
+    private static final int MAX_LENGTH = 256;
+    private final String chatMessage;
 
     public ChatMessageC2SPacket(String chatMessage) {
         if (chatMessage.length() > 256) {
@@ -22,13 +19,12 @@ implements Packet<ServerPlayPacketListener> {
         this.chatMessage = chatMessage;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ChatMessageC2SPacket(PacketByteBuf buf) {
         this.chatMessage = buf.readString(256);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeString(this.chatMessage);
     }
 

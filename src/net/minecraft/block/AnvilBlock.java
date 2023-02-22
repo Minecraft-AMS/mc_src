@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -19,6 +15,7 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.screen.AnvilScreenHandler;
@@ -55,6 +52,8 @@ extends FallingBlock {
     private static final VoxelShape X_AXIS_SHAPE = VoxelShapes.union(BASE_SHAPE, X_STEP_SHAPE, X_STEM_SHAPE, X_FACE_SHAPE);
     private static final VoxelShape Z_AXIS_SHAPE = VoxelShapes.union(BASE_SHAPE, Z_STEP_SHAPE, Z_STEM_SHAPE, Z_FACE_SHAPE);
     private static final Text TITLE = new TranslatableText("container.repair");
+    private static final float FALLING_BLOCK_ENTITY_DAMAGE_MULTIPLIER = 2.0f;
+    private static final int FALLING_BLOCK_ENTITY_MAX_DAMAGE = 40;
 
     public AnvilBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -79,7 +78,7 @@ extends FallingBlock {
     @Override
     @Nullable
     public NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, World world, BlockPos pos) {
-        return new SimpleNamedScreenHandlerFactory((i, playerInventory, playerEntity) -> new AnvilScreenHandler(i, playerInventory, ScreenHandlerContext.create(world, pos)), TITLE);
+        return new SimpleNamedScreenHandlerFactory((syncId, inventory, player) -> new AnvilScreenHandler(syncId, inventory, ScreenHandlerContext.create(world, pos)), TITLE);
     }
 
     @Override
@@ -93,7 +92,7 @@ extends FallingBlock {
 
     @Override
     protected void configureFallingBlockEntity(FallingBlockEntity entity) {
-        entity.setHurtEntities(true);
+        entity.setHurtEntities(2.0f, 40);
     }
 
     @Override
@@ -108,6 +107,11 @@ extends FallingBlock {
         if (!fallingBlockEntity.isSilent()) {
             world.syncWorldEvent(1029, pos, 0);
         }
+    }
+
+    @Override
+    public DamageSource getDamageSource() {
+        return DamageSource.ANVIL;
     }
 
     @Nullable
@@ -137,9 +141,8 @@ extends FallingBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public int getColor(BlockState state, BlockView world, BlockPos pos) {
-        return state.getTopMaterialColor((BlockView)world, (BlockPos)pos).color;
+        return state.getMapColor((BlockView)world, (BlockPos)pos).color;
     }
 }
 

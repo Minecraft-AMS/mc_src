@@ -38,7 +38,7 @@ extends FeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractCl
             return;
         }
         ItemStack itemStack = abstractClientPlayerEntity.getEquippedStack(EquipmentSlot.CHEST);
-        if (itemStack.getItem() == Items.ELYTRA) {
+        if (itemStack.isOf(Items.ELYTRA)) {
             return;
         }
         matrixStack.push();

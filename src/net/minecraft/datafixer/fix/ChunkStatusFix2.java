@@ -27,7 +27,7 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class ChunkStatusFix2
 extends DataFix {
-    private static final Map<String, String> statusMap = ImmutableMap.builder().put((Object)"structure_references", (Object)"empty").put((Object)"biomes", (Object)"empty").put((Object)"base", (Object)"surface").put((Object)"carved", (Object)"carvers").put((Object)"liquid_carved", (Object)"liquid_carvers").put((Object)"decorated", (Object)"features").put((Object)"lighted", (Object)"light").put((Object)"mobs_spawned", (Object)"spawn").put((Object)"finalized", (Object)"heightmaps").put((Object)"fullchunk", (Object)"full").build();
+    private static final Map<String, String> STATUS_MAP = ImmutableMap.builder().put((Object)"structure_references", (Object)"empty").put((Object)"biomes", (Object)"empty").put((Object)"base", (Object)"surface").put((Object)"carved", (Object)"carvers").put((Object)"liquid_carved", (Object)"liquid_carvers").put((Object)"decorated", (Object)"features").put((Object)"lighted", (Object)"light").put((Object)"mobs_spawned", (Object)"spawn").put((Object)"finalized", (Object)"heightmaps").put((Object)"fullchunk", (Object)"full").build();
 
     public ChunkStatusFix2(Schema outputSchema, boolean changesType) {
         super(outputSchema, changesType);
@@ -41,7 +41,7 @@ extends DataFix {
             String string2;
             Dynamic dynamic = (Dynamic)typed.get(DSL.remainderFinder());
             String string = dynamic.get("Status").asString("empty");
-            if (Objects.equals(string, string2 = statusMap.getOrDefault(string, "empty"))) {
+            if (Objects.equals(string, string2 = STATUS_MAP.getOrDefault(string, "empty"))) {
                 return typed;
             }
             return typed.set(DSL.remainderFinder(), (Object)dynamic.set("Status", dynamic.createString(string2)));

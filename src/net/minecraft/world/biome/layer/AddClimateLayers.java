@@ -10,10 +10,19 @@ import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 
 public class AddClimateLayers {
 
-    public static enum AddSpecialBiomesLayer implements IdentitySamplingLayer
-    {
-        INSTANCE;
+    public static final class AddSpecialBiomesLayer
+    extends Enum<AddSpecialBiomesLayer>
+    implements IdentitySamplingLayer {
+        public static final /* enum */ AddSpecialBiomesLayer INSTANCE = new AddSpecialBiomesLayer();
+        private static final /* synthetic */ AddSpecialBiomesLayer[] field_16050;
 
+        public static AddSpecialBiomesLayer[] values() {
+            return (AddSpecialBiomesLayer[])field_16050.clone();
+        }
+
+        public static AddSpecialBiomesLayer valueOf(String string) {
+            return Enum.valueOf(AddSpecialBiomesLayer.class, string);
+        }
 
         @Override
         public int sample(LayerRandomnessSource context, int value) {
@@ -22,12 +31,29 @@ public class AddClimateLayers {
             }
             return value;
         }
+
+        private static /* synthetic */ AddSpecialBiomesLayer[] method_36769() {
+            return new AddSpecialBiomesLayer[]{INSTANCE};
+        }
+
+        static {
+            field_16050 = AddSpecialBiomesLayer.method_36769();
+        }
     }
 
-    public static enum AddCoolBiomesLayer implements CrossSamplingLayer
-    {
-        INSTANCE;
+    public static final class AddCoolBiomesLayer
+    extends Enum<AddCoolBiomesLayer>
+    implements CrossSamplingLayer {
+        public static final /* enum */ AddCoolBiomesLayer INSTANCE = new AddCoolBiomesLayer();
+        private static final /* synthetic */ AddCoolBiomesLayer[] field_17402;
 
+        public static AddCoolBiomesLayer[] values() {
+            return (AddCoolBiomesLayer[])field_17402.clone();
+        }
+
+        public static AddCoolBiomesLayer valueOf(String string) {
+            return Enum.valueOf(AddCoolBiomesLayer.class, string);
+        }
 
         @Override
         public int sample(LayerRandomnessSource context, int n, int e, int s, int w, int center) {
@@ -36,12 +62,29 @@ public class AddClimateLayers {
             }
             return center;
         }
+
+        private static /* synthetic */ AddCoolBiomesLayer[] method_36768() {
+            return new AddCoolBiomesLayer[]{INSTANCE};
+        }
+
+        static {
+            field_17402 = AddCoolBiomesLayer.method_36768();
+        }
     }
 
-    public static enum AddTemperateBiomesLayer implements CrossSamplingLayer
-    {
-        INSTANCE;
+    public static final class AddTemperateBiomesLayer
+    extends Enum<AddTemperateBiomesLayer>
+    implements CrossSamplingLayer {
+        public static final /* enum */ AddTemperateBiomesLayer INSTANCE = new AddTemperateBiomesLayer();
+        private static final /* synthetic */ AddTemperateBiomesLayer[] field_17400;
 
+        public static AddTemperateBiomesLayer[] values() {
+            return (AddTemperateBiomesLayer[])field_17400.clone();
+        }
+
+        public static AddTemperateBiomesLayer valueOf(String string) {
+            return Enum.valueOf(AddTemperateBiomesLayer.class, string);
+        }
 
         @Override
         public int sample(LayerRandomnessSource context, int n, int e, int s, int w, int center) {
@@ -49,6 +92,14 @@ public class AddClimateLayers {
                 return 2;
             }
             return center;
+        }
+
+        private static /* synthetic */ AddTemperateBiomesLayer[] method_36767() {
+            return new AddTemperateBiomesLayer[]{INSTANCE};
+        }
+
+        static {
+            field_17400 = AddTemperateBiomesLayer.method_36767();
         }
     }
 }

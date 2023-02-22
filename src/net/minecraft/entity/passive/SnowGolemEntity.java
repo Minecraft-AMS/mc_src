@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityDimensions;
@@ -18,7 +14,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Shearable;
 import net.minecraft.entity.ai.RangedAttackMob;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.ProjectileAttackGoal;
@@ -48,6 +44,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class SnowGolemEntity
@@ -55,6 +52,8 @@ extends GolemEntity
 implements Shearable,
 RangedAttackMob {
     private static final TrackedData<Byte> SNOW_GOLEM_FLAGS = DataTracker.registerData(SnowGolemEntity.class, TrackedDataHandlerRegistry.BYTE);
+    private static final byte HAS_PUMPKIN_FLAG = 16;
+    private static final float EYE_HEIGHT = 1.7f;
 
     public SnowGolemEntity(EntityType<? extends SnowGolemEntity> entityType, World world) {
         super((EntityType<? extends GolemEntity>)entityType, world);
@@ -66,7 +65,7 @@ RangedAttackMob {
         this.goalSelector.add(2, new WanderAroundFarGoal((PathAwareEntity)this, 1.0, 1.0000001E-5f));
         this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(4, new LookAroundGoal(this));
-        this.targetSelector.add(1, new FollowTargetGoal<MobEntity>(this, MobEntity.class, 10, true, false, livingEntity -> livingEntity instanceof Monster));
+        this.targetSelector.add(1, new ActiveTargetGoal<MobEntity>(this, MobEntity.class, 10, true, false, livingEntity -> livingEntity instanceof Monster));
     }
 
     public static DefaultAttributeContainer.Builder createSnowGolemAttributes() {
@@ -130,8 +129,8 @@ RangedAttackMob {
         double e = target.getX() - this.getX();
         double f = d - snowballEntity.getY();
         double g = target.getZ() - this.getZ();
-        float h = MathHelper.sqrt(e * e + g * g) * 0.2f;
-        snowballEntity.setVelocity(e, f + (double)h, g, 1.6f, 12.0f);
+        double h = Math.sqrt(e * e + g * g) * (double)0.2f;
+        snowballEntity.setVelocity(e, f + h, g, 1.6f, 12.0f);
         this.playSound(SoundEvents.ENTITY_SNOW_GOLEM_SHOOT, 1.0f, 0.4f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
         this.world.spawnEntity(snowballEntity);
     }
@@ -142,12 +141,13 @@ RangedAttackMob {
     }
 
     @Override
-    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.SHEARS && this.isShearable()) {
+    protected ActionResult interactMob(PlayerEntity player2, Hand hand) {
+        ItemStack itemStack = player2.getStackInHand(hand);
+        if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
             this.sheared(SoundCategory.PLAYERS);
+            this.emitGameEvent(GameEvent.SHEAR, player2);
             if (!this.world.isClient) {
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+                itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
             }
             return ActionResult.success(this.world.isClient);
         }
@@ -200,8 +200,7 @@ RangedAttackMob {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d method_29919() {
+    public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.75f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 }

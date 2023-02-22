@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -19,6 +13,7 @@ import net.minecraft.block.TransparentBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.TntEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
@@ -33,6 +28,10 @@ import net.minecraft.world.World;
 
 public class HoneyBlock
 extends TransparentBlock {
+    private static final double field_31101 = 0.13;
+    private static final double field_31102 = 0.08;
+    private static final double field_31103 = 0.05;
+    private static final int TICKS_PER_SECOND = 20;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
 
     public HoneyBlock(AbstractBlock.Settings settings) {
@@ -49,12 +48,12 @@ extends TransparentBlock {
     }
 
     @Override
-    public void onLandedUpon(World world, BlockPos pos, Entity entity, float distance) {
+    public void onLandedUpon(World world, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
         entity.playSound(SoundEvents.BLOCK_HONEY_BLOCK_SLIDE, 1.0f, 1.0f);
         if (!world.isClient) {
             world.sendEntityStatus(entity, (byte)54);
         }
-        if (entity.handleFallDamage(distance, 0.2f)) {
+        if (entity.handleFallDamage(fallDistance, 0.2f, DamageSource.FALL)) {
             entity.playSound(this.soundGroup.getFallSound(), this.soundGroup.getVolume() * 0.5f, this.soundGroup.getPitch() * 0.75f);
         }
     }
@@ -87,7 +86,7 @@ extends TransparentBlock {
 
     private void triggerAdvancement(Entity entity, BlockPos pos) {
         if (entity instanceof ServerPlayerEntity && entity.world.getTime() % 20L == 0L) {
-            Criteria.SLIDE_DOWN_BLOCK.test((ServerPlayerEntity)entity, entity.world.getBlockState(pos));
+            Criteria.SLIDE_DOWN_BLOCK.trigger((ServerPlayerEntity)entity, entity.world.getBlockState(pos));
         }
     }
 
@@ -113,17 +112,14 @@ extends TransparentBlock {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static void addRegularParticles(Entity entity) {
         HoneyBlock.addParticles(entity, 5);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static void addRichParticles(Entity entity) {
         HoneyBlock.addParticles(entity, 10);
     }
 
-    @Environment(value=EnvType.CLIENT)
     private static void addParticles(Entity entity, int count) {
         if (!entity.world.isClient) {
             return;

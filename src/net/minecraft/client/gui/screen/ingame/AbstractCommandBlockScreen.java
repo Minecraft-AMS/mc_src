@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screen.CommandSuggestor;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
@@ -33,9 +34,8 @@ extends Screen {
     protected TextFieldWidget previousOutputTextField;
     protected ButtonWidget doneButton;
     protected ButtonWidget cancelButton;
-    protected ButtonWidget toggleTrackingOutputButton;
-    protected boolean trackingOutput;
-    private CommandSuggestor commandSuggestor;
+    protected CyclingButtonWidget<Boolean> toggleTrackingOutputButton;
+    CommandSuggestor commandSuggestor;
 
     public AbstractCommandBlockScreen() {
         super(NarratorManager.EMPTY);
@@ -53,12 +53,13 @@ extends Screen {
     @Override
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.doneButton = this.addButton(new ButtonWidget(this.width / 2 - 4 - 150, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.DONE, buttonWidget -> this.commitAndClose()));
-        this.cancelButton = this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.CANCEL, buttonWidget -> this.onClose()));
-        this.toggleTrackingOutputButton = this.addButton(new ButtonWidget(this.width / 2 + 150 - 20, this.getTrackOutputButtonHeight(), 20, 20, new LiteralText("O"), buttonWidget -> {
-            CommandBlockExecutor commandBlockExecutor;
-            commandBlockExecutor.setTrackingOutput(!(commandBlockExecutor = this.getCommandExecutor()).isTrackingOutput());
-            this.updateTrackedOutput();
+        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 4 - 150, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.DONE, button -> this.commitAndClose()));
+        this.cancelButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.CANCEL, button -> this.onClose()));
+        boolean bl = this.getCommandExecutor().isTrackingOutput();
+        this.toggleTrackingOutputButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(new LiteralText("O"), new LiteralText("X")).initially(bl).omitKeyText().build(this.width / 2 + 150 - 20, this.getTrackOutputButtonHeight(), 20, 20, new TranslatableText("advMode.trackOutput"), (button, trackOutput) -> {
+            CommandBlockExecutor commandBlockExecutor = this.getCommandExecutor();
+            commandBlockExecutor.setTrackingOutput((boolean)trackOutput);
+            this.setPreviousOutputText((boolean)trackOutput);
         }));
         this.consoleCommandTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, 50, 300, 20, (Text)new TranslatableText("advMode.command")){
 
@@ -69,17 +70,18 @@ extends Screen {
         };
         this.consoleCommandTextField.setMaxLength(32500);
         this.consoleCommandTextField.setChangedListener(this::onCommandChanged);
-        this.children.add(this.consoleCommandTextField);
+        this.addSelectableChild(this.consoleCommandTextField);
         this.previousOutputTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, this.getTrackOutputButtonHeight(), 276, 20, new TranslatableText("advMode.previousOutput"));
         this.previousOutputTextField.setMaxLength(32500);
         this.previousOutputTextField.setEditable(false);
         this.previousOutputTextField.setText("-");
-        this.children.add(this.previousOutputTextField);
+        this.addSelectableChild(this.previousOutputTextField);
         this.setInitialFocus(this.consoleCommandTextField);
         this.consoleCommandTextField.setTextFieldFocused(true);
         this.commandSuggestor = new CommandSuggestor(this.client, this, this.consoleCommandTextField, this.textRenderer, true, true, 0, 7, false, Integer.MIN_VALUE);
         this.commandSuggestor.setWindowActive(true);
         this.commandSuggestor.refresh();
+        this.setPreviousOutputText(bl);
     }
 
     @Override
@@ -90,14 +92,8 @@ extends Screen {
         this.commandSuggestor.refresh();
     }
 
-    protected void updateTrackedOutput() {
-        if (this.getCommandExecutor().isTrackingOutput()) {
-            this.toggleTrackingOutputButton.setMessage(new LiteralText("O"));
-            this.previousOutputTextField.setText(this.getCommandExecutor().getLastOutput().getString());
-        } else {
-            this.toggleTrackingOutputButton.setMessage(new LiteralText("X"));
-            this.previousOutputTextField.setText("-");
-        }
+    protected void setPreviousOutputText(boolean trackOutput) {
+        this.previousOutputTextField.setText(trackOutput ? this.getCommandExecutor().getLastOutput().getString() : "-");
     }
 
     protected void commitAndClose() {
@@ -106,7 +102,7 @@ extends Screen {
         if (!commandBlockExecutor.isTrackingOutput()) {
             commandBlockExecutor.setLastOutput(null);
         }
-        this.client.openScreen(null);
+        this.client.setScreen(null);
     }
 
     @Override
@@ -115,12 +111,6 @@ extends Screen {
     }
 
     protected abstract void syncSettingsToServer(CommandBlockExecutor var1);
-
-    @Override
-    public void onClose() {
-        this.getCommandExecutor().setTrackingOutput(this.trackingOutput);
-        this.client.openScreen(null);
-    }
 
     private void onCommandChanged(String text) {
         this.commandSuggestor.refresh();

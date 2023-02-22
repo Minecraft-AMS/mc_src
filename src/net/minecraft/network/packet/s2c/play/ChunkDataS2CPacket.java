@@ -5,114 +5,86 @@
  *  com.google.common.collect.Lists
  *  io.netty.buffer.ByteBuf
  *  io.netty.buffer.Unpooled
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
 import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import java.io.IOException;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtLongArray;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
-import org.jetbrains.annotations.Nullable;
 
 public class ChunkDataS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int chunkX;
-    private int chunkZ;
-    private int verticalStripBitmask;
-    private NbtCompound heightmaps;
-    @Nullable
-    private int[] biomeArray;
-    private byte[] data;
-    private List<NbtCompound> blockEntities;
-    private boolean isFullChunk;
+    public static final int MAX_DATA_LENGTH = 0x200000;
+    private final int chunkX;
+    private final int chunkZ;
+    private final BitSet verticalStripBitmask;
+    private final NbtCompound heightmaps;
+    private final int[] biomeArray;
+    private final byte[] data;
+    private final List<NbtCompound> blockEntities;
 
-    public ChunkDataS2CPacket() {
-    }
-
-    public ChunkDataS2CPacket(WorldChunk chunk, int includedSectionsMask) {
+    public ChunkDataS2CPacket(WorldChunk chunk) {
         ChunkPos chunkPos = chunk.getPos();
         this.chunkX = chunkPos.x;
         this.chunkZ = chunkPos.z;
-        this.isFullChunk = includedSectionsMask == 65535;
         this.heightmaps = new NbtCompound();
         for (Map.Entry<Heightmap.Type, Heightmap> entry : chunk.getHeightmaps()) {
             if (!entry.getKey().shouldSendToClient()) continue;
             this.heightmaps.put(entry.getKey().getName(), new NbtLongArray(entry.getValue().asLongArray()));
         }
-        if (this.isFullChunk) {
-            this.biomeArray = chunk.getBiomeArray().toIntArray();
-        }
-        this.data = new byte[this.getDataSize(chunk, includedSectionsMask)];
-        this.verticalStripBitmask = this.writeData(new PacketByteBuf(this.getWriteBuffer()), chunk, includedSectionsMask);
+        this.biomeArray = chunk.getBiomeArray().toIntArray();
+        this.data = new byte[this.getDataSize(chunk)];
+        this.verticalStripBitmask = this.writeData(new PacketByteBuf(this.getWriteBuffer()), chunk);
         this.blockEntities = Lists.newArrayList();
         for (Map.Entry<Object, Object> entry : chunk.getBlockEntities().entrySet()) {
-            BlockPos blockPos = (BlockPos)entry.getKey();
             BlockEntity blockEntity = (BlockEntity)entry.getValue();
-            int i = blockPos.getY() >> 4;
-            if (!this.isFullChunk() && (includedSectionsMask & 1 << i) == 0) continue;
             NbtCompound nbtCompound = blockEntity.toInitialChunkDataNbt();
             this.blockEntities.add(nbtCompound);
         }
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        int i;
+    public ChunkDataS2CPacket(PacketByteBuf buf) {
         this.chunkX = buf.readInt();
         this.chunkZ = buf.readInt();
-        this.isFullChunk = buf.readBoolean();
-        this.verticalStripBitmask = buf.readVarInt();
+        this.verticalStripBitmask = buf.readBitSet();
         this.heightmaps = buf.readNbt();
-        if (this.isFullChunk) {
-            this.biomeArray = buf.readIntArray(BiomeArray.DEFAULT_LENGTH);
+        if (this.heightmaps == null) {
+            throw new RuntimeException("Can't read heightmap in packet for [" + this.chunkX + ", " + this.chunkZ + "]");
         }
-        if ((i = buf.readVarInt()) > 0x200000) {
+        this.biomeArray = buf.readIntArray(BiomeArray.DEFAULT_LENGTH);
+        int i = buf.readVarInt();
+        if (i > 0x200000) {
             throw new RuntimeException("Chunk Packet trying to allocate too much memory on read.");
         }
         this.data = new byte[i];
         buf.readBytes(this.data);
-        int j = buf.readVarInt();
-        this.blockEntities = Lists.newArrayList();
-        for (int k = 0; k < j; ++k) {
-            this.blockEntities.add(buf.readNbt());
-        }
+        this.blockEntities = buf.readList(PacketByteBuf::readNbt);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeInt(this.chunkX);
         buf.writeInt(this.chunkZ);
-        buf.writeBoolean(this.isFullChunk);
-        buf.writeVarInt(this.verticalStripBitmask);
+        buf.writeBitSet(this.verticalStripBitmask);
         buf.writeNbt(this.heightmaps);
-        if (this.biomeArray != null) {
-            buf.writeIntArray(this.biomeArray);
-        }
+        buf.writeIntArray(this.biomeArray);
         buf.writeVarInt(this.data.length);
         buf.writeBytes(this.data);
-        buf.writeVarInt(this.blockEntities.size());
-        for (NbtCompound nbtCompound : this.blockEntities) {
-            buf.writeNbt(nbtCompound);
-        }
+        buf.writeCollection(this.blockEntities, PacketByteBuf::writeNbt);
     }
 
     @Override
@@ -120,7 +92,6 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onChunkData(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public PacketByteBuf getReadBuffer() {
         return new PacketByteBuf(Unpooled.wrappedBuffer((byte[])this.data));
     }
@@ -131,62 +102,48 @@ implements Packet<ClientPlayPacketListener> {
         return byteBuf;
     }
 
-    public int writeData(PacketByteBuf packetByteBuf, WorldChunk chunk, int includedSectionsMask) {
-        int i = 0;
+    public BitSet writeData(PacketByteBuf buf, WorldChunk chunk) {
+        BitSet bitSet = new BitSet();
         ChunkSection[] chunkSections = chunk.getSectionArray();
-        int k = chunkSections.length;
-        for (int j = 0; j < k; ++j) {
-            ChunkSection chunkSection = chunkSections[j];
-            if (chunkSection == WorldChunk.EMPTY_SECTION || this.isFullChunk() && chunkSection.isEmpty() || (includedSectionsMask & 1 << j) == 0) continue;
-            i |= 1 << j;
-            chunkSection.toPacket(packetByteBuf);
+        int j = chunkSections.length;
+        for (int i = 0; i < j; ++i) {
+            ChunkSection chunkSection = chunkSections[i];
+            if (chunkSection == WorldChunk.EMPTY_SECTION || chunkSection.isEmpty()) continue;
+            bitSet.set(i);
+            chunkSection.toPacket(buf);
         }
-        return i;
+        return bitSet;
     }
 
-    protected int getDataSize(WorldChunk chunk, int includedSectionsMark) {
+    protected int getDataSize(WorldChunk chunk) {
         int i = 0;
-        ChunkSection[] chunkSections = chunk.getSectionArray();
-        int k = chunkSections.length;
-        for (int j = 0; j < k; ++j) {
-            ChunkSection chunkSection = chunkSections[j];
-            if (chunkSection == WorldChunk.EMPTY_SECTION || this.isFullChunk() && chunkSection.isEmpty() || (includedSectionsMark & 1 << j) == 0) continue;
+        for (ChunkSection chunkSection : chunk.getSectionArray()) {
+            if (chunkSection == WorldChunk.EMPTY_SECTION || chunkSection.isEmpty()) continue;
             i += chunkSection.getPacketSize();
         }
         return i;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getX() {
         return this.chunkX;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getZ() {
         return this.chunkZ;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public int getVerticalStripBitmask() {
+    public BitSet getVerticalStripBitmask() {
         return this.verticalStripBitmask;
     }
 
-    public boolean isFullChunk() {
-        return this.isFullChunk;
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public NbtCompound getHeightmaps() {
         return this.heightmaps;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public List<NbtCompound> getBlockEntityTagList() {
         return this.blockEntities;
     }
 
-    @Nullable
-    @Environment(value=EnvType.CLIENT)
     public int[] getBiomeArray() {
         return this.biomeArray;
     }

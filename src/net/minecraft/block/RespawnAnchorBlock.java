@@ -4,16 +4,12 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableList$Builder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import com.google.common.collect.ImmutableList;
 import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -50,9 +46,11 @@ import net.minecraft.world.explosion.ExplosionBehavior;
 
 public class RespawnAnchorBlock
 extends Block {
+    public static final int NO_CHARGES = 0;
+    public static final int MAX_CHARGES = 4;
     public static final IntProperty CHARGES = Properties.CHARGES;
-    private static final ImmutableList<Vec3i> field_26442 = ImmutableList.of((Object)new Vec3i(0, 0, -1), (Object)new Vec3i(-1, 0, 0), (Object)new Vec3i(0, 0, 1), (Object)new Vec3i(1, 0, 0), (Object)new Vec3i(-1, 0, -1), (Object)new Vec3i(1, 0, -1), (Object)new Vec3i(-1, 0, 1), (Object)new Vec3i(1, 0, 1));
-    private static final ImmutableList<Vec3i> field_26443 = new ImmutableList.Builder().addAll(field_26442).addAll(field_26442.stream().map(Vec3i::down).iterator()).addAll(field_26442.stream().map(Vec3i::up).iterator()).add((Object)new Vec3i(0, 1, 0)).build();
+    private static final ImmutableList<Vec3i> VALID_HORIZONTAL_SPAWN_OFFSETS = ImmutableList.of((Object)new Vec3i(0, 0, -1), (Object)new Vec3i(-1, 0, 0), (Object)new Vec3i(0, 0, 1), (Object)new Vec3i(1, 0, 0), (Object)new Vec3i(-1, 0, -1), (Object)new Vec3i(1, 0, -1), (Object)new Vec3i(-1, 0, 1), (Object)new Vec3i(1, 0, 1));
+    private static final ImmutableList<Vec3i> VALID_SPAWN_OFFSETS = new ImmutableList.Builder().addAll(VALID_HORIZONTAL_SPAWN_OFFSETS).addAll(VALID_HORIZONTAL_SPAWN_OFFSETS.stream().map(Vec3i::down).iterator()).addAll(VALID_HORIZONTAL_SPAWN_OFFSETS.stream().map(Vec3i::up).iterator()).add((Object)new Vec3i(0, 1, 0)).build();
 
     public RespawnAnchorBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -67,7 +65,7 @@ extends Block {
         }
         if (RespawnAnchorBlock.isChargeItem(itemStack) && RespawnAnchorBlock.canCharge(state)) {
             RespawnAnchorBlock.charge(world, pos, state);
-            if (!player.abilities.creativeMode) {
+            if (!player.getAbilities().creativeMode) {
                 itemStack.decrement(1);
             }
             return ActionResult.success(world.isClient);
@@ -77,7 +75,7 @@ extends Block {
         }
         if (RespawnAnchorBlock.isNether(world)) {
             ServerPlayerEntity serverPlayerEntity;
-            if (!(world.isClient || (serverPlayerEntity = (ServerPlayerEntity)player).getSpawnPointDimension() == world.getRegistryKey() && serverPlayerEntity.getSpawnPointPosition().equals(pos))) {
+            if (!(world.isClient || (serverPlayerEntity = (ServerPlayerEntity)player).getSpawnPointDimension() == world.getRegistryKey() && pos.equals(serverPlayerEntity.getSpawnPointPosition()))) {
                 serverPlayerEntity.setSpawnPoint(world.getRegistryKey(), pos, 0.0f, false, true);
                 world.playSound(null, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, SoundEvents.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 return ActionResult.SUCCESS;
@@ -91,7 +89,7 @@ extends Block {
     }
 
     private static boolean isChargeItem(ItemStack stack) {
-        return stack.getItem() == Items.GLOWSTONE;
+        return stack.isOf(Items.GLOWSTONE);
     }
 
     private static boolean canCharge(BlockState state) {
@@ -116,7 +114,7 @@ extends Block {
 
     private void explode(BlockState state, World world, final BlockPos explodedPos) {
         world.removeBlock(explodedPos, false);
-        boolean bl = Direction.Type.HORIZONTAL.stream().map(explodedPos::offset).anyMatch(blockPos -> RespawnAnchorBlock.hasStillWater(blockPos, world));
+        boolean bl = Direction.Type.HORIZONTAL.stream().map(explodedPos::offset).anyMatch(pos -> RespawnAnchorBlock.hasStillWater(pos, world));
         final boolean bl2 = bl || world.getFluidState(explodedPos.up()).isIn(FluidTags.WATER);
         ExplosionBehavior explosionBehavior = new ExplosionBehavior(){
 
@@ -141,7 +139,6 @@ extends Block {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (state.get(CHARGES) == 0) {
             return;
@@ -176,18 +173,18 @@ extends Block {
     }
 
     public static Optional<Vec3d> findRespawnPosition(EntityType<?> entity, CollisionView world, BlockPos pos) {
-        Optional<Vec3d> optional = RespawnAnchorBlock.method_30842(entity, world, pos, true);
+        Optional<Vec3d> optional = RespawnAnchorBlock.findRespawnPosition(entity, world, pos, true);
         if (optional.isPresent()) {
             return optional;
         }
-        return RespawnAnchorBlock.method_30842(entity, world, pos, false);
+        return RespawnAnchorBlock.findRespawnPosition(entity, world, pos, false);
     }
 
-    private static Optional<Vec3d> method_30842(EntityType<?> entityType, CollisionView collisionView, BlockPos blockPos, boolean bl) {
+    private static Optional<Vec3d> findRespawnPosition(EntityType<?> entity, CollisionView world, BlockPos pos, boolean bl) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (Vec3i vec3i : field_26443) {
-            mutable.set(blockPos).move(vec3i);
-            Vec3d vec3d = Dismounting.method_30769(entityType, collisionView, mutable, bl);
+        for (Vec3i vec3i : VALID_SPAWN_OFFSETS) {
+            mutable.set(pos).move(vec3i);
+            Vec3d vec3d = Dismounting.findRespawnPos(entity, world, mutable, bl);
             if (vec3d == null) continue;
             return Optional.of(vec3d);
         }

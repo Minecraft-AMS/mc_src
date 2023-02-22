@@ -35,8 +35,8 @@ public final class PlayerChunkWatchingManager {
         this.watchingPlayers.replace((Object)player, false);
     }
 
-    public boolean method_21715(ServerPlayerEntity serverPlayerEntity) {
-        return this.watchingPlayers.getOrDefault((Object)serverPlayerEntity, true);
+    public boolean isWatchInactive(ServerPlayerEntity player) {
+        return this.watchingPlayers.getOrDefault((Object)player, true);
     }
 
     public boolean isWatchDisabled(ServerPlayerEntity player) {

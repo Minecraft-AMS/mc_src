@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -53,7 +47,7 @@ extends SpecialCraftingRecipe {
     @Override
     public ItemStack craft(CraftingInventory craftingInventory) {
         ItemStack itemStack = new ItemStack(Items.FIREWORK_ROCKET, 3);
-        NbtCompound nbtCompound = itemStack.getOrCreateSubTag("Fireworks");
+        NbtCompound nbtCompound = itemStack.getOrCreateSubNbt("Fireworks");
         NbtList nbtList = new NbtList();
         int i = 0;
         for (int j = 0; j < craftingInventory.size(); ++j) {
@@ -64,7 +58,7 @@ extends SpecialCraftingRecipe {
                 ++i;
                 continue;
             }
-            if (!FIREWORK_STAR.test(itemStack2) || (nbtCompound2 = itemStack2.getSubTag("Explosion")) == null) continue;
+            if (!FIREWORK_STAR.test(itemStack2) || (nbtCompound2 = itemStack2.getSubNbt("Explosion")) == null) continue;
             nbtList.add(nbtCompound2);
         }
         nbtCompound.putByte("Flight", (byte)i);
@@ -75,7 +69,6 @@ extends SpecialCraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= 2;
     }

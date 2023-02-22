@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -24,6 +20,9 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkSection {
+    public static final int field_31406 = 16;
+    public static final int field_31407 = 16;
+    public static final int field_31408 = 4096;
     private static final Palette<BlockState> PALETTE = new IdListPalette<BlockState>(Block.STATE_IDS, Blocks.AIR.getDefaultState());
     private final int yOffset;
     private short nonEmptyBlockCount;
@@ -36,11 +35,15 @@ public class ChunkSection {
     }
 
     public ChunkSection(int yOffset, short nonEmptyBlockCount, short randomTickableBlockCount, short nonEmptyFluidCount) {
-        this.yOffset = yOffset;
+        this.yOffset = ChunkSection.blockCoordFromChunkCoord(yOffset);
         this.nonEmptyBlockCount = nonEmptyBlockCount;
         this.randomTickableBlockCount = randomTickableBlockCount;
         this.nonEmptyFluidCount = nonEmptyFluidCount;
         this.container = new PalettedContainer<BlockState>(PALETTE, Block.STATE_IDS, NbtHelper::toBlockState, NbtHelper::fromBlockState, Blocks.AIR.getDefaultState());
+    }
+
+    public static int blockCoordFromChunkCoord(int chunkPos) {
+        return chunkPos << 4;
     }
 
     public BlockState getBlockState(int x, int y, int z) {
@@ -116,18 +119,18 @@ public class ChunkSection {
         this.nonEmptyBlockCount = 0;
         this.randomTickableBlockCount = 0;
         this.nonEmptyFluidCount = 0;
-        this.container.count((blockState, i) -> {
-            FluidState fluidState = blockState.getFluidState();
-            if (!blockState.isAir()) {
-                this.nonEmptyBlockCount = (short)(this.nonEmptyBlockCount + i);
-                if (blockState.hasRandomTicks()) {
-                    this.randomTickableBlockCount = (short)(this.randomTickableBlockCount + i);
+        this.container.count((state, count) -> {
+            FluidState fluidState = state.getFluidState();
+            if (!state.isAir()) {
+                this.nonEmptyBlockCount = (short)(this.nonEmptyBlockCount + count);
+                if (state.hasRandomTicks()) {
+                    this.randomTickableBlockCount = (short)(this.randomTickableBlockCount + count);
                 }
             }
             if (!fluidState.isEmpty()) {
-                this.nonEmptyBlockCount = (short)(this.nonEmptyBlockCount + i);
+                this.nonEmptyBlockCount = (short)(this.nonEmptyBlockCount + count);
                 if (fluidState.hasRandomTicks()) {
-                    this.nonEmptyFluidCount = (short)(this.nonEmptyFluidCount + i);
+                    this.nonEmptyFluidCount = (short)(this.nonEmptyFluidCount + count);
                 }
             }
         });
@@ -137,7 +140,6 @@ public class ChunkSection {
         return this.container;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void fromPacket(PacketByteBuf buf) {
         this.nonEmptyBlockCount = buf.readShort();
         this.container.fromPacket(buf);

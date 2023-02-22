@@ -52,7 +52,12 @@ extends MessageToByteEncoder<Packet<?>> {
         PacketByteBuf packetByteBuf = new PacketByteBuf(byteBuf);
         packetByteBuf.writeVarInt(integer);
         try {
+            int i = packetByteBuf.writerIndex();
             packet.write(packetByteBuf);
+            int j = packetByteBuf.writerIndex() - i;
+            if (j > 0x800000) {
+                throw new IllegalArgumentException("Packet too big (is " + j + ", should be less than 8388608): " + packet);
+            }
         }
         catch (Throwable throwable) {
             LOGGER.error((Object)throwable);

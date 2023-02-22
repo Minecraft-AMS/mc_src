@@ -1,16 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -18,29 +11,25 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class PlayerSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private UUID uuid;
-    private double x;
-    private double y;
-    private double z;
-    private byte yaw;
-    private byte pitch;
-
-    public PlayerSpawnS2CPacket() {
-    }
+    private final int id;
+    private final UUID uuid;
+    private final double x;
+    private final double y;
+    private final double z;
+    private final byte yaw;
+    private final byte pitch;
 
     public PlayerSpawnS2CPacket(PlayerEntity player) {
-        this.id = player.getEntityId();
+        this.id = player.getId();
         this.uuid = player.getGameProfile().getId();
         this.x = player.getX();
         this.y = player.getY();
         this.z = player.getZ();
-        this.yaw = (byte)(player.yaw * 256.0f / 360.0f);
-        this.pitch = (byte)(player.pitch * 256.0f / 360.0f);
+        this.yaw = (byte)(player.getYaw() * 256.0f / 360.0f);
+        this.pitch = (byte)(player.getPitch() * 256.0f / 360.0f);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PlayerSpawnS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.uuid = buf.readUuid();
         this.x = buf.readDouble();
@@ -51,7 +40,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeUuid(this.uuid);
         buf.writeDouble(this.x);
@@ -66,37 +55,30 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerSpawn(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public UUID getPlayerUuid() {
         return this.uuid;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getYaw() {
         return this.yaw;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getPitch() {
         return this.pitch;
     }

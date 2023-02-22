@@ -7,7 +7,7 @@ import java.util.EnumSet;
 import java.util.function.Predicate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
@@ -44,7 +44,7 @@ extends Goal {
         this.inclusionSelector = inclusionSelector;
         this.fleeingEntityNavigation = mob.getNavigation();
         this.setControls(EnumSet.of(Goal.Control.MOVE));
-        this.withinRangePredicate = new TargetPredicate().setBaseMaxDistance(distance).setPredicate(inclusionSelector.and(extraInclusionSelector));
+        this.withinRangePredicate = TargetPredicate.createAttackable().setBaseMaxDistance(distance).setPredicate(inclusionSelector.and(extraInclusionSelector));
     }
 
     public FleeEntityGoal(PathAwareEntity fleeingEntity, Class<T> classToFleeFrom, float fleeDistance, double fleeSlowSpeed, double fleeFastSpeed, Predicate<LivingEntity> inclusionSelector) {
@@ -53,11 +53,11 @@ extends Goal {
 
     @Override
     public boolean canStart() {
-        this.targetEntity = this.mob.world.getClosestEntityIncludingUngeneratedChunks(this.classToFleeFrom, this.withinRangePredicate, this.mob, this.mob.getX(), this.mob.getY(), this.mob.getZ(), this.mob.getBoundingBox().expand(this.fleeDistance, 3.0, this.fleeDistance));
+        this.targetEntity = this.mob.world.getClosestEntity(this.mob.world.getEntitiesByClass(this.classToFleeFrom, this.mob.getBoundingBox().expand(this.fleeDistance, 3.0, this.fleeDistance), livingEntity -> true), this.withinRangePredicate, this.mob, this.mob.getX(), this.mob.getY(), this.mob.getZ());
         if (this.targetEntity == null) {
             return false;
         }
-        Vec3d vec3d = TargetFinder.findTargetAwayFrom(this.mob, 16, 7, ((Entity)this.targetEntity).getPos());
+        Vec3d vec3d = NoPenaltyTargeting.find(this.mob, 16, 7, ((Entity)this.targetEntity).getPos());
         if (vec3d == null) {
             return false;
         }

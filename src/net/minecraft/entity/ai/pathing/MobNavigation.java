@@ -3,7 +3,7 @@
  */
 package net.minecraft.entity.ai.pathing;
 
-import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
@@ -49,20 +49,20 @@ extends EntityNavigation {
         BlockPos blockPos;
         if (this.world.getBlockState(target).isAir()) {
             blockPos = target.down();
-            while (blockPos.getY() > 0 && this.world.getBlockState(blockPos).isAir()) {
+            while (blockPos.getY() > this.world.getBottomY() && this.world.getBlockState(blockPos).isAir()) {
                 blockPos = blockPos.down();
             }
-            if (blockPos.getY() > 0) {
+            if (blockPos.getY() > this.world.getBottomY()) {
                 return super.findPathTo(blockPos.up(), distance);
             }
-            while (blockPos.getY() < this.world.getHeight() && this.world.getBlockState(blockPos).isAir()) {
+            while (blockPos.getY() < this.world.getTopY() && this.world.getBlockState(blockPos).isAir()) {
                 blockPos = blockPos.up();
             }
             target = blockPos;
         }
         if (this.world.getBlockState(target).getMaterial().isSolid()) {
             blockPos = target.up();
-            while (blockPos.getY() < this.world.getHeight() && this.world.getBlockState(blockPos).getMaterial().isSolid()) {
+            while (blockPos.getY() < this.world.getTopY() && this.world.getBlockState(blockPos).getMaterial().isSolid()) {
                 blockPos = blockPos.up();
             }
             return super.findPathTo(blockPos, distance);
@@ -79,13 +79,13 @@ extends EntityNavigation {
         if (!this.entity.isTouchingWater() || !this.canSwim()) {
             return MathHelper.floor(this.entity.getY() + 0.5);
         }
-        int i = MathHelper.floor(this.entity.getY());
-        Block block = this.world.getBlockState(new BlockPos(this.entity.getX(), (double)i, this.entity.getZ())).getBlock();
+        int i = this.entity.getBlockY();
+        BlockState blockState = this.world.getBlockState(new BlockPos(this.entity.getX(), (double)i, this.entity.getZ()));
         int j = 0;
-        while (block == Blocks.WATER) {
-            block = this.world.getBlockState(new BlockPos(this.entity.getX(), (double)(++i), this.entity.getZ())).getBlock();
+        while (blockState.isOf(Blocks.WATER)) {
+            blockState = this.world.getBlockState(new BlockPos(this.entity.getX(), (double)(++i), this.entity.getZ()));
             if (++j <= 16) continue;
-            return MathHelper.floor(this.entity.getY());
+            return this.entity.getBlockY();
         }
         return i;
     }
@@ -203,6 +203,14 @@ extends EntityNavigation {
 
     public void setCanPathThroughDoors(boolean canPathThroughDoors) {
         this.nodeMaker.setCanOpenDoors(canPathThroughDoors);
+    }
+
+    public boolean method_35140() {
+        return this.nodeMaker.canEnterOpenDoors();
+    }
+
+    public void setCanEnterOpenDoors(boolean canEnterOpenDoors) {
+        this.nodeMaker.setCanEnterOpenDoors(canEnterOpenDoors);
     }
 
     public boolean canEnterOpenDoors() {

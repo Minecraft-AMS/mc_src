@@ -2,27 +2,22 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import org.jetbrains.annotations.Nullable;
 
 public class EntityTrackerUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private List<DataTracker.Entry<?>> trackedValues;
-
-    public EntityTrackerUpdateS2CPacket() {
-    }
+    private final int id;
+    @Nullable
+    private final List<DataTracker.Entry<?>> trackedValues;
 
     public EntityTrackerUpdateS2CPacket(int id, DataTracker tracker, boolean forceUpdateAll) {
         this.id = id;
@@ -34,14 +29,13 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public EntityTrackerUpdateS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.trackedValues = DataTracker.deserializePacket(buf);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         DataTracker.entriesToPacket(this.trackedValues, buf);
     }
@@ -51,12 +45,11 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onEntityTrackerUpdate(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
+    @Nullable
     public List<DataTracker.Entry<?>> getTrackedValues() {
         return this.trackedValues;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int id() {
         return this.id;
     }

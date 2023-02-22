@@ -52,16 +52,16 @@ implements ArgumentType<String> {
         return (String)context.getArgument(name, String.class);
     }
 
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> commandContext, SuggestionsBuilder suggestionsBuilder) {
-        return CommandSource.suggestMatching(TestFunctions.getTestClasses().stream(), suggestionsBuilder);
+    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
+        return CommandSource.suggestMatching(TestFunctions.getTestClasses().stream(), builder);
     }
 
     public Collection<String> getExamples() {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

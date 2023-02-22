@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.Collections;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -20,6 +16,8 @@ import net.minecraft.block.PistonBlock;
 import net.minecraft.block.PistonHeadBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.PistonBlockEntity;
 import net.minecraft.block.enums.PistonType;
 import net.minecraft.entity.ai.pathing.NavigationType;
@@ -56,12 +54,18 @@ extends BlockWithEntity {
 
     @Override
     @Nullable
-    public BlockEntity createBlockEntity(BlockView world) {
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
         return null;
     }
 
-    public static BlockEntity createBlockEntityPiston(BlockState pushedBlock, Direction dir, boolean extending, boolean bl) {
-        return new PistonBlockEntity(pushedBlock, dir, extending, bl);
+    public static BlockEntity createBlockEntityPiston(BlockPos pos, BlockState state, BlockState pushedBlock, Direction facing, boolean extending, boolean source) {
+        return new PistonBlockEntity(pos, state, pushedBlock, facing, extending, source);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return PistonExtensionBlock.checkType(type, BlockEntityType.PISTON, PistonBlockEntity::tick);
     }
 
     @Override
@@ -126,7 +130,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
     }

@@ -2,16 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.TintableCompositeModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
@@ -19,38 +23,29 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class SmallTropicalFishEntityModel<T extends Entity>
 extends TintableCompositeModel<T> {
-    private final ModelPart body;
-    private final ModelPart field_3591;
-    private final ModelPart field_3590;
-    private final ModelPart field_3588;
-    private final ModelPart field_3587;
+    private final ModelPart root;
+    private final ModelPart tail;
 
-    public SmallTropicalFishEntityModel(float scale) {
-        this.textureWidth = 32;
-        this.textureHeight = 32;
+    public SmallTropicalFishEntityModel(ModelPart root) {
+        this.root = root;
+        this.tail = root.getChild("tail");
+    }
+
+    public static TexturedModelData getTexturedModelData(Dilation dilation) {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
         int i = 22;
-        this.body = new ModelPart(this, 0, 0);
-        this.body.addCuboid(-1.0f, -1.5f, -3.0f, 2.0f, 3.0f, 6.0f, scale);
-        this.body.setPivot(0.0f, 22.0f, 0.0f);
-        this.field_3591 = new ModelPart(this, 22, -6);
-        this.field_3591.addCuboid(0.0f, -1.5f, 0.0f, 0.0f, 3.0f, 6.0f, scale);
-        this.field_3591.setPivot(0.0f, 22.0f, 3.0f);
-        this.field_3590 = new ModelPart(this, 2, 16);
-        this.field_3590.addCuboid(-2.0f, -1.0f, 0.0f, 2.0f, 2.0f, 0.0f, scale);
-        this.field_3590.setPivot(-1.0f, 22.5f, 0.0f);
-        this.field_3590.yaw = 0.7853982f;
-        this.field_3588 = new ModelPart(this, 2, 12);
-        this.field_3588.addCuboid(0.0f, -1.0f, 0.0f, 2.0f, 2.0f, 0.0f, scale);
-        this.field_3588.setPivot(1.0f, 22.5f, 0.0f);
-        this.field_3588.yaw = -0.7853982f;
-        this.field_3587 = new ModelPart(this, 10, -5);
-        this.field_3587.addCuboid(0.0f, -3.0f, 0.0f, 0.0f, 3.0f, 6.0f, scale);
-        this.field_3587.setPivot(0.0f, 20.5f, -3.0f);
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-1.0f, -1.5f, -3.0f, 2.0f, 3.0f, 6.0f, dilation), ModelTransform.pivot(0.0f, 22.0f, 0.0f));
+        modelPartData.addChild("tail", ModelPartBuilder.create().uv(22, -6).cuboid(0.0f, -1.5f, 0.0f, 0.0f, 3.0f, 6.0f, dilation), ModelTransform.pivot(0.0f, 22.0f, 3.0f));
+        modelPartData.addChild("right_fin", ModelPartBuilder.create().uv(2, 16).cuboid(-2.0f, -1.0f, 0.0f, 2.0f, 2.0f, 0.0f, dilation), ModelTransform.of(-1.0f, 22.5f, 0.0f, 0.0f, 0.7853982f, 0.0f));
+        modelPartData.addChild("left_fin", ModelPartBuilder.create().uv(2, 12).cuboid(0.0f, -1.0f, 0.0f, 2.0f, 2.0f, 0.0f, dilation), ModelTransform.of(1.0f, 22.5f, 0.0f, 0.0f, -0.7853982f, 0.0f));
+        modelPartData.addChild("top_fin", ModelPartBuilder.create().uv(10, -5).cuboid(0.0f, -3.0f, 0.0f, 0.0f, 3.0f, 6.0f, dilation), ModelTransform.pivot(0.0f, 20.5f, -3.0f));
+        return TexturedModelData.of(modelData, 32, 32);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.body, (Object)this.field_3591, (Object)this.field_3590, (Object)this.field_3588, (Object)this.field_3587);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override
@@ -59,7 +54,7 @@ extends TintableCompositeModel<T> {
         if (!((Entity)entity).isTouchingWater()) {
             f = 1.5f;
         }
-        this.field_3591.yaw = -f * 0.45f * MathHelper.sin(0.6f * animationProgress);
+        this.tail.yaw = -f * 0.45f * MathHelper.sin(0.6f * animationProgress);
     }
 }
 

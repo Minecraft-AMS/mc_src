@@ -17,7 +17,7 @@ public final class PropertiesMap {
     private static final Comparator<Property.Value<?>> COMPARATOR = Comparator.comparing(value -> value.getProperty().getName());
     private final List<Property.Value<?>> values;
 
-    public PropertiesMap method_25819(Property.Value<?> value) {
+    public PropertiesMap withValue(Property.Value<?> value) {
         return new PropertiesMap((List<Property.Value<?>>)ImmutableList.builder().addAll(this.values).add(value).build());
     }
 
@@ -25,20 +25,20 @@ public final class PropertiesMap {
         return new PropertiesMap((List<Property.Value<?>>)ImmutableList.builder().addAll(this.values).addAll(propertiesMap.values).build());
     }
 
-    private PropertiesMap(List<Property.Value<?>> list) {
-        this.values = list;
+    private PropertiesMap(List<Property.Value<?>> values) {
+        this.values = values;
     }
 
     public static PropertiesMap empty() {
         return EMPTY;
     }
 
-    public static PropertiesMap method_25821(Property.Value<?> ... values) {
+    public static PropertiesMap withValues(Property.Value<?> ... values) {
         return new PropertiesMap((List<Property.Value<?>>)ImmutableList.copyOf((Object[])values));
     }
 
-    public boolean equals(Object object) {
-        return this == object || object instanceof PropertiesMap && this.values.equals(((PropertiesMap)object).values);
+    public boolean equals(Object o) {
+        return this == o || o instanceof PropertiesMap && this.values.equals(((PropertiesMap)o).values);
     }
 
     public int hashCode() {

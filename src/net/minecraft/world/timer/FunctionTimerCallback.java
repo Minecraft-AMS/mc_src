@@ -13,16 +13,16 @@ import net.minecraft.world.timer.TimerCallback;
 
 public class FunctionTimerCallback
 implements TimerCallback<MinecraftServer> {
-    private final Identifier name;
+    final Identifier name;
 
-    public FunctionTimerCallback(Identifier identifier) {
-        this.name = identifier;
+    public FunctionTimerCallback(Identifier name) {
+        this.name = name;
     }
 
     @Override
     public void call(MinecraftServer minecraftServer, Timer<MinecraftServer> timer, long l) {
         CommandFunctionManager commandFunctionManager = minecraftServer.getCommandFunctionManager();
-        commandFunctionManager.getFunction(this.name).ifPresent(commandFunction -> commandFunctionManager.execute((CommandFunction)commandFunction, commandFunctionManager.getTaggedFunctionSource()));
+        commandFunctionManager.getFunction(this.name).ifPresent(commandFunction -> commandFunctionManager.execute((CommandFunction)commandFunction, commandFunctionManager.getScheduledCommandSource()));
     }
 
     public static class Serializer
@@ -43,8 +43,8 @@ implements TimerCallback<MinecraftServer> {
         }
 
         @Override
-        public /* synthetic */ TimerCallback deserialize(NbtCompound tag) {
-            return this.deserialize(tag);
+        public /* synthetic */ TimerCallback deserialize(NbtCompound nbt) {
+            return this.deserialize(nbt);
         }
     }
 }

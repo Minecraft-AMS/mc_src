@@ -7,8 +7,7 @@
 package net.minecraft.world.chunk;
 
 import java.io.IOException;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
+import java.util.function.BooleanSupplier;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.chunk.Chunk;
@@ -44,7 +43,11 @@ AutoCloseable {
     @Nullable
     public abstract Chunk getChunk(int var1, int var2, ChunkStatus var3, boolean var4);
 
+    public abstract void tick(BooleanSupplier var1);
+
     public abstract String getDebugString();
+
+    public abstract int getLoadedChunkCount();
 
     @Override
     public void close() throws IOException {
@@ -56,18 +59,6 @@ AutoCloseable {
     }
 
     public void setChunkForced(ChunkPos pos, boolean forced) {
-    }
-
-    public boolean shouldTickEntity(Entity entity) {
-        return true;
-    }
-
-    public boolean shouldTickChunk(ChunkPos pos) {
-        return true;
-    }
-
-    public boolean shouldTickBlock(BlockPos pos) {
-        return true;
     }
 }
 

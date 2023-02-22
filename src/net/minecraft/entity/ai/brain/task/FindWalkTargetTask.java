@@ -9,7 +9,8 @@ package net.minecraft.entity.ai.brain.task;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.FuzzyTargeting;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -23,6 +24,8 @@ import net.minecraft.util.math.Vec3d;
 
 public class FindWalkTargetTask
 extends Task<PathAwareEntity> {
+    private static final int MIN_RUN_TIME = 10;
+    private static final int MAX_RUN_TIME = 7;
     private final float walkSpeed;
     private final int maxHorizontalDistance;
     private final int maxVerticalDistance;
@@ -55,12 +58,12 @@ extends Task<PathAwareEntity> {
     }
 
     private void updateWalkTarget(PathAwareEntity entity, ChunkSectionPos pos) {
-        Optional<Vec3d> optional = Optional.ofNullable(TargetFinder.findTargetTowards(entity, this.maxHorizontalDistance, this.maxVerticalDistance, Vec3d.ofBottomCenter(pos.getCenterPos())));
+        Optional<Vec3d> optional = Optional.ofNullable(NoPenaltyTargeting.find(entity, this.maxHorizontalDistance, this.maxVerticalDistance, Vec3d.ofBottomCenter(pos.getCenterPos()), 1.5707963705062866));
         entity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.walkSpeed, 0)));
     }
 
     private void updateWalkTarget(PathAwareEntity entity) {
-        Optional<Vec3d> optional = Optional.ofNullable(TargetFinder.findGroundTarget(entity, this.maxHorizontalDistance, this.maxVerticalDistance));
+        Optional<Vec3d> optional = Optional.ofNullable(FuzzyTargeting.find(entity, this.maxHorizontalDistance, this.maxVerticalDistance));
         entity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.walkSpeed, 0)));
     }
 }

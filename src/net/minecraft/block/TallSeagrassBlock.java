@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -37,6 +33,7 @@ public class TallSeagrassBlock
 extends TallPlantBlock
 implements FluidFillable {
     public static final EnumProperty<DoubleBlockHalf> HALF = TallPlantBlock.HALF;
+    protected static final float field_31262 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
 
     public TallSeagrassBlock(AbstractBlock.Settings settings) {
@@ -54,7 +51,6 @@ implements FluidFillable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return new ItemStack(Blocks.SEAGRASS);
     }

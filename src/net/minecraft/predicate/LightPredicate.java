@@ -22,8 +22,8 @@ public class LightPredicate {
     public static final LightPredicate ANY = new LightPredicate(NumberRange.IntRange.ANY);
     private final NumberRange.IntRange range;
 
-    private LightPredicate(NumberRange.IntRange range) {
-        this.range = range;
+    LightPredicate(NumberRange.IntRange intRange) {
+        this.range = intRange;
     }
 
     public boolean test(ServerWorld world, BlockPos pos) {
@@ -52,6 +52,23 @@ public class LightPredicate {
         JsonObject jsonObject = JsonHelper.asObject(json, "light");
         NumberRange.IntRange intRange = NumberRange.IntRange.fromJson(jsonObject.get("light"));
         return new LightPredicate(intRange);
+    }
+
+    public static class Builder {
+        private NumberRange.IntRange light = NumberRange.IntRange.ANY;
+
+        public static Builder create() {
+            return new Builder();
+        }
+
+        public Builder light(NumberRange.IntRange light) {
+            this.light = light;
+            return this;
+        }
+
+        public LightPredicate build() {
+            return new LightPredicate(this.light);
+        }
     }
 }
 

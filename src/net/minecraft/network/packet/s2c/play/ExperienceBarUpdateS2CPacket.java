@@ -1,27 +1,17 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class ExperienceBarUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private float barProgress;
-    private int experienceLevel;
-    private int experience;
-
-    public ExperienceBarUpdateS2CPacket() {
-    }
+    private final float barProgress;
+    private final int experienceLevel;
+    private final int experience;
 
     public ExperienceBarUpdateS2CPacket(float barProgress, int experienceLevel, int experience) {
         this.barProgress = barProgress;
@@ -29,15 +19,14 @@ implements Packet<ClientPlayPacketListener> {
         this.experience = experience;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ExperienceBarUpdateS2CPacket(PacketByteBuf buf) {
         this.barProgress = buf.readFloat();
         this.experience = buf.readVarInt();
         this.experienceLevel = buf.readVarInt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeFloat(this.barProgress);
         buf.writeVarInt(this.experience);
         buf.writeVarInt(this.experienceLevel);
@@ -48,17 +37,14 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onExperienceBarUpdate(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getBarProgress() {
         return this.barProgress;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getExperienceLevel() {
         return this.experienceLevel;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getExperience() {
         return this.experience;
     }

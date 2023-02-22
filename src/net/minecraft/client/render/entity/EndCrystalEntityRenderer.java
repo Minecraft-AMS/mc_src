@@ -9,15 +9,21 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EnderDragonEntityRenderer;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.util.Identifier;
@@ -32,19 +38,28 @@ extends EntityRenderer<EndCrystalEntity> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/end_crystal/end_crystal.png");
     private static final RenderLayer END_CRYSTAL = RenderLayer.getEntityCutoutNoCull(TEXTURE);
     private static final float SINE_45_DEGREES = (float)Math.sin(0.7853981633974483);
+    private static final String GLASS = "glass";
+    private static final String BASE = "base";
     private final ModelPart core;
     private final ModelPart frame;
     private final ModelPart bottom;
 
-    public EndCrystalEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public EndCrystalEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
         this.shadowRadius = 0.5f;
-        this.frame = new ModelPart(64, 32, 0, 0);
-        this.frame.addCuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f);
-        this.core = new ModelPart(64, 32, 32, 0);
-        this.core.addCuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f);
-        this.bottom = new ModelPart(64, 32, 0, 16);
-        this.bottom.addCuboid(-6.0f, 0.0f, -6.0f, 12.0f, 4.0f, 12.0f);
+        ModelPart modelPart = context.getPart(EntityModelLayers.END_CRYSTAL);
+        this.frame = modelPart.getChild(GLASS);
+        this.core = modelPart.getChild("cube");
+        this.bottom = modelPart.getChild(BASE);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild(GLASS, ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f), ModelTransform.NONE);
+        modelPartData.addChild("cube", ModelPartBuilder.create().uv(32, 0).cuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f), ModelTransform.NONE);
+        modelPartData.addChild(BASE, ModelPartBuilder.create().uv(0, 16).cuboid(-6.0f, 0.0f, -6.0f, 12.0f, 4.0f, 12.0f), ModelTransform.NONE);
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override

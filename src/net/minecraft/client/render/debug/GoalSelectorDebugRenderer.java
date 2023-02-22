@@ -24,6 +24,7 @@ import net.minecraft.util.math.BlockPos;
 @Environment(value=EnvType.CLIENT)
 public class GoalSelectorDebugRenderer
 implements DebugRenderer.Renderer {
+    private static final int RANGE = 160;
     private final MinecraftClient client;
     private final Map<Integer, List<GoalSelector>> goalSelectors = Maps.newHashMap();
 
@@ -32,18 +33,21 @@ implements DebugRenderer.Renderer {
         this.goalSelectors.clear();
     }
 
-    public void setGoalSelectorList(int index, List<GoalSelector> list) {
-        this.goalSelectors.put(index, list);
+    public void setGoalSelectorList(int index, List<GoalSelector> selectors) {
+        this.goalSelectors.put(index, selectors);
     }
 
-    public GoalSelectorDebugRenderer(MinecraftClient minecraftClient) {
-        this.client = minecraftClient;
+    public void removeGoalSelectorList(int index) {
+        this.goalSelectors.remove(index);
+    }
+
+    public GoalSelectorDebugRenderer(MinecraftClient client) {
+        this.client = client;
     }
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         Camera camera = this.client.gameRenderer.getCamera();
-        RenderSystem.pushMatrix();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableTexture();
@@ -61,7 +65,6 @@ implements DebugRenderer.Renderer {
         });
         RenderSystem.enableDepthTest();
         RenderSystem.enableTexture();
-        RenderSystem.popMatrix();
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -71,10 +74,10 @@ implements DebugRenderer.Renderer {
         public final String name;
         public final boolean field_18785;
 
-        public GoalSelector(BlockPos blockPos, int i, String string, boolean bl) {
-            this.pos = blockPos;
+        public GoalSelector(BlockPos pos, int i, String name, boolean bl) {
+            this.pos = pos;
             this.field_18783 = i;
-            this.name = string;
+            this.name = name;
             this.field_18785 = bl;
         }
     }

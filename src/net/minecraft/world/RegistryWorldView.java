@@ -9,6 +9,8 @@ package net.minecraft.world;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -28,6 +30,11 @@ extends EntityView,
 WorldView,
 ModifiableTestableWorld {
     @Override
+    default public <T extends BlockEntity> Optional<T> getBlockEntity(BlockPos pos, BlockEntityType<T> type) {
+        return WorldView.super.getBlockEntity(pos, type);
+    }
+
+    @Override
     default public Stream<VoxelShape> getEntityCollisions(@Nullable Entity entity, Box box, Predicate<Entity> predicate) {
         return EntityView.super.getEntityCollisions(entity, box, predicate);
     }
@@ -38,8 +45,8 @@ ModifiableTestableWorld {
     }
 
     @Override
-    default public BlockPos getTopPosition(Heightmap.Type type, BlockPos pos) {
-        return WorldView.super.getTopPosition(type, pos);
+    default public BlockPos getTopPosition(Heightmap.Type heightmap, BlockPos pos) {
+        return WorldView.super.getTopPosition(heightmap, pos);
     }
 
     public DynamicRegistryManager getRegistryManager();

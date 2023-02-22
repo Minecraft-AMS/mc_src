@@ -14,7 +14,6 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.network.MessageType;
-import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
@@ -42,12 +41,11 @@ extends BlockItem {
             int i = 0;
             BlockPos.Mutable mutable = blockPos.mutableCopy().move(direction);
             while (i < 7) {
-                if (!world.isClient && !World.isInBuildLimit(mutable)) {
+                if (!world.isClient && !world.isInBuildLimit(mutable)) {
                     PlayerEntity playerEntity = context.getPlayer();
-                    int j = world.getHeight();
+                    int j = world.getTopY();
                     if (!(playerEntity instanceof ServerPlayerEntity) || mutable.getY() < j) break;
-                    GameMessageS2CPacket gameMessageS2CPacket = new GameMessageS2CPacket(new TranslatableText("build.tooHigh", j).formatted(Formatting.RED), MessageType.GAME_INFO, Util.NIL_UUID);
-                    ((ServerPlayerEntity)playerEntity).networkHandler.sendPacket(gameMessageS2CPacket);
+                    ((ServerPlayerEntity)playerEntity).sendMessage(new TranslatableText("build.tooHigh", j - 1).formatted(Formatting.RED), MessageType.GAME_INFO, Util.NIL_UUID);
                     break;
                 }
                 blockState = world.getBlockState(mutable);

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -20,6 +14,7 @@ import net.minecraft.screen.slot.Slot;
 
 public class GenericContainerScreenHandler
 extends ScreenHandler {
+    private static final int field_30780 = 9;
     private final Inventory inventory;
     private final int rows;
 
@@ -117,7 +112,6 @@ extends ScreenHandler {
         return this.inventory;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getRows() {
         return this.rows;
     }

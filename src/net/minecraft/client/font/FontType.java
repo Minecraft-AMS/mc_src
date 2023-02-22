@@ -22,14 +22,23 @@ import net.minecraft.client.font.UnicodeTextureFont;
 import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
-public enum FontType {
-    BITMAP("bitmap", BitmapFont.Loader::fromJson),
-    TTF("ttf", TrueTypeFontLoader::fromJson),
-    LEGACY_UNICODE("legacy_unicode", UnicodeTextureFont.Loader::fromJson);
-
+public final class FontType
+extends Enum<FontType> {
+    public static final /* enum */ FontType BITMAP = new FontType("bitmap", BitmapFont.Loader::fromJson);
+    public static final /* enum */ FontType TTF = new FontType("ttf", TrueTypeFontLoader::fromJson);
+    public static final /* enum */ FontType LEGACY_UNICODE = new FontType("legacy_unicode", UnicodeTextureFont.Loader::fromJson);
     private static final Map<String, FontType> REGISTRY;
     private final String id;
     private final Function<JsonObject, FontLoader> loaderFactory;
+    private static final /* synthetic */ FontType[] field_2316;
+
+    public static FontType[] values() {
+        return (FontType[])field_2316.clone();
+    }
+
+    public static FontType valueOf(String string) {
+        return Enum.valueOf(FontType.class, string);
+    }
 
     private FontType(String id, Function<JsonObject, FontLoader> factory) {
         this.id = id;
@@ -48,7 +57,12 @@ public enum FontType {
         return this.loaderFactory.apply(json);
     }
 
+    private static /* synthetic */ FontType[] method_36876() {
+        return new FontType[]{BITMAP, TTF, LEGACY_UNICODE};
+    }
+
     static {
+        field_2316 = FontType.method_36876();
         REGISTRY = Util.make(Maps.newHashMap(), hashMap -> {
             for (FontType fontType : FontType.values()) {
                 hashMap.put(fontType.id, fontType);

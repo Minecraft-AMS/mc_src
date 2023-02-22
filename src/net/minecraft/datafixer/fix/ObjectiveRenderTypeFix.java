@@ -15,7 +15,6 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
-import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.scoreboard.ScoreboardCriterion;
@@ -31,11 +30,8 @@ extends DataFix {
     }
 
     protected TypeRewriteRule makeRule() {
-        Type type = DSL.named((String)TypeReferences.OBJECTIVE.typeName(), (Type)DSL.remainderType());
-        if (!Objects.equals(type, this.getInputSchema().getType(TypeReferences.OBJECTIVE))) {
-            throw new IllegalStateException("Objective type is not what was expected.");
-        }
-        return this.fixTypeEverywhere("ObjectiveRenderTypeFix", type, dynamicOps -> pair -> pair.mapSecond(dynamic -> {
+        Type type = this.getInputSchema().getType(TypeReferences.OBJECTIVE);
+        return this.fixTypeEverywhereTyped("ObjectiveRenderTypeFix", type, typed -> typed.update(DSL.remainderFinder(), dynamic -> {
             Optional optional = dynamic.get("RenderType").asString().result();
             if (!optional.isPresent()) {
                 String string = dynamic.get("CriteriaName").asString("");

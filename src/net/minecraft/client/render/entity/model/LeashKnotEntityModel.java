@@ -2,35 +2,44 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.Entity;
 
 @Environment(value=EnvType.CLIENT)
 public class LeashKnotEntityModel<T extends Entity>
-extends CompositeEntityModel<T> {
+extends SinglePartEntityModel<T> {
+    private static final String KNOT = "knot";
+    private final ModelPart root;
     private final ModelPart knot;
 
-    public LeashKnotEntityModel() {
-        this.textureWidth = 32;
-        this.textureHeight = 32;
-        this.knot = new ModelPart(this, 0, 0);
-        this.knot.addCuboid(-3.0f, -6.0f, -3.0f, 6.0f, 8.0f, 6.0f, 0.0f);
-        this.knot.setPivot(0.0f, 0.0f, 0.0f);
+    public LeashKnotEntityModel(ModelPart root) {
+        this.root = root;
+        this.knot = root.getChild(KNOT);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild(KNOT, ModelPartBuilder.create().uv(0, 0).cuboid(-3.0f, -8.0f, -3.0f, 6.0f, 8.0f, 6.0f), ModelTransform.NONE);
+        return TexturedModelData.of(modelData, 32, 32);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.knot);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override

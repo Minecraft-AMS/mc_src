@@ -22,6 +22,7 @@ import net.minecraft.util.math.ChunkSectionPos;
 @Environment(value=EnvType.CLIENT)
 public class VillageSectionsDebugRenderer
 implements DebugRenderer.Renderer {
+    private static final int RANGE = 60;
     private final Set<ChunkSectionPos> sections = Sets.newHashSet();
 
     VillageSectionsDebugRenderer() {
@@ -42,21 +43,19 @@ implements DebugRenderer.Renderer {
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
-        RenderSystem.pushMatrix();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableTexture();
         this.drawSections(cameraX, cameraY, cameraZ);
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
-        RenderSystem.popMatrix();
     }
 
     private void drawSections(double cameraX, double cameraY, double cameraZ) {
         BlockPos blockPos = new BlockPos(cameraX, cameraY, cameraZ);
-        this.sections.forEach(chunkSectionPos -> {
-            if (blockPos.isWithinDistance(chunkSectionPos.getCenterPos(), 60.0)) {
-                VillageSectionsDebugRenderer.drawBoxAtCenterOf(chunkSectionPos);
+        this.sections.forEach(section -> {
+            if (blockPos.isWithinDistance(section.getCenterPos(), 60.0)) {
+                VillageSectionsDebugRenderer.drawBoxAtCenterOf(section);
             }
         });
     }

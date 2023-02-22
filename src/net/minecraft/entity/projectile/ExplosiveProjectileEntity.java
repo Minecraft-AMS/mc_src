@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -22,7 +16,6 @@ import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -38,9 +31,9 @@ extends ProjectileEntity {
 
     public ExplosiveProjectileEntity(EntityType<? extends ExplosiveProjectileEntity> type, double x, double y, double z, double directionX, double directionY, double directionZ, World world) {
         this(type, world);
-        this.refreshPositionAndAngles(x, y, z, this.yaw, this.pitch);
+        this.refreshPositionAndAngles(x, y, z, this.getYaw(), this.getPitch());
         this.refreshPosition();
-        double d = MathHelper.sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
+        double d = Math.sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
         if (d != 0.0) {
             this.powerX = directionX / d * 0.1;
             this.powerY = directionY / d * 0.1;
@@ -51,7 +44,7 @@ extends ProjectileEntity {
     public ExplosiveProjectileEntity(EntityType<? extends ExplosiveProjectileEntity> type, LivingEntity owner, double directionX, double directionY, double directionZ, World world) {
         this(type, owner.getX(), owner.getY(), owner.getZ(), directionX, directionY, directionZ, world);
         this.setOwner(owner);
-        this.setRotation(owner.yaw, owner.pitch);
+        this.setRotation(owner.getYaw(), owner.getPitch());
     }
 
     @Override
@@ -59,7 +52,6 @@ extends ProjectileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         double d = this.getBoundingBox().getAverageSideLength() * 4.0;
         if (Double.isNaN(d)) {
@@ -72,15 +64,15 @@ extends ProjectileEntity {
     public void tick() {
         HitResult hitResult;
         Entity entity = this.getOwner();
-        if (!this.world.isClient && (entity != null && entity.removed || !this.world.isChunkLoaded(this.getBlockPos()))) {
-            this.remove();
+        if (!this.world.isClient && (entity != null && entity.isRemoved() || !this.world.isChunkLoaded(this.getBlockPos()))) {
+            this.discard();
             return;
         }
         super.tick();
         if (this.isBurning()) {
             this.setOnFireFor(1);
         }
-        if ((hitResult = ProjectileUtil.getCollision(this, this::method_26958)).getType() != HitResult.Type.MISS) {
+        if ((hitResult = ProjectileUtil.getCollision(this, this::canHit)).getType() != HitResult.Type.MISS) {
             this.onCollision(hitResult);
         }
         this.checkBlockCollision();
@@ -103,8 +95,8 @@ extends ProjectileEntity {
     }
 
     @Override
-    protected boolean method_26958(Entity entity) {
-        return super.method_26958(entity) && !entity.noClip;
+    protected boolean canHit(Entity entity) {
+        return super.canHit(entity) && !entity.noClip;
     }
 
     protected boolean isBurning() {
@@ -173,8 +165,22 @@ extends ProjectileEntity {
     @Override
     public Packet<?> createSpawnPacket() {
         Entity entity = this.getOwner();
-        int i = entity == null ? 0 : entity.getEntityId();
-        return new EntitySpawnS2CPacket(this.getEntityId(), this.getUuid(), this.getX(), this.getY(), this.getZ(), this.pitch, this.yaw, this.getType(), i, new Vec3d(this.powerX, this.powerY, this.powerZ));
+        int i = entity == null ? 0 : entity.getId();
+        return new EntitySpawnS2CPacket(this.getId(), this.getUuid(), this.getX(), this.getY(), this.getZ(), this.getPitch(), this.getYaw(), this.getType(), i, new Vec3d(this.powerX, this.powerY, this.powerZ));
+    }
+
+    @Override
+    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
+        super.onSpawnPacket(packet);
+        double d = packet.getVelocityX();
+        double e = packet.getVelocityY();
+        double f = packet.getVelocityZ();
+        double g = Math.sqrt(d * d + e * e + f * f);
+        if (g != 0.0) {
+            this.powerX = d / g * 0.1;
+            this.powerY = e / g * 0.1;
+            this.powerZ = f / g * 0.1;
+        }
     }
 }
 

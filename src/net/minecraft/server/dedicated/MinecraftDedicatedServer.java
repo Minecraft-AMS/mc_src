@@ -21,11 +21,15 @@ import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -59,10 +63,11 @@ import net.minecraft.server.rcon.QueryResponseHandler;
 import net.minecraft.server.rcon.RconCommandOutput;
 import net.minecraft.server.rcon.RconListener;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
+import net.minecraft.util.SystemDetails;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.logging.UncaughtExceptionHandler;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.math.BlockPos;
@@ -81,7 +86,9 @@ import org.jetbrains.annotations.Nullable;
 public class MinecraftDedicatedServer
 extends MinecraftServer
 implements DedicatedServer {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_29662 = 5000;
+    private static final int field_29663 = 2;
     private static final Pattern SHA1_PATTERN = Pattern.compile("^[a-fA-F0-9]{40}$");
     private final List<PendingServerCommand> commandQueue = Collections.synchronizedList(Lists.newArrayList());
     private QueryResponseHandler queryResponseHandler;
@@ -92,12 +99,15 @@ implements DedicatedServer {
     private DedicatedServerGui gui;
     @Nullable
     private final TextFilterer filterer;
+    @Nullable
+    private final Text resourcePackPrompt;
 
-    public MinecraftDedicatedServer(Thread thread, DynamicRegistryManager.Impl impl, LevelStorage.Session session, ResourcePackManager resourcePackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, ServerPropertiesLoader serverPropertiesLoader, DataFixer dataFixer, MinecraftSessionService minecraftSessionService, GameProfileRepository gameProfileRepository, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
-        super(thread, impl, session, saveProperties, resourcePackManager, Proxy.NO_PROXY, dataFixer, serverResourceManager, minecraftSessionService, gameProfileRepository, userCache, worldGenerationProgressListenerFactory);
-        this.propertiesLoader = serverPropertiesLoader;
+    public MinecraftDedicatedServer(Thread serverThread, DynamicRegistryManager.Impl registryManager, LevelStorage.Session session, ResourcePackManager dataPackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, ServerPropertiesLoader propertiesLoader, DataFixer dataFixer, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+        super(serverThread, registryManager, session, saveProperties, dataPackManager, Proxy.NO_PROXY, dataFixer, serverResourceManager, sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
+        this.propertiesLoader = propertiesLoader;
         this.rconCommandOutput = new RconCommandOutput(this);
-        this.filterer = null;
+        this.filterer = TextFilterer.load(propertiesLoader.getPropertiesHandler().textFilteringConfig);
+        this.resourcePackPrompt = MinecraftDedicatedServer.parseResourcePackPrompt(propertiesLoader);
     }
 
     @Override
@@ -121,13 +131,13 @@ implements DedicatedServer {
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler(new UncaughtExceptionLogger(LOGGER));
         thread.start();
-        LOGGER.info("Starting minecraft server version " + SharedConstants.getGameVersion().getName());
+        LOGGER.info("Starting minecraft server version {}", (Object)SharedConstants.getGameVersion().getName());
         if (Runtime.getRuntime().maxMemory() / 1024L / 1024L < 512L) {
             LOGGER.warn("To start the server with more ram, launch it as \"java -Xmx1024M -Xms1024M -jar minecraft_server.jar\"");
         }
         LOGGER.info("Loading properties");
         ServerPropertiesHandler serverPropertiesHandler = this.propertiesLoader.getPropertiesHandler();
-        if (this.isSinglePlayer()) {
+        if (this.isSingleplayer()) {
             this.setServerIp("127.0.0.1");
         } else {
             this.setOnlineMode(serverPropertiesHandler.onlineMode);
@@ -138,7 +148,6 @@ implements DedicatedServer {
         this.setFlightEnabled(serverPropertiesHandler.allowFlight);
         this.setResourcePack(serverPropertiesHandler.resourcePack, this.createResourcePackHash());
         this.setMotd(serverPropertiesHandler.motd);
-        this.setForceGameMode(serverPropertiesHandler.forceGameMode);
         super.setPlayerIdleTimeout(serverPropertiesHandler.playerIdleTimeout.get());
         this.setEnforceWhitelist(serverPropertiesHandler.enforceWhitelist);
         this.saveProperties.setGameMode(serverPropertiesHandler.gameMode);
@@ -150,7 +159,7 @@ implements DedicatedServer {
         if (this.getServerPort() < 0) {
             this.setServerPort(serverPropertiesHandler.serverPort);
         }
-        this.method_31400();
+        this.generateKeyPair();
         LOGGER.info("Starting Minecraft server on {}:{}", (Object)(this.getServerIp().isEmpty() ? "*" : this.getServerIp()), (Object)this.getServerPort());
         try {
             this.getNetworkIo().bind(inetAddress, this.getServerPort());
@@ -175,9 +184,9 @@ implements DedicatedServer {
         }
         this.setPlayerManager(new DedicatedPlayerManager(this, this.registryManager, this.saveHandler));
         long l = Util.getMeasuringTimeNano();
-        this.setWorldHeight(serverPropertiesHandler.maxBuildHeight);
         SkullBlockEntity.setUserCache(this.getUserCache());
         SkullBlockEntity.setSessionService(this.getSessionService());
+        SkullBlockEntity.setExecutor(this);
         UserCache.setUseRemote(this.isOnlineMode());
         LOGGER.info("Preparing level \"{}\"", (Object)this.getLevelName());
         this.loadWorld();
@@ -205,6 +214,7 @@ implements DedicatedServer {
         Items.AIR.appendStacks(ItemGroup.SEARCH, DefaultedList.of());
         if (serverPropertiesHandler.enableJmxMonitoring) {
             ServerMBean.register(this);
+            LOGGER.info("JMX monitoring enabled");
         }
         return true;
     }
@@ -253,7 +263,7 @@ implements DedicatedServer {
     }
 
     @Override
-    public void method_27731() {
+    public void updateDifficulty() {
         this.setDifficulty(this.getProperties().difficulty, true);
     }
 
@@ -263,11 +273,28 @@ implements DedicatedServer {
     }
 
     @Override
-    public CrashReport populateCrashReport(CrashReport report) {
-        report = super.populateCrashReport(report);
-        report.getSystemDetailsSection().add("Is Modded", () -> this.getModdedStatusMessage().orElse("Unknown (can't tell)"));
-        report.getSystemDetailsSection().add("Type", () -> "Dedicated Server (map_server.txt)");
-        return report;
+    public SystemDetails addExtraSystemDetails(SystemDetails details) {
+        details.addSection("Is Modded", () -> this.getModdedStatusMessage().orElse("Unknown (can't tell)"));
+        details.addSection("Type", () -> "Dedicated Server (map_server.txt)");
+        return details;
+    }
+
+    @Override
+    public void dumpProperties(Path file) throws IOException {
+        ServerPropertiesHandler serverPropertiesHandler = this.getProperties();
+        try (BufferedWriter writer = Files.newBufferedWriter(file, new OpenOption[0]);){
+            writer.write(String.format("sync-chunk-writes=%s%n", serverPropertiesHandler.syncChunkWrites));
+            writer.write(String.format("gamemode=%s%n", new Object[]{serverPropertiesHandler.gameMode}));
+            writer.write(String.format("spawn-monsters=%s%n", serverPropertiesHandler.spawnMonsters));
+            writer.write(String.format("entity-broadcast-range-percentage=%d%n", serverPropertiesHandler.entityBroadcastRangePercentage));
+            writer.write(String.format("max-world-size=%d%n", serverPropertiesHandler.maxWorldSize));
+            writer.write(String.format("spawn-npcs=%s%n", serverPropertiesHandler.spawnNpcs));
+            writer.write(String.format("view-distance=%d%n", serverPropertiesHandler.viewDistance));
+            writer.write(String.format("spawn-animals=%s%n", serverPropertiesHandler.spawnAnimals));
+            writer.write(String.format("generate-structures=%s%n", serverPropertiesHandler.method_37371(this.registryManager).shouldGenerateStructures()));
+            writer.write(String.format("use-native=%s%n", serverPropertiesHandler.useNativeTransport));
+            writer.write(String.format("rate-limit=%d%n", serverPropertiesHandler.rateLimit));
+        }
     }
 
     @Override
@@ -311,6 +338,11 @@ implements DedicatedServer {
         snooper.addInfo("whitelist_enabled", this.getPlayerManager().isWhitelistEnabled());
         snooper.addInfo("whitelist_count", this.getPlayerManager().getWhitelistedNames().length);
         super.addSnooperInfo(snooper);
+    }
+
+    @Override
+    public boolean isSnooperEnabled() {
+        return this.getProperties().snooperEnabled;
     }
 
     public void enqueueCommand(String command, ServerCommandSource commandSource) {
@@ -373,11 +405,6 @@ implements DedicatedServer {
     @Override
     public boolean hasGui() {
         return this.gui != null;
-    }
-
-    @Override
-    public boolean openToLan(GameMode gameMode, boolean cheatsAllowed, int port) {
-        return false;
     }
 
     @Override
@@ -553,12 +580,42 @@ implements DedicatedServer {
     }
 
     @Override
-    @Nullable
     public TextStream createFilterer(ServerPlayerEntity player) {
         if (this.filterer != null) {
             return this.filterer.createFilterer(player.getGameProfile());
         }
+        return TextStream.UNFILTERED;
+    }
+
+    @Override
+    public boolean requireResourcePack() {
+        return this.propertiesLoader.getPropertiesHandler().requireResourcePack;
+    }
+
+    @Override
+    @Nullable
+    public GameMode getForcedGameMode() {
+        return this.propertiesLoader.getPropertiesHandler().forceGameMode ? this.saveProperties.getGameMode() : null;
+    }
+
+    @Nullable
+    private static Text parseResourcePackPrompt(ServerPropertiesLoader propertiesLoader) {
+        String string = propertiesLoader.getPropertiesHandler().resourcePackPrompt;
+        if (!Strings.isNullOrEmpty((String)string)) {
+            try {
+                return Text.Serializer.fromJson(string);
+            }
+            catch (Exception exception) {
+                LOGGER.warn("Failed to parse resource pack prompt '{}'", (Object)string, (Object)exception);
+            }
+        }
         return null;
+    }
+
+    @Override
+    @Nullable
+    public Text getResourcePackPrompt() {
+        return this.resourcePackPrompt;
     }
 
     @Override

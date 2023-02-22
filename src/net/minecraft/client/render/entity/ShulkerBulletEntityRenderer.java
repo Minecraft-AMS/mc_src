@@ -13,8 +13,9 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.ShulkerBulletEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
@@ -28,10 +29,11 @@ public class ShulkerBulletEntityRenderer
 extends EntityRenderer<ShulkerBulletEntity> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/shulker/spark.png");
     private static final RenderLayer LAYER = RenderLayer.getEntityTranslucent(TEXTURE);
-    private final ShulkerBulletEntityModel<ShulkerBulletEntity> model = new ShulkerBulletEntityModel();
+    private final ShulkerBulletEntityModel<ShulkerBulletEntity> model;
 
-    public ShulkerBulletEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public ShulkerBulletEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
+        this.model = new ShulkerBulletEntityModel(context.getPart(EntityModelLayers.SHULKER_BULLET));
     }
 
     @Override
@@ -42,8 +44,8 @@ extends EntityRenderer<ShulkerBulletEntity> {
     @Override
     public void render(ShulkerBulletEntity shulkerBulletEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         matrixStack.push();
-        float h = MathHelper.lerpAngle(shulkerBulletEntity.prevYaw, shulkerBulletEntity.yaw, g);
-        float j = MathHelper.lerp(g, shulkerBulletEntity.prevPitch, shulkerBulletEntity.pitch);
+        float h = MathHelper.lerpAngle(shulkerBulletEntity.prevYaw, shulkerBulletEntity.getYaw(), g);
+        float j = MathHelper.lerp(g, shulkerBulletEntity.prevPitch, shulkerBulletEntity.getPitch());
         float k = (float)shulkerBulletEntity.age + g;
         matrixStack.translate(0.0, 0.15f, 0.0);
         matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(MathHelper.sin(k * 0.1f) * 180.0f));

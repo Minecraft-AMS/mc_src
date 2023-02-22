@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.Lists
  *  com.google.gson.Gson
  *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonArray
@@ -17,12 +18,11 @@
  *  com.google.gson.stream.JsonReader
  *  com.mojang.brigadier.Message
  *  com.mojang.brigadier.StringReader
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
 
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -42,11 +42,10 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.KeybindText;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
@@ -94,11 +93,9 @@ StringVisitable {
 
     public MutableText shallowCopy();
 
-    @Environment(value=EnvType.CLIENT)
     public OrderedText asOrderedText();
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     default public <T> Optional<T> visit(StringVisitable.StyledVisitor<T> styledVisitor, Style style) {
         Style style2 = this.getStyle().withParent(style);
         Optional<T> optional = this.visitSelf(styledVisitor, style2);
@@ -127,7 +124,6 @@ StringVisitable {
         return Optional.empty();
     }
 
-    @Environment(value=EnvType.CLIENT)
     default public <T> Optional<T> visitSelf(StringVisitable.StyledVisitor<T> visitor, Style style) {
         return visitor.accept(style, this.asString());
     }
@@ -136,7 +132,17 @@ StringVisitable {
         return visitor.accept(this.asString());
     }
 
-    @Environment(value=EnvType.CLIENT)
+    default public List<Text> getWithStyle(Style style) {
+        ArrayList list = Lists.newArrayList();
+        this.visit((styleOverride, text) -> {
+            if (!text.isEmpty()) {
+                list.add(new LiteralText(text).fillStyle(styleOverride));
+            }
+            return Optional.empty();
+        }, style);
+        return list;
+    }
+
     public static Text of(@Nullable String string) {
         return string != null ? new LiteralText(string) : LiteralText.EMPTY;
     }
@@ -187,7 +193,6 @@ StringVisitable {
             }
             if (jsonElement.isJsonObject()) {
                 void var5_17;
-                String string;
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
                 if (jsonObject.has("text")) {
                     LiteralText literalText = new LiteralText(JsonHelper.getString(jsonObject, "text"));
@@ -211,20 +216,22 @@ StringVisitable {
                     if (!jsonObject2.has("name") || !jsonObject2.has("objective")) throw new JsonParseException("A score component needs a least a name and an objective");
                     ScoreText scoreText = new ScoreText(JsonHelper.getString(jsonObject2, "name"), JsonHelper.getString(jsonObject2, "objective"));
                 } else if (jsonObject.has("selector")) {
-                    SelectorText selectorText = new SelectorText(JsonHelper.getString(jsonObject, "selector"));
+                    Optional<Text> optional = this.getSeparator(type, jsonDeserializationContext, jsonObject);
+                    SelectorText selectorText = new SelectorText(JsonHelper.getString(jsonObject, "selector"), optional);
                 } else if (jsonObject.has("keybind")) {
                     KeybindText keybindText = new KeybindText(JsonHelper.getString(jsonObject, "keybind"));
                 } else {
                     if (!jsonObject.has("nbt")) throw new JsonParseException("Don't know how to turn " + jsonElement + " into a Component");
                     string = JsonHelper.getString(jsonObject, "nbt");
+                    Optional<Text> optional2 = this.getSeparator(type, jsonDeserializationContext, jsonObject);
                     boolean bl = JsonHelper.getBoolean(jsonObject, "interpret", false);
                     if (jsonObject.has("block")) {
-                        NbtText.BlockNbtText blockNbtText = new NbtText.BlockNbtText(string, bl, JsonHelper.getString(jsonObject, "block"));
+                        NbtText.BlockNbtText blockNbtText = new NbtText.BlockNbtText(string, bl, JsonHelper.getString(jsonObject, "block"), optional2);
                     } else if (jsonObject.has("entity")) {
-                        NbtText.EntityNbtText entityNbtText = new NbtText.EntityNbtText(string, bl, JsonHelper.getString(jsonObject, "entity"));
+                        NbtText.EntityNbtText entityNbtText = new NbtText.EntityNbtText(string, bl, JsonHelper.getString(jsonObject, "entity"), optional2);
                     } else {
                         if (!jsonObject.has("storage")) throw new JsonParseException("Don't know how to turn " + jsonElement + " into a Component");
-                        NbtText.StorageNbtText storageNbtText = new NbtText.StorageNbtText(string, bl, new Identifier(JsonHelper.getString(jsonObject, "storage")));
+                        NbtText.StorageNbtText storageNbtText = new NbtText.StorageNbtText(string, bl, new Identifier(JsonHelper.getString(jsonObject, "storage")), optional2);
                     }
                 }
                 if (jsonObject.has("extra")) {
@@ -249,6 +256,13 @@ StringVisitable {
                 var5_19.append(mutableText2);
             }
             return var5_19;
+        }
+
+        private Optional<Text> getSeparator(Type type, JsonDeserializationContext context, JsonObject json) {
+            if (json.has("separator")) {
+                return Optional.of(this.deserialize(json.get("separator"), type, context));
+            }
+            return Optional.empty();
         }
 
         private void addStyle(Style style, JsonObject json, JsonSerializationContext context) {
@@ -304,6 +318,7 @@ StringVisitable {
             } else if (text instanceof SelectorText) {
                 SelectorText selectorText = (SelectorText)text;
                 jsonObject.addProperty("selector", selectorText.getPattern());
+                this.addSeparator(jsonSerializationContext, jsonObject, selectorText.getSeparator());
                 return jsonObject;
             } else if (text instanceof KeybindText) {
                 KeybindText keybindText = (KeybindText)text;
@@ -314,6 +329,7 @@ StringVisitable {
                 NbtText nbtText = (NbtText)text;
                 jsonObject.addProperty("nbt", nbtText.getPath());
                 jsonObject.addProperty("interpret", Boolean.valueOf(nbtText.shouldInterpret()));
+                this.addSeparator(jsonSerializationContext, jsonObject, nbtText.separator);
                 if (text instanceof NbtText.BlockNbtText) {
                     NbtText.BlockNbtText blockNbtText = (NbtText.BlockNbtText)text;
                     jsonObject.addProperty("block", blockNbtText.getPos());
@@ -329,6 +345,10 @@ StringVisitable {
                 }
             }
             return jsonObject;
+        }
+
+        private void addSeparator(JsonSerializationContext context, JsonObject json, Optional<Text> separator2) {
+            separator2.ifPresent(separator -> json.add("separator", this.serialize((Text)separator, (Type)separator.getClass(), context)));
         }
 
         public static String toJson(Text text) {

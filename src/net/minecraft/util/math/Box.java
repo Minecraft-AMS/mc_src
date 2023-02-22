@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util.math;
 
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
@@ -20,6 +16,7 @@ import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class Box {
+    private static final double EPSILON = 1.0E-7;
     public final double minX;
     public final double minY;
     public final double minZ;
@@ -49,11 +46,35 @@ public class Box {
     }
 
     public static Box from(BlockBox mutable) {
-        return new Box(mutable.minX, mutable.minY, mutable.minZ, mutable.maxX + 1, mutable.maxY + 1, mutable.maxZ + 1);
+        return new Box(mutable.getMinX(), mutable.getMinY(), mutable.getMinZ(), mutable.getMaxX() + 1, mutable.getMaxY() + 1, mutable.getMaxZ() + 1);
     }
 
-    public static Box method_29968(Vec3d vec3d) {
-        return new Box(vec3d.x, vec3d.y, vec3d.z, vec3d.x + 1.0, vec3d.y + 1.0, vec3d.z + 1.0);
+    public static Box from(Vec3d pos) {
+        return new Box(pos.x, pos.y, pos.z, pos.x + 1.0, pos.y + 1.0, pos.z + 1.0);
+    }
+
+    public Box withMinX(double minX) {
+        return new Box(minX, this.minY, this.minZ, this.maxX, this.maxY, this.maxZ);
+    }
+
+    public Box withMinY(double minY) {
+        return new Box(this.minX, minY, this.minZ, this.maxX, this.maxY, this.maxZ);
+    }
+
+    public Box withMinZ(double minZ) {
+        return new Box(this.minX, this.minY, minZ, this.maxX, this.maxY, this.maxZ);
+    }
+
+    public Box withMaxX(double maxX) {
+        return new Box(this.minX, this.minY, this.minZ, maxX, this.maxY, this.maxZ);
+    }
+
+    public Box withMaxY(double maxY) {
+        return new Box(this.minX, this.minY, this.minZ, this.maxX, maxY, this.maxZ);
+    }
+
+    public Box withMaxZ(double maxZ) {
+        return new Box(this.minX, this.minY, this.minZ, this.maxX, this.maxY, maxZ);
     }
 
     public double getMin(Direction.Axis axis) {
@@ -214,7 +235,6 @@ public class Box {
         return this.minX < maxX && this.maxX > minX && this.minY < maxY && this.maxY > minY && this.minZ < maxZ && this.maxZ > minZ;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean intersects(Vec3d pos1, Vec3d pos2) {
         return this.intersects(Math.min(pos1.x, pos2.x), Math.min(pos1.y, pos2.y), Math.min(pos1.z, pos2.z), Math.max(pos1.x, pos2.x), Math.max(pos1.y, pos2.y), Math.max(pos1.z, pos2.z));
     }
@@ -244,6 +264,10 @@ public class Box {
 
     public double getZLength() {
         return this.maxZ - this.minZ;
+    }
+
+    public Box contract(double x, double y, double z) {
+        return this.expand(-x, -y, -z);
     }
 
     public Box contract(double value) {
@@ -316,7 +340,6 @@ public class Box {
         return "AABB[" + this.minX + ", " + this.minY + ", " + this.minZ + "] -> [" + this.maxX + ", " + this.maxY + ", " + this.maxZ + "]";
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isValid() {
         return Double.isNaN(this.minX) || Double.isNaN(this.minY) || Double.isNaN(this.minZ) || Double.isNaN(this.maxX) || Double.isNaN(this.maxY) || Double.isNaN(this.maxZ);
     }
@@ -325,8 +348,8 @@ public class Box {
         return new Vec3d(MathHelper.lerp(0.5, this.minX, this.maxX), MathHelper.lerp(0.5, this.minY, this.maxY), MathHelper.lerp(0.5, this.minZ, this.maxZ));
     }
 
-    public static Box method_30048(double d, double e, double f) {
-        return new Box(-d / 2.0, -e / 2.0, -f / 2.0, d / 2.0, e / 2.0, f / 2.0);
+    public static Box of(Vec3d center, double dx, double dy, double dz) {
+        return new Box(center.x - dx / 2.0, center.y - dy / 2.0, center.z - dz / 2.0, center.x + dx / 2.0, center.y + dy / 2.0, center.z + dz / 2.0);
     }
 }
 

@@ -19,11 +19,11 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.RangedAttackMob;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.AvoidSunlightGoal;
 import net.minecraft.entity.ai.goal.BowAttackGoal;
 import net.minecraft.entity.ai.goal.EscapeSunlightGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -47,7 +47,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -87,9 +86,9 @@ implements RangedAttackMob {
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
         this.goalSelector.add(6, new LookAroundGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
     }
 
     public static DefaultAttributeContainer.Builder createAbstractSkeletonAttributes() {
@@ -172,7 +171,7 @@ implements RangedAttackMob {
         this.goalSelector.remove(this.meleeAttackGoal);
         this.goalSelector.remove(this.bowAttackGoal);
         ItemStack itemStack = this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW));
-        if (itemStack.getItem() == Items.BOW) {
+        if (itemStack.isOf(Items.BOW)) {
             int i = 20;
             if (this.world.getDifficulty() != Difficulty.HARD) {
                 i = 40;
@@ -191,7 +190,7 @@ implements RangedAttackMob {
         double d = target.getX() - this.getX();
         double e = target.getBodyY(0.3333333333333333) - persistentProjectileEntity.getY();
         double f = target.getZ() - this.getZ();
-        double g = MathHelper.sqrt(d * d + f * f);
+        double g = Math.sqrt(d * d + f * f);
         persistentProjectileEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
         this.world.spawnEntity(persistentProjectileEntity);
@@ -228,6 +227,10 @@ implements RangedAttackMob {
     @Override
     public double getHeightOffset() {
         return -0.6;
+    }
+
+    public boolean isShaking() {
+        return this.isFreezing();
     }
 }
 

@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.ImmutableSet
@@ -10,13 +11,12 @@
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -31,8 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
@@ -117,12 +115,24 @@ extends MerchantEntity
 implements InteractionObserver,
 VillagerDataContainer {
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(VillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
+    public static final int field_30602 = 12;
     public static final Map<Item, Integer> ITEM_FOOD_VALUES = ImmutableMap.of((Object)Items.BREAD, (Object)4, (Object)Items.POTATO, (Object)1, (Object)Items.CARROT, (Object)1, (Object)Items.BEETROOT, (Object)1);
+    private static final int field_30604 = 2;
     private static final Set<Item> GATHERABLE_ITEMS = ImmutableSet.of((Object)Items.BREAD, (Object)Items.POTATO, (Object)Items.CARROT, (Object)Items.WHEAT, (Object)Items.WHEAT_SEEDS, (Object)Items.BEETROOT, (Object[])new Item[]{Items.BEETROOT_SEEDS});
+    private static final int field_30605 = 10;
+    private static final int field_30606 = 1200;
+    private static final int field_30607 = 24000;
+    private static final int field_30608 = 25;
+    private static final int field_30609 = 10;
+    private static final int field_30610 = 5;
+    private static final long field_30611 = 24000L;
+    @VisibleForTesting
+    public static final float field_30603 = 0.5f;
     private int levelUpTimer;
     private boolean levelingUp;
     @Nullable
     private PlayerEntity lastCustomer;
+    private boolean field_30612;
     private byte foodLevel;
     private final VillagerGossips gossip = new VillagerGossips();
     private long gossipStartTime;
@@ -134,7 +144,7 @@ VillagerDataContainer {
     private boolean natural;
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.WALK_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, MemoryModuleType.PATH, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WOKEN, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_DETECTED_RECENTLY});
     private static final ImmutableList<SensorType<? extends Sensor<? super VillagerEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.NEAREST_BED, SensorType.HURT_BY, SensorType.VILLAGER_HOSTILES, SensorType.VILLAGER_BABIES, SensorType.SECONDARY_POIS, SensorType.GOLEM_DETECTED);
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, PointOfInterestType>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villagerEntity, pointOfInterestType) -> pointOfInterestType == PointOfInterestType.HOME, MemoryModuleType.JOB_SITE, (villagerEntity, pointOfInterestType) -> villagerEntity.getVillagerData().getProfession().getWorkStation() == pointOfInterestType, MemoryModuleType.POTENTIAL_JOB_SITE, (villagerEntity, pointOfInterestType) -> PointOfInterestType.IS_USED_BY_PROFESSION.test((PointOfInterestType)pointOfInterestType), MemoryModuleType.MEETING_POINT, (villagerEntity, pointOfInterestType) -> pointOfInterestType == PointOfInterestType.MEETING);
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, PointOfInterestType>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villager, poiType) -> poiType == PointOfInterestType.HOME, MemoryModuleType.JOB_SITE, (villager, poiType) -> villager.getVillagerData().getProfession().getWorkStation() == poiType, MemoryModuleType.POTENTIAL_JOB_SITE, (villager, poiType) -> PointOfInterestType.IS_USED_BY_PROFESSION.test((PointOfInterestType)poiType), MemoryModuleType.MEETING_POINT, (villager, poiType) -> poiType == PointOfInterestType.MEETING);
 
     public VillagerEntity(EntityType<? extends VillagerEntity> entityType, World world) {
         this(entityType, world, VillagerType.PLAINS);
@@ -254,7 +264,7 @@ VillagerDataContainer {
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() != Items.VILLAGER_SPAWN_EGG && this.isAlive() && !this.hasCustomer() && !this.isSleeping()) {
+        if (!itemStack.isOf(Items.VILLAGER_SPAWN_EGG) && this.isAlive() && !this.hasCustomer() && !this.isSleeping()) {
             if (this.isBaby()) {
                 this.sayNo();
                 return ActionResult.success(this.world.isClient);
@@ -327,7 +337,7 @@ VillagerDataContainer {
 
     private boolean needsRestock() {
         for (TradeOffer tradeOffer : this.getOffers()) {
-            if (!tradeOffer.method_21834()) continue;
+            if (!tradeOffer.hasBeenUsed()) continue;
             return true;
         }
         return false;
@@ -355,7 +365,7 @@ VillagerDataContainer {
         return this.canRestock() && this.needsRestock();
     }
 
-    private void method_21723() {
+    private void restockAndUpdateDemandBonus() {
         int i = 2 - this.restocksToday;
         if (i > 0) {
             for (TradeOffer tradeOffer : this.getOffers()) {
@@ -476,6 +486,7 @@ VillagerDataContainer {
         }
     }
 
+    @Override
     public void setVillagerData(VillagerData villagerData) {
         VillagerData villagerData2 = this.getVillagerData();
         if (villagerData2.getProfession() != villagerData.getProfession()) {
@@ -504,6 +515,14 @@ VillagerDataContainer {
         }
     }
 
+    public void method_35201(boolean bl) {
+        this.field_30612 = bl;
+    }
+
+    public boolean method_35200() {
+        return this.field_30612;
+    }
+
     @Override
     public void setAttacker(@Nullable LivingEntity attacker) {
         if (attacker != null && this.world instanceof ServerWorld) {
@@ -522,11 +541,11 @@ VillagerDataContainer {
         if (entity != null) {
             this.notifyDeath(entity);
         }
-        this.method_30958();
+        this.releaseAllTickets();
         super.onDeath(source);
     }
 
-    private void method_30958() {
+    private void releaseAllTickets() {
         this.releaseTicketFor(MemoryModuleType.HOME);
         this.releaseTicketFor(MemoryModuleType.JOB_SITE);
         this.releaseTicketFor(MemoryModuleType.POTENTIAL_JOB_SITE);
@@ -542,7 +561,7 @@ VillagerDataContainer {
             return;
         }
         ServerWorld serverWorld = (ServerWorld)this.world;
-        optional.get().stream().filter(livingEntity -> livingEntity instanceof InteractionObserver).forEach(livingEntity -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)livingEntity)));
+        optional.get().stream().filter(entity -> entity instanceof InteractionObserver).forEach(livingEntity -> serverWorld.handleInteraction(EntityInteraction.VILLAGER_KILLED, killer, (InteractionObserver)((Object)livingEntity)));
     }
 
     public void releaseTicketFor(MemoryModuleType<GlobalPos> memoryModuleType) {
@@ -550,17 +569,17 @@ VillagerDataContainer {
             return;
         }
         MinecraftServer minecraftServer = ((ServerWorld)this.world).getServer();
-        this.brain.getOptionalMemory(memoryModuleType).ifPresent(globalPos -> {
-            ServerWorld serverWorld = minecraftServer.getWorld(globalPos.getDimension());
+        this.brain.getOptionalMemory(memoryModuleType).ifPresent(pos -> {
+            ServerWorld serverWorld = minecraftServer.getWorld(pos.getDimension());
             if (serverWorld == null) {
                 return;
             }
             PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
-            Optional<PointOfInterestType> optional = pointOfInterestStorage.getType(globalPos.getPos());
+            Optional<PointOfInterestType> optional = pointOfInterestStorage.getType(pos.getPos());
             BiPredicate<VillagerEntity, PointOfInterestType> biPredicate = POINTS_OF_INTEREST.get(memoryModuleType);
             if (optional.isPresent() && biPredicate.test(this, optional.get())) {
-                pointOfInterestStorage.releaseTicket(globalPos.getPos());
-                DebugInfoSender.sendPointOfInterest(serverWorld, globalPos.getPos());
+                pointOfInterestStorage.releaseTicket(pos.getPos());
+                DebugInfoSender.sendPointOfInterest(serverWorld, pos.getPos());
             }
         });
     }
@@ -593,7 +612,7 @@ VillagerDataContainer {
     }
 
     public int getReputation(PlayerEntity player) {
-        return this.gossip.getReputationFor(player.getUuid(), villageGossipType -> true);
+        return this.gossip.getReputationFor(player.getUuid(), gossipType -> true);
     }
 
     private void depleteFood(int amount) {
@@ -621,11 +640,10 @@ VillagerDataContainer {
 
     @Override
     protected Text getDefaultName() {
-        return new TranslatableText(this.getType().getTranslationKey() + '.' + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
+        return new TranslatableText(this.getType().getTranslationKey() + "." + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 12) {
             this.produceParticles(ParticleTypes.HEART);
@@ -669,7 +687,7 @@ VillagerDataContainer {
         if (world.getDifficulty() != Difficulty.PEACEFUL) {
             LOGGER.info("Villager {} was struck by lightning {}.", (Object)this, (Object)lightning);
             WitchEntity witchEntity = EntityType.WITCH.create(world);
-            witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
+            witchEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             witchEntity.initialize(world, world.getLocalDifficulty(witchEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
             witchEntity.setAiDisabled(this.isAiDisabled());
             if (this.hasCustomName()) {
@@ -678,8 +696,8 @@ VillagerDataContainer {
             }
             witchEntity.setPersistent();
             world.spawnEntityAndPassengers(witchEntity);
-            this.method_30958();
-            this.remove();
+            this.releaseAllTickets();
+            this.discard();
         } else {
             super.onStruckByLightning(world, lightning);
         }
@@ -694,11 +712,11 @@ VillagerDataContainer {
             if (!bl) {
                 return;
             }
-            this.method_29499(item);
+            this.triggerItemPickedUpByEntityCriteria(item);
             this.sendPickup(item, itemStack.getCount());
             ItemStack itemStack2 = simpleInventory.addStack(itemStack);
             if (itemStack2.isEmpty()) {
-                item.remove();
+                item.discard();
             } else {
                 itemStack.setCount(itemStack2.getCount());
             }
@@ -772,7 +790,7 @@ VillagerDataContainer {
         }
         Box box = this.getBoundingBox().expand(10.0, 10.0, 10.0);
         List<VillagerEntity> list = world.getNonSpectatingEntities(VillagerEntity.class, box);
-        List list2 = list.stream().filter(villagerEntity -> villagerEntity.canSummonGolem(time)).limit(5L).collect(Collectors.toList());
+        List list2 = list.stream().filter(villager -> villager.canSummonGolem(time)).limit(5L).collect(Collectors.toList());
         if (list2.size() < requiredCount) {
             return;
         }
@@ -780,7 +798,7 @@ VillagerDataContainer {
         if (ironGolemEntity == null) {
             return;
         }
-        list.forEach(GolemLastSeenSensor::method_30233);
+        list.forEach(GolemLastSeenSensor::rememberIronGolem);
     }
 
     public boolean canSummonGolem(long time) {
@@ -797,29 +815,29 @@ VillagerDataContainer {
             IronGolemEntity ironGolemEntity;
             double e;
             double d = world.random.nextInt(16) - 8;
-            BlockPos blockPos2 = this.method_30023(blockPos, d, e = (double)(world.random.nextInt(16) - 8));
+            BlockPos blockPos2 = this.getHighestOpenPositionOnOffset(blockPos, d, e = (double)(world.random.nextInt(16) - 8));
             if (blockPos2 == null || (ironGolemEntity = EntityType.IRON_GOLEM.create(world, null, null, null, blockPos2, SpawnReason.MOB_SUMMONED, false, false)) == null) continue;
             if (ironGolemEntity.canSpawn(world, SpawnReason.MOB_SUMMONED) && ironGolemEntity.canSpawn(world)) {
                 world.spawnEntityAndPassengers(ironGolemEntity);
                 return ironGolemEntity;
             }
-            ironGolemEntity.remove();
+            ironGolemEntity.discard();
         }
         return null;
     }
 
     @Nullable
-    private BlockPos method_30023(BlockPos blockPos, double d, double e) {
+    private BlockPos getHighestOpenPositionOnOffset(BlockPos pos, double x, double z) {
         int i = 6;
-        BlockPos blockPos2 = blockPos.add(d, 6.0, e);
-        BlockState blockState = this.world.getBlockState(blockPos2);
+        BlockPos blockPos = pos.add(x, 6.0, z);
+        BlockState blockState = this.world.getBlockState(blockPos);
         for (int j = 6; j >= -6; --j) {
-            BlockPos blockPos3 = blockPos2;
+            BlockPos blockPos2 = blockPos;
             BlockState blockState2 = blockState;
-            blockPos2 = blockPos3.down();
-            blockState = this.world.getBlockState(blockPos2);
+            blockPos = blockPos2.down();
+            blockState = this.world.getBlockState(blockPos);
             if (!blockState2.isAir() && !blockState2.getMaterial().isLiquid() || !blockState.getMaterial().blocksLight()) continue;
-            return blockPos3;
+            return blockPos2;
         }
         return null;
     }
@@ -848,7 +866,7 @@ VillagerDataContainer {
     }
 
     private void clearDailyRestockCount() {
-        this.method_21723();
+        this.restockAndUpdateDemandBonus();
         this.restocksToday = 0;
     }
 

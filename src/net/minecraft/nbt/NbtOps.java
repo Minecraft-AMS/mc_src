@@ -388,11 +388,11 @@ implements DynamicOps<NbtElement> {
         return nbtList;
     }
 
-    public NbtElement remove(NbtElement nbtElement, String string3) {
+    public NbtElement remove(NbtElement nbtElement, String string) {
         if (nbtElement instanceof NbtCompound) {
             NbtCompound nbtCompound = (NbtCompound)nbtElement;
             NbtCompound nbtCompound2 = new NbtCompound();
-            nbtCompound.getKeys().stream().filter(string2 -> !Objects.equals(string2, string3)).forEach(string -> nbtCompound2.put((String)string, nbtCompound.get((String)string)));
+            nbtCompound.getKeys().stream().filter(k -> !Objects.equals(k, string)).forEach(k -> nbtCompound2.put((String)k, nbtCompound.get((String)k)));
             return nbtCompound2;
         }
         return nbtElement;
@@ -406,124 +406,124 @@ implements DynamicOps<NbtElement> {
         return new MapBuilder();
     }
 
-    public /* synthetic */ Object remove(Object object, String string) {
-        return this.remove((NbtElement)object, string);
+    public /* synthetic */ Object remove(Object element, String key) {
+        return this.remove((NbtElement)element, key);
     }
 
     public /* synthetic */ Object createLongList(LongStream longStream) {
         return this.createLongList(longStream);
     }
 
-    public /* synthetic */ DataResult getLongStream(Object object) {
-        return this.getLongStream((NbtElement)object);
+    public /* synthetic */ DataResult getLongStream(Object element) {
+        return this.getLongStream((NbtElement)element);
     }
 
     public /* synthetic */ Object createIntList(IntStream intStream) {
         return this.createIntList(intStream);
     }
 
-    public /* synthetic */ DataResult getIntStream(Object object) {
-        return this.getIntStream((NbtElement)object);
+    public /* synthetic */ DataResult getIntStream(Object element) {
+        return this.getIntStream((NbtElement)element);
     }
 
     public /* synthetic */ Object createByteList(ByteBuffer byteBuffer) {
         return this.createByteList(byteBuffer);
     }
 
-    public /* synthetic */ DataResult getByteBuffer(Object object) {
-        return this.getByteBuffer((NbtElement)object);
+    public /* synthetic */ DataResult getByteBuffer(Object element) {
+        return this.getByteBuffer((NbtElement)element);
     }
 
     public /* synthetic */ Object createList(Stream stream) {
         return this.createList(stream);
     }
 
-    public /* synthetic */ DataResult getList(Object object) {
-        return this.getList((NbtElement)object);
+    public /* synthetic */ DataResult getList(Object element) {
+        return this.getList((NbtElement)element);
     }
 
-    public /* synthetic */ DataResult getStream(Object object) {
-        return this.getStream((NbtElement)object);
+    public /* synthetic */ DataResult getStream(Object element) {
+        return this.getStream((NbtElement)element);
     }
 
-    public /* synthetic */ DataResult getMap(Object object) {
-        return this.getMap((NbtElement)object);
+    public /* synthetic */ DataResult getMap(Object element) {
+        return this.getMap((NbtElement)element);
     }
 
     public /* synthetic */ Object createMap(Stream stream) {
         return this.createMap(stream);
     }
 
-    public /* synthetic */ DataResult getMapEntries(Object object) {
-        return this.getMapEntries((NbtElement)object);
+    public /* synthetic */ DataResult getMapEntries(Object element) {
+        return this.getMapEntries((NbtElement)element);
     }
 
-    public /* synthetic */ DataResult getMapValues(Object object) {
-        return this.getMapValues((NbtElement)object);
+    public /* synthetic */ DataResult getMapValues(Object element) {
+        return this.getMapValues((NbtElement)element);
     }
 
-    public /* synthetic */ DataResult mergeToMap(Object object, MapLike mapLike) {
-        return this.mergeToMap((NbtElement)object, (MapLike<NbtElement>)mapLike);
+    public /* synthetic */ DataResult mergeToMap(Object element, MapLike mapLike) {
+        return this.mergeToMap((NbtElement)element, (MapLike<NbtElement>)mapLike);
     }
 
-    public /* synthetic */ DataResult mergeToMap(Object object, Object object2, Object object3) {
-        return this.mergeToMap((NbtElement)object, (NbtElement)object2, (NbtElement)object3);
+    public /* synthetic */ DataResult mergeToMap(Object map, Object key, Object value) {
+        return this.mergeToMap((NbtElement)map, (NbtElement)key, (NbtElement)value);
     }
 
     public /* synthetic */ DataResult mergeToList(Object object, List list) {
         return this.mergeToList((NbtElement)object, (List<NbtElement>)list);
     }
 
-    public /* synthetic */ DataResult mergeToList(Object object, Object object2) {
-        return this.mergeToList((NbtElement)object, (NbtElement)object2);
+    public /* synthetic */ DataResult mergeToList(Object list, Object value) {
+        return this.mergeToList((NbtElement)list, (NbtElement)value);
     }
 
     public /* synthetic */ Object createString(String string) {
         return this.createString(string);
     }
 
-    public /* synthetic */ DataResult getStringValue(Object object) {
-        return this.getStringValue((NbtElement)object);
+    public /* synthetic */ DataResult getStringValue(Object element) {
+        return this.getStringValue((NbtElement)element);
     }
 
-    public /* synthetic */ Object createBoolean(boolean bl) {
-        return this.createBoolean(bl);
+    public /* synthetic */ Object createBoolean(boolean value) {
+        return this.createBoolean(value);
     }
 
-    public /* synthetic */ Object createDouble(double d) {
-        return this.createDouble(d);
+    public /* synthetic */ Object createDouble(double value) {
+        return this.createDouble(value);
     }
 
-    public /* synthetic */ Object createFloat(float f) {
-        return this.createFloat(f);
+    public /* synthetic */ Object createFloat(float value) {
+        return this.createFloat(value);
     }
 
-    public /* synthetic */ Object createLong(long l) {
-        return this.createLong(l);
+    public /* synthetic */ Object createLong(long value) {
+        return this.createLong(value);
     }
 
-    public /* synthetic */ Object createInt(int i) {
-        return this.createInt(i);
+    public /* synthetic */ Object createInt(int value) {
+        return this.createInt(value);
     }
 
-    public /* synthetic */ Object createShort(short s) {
-        return this.createShort(s);
+    public /* synthetic */ Object createShort(short value) {
+        return this.createShort(value);
     }
 
-    public /* synthetic */ Object createByte(byte b) {
-        return this.createByte(b);
+    public /* synthetic */ Object createByte(byte value) {
+        return this.createByte(value);
     }
 
-    public /* synthetic */ Object createNumeric(Number number) {
-        return this.createNumeric(number);
+    public /* synthetic */ Object createNumeric(Number value) {
+        return this.createNumeric(value);
     }
 
-    public /* synthetic */ DataResult getNumberValue(Object object) {
-        return this.getNumberValue((NbtElement)object);
+    public /* synthetic */ DataResult getNumberValue(Object element) {
+        return this.getNumberValue((NbtElement)element);
     }
 
-    public /* synthetic */ Object convertTo(DynamicOps dynamicOps, Object object) {
-        return this.convertTo(dynamicOps, (NbtElement)object);
+    public /* synthetic */ Object convertTo(DynamicOps dynamicOps, Object element) {
+        return this.convertTo(dynamicOps, (NbtElement)element);
     }
 
     public /* synthetic */ Object empty() {

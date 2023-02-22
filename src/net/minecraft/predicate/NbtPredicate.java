@@ -39,7 +39,7 @@ public class NbtPredicate {
         if (this == ANY) {
             return true;
         }
-        return this.test(stack.getTag());
+        return this.test(stack.getNbt());
     }
 
     public boolean test(Entity entity) {
@@ -80,7 +80,7 @@ public class NbtPredicate {
     public static NbtCompound entityToNbt(Entity entity) {
         ItemStack itemStack;
         NbtCompound nbtCompound = entity.writeNbt(new NbtCompound());
-        if (entity instanceof PlayerEntity && !(itemStack = ((PlayerEntity)entity).inventory.getMainHandStack()).isEmpty()) {
+        if (entity instanceof PlayerEntity && !(itemStack = ((PlayerEntity)entity).getInventory().getMainHandStack()).isEmpty()) {
             nbtCompound.put("SelectedItem", itemStack.writeNbt(new NbtCompound()));
         }
         return nbtCompound;

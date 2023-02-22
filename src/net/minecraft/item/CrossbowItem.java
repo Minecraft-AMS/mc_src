@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
@@ -14,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -55,8 +51,16 @@ import org.jetbrains.annotations.Nullable;
 public class CrossbowItem
 extends RangedWeaponItem
 implements Vanishable {
+    private static final String CHARGED_KEY = "Charged";
+    private static final String CHARGED_PROJECTILES_KEY = "ChargedProjectiles";
+    private static final int field_30866 = 25;
+    public static final int RANGE = 8;
     private boolean charged = false;
     private boolean loaded = false;
+    private static final float field_30867 = 0.2f;
+    private static final float field_30868 = 0.5f;
+    private static final float field_30869 = 3.15f;
+    private static final float field_30870 = 1.6f;
 
     public CrossbowItem(Item.Settings settings) {
         super(settings);
@@ -91,6 +95,13 @@ implements Vanishable {
         return TypedActionResult.fail(itemStack);
     }
 
+    private static float getSpeed(ItemStack stack) {
+        if (CrossbowItem.hasProjectile(stack, Items.FIREWORK_ROCKET)) {
+            return 1.6f;
+        }
+        return 3.15f;
+    }
+
     @Override
     public void onStoppedUsing(ItemStack stack, World world, LivingEntity user, int remainingUseTicks) {
         int i = this.getMaxUseTime(stack) - remainingUseTicks;
@@ -98,14 +109,14 @@ implements Vanishable {
         if (f >= 1.0f && !CrossbowItem.isCharged(stack) && CrossbowItem.loadProjectiles(user, stack)) {
             CrossbowItem.setCharged(stack, true);
             SoundCategory soundCategory = user instanceof PlayerEntity ? SoundCategory.PLAYERS : SoundCategory.HOSTILE;
-            world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ITEM_CROSSBOW_LOADING_END, soundCategory, 1.0f, 1.0f / (RANDOM.nextFloat() * 0.5f + 1.0f) + 0.2f);
+            world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ITEM_CROSSBOW_LOADING_END, soundCategory, 1.0f, 1.0f / (world.getRandom().nextFloat() * 0.5f + 1.0f) + 0.2f);
         }
     }
 
     private static boolean loadProjectiles(LivingEntity shooter, ItemStack projectile) {
         int i = EnchantmentHelper.getLevel(Enchantments.MULTISHOT, projectile);
         int j = i == 0 ? 1 : 3;
-        boolean bl = shooter instanceof PlayerEntity && ((PlayerEntity)shooter).abilities.creativeMode;
+        boolean bl = shooter instanceof PlayerEntity && ((PlayerEntity)shooter).getAbilities().creativeMode;
         ItemStack itemStack = shooter.getArrowType(projectile);
         ItemStack itemStack2 = itemStack.copy();
         for (int k = 0; k < j; ++k) {
@@ -132,7 +143,7 @@ implements Vanishable {
         if (!(bl || creative || simulated)) {
             itemStack = projectile.split(1);
             if (projectile.isEmpty() && shooter instanceof PlayerEntity) {
-                ((PlayerEntity)shooter).inventory.removeOne(projectile);
+                ((PlayerEntity)shooter).getInventory().removeOne(projectile);
             }
         } else {
             itemStack = projectile.copy();
@@ -142,29 +153,29 @@ implements Vanishable {
     }
 
     public static boolean isCharged(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getTag();
-        return nbtCompound != null && nbtCompound.getBoolean("Charged");
+        NbtCompound nbtCompound = stack.getNbt();
+        return nbtCompound != null && nbtCompound.getBoolean(CHARGED_KEY);
     }
 
     public static void setCharged(ItemStack stack, boolean charged) {
-        NbtCompound nbtCompound = stack.getOrCreateTag();
-        nbtCompound.putBoolean("Charged", charged);
+        NbtCompound nbtCompound = stack.getOrCreateNbt();
+        nbtCompound.putBoolean(CHARGED_KEY, charged);
     }
 
     private static void putProjectile(ItemStack crossbow, ItemStack projectile) {
-        NbtCompound nbtCompound = crossbow.getOrCreateTag();
-        NbtList nbtList = nbtCompound.contains("ChargedProjectiles", 9) ? nbtCompound.getList("ChargedProjectiles", 10) : new NbtList();
+        NbtCompound nbtCompound = crossbow.getOrCreateNbt();
+        NbtList nbtList = nbtCompound.contains(CHARGED_PROJECTILES_KEY, 9) ? nbtCompound.getList(CHARGED_PROJECTILES_KEY, 10) : new NbtList();
         NbtCompound nbtCompound2 = new NbtCompound();
         projectile.writeNbt(nbtCompound2);
         nbtList.add(nbtCompound2);
-        nbtCompound.put("ChargedProjectiles", nbtList);
+        nbtCompound.put(CHARGED_PROJECTILES_KEY, nbtList);
     }
 
     private static List<ItemStack> getProjectiles(ItemStack crossbow) {
         NbtList nbtList;
         ArrayList list = Lists.newArrayList();
-        NbtCompound nbtCompound = crossbow.getTag();
-        if (nbtCompound != null && nbtCompound.contains("ChargedProjectiles", 9) && (nbtList = nbtCompound.getList("ChargedProjectiles", 10)) != null) {
+        NbtCompound nbtCompound = crossbow.getNbt();
+        if (nbtCompound != null && nbtCompound.contains(CHARGED_PROJECTILES_KEY, 9) && (nbtList = nbtCompound.getList(CHARGED_PROJECTILES_KEY, 10)) != null) {
             for (int i = 0; i < nbtList.size(); ++i) {
                 NbtCompound nbtCompound2 = nbtList.getCompound(i);
                 list.add(ItemStack.fromNbt(nbtCompound2));
@@ -174,25 +185,24 @@ implements Vanishable {
     }
 
     private static void clearProjectiles(ItemStack crossbow) {
-        NbtCompound nbtCompound = crossbow.getTag();
+        NbtCompound nbtCompound = crossbow.getNbt();
         if (nbtCompound != null) {
-            NbtList nbtList = nbtCompound.getList("ChargedProjectiles", 9);
+            NbtList nbtList = nbtCompound.getList(CHARGED_PROJECTILES_KEY, 9);
             nbtList.clear();
-            nbtCompound.put("ChargedProjectiles", nbtList);
+            nbtCompound.put(CHARGED_PROJECTILES_KEY, nbtList);
         }
     }
 
     public static boolean hasProjectile(ItemStack crossbow, Item projectile) {
-        return CrossbowItem.getProjectiles(crossbow).stream().anyMatch(s -> s.getItem() == projectile);
+        return CrossbowItem.getProjectiles(crossbow).stream().anyMatch(s -> s.isOf(projectile));
     }
 
     private static void shoot(World world, LivingEntity shooter, Hand hand, ItemStack crossbow, ItemStack projectile, float soundPitch, boolean creative, float speed, float divergence, float simulated) {
         ProjectileEntity projectileEntity;
-        boolean bl;
         if (world.isClient) {
             return;
         }
-        boolean bl2 = bl = projectile.getItem() == Items.FIREWORK_ROCKET;
+        boolean bl = projectile.isOf(Items.FIREWORK_ROCKET);
         if (bl) {
             projectileEntity = new FireworkRocketEntity(world, projectile, shooter, shooter.getX(), shooter.getEyeY() - (double)0.15f, shooter.getZ(), true);
         } else {
@@ -238,7 +248,7 @@ implements Vanishable {
         for (int i = 0; i < list.size(); ++i) {
             boolean bl;
             ItemStack itemStack = list.get(i);
-            boolean bl2 = bl = entity instanceof PlayerEntity && ((PlayerEntity)entity).abilities.creativeMode;
+            boolean bl2 = bl = entity instanceof PlayerEntity && ((PlayerEntity)entity).getAbilities().creativeMode;
             if (itemStack.isEmpty()) continue;
             if (i == 0) {
                 CrossbowItem.shoot(world, entity, hand, stack, itemStack, fs[i], bl, speed, divergence, 0.0f);
@@ -256,12 +266,12 @@ implements Vanishable {
 
     private static float[] getSoundPitches(Random random) {
         boolean bl = random.nextBoolean();
-        return new float[]{1.0f, CrossbowItem.getSoundPitch(bl), CrossbowItem.getSoundPitch(!bl)};
+        return new float[]{1.0f, CrossbowItem.getSoundPitch(bl, random), CrossbowItem.getSoundPitch(!bl, random)};
     }
 
-    private static float getSoundPitch(boolean flag) {
+    private static float getSoundPitch(boolean flag, Random random) {
         float f = flag ? 0.63f : 0.43f;
-        return 1.0f / (RANDOM.nextFloat() * 0.5f + 1.8f) + f;
+        return 1.0f / (random.nextFloat() * 0.5f + 1.8f) + f;
     }
 
     private static void postShoot(World world, LivingEntity entity, ItemStack stack) {
@@ -336,7 +346,6 @@ implements Vanishable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         List<ItemStack> list = CrossbowItem.getProjectiles(stack);
         if (!CrossbowItem.isCharged(stack) || list.isEmpty()) {
@@ -344,7 +353,7 @@ implements Vanishable {
         }
         ItemStack itemStack = list.get(0);
         tooltip.add(new TranslatableText("item.minecraft.crossbow.projectile").append(" ").append(itemStack.toHoverableText()));
-        if (context.isAdvanced() && itemStack.getItem() == Items.FIREWORK_ROCKET) {
+        if (context.isAdvanced() && itemStack.isOf(Items.FIREWORK_ROCKET)) {
             ArrayList list2 = Lists.newArrayList();
             Items.FIREWORK_ROCKET.appendTooltip(itemStack, world, list2, context);
             if (!list2.isEmpty()) {
@@ -356,11 +365,9 @@ implements Vanishable {
         }
     }
 
-    private static float getSpeed(ItemStack stack) {
-        if (stack.getItem() == Items.CROSSBOW && CrossbowItem.hasProjectile(stack, Items.FIREWORK_ROCKET)) {
-            return 1.6f;
-        }
-        return 3.15f;
+    @Override
+    public boolean isUsedOnRelease(ItemStack stack) {
+        return stack.isOf(this);
     }
 
     @Override

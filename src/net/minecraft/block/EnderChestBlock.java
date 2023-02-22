@@ -2,14 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractChestBlock;
 import net.minecraft.block.Block;
@@ -20,6 +17,7 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.entity.EnderChestBlockEntity;
@@ -33,6 +31,7 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
@@ -51,6 +50,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import org.jetbrains.annotations.Nullable;
 
 public class EnderChestBlock
 extends AbstractChestBlock<EnderChestBlockEntity>
@@ -66,7 +66,6 @@ implements Waterloggable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public DoubleBlockProperties.PropertySource<? extends ChestBlockEntity> getBlockEntitySource(BlockState state, World world, BlockPos pos, boolean ignoreBlocked) {
         return DoubleBlockProperties.PropertyRetriever::getFallback;
     }
@@ -88,8 +87,8 @@ implements Waterloggable {
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        EnderChestInventory enderChestInventory = player.getEnderChestInventory();
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player2, Hand hand, BlockHitResult hit) {
+        EnderChestInventory enderChestInventory = player2.getEnderChestInventory();
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (enderChestInventory == null || !(blockEntity instanceof EnderChestBlockEntity)) {
             return ActionResult.success(world.isClient);
@@ -103,19 +102,24 @@ implements Waterloggable {
         }
         EnderChestBlockEntity enderChestBlockEntity = (EnderChestBlockEntity)blockEntity;
         enderChestInventory.setActiveBlockEntity(enderChestBlockEntity);
-        player.openHandledScreen(new SimpleNamedScreenHandlerFactory((i, playerInventory, playerEntity) -> GenericContainerScreenHandler.createGeneric9x3(i, playerInventory, enderChestInventory), CONTAINER_NAME));
-        player.incrementStat(Stats.OPEN_ENDERCHEST);
-        PiglinBrain.onGuardedBlockInteracted(player, true);
+        player2.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, inventory, player) -> GenericContainerScreenHandler.createGeneric9x3(syncId, inventory, enderChestInventory), CONTAINER_NAME));
+        player2.incrementStat(Stats.OPEN_ENDERCHEST);
+        PiglinBrain.onGuardedBlockInteracted(player2, true);
         return ActionResult.CONSUME;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new EnderChestBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new EnderChestBlockEntity(pos, state);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return world.isClient ? EnderChestBlock.checkType(type, BlockEntityType.ENDER_CHEST, EnderChestBlockEntity::clientTick) : null;
+    }
+
+    @Override
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         for (int i = 0; i < 3; ++i) {
             int j = random.nextInt(2) * 2 - 1;
@@ -164,6 +168,14 @@ implements Waterloggable {
     @Override
     public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
         return false;
+    }
+
+    @Override
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof EnderChestBlockEntity) {
+            ((EnderChestBlockEntity)blockEntity).onScheduledTick();
+        }
     }
 }
 

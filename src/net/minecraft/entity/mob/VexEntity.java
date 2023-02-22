@@ -15,7 +15,7 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.control.MoveControl;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
@@ -47,8 +47,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class VexEntity
 extends HostileEntity {
+    public static final float field_30502 = 45.836624f;
+    public static final int field_28645 = MathHelper.ceil(3.9269907f);
     protected static final TrackedData<Byte> VEX_FLAGS = DataTracker.registerData(VexEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private MobEntity owner;
+    private static final int CHARGING_FLAG = 1;
+    MobEntity owner;
     @Nullable
     private BlockPos bounds;
     private boolean alive;
@@ -58,6 +61,11 @@ extends HostileEntity {
         super((EntityType<? extends HostileEntity>)entityType, world);
         this.moveControl = new VexMoveControl(this);
         this.experiencePoints = 3;
+    }
+
+    @Override
+    public boolean hasWings() {
+        return this.age % field_28645 == 0;
     }
 
     @Override
@@ -88,7 +96,7 @@ extends HostileEntity {
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
         this.targetSelector.add(1, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
         this.targetSelector.add(2, new TrackOwnerTargetGoal(this));
-        this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
     }
 
     public static DefaultAttributeContainer.Builder createVexAttributes() {
@@ -200,24 +208,84 @@ extends HostileEntity {
         this.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0.0f);
     }
 
-    class TrackOwnerTargetGoal
-    extends TrackTargetGoal {
-        private final TargetPredicate TRACK_OWNER_PREDICATE;
+    class VexMoveControl
+    extends MoveControl {
+        public VexMoveControl(VexEntity owner) {
+            super(owner);
+        }
 
-        public TrackOwnerTargetGoal(PathAwareEntity mob) {
-            super(mob, false);
-            this.TRACK_OWNER_PREDICATE = new TargetPredicate().includeHidden().ignoreDistanceScalingFactor();
+        @Override
+        public void tick() {
+            if (this.state != MoveControl.State.MOVE_TO) {
+                return;
+            }
+            Vec3d vec3d = new Vec3d(this.targetX - VexEntity.this.getX(), this.targetY - VexEntity.this.getY(), this.targetZ - VexEntity.this.getZ());
+            double d = vec3d.length();
+            if (d < VexEntity.this.getBoundingBox().getAverageSideLength()) {
+                this.state = MoveControl.State.WAIT;
+                VexEntity.this.setVelocity(VexEntity.this.getVelocity().multiply(0.5));
+            } else {
+                VexEntity.this.setVelocity(VexEntity.this.getVelocity().add(vec3d.multiply(this.speed * 0.05 / d)));
+                if (VexEntity.this.getTarget() == null) {
+                    Vec3d vec3d2 = VexEntity.this.getVelocity();
+                    VexEntity.this.setYaw(-((float)MathHelper.atan2(vec3d2.x, vec3d2.z)) * 57.295776f);
+                    VexEntity.this.bodyYaw = VexEntity.this.getYaw();
+                } else {
+                    double e = VexEntity.this.getTarget().getX() - VexEntity.this.getX();
+                    double f = VexEntity.this.getTarget().getZ() - VexEntity.this.getZ();
+                    VexEntity.this.setYaw(-((float)MathHelper.atan2(e, f)) * 57.295776f);
+                    VexEntity.this.bodyYaw = VexEntity.this.getYaw();
+                }
+            }
+        }
+    }
+
+    class ChargeTargetGoal
+    extends Goal {
+        public ChargeTargetGoal() {
+            this.setControls(EnumSet.of(Goal.Control.MOVE));
         }
 
         @Override
         public boolean canStart() {
-            return VexEntity.this.owner != null && VexEntity.this.owner.getTarget() != null && this.canTrack(VexEntity.this.owner.getTarget(), this.TRACK_OWNER_PREDICATE);
+            if (VexEntity.this.getTarget() != null && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(7) == 0) {
+                return VexEntity.this.squaredDistanceTo(VexEntity.this.getTarget()) > 4.0;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean shouldContinue() {
+            return VexEntity.this.getMoveControl().isMoving() && VexEntity.this.isCharging() && VexEntity.this.getTarget() != null && VexEntity.this.getTarget().isAlive();
         }
 
         @Override
         public void start() {
-            VexEntity.this.setTarget(VexEntity.this.owner.getTarget());
-            super.start();
+            LivingEntity livingEntity = VexEntity.this.getTarget();
+            Vec3d vec3d = livingEntity.getEyePos();
+            VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
+            VexEntity.this.setCharging(true);
+            VexEntity.this.playSound(SoundEvents.ENTITY_VEX_CHARGE, 1.0f, 1.0f);
+        }
+
+        @Override
+        public void stop() {
+            VexEntity.this.setCharging(false);
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity livingEntity = VexEntity.this.getTarget();
+            if (VexEntity.this.getBoundingBox().intersects(livingEntity.getBoundingBox())) {
+                VexEntity.this.tryAttack(livingEntity);
+                VexEntity.this.setCharging(false);
+            } else {
+                double d = VexEntity.this.squaredDistanceTo(livingEntity);
+                if (d < 9.0) {
+                    Vec3d vec3d = livingEntity.getEyePos();
+                    VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
+                }
+            }
         }
     }
 
@@ -254,82 +322,24 @@ extends HostileEntity {
         }
     }
 
-    class ChargeTargetGoal
-    extends Goal {
-        public ChargeTargetGoal() {
-            this.setControls(EnumSet.of(Goal.Control.MOVE));
+    class TrackOwnerTargetGoal
+    extends TrackTargetGoal {
+        private final TargetPredicate TRACK_OWNER_PREDICATE;
+
+        public TrackOwnerTargetGoal(PathAwareEntity mob) {
+            super(mob, false);
+            this.TRACK_OWNER_PREDICATE = TargetPredicate.createNonAttackable().ignoreVisibility().ignoreDistanceScalingFactor();
         }
 
         @Override
         public boolean canStart() {
-            if (VexEntity.this.getTarget() != null && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(7) == 0) {
-                return VexEntity.this.squaredDistanceTo(VexEntity.this.getTarget()) > 4.0;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean shouldContinue() {
-            return VexEntity.this.getMoveControl().isMoving() && VexEntity.this.isCharging() && VexEntity.this.getTarget() != null && VexEntity.this.getTarget().isAlive();
+            return VexEntity.this.owner != null && VexEntity.this.owner.getTarget() != null && this.canTrack(VexEntity.this.owner.getTarget(), this.TRACK_OWNER_PREDICATE);
         }
 
         @Override
         public void start() {
-            LivingEntity livingEntity = VexEntity.this.getTarget();
-            Vec3d vec3d = livingEntity.getCameraPosVec(1.0f);
-            VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
-            VexEntity.this.setCharging(true);
-            VexEntity.this.playSound(SoundEvents.ENTITY_VEX_CHARGE, 1.0f, 1.0f);
-        }
-
-        @Override
-        public void stop() {
-            VexEntity.this.setCharging(false);
-        }
-
-        @Override
-        public void tick() {
-            LivingEntity livingEntity = VexEntity.this.getTarget();
-            if (VexEntity.this.getBoundingBox().intersects(livingEntity.getBoundingBox())) {
-                VexEntity.this.tryAttack(livingEntity);
-                VexEntity.this.setCharging(false);
-            } else {
-                double d = VexEntity.this.squaredDistanceTo(livingEntity);
-                if (d < 9.0) {
-                    Vec3d vec3d = livingEntity.getCameraPosVec(1.0f);
-                    VexEntity.this.moveControl.moveTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
-                }
-            }
-        }
-    }
-
-    class VexMoveControl
-    extends MoveControl {
-        public VexMoveControl(VexEntity owner) {
-            super(owner);
-        }
-
-        @Override
-        public void tick() {
-            if (this.state != MoveControl.State.MOVE_TO) {
-                return;
-            }
-            Vec3d vec3d = new Vec3d(this.targetX - VexEntity.this.getX(), this.targetY - VexEntity.this.getY(), this.targetZ - VexEntity.this.getZ());
-            double d = vec3d.length();
-            if (d < VexEntity.this.getBoundingBox().getAverageSideLength()) {
-                this.state = MoveControl.State.WAIT;
-                VexEntity.this.setVelocity(VexEntity.this.getVelocity().multiply(0.5));
-            } else {
-                VexEntity.this.setVelocity(VexEntity.this.getVelocity().add(vec3d.multiply(this.speed * 0.05 / d)));
-                if (VexEntity.this.getTarget() == null) {
-                    Vec3d vec3d2 = VexEntity.this.getVelocity();
-                    VexEntity.this.bodyYaw = VexEntity.this.yaw = -((float)MathHelper.atan2(vec3d2.x, vec3d2.z)) * 57.295776f;
-                } else {
-                    double e = VexEntity.this.getTarget().getX() - VexEntity.this.getX();
-                    double f = VexEntity.this.getTarget().getZ() - VexEntity.this.getZ();
-                    VexEntity.this.bodyYaw = VexEntity.this.yaw = -((float)MathHelper.atan2(e, f)) * 57.295776f;
-                }
-            }
+            VexEntity.this.setTarget(VexEntity.this.owner.getTarget());
+            super.start();
         }
     }
 }

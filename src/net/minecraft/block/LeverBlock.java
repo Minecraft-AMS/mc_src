@@ -1,21 +1,16 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.WallMountedBlock;
 import net.minecraft.block.enums.WallMountLocation;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.sound.SoundCategory;
@@ -32,10 +27,14 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 
 public class LeverBlock
 extends WallMountedBlock {
     public static final BooleanProperty POWERED = Properties.POWERED;
+    protected static final int field_31184 = 6;
+    protected static final int field_31185 = 6;
+    protected static final int field_31186 = 8;
     protected static final VoxelShape NORTH_WALL_SHAPE = Block.createCuboidShape(5.0, 4.0, 10.0, 11.0, 12.0, 16.0);
     protected static final VoxelShape SOUTH_WALL_SHAPE = Block.createCuboidShape(5.0, 4.0, 0.0, 11.0, 12.0, 6.0);
     protected static final VoxelShape WEST_WALL_SHAPE = Block.createCuboidShape(10.0, 4.0, 5.0, 16.0, 12.0, 11.0);
@@ -93,17 +92,18 @@ extends WallMountedBlock {
             }
             return ActionResult.SUCCESS;
         }
-        BlockState blockState = this.method_21846(state, world, pos);
+        BlockState blockState = this.togglePower(state, world, pos);
         float f = blockState.get(POWERED) != false ? 0.6f : 0.5f;
         world.playSound(null, pos, SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.BLOCKS, 0.3f, f);
+        world.emitGameEvent((Entity)player, blockState.get(POWERED) != false ? GameEvent.BLOCK_SWITCH : GameEvent.BLOCK_UNSWITCH, pos);
         return ActionResult.CONSUME;
     }
 
-    public BlockState method_21846(BlockState blockState, World world, BlockPos blockPos) {
-        blockState = (BlockState)blockState.cycle(POWERED);
-        world.setBlockState(blockPos, blockState, 3);
-        this.updateNeighbors(blockState, world, blockPos);
-        return blockState;
+    public BlockState togglePower(BlockState state, World world, BlockPos pos) {
+        state = (BlockState)state.cycle(POWERED);
+        world.setBlockState(pos, state, 3);
+        this.updateNeighbors(state, world, pos);
+        return state;
     }
 
     private static void spawnParticles(BlockState state, WorldAccess world, BlockPos pos, float alpha) {
@@ -112,11 +112,10 @@ extends WallMountedBlock {
         double d = (double)pos.getX() + 0.5 + 0.1 * (double)direction.getOffsetX() + 0.2 * (double)direction2.getOffsetX();
         double e = (double)pos.getY() + 0.5 + 0.1 * (double)direction.getOffsetY() + 0.2 * (double)direction2.getOffsetY();
         double f = (double)pos.getZ() + 0.5 + 0.1 * (double)direction.getOffsetZ() + 0.2 * (double)direction2.getOffsetZ();
-        world.addParticle(new DustParticleEffect(1.0f, 0.0f, 0.0f, alpha), d, e, f, 0.0, 0.0, 0.0);
+        world.addParticle(new DustParticleEffect(DustParticleEffect.RED, alpha), d, e, f, 0.0, 0.0, 0.0);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (state.get(POWERED).booleanValue() && random.nextFloat() < 0.25f) {
             LeverBlock.spawnParticles(state, world, pos, 0.5f);

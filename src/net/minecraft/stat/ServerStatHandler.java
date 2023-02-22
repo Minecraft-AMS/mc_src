@@ -64,7 +64,6 @@ extends StatHandler {
     private final MinecraftServer server;
     private final File file;
     private final Set<Stat<?>> pendingStats = Sets.newHashSet();
-    private int lastStatsUpdate = -300;
 
     public ServerStatHandler(MinecraftServer server, File file) {
         this.server = server;
@@ -164,7 +163,7 @@ extends StatHandler {
         }
         JsonObject jsonObject = new JsonObject();
         for (Map.Entry entry : map.entrySet()) {
-            jsonObject.add(Registry.STAT_TYPE.getId((StatType<?>)entry.getKey()).toString(), (JsonElement)entry.getValue());
+            jsonObject.add(Registry.STAT_TYPE.getId((StatType)entry.getKey()).toString(), (JsonElement)entry.getValue());
         }
         JsonObject jsonObject2 = new JsonObject();
         jsonObject2.add("stats", (JsonElement)jsonObject);
@@ -181,13 +180,9 @@ extends StatHandler {
     }
 
     public void sendStats(ServerPlayerEntity player) {
-        int i = this.server.getTicks();
         Object2IntOpenHashMap object2IntMap = new Object2IntOpenHashMap();
-        if (i - this.lastStatsUpdate > 300) {
-            this.lastStatsUpdate = i;
-            for (Stat<?> stat : this.takePendingStats()) {
-                object2IntMap.put(stat, this.getStat(stat));
-            }
+        for (Stat<?> stat : this.takePendingStats()) {
+            object2IntMap.put(stat, this.getStat(stat));
         }
         player.networkHandler.sendPacket(new StatisticsS2CPacket((Object2IntMap<Stat<?>>)object2IntMap));
     }

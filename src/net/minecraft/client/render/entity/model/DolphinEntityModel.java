@@ -2,82 +2,65 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class DolphinEntityModel<T extends Entity>
-extends CompositeEntityModel<T> {
+extends SinglePartEntityModel<T> {
+    private final ModelPart root;
     private final ModelPart body;
     private final ModelPart tail;
     private final ModelPart tailFin;
 
-    public DolphinEntityModel() {
-        this.textureWidth = 64;
-        this.textureHeight = 64;
+    public DolphinEntityModel(ModelPart root) {
+        this.root = root;
+        this.body = root.getChild("body");
+        this.tail = this.body.getChild("tail");
+        this.tailFin = this.tail.getChild("tail_fin");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
         float f = 18.0f;
         float g = -8.0f;
-        this.body = new ModelPart(this, 22, 0);
-        this.body.addCuboid(-4.0f, -7.0f, 0.0f, 8.0f, 7.0f, 13.0f);
-        this.body.setPivot(0.0f, 22.0f, -5.0f);
-        ModelPart modelPart = new ModelPart(this, 51, 0);
-        modelPart.addCuboid(-0.5f, 0.0f, 8.0f, 1.0f, 4.0f, 5.0f);
-        modelPart.pitch = 1.0471976f;
-        this.body.addChild(modelPart);
-        ModelPart modelPart2 = new ModelPart(this, 48, 20);
-        modelPart2.mirror = true;
-        modelPart2.addCuboid(-0.5f, -4.0f, 0.0f, 1.0f, 4.0f, 7.0f);
-        modelPart2.setPivot(2.0f, -2.0f, 4.0f);
-        modelPart2.pitch = 1.0471976f;
-        modelPart2.roll = 2.0943952f;
-        this.body.addChild(modelPart2);
-        ModelPart modelPart3 = new ModelPart(this, 48, 20);
-        modelPart3.addCuboid(-0.5f, -4.0f, 0.0f, 1.0f, 4.0f, 7.0f);
-        modelPart3.setPivot(-2.0f, -2.0f, 4.0f);
-        modelPart3.pitch = 1.0471976f;
-        modelPart3.roll = -2.0943952f;
-        this.body.addChild(modelPart3);
-        this.tail = new ModelPart(this, 0, 19);
-        this.tail.addCuboid(-2.0f, -2.5f, 0.0f, 4.0f, 5.0f, 11.0f);
-        this.tail.setPivot(0.0f, -2.5f, 11.0f);
-        this.tail.pitch = -0.10471976f;
-        this.body.addChild(this.tail);
-        this.tailFin = new ModelPart(this, 19, 20);
-        this.tailFin.addCuboid(-5.0f, -0.5f, 0.0f, 10.0f, 1.0f, 6.0f);
-        this.tailFin.setPivot(0.0f, 0.0f, 9.0f);
-        this.tailFin.pitch = 0.0f;
-        this.tail.addChild(this.tailFin);
-        ModelPart modelPart4 = new ModelPart(this, 0, 0);
-        modelPart4.addCuboid(-4.0f, -3.0f, -3.0f, 8.0f, 7.0f, 6.0f);
-        modelPart4.setPivot(0.0f, -4.0f, -3.0f);
-        ModelPart modelPart5 = new ModelPart(this, 0, 13);
-        modelPart5.addCuboid(-1.0f, 2.0f, -7.0f, 2.0f, 2.0f, 4.0f);
-        modelPart4.addChild(modelPart5);
-        this.body.addChild(modelPart4);
+        ModelPartData modelPartData2 = modelPartData.addChild("body", ModelPartBuilder.create().uv(22, 0).cuboid(-4.0f, -7.0f, 0.0f, 8.0f, 7.0f, 13.0f), ModelTransform.pivot(0.0f, 22.0f, -5.0f));
+        modelPartData2.addChild("back_fin", ModelPartBuilder.create().uv(51, 0).cuboid(-0.5f, 0.0f, 8.0f, 1.0f, 4.0f, 5.0f), ModelTransform.rotation(1.0471976f, 0.0f, 0.0f));
+        modelPartData2.addChild("left_fin", ModelPartBuilder.create().uv(48, 20).mirrored().cuboid(-0.5f, -4.0f, 0.0f, 1.0f, 4.0f, 7.0f), ModelTransform.of(2.0f, -2.0f, 4.0f, 1.0471976f, 0.0f, 2.0943952f));
+        modelPartData2.addChild("right_fin", ModelPartBuilder.create().uv(48, 20).cuboid(-0.5f, -4.0f, 0.0f, 1.0f, 4.0f, 7.0f), ModelTransform.of(-2.0f, -2.0f, 4.0f, 1.0471976f, 0.0f, -2.0943952f));
+        ModelPartData modelPartData3 = modelPartData2.addChild("tail", ModelPartBuilder.create().uv(0, 19).cuboid(-2.0f, -2.5f, 0.0f, 4.0f, 5.0f, 11.0f), ModelTransform.of(0.0f, -2.5f, 11.0f, -0.10471976f, 0.0f, 0.0f));
+        modelPartData3.addChild("tail_fin", ModelPartBuilder.create().uv(19, 20).cuboid(-5.0f, -0.5f, 0.0f, 10.0f, 1.0f, 6.0f), ModelTransform.pivot(0.0f, 0.0f, 9.0f));
+        ModelPartData modelPartData4 = modelPartData2.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -3.0f, -3.0f, 8.0f, 7.0f, 6.0f), ModelTransform.pivot(0.0f, -4.0f, -3.0f));
+        modelPartData4.addChild("nose", ModelPartBuilder.create().uv(0, 13).cuboid(-1.0f, 2.0f, -7.0f, 2.0f, 2.0f, 4.0f), ModelTransform.NONE);
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.body);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override
     public void setAngles(T entity, float limbAngle, float limbDistance, float animationProgress, float headYaw, float headPitch) {
         this.body.pitch = headPitch * ((float)Math.PI / 180);
         this.body.yaw = headYaw * ((float)Math.PI / 180);
-        if (Entity.squaredHorizontalLength(((Entity)entity).getVelocity()) > 1.0E-7) {
-            this.body.pitch += -0.05f + -0.05f * MathHelper.cos(animationProgress * 0.3f);
+        if (((Entity)entity).getVelocity().horizontalLengthSquared() > 1.0E-7) {
+            this.body.pitch += -0.05f - 0.05f * MathHelper.cos(animationProgress * 0.3f);
             this.tail.pitch = -0.1f * MathHelper.cos(animationProgress * 0.3f);
             this.tailFin.pitch = -0.2f * MathHelper.cos(animationProgress * 0.3f);
         }

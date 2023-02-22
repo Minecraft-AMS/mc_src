@@ -12,8 +12,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.json.ModelTransformation;
@@ -29,12 +29,20 @@ import net.minecraft.util.math.Vec3f;
 @Environment(value=EnvType.CLIENT)
 public class ItemEntityRenderer
 extends EntityRenderer<ItemEntity> {
+    private static final float field_32924 = 0.15f;
+    private static final int MAX_COUNT_FOR_4_ITEMS_RENDERED = 48;
+    private static final int MAX_COUNT_FOR_3_ITEMS_RENDERED = 32;
+    private static final int MAX_COUNT_FOR_2_ITEMS_RENDERED = 16;
+    private static final int MAX_COUNT_FOR_1_ITEM_RENDERED = 1;
+    private static final float field_32929 = 0.0f;
+    private static final float field_32930 = 0.0f;
+    private static final float field_32931 = 0.09375f;
     private final ItemRenderer itemRenderer;
     private final Random random = new Random();
 
-    public ItemEntityRenderer(EntityRenderDispatcher dispatcher, ItemRenderer itemRenderer) {
-        super(dispatcher);
-        this.itemRenderer = itemRenderer;
+    public ItemEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
+        this.itemRenderer = context.getItemRenderer();
         this.shadowRadius = 0.15f;
         this.shadowOpacity = 0.75f;
     }
@@ -61,14 +69,14 @@ extends EntityRenderer<ItemEntity> {
         ItemStack itemStack = itemEntity.getStack();
         int j = itemStack.isEmpty() ? 187 : Item.getRawId(itemStack.getItem()) + itemStack.getDamage();
         this.random.setSeed(j);
-        BakedModel bakedModel = this.itemRenderer.getHeldItemModel(itemStack, itemEntity.world, null);
+        BakedModel bakedModel = this.itemRenderer.getHeldItemModel(itemStack, itemEntity.world, null, itemEntity.getId());
         boolean bl = bakedModel.hasDepth();
         int k = this.getRenderedAmount(itemStack);
         float h = 0.25f;
         float l = MathHelper.sin(((float)itemEntity.getItemAge() + g) / 10.0f + itemEntity.uniqueOffset) * 0.1f + 0.1f;
         float m = bakedModel.getTransformation().getTransformation((ModelTransformation.Mode)ModelTransformation.Mode.GROUND).scale.getY();
         matrixStack.translate(0.0, l + 0.25f * m, 0.0);
-        float n = itemEntity.method_27314(g);
+        float n = itemEntity.getRotation(g);
         matrixStack.multiply(Vec3f.POSITIVE_Y.getRadialQuaternion(n));
         float o = bakedModel.getTransformation().ground.scale.getX();
         float p = bakedModel.getTransformation().ground.scale.getY();

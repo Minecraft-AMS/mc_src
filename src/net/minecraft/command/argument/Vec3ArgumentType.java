@@ -53,12 +53,12 @@ implements ArgumentType<PosArgument> {
         return new Vec3ArgumentType(centerIntegers);
     }
 
-    public static Vec3d getVec3(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+    public static Vec3d getVec3(CommandContext<ServerCommandSource> context, String name) {
         return ((PosArgument)context.getArgument(name, PosArgument.class)).toAbsolutePos((ServerCommandSource)context.getSource());
     }
 
-    public static PosArgument getPosArgument(CommandContext<ServerCommandSource> commandContext, String string) {
-        return (PosArgument)commandContext.getArgument(string, PosArgument.class);
+    public static PosArgument getPosArgument(CommandContext<ServerCommandSource> context, String name) {
+        return (PosArgument)context.getArgument(name, PosArgument.class);
     }
 
     public PosArgument parse(StringReader stringReader) throws CommandSyntaxException {
@@ -81,8 +81,8 @@ implements ArgumentType<PosArgument> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

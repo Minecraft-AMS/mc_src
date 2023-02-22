@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.carver.CarverConfig;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
@@ -52,19 +53,19 @@ import org.apache.logging.log4j.Logger;
 public class GenerationSettings {
     public static final Logger LOGGER = LogManager.getLogger();
     public static final GenerationSettings INSTANCE = new GenerationSettings(() -> ConfiguredSurfaceBuilders.NOPE, (Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>>)ImmutableMap.of(), (List<List<Supplier<ConfiguredFeature<?, ?>>>>)ImmutableList.of(), (List<Supplier<ConfiguredStructureFeature<?, ?>>>)ImmutableList.of());
-    public static final MapCodec<GenerationSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)ConfiguredSurfaceBuilder.REGISTRY_CODEC.fieldOf("surface_builder").forGetter(generationSettings -> generationSettings.surfaceBuilder), (App)Codec.simpleMap(GenerationStep.Carver.CODEC, (Codec)ConfiguredCarver.field_26755.promotePartial(Util.method_29188("Carver: ", arg_0 -> ((Logger)LOGGER).error(arg_0))), (Keyable)StringIdentifiable.method_28142(GenerationStep.Carver.values())).fieldOf("carvers").forGetter(generationSettings -> generationSettings.carvers), (App)ConfiguredFeature.field_26756.promotePartial(Util.method_29188("Feature: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).listOf().fieldOf("features").forGetter(generationSettings -> generationSettings.features), (App)ConfiguredStructureFeature.field_26757.promotePartial(Util.method_29188("Structure start: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).fieldOf("starts").forGetter(generationSettings -> generationSettings.structureFeatures)).apply((Applicative)instance, GenerationSettings::new));
+    public static final MapCodec<GenerationSettings> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)ConfiguredSurfaceBuilder.REGISTRY_CODEC.fieldOf("surface_builder").flatXmap(Codecs.createPresentValueChecker(), Codecs.createPresentValueChecker()).forGetter(generationSettings -> generationSettings.surfaceBuilder), (App)Codec.simpleMap(GenerationStep.Carver.CODEC, (Codec)ConfiguredCarver.LIST_CODEC.promotePartial(Util.addPrefix("Carver: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()), (Keyable)StringIdentifiable.toKeyable(GenerationStep.Carver.values())).fieldOf("carvers").forGetter(generationSettings -> generationSettings.carvers), (App)ConfiguredFeature.field_26756.promotePartial(Util.addPrefix("Feature: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()).listOf().fieldOf("features").forGetter(generationSettings -> generationSettings.features), (App)ConfiguredStructureFeature.REGISTRY_ELEMENT_CODEC.promotePartial(Util.addPrefix("Structure start: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).fieldOf("starts").flatXmap(Codecs.createPresentValuesChecker(), Codecs.createPresentValuesChecker()).forGetter(generationSettings -> generationSettings.structureFeatures)).apply((Applicative)instance, GenerationSettings::new));
     private final Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilder;
     private final Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers;
     private final List<List<Supplier<ConfiguredFeature<?, ?>>>> features;
     private final List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures;
     private final List<ConfiguredFeature<?, ?>> flowerFeatures;
 
-    private GenerationSettings(Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilder, Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers, List<List<Supplier<ConfiguredFeature<?, ?>>>> features, List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures) {
+    GenerationSettings(Supplier<ConfiguredSurfaceBuilder<?>> surfaceBuilder, Map<GenerationStep.Carver, List<Supplier<ConfiguredCarver<?>>>> carvers, List<List<Supplier<ConfiguredFeature<?, ?>>>> features, List<Supplier<ConfiguredStructureFeature<?, ?>>> structureFeatures) {
         this.surfaceBuilder = surfaceBuilder;
         this.carvers = carvers;
         this.features = features;
         this.structureFeatures = structureFeatures;
-        this.flowerFeatures = (List)features.stream().flatMap(Collection::stream).map(Supplier::get).flatMap(ConfiguredFeature::method_30648).filter(configuredFeature -> configuredFeature.feature == Feature.FLOWER).collect(ImmutableList.toImmutableList());
+        this.flowerFeatures = (List)features.stream().flatMap(Collection::stream).map(Supplier::get).flatMap(ConfiguredFeature::getDecoratedFeatures).filter(configuredFeature -> configuredFeature.feature == Feature.FLOWER).collect(ImmutableList.toImmutableList());
     }
 
     public List<Supplier<ConfiguredCarver<?>>> getCarversForStep(GenerationStep.Carver carverStep) {
@@ -141,7 +142,7 @@ public class GenerationSettings {
         }
 
         public GenerationSettings build() {
-            return new GenerationSettings(this.surfaceBuilder.orElseThrow(() -> new IllegalStateException("Missing surface builder")), (Map)this.carvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> ImmutableList.copyOf((Collection)((Collection)entry.getValue())))), (List)this.features.stream().map(ImmutableList::copyOf).collect(ImmutableList.toImmutableList()), (List)ImmutableList.copyOf(this.structureFeatures));
+            return new GenerationSettings(this.surfaceBuilder.orElseThrow(() -> new IllegalStateException("Missing surface builder")), (Map)this.carvers.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> ImmutableList.copyOf((Collection)((Collection)entry.getValue())))), (List)this.features.stream().map(ImmutableList::copyOf).collect(ImmutableList.toImmutableList()), (List<Supplier<ConfiguredStructureFeature<?, ?>>>)ImmutableList.copyOf(this.structureFeatures));
         }
     }
 }

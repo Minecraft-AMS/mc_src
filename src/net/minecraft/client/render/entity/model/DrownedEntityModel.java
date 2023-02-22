@@ -9,7 +9,13 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.ZombieEntityModel;
 import net.minecraft.entity.LivingEntity;
@@ -24,18 +30,16 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class DrownedEntityModel<T extends ZombieEntity>
 extends ZombieEntityModel<T> {
-    public DrownedEntityModel(float f, float g, int i, int j) {
-        super(f, g, i, j);
-        this.rightArm = new ModelPart(this, 32, 48);
-        this.rightArm.addCuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, f);
-        this.rightArm.setPivot(-5.0f, 2.0f + g, 0.0f);
-        this.rightLeg = new ModelPart(this, 16, 48);
-        this.rightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, f);
-        this.rightLeg.setPivot(-1.9f, 12.0f + g, 0.0f);
+    public DrownedEntityModel(ModelPart modelPart) {
+        super(modelPart);
     }
 
-    public DrownedEntityModel(float f, boolean bl) {
-        super(f, 0.0f, 64, bl ? 32 : 64);
+    public static TexturedModelData getTexturedModelData(Dilation dilation) {
+        ModelData modelData = BipedEntityModel.getModelData(dilation, 0.0f);
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(32, 48).cuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(5.0f, 2.0f, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(16, 48).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(1.9f, 12.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
@@ -43,7 +47,7 @@ extends ZombieEntityModel<T> {
         this.rightArmPose = BipedEntityModel.ArmPose.EMPTY;
         this.leftArmPose = BipedEntityModel.ArmPose.EMPTY;
         ItemStack itemStack = ((LivingEntity)zombieEntity).getStackInHand(Hand.MAIN_HAND);
-        if (itemStack.getItem() == Items.TRIDENT && ((MobEntity)zombieEntity).isAttacking()) {
+        if (itemStack.isOf(Items.TRIDENT) && ((MobEntity)zombieEntity).isAttacking()) {
             if (((MobEntity)zombieEntity).getMainArm() == Arm.RIGHT) {
                 this.rightArmPose = BipedEntityModel.ArmPose.THROW_SPEAR;
             } else {

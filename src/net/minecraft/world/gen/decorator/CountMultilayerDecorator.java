@@ -33,7 +33,7 @@ extends Decorator<CountConfig> {
         int i = 0;
         do {
             bl = false;
-            for (int j = 0; j < countConfig.getCount().getValue(random); ++j) {
+            for (int j = 0; j < countConfig.getCount().get(random); ++j) {
                 int l;
                 int m;
                 int k = random.nextInt(16) + blockPos.getX();
@@ -51,7 +51,7 @@ extends Decorator<CountConfig> {
         BlockPos.Mutable mutable = new BlockPos.Mutable(x, y, z);
         int i = 0;
         BlockState blockState = context.getBlockState(mutable);
-        for (int j = y; j >= 1; --j) {
+        for (int j = y; j >= context.getBottomY() + 1; --j) {
             mutable.setY(j - 1);
             BlockState blockState2 = context.getBlockState(mutable);
             if (!CountMultilayerDecorator.blocksSpawn(blockState2) && CountMultilayerDecorator.blocksSpawn(blockState) && !blockState2.isOf(Blocks.BEDROCK)) {

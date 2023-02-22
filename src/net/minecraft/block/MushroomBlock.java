@@ -37,7 +37,7 @@ extends Block {
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         World blockView = ctx.getWorld();
         BlockPos blockPos = ctx.getBlockPos();
-        return (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(DOWN, this != blockView.getBlockState(blockPos.down()).getBlock())).with(UP, this != blockView.getBlockState(blockPos.up()).getBlock())).with(NORTH, this != blockView.getBlockState(blockPos.north()).getBlock())).with(EAST, this != blockView.getBlockState(blockPos.east()).getBlock())).with(SOUTH, this != blockView.getBlockState(blockPos.south()).getBlock())).with(WEST, this != blockView.getBlockState(blockPos.west()).getBlock());
+        return (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(DOWN, !blockView.getBlockState(blockPos.down()).isOf(this))).with(UP, !blockView.getBlockState(blockPos.up()).isOf(this))).with(NORTH, !blockView.getBlockState(blockPos.north()).isOf(this))).with(EAST, !blockView.getBlockState(blockPos.east()).isOf(this))).with(SOUTH, !blockView.getBlockState(blockPos.south()).isOf(this))).with(WEST, !blockView.getBlockState(blockPos.west()).isOf(this));
     }
 
     @Override

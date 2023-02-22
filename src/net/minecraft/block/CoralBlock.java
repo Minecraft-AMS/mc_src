@@ -22,6 +22,7 @@ import net.minecraft.world.WorldAccess;
 public class CoralBlock
 extends CoralParentBlock {
     private final Block deadCoralBlock;
+    protected static final float field_31076 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 15.0, 14.0);
 
     protected CoralBlock(Block deadCoralBlock, AbstractBlock.Settings settings) {

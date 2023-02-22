@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util;
@@ -17,34 +15,33 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import org.jetbrains.annotations.Nullable;
 
-public enum Formatting {
-    BLACK("BLACK", '0', 0, 0),
-    DARK_BLUE("DARK_BLUE", '1', 1, 170),
-    DARK_GREEN("DARK_GREEN", '2', 2, 43520),
-    DARK_AQUA("DARK_AQUA", '3', 3, 43690),
-    DARK_RED("DARK_RED", '4', 4, 0xAA0000),
-    DARK_PURPLE("DARK_PURPLE", '5', 5, 0xAA00AA),
-    GOLD("GOLD", '6', 6, 0xFFAA00),
-    GRAY("GRAY", '7', 7, 0xAAAAAA),
-    DARK_GRAY("DARK_GRAY", '8', 8, 0x555555),
-    BLUE("BLUE", '9', 9, 0x5555FF),
-    GREEN("GREEN", 'a', 10, 0x55FF55),
-    AQUA("AQUA", 'b', 11, 0x55FFFF),
-    RED("RED", 'c', 12, 0xFF5555),
-    LIGHT_PURPLE("LIGHT_PURPLE", 'd', 13, 0xFF55FF),
-    YELLOW("YELLOW", 'e', 14, 0xFFFF55),
-    WHITE("WHITE", 'f', 15, 0xFFFFFF),
-    OBFUSCATED("OBFUSCATED", 'k', true),
-    BOLD("BOLD", 'l', true),
-    STRIKETHROUGH("STRIKETHROUGH", 'm', true),
-    UNDERLINE("UNDERLINE", 'n', true),
-    ITALIC("ITALIC", 'o', true),
-    RESET("RESET", 'r', -1, null);
-
+public final class Formatting
+extends Enum<Formatting> {
+    public static final /* enum */ Formatting BLACK = new Formatting("BLACK", '0', 0, 0);
+    public static final /* enum */ Formatting DARK_BLUE = new Formatting("DARK_BLUE", '1', 1, 170);
+    public static final /* enum */ Formatting DARK_GREEN = new Formatting("DARK_GREEN", '2', 2, 43520);
+    public static final /* enum */ Formatting DARK_AQUA = new Formatting("DARK_AQUA", '3', 3, 43690);
+    public static final /* enum */ Formatting DARK_RED = new Formatting("DARK_RED", '4', 4, 0xAA0000);
+    public static final /* enum */ Formatting DARK_PURPLE = new Formatting("DARK_PURPLE", '5', 5, 0xAA00AA);
+    public static final /* enum */ Formatting GOLD = new Formatting("GOLD", '6', 6, 0xFFAA00);
+    public static final /* enum */ Formatting GRAY = new Formatting("GRAY", '7', 7, 0xAAAAAA);
+    public static final /* enum */ Formatting DARK_GRAY = new Formatting("DARK_GRAY", '8', 8, 0x555555);
+    public static final /* enum */ Formatting BLUE = new Formatting("BLUE", '9', 9, 0x5555FF);
+    public static final /* enum */ Formatting GREEN = new Formatting("GREEN", 'a', 10, 0x55FF55);
+    public static final /* enum */ Formatting AQUA = new Formatting("AQUA", 'b', 11, 0x55FFFF);
+    public static final /* enum */ Formatting RED = new Formatting("RED", 'c', 12, 0xFF5555);
+    public static final /* enum */ Formatting LIGHT_PURPLE = new Formatting("LIGHT_PURPLE", 'd', 13, 0xFF55FF);
+    public static final /* enum */ Formatting YELLOW = new Formatting("YELLOW", 'e', 14, 0xFFFF55);
+    public static final /* enum */ Formatting WHITE = new Formatting("WHITE", 'f', 15, 0xFFFFFF);
+    public static final /* enum */ Formatting OBFUSCATED = new Formatting("OBFUSCATED", 'k', true);
+    public static final /* enum */ Formatting BOLD = new Formatting("BOLD", 'l', true);
+    public static final /* enum */ Formatting STRIKETHROUGH = new Formatting("STRIKETHROUGH", 'm', true);
+    public static final /* enum */ Formatting UNDERLINE = new Formatting("UNDERLINE", 'n', true);
+    public static final /* enum */ Formatting ITALIC = new Formatting("ITALIC", 'o', true);
+    public static final /* enum */ Formatting RESET = new Formatting("RESET", 'r', -1, null);
+    public static final char field_33292 = '\u00a7';
     private static final Map<String, Formatting> BY_NAME;
     private static final Pattern FORMATTING_CODE_PATTERN;
     private final String name;
@@ -54,6 +51,15 @@ public enum Formatting {
     private final int colorIndex;
     @Nullable
     private final Integer colorValue;
+    private static final /* synthetic */ Formatting[] field_1072;
+
+    public static Formatting[] values() {
+        return (Formatting[])field_1072.clone();
+    }
+
+    public static Formatting valueOf(String string) {
+        return Enum.valueOf(Formatting.class, string);
+    }
 
     private static String sanitize(String name) {
         return name.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
@@ -74,6 +80,10 @@ public enum Formatting {
         this.colorIndex = colorIndex;
         this.colorValue = colorValue;
         this.stringValue = "\u00a7" + code;
+    }
+
+    public char getCode() {
+        return this.code;
     }
 
     public int getColorIndex() {
@@ -127,7 +137,6 @@ public enum Formatting {
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static Formatting byCode(char code) {
         char c = Character.toString(code).toLowerCase(Locale.ROOT).charAt(0);
         for (Formatting formatting : Formatting.values()) {
@@ -146,7 +155,12 @@ public enum Formatting {
         return list;
     }
 
+    private static /* synthetic */ Formatting[] method_36946() {
+        return new Formatting[]{BLACK, DARK_BLUE, DARK_GREEN, DARK_AQUA, DARK_RED, DARK_PURPLE, GOLD, GRAY, DARK_GRAY, BLUE, GREEN, AQUA, RED, LIGHT_PURPLE, YELLOW, WHITE, OBFUSCATED, BOLD, STRIKETHROUGH, UNDERLINE, ITALIC, RESET};
+    }
+
     static {
+        field_1072 = Formatting.method_36946();
         BY_NAME = Arrays.stream(Formatting.values()).collect(Collectors.toMap(f -> Formatting.sanitize(f.name), f -> f));
         FORMATTING_CODE_PATTERN = Pattern.compile("(?i)\u00a7[0-9A-FK-OR]");
     }

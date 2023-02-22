@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.stat;
 
 import java.util.Objects;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.stat.StatFormatter;
 import net.minecraft.stat.StatType;
@@ -47,7 +43,6 @@ extends ScoreboardCriterion {
         return this.value;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public String format(int i) {
         return this.formatter.format(i);
     }
@@ -61,7 +56,7 @@ extends ScoreboardCriterion {
     }
 
     public String toString() {
-        return "Stat{name=" + this.getName() + ", formatter=" + this.formatter + '}';
+        return "Stat{name=" + this.getName() + ", formatter=" + this.formatter + "}";
     }
 }
 

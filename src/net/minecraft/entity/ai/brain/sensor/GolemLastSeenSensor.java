@@ -18,6 +18,9 @@ import net.minecraft.server.world.ServerWorld;
 
 public class GolemLastSeenSensor
 extends Sensor<LivingEntity> {
+    private static final int RUN_TIME = 200;
+    private static final int GOLEM_DETECTED_WARMUP = 600;
+
     public GolemLastSeenSensor() {
         this(200);
     }
@@ -43,12 +46,12 @@ extends Sensor<LivingEntity> {
         }
         boolean bl = optional.get().stream().anyMatch(livingEntity -> livingEntity.getType().equals(EntityType.IRON_GOLEM));
         if (bl) {
-            GolemLastSeenSensor.method_30233(entity);
+            GolemLastSeenSensor.rememberIronGolem(entity);
         }
     }
 
-    public static void method_30233(LivingEntity livingEntity) {
-        livingEntity.getBrain().remember(MemoryModuleType.GOLEM_DETECTED_RECENTLY, true, 600L);
+    public static void rememberIronGolem(LivingEntity entity) {
+        entity.getBrain().remember(MemoryModuleType.GOLEM_DETECTED_RECENTLY, true, 600L);
     }
 }
 

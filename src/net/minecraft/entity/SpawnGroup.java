@@ -12,15 +12,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.minecraft.util.StringIdentifiable;
 
-public enum SpawnGroup implements StringIdentifiable
-{
-    MONSTER("monster", 70, false, false, 128),
-    CREATURE("creature", 10, true, true, 128),
-    AMBIENT("ambient", 15, true, false, 128),
-    WATER_CREATURE("water_creature", 5, true, false, 128),
-    WATER_AMBIENT("water_ambient", 20, true, false, 64),
-    MISC("misc", -1, true, true, 128);
-
+public final class SpawnGroup
+extends Enum<SpawnGroup>
+implements StringIdentifiable {
+    public static final /* enum */ SpawnGroup MONSTER = new SpawnGroup("monster", 70, false, false, 128);
+    public static final /* enum */ SpawnGroup CREATURE = new SpawnGroup("creature", 10, true, true, 128);
+    public static final /* enum */ SpawnGroup AMBIENT = new SpawnGroup("ambient", 15, true, false, 128);
+    public static final /* enum */ SpawnGroup UNDERGROUND_WATER_CREATURE = new SpawnGroup("underground_water_creature", 5, true, false, 128);
+    public static final /* enum */ SpawnGroup WATER_CREATURE = new SpawnGroup("water_creature", 5, true, false, 128);
+    public static final /* enum */ SpawnGroup WATER_AMBIENT = new SpawnGroup("water_ambient", 20, true, false, 64);
+    public static final /* enum */ SpawnGroup MISC = new SpawnGroup("misc", -1, true, true, 128);
     public static final Codec<SpawnGroup> CODEC;
     private static final Map<String, SpawnGroup> BY_NAME;
     private final int capacity;
@@ -29,6 +30,15 @@ public enum SpawnGroup implements StringIdentifiable
     private final String name;
     private final int despawnStartRange = 32;
     private final int immediateDespawnRange;
+    private static final /* synthetic */ SpawnGroup[] field_6301;
+
+    public static SpawnGroup[] values() {
+        return (SpawnGroup[])field_6301.clone();
+    }
+
+    public static SpawnGroup valueOf(String string) {
+        return Enum.valueOf(SpawnGroup.class, string);
+    }
 
     private SpawnGroup(String name, int spawnCap, boolean peaceful, boolean rare, int immediateDespawnRange) {
         this.name = name;
@@ -71,7 +81,12 @@ public enum SpawnGroup implements StringIdentifiable
         return 32;
     }
 
+    private static /* synthetic */ SpawnGroup[] method_36609() {
+        return new SpawnGroup[]{MONSTER, CREATURE, AMBIENT, UNDERGROUND_WATER_CREATURE, WATER_CREATURE, WATER_AMBIENT, MISC};
+    }
+
     static {
+        field_6301 = SpawnGroup.method_36609();
         CODEC = StringIdentifiable.createCodec(SpawnGroup::values, SpawnGroup::byName);
         BY_NAME = Arrays.stream(SpawnGroup.values()).collect(Collectors.toMap(SpawnGroup::getName, spawnGroup -> spawnGroup));
     }

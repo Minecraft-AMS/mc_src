@@ -76,7 +76,7 @@ implements BakedModel {
     }
 
     @Override
-    public Sprite getSprite() {
+    public Sprite getParticleSprite() {
         return this.sprite;
     }
 
@@ -105,15 +105,15 @@ implements BakedModel {
             this(unbakedModel.useAmbientOcclusion(), unbakedModel.getGuiLight().isSide(), hasDepth, unbakedModel.getTransformations(), itemPropertyOverrides);
         }
 
-        private Builder(boolean usesAo, boolean isSideLit, boolean hasDepth, ModelTransformation modelTransformation, ModelOverrideList modelOverrideList) {
+        private Builder(boolean usesAo, boolean isSideLit, boolean hasDepth, ModelTransformation transformation, ModelOverrideList itemPropertyOverrides) {
             for (Direction direction : Direction.values()) {
                 this.faceQuads.put(direction, Lists.newArrayList());
             }
-            this.itemPropertyOverrides = modelOverrideList;
+            this.itemPropertyOverrides = itemPropertyOverrides;
             this.usesAo = usesAo;
             this.isSideLit = isSideLit;
             this.hasDepth = hasDepth;
-            this.transformation = modelTransformation;
+            this.transformation = transformation;
         }
 
         public Builder addQuad(Direction side, BakedQuad quad) {
@@ -128,6 +128,10 @@ implements BakedModel {
 
         public Builder setParticle(Sprite sprite) {
             this.particleTexture = sprite;
+            return this;
+        }
+
+        public Builder method_35809() {
             return this;
         }
 

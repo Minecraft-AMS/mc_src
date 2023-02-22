@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ZombieSiegeManager
 implements Spawner {
-    private static final Logger field_26390 = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger();
     private boolean spawned;
     private State state = State.SIEGE_DONE;
     private int remaining;
@@ -100,7 +100,7 @@ implements Spawner {
             zombieEntity.initialize(world, world.getLocalDifficulty(zombieEntity.getBlockPos()), SpawnReason.EVENT, null, null);
         }
         catch (Exception exception) {
-            field_26390.warn("Failed to create zombie for village siege at {}", (Object)vec3d, (Object)exception);
+            LOGGER.warn("Failed to create zombie for village siege at {}", (Object)vec3d, (Object)exception);
             return;
         }
         zombieEntity.refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, world.random.nextFloat() * 360.0f, 0.0f);
@@ -120,11 +120,28 @@ implements Spawner {
         return null;
     }
 
-    static enum State {
-        SIEGE_CAN_ACTIVATE,
-        SIEGE_TONIGHT,
-        SIEGE_DONE;
+    static final class State
+    extends Enum<State> {
+        public static final /* enum */ State SIEGE_CAN_ACTIVATE = new State();
+        public static final /* enum */ State SIEGE_TONIGHT = new State();
+        public static final /* enum */ State SIEGE_DONE = new State();
+        private static final /* synthetic */ State[] field_18483;
 
+        public static State[] values() {
+            return (State[])field_18483.clone();
+        }
+
+        public static State valueOf(String string) {
+            return Enum.valueOf(State.class, string);
+        }
+
+        private static /* synthetic */ State[] method_36628() {
+            return new State[]{SIEGE_CAN_ACTIVATE, SIEGE_TONIGHT, SIEGE_DONE};
+        }
+
+        static {
+            field_18483 = State.method_36628();
+        }
     }
 }
 

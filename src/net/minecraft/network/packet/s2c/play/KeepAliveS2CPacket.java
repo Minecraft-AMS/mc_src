@@ -1,28 +1,27 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class KeepAliveS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private long id;
-
-    public KeepAliveS2CPacket() {
-    }
+    private final long id;
 
     public KeepAliveS2CPacket(long id) {
         this.id = id;
+    }
+
+    public KeepAliveS2CPacket(PacketByteBuf buf) {
+        this.id = buf.readLong();
+    }
+
+    @Override
+    public void write(PacketByteBuf buf) {
+        buf.writeLong(this.id);
     }
 
     @Override
@@ -30,17 +29,6 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onKeepAlive(this);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        this.id = buf.readLong();
-    }
-
-    @Override
-    public void write(PacketByteBuf buf) throws IOException {
-        buf.writeLong(this.id);
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public long getId() {
         return this.id;
     }

@@ -4,6 +4,7 @@
 package net.minecraft.entity.attribute;
 
 public class EntityAttribute {
+    public static final int field_30097 = 64;
     private final double fallback;
     private boolean tracked;
     private final String translationKey;

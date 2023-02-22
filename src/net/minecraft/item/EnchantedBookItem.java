@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -29,6 +26,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnchantedBookItem
 extends Item {
+    public static final String STORED_ENCHANTMENTS_KEY = "StoredEnchantments";
+
     public EnchantedBookItem(Item.Settings settings) {
         super(settings);
     }
@@ -44,15 +43,14 @@ extends Item {
     }
 
     public static NbtList getEnchantmentNbt(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getTag();
+        NbtCompound nbtCompound = stack.getNbt();
         if (nbtCompound != null) {
-            return nbtCompound.getList("StoredEnchantments", 10);
+            return nbtCompound.getList(STORED_ENCHANTMENTS_KEY, 10);
         }
         return new NbtList();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         super.appendTooltip(stack, world, tooltip, context);
         ItemStack.appendEnchantments(tooltip, EnchantedBookItem.getEnchantmentNbt(stack));
@@ -61,24 +59,21 @@ extends Item {
     public static void addEnchantment(ItemStack stack, EnchantmentLevelEntry entry) {
         NbtList nbtList = EnchantedBookItem.getEnchantmentNbt(stack);
         boolean bl = true;
-        Identifier identifier = Registry.ENCHANTMENT.getId(entry.enchantment);
+        Identifier identifier = EnchantmentHelper.getEnchantmentId(entry.enchantment);
         for (int i = 0; i < nbtList.size(); ++i) {
             NbtCompound nbtCompound = nbtList.getCompound(i);
-            Identifier identifier2 = Identifier.tryParse(nbtCompound.getString("id"));
+            Identifier identifier2 = EnchantmentHelper.getIdFromNbt(nbtCompound);
             if (identifier2 == null || !identifier2.equals(identifier)) continue;
-            if (nbtCompound.getInt("lvl") < entry.level) {
-                nbtCompound.putShort("lvl", (short)entry.level);
+            if (EnchantmentHelper.getLevelFromNbt(nbtCompound) < entry.level) {
+                EnchantmentHelper.writeLevelToNbt(nbtCompound, entry.level);
             }
             bl = false;
             break;
         }
         if (bl) {
-            NbtCompound nbtCompound2 = new NbtCompound();
-            nbtCompound2.putString("id", String.valueOf(identifier));
-            nbtCompound2.putShort("lvl", (short)entry.level);
-            nbtList.add(nbtCompound2);
+            nbtList.add(EnchantmentHelper.createNbt(identifier, entry.level));
         }
-        stack.getOrCreateTag().put("StoredEnchantments", nbtList);
+        stack.getOrCreateNbt().put(STORED_ENCHANTMENTS_KEY, nbtList);
     }
 
     public static ItemStack forEnchantment(EnchantmentLevelEntry info) {

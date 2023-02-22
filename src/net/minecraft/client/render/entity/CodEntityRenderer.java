@@ -9,9 +9,10 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.CodEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.CodEntity;
 import net.minecraft.util.Identifier;
@@ -23,8 +24,8 @@ public class CodEntityRenderer
 extends MobEntityRenderer<CodEntity, CodEntityModel<CodEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/fish/cod.png");
 
-    public CodEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new CodEntityModel(), 0.3f);
+    public CodEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new CodEntityModel(context.getPart(EntityModelLayers.COD)), 0.3f);
     }
 
     @Override

@@ -3,16 +3,15 @@
  */
 package net.minecraft.structure;
 
-import java.util.List;
 import java.util.Random;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.SimpleStructurePiece;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
+import net.minecraft.structure.StructurePiecesHolder;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.processor.BlockIgnoreStructureProcessor;
 import net.minecraft.util.BlockMirror;
@@ -22,6 +21,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
@@ -30,50 +30,38 @@ import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ShipwreckFeatureConfig;
 
 public class ShipwreckGenerator {
-    private static final BlockPos field_14536 = new BlockPos(4, 0, 15);
+    static final BlockPos DEFAULT_POSITION = new BlockPos(4, 0, 15);
     private static final Identifier[] BEACHED_TEMPLATES = new Identifier[]{new Identifier("shipwreck/with_mast"), new Identifier("shipwreck/sideways_full"), new Identifier("shipwreck/sideways_fronthalf"), new Identifier("shipwreck/sideways_backhalf"), new Identifier("shipwreck/rightsideup_full"), new Identifier("shipwreck/rightsideup_fronthalf"), new Identifier("shipwreck/rightsideup_backhalf"), new Identifier("shipwreck/with_mast_degraded"), new Identifier("shipwreck/rightsideup_full_degraded"), new Identifier("shipwreck/rightsideup_fronthalf_degraded"), new Identifier("shipwreck/rightsideup_backhalf_degraded")};
     private static final Identifier[] REGULAR_TEMPLATES = new Identifier[]{new Identifier("shipwreck/with_mast"), new Identifier("shipwreck/upsidedown_full"), new Identifier("shipwreck/upsidedown_fronthalf"), new Identifier("shipwreck/upsidedown_backhalf"), new Identifier("shipwreck/sideways_full"), new Identifier("shipwreck/sideways_fronthalf"), new Identifier("shipwreck/sideways_backhalf"), new Identifier("shipwreck/rightsideup_full"), new Identifier("shipwreck/rightsideup_fronthalf"), new Identifier("shipwreck/rightsideup_backhalf"), new Identifier("shipwreck/with_mast_degraded"), new Identifier("shipwreck/upsidedown_full_degraded"), new Identifier("shipwreck/upsidedown_fronthalf_degraded"), new Identifier("shipwreck/upsidedown_backhalf_degraded"), new Identifier("shipwreck/sideways_full_degraded"), new Identifier("shipwreck/sideways_fronthalf_degraded"), new Identifier("shipwreck/sideways_backhalf_degraded"), new Identifier("shipwreck/rightsideup_full_degraded"), new Identifier("shipwreck/rightsideup_fronthalf_degraded"), new Identifier("shipwreck/rightsideup_backhalf_degraded")};
 
-    public static void addParts(StructureManager structureManager, BlockPos pos, BlockRotation rotation, List<StructurePiece> children, Random random, ShipwreckFeatureConfig config) {
+    public static void addParts(StructureManager structureManager, BlockPos pos, BlockRotation rotation, StructurePiecesHolder structurePiecesHolder, Random random, ShipwreckFeatureConfig config) {
         Identifier identifier = Util.getRandom(config.isBeached ? BEACHED_TEMPLATES : REGULAR_TEMPLATES, random);
-        children.add(new Piece(structureManager, identifier, pos, rotation, config.isBeached));
+        structurePiecesHolder.addPiece(new Piece(structureManager, identifier, pos, rotation, config.isBeached));
     }
 
     public static class Piece
     extends SimpleStructurePiece {
-        private final BlockRotation rotation;
-        private final Identifier template;
         private final boolean grounded;
 
         public Piece(StructureManager manager, Identifier identifier, BlockPos pos, BlockRotation rotation, boolean grounded) {
-            super(StructurePieceType.SHIPWRECK, 0);
-            this.pos = pos;
-            this.rotation = rotation;
-            this.template = identifier;
+            super(StructurePieceType.SHIPWRECK, 0, manager, identifier, identifier.toString(), Piece.createPlacementData(rotation), pos);
             this.grounded = grounded;
-            this.initializeStructureData(manager);
         }
 
-        public Piece(StructureManager manager, NbtCompound tag) {
-            super(StructurePieceType.SHIPWRECK, tag);
-            this.template = new Identifier(tag.getString("Template"));
-            this.grounded = tag.getBoolean("isBeached");
-            this.rotation = BlockRotation.valueOf(tag.getString("Rot"));
-            this.initializeStructureData(manager);
+        public Piece(ServerWorld world, NbtCompound nbt) {
+            super(StructurePieceType.SHIPWRECK, nbt, world, identifier -> Piece.createPlacementData(BlockRotation.valueOf(nbt.getString("Rot"))));
+            this.grounded = nbt.getBoolean("isBeached");
         }
 
         @Override
-        protected void toNbt(NbtCompound tag) {
-            super.toNbt(tag);
-            tag.putString("Template", this.template.toString());
-            tag.putBoolean("isBeached", this.grounded);
-            tag.putString("Rot", this.rotation.name());
+        protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+            super.writeNbt(world, nbt);
+            nbt.putBoolean("isBeached", this.grounded);
+            nbt.putString("Rot", this.placementData.getRotation().name());
         }
 
-        private void initializeStructureData(StructureManager manager) {
-            Structure structure = manager.getStructureOrBlank(this.template);
-            StructurePlacementData structurePlacementData = new StructurePlacementData().setRotation(this.rotation).setMirror(BlockMirror.NONE).setPosition(field_14536).addProcessor(BlockIgnoreStructureProcessor.IGNORE_AIR_AND_STRUCTURE_BLOCKS);
-            this.setStructureData(structure, this.pos, structurePlacementData);
+        private static StructurePlacementData createPlacementData(BlockRotation rotation) {
+            return new StructurePlacementData().setRotation(rotation).setMirror(BlockMirror.NONE).setPosition(DEFAULT_POSITION).addProcessor(BlockIgnoreStructureProcessor.IGNORE_AIR_AND_STRUCTURE_BLOCKS);
         }
 
         @Override
@@ -89,23 +77,23 @@ public class ShipwreckGenerator {
 
         @Override
         public boolean generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox boundingBox, ChunkPos chunkPos, BlockPos pos) {
-            int i = 256;
+            int i = world.getTopY();
             int j = 0;
-            BlockPos blockPos = this.structure.getSize();
+            Vec3i vec3i = this.structure.getSize();
             Heightmap.Type type = this.grounded ? Heightmap.Type.WORLD_SURFACE_WG : Heightmap.Type.OCEAN_FLOOR_WG;
-            int k = blockPos.getX() * blockPos.getZ();
+            int k = vec3i.getX() * vec3i.getZ();
             if (k == 0) {
                 j = world.getTopY(type, this.pos.getX(), this.pos.getZ());
             } else {
-                BlockPos blockPos2 = this.pos.add(blockPos.getX() - 1, 0, blockPos.getZ() - 1);
-                for (BlockPos blockPos3 : BlockPos.iterate(this.pos, blockPos2)) {
-                    int l = world.getTopY(type, blockPos3.getX(), blockPos3.getZ());
+                BlockPos blockPos = this.pos.add(vec3i.getX() - 1, 0, vec3i.getZ() - 1);
+                for (BlockPos blockPos2 : BlockPos.iterate(this.pos, blockPos)) {
+                    int l = world.getTopY(type, blockPos2.getX(), blockPos2.getZ());
                     j += l;
                     i = Math.min(i, l);
                 }
                 j /= k;
             }
-            int m = this.grounded ? i - blockPos.getY() / 2 - random.nextInt(3) : j;
+            int m = this.grounded ? i - vec3i.getY() / 2 - random.nextInt(3) : j;
             this.pos = new BlockPos(this.pos.getX(), m, this.pos.getZ());
             return super.generate(world, structureAccessor, chunkGenerator, random, boundingBox, chunkPos, pos);
         }

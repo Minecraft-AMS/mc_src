@@ -21,6 +21,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -48,18 +49,26 @@ public class LootContext {
     private final Map<LootContextParameter<?>, Object> parameters;
     private final Map<Identifier, Dropper> drops;
 
-    private LootContext(Random random, float luck, ServerWorld world, Function<Identifier, LootTable> tableGetter, Function<Identifier, LootCondition> conditionSetter, Map<LootContextParameter<?>, Object> parameters, Map<Identifier, Dropper> drops) {
+    LootContext(Random random, float luck, ServerWorld world, Function<Identifier, LootTable> tableGetter, Function<Identifier, LootCondition> conditionGetter, Map<LootContextParameter<?>, Object> parameters, Map<Identifier, Dropper> drops) {
         this.random = random;
         this.luck = luck;
         this.world = world;
         this.tableGetter = tableGetter;
-        this.conditionGetter = conditionSetter;
+        this.conditionGetter = conditionGetter;
         this.parameters = ImmutableMap.copyOf(parameters);
         this.drops = ImmutableMap.copyOf(drops);
     }
 
     public boolean hasParameter(LootContextParameter<?> parameter) {
         return this.parameters.containsKey(parameter);
+    }
+
+    public <T> T requireParameter(LootContextParameter<T> parameter) {
+        Object object = this.parameters.get(parameter);
+        if (object == null) {
+            throw new NoSuchElementException(parameter.getIdentifier().toString());
+        }
+        return (T)object;
     }
 
     public void drop(Identifier id, Consumer<ItemStack> lootConsumer) {
@@ -90,7 +99,7 @@ public class LootContext {
         this.conditions.remove(condition);
     }
 
-    public LootTable getSupplier(Identifier id) {
+    public LootTable getTable(Identifier id) {
         return this.tableGetter.apply(id);
     }
 
@@ -110,14 +119,28 @@ public class LootContext {
         return this.world;
     }
 
-    public static enum EntityTarget {
-        THIS("this", LootContextParameters.THIS_ENTITY),
-        KILLER("killer", LootContextParameters.KILLER_ENTITY),
-        DIRECT_KILLER("direct_killer", LootContextParameters.DIRECT_KILLER_ENTITY),
-        KILLER_PLAYER("killer_player", LootContextParameters.LAST_DAMAGE_PLAYER);
+    @FunctionalInterface
+    public static interface Dropper {
+        public void add(LootContext var1, Consumer<ItemStack> var2);
+    }
 
-        private final String type;
+    public static final class EntityTarget
+    extends Enum<EntityTarget> {
+        public static final /* enum */ EntityTarget THIS = new EntityTarget("this", LootContextParameters.THIS_ENTITY);
+        public static final /* enum */ EntityTarget KILLER = new EntityTarget("killer", LootContextParameters.KILLER_ENTITY);
+        public static final /* enum */ EntityTarget DIRECT_KILLER = new EntityTarget("direct_killer", LootContextParameters.DIRECT_KILLER_ENTITY);
+        public static final /* enum */ EntityTarget KILLER_PLAYER = new EntityTarget("killer_player", LootContextParameters.LAST_DAMAGE_PLAYER);
+        final String type;
         private final LootContextParameter<? extends Entity> parameter;
+        private static final /* synthetic */ EntityTarget[] field_940;
+
+        public static EntityTarget[] values() {
+            return (EntityTarget[])field_940.clone();
+        }
+
+        public static EntityTarget valueOf(String string) {
+            return Enum.valueOf(EntityTarget.class, string);
+        }
 
         private EntityTarget(String type, LootContextParameter<? extends Entity> parameter) {
             this.type = type;
@@ -134,6 +157,14 @@ public class LootContext {
                 return entityTarget;
             }
             throw new IllegalArgumentException("Invalid entity target " + type);
+        }
+
+        private static /* synthetic */ EntityTarget[] method_36793() {
+            return new EntityTarget[]{THIS, KILLER, DIRECT_KILLER, KILLER_PLAYER};
+        }
+
+        static {
+            field_940 = EntityTarget.method_36793();
         }
 
         public static class Serializer
@@ -231,11 +262,11 @@ public class LootContext {
         public LootContext build(LootContextType type) {
             Sets.SetView set = Sets.difference(this.parameters.keySet(), type.getAllowed());
             if (!set.isEmpty()) {
-                throw new IllegalArgumentException("Parameters not allowed in this parameter set: " + set);
+                throw new IllegalArgumentException("Parameters not allowed in this parameter set: " + (Set)set);
             }
             Sets.SetView set2 = Sets.difference(type.getRequired(), this.parameters.keySet());
             if (!set2.isEmpty()) {
-                throw new IllegalArgumentException("Missing required parameters: " + set2);
+                throw new IllegalArgumentException("Missing required parameters: " + (Set)set2);
             }
             Random random = this.random;
             if (random == null) {
@@ -244,11 +275,6 @@ public class LootContext {
             MinecraftServer minecraftServer = this.world.getServer();
             return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager()::getTable, minecraftServer.getPredicateManager()::get, this.parameters, this.drops);
         }
-    }
-
-    @FunctionalInterface
-    public static interface Dropper {
-        public void add(LootContext var1, Consumer<ItemStack> var2);
     }
 }
 

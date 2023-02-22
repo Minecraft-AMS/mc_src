@@ -9,8 +9,9 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.ParrotEntityModel;
 import net.minecraft.entity.passive.ParrotEntity;
 import net.minecraft.util.Identifier;
@@ -21,8 +22,8 @@ public class ParrotEntityRenderer
 extends MobEntityRenderer<ParrotEntity, ParrotEntityModel> {
     public static final Identifier[] TEXTURES = new Identifier[]{new Identifier("textures/entity/parrot/parrot_red_blue.png"), new Identifier("textures/entity/parrot/parrot_blue.png"), new Identifier("textures/entity/parrot/parrot_green.png"), new Identifier("textures/entity/parrot/parrot_yellow_blue.png"), new Identifier("textures/entity/parrot/parrot_grey.png")};
 
-    public ParrotEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new ParrotEntityModel(), 0.3f);
+    public ParrotEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new ParrotEntityModel(context.getPart(EntityModelLayers.PARROT)), 0.3f);
     }
 
     @Override

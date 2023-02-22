@@ -27,8 +27,8 @@ implements DataProvider {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private final DataGenerator generator;
 
-    public CommandSyntaxProvider(DataGenerator dataGenerator) {
-        this.generator = dataGenerator;
+    public CommandSyntaxProvider(DataGenerator generator) {
+        this.generator = generator;
     }
 
     @Override

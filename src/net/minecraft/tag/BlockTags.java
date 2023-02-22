@@ -3,17 +3,15 @@
  */
 package net.minecraft.tag;
 
-import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.tag.RequiredTagList;
 import net.minecraft.tag.RequiredTagListRegistry;
 import net.minecraft.tag.Tag;
 import net.minecraft.tag.TagGroup;
-import net.minecraft.tag.TagManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
 
 public final class BlockTags {
-    protected static final RequiredTagList<Block> REQUIRED_TAGS = RequiredTagListRegistry.register(new Identifier("block"), TagManager::getBlocks);
+    protected static final RequiredTagList<Block> REQUIRED_TAGS = RequiredTagListRegistry.register(Registry.BLOCK_KEY, "tags/blocks");
     public static final Tag.Identified<Block> WOOL = BlockTags.register("wool");
     public static final Tag.Identified<Block> PLANKS = BlockTags.register("planks");
     public static final Tag.Identified<Block> STONE_BRICKS = BlockTags.register("stone_bricks");
@@ -56,7 +54,16 @@ public final class BlockTags {
     public static final Tag.Identified<Block> FLOWERS = BlockTags.register("flowers");
     public static final Tag.Identified<Block> PIGLIN_REPELLENTS = BlockTags.register("piglin_repellents");
     public static final Tag.Identified<Block> GOLD_ORES = BlockTags.register("gold_ores");
+    public static final Tag.Identified<Block> IRON_ORES = BlockTags.register("iron_ores");
+    public static final Tag.Identified<Block> DIAMOND_ORES = BlockTags.register("diamond_ores");
+    public static final Tag.Identified<Block> REDSTONE_ORES = BlockTags.register("redstone_ores");
+    public static final Tag.Identified<Block> LAPIS_ORES = BlockTags.register("lapis_ores");
+    public static final Tag.Identified<Block> COAL_ORES = BlockTags.register("coal_ores");
+    public static final Tag.Identified<Block> EMERALD_ORES = BlockTags.register("emerald_ores");
+    public static final Tag.Identified<Block> COPPER_ORES = BlockTags.register("copper_ores");
     public static final Tag.Identified<Block> NON_FLAMMABLE_WOOD = BlockTags.register("non_flammable_wood");
+    public static final Tag.Identified<Block> CANDLES = BlockTags.register("candles");
+    public static final Tag.Identified<Block> DIRT = BlockTags.register("dirt");
     public static final Tag.Identified<Block> FLOWER_POTS = BlockTags.register("flower_pots");
     public static final Tag.Identified<Block> ENDERMAN_HOLDABLE = BlockTags.register("enderman_holdable");
     public static final Tag.Identified<Block> ICE = BlockTags.register("ice");
@@ -99,7 +106,33 @@ public final class BlockTags {
     public static final Tag.Identified<Block> INFINIBURN_NETHER = BlockTags.register("infiniburn_nether");
     public static final Tag.Identified<Block> INFINIBURN_END = BlockTags.register("infiniburn_end");
     public static final Tag.Identified<Block> BASE_STONE_OVERWORLD = BlockTags.register("base_stone_overworld");
+    public static final Tag.Identified<Block> STONE_ORE_REPLACEABLES = BlockTags.register("stone_ore_replaceables");
+    public static final Tag.Identified<Block> DEEPSLATE_ORE_REPLACEABLES = BlockTags.register("deepslate_ore_replaceables");
     public static final Tag.Identified<Block> BASE_STONE_NETHER = BlockTags.register("base_stone_nether");
+    public static final Tag.Identified<Block> CANDLE_CAKES = BlockTags.register("candle_cakes");
+    public static final Tag.Identified<Block> CAULDRONS = BlockTags.register("cauldrons");
+    public static final Tag.Identified<Block> CRYSTAL_SOUND_BLOCKS = BlockTags.register("crystal_sound_blocks");
+    public static final Tag.Identified<Block> INSIDE_STEP_SOUND_BLOCKS = BlockTags.register("inside_step_sound_blocks");
+    public static final Tag.Identified<Block> OCCLUDES_VIBRATION_SIGNALS = BlockTags.register("occludes_vibration_signals");
+    public static final Tag.Identified<Block> DRIPSTONE_REPLACEABLE_BLOCKS = BlockTags.register("dripstone_replaceable_blocks");
+    public static final Tag.Identified<Block> CAVE_VINES = BlockTags.register("cave_vines");
+    public static final Tag.Identified<Block> MOSS_REPLACEABLE = BlockTags.register("moss_replaceable");
+    public static final Tag.Identified<Block> LUSH_GROUND_REPLACEABLE = BlockTags.register("lush_ground_replaceable");
+    public static final Tag.Identified<Block> SMALL_DRIPLEAF_PLACEABLE = BlockTags.register("small_dripleaf_placeable");
+    public static final Tag.Identified<Block> SNOW = BlockTags.register("snow");
+    public static final Tag.Identified<Block> AXE_MINEABLE = BlockTags.register("mineable/axe");
+    public static final Tag.Identified<Block> HOE_MINEABLE = BlockTags.register("mineable/hoe");
+    public static final Tag.Identified<Block> PICKAXE_MINEABLE = BlockTags.register("mineable/pickaxe");
+    public static final Tag.Identified<Block> SHOVEL_MINEABLE = BlockTags.register("mineable/shovel");
+    public static final Tag.Identified<Block> NEEDS_DIAMOND_TOOL = BlockTags.register("needs_diamond_tool");
+    public static final Tag.Identified<Block> NEEDS_IRON_TOOL = BlockTags.register("needs_iron_tool");
+    public static final Tag.Identified<Block> NEEDS_STONE_TOOL = BlockTags.register("needs_stone_tool");
+    public static final Tag.Identified<Block> FEATURES_CANNOT_REPLACE = BlockTags.register("features_cannot_replace");
+    public static final Tag.Identified<Block> LAVA_POOL_STONE_REPLACEABLES = BlockTags.register("lava_pool_stone_replaceables");
+    public static final Tag.Identified<Block> GEODE_INVALID_BLOCKS = BlockTags.register("geode_invalid_blocks");
+
+    private BlockTags() {
+    }
 
     private static Tag.Identified<Block> register(String id) {
         return REQUIRED_TAGS.add(id);
@@ -107,10 +140,6 @@ public final class BlockTags {
 
     public static TagGroup<Block> getTagGroup() {
         return REQUIRED_TAGS.getGroup();
-    }
-
-    public static List<? extends Tag.Identified<Block>> getRequiredTags() {
-        return REQUIRED_TAGS.getTags();
     }
 }
 

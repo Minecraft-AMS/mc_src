@@ -32,22 +32,24 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.ColumnPos;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
 public class ForceLoadCommand {
-    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.forceload.toobig", object, object2));
-    private static final Dynamic2CommandExceptionType QUERY_FAILURE_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("commands.forceload.query.failure", object, object2));
+    private static final int MAX_CHUNKS = 256;
+    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((maxCount, count) -> new TranslatableText("commands.forceload.toobig", maxCount, count));
+    private static final Dynamic2CommandExceptionType QUERY_FAILURE_EXCEPTION = new Dynamic2CommandExceptionType((chunkPos, registryKey) -> new TranslatableText("commands.forceload.query.failure", chunkPos, registryKey));
     private static final SimpleCommandExceptionType ADDED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.forceload.added.failure"));
     private static final SimpleCommandExceptionType REMOVED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.forceload.removed.failure"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("forceload").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.literal("add").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(commandContext -> ForceLoadCommand.executeChange((ServerCommandSource)commandContext.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), true))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(commandContext -> ForceLoadCommand.executeChange((ServerCommandSource)commandContext.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "to"), true)))))).then(((LiteralArgumentBuilder)CommandManager.literal("remove").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(commandContext -> ForceLoadCommand.executeChange((ServerCommandSource)commandContext.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), false))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(commandContext -> ForceLoadCommand.executeChange((ServerCommandSource)commandContext.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "to"), false))))).then(CommandManager.literal("all").executes(commandContext -> ForceLoadCommand.executeRemoveAll((ServerCommandSource)commandContext.getSource()))))).then(((LiteralArgumentBuilder)CommandManager.literal("query").executes(commandContext -> ForceLoadCommand.executeQuery((ServerCommandSource)commandContext.getSource()))).then(CommandManager.argument("pos", ColumnPosArgumentType.columnPos()).executes(commandContext -> ForceLoadCommand.executeQuery((ServerCommandSource)commandContext.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)commandContext, "pos"))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("forceload").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.literal("add").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), true))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "to"), true)))))).then(((LiteralArgumentBuilder)CommandManager.literal("remove").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), false))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "to"), false))))).then(CommandManager.literal("all").executes(context -> ForceLoadCommand.executeRemoveAll((ServerCommandSource)context.getSource()))))).then(((LiteralArgumentBuilder)CommandManager.literal("query").executes(context -> ForceLoadCommand.executeQuery((ServerCommandSource)context.getSource()))).then(CommandManager.argument("pos", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeQuery((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "pos"))))));
     }
 
     private static int executeQuery(ServerCommandSource source, ColumnPos pos) throws CommandSyntaxException {
-        ChunkPos chunkPos = new ChunkPos(pos.x >> 4, pos.z >> 4);
+        ChunkPos chunkPos = new ChunkPos(ChunkSectionPos.getSectionCoord(pos.x), ChunkSectionPos.getSectionCoord(pos.z));
         ServerWorld serverWorld = source.getWorld();
         RegistryKey<World> registryKey = serverWorld.getRegistryKey();
         boolean bl = serverWorld.getForcedChunks().contains(chunkPos.toLong());
@@ -86,6 +88,7 @@ public class ForceLoadCommand {
     }
 
     private static int executeChange(ServerCommandSource source, ColumnPos from, ColumnPos to, boolean forceLoaded) throws CommandSyntaxException {
+        int p;
         int i = Math.min(from.x, to.x);
         int j = Math.min(from.z, to.z);
         int k = Math.max(from.x, to.x);
@@ -93,11 +96,10 @@ public class ForceLoadCommand {
         if (i < -30000000 || j < -30000000 || k >= 30000000 || l >= 30000000) {
             throw BlockPosArgumentType.OUT_OF_WORLD_EXCEPTION.create();
         }
-        int o = k >> 4;
-        int m = i >> 4;
-        int p = l >> 4;
-        int n = j >> 4;
-        long q = ((long)(o - m) + 1L) * ((long)(p - n) + 1L);
+        int m = ChunkSectionPos.getSectionCoord(i);
+        int n = ChunkSectionPos.getSectionCoord(j);
+        int o = ChunkSectionPos.getSectionCoord(k);
+        long q = ((long)(o - m) + 1L) * ((long)((p = ChunkSectionPos.getSectionCoord(l)) - n) + 1L);
         if (q > 256L) {
             throw TOO_BIG_EXCEPTION.create((Object)256, (Object)q);
         }

@@ -50,8 +50,10 @@ implements ArgumentType<EntitySelector> {
     public static final SimpleCommandExceptionType ENTITY_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.notfound.entity"));
     public static final SimpleCommandExceptionType PLAYER_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.notfound.player"));
     public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed"));
-    private final boolean singleTarget;
-    private final boolean playersOnly;
+    private static final byte field_32098 = 1;
+    private static final byte field_32099 = 2;
+    final boolean singleTarget;
+    final boolean playersOnly;
 
     protected EntityArgumentType(boolean singleTarget, boolean playersOnly) {
         this.singleTarget = singleTarget;
@@ -78,28 +80,28 @@ implements ArgumentType<EntitySelector> {
         return collection;
     }
 
-    public static Collection<? extends Entity> getOptionalEntities(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        return ((EntitySelector)commandContext.getArgument(string, EntitySelector.class)).getEntities((ServerCommandSource)commandContext.getSource());
+    public static Collection<? extends Entity> getOptionalEntities(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return ((EntitySelector)context.getArgument(name, EntitySelector.class)).getEntities((ServerCommandSource)context.getSource());
     }
 
-    public static Collection<ServerPlayerEntity> getOptionalPlayers(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        return ((EntitySelector)commandContext.getArgument(string, EntitySelector.class)).getPlayers((ServerCommandSource)commandContext.getSource());
+    public static Collection<ServerPlayerEntity> getOptionalPlayers(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return ((EntitySelector)context.getArgument(name, EntitySelector.class)).getPlayers((ServerCommandSource)context.getSource());
     }
 
     public static EntityArgumentType player() {
         return new EntityArgumentType(true, true);
     }
 
-    public static ServerPlayerEntity getPlayer(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        return ((EntitySelector)commandContext.getArgument(string, EntitySelector.class)).getPlayer((ServerCommandSource)commandContext.getSource());
+    public static ServerPlayerEntity getPlayer(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        return ((EntitySelector)context.getArgument(name, EntitySelector.class)).getPlayer((ServerCommandSource)context.getSource());
     }
 
     public static EntityArgumentType players() {
         return new EntityArgumentType(false, true);
     }
 
-    public static Collection<ServerPlayerEntity> getPlayers(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        List<ServerPlayerEntity> list = ((EntitySelector)commandContext.getArgument(string, EntitySelector.class)).getPlayers((ServerCommandSource)commandContext.getSource());
+    public static Collection<ServerPlayerEntity> getPlayers(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        List<ServerPlayerEntity> list = ((EntitySelector)context.getArgument(name, EntitySelector.class)).getPlayers((ServerCommandSource)context.getSource());
         if (list.isEmpty()) {
             throw PLAYER_NOT_FOUND_EXCEPTION.create();
         }
@@ -125,10 +127,10 @@ implements ArgumentType<EntitySelector> {
         return entitySelector;
     }
 
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
+    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder2) {
         if (context.getSource() instanceof CommandSource) {
-            StringReader stringReader = new StringReader(builder.getInput());
-            stringReader.setCursor(builder.getStart());
+            StringReader stringReader = new StringReader(builder2.getInput());
+            stringReader.setCursor(builder2.getStart());
             CommandSource commandSource = (CommandSource)context.getSource();
             EntitySelectorReader entitySelectorReader = new EntitySelectorReader(stringReader, commandSource.hasPermissionLevel(2));
             try {
@@ -137,10 +139,10 @@ implements ArgumentType<EntitySelector> {
             catch (CommandSyntaxException commandSyntaxException) {
                 // empty catch block
             }
-            return entitySelectorReader.listSuggestions(builder, (SuggestionsBuilder suggestionsBuilder) -> {
+            return entitySelectorReader.listSuggestions(builder2, (SuggestionsBuilder builder) -> {
                 Collection<String> collection = commandSource.getPlayerNames();
                 Collection<String> iterable = this.playersOnly ? collection : Iterables.concat(collection, commandSource.getEntitySuggestions());
-                CommandSource.suggestMatching(iterable, suggestionsBuilder);
+                CommandSource.suggestMatching(iterable, builder);
             });
         }
         return Suggestions.empty();
@@ -150,8 +152,8 @@ implements ArgumentType<EntitySelector> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 
     public static class Serializer
@@ -181,8 +183,8 @@ implements ArgumentType<EntitySelector> {
         }
 
         @Override
-        public /* synthetic */ ArgumentType fromPacket(PacketByteBuf packetByteBuf) {
-            return this.fromPacket(packetByteBuf);
+        public /* synthetic */ ArgumentType fromPacket(PacketByteBuf buf) {
+            return this.fromPacket(buf);
         }
     }
 }

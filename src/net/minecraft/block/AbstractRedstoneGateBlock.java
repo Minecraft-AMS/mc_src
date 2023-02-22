@@ -85,7 +85,7 @@ extends HorizontalFacingBlock {
             this.updatePowered(world, pos, state);
             return;
         }
-        BlockEntity blockEntity = this.hasBlockEntity() ? world.getBlockEntity(pos) : null;
+        BlockEntity blockEntity = state.hasBlockEntity() ? world.getBlockEntity(pos) : null;
         AbstractRedstoneGateBlock.dropStacks(state, world, pos, blockEntity);
         world.removeBlock(pos, false);
         for (Direction direction : Direction.values()) {

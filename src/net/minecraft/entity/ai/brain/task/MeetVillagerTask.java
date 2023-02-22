@@ -23,6 +23,8 @@ import net.minecraft.util.dynamic.GlobalPos;
 
 public class MeetVillagerTask
 extends Task<LivingEntity> {
+    private static final float WALK_SPEED = 0.3f;
+
     public MeetVillagerTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.MEETING_POINT, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.VISIBLE_MOBS, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.INTERACTION_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT)));
     }

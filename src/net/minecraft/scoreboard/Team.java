@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.scoreboard;
@@ -12,8 +10,6 @@ package net.minecraft.scoreboard;
 import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.text.HoverEvent;
@@ -27,6 +23,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class Team
 extends AbstractTeam {
+    public static final int field_31883 = 16;
+    private static final int field_31884 = 0;
+    private static final int field_31885 = 1;
     private final Scoreboard scoreboard;
     private final String name;
     private final Set<String> playerList = Sets.newHashSet();
@@ -39,13 +38,17 @@ extends AbstractTeam {
     private AbstractTeam.VisibilityRule deathMessageVisibilityRule = AbstractTeam.VisibilityRule.ALWAYS;
     private Formatting color = Formatting.RESET;
     private AbstractTeam.CollisionRule collisionRule = AbstractTeam.CollisionRule.ALWAYS;
-    private final Style field_24195;
+    private final Style nameStyle;
 
     public Team(Scoreboard scoreboard, String name) {
         this.scoreboard = scoreboard;
         this.name = name;
         this.displayName = new LiteralText(name);
-        this.field_24195 = Style.EMPTY.withInsertion(name).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText(name)));
+        this.nameStyle = Style.EMPTY.withInsertion(name).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText(name)));
+    }
+
+    public Scoreboard getScoreboard() {
+        return this.scoreboard;
     }
 
     @Override
@@ -58,7 +61,7 @@ extends AbstractTeam {
     }
 
     public MutableText getFormattedName() {
-        MutableText mutableText = Texts.bracketed(this.displayName.shallowCopy().fillStyle(this.field_24195));
+        MutableText mutableText = Texts.bracketed(this.displayName.shallowCopy().fillStyle(this.nameStyle));
         Formatting formatting = this.getColor();
         if (formatting != Formatting.RESET) {
             mutableText.formatted(formatting);
@@ -175,7 +178,6 @@ extends AbstractTeam {
         return i;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setFriendlyFlagsBitwise(int flags) {
         this.setFriendlyFireAllowed((flags & 1) > 0);
         this.setShowFriendlyInvisibles((flags & 2) > 0);

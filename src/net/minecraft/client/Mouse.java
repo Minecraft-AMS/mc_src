@@ -79,7 +79,7 @@ public class Mouse {
             this.activeButton = -1;
         }
         boolean[] bls = new boolean[]{false};
-        if (this.client.overlay == null) {
+        if (this.client.getOverlay() == null) {
             if (this.client.currentScreen == null) {
                 if (!this.cursorLocked && bl) {
                     this.lockCursor();
@@ -87,18 +87,20 @@ public class Mouse {
             } else {
                 double d = this.x * (double)this.client.getWindow().getScaledWidth() / (double)this.client.getWindow().getWidth();
                 double e = this.y * (double)this.client.getWindow().getScaledHeight() / (double)this.client.getWindow().getHeight();
+                Screen screen = this.client.currentScreen;
                 if (bl) {
+                    screen.applyMousePressScrollNarratorDelay();
                     Screen.wrapScreenError(() -> {
-                        bls[0] = this.client.currentScreen.mouseClicked(d, e, i);
-                    }, "mouseClicked event handler", this.client.currentScreen.getClass().getCanonicalName());
+                        bls[0] = screen.mouseClicked(d, e, i);
+                    }, "mouseClicked event handler", screen.getClass().getCanonicalName());
                 } else {
                     Screen.wrapScreenError(() -> {
-                        bls[0] = this.client.currentScreen.mouseReleased(d, e, i);
-                    }, "mouseReleased event handler", this.client.currentScreen.getClass().getCanonicalName());
+                        bls[0] = screen.mouseReleased(d, e, i);
+                    }, "mouseReleased event handler", screen.getClass().getCanonicalName());
                 }
             }
         }
-        if (!bls[0] && (this.client.currentScreen == null || this.client.currentScreen.passEvents) && this.client.overlay == null) {
+        if (!bls[0] && (this.client.currentScreen == null || this.client.currentScreen.passEvents) && this.client.getOverlay() == null) {
             if (i == 0) {
                 this.leftButtonClicked = bl;
             } else if (i == 2) {
@@ -120,11 +122,12 @@ public class Mouse {
     private void onMouseScroll(long window, double horizontal, double vertical) {
         if (window == MinecraftClient.getInstance().getWindow().getHandle()) {
             double d = (this.client.options.discreteMouseScroll ? Math.signum(vertical) : vertical) * this.client.options.mouseWheelSensitivity;
-            if (this.client.overlay == null) {
+            if (this.client.getOverlay() == null) {
                 if (this.client.currentScreen != null) {
                     double e = this.x * (double)this.client.getWindow().getScaledWidth() / (double)this.client.getWindow().getWidth();
                     double f = this.y * (double)this.client.getWindow().getScaledHeight() / (double)this.client.getWindow().getHeight();
                     this.client.currentScreen.mouseScrolled(e, f, d);
+                    this.client.currentScreen.applyMousePressScrollNarratorDelay();
                 } else if (this.client.player != null) {
                     if (this.eventDeltaWheel != 0.0 && Math.signum(d) != Math.signum(this.eventDeltaWheel)) {
                         this.eventDeltaWheel = 0.0;
@@ -139,35 +142,35 @@ public class Mouse {
                         if (this.client.inGameHud.getSpectatorHud().isOpen()) {
                             this.client.inGameHud.getSpectatorHud().cycleSlot(-g);
                         } else {
-                            float h = MathHelper.clamp(this.client.player.abilities.getFlySpeed() + g * 0.005f, 0.0f, 0.2f);
-                            this.client.player.abilities.setFlySpeed(h);
+                            float h = MathHelper.clamp(this.client.player.getAbilities().getFlySpeed() + g * 0.005f, 0.0f, 0.2f);
+                            this.client.player.getAbilities().setFlySpeed(h);
                         }
                     } else {
-                        this.client.player.inventory.scrollInHotbar(g);
+                        this.client.player.getInventory().scrollInHotbar(g);
                     }
                 }
             }
         }
     }
 
-    private void method_29616(long l, List<Path> list) {
+    private void onFilesDropped(long window, List<Path> paths) {
         if (this.client.currentScreen != null) {
-            this.client.currentScreen.filesDragged(list);
+            this.client.currentScreen.filesDragged(paths);
         }
     }
 
-    public void setup(long window) {
-        InputUtil.setMouseCallbacks(window, (l, d, e) -> this.client.execute(() -> this.onCursorPos(l, d, e)), (l, i, j, k) -> this.client.execute(() -> this.onMouseButton(l, i, j, k)), (l, d, e) -> this.client.execute(() -> this.onMouseScroll(l, d, e)), (l, i, m) -> {
-            Path[] paths = new Path[i];
-            for (int j = 0; j < i; ++j) {
-                paths[j] = Paths.get(GLFWDropCallback.getName((long)m, (int)j), new String[0]);
+    public void setup(long window2) {
+        InputUtil.setMouseCallbacks(window2, (window, x, y) -> this.client.execute(() -> this.onCursorPos(window, x, y)), (window, button, action, modifiers) -> this.client.execute(() -> this.onMouseButton(window, button, action, modifiers)), (window, offsetX, offsetY) -> this.client.execute(() -> this.onMouseScroll(window, offsetX, offsetY)), (window, count, names) -> {
+            Path[] paths = new Path[count];
+            for (int i = 0; i < count; ++i) {
+                paths[i] = Paths.get(GLFWDropCallback.getName((long)names, (int)i), new String[0]);
             }
-            this.client.execute(() -> this.method_29616(l, Arrays.asList(paths)));
+            this.client.execute(() -> this.onFilesDropped(window, Arrays.asList(paths)));
         });
     }
 
     private void onCursorPos(long window, double x, double y) {
-        Screen element;
+        Screen screen;
         if (window != MinecraftClient.getInstance().getWindow().getHandle()) {
             return;
         }
@@ -176,15 +179,16 @@ public class Mouse {
             this.y = y;
             this.hasResolutionChanged = false;
         }
-        if ((element = this.client.currentScreen) != null && this.client.overlay == null) {
+        if ((screen = this.client.currentScreen) != null && this.client.getOverlay() == null) {
             double d = x * (double)this.client.getWindow().getScaledWidth() / (double)this.client.getWindow().getWidth();
             double e = y * (double)this.client.getWindow().getScaledHeight() / (double)this.client.getWindow().getHeight();
-            Screen.wrapScreenError(() -> element.mouseMoved(d, e), "mouseMoved event handler", element.getClass().getCanonicalName());
+            Screen.wrapScreenError(() -> screen.mouseMoved(d, e), "mouseMoved event handler", screen.getClass().getCanonicalName());
             if (this.activeButton != -1 && this.glfwTime > 0.0) {
                 double f = (x - this.x) * (double)this.client.getWindow().getScaledWidth() / (double)this.client.getWindow().getWidth();
                 double g = (y - this.y) * (double)this.client.getWindow().getScaledHeight() / (double)this.client.getWindow().getHeight();
-                Screen.wrapScreenError(() -> element.mouseDragged(d, e, this.activeButton, f, g), "mouseDragged event handler", element.getClass().getCanonicalName());
+                Screen.wrapScreenError(() -> screen.mouseDragged(d, e, this.activeButton, f, g), "mouseDragged event handler", screen.getClass().getCanonicalName());
             }
+            screen.applyMouseMoveNarratorDelay();
         }
         this.client.getProfiler().push("mouse");
         if (this.isCursorLocked() && this.client.isWindowFocused()) {
@@ -198,8 +202,8 @@ public class Mouse {
     }
 
     public void updateMouse() {
+        double l;
         double k;
-        double j;
         double d = GlfwUtil.getTime();
         double e = d - this.lastMouseUpdateTime;
         this.lastMouseUpdateTime = d;
@@ -209,32 +213,42 @@ public class Mouse {
             return;
         }
         double f = this.client.options.mouseSensitivity * (double)0.6f + (double)0.2f;
-        double g = f * f * f * 8.0;
+        double g = f * f * f;
+        double h = g * 8.0;
         if (this.client.options.smoothCameraEnabled) {
-            double h = this.cursorXSmoother.smooth(this.cursorDeltaX * g, e * g);
-            double i = this.cursorYSmoother.smooth(this.cursorDeltaY * g, e * g);
-            j = h;
+            double i = this.cursorXSmoother.smooth(this.cursorDeltaX * h, e * h);
+            double j = this.cursorYSmoother.smooth(this.cursorDeltaY * h, e * h);
             k = i;
+            l = j;
+        } else if (this.client.options.getPerspective().isFirstPerson() && this.client.player.isUsingSpyglass()) {
+            this.cursorXSmoother.clear();
+            this.cursorYSmoother.clear();
+            k = this.cursorDeltaX * g;
+            l = this.cursorDeltaY * g;
         } else {
             this.cursorXSmoother.clear();
             this.cursorYSmoother.clear();
-            j = this.cursorDeltaX * g;
-            k = this.cursorDeltaY * g;
+            k = this.cursorDeltaX * h;
+            l = this.cursorDeltaY * h;
         }
         this.cursorDeltaX = 0.0;
         this.cursorDeltaY = 0.0;
-        int l = 1;
+        int m = 1;
         if (this.client.options.invertYMouse) {
-            l = -1;
+            m = -1;
         }
-        this.client.getTutorialManager().onUpdateMouse(j, k);
+        this.client.getTutorialManager().onUpdateMouse(k, l);
         if (this.client.player != null) {
-            this.client.player.changeLookDirection(j, k * (double)l);
+            this.client.player.changeLookDirection(k, l * (double)m);
         }
     }
 
     public boolean wasLeftButtonClicked() {
         return this.leftButtonClicked;
+    }
+
+    public boolean wasMiddleButtonClicked() {
+        return this.middleButtonClicked;
     }
 
     public boolean wasRightButtonClicked() {
@@ -271,7 +285,7 @@ public class Mouse {
         this.x = this.client.getWindow().getWidth() / 2;
         this.y = this.client.getWindow().getHeight() / 2;
         InputUtil.setCursorParameters(this.client.getWindow().getHandle(), 212995, this.x, this.y);
-        this.client.openScreen(null);
+        this.client.setScreen(null);
         this.client.attackCooldown = 10000;
         this.hasResolutionChanged = true;
     }
@@ -286,7 +300,7 @@ public class Mouse {
         InputUtil.setCursorParameters(this.client.getWindow().getHandle(), 212993, this.x, this.y);
     }
 
-    public void method_30134() {
+    public void setResolutionChanged() {
         this.hasResolutionChanged = true;
     }
 }

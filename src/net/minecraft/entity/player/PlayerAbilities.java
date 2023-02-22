@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.player;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.nbt.NbtCompound;
 
 public class PlayerAbilities {
@@ -53,7 +47,6 @@ public class PlayerAbilities {
         return this.flySpeed;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setFlySpeed(float flySpeed) {
         this.flySpeed = flySpeed;
     }
@@ -62,7 +55,6 @@ public class PlayerAbilities {
         return this.walkSpeed;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setWalkSpeed(float walkSpeed) {
         this.walkSpeed = walkSpeed;
     }

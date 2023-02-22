@@ -4,10 +4,10 @@
 package net.minecraft.block;
 
 import java.util.Random;
+import java.util.function.Supplier;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.Fertilizable;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.block.ShapeContext;
@@ -19,15 +19,17 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
-import net.minecraft.world.gen.feature.ConfiguredFeatures;
 
 public class MushroomPlantBlock
 extends PlantBlock
 implements Fertilizable {
+    protected static final float field_31195 = 3.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(5.0, 0.0, 5.0, 11.0, 6.0, 11.0);
+    private final Supplier<ConfiguredFeature<?, ?>> feature;
 
-    public MushroomPlantBlock(AbstractBlock.Settings settings) {
+    public MushroomPlantBlock(AbstractBlock.Settings settings, Supplier<ConfiguredFeature<?, ?>> feature) {
         super(settings);
+        this.feature = feature;
     }
 
     @Override
@@ -73,17 +75,8 @@ implements Fertilizable {
     }
 
     public boolean trySpawningBigMushroom(ServerWorld world, BlockPos pos, BlockState state, Random random) {
-        ConfiguredFeature<?, ?> configuredFeature;
         world.removeBlock(pos, false);
-        if (this == Blocks.BROWN_MUSHROOM) {
-            configuredFeature = ConfiguredFeatures.HUGE_BROWN_MUSHROOM;
-        } else if (this == Blocks.RED_MUSHROOM) {
-            configuredFeature = ConfiguredFeatures.HUGE_RED_MUSHROOM;
-        } else {
-            world.setBlockState(pos, state, 3);
-            return false;
-        }
-        if (configuredFeature.generate(world, world.getChunkManager().getChunkGenerator(), random, pos)) {
+        if (this.feature.get().generate(world, world.getChunkManager().getChunkGenerator(), random, pos)) {
             return true;
         }
         world.setBlockState(pos, state, 3);

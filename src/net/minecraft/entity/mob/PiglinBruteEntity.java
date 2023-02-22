@@ -4,16 +4,12 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.mojang.serialization.Dynamic
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Dynamic;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
@@ -45,6 +41,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class PiglinBruteEntity
 extends AbstractPiglinEntity {
+    private static final int MAX_HEALTH = 50;
+    private static final float MOVEMENT_SPEED = 0.35f;
+    private static final int ATTACK_DAMAGE = 7;
     protected static final ImmutableList<SensorType<? extends Sensor<? super PiglinBruteEntity>>> SENSOR_TYPES = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_BRUTE_SPECIFIC_SENSOR);
     protected static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULE_TYPES = ImmutableList.of(MemoryModuleType.LOOK_TARGET, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS, MemoryModuleType.NEARBY_ADULT_PIGLINS, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object[])new MemoryModuleType[]{MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.PATH, MemoryModuleType.ANGRY_AT, MemoryModuleType.NEAREST_VISIBLE_NEMESIS, MemoryModuleType.HOME});
 
@@ -60,7 +59,7 @@ extends AbstractPiglinEntity {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        PiglinBruteBrain.method_30250(this);
+        PiglinBruteBrain.setCurrentPosAsHome(this);
         this.initEquipment(difficulty);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
@@ -90,7 +89,7 @@ extends AbstractPiglinEntity {
 
     @Override
     public boolean canGather(ItemStack stack) {
-        if (stack.getItem() == Items.GOLDEN_AXE) {
+        if (stack.isOf(Items.GOLDEN_AXE)) {
             return super.canGather(stack);
         }
         return false;
@@ -107,7 +106,6 @@ extends AbstractPiglinEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public PiglinActivity getActivity() {
         if (this.isAttacking() && this.isHoldingTool()) {
             return PiglinActivity.ATTACKING_WITH_MELEE_WEAPON;
@@ -122,7 +120,7 @@ extends AbstractPiglinEntity {
             return false;
         }
         if (bl && source.getAttacker() instanceof LivingEntity) {
-            PiglinBruteBrain.method_30251(this, (LivingEntity)source.getAttacker());
+            PiglinBruteBrain.tryRevenge(this, (LivingEntity)source.getAttacker());
         }
         return bl;
     }

@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -41,6 +35,8 @@ import net.minecraft.world.World;
 public class SweetBerryBushBlock
 extends PlantBlock
 implements Fertilizable {
+    private static final float field_31260 = 0.003f;
+    public static final int MAX_AGE = 3;
     public static final IntProperty AGE = Properties.AGE_3;
     private static final VoxelShape SMALL_SHAPE = Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 8.0, 13.0);
     private static final VoxelShape LARGE_SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 16.0, 15.0);
@@ -51,7 +47,6 @@ implements Fertilizable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return new ItemStack(Items.SWEET_BERRIES);
     }
@@ -100,13 +95,13 @@ implements Fertilizable {
         boolean bl;
         int i = state.get(AGE);
         boolean bl2 = bl = i == 3;
-        if (!bl && player.getStackInHand(hand).getItem() == Items.BONE_MEAL) {
+        if (!bl && player.getStackInHand(hand).isOf(Items.BONE_MEAL)) {
             return ActionResult.PASS;
         }
         if (i > 1) {
             int j = 1 + world.random.nextInt(2);
             SweetBerryBushBlock.dropStack(world, pos, new ItemStack(Items.SWEET_BERRIES, j + (bl ? 1 : 0)));
-            world.playSound(null, pos, SoundEvents.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, SoundCategory.BLOCKS, 1.0f, 0.8f + world.random.nextFloat() * 0.4f);
+            world.playSound(null, pos, SoundEvents.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, SoundCategory.BLOCKS, 1.0f, 0.8f + world.random.nextFloat() * 0.4f);
             world.setBlockState(pos, (BlockState)state.with(AGE, 1), 2);
             return ActionResult.success(world.isClient);
         }

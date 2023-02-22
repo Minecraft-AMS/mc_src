@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
@@ -14,12 +12,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 public final class TextColor {
+    private static final String RGB_PREFIX = "#";
     private static final Map<Formatting, TextColor> FORMATTING_TO_COLOR = (Map)Stream.of(Formatting.values()).filter(Formatting::isColor).collect(ImmutableMap.toImmutableMap(Function.identity(), formatting -> new TextColor(formatting.getColorValue(), formatting.getName())));
     private static final Map<String, TextColor> BY_NAME = (Map)FORMATTING_TO_COLOR.values().stream().collect(ImmutableMap.toImmutableMap(textColor -> textColor.name, Function.identity()));
     private final int rgb;
@@ -36,7 +33,6 @@ public final class TextColor {
         this.name = null;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getRgb() {
         return this.rgb;
     }
@@ -52,14 +48,14 @@ public final class TextColor {
         return String.format("#%06X", this.rgb);
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object == null || this.getClass() != object.getClass()) {
+        if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
-        TextColor textColor = (TextColor)object;
+        TextColor textColor = (TextColor)o;
         return this.rgb == textColor.rgb;
     }
 
@@ -82,7 +78,7 @@ public final class TextColor {
 
     @Nullable
     public static TextColor parse(String name) {
-        if (name.startsWith("#")) {
+        if (name.startsWith(RGB_PREFIX)) {
             try {
                 int i = Integer.parseInt(name.substring(1), 16);
                 return TextColor.fromRgb(i);

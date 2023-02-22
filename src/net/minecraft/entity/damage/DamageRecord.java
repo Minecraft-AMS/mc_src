@@ -6,6 +6,7 @@
  */
 package net.minecraft.entity.damage;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.text.Text;
@@ -16,10 +17,11 @@ public class DamageRecord {
     private final int entityAge;
     private final float damage;
     private final float entityHealth;
+    @Nullable
     private final String fallDeathSuffix;
     private final float fallDistance;
 
-    public DamageRecord(DamageSource damageSource, int entityAge, float entityOriginalHealth, float damage, String fallDeathSuffix, float fallDistance) {
+    public DamageRecord(DamageSource damageSource, int entityAge, float entityOriginalHealth, float damage, @Nullable String fallDeathSuffix, float fallDistance) {
         this.damageSource = damageSource;
         this.entityAge = entityAge;
         this.damage = damage;
@@ -32,8 +34,20 @@ public class DamageRecord {
         return this.damageSource;
     }
 
+    public int getEntityAge() {
+        return this.entityAge;
+    }
+
     public float getDamage() {
         return this.damage;
+    }
+
+    public float getEntityHealth() {
+        return this.entityHealth;
+    }
+
+    public float getNewEntityHealth() {
+        return this.entityHealth - this.damage;
     }
 
     public boolean isAttackerLiving() {
@@ -48,6 +62,11 @@ public class DamageRecord {
     @Nullable
     public Text getAttackerName() {
         return this.getDamageSource().getAttacker() == null ? null : this.getDamageSource().getAttacker().getDisplayName();
+    }
+
+    @Nullable
+    public Entity getAttacker() {
+        return this.getDamageSource().getAttacker();
     }
 
     public float getFallDistance() {

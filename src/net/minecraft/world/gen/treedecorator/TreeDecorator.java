@@ -9,15 +9,13 @@ package net.minecraft.world.gen.treedecorator;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
+import java.util.function.BiConsumer;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.ModifiableWorld;
-import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
 
 public abstract class TreeDecorator {
@@ -25,16 +23,10 @@ public abstract class TreeDecorator {
 
     protected abstract TreeDecoratorType<?> getType();
 
-    public abstract void generate(StructureWorldAccess var1, Random var2, List<BlockPos> var3, List<BlockPos> var4, Set<BlockPos> var5, BlockBox var6);
+    public abstract void generate(TestableWorld var1, BiConsumer<BlockPos, BlockState> var2, Random var3, List<BlockPos> var4, List<BlockPos> var5);
 
-    protected void placeVine(ModifiableWorld world, BlockPos pos, BooleanProperty directionProperty, Set<BlockPos> placedStates, BlockBox box) {
-        this.setBlockStateAndEncompassPosition(world, pos, (BlockState)Blocks.VINE.getDefaultState().with(directionProperty, true), placedStates, box);
-    }
-
-    protected void setBlockStateAndEncompassPosition(ModifiableWorld world, BlockPos pos, BlockState state, Set<BlockPos> placedStates, BlockBox box) {
-        world.setBlockState(pos, state, 19);
-        placedStates.add(pos);
-        box.encompass(new BlockBox(pos, pos));
+    protected static void placeVine(BiConsumer<BlockPos, BlockState> replacer, BlockPos pos, BooleanProperty facing) {
+        replacer.accept(pos, (BlockState)Blocks.VINE.getDefaultState().with(facing, true));
     }
 }
 

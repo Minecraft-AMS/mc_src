@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.base.MoreObjects
  *  com.google.common.cache.CacheBuilder
  *  com.google.common.cache.CacheLoader
@@ -10,6 +11,7 @@
  */
 package net.minecraft.block.pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -50,6 +52,18 @@ public class BlockPattern {
 
     public int getWidth() {
         return this.width;
+    }
+
+    @VisibleForTesting
+    public Predicate<CachedBlockPosition>[][][] getPattern() {
+        return this.pattern;
+    }
+
+    @Nullable
+    @VisibleForTesting
+    public Result method_35300(WorldView worldView, BlockPos blockPos, Direction direction, Direction direction2) {
+        LoadingCache<BlockPos, CachedBlockPosition> loadingCache = BlockPattern.makeCache(worldView, false);
+        return this.testTransform(blockPos, direction, direction2, loadingCache);
     }
 
     @Nullable
@@ -126,8 +140,20 @@ public class BlockPattern {
             return this.up;
         }
 
-        public CachedBlockPosition translate(int i, int j, int k) {
-            return (CachedBlockPosition)this.cache.getUnchecked((Object)BlockPattern.translate(this.frontTopLeft, this.getForwards(), this.getUp(), i, j, k));
+        public int getWidth() {
+            return this.width;
+        }
+
+        public int getHeight() {
+            return this.height;
+        }
+
+        public int getDepth() {
+            return this.depth;
+        }
+
+        public CachedBlockPosition translate(int offsetLeft, int offsetDown, int offsetForwards) {
+            return (CachedBlockPosition)this.cache.getUnchecked((Object)BlockPattern.translate(this.frontTopLeft, this.getForwards(), this.getUp(), offsetLeft, offsetDown, offsetForwards));
         }
 
         public String toString() {
@@ -145,7 +171,7 @@ public class BlockPattern {
             this.forceLoad = forceLoad;
         }
 
-        public CachedBlockPosition load(BlockPos blockPos) throws Exception {
+        public CachedBlockPosition load(BlockPos blockPos) {
             return new CachedBlockPosition(this.world, blockPos, this.forceLoad);
         }
 

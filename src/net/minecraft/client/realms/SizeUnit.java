@@ -12,12 +12,22 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
-public enum SizeUnit {
-    B,
-    KB,
-    MB,
-    GB;
+public final class SizeUnit
+extends Enum<SizeUnit> {
+    public static final /* enum */ SizeUnit B = new SizeUnit();
+    public static final /* enum */ SizeUnit KB = new SizeUnit();
+    public static final /* enum */ SizeUnit MB = new SizeUnit();
+    public static final /* enum */ SizeUnit GB = new SizeUnit();
+    private static final int BASE = 1024;
+    private static final /* synthetic */ SizeUnit[] field_20204;
 
+    public static SizeUnit[] values() {
+        return (SizeUnit[])field_20204.clone();
+    }
+
+    public static SizeUnit valueOf(String name) {
+        return Enum.valueOf(SizeUnit.class, name);
+    }
 
     public static SizeUnit getLargestUnit(long bytes) {
         if (bytes < 1024L) {
@@ -46,12 +56,20 @@ public enum SizeUnit {
             return bytes + " B";
         }
         int j = (int)(Math.log(bytes) / Math.log(1024.0));
-        String string = "KMGTPE".charAt(j - 1) + "";
+        String string = "" + "KMGTPE".charAt(j - 1);
         return String.format(Locale.ROOT, "%.1f %sB", (double)bytes / Math.pow(1024.0, j), string);
     }
 
     public static String humanReadableSize(long bytes, SizeUnit unit) {
         return String.format("%." + (unit == GB ? "1" : "0") + "f %s", SizeUnit.convertToUnit(bytes, unit), unit.name());
+    }
+
+    private static /* synthetic */ SizeUnit[] method_36844() {
+        return new SizeUnit[]{B, KB, MB, GB};
+    }
+
+    static {
+        field_20204 = SizeUnit.method_36844();
     }
 }
 

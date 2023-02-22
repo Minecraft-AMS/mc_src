@@ -27,13 +27,17 @@ import net.minecraft.entity.ai.pathing.PathNodeMaker;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.profiler.Profiler;
+import net.minecraft.util.profiler.SampleType;
 import net.minecraft.world.chunk.ChunkCache;
 import org.jetbrains.annotations.Nullable;
 
 public class PathNodeNavigator {
+    private static final float TARGET_DISTANCE_MULTIPLIER = 1.5f;
     private final PathNode[] successors = new PathNode[32];
     private final int range;
     private final PathNodeMaker pathNodeMaker;
+    private static final boolean field_31808 = false;
     private final PathMinHeap minHeap = new PathMinHeap();
 
     public PathNodeNavigator(PathNodeMaker pathNodeMaker, int range) {
@@ -47,14 +51,15 @@ public class PathNodeNavigator {
         this.pathNodeMaker.init(world, mob);
         PathNode pathNode = this.pathNodeMaker.getStart();
         Map<TargetPathNode, BlockPos> map = positions.stream().collect(Collectors.toMap(blockPos -> this.pathNodeMaker.getNode((double)blockPos.getX(), (double)blockPos.getY(), (double)blockPos.getZ()), Function.identity()));
-        Path path = this.findPathToAny(pathNode, map, followRange, distance, rangeMultiplier);
+        Path path = this.findPathToAny(world.getProfiler(), pathNode, map, followRange, distance, rangeMultiplier);
         this.pathNodeMaker.clear();
         return path;
     }
 
     @Nullable
-    private Path findPathToAny(PathNode startNode, Map<TargetPathNode, BlockPos> positions, float followRange, int distance, float rangeMultiplier) {
-        Optional<Path> optional;
+    private Path findPathToAny(Profiler profiler, PathNode startNode, Map<TargetPathNode, BlockPos> positions, float followRange, int distance, float rangeMultiplier) {
+        profiler.push("find_path");
+        profiler.markSampleType(SampleType.PATH_FINDING);
         Set<TargetPathNode> set = positions.keySet();
         startNode.penalizedPathLength = 0.0f;
         startNode.heapWeight = startNode.distanceToNearestTarget = this.calculateDistances(startNode, set);
@@ -92,7 +97,8 @@ public class PathNodeNavigator {
                 this.minHeap.push(pathNode2);
             }
         }
-        Optional<Path> optional2 = optional = !set3.isEmpty() ? set3.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), true)).min(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), false)).min(Comparator.comparingDouble(Path::getManhattanDistanceFromTarget).thenComparingInt(Path::getLength));
+        Optional<Path> optional = !set3.isEmpty() ? set3.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), true)).min(Comparator.comparingInt(Path::getLength)) : set.stream().map(targetPathNode -> this.createPath(targetPathNode.getNearestNode(), (BlockPos)positions.get(targetPathNode), false)).min(Comparator.comparingDouble(Path::getManhattanDistanceFromTarget).thenComparingInt(Path::getLength));
+        profiler.pop();
         if (!optional.isPresent()) {
             return null;
         }

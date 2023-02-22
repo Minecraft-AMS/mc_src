@@ -31,7 +31,7 @@ import net.minecraft.util.Util;
 
 public class MessageCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("msg").then(CommandManager.argument("targets", EntityArgumentType.players()).then(CommandManager.argument("message", MessageArgumentType.message()).executes(commandContext -> MessageCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)commandContext, "message"))))));
+        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("msg").then(CommandManager.argument("targets", EntityArgumentType.players()).then(CommandManager.argument("message", MessageArgumentType.message()).executes(context -> MessageCommand.execute((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)context, "message"))))));
         dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("tell").redirect((CommandNode)literalCommandNode));
         dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("w").redirect((CommandNode)literalCommandNode));
     }
@@ -42,9 +42,9 @@ public class MessageCommand {
         Entity entity = source.getEntity();
         if (entity instanceof ServerPlayerEntity) {
             ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
-            consumer = text2 -> serverPlayerEntity.sendSystemMessage(new TranslatableText("commands.message.display.outgoing", text2, message).formatted(Formatting.GRAY, Formatting.ITALIC), serverPlayerEntity.getUuid());
+            consumer = playerName -> serverPlayerEntity.sendSystemMessage(new TranslatableText("commands.message.display.outgoing", playerName, message).formatted(Formatting.GRAY, Formatting.ITALIC), serverPlayerEntity.getUuid());
         } else {
-            consumer = text2 -> source.sendFeedback(new TranslatableText("commands.message.display.outgoing", text2, message).formatted(Formatting.GRAY, Formatting.ITALIC), false);
+            consumer = playerName -> source.sendFeedback(new TranslatableText("commands.message.display.outgoing", playerName, message).formatted(Formatting.GRAY, Formatting.ITALIC), false);
         }
         for (ServerPlayerEntity serverPlayerEntity2 : targets) {
             consumer.accept(serverPlayerEntity2.getDisplayName());

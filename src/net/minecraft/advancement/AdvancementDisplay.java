@@ -7,8 +7,6 @@
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSyntaxException
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.advancement;
@@ -18,8 +16,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.AdvancementFrame;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -69,13 +65,11 @@ public class AdvancementDisplay {
         return this.description;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getIcon() {
         return this.icon;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public Identifier getBackground() {
         return this.background;
     }
@@ -84,17 +78,14 @@ public class AdvancementDisplay {
         return this.frame;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldShowToast() {
         return this.showToast;
     }
@@ -134,7 +125,7 @@ public class AdvancementDisplay {
         if (json.has("nbt")) {
             try {
                 NbtCompound nbtCompound = StringNbtReader.parse(JsonHelper.asString(json.get("nbt"), "nbt"));
-                itemStack.setTag(nbtCompound);
+                itemStack.setNbt(nbtCompound);
             }
             catch (CommandSyntaxException commandSyntaxException) {
                 throw new JsonSyntaxException("Invalid nbt tag: " + commandSyntaxException.getMessage());
@@ -198,8 +189,8 @@ public class AdvancementDisplay {
     private JsonObject iconToJson() {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("item", Registry.ITEM.getId(this.icon.getItem()).toString());
-        if (this.icon.hasTag()) {
-            jsonObject.addProperty("nbt", this.icon.getTag().toString());
+        if (this.icon.hasNbt()) {
+            jsonObject.addProperty("nbt", this.icon.getNbt().toString());
         }
         return jsonObject;
     }

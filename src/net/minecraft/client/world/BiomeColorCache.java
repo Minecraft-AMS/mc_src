@@ -16,17 +16,19 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 
 @Environment(value=EnvType.CLIENT)
 public class BiomeColorCache {
-    private final ThreadLocal<Last> last = ThreadLocal.withInitial(() -> new Last());
+    private static final int field_32164 = 256;
+    private final ThreadLocal<Last> last = ThreadLocal.withInitial(Last::new);
     private final Long2ObjectLinkedOpenHashMap<int[]> colors = new Long2ObjectLinkedOpenHashMap(256, 0.25f);
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public int getBiomeColor(BlockPos pos, IntSupplier colorFactory) {
         int o;
-        int i = pos.getX() >> 4;
-        int j = pos.getZ() >> 4;
+        int i = ChunkSectionPos.getSectionCoord(pos.getX());
+        int j = ChunkSectionPos.getSectionCoord(pos.getZ());
         Last last = this.last.get();
         if (last.x != i || last.z != j) {
             last.x = i;

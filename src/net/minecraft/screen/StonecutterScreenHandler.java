@@ -3,15 +3,11 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -34,15 +30,21 @@ import net.minecraft.world.World;
 
 public class StonecutterScreenHandler
 extends ScreenHandler {
+    public static final int field_30842 = 0;
+    public static final int field_30843 = 1;
+    private static final int field_30844 = 2;
+    private static final int field_30845 = 29;
+    private static final int field_30846 = 29;
+    private static final int field_30847 = 38;
     private final ScreenHandlerContext context;
     private final Property selectedRecipe = Property.create();
     private final World world;
     private List<StonecuttingRecipe> availableRecipes = Lists.newArrayList();
     private ItemStack inputStack = ItemStack.EMPTY;
-    private long lastTakeTime;
+    long lastTakeTime;
     final Slot inputSlot;
     final Slot outputSlot;
-    private Runnable contentsChangedListener = () -> {};
+    Runnable contentsChangedListener = () -> {};
     public final Inventory input = new SimpleInventory(1){
 
         @Override
@@ -52,7 +54,7 @@ extends ScreenHandler {
             StonecutterScreenHandler.this.contentsChangedListener.run();
         }
     };
-    private final CraftingResultInventory output = new CraftingResultInventory();
+    final CraftingResultInventory output = new CraftingResultInventory();
 
     public StonecutterScreenHandler(int syncId, PlayerInventory playerInventory) {
         this(syncId, playerInventory, ScreenHandlerContext.EMPTY);
@@ -72,21 +74,21 @@ extends ScreenHandler {
             }
 
             @Override
-            public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
+            public void onTakeItem(PlayerEntity player, ItemStack stack) {
                 stack.onCraft(player.world, player, stack.getCount());
                 StonecutterScreenHandler.this.output.unlockLastRecipe(player);
                 ItemStack itemStack = StonecutterScreenHandler.this.inputSlot.takeStack(1);
                 if (!itemStack.isEmpty()) {
                     StonecutterScreenHandler.this.populateResult();
                 }
-                context.run((world, blockPos) -> {
+                context.run((world, pos) -> {
                     long l = world.getTime();
                     if (StonecutterScreenHandler.this.lastTakeTime != l) {
-                        world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_STONECUTTER_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                        world.playSound(null, (BlockPos)pos, SoundEvents.UI_STONECUTTER_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
                         StonecutterScreenHandler.this.lastTakeTime = l;
                     }
                 });
-                return super.onTakeItem(player, stack);
+                super.onTakeItem(player, stack);
             }
         });
         for (i = 0; i < 3; ++i) {
@@ -100,22 +102,18 @@ extends ScreenHandler {
         this.addProperty(this.selectedRecipe);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSelectedRecipe() {
         return this.selectedRecipe.get();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public List<StonecuttingRecipe> getAvailableRecipes() {
         return this.availableRecipes;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getAvailableRecipeCount() {
         return this.availableRecipes.size();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean canCraft() {
         return this.inputSlot.hasStack() && !this.availableRecipes.isEmpty();
     }
@@ -127,21 +125,21 @@ extends ScreenHandler {
 
     @Override
     public boolean onButtonClick(PlayerEntity player, int id) {
-        if (this.method_30160(id)) {
+        if (this.isInBounds(id)) {
             this.selectedRecipe.set(id);
             this.populateResult();
         }
         return true;
     }
 
-    private boolean method_30160(int i) {
-        return i >= 0 && i < this.availableRecipes.size();
+    private boolean isInBounds(int id) {
+        return id >= 0 && id < this.availableRecipes.size();
     }
 
     @Override
     public void onContentChanged(Inventory inventory) {
         ItemStack itemStack = this.inputSlot.getStack();
-        if (itemStack.getItem() != this.inputStack.getItem()) {
+        if (!itemStack.isOf(this.inputStack.getItem())) {
             this.inputStack = itemStack.copy();
             this.updateInput(inventory, itemStack);
         }
@@ -156,8 +154,8 @@ extends ScreenHandler {
         }
     }
 
-    private void populateResult() {
-        if (!this.availableRecipes.isEmpty() && this.method_30160(this.selectedRecipe.get())) {
+    void populateResult() {
+        if (!this.availableRecipes.isEmpty() && this.isInBounds(this.selectedRecipe.get())) {
             StonecuttingRecipe stonecuttingRecipe = this.availableRecipes.get(this.selectedRecipe.get());
             this.output.setLastRecipe(stonecuttingRecipe);
             this.outputSlot.setStack(stonecuttingRecipe.craft(this.input));
@@ -172,9 +170,8 @@ extends ScreenHandler {
         return ScreenHandlerType.STONECUTTER;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public void setContentsChangedListener(Runnable runnable) {
-        this.contentsChangedListener = runnable;
+    public void setContentsChangedListener(Runnable contentsChangedListener) {
+        this.contentsChangedListener = contentsChangedListener;
     }
 
     @Override
@@ -216,7 +213,7 @@ extends ScreenHandler {
     public void close(PlayerEntity player) {
         super.close(player);
         this.output.removeStack(1);
-        this.context.run((world, blockPos) -> this.dropInventory(player, playerEntity.world, this.input));
+        this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 }
 

@@ -1,18 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
  */
 package net.minecraft.entity.projectile;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
 import net.minecraft.entity.LivingEntity;
@@ -26,7 +16,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Util;
 import net.minecraft.world.World;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=FlyingItemEntity.class)})
 public abstract class AbstractFireballEntity
 extends ExplosiveProjectileEntity
 implements FlyingItemEntity {
@@ -44,9 +33,9 @@ implements FlyingItemEntity {
         super(entityType, livingEntity, d, e, f, world);
     }
 
-    public void setItem(ItemStack stack) {
-        if (stack.getItem() != Items.FIRE_CHARGE || stack.hasTag()) {
-            this.getDataTracker().set(ITEM, Util.make(stack.copy(), itemStack -> itemStack.setCount(1)));
+    public void setItem(ItemStack stack2) {
+        if (!stack2.isOf(Items.FIRE_CHARGE) || stack2.hasNbt()) {
+            this.getDataTracker().set(ITEM, Util.make(stack2.copy(), stack -> stack.setCount(1)));
         }
     }
 
@@ -55,7 +44,6 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getStack() {
         ItemStack itemStack = this.getItem();
         return itemStack.isEmpty() ? new ItemStack(Items.FIRE_CHARGE) : itemStack;

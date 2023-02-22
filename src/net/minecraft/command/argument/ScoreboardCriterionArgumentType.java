@@ -36,7 +36,7 @@ import net.minecraft.util.registry.Registry;
 public class ScoreboardCriterionArgumentType
 implements ArgumentType<ScoreboardCriterion> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo.bar.baz", "minecraft:foo");
-    public static final DynamicCommandExceptionType INVALID_CRITERION_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.criteria.invalid", object));
+    public static final DynamicCommandExceptionType INVALID_CRITERION_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("argument.criteria.invalid", name));
 
     private ScoreboardCriterionArgumentType() {
     }
@@ -45,8 +45,8 @@ implements ArgumentType<ScoreboardCriterion> {
         return new ScoreboardCriterionArgumentType();
     }
 
-    public static ScoreboardCriterion getCriterion(CommandContext<ServerCommandSource> commandContext, String string) {
-        return (ScoreboardCriterion)commandContext.getArgument(string, ScoreboardCriterion.class);
+    public static ScoreboardCriterion getCriterion(CommandContext<ServerCommandSource> context, String name) {
+        return (ScoreboardCriterion)context.getArgument(name, ScoreboardCriterion.class);
     }
 
     public ScoreboardCriterion parse(StringReader stringReader) throws CommandSyntaxException {
@@ -62,7 +62,7 @@ implements ArgumentType<ScoreboardCriterion> {
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        ArrayList list = Lists.newArrayList(ScoreboardCriterion.CRITERIA.keySet());
+        ArrayList list = Lists.newArrayList(ScoreboardCriterion.method_37271());
         for (StatType statType : Registry.STAT_TYPE) {
             for (Object object : statType.getRegistry()) {
                 String string = this.getStatName(statType, object);
@@ -80,8 +80,8 @@ implements ArgumentType<ScoreboardCriterion> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

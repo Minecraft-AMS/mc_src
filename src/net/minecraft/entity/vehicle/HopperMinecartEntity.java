@@ -26,6 +26,7 @@ import net.minecraft.world.World;
 public class HopperMinecartEntity
 extends StorageMinecartEntity
 implements Hopper {
+    public static final int MAX_TRANSFER_COOLDOWN = 4;
     private boolean enabled = true;
     private int transferCooldown = -1;
     private final BlockPos currentBlockPos = BlockPos.ORIGIN;
@@ -76,11 +77,6 @@ implements Hopper {
     }
 
     @Override
-    public World getWorld() {
-        return this.world;
-    }
-
-    @Override
     public double getHopperX() {
         return this.getX();
     }
@@ -116,7 +112,7 @@ implements Hopper {
     }
 
     public boolean canOperate() {
-        if (HopperBlockEntity.extract(this)) {
+        if (HopperBlockEntity.extract(this.world, this)) {
             return true;
         }
         List<Entity> list = this.world.getEntitiesByClass(ItemEntity.class, this.getBoundingBox().expand(0.25, 0.0, 0.25), EntityPredicates.VALID_ENTITY);

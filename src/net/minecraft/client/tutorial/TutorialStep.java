@@ -20,16 +20,25 @@ import net.minecraft.client.tutorial.TutorialManager;
 import net.minecraft.client.tutorial.TutorialStepHandler;
 
 @Environment(value=EnvType.CLIENT)
-public enum TutorialStep {
-    MOVEMENT("movement", MovementTutorialStepHandler::new),
-    FIND_TREE("find_tree", FindTreeTutorialStepHandler::new),
-    PUNCH_TREE("punch_tree", PunchTreeTutorialStepHandler::new),
-    OPEN_INVENTORY("open_inventory", OpenInventoryTutorialStepHandler::new),
-    CRAFT_PLANKS("craft_planks", CraftPlanksTutorialStepHandler::new),
-    NONE("none", NoneTutorialStepHandler::new);
-
+public final class TutorialStep
+extends Enum<TutorialStep> {
+    public static final /* enum */ TutorialStep MOVEMENT = new TutorialStep("movement", MovementTutorialStepHandler::new);
+    public static final /* enum */ TutorialStep FIND_TREE = new TutorialStep("find_tree", FindTreeTutorialStepHandler::new);
+    public static final /* enum */ TutorialStep PUNCH_TREE = new TutorialStep("punch_tree", PunchTreeTutorialStepHandler::new);
+    public static final /* enum */ TutorialStep OPEN_INVENTORY = new TutorialStep("open_inventory", OpenInventoryTutorialStepHandler::new);
+    public static final /* enum */ TutorialStep CRAFT_PLANKS = new TutorialStep("craft_planks", CraftPlanksTutorialStepHandler::new);
+    public static final /* enum */ TutorialStep NONE = new TutorialStep("none", NoneTutorialStepHandler::new);
     private final String name;
     private final Function<TutorialManager, ? extends TutorialStepHandler> handlerFactory;
+    private static final /* synthetic */ TutorialStep[] field_5654;
+
+    public static TutorialStep[] values() {
+        return (TutorialStep[])field_5654.clone();
+    }
+
+    public static TutorialStep valueOf(String string) {
+        return Enum.valueOf(TutorialStep.class, string);
+    }
 
     private <T extends TutorialStepHandler> TutorialStep(String name, Function<TutorialManager, T> factory) {
         this.name = name;
@@ -50,6 +59,14 @@ public enum TutorialStep {
             return tutorialStep;
         }
         return NONE;
+    }
+
+    private static /* synthetic */ TutorialStep[] method_36929() {
+        return new TutorialStep[]{MOVEMENT, FIND_TREE, PUNCH_TREE, OPEN_INVENTORY, CRAFT_PLANKS, NONE};
+    }
+
+    static {
+        field_5654 = TutorialStep.method_36929();
     }
 }
 

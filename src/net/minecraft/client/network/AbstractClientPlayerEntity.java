@@ -17,12 +17,14 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.PlayerSkinTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.ChatUtil;
 import net.minecraft.util.Identifier;
@@ -33,6 +35,17 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public abstract class AbstractClientPlayerEntity
 extends PlayerEntity {
+    private static final String SKIN_URL = "http://skins.minecraft.net/MinecraftSkins/%s.png";
+    public static final int field_32659 = 8;
+    public static final int field_32660 = 8;
+    public static final int field_32661 = 8;
+    public static final int field_32667 = 8;
+    public static final int field_32668 = 40;
+    public static final int field_32669 = 8;
+    public static final int field_32662 = 8;
+    public static final int field_32663 = 8;
+    public static final int field_32664 = 64;
+    public static final int field_32665 = 64;
     private PlayerListEntry cachedScoreboardEntry;
     public float elytraPitch;
     public float elytraYaw;
@@ -40,7 +53,7 @@ extends PlayerEntity {
     public final ClientWorld clientWorld;
 
     public AbstractClientPlayerEntity(ClientWorld world, GameProfile profile) {
-        super(world, world.getSpawnPos(), world.method_30671(), profile);
+        super(world, world.getSpawnPos(), world.getSpawnAngle(), profile);
         this.clientWorld = world;
     }
 
@@ -94,14 +107,13 @@ extends PlayerEntity {
         return playerListEntry == null ? null : playerListEntry.getElytraTexture();
     }
 
-    public static PlayerSkinTexture loadSkin(Identifier id, String playerName) {
+    public static void loadSkin(Identifier id, String playerName) {
         TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
-        AbstractTexture abstractTexture = textureManager.getTexture(id);
-        if (abstractTexture == null) {
-            abstractTexture = new PlayerSkinTexture(null, String.format("http://skins.minecraft.net/MinecraftSkins/%s.png", ChatUtil.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
+        AbstractTexture abstractTexture = textureManager.getOrDefault(id, MissingSprite.getMissingSpriteTexture());
+        if (abstractTexture == MissingSprite.getMissingSpriteTexture()) {
+            abstractTexture = new PlayerSkinTexture(null, String.format(SKIN_URL, ChatUtil.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
             textureManager.registerTexture(id, abstractTexture);
         }
-        return (PlayerSkinTexture)abstractTexture;
     }
 
     public static Identifier getSkinId(String playerName) {
@@ -115,18 +127,23 @@ extends PlayerEntity {
 
     public float getSpeed() {
         float f = 1.0f;
-        if (this.abilities.flying) {
+        if (this.getAbilities().flying) {
             f *= 1.1f;
         }
-        f = (float)((double)f * ((this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) / (double)this.abilities.getWalkSpeed() + 1.0) / 2.0));
-        if (this.abilities.getWalkSpeed() == 0.0f || Float.isNaN(f) || Float.isInfinite(f)) {
+        f = (float)((double)f * ((this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) / (double)this.getAbilities().getWalkSpeed() + 1.0) / 2.0));
+        if (this.getAbilities().getWalkSpeed() == 0.0f || Float.isNaN(f) || Float.isInfinite(f)) {
             f = 1.0f;
         }
-        if (this.isUsingItem() && this.getActiveItem().getItem() == Items.BOW) {
-            int i = this.getItemUseTime();
-            float g = (float)i / 20.0f;
-            g = g > 1.0f ? 1.0f : (g *= g);
-            f *= 1.0f - g * 0.15f;
+        ItemStack itemStack = this.getActiveItem();
+        if (this.isUsingItem()) {
+            if (itemStack.isOf(Items.BOW)) {
+                int i = this.getItemUseTime();
+                float g = (float)i / 20.0f;
+                g = g > 1.0f ? 1.0f : (g *= g);
+                f *= 1.0f - g * 0.15f;
+            } else if (MinecraftClient.getInstance().options.getPerspective().isFirstPerson() && this.isUsingSpyglass()) {
+                return 0.1f;
+            }
         }
         return MathHelper.lerp(MinecraftClient.getInstance().options.fovEffectScale, 1.0f, f);
     }

@@ -25,6 +25,7 @@ import net.minecraft.server.world.ServerWorld;
 
 public class CrossbowAttackTask<E extends MobEntity, T extends LivingEntity>
 extends Task<E> {
+    private static final int RUN_TIME = 1200;
     private int chargingCooldown;
     private CrossbowState state = CrossbowState.UNCHARGED;
 
@@ -35,7 +36,7 @@ extends Task<E> {
     @Override
     protected boolean shouldRun(ServerWorld serverWorld, E mobEntity) {
         LivingEntity livingEntity = CrossbowAttackTask.getAttackTarget(mobEntity);
-        return ((LivingEntity)mobEntity).isHolding(Items.CROSSBOW) && LookTargetUtil.isVisibleInMemory(mobEntity, livingEntity) && LookTargetUtil.method_25940(mobEntity, livingEntity, 0);
+        return ((LivingEntity)mobEntity).isHolding(Items.CROSSBOW) && LookTargetUtil.isVisibleInMemory(mobEntity, livingEntity) && LookTargetUtil.isTargetWithinAttackRange(mobEntity, livingEntity, 0);
     }
 
     @Override
@@ -109,12 +110,29 @@ extends Task<E> {
         this.keepRunning(world, (E)((MobEntity)entity), time);
     }
 
-    static enum CrossbowState {
-        UNCHARGED,
-        CHARGING,
-        CHARGED,
-        READY_TO_ATTACK;
+    static final class CrossbowState
+    extends Enum<CrossbowState> {
+        public static final /* enum */ CrossbowState UNCHARGED = new CrossbowState();
+        public static final /* enum */ CrossbowState CHARGING = new CrossbowState();
+        public static final /* enum */ CrossbowState CHARGED = new CrossbowState();
+        public static final /* enum */ CrossbowState READY_TO_ATTACK = new CrossbowState();
+        private static final /* synthetic */ CrossbowState[] field_22299;
 
+        public static CrossbowState[] values() {
+            return (CrossbowState[])field_22299.clone();
+        }
+
+        public static CrossbowState valueOf(String string) {
+            return Enum.valueOf(CrossbowState.class, string);
+        }
+
+        private static /* synthetic */ CrossbowState[] method_36616() {
+            return new CrossbowState[]{UNCHARGED, CHARGING, CHARGED, READY_TO_ATTACK};
+        }
+
+        static {
+            field_22299 = CrossbowState.method_36616();
+        }
     }
 }
 

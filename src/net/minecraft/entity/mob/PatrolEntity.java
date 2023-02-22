@@ -146,6 +146,7 @@ extends HostileEntity {
 
     public static class PatrolGoal<T extends PatrolEntity>
     extends Goal {
+        private static final int field_30474 = 200;
         private final T entity;
         private final double leaderSpeed;
         private final double followSpeed;

@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.pathing;
@@ -16,22 +14,20 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class Path {
     private final List<PathNode> nodes;
-    private PathNode[] field_57 = new PathNode[0];
-    private PathNode[] field_55 = new PathNode[0];
-    @Environment(value=EnvType.CLIENT)
-    private Set<TargetPathNode> field_20300;
+    private PathNode[] debugNodes = new PathNode[0];
+    private PathNode[] debugSecondNodes = new PathNode[0];
+    private Set<TargetPathNode> debugTargetNodes;
     private int currentNodeIndex;
     private final BlockPos target;
     private final float manhattanDistanceFromTarget;
@@ -48,7 +44,7 @@ public class Path {
         ++this.currentNodeIndex;
     }
 
-    public boolean method_30849() {
+    public boolean isStart() {
         return this.currentNodeIndex <= 0;
     }
 
@@ -98,24 +94,24 @@ public class Path {
         return new Vec3d(d, e, f);
     }
 
-    public BlockPos method_31031(int i) {
-        return this.nodes.get(i).getBlockPos();
+    public BlockPos getNodePos(int index) {
+        return this.nodes.get(index).getBlockPos();
     }
 
     public Vec3d getNodePosition(Entity entity) {
         return this.getNodePosition(entity, this.currentNodeIndex);
     }
 
-    public BlockPos method_31032() {
+    public BlockPos getCurrentNodePos() {
         return this.nodes.get(this.currentNodeIndex).getBlockPos();
     }
 
-    public PathNode method_29301() {
+    public PathNode getCurrentNode() {
         return this.nodes.get(this.currentNodeIndex);
     }
 
     @Nullable
-    public PathNode method_30850() {
+    public PathNode getLastNode() {
         return this.currentNodeIndex > 0 ? this.nodes.get(this.currentNodeIndex - 1) : null;
     }
 
@@ -139,17 +135,48 @@ public class Path {
         return this.reachesTarget;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public PathNode[] method_22880() {
-        return this.field_57;
+    @Debug
+    void setDebugInfo(PathNode[] debugNodes, PathNode[] debugSecondNodes, Set<TargetPathNode> debugTargetNodes) {
+        this.debugNodes = debugNodes;
+        this.debugSecondNodes = debugSecondNodes;
+        this.debugTargetNodes = debugTargetNodes;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public PathNode[] method_22881() {
-        return this.field_55;
+    @Debug
+    public PathNode[] getDebugNodes() {
+        return this.debugNodes;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    @Debug
+    public PathNode[] getDebugSecondNodes() {
+        return this.debugSecondNodes;
+    }
+
+    public void toBuffer(PacketByteBuf buffer) {
+        if (this.debugTargetNodes == null || this.debugTargetNodes.isEmpty()) {
+            return;
+        }
+        buffer.writeBoolean(this.reachesTarget);
+        buffer.writeInt(this.currentNodeIndex);
+        buffer.writeInt(this.debugTargetNodes.size());
+        this.debugTargetNodes.forEach(targetPathNode -> targetPathNode.toBuffer(buffer));
+        buffer.writeInt(this.target.getX());
+        buffer.writeInt(this.target.getY());
+        buffer.writeInt(this.target.getZ());
+        buffer.writeInt(this.nodes.size());
+        for (PathNode pathNode : this.nodes) {
+            pathNode.toBuffer(buffer);
+        }
+        buffer.writeInt(this.debugNodes.length);
+        for (PathNode pathNode2 : this.debugNodes) {
+            pathNode2.toBuffer(buffer);
+        }
+        buffer.writeInt(this.debugSecondNodes.length);
+        for (PathNode pathNode2 : this.debugSecondNodes) {
+            pathNode2.toBuffer(buffer);
+        }
+    }
+
     public static Path fromBuffer(PacketByteBuf buffer) {
         boolean bl = buffer.readBoolean();
         int i = buffer.readInt();
@@ -173,9 +200,9 @@ public class Path {
             pathNodes2[o] = PathNode.readBuf(buffer);
         }
         Path path = new Path(list, blockPos, bl);
-        path.field_57 = pathNodes;
-        path.field_55 = pathNodes2;
-        path.field_20300 = set;
+        path.debugNodes = pathNodes;
+        path.debugSecondNodes = pathNodes2;
+        path.debugTargetNodes = set;
         path.currentNodeIndex = i;
         return path;
     }

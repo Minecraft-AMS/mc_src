@@ -5,12 +5,13 @@ package net.minecraft.entity.mob;
 
 import java.util.Random;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -33,8 +34,8 @@ import net.minecraft.world.WorldAccess;
 
 public class EndermiteEntity
 extends HostileEntity {
+    private static final int DESPAWN_TIME = 2400;
     private int lifeTime;
-    private boolean playerSpawned;
 
     public EndermiteEntity(EntityType<? extends EndermiteEntity> entityType, World world) {
         super((EntityType<? extends HostileEntity>)entityType, world);
@@ -49,7 +50,7 @@ extends HostileEntity {
         this.goalSelector.add(7, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
         this.goalSelector.add(8, new LookAroundGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, new Class[0]).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
     }
 
     @Override
@@ -62,8 +63,8 @@ extends HostileEntity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
@@ -90,39 +91,29 @@ extends HostileEntity {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         this.lifeTime = nbt.getInt("Lifetime");
-        this.playerSpawned = nbt.getBoolean("PlayerSpawned");
     }
 
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
         nbt.putInt("Lifetime", this.lifeTime);
-        nbt.putBoolean("PlayerSpawned", this.playerSpawned);
     }
 
     @Override
     public void tick() {
-        this.bodyYaw = this.yaw;
+        this.bodyYaw = this.getYaw();
         super.tick();
     }
 
     @Override
     public void setBodyYaw(float bodyYaw) {
-        this.yaw = bodyYaw;
+        this.setYaw(bodyYaw);
         super.setBodyYaw(bodyYaw);
     }
 
     @Override
     public double getHeightOffset() {
         return 0.1;
-    }
-
-    public boolean isPlayerSpawned() {
-        return this.playerSpawned;
-    }
-
-    public void setPlayerSpawned(boolean playerSpawned) {
-        this.playerSpawned = playerSpawned;
     }
 
     @Override
@@ -137,7 +128,7 @@ extends HostileEntity {
                 ++this.lifeTime;
             }
             if (this.lifeTime >= 2400) {
-                this.remove();
+                this.discard();
             }
         }
     }

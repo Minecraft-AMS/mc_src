@@ -9,7 +9,7 @@ package net.minecraft.entity.ai.brain.task;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -21,15 +21,18 @@ import net.minecraft.util.math.Vec3d;
 
 public class GoToIfNearbyTask
 extends Task<PathAwareEntity> {
+    private static final int UPDATE_INTERVAL = 180;
+    private static final int HORIZONTAL_RANGE = 8;
+    private static final int VERTICAL_RANGE = 6;
     private final MemoryModuleType<GlobalPos> target;
     private long nextUpdateTime;
     private final int maxDistance;
-    private float field_25752;
+    private final float walkSpeed;
 
     public GoToIfNearbyTask(MemoryModuleType<GlobalPos> target, float walkSpeed, int maxDistance) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), target, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
         this.target = target;
-        this.field_25752 = walkSpeed;
+        this.walkSpeed = walkSpeed;
         this.maxDistance = maxDistance;
     }
 
@@ -42,8 +45,8 @@ extends Task<PathAwareEntity> {
     @Override
     protected void run(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
         if (l > this.nextUpdateTime) {
-            Optional<Vec3d> optional = Optional.ofNullable(TargetFinder.findGroundTarget(pathAwareEntity, 8, 6));
-            pathAwareEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.field_25752, 1)));
+            Optional<Vec3d> optional = Optional.ofNullable(FuzzyTargeting.find(pathAwareEntity, 8, 6));
+            pathAwareEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.walkSpeed, 1)));
             this.nextUpdateTime = l + 180L;
         }
     }

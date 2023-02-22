@@ -11,14 +11,23 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
-public enum Perspective {
-    FIRST_PERSON(true, false),
-    THIRD_PERSON_BACK(false, false),
-    THIRD_PERSON_FRONT(false, true);
-
+public final class Perspective
+extends Enum<Perspective> {
+    public static final /* enum */ Perspective FIRST_PERSON = new Perspective(true, false);
+    public static final /* enum */ Perspective THIRD_PERSON_BACK = new Perspective(false, false);
+    public static final /* enum */ Perspective THIRD_PERSON_FRONT = new Perspective(false, true);
     private static final Perspective[] VALUES;
-    private boolean firstPerson;
-    private boolean frontView;
+    private final boolean firstPerson;
+    private final boolean frontView;
+    private static final /* synthetic */ Perspective[] field_26670;
+
+    public static Perspective[] values() {
+        return (Perspective[])field_26670.clone();
+    }
+
+    public static Perspective valueOf(String string) {
+        return Enum.valueOf(Perspective.class, string);
+    }
 
     private Perspective(boolean firstPerson, boolean frontView) {
         this.firstPerson = firstPerson;
@@ -37,7 +46,12 @@ public enum Perspective {
         return VALUES[(this.ordinal() + 1) % VALUES.length];
     }
 
+    private static /* synthetic */ Perspective[] method_36859() {
+        return new Perspective[]{FIRST_PERSON, THIRD_PERSON_BACK, THIRD_PERSON_FRONT};
+    }
+
     static {
+        field_26670 = Perspective.method_36859();
         VALUES = Perspective.values();
     }
 }

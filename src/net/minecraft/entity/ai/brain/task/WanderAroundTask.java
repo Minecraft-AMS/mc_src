@@ -11,7 +11,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
@@ -28,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class WanderAroundTask
 extends Task<MobEntity> {
+    private static final int MAX_UPDATE_COUNTDOWN = 40;
     private int pathUpdateCountdownTicks;
     @Nullable
     private Path path;
@@ -39,8 +40,8 @@ extends Task<MobEntity> {
         this(150, 250);
     }
 
-    public WanderAroundTask(int i, int j) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.PATH, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), i, j);
+    public WanderAroundTask(int minRunTime, int maxRunTime) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.PATH, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT)), minRunTime, maxRunTime);
     }
 
     @Override
@@ -126,7 +127,7 @@ extends Task<MobEntity> {
             if (this.path != null) {
                 return true;
             }
-            Vec3d vec3d = TargetFinder.findTargetTowards((PathAwareEntity)entity, 10, 7, Vec3d.ofBottomCenter(blockPos));
+            Vec3d vec3d = NoPenaltyTargeting.find((PathAwareEntity)entity, 10, 7, Vec3d.ofBottomCenter(blockPos), 1.5707963705062866);
             if (vec3d != null) {
                 this.path = entity.getNavigation().findPathTo(vec3d.x, vec3d.y, vec3d.z, 0);
                 return this.path != null;

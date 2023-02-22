@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.objects.ObjectArrays
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util.collection;
 
@@ -12,12 +13,14 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import org.jetbrains.annotations.Nullable;
 
 public class SortedArraySet<T>
 extends AbstractSet<T> {
+    private static final int DEFAULT_CAPACITY = 10;
     private final Comparator<T> comparator;
-    private T[] elements;
-    private int size;
+    T[] elements;
+    int size;
 
     private SortedArraySet(int initialCapacity, Comparator<T> comparator) {
         this.comparator = comparator;
@@ -27,8 +30,20 @@ extends AbstractSet<T> {
         this.elements = SortedArraySet.cast(new Object[initialCapacity]);
     }
 
+    public static <T extends Comparable<T>> SortedArraySet<T> create() {
+        return SortedArraySet.create(10);
+    }
+
     public static <T extends Comparable<T>> SortedArraySet<T> create(int initialCapacity) {
         return new SortedArraySet(initialCapacity, Comparator.naturalOrder());
+    }
+
+    public static <T> SortedArraySet<T> create(Comparator<T> comparator) {
+        return SortedArraySet.create(comparator, 10);
+    }
+
+    public static <T> SortedArraySet<T> create(Comparator<T> comparator, int initialCapacity) {
+        return new SortedArraySet<T>(initialCapacity, comparator);
     }
 
     private static <T> T[] cast(Object[] array) {
@@ -77,7 +92,7 @@ extends AbstractSet<T> {
         ++this.size;
     }
 
-    private void remove(int index) {
+    void remove(int index) {
         --this.size;
         if (index != this.size) {
             System.arraycopy(this.elements, index + 1, this.elements, index, this.size - index);
@@ -108,8 +123,21 @@ extends AbstractSet<T> {
         return false;
     }
 
+    @Nullable
+    public T getIfContains(T object) {
+        int i = this.binarySearch(object);
+        if (i >= 0) {
+            return this.get(i);
+        }
+        return null;
+    }
+
     public T first() {
         return this.get(0);
+    }
+
+    public T last() {
+        return this.get(this.size - 1);
     }
 
     @Override
@@ -152,17 +180,17 @@ extends AbstractSet<T> {
     }
 
     @Override
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object instanceof SortedArraySet) {
-            SortedArraySet sortedArraySet = (SortedArraySet)object;
+        if (o instanceof SortedArraySet) {
+            SortedArraySet sortedArraySet = (SortedArraySet)o;
             if (this.comparator.equals(sortedArraySet.comparator)) {
                 return this.size == sortedArraySet.size && Arrays.equals(this.elements, sortedArraySet.elements);
             }
         }
-        return super.equals(object);
+        return super.equals(o);
     }
 
     class SetIterator
@@ -170,7 +198,7 @@ extends AbstractSet<T> {
         private int nextIndex;
         private int lastIndex = -1;
 
-        private SetIterator() {
+        SetIterator() {
         }
 
         @Override

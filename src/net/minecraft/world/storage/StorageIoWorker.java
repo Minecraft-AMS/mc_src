@@ -38,26 +38,39 @@ public class StorageIoWorker
 implements AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
     private final AtomicBoolean closed = new AtomicBoolean();
-    private final TaskExecutor<TaskQueue.PrioritizedTask> field_24468;
+    private final TaskExecutor<TaskQueue.PrioritizedTask> executor;
     private final RegionBasedStorage storage;
     private final Map<ChunkPos, Result> results = Maps.newLinkedHashMap();
 
-    protected StorageIoWorker(File file, boolean bl, String string) {
-        this.storage = new RegionBasedStorage(file, bl);
-        this.field_24468 = new TaskExecutor<TaskQueue.PrioritizedTask>(new TaskQueue.Prioritized(Priority.values().length), Util.getIoWorkerExecutor(), "IOWorker-" + string);
+    protected StorageIoWorker(File directory, boolean dsync, String name) {
+        this.storage = new RegionBasedStorage(directory, dsync);
+        this.executor = new TaskExecutor<TaskQueue.PrioritizedTask>(new TaskQueue.Prioritized(Priority.values().length), Util.getIoWorkerExecutor(), "IOWorker-" + name);
     }
 
-    public CompletableFuture<Void> setResult(ChunkPos pos, NbtCompound nbt) {
+    public CompletableFuture<Void> setResult(ChunkPos pos, @Nullable NbtCompound nbt) {
         return this.run(() -> {
             Result result = this.results.computeIfAbsent(pos, chunkPos -> new Result(nbt));
             result.nbt = nbt;
-            return Either.left((Object)result.future);
+            return Either.left(result.future);
         }).thenCompose(Function.identity());
     }
 
     @Nullable
     public NbtCompound getNbt(ChunkPos pos) throws IOException {
-        CompletableFuture completableFuture = this.run(() -> {
+        CompletableFuture<NbtCompound> completableFuture = this.readChunkData(pos);
+        try {
+            return completableFuture.join();
+        }
+        catch (CompletionException completionException) {
+            if (completionException.getCause() instanceof IOException) {
+                throw (IOException)completionException.getCause();
+            }
+            throw completionException;
+        }
+    }
+
+    protected CompletableFuture<NbtCompound> readChunkData(ChunkPos pos) {
+        return this.run(() -> {
             Result result = this.results.get(pos);
             if (result != null) {
                 return Either.left((Object)result.nbt);
@@ -71,48 +84,42 @@ implements AutoCloseable {
                 return Either.right((Object)exception);
             }
         });
-        try {
-            return (NbtCompound)completableFuture.join();
-        }
-        catch (CompletionException completionException) {
-            if (completionException.getCause() instanceof IOException) {
-                throw (IOException)completionException.getCause();
-            }
-            throw completionException;
-        }
     }
 
-    public CompletableFuture<Void> completeAll() {
-        CompletionStage completableFuture = this.run(() -> Either.left(CompletableFuture.allOf((CompletableFuture[])this.results.values().stream().map(result -> ((Result)result).future).toArray(CompletableFuture[]::new)))).thenCompose(Function.identity());
-        return ((CompletableFuture)completableFuture).thenCompose(void_ -> this.run(() -> {
-            try {
-                this.storage.method_26982();
-                return Either.left(null);
-            }
-            catch (Exception exception) {
-                LOGGER.warn("Failed to synchronized chunks", (Throwable)exception);
-                return Either.right((Object)exception);
-            }
-        }));
+    public CompletableFuture<Void> completeAll(boolean sync) {
+        CompletionStage completableFuture = this.run(() -> Either.left(CompletableFuture.allOf((CompletableFuture[])this.results.values().stream().map(result -> result.future).toArray(CompletableFuture[]::new)))).thenCompose(Function.identity());
+        if (sync) {
+            return ((CompletableFuture)completableFuture).thenCompose(void_ -> this.run(() -> {
+                try {
+                    this.storage.sync();
+                    return Either.left(null);
+                }
+                catch (Exception exception) {
+                    LOGGER.warn("Failed to synchronize chunks", (Throwable)exception);
+                    return Either.right((Object)exception);
+                }
+            }));
+        }
+        return ((CompletableFuture)completableFuture).thenCompose(void_ -> this.run(() -> Either.left(null)));
     }
 
     private <T> CompletableFuture<T> run(Supplier<Either<T, Exception>> task) {
-        return this.field_24468.method_27918(messageListener -> new TaskQueue.PrioritizedTask(Priority.HIGH.ordinal(), () -> this.method_27939(messageListener, (Supplier)task)));
+        return this.executor.askFallible(messageListener -> new TaskQueue.PrioritizedTask(Priority.FOREGROUND.ordinal(), () -> this.method_27939(messageListener, (Supplier)task)));
     }
 
     private void writeResult() {
-        Iterator<Map.Entry<ChunkPos, Result>> iterator = this.results.entrySet().iterator();
-        if (!iterator.hasNext()) {
+        if (this.results.isEmpty()) {
             return;
         }
+        Iterator<Map.Entry<ChunkPos, Result>> iterator = this.results.entrySet().iterator();
         Map.Entry<ChunkPos, Result> entry = iterator.next();
         iterator.remove();
         this.write(entry.getKey(), entry.getValue());
-        this.method_27945();
+        this.writeRemainingResults();
     }
 
-    private void method_27945() {
-        this.field_24468.send(new TaskQueue.PrioritizedTask(Priority.LOW.ordinal(), this::writeResult));
+    private void writeRemainingResults() {
+        this.executor.send(new TaskQueue.PrioritizedTask(Priority.BACKGROUND.ordinal(), this::writeResult));
     }
 
     private void write(ChunkPos pos, Result result) {
@@ -131,19 +138,8 @@ implements AutoCloseable {
         if (!this.closed.compareAndSet(false, true)) {
             return;
         }
-        CompletableFuture completableFuture = this.field_24468.ask(messageListener -> new TaskQueue.PrioritizedTask(Priority.HIGH.ordinal(), () -> messageListener.send(Unit.INSTANCE)));
-        try {
-            completableFuture.join();
-        }
-        catch (CompletionException completionException) {
-            if (completionException.getCause() instanceof IOException) {
-                throw (IOException)completionException.getCause();
-            }
-            throw completionException;
-        }
-        this.field_24468.close();
-        this.results.forEach(this::write);
-        this.results.clear();
+        this.executor.ask(messageListener -> new TaskQueue.PrioritizedTask(Priority.SHUTDOWN.ordinal(), () -> messageListener.send(Unit.INSTANCE))).join();
+        this.executor.close();
         try {
             this.storage.close();
         }
@@ -154,24 +150,43 @@ implements AutoCloseable {
 
     private /* synthetic */ void method_27939(MessageListener messageListener, Supplier supplier) {
         if (!this.closed.get()) {
-            messageListener.send(supplier.get());
+            messageListener.send((Either)supplier.get());
         }
-        this.method_27945();
+        this.writeRemainingResults();
+    }
+
+    static final class Priority
+    extends Enum<Priority> {
+        public static final /* enum */ Priority FOREGROUND = new Priority();
+        public static final /* enum */ Priority BACKGROUND = new Priority();
+        public static final /* enum */ Priority SHUTDOWN = new Priority();
+        private static final /* synthetic */ Priority[] field_24471;
+
+        public static Priority[] values() {
+            return (Priority[])field_24471.clone();
+        }
+
+        public static Priority valueOf(String string) {
+            return Enum.valueOf(Priority.class, string);
+        }
+
+        private static /* synthetic */ Priority[] method_36744() {
+            return new Priority[]{FOREGROUND, BACKGROUND, SHUTDOWN};
+        }
+
+        static {
+            field_24471 = Priority.method_36744();
+        }
     }
 
     static class Result {
-        private NbtCompound nbt;
-        private final CompletableFuture<Void> future = new CompletableFuture();
+        @Nullable
+        NbtCompound nbt;
+        final CompletableFuture<Void> future = new CompletableFuture();
 
-        public Result(NbtCompound nbtCompound) {
-            this.nbt = nbtCompound;
+        public Result(@Nullable NbtCompound nbt) {
+            this.nbt = nbt;
         }
-    }
-
-    static enum Priority {
-        HIGH,
-        LOW;
-
     }
 }
 

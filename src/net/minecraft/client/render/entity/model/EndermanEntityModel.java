@@ -9,7 +9,13 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.entity.LivingEntity;
 
@@ -19,37 +25,30 @@ extends BipedEntityModel<T> {
     public boolean carryingBlock;
     public boolean angry;
 
-    public EndermanEntityModel(float f) {
-        super(0.0f, -14.0f, 64, 32);
-        float g = -14.0f;
-        this.hat = new ModelPart(this, 0, 16);
-        this.hat.addCuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, f - 0.5f);
-        this.hat.setPivot(0.0f, -14.0f, 0.0f);
-        this.body = new ModelPart(this, 32, 16);
-        this.body.addCuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, f);
-        this.body.setPivot(0.0f, -14.0f, 0.0f);
-        this.rightArm = new ModelPart(this, 56, 0);
-        this.rightArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
-        this.rightArm.setPivot(-3.0f, -12.0f, 0.0f);
-        this.leftArm = new ModelPart(this, 56, 0);
-        this.leftArm.mirror = true;
-        this.leftArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
-        this.leftArm.setPivot(5.0f, -12.0f, 0.0f);
-        this.rightLeg = new ModelPart(this, 56, 0);
-        this.rightLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
-        this.rightLeg.setPivot(-2.0f, -2.0f, 0.0f);
-        this.leftLeg = new ModelPart(this, 56, 0);
-        this.leftLeg.mirror = true;
-        this.leftLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f, f);
-        this.leftLeg.setPivot(2.0f, -2.0f, 0.0f);
+    public EndermanEntityModel(ModelPart modelPart) {
+        super(modelPart);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        float f = -14.0f;
+        ModelData modelData = BipedEntityModel.getModelData(Dilation.NONE, -14.0f);
+        ModelPartData modelPartData = modelData.getRoot();
+        ModelTransform modelTransform = ModelTransform.pivot(0.0f, -13.0f, 0.0f);
+        modelPartData.addChild("hat", ModelPartBuilder.create().uv(0, 16).cuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, new Dilation(-0.5f)), modelTransform);
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f), modelTransform);
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(32, 16).cuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f), ModelTransform.pivot(0.0f, -14.0f, 0.0f));
+        modelPartData.addChild("right_arm", ModelPartBuilder.create().uv(56, 0).cuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f), ModelTransform.pivot(-5.0f, -12.0f, 0.0f));
+        modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(56, 0).mirrored().cuboid(-1.0f, -2.0f, -1.0f, 2.0f, 30.0f, 2.0f), ModelTransform.pivot(5.0f, -12.0f, 0.0f));
+        modelPartData.addChild("right_leg", ModelPartBuilder.create().uv(56, 0).cuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f), ModelTransform.pivot(-2.0f, -5.0f, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(56, 0).mirrored().cuboid(-1.0f, 0.0f, -1.0f, 2.0f, 30.0f, 2.0f), ModelTransform.pivot(2.0f, -5.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override
     public void setAngles(T livingEntity, float f, float g, float h, float i, float j) {
-        float m;
         super.setAngles(livingEntity, f, g, h, i, j);
         this.head.visible = true;
-        float k = -14.0f;
+        int k = -14;
         this.body.pitch = 0.0f;
         this.body.pivotY = -14.0f;
         this.body.pivotZ = -0.0f;
@@ -90,8 +89,6 @@ extends BipedEntityModel<T> {
             this.rightArm.roll = 0.05f;
             this.leftArm.roll = -0.05f;
         }
-        this.rightArm.pivotZ = 0.0f;
-        this.leftArm.pivotZ = 0.0f;
         this.rightLeg.pivotZ = 0.0f;
         this.leftLeg.pivotZ = 0.0f;
         this.rightLeg.pivotY = -5.0f;
@@ -105,10 +102,10 @@ extends BipedEntityModel<T> {
         this.hat.yaw = this.head.yaw;
         this.hat.roll = this.head.roll;
         if (this.angry) {
-            m = 1.0f;
+            float m = 1.0f;
             this.head.pivotY -= 5.0f;
         }
-        m = -14.0f;
+        int n = -14;
         this.rightArm.setPivot(-5.0f, -12.0f, 0.0f);
         this.leftArm.setPivot(5.0f, -12.0f, 0.0f);
     }

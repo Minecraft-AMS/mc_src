@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk.light;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.LightType;
 import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.chunk.ChunkProvider;
@@ -25,16 +22,21 @@ import org.jetbrains.annotations.Nullable;
 
 public class LightingProvider
 implements LightingView {
+    public static final int field_31713 = 15;
+    public static final int field_31714 = 1;
+    protected final HeightLimitView world;
     @Nullable
     private final ChunkLightProvider<?, ?> blockLightProvider;
     @Nullable
     private final ChunkLightProvider<?, ?> skyLightProvider;
 
     public LightingProvider(ChunkProvider chunkProvider, boolean hasBlockLight, boolean hasSkyLight) {
+        this.world = chunkProvider.getWorld();
         this.blockLightProvider = hasBlockLight ? new ChunkBlockLightProvider(chunkProvider) : null;
         this.skyLightProvider = hasSkyLight ? new ChunkSkyLightProvider(chunkProvider) : null;
     }
 
+    @Override
     public void checkBlock(BlockPos pos) {
         if (this.blockLightProvider != null) {
             this.blockLightProvider.checkBlock(pos);
@@ -44,12 +46,14 @@ implements LightingView {
         }
     }
 
+    @Override
     public void addLightSource(BlockPos pos, int level) {
         if (this.blockLightProvider != null) {
             this.blockLightProvider.addLightSource(pos, level);
         }
     }
 
+    @Override
     public boolean hasUpdates() {
         if (this.skyLightProvider != null && this.skyLightProvider.hasUpdates()) {
             return true;
@@ -57,24 +61,25 @@ implements LightingView {
         return this.blockLightProvider != null && this.blockLightProvider.hasUpdates();
     }
 
-    public int doLightUpdates(int maxUpdateCount, boolean doSkylight, boolean skipEdgeLightPropagation) {
+    @Override
+    public int doLightUpdates(int i, boolean bl, boolean bl2) {
         if (this.blockLightProvider != null && this.skyLightProvider != null) {
-            int i = maxUpdateCount / 2;
-            int j = this.blockLightProvider.doLightUpdates(i, doSkylight, skipEdgeLightPropagation);
-            int k = maxUpdateCount - i + j;
-            int l = this.skyLightProvider.doLightUpdates(k, doSkylight, skipEdgeLightPropagation);
-            if (j == 0 && l > 0) {
-                return this.blockLightProvider.doLightUpdates(l, doSkylight, skipEdgeLightPropagation);
+            int j = i / 2;
+            int k = this.blockLightProvider.doLightUpdates(j, bl, bl2);
+            int l = i - j + k;
+            int m = this.skyLightProvider.doLightUpdates(l, bl, bl2);
+            if (k == 0 && m > 0) {
+                return this.blockLightProvider.doLightUpdates(m, bl, bl2);
             }
-            return l;
+            return m;
         }
         if (this.blockLightProvider != null) {
-            return this.blockLightProvider.doLightUpdates(maxUpdateCount, doSkylight, skipEdgeLightPropagation);
+            return this.blockLightProvider.doLightUpdates(i, bl, bl2);
         }
         if (this.skyLightProvider != null) {
-            return this.skyLightProvider.doLightUpdates(maxUpdateCount, doSkylight, skipEdgeLightPropagation);
+            return this.skyLightProvider.doLightUpdates(i, bl, bl2);
         }
-        return maxUpdateCount;
+        return i;
     }
 
     @Override
@@ -87,12 +92,13 @@ implements LightingView {
         }
     }
 
-    public void setColumnEnabled(ChunkPos pos, boolean lightEnabled) {
+    @Override
+    public void setColumnEnabled(ChunkPos chunkPos, boolean bl) {
         if (this.blockLightProvider != null) {
-            this.blockLightProvider.setColumnEnabled(pos, lightEnabled);
+            this.blockLightProvider.setColumnEnabled(chunkPos, bl);
         }
         if (this.skyLightProvider != null) {
-            this.skyLightProvider.setColumnEnabled(pos, lightEnabled);
+            this.skyLightProvider.setColumnEnabled(chunkPos, bl);
         }
     }
 
@@ -109,7 +115,6 @@ implements LightingView {
         return this.skyLightProvider;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public String displaySectionLevel(LightType lightType, ChunkSectionPos chunkSectionPos) {
         if (lightType == LightType.BLOCK) {
             if (this.blockLightProvider != null) {
@@ -144,6 +149,18 @@ implements LightingView {
         int i = this.skyLightProvider == null ? 0 : this.skyLightProvider.getLightLevel(pos) - ambientDarkness;
         int j = this.blockLightProvider == null ? 0 : this.blockLightProvider.getLightLevel(pos);
         return Math.max(j, i);
+    }
+
+    public int getHeight() {
+        return this.world.countVerticalSections() + 2;
+    }
+
+    public int getBottomY() {
+        return this.world.getBottomSectionCoord() - 1;
+    }
+
+    public int getTopY() {
+        return this.getBottomY() + this.getHeight();
     }
 }
 

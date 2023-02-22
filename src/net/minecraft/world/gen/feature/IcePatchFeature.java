@@ -14,6 +14,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DiskFeature;
 import net.minecraft.world.gen.feature.DiskFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class IcePatchFeature
 extends DiskFeature {
@@ -22,14 +23,19 @@ extends DiskFeature {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, DiskFeatureConfig diskFeatureConfig) {
-        while (structureWorldAccess.isAir(blockPos) && blockPos.getY() > 2) {
+    public boolean generate(FeatureContext<DiskFeatureConfig> context) {
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        ChunkGenerator chunkGenerator = context.getGenerator();
+        Random random = context.getRandom();
+        DiskFeatureConfig diskFeatureConfig = context.getConfig();
+        BlockPos blockPos = context.getOrigin();
+        while (structureWorldAccess.isAir(blockPos) && blockPos.getY() > structureWorldAccess.getBottomY() + 2) {
             blockPos = blockPos.down();
         }
         if (!structureWorldAccess.getBlockState(blockPos).isOf(Blocks.SNOW_BLOCK)) {
             return false;
         }
-        return super.generate(structureWorldAccess, chunkGenerator, random, blockPos, diskFeatureConfig);
+        return super.generate(new FeatureContext<DiskFeatureConfig>(structureWorldAccess, chunkGenerator, random, blockPos, diskFeatureConfig));
     }
 }
 

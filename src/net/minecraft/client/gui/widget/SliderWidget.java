@@ -11,6 +11,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.client.util.math.MatrixStack;
@@ -40,9 +42,21 @@ extends ClickableWidget {
     }
 
     @Override
+    public void appendNarrations(NarrationMessageBuilder builder) {
+        builder.put(NarrationPart.TITLE, (Text)this.getNarrationMessage());
+        if (this.active) {
+            if (this.isFocused()) {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.slider.usage.focused"));
+            } else {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.slider.usage.hovered"));
+            }
+        }
+    }
+
+    @Override
     protected void renderBackground(MatrixStack matrices, MinecraftClient client, int mouseX, int mouseY) {
-        client.getTextureManager().bindTexture(WIDGETS_TEXTURE);
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = (this.isHovered() ? 2 : 1) * 20;
         this.drawTexture(matrices, this.x + (int)(this.value * (double)(this.width - 8)), this.y, 0, 46 + i, 4, 20);
         this.drawTexture(matrices, this.x + (int)(this.value * (double)(this.width - 8)) + 4, this.y, 196, 46 + i, 4, 20);
@@ -68,9 +82,9 @@ extends ClickableWidget {
         this.setValue((mouseX - (double)(this.x + 4)) / (double)(this.width - 8));
     }
 
-    private void setValue(double mouseX) {
+    private void setValue(double value) {
         double d = this.value;
-        this.value = MathHelper.clamp(mouseX, 0.0, 1.0);
+        this.value = MathHelper.clamp(value, 0.0, 1.0);
         if (d != this.value) {
             this.applyValue();
         }

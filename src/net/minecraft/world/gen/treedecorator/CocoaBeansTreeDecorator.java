@@ -9,21 +9,20 @@ package net.minecraft.world.gen.treedecorator;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
+import java.util.function.BiConsumer;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CocoaBlock;
-import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.treedecorator.TreeDecorator;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
 
 public class CocoaBeansTreeDecorator
 extends TreeDecorator {
-    public static final Codec<CocoaBeansTreeDecorator> CODEC = Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").xmap(CocoaBeansTreeDecorator::new, cocoaBeansTreeDecorator -> Float.valueOf(cocoaBeansTreeDecorator.probability)).codec();
+    public static final Codec<CocoaBeansTreeDecorator> CODEC = Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").xmap(CocoaBeansTreeDecorator::new, decorator -> Float.valueOf(decorator.probability)).codec();
     private final float probability;
 
     public CocoaBeansTreeDecorator(float probability) {
@@ -36,7 +35,7 @@ extends TreeDecorator {
     }
 
     @Override
-    public void generate(StructureWorldAccess world, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions, Set<BlockPos> placedStates, BlockBox box) {
+    public void generate(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions) {
         if (random.nextFloat() >= this.probability) {
             return;
         }
@@ -46,8 +45,7 @@ extends TreeDecorator {
                 Direction direction2;
                 BlockPos blockPos;
                 if (!(random.nextFloat() <= 0.25f) || !Feature.isAir(world, blockPos = pos.add((direction2 = direction.getOpposite()).getOffsetX(), 0, direction2.getOffsetZ()))) continue;
-                BlockState blockState = (BlockState)((BlockState)Blocks.COCOA.getDefaultState().with(CocoaBlock.AGE, random.nextInt(3))).with(CocoaBlock.FACING, direction);
-                this.setBlockStateAndEncompassPosition(world, blockPos, blockState, placedStates, box);
+                replacer.accept(blockPos, (BlockState)((BlockState)Blocks.COCOA.getDefaultState().with(CocoaBlock.AGE, random.nextInt(3))).with(CocoaBlock.FACING, direction));
             }
         });
     }

@@ -46,6 +46,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.PlayerSkinTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.DefaultSkinHelper;
@@ -55,6 +56,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class PlayerSkinProvider {
+    public static final String TEXTURES = "textures";
     private final TextureManager textureManager;
     private final File skinCacheDir;
     private final MinecraftSessionService sessionService;
@@ -68,7 +70,7 @@ public class PlayerSkinProvider {
 
             public Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> load(String string) {
                 GameProfile gameProfile = new GameProfile(null, "dummy_mcdummyface");
-                gameProfile.getProperties().put((Object)"textures", (Object)new Property("textures", string, ""));
+                gameProfile.getProperties().put((Object)PlayerSkinProvider.TEXTURES, (Object)new Property(PlayerSkinProvider.TEXTURES, string, ""));
                 try {
                     return sessionService.getTextures(gameProfile, false);
                 }
@@ -90,12 +92,8 @@ public class PlayerSkinProvider {
     private Identifier loadSkin(MinecraftProfileTexture profileTexture, MinecraftProfileTexture.Type type, @Nullable SkinTextureAvailableCallback callback) {
         String string = Hashing.sha1().hashUnencodedChars((CharSequence)profileTexture.getHash()).toString();
         Identifier identifier = new Identifier("skins/" + string);
-        AbstractTexture abstractTexture = this.textureManager.getTexture(identifier);
-        if (abstractTexture != null) {
-            if (callback != null) {
-                callback.onSkinTextureAvailable(type, identifier, profileTexture);
-            }
-        } else {
+        AbstractTexture abstractTexture = this.textureManager.getOrDefault(identifier, MissingSprite.getMissingSpriteTexture());
+        if (abstractTexture == MissingSprite.getMissingSpriteTexture()) {
             File file = new File(this.skinCacheDir, string.length() > 2 ? string.substring(0, 2) : "xx");
             File file2 = new File(file, string);
             PlayerSkinTexture playerSkinTexture = new PlayerSkinTexture(file2, profileTexture.getUrl(), DefaultSkinHelper.getTexture(), type == MinecraftProfileTexture.Type.SKIN, () -> {
@@ -104,6 +102,8 @@ public class PlayerSkinProvider {
                 }
             });
             this.textureManager.registerTexture(identifier, playerSkinTexture);
+        } else if (callback != null) {
+            callback.onSkinTextureAvailable(type, identifier, profileTexture);
         }
         return identifier;
     }
@@ -142,7 +142,7 @@ public class PlayerSkinProvider {
     }
 
     public Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> getTextures(GameProfile profile) {
-        Property property = (Property)Iterables.getFirst((Iterable)profile.getProperties().get((Object)"textures"), null);
+        Property property = (Property)Iterables.getFirst((Iterable)profile.getProperties().get((Object)TEXTURES), null);
         if (property == null) {
             return ImmutableMap.of();
         }

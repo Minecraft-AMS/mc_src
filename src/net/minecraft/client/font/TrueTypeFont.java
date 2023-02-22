@@ -38,28 +38,28 @@ import org.lwjgl.system.MemoryUtil;
 @Environment(value=EnvType.CLIENT)
 public class TrueTypeFont
 implements Font {
-    private final ByteBuffer field_21839;
-    private final STBTTFontinfo info;
-    private final float oversample;
+    private final ByteBuffer buffer;
+    final STBTTFontinfo info;
+    final float oversample;
     private final IntSet excludedCharacters = new IntArraySet();
-    private final float shiftX;
-    private final float shiftY;
-    private final float scaleFactor;
-    private final float ascent;
+    final float shiftX;
+    final float shiftY;
+    final float scaleFactor;
+    final float ascent;
 
-    public TrueTypeFont(ByteBuffer byteBuffer, STBTTFontinfo sTBTTFontinfo, float f, float g, float h, float i, String string) {
-        this.field_21839 = byteBuffer;
-        this.info = sTBTTFontinfo;
-        this.oversample = g;
-        string.codePoints().forEach(arg_0 -> ((IntSet)this.excludedCharacters).add(arg_0));
-        this.shiftX = h * g;
-        this.shiftY = i * g;
-        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)sTBTTFontinfo, (float)(f * g));
+    public TrueTypeFont(ByteBuffer buffer, STBTTFontinfo info, float f, float oversample, float g, float h, String excludedCharacters) {
+        this.buffer = buffer;
+        this.info = info;
+        this.oversample = oversample;
+        excludedCharacters.codePoints().forEach(arg_0 -> ((IntSet)this.excludedCharacters).add(arg_0));
+        this.shiftX = g * oversample;
+        this.shiftY = h * oversample;
+        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)info, (float)(f * oversample));
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             IntBuffer intBuffer = memoryStack.mallocInt(1);
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
             IntBuffer intBuffer3 = memoryStack.mallocInt(1);
-            STBTruetype.stbtt_GetFontVMetrics((STBTTFontinfo)sTBTTFontinfo, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3);
+            STBTruetype.stbtt_GetFontVMetrics((STBTTFontinfo)info, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3);
             this.ascent = (float)intBuffer.get(0) * this.scaleFactor;
         }
     }
@@ -83,7 +83,7 @@ implements Font {
             STBTruetype.stbtt_GetGlyphBitmapBoxSubpixel((STBTTFontinfo)this.info, (int)j, (float)this.scaleFactor, (float)this.scaleFactor, (float)this.shiftX, (float)this.shiftY, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3, (IntBuffer)intBuffer4);
             int k = intBuffer3.get(0) - intBuffer.get(0);
             int l = intBuffer4.get(0) - intBuffer2.get(0);
-            if (k == 0 || l == 0) {
+            if (k <= 0 || l <= 0) {
                 TtfGlyph ttfGlyph = null;
                 return ttfGlyph;
             }
@@ -98,12 +98,12 @@ implements Font {
     @Override
     public void close() {
         this.info.free();
-        MemoryUtil.memFree((Buffer)this.field_21839);
+        MemoryUtil.memFree((Buffer)this.buffer);
     }
 
     @Override
     public IntSet getProvidedGlyphs() {
-        return (IntSet)IntStream.range(0, 65535).filter(i -> !this.excludedCharacters.contains(i)).collect(IntOpenHashSet::new, IntCollection::add, IntCollection::addAll);
+        return (IntSet)IntStream.range(0, 65535).filter(codePoint -> !this.excludedCharacters.contains(codePoint)).collect(IntOpenHashSet::new, IntCollection::add, IntCollection::addAll);
     }
 
     @Override
@@ -122,13 +122,13 @@ implements Font {
         private final float advance;
         private final int glyphIndex;
 
-        private TtfGlyph(int xMin, int xMax, int yMax, int yMin, float advance, float bearing, int index) {
-            this.width = xMax - xMin;
-            this.height = yMax - yMin;
-            this.advance = advance / TrueTypeFont.this.oversample;
-            this.bearingX = (bearing + (float)xMin + TrueTypeFont.this.shiftX) / TrueTypeFont.this.oversample;
-            this.ascent = (TrueTypeFont.this.ascent - (float)yMax + TrueTypeFont.this.shiftY) / TrueTypeFont.this.oversample;
-            this.glyphIndex = index;
+        TtfGlyph(int i, int j, int k, int l, float f, float g, int m) {
+            this.width = j - i;
+            this.height = k - l;
+            this.advance = f / TrueTypeFont.this.oversample;
+            this.bearingX = (g + (float)i + TrueTypeFont.this.shiftX) / TrueTypeFont.this.oversample;
+            this.ascent = (TrueTypeFont.this.ascent - (float)k + TrueTypeFont.this.shiftY) / TrueTypeFont.this.oversample;
+            this.glyphIndex = m;
         }
 
         @Override

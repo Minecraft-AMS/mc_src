@@ -9,6 +9,8 @@
  *  io.netty.channel.ChannelException
  *  io.netty.channel.ChannelFuture
  *  io.netty.channel.ChannelHandler
+ *  io.netty.channel.ChannelHandlerContext
+ *  io.netty.channel.ChannelInboundHandlerAdapter
  *  io.netty.channel.ChannelInitializer
  *  io.netty.channel.ChannelOption
  *  io.netty.channel.EventLoopGroup
@@ -20,10 +22,11 @@
  *  io.netty.channel.nio.NioEventLoopGroup
  *  io.netty.channel.socket.nio.NioServerSocketChannel
  *  io.netty.handler.timeout.ReadTimeoutHandler
+ *  io.netty.util.HashedWheelTimer
+ *  io.netty.util.Timeout
+ *  io.netty.util.Timer
  *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -37,6 +40,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -48,6 +53,9 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.Timer;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import java.io.IOException;
@@ -56,8 +64,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.concurrent.TimeUnit;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.LegacyQueryHandler;
@@ -82,10 +89,10 @@ public class ServerNetworkIo {
     private static final Logger LOGGER = LogManager.getLogger();
     public static final Lazy<NioEventLoopGroup> DEFAULT_CHANNEL = new Lazy<NioEventLoopGroup>(() -> new NioEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Server IO #%d").setDaemon(true).build()));
     public static final Lazy<EpollEventLoopGroup> EPOLL_CHANNEL = new Lazy<EpollEventLoopGroup>(() -> new EpollEventLoopGroup(0, new ThreadFactoryBuilder().setNameFormat("Netty Epoll Server IO #%d").setDaemon(true).build()));
-    private final MinecraftServer server;
+    final MinecraftServer server;
     public volatile boolean active;
     private final List<ChannelFuture> channels = Collections.synchronizedList(Lists.newArrayList());
-    private final List<ClientConnection> connections = Collections.synchronizedList(Lists.newArrayList());
+    final List<ClientConnection> connections = Collections.synchronizedList(Lists.newArrayList());
 
     public ServerNetworkIo(MinecraftServer server) {
         this.server = server;
@@ -111,7 +118,7 @@ public class ServerNetworkIo {
             }
             this.channels.add(((ServerBootstrap)((ServerBootstrap)new ServerBootstrap().channel(class_)).childHandler((ChannelHandler)new ChannelInitializer<Channel>(){
 
-                protected void initChannel(Channel channel) throws Exception {
+                protected void initChannel(Channel channel) {
                     try {
                         channel.config().setOption(ChannelOption.TCP_NODELAY, (Object)true);
                     }
@@ -132,14 +139,13 @@ public class ServerNetworkIo {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    @Environment(value=EnvType.CLIENT)
     public SocketAddress bindLocal() {
         ChannelFuture channelFuture;
         List<ChannelFuture> list = this.channels;
         synchronized (list) {
             channelFuture = ((ServerBootstrap)((ServerBootstrap)new ServerBootstrap().channel(LocalServerChannel.class)).childHandler((ChannelHandler)new ChannelInitializer<Channel>(){
 
-                protected void initChannel(Channel channel) throws Exception {
+                protected void initChannel(Channel channel) {
                     ClientConnection clientConnection = new ClientConnection(NetworkSide.SERVERBOUND);
                     clientConnection.setPacketListener(new LocalServerHandshakeNetworkHandler(ServerNetworkIo.this.server, clientConnection));
                     ServerNetworkIo.this.connections.add(clientConnection);
@@ -196,6 +202,44 @@ public class ServerNetworkIo {
 
     public MinecraftServer getServer() {
         return this.server;
+    }
+
+    static class DelayingChannelInboundHandler
+    extends ChannelInboundHandlerAdapter {
+        private static final Timer TIMER = new HashedWheelTimer();
+        private final int baseDelay;
+        private final int extraDelay;
+        private final List<Packet> packets = Lists.newArrayList();
+
+        public DelayingChannelInboundHandler(int baseDelay, int extraDelay) {
+            this.baseDelay = baseDelay;
+            this.extraDelay = extraDelay;
+        }
+
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            this.delay(ctx, msg);
+        }
+
+        private void delay(ChannelHandlerContext ctx, Object msg) {
+            int i = this.baseDelay + (int)(Math.random() * (double)this.extraDelay);
+            this.packets.add(new Packet(ctx, msg));
+            TIMER.newTimeout(this::forward, (long)i, TimeUnit.MILLISECONDS);
+        }
+
+        private void forward(Timeout timeout) {
+            Packet packet = this.packets.remove(0);
+            packet.context.fireChannelRead(packet.message);
+        }
+
+        static class Packet {
+            public final ChannelHandlerContext context;
+            public final Object message;
+
+            public Packet(ChannelHandlerContext context, Object message) {
+                this.context = context;
+                this.message = message;
+            }
+        }
     }
 }
 

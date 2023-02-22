@@ -7,8 +7,6 @@
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.explosion;
@@ -24,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -54,12 +50,14 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.explosion.EntityExplosionBehavior;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import org.jetbrains.annotations.Nullable;
 
 public class Explosion {
-    private static final ExplosionBehavior field_25818 = new ExplosionBehavior();
+    private static final ExplosionBehavior DEFAULT_BEHAVIOR = new ExplosionBehavior();
+    private static final int field_30960 = 16;
     private final boolean createFire;
     private final DestructionType destructionType;
     private final Random random = new Random();
@@ -75,20 +73,21 @@ public class Explosion {
     private final List<BlockPos> affectedBlocks = Lists.newArrayList();
     private final Map<PlayerEntity, Vec3d> affectedPlayers = Maps.newHashMap();
 
-    @Environment(value=EnvType.CLIENT)
+    public Explosion(World world, @Nullable Entity entity, double x, double y, double z, float power) {
+        this(world, entity, x, y, z, power, false, DestructionType.DESTROY);
+    }
+
     public Explosion(World world, @Nullable Entity entity, double x, double y, double z, float power, List<BlockPos> affectedBlocks) {
         this(world, entity, x, y, z, power, false, DestructionType.DESTROY, affectedBlocks);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Explosion(World world, @Nullable Entity entity, double x, double y, double z, float power, boolean createFire, DestructionType destructionType, List<BlockPos> affectedBlocks) {
         this(world, entity, x, y, z, power, createFire, destructionType);
         this.affectedBlocks.addAll(affectedBlocks);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public Explosion(World world, @Nullable Entity entity, double d, double e, double f, float g, boolean bl, DestructionType destructionType) {
-        this(world, entity, null, null, d, e, f, g, bl, destructionType);
+    public Explosion(World world, @Nullable Entity entity, double x, double y, double z, float power, boolean createFire, DestructionType destructionType) {
+        this(world, entity, null, null, x, y, z, power, createFire, destructionType);
     }
 
     public Explosion(World world, @Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, DestructionType destructionType) {
@@ -105,7 +104,7 @@ public class Explosion {
     }
 
     private ExplosionBehavior chooseBehavior(@Nullable Entity entity) {
-        return entity == null ? field_25818 : new EntityExplosionBehavior(entity);
+        return entity == null ? DEFAULT_BEHAVIOR : new EntityExplosionBehavior(entity);
     }
 
     public static float getExposure(Vec3d source, Entity entity) {
@@ -146,11 +145,12 @@ public class Explosion {
     public void collectBlocksAndDamageEntities() {
         int l;
         int k;
+        this.world.emitGameEvent(this.entity, GameEvent.EXPLODE, new BlockPos(this.x, this.y, this.z));
         HashSet set = Sets.newHashSet();
         int i = 16;
         for (int j = 0; j < 16; ++j) {
             for (k = 0; k < 16; ++k) {
-                for (l = 0; l < 16; ++l) {
+                block2: for (l = 0; l < 16; ++l) {
                     if (j != 0 && j != 15 && k != 0 && k != 15 && l != 0 && l != 15) continue;
                     double d = (float)j / 15.0f * 2.0f - 1.0f;
                     double e = (float)k / 15.0f * 2.0f - 1.0f;
@@ -164,10 +164,11 @@ public class Explosion {
                     double o = this.z;
                     float p = 0.3f;
                     for (float h = this.power * (0.7f + this.world.random.nextFloat() * 0.6f); h > 0.0f; h -= 0.22500001f) {
-                        FluidState fluidState;
                         BlockPos blockPos = new BlockPos(m, n, o);
                         BlockState blockState = this.world.getBlockState(blockPos);
-                        Optional<Float> optional = this.behavior.getBlastResistance(this, this.world, blockPos, blockState, fluidState = this.world.getFluidState(blockPos));
+                        FluidState fluidState = this.world.getFluidState(blockPos);
+                        if (!this.world.isInBuildLimit(blockPos)) continue block2;
+                        Optional<Float> optional = this.behavior.getBlastResistance(this, this.world, blockPos, blockState, fluidState);
                         if (optional.isPresent()) {
                             h -= (optional.get().floatValue() + 0.3f) * 0.3f;
                         }
@@ -199,7 +200,7 @@ public class Explosion {
             double aa;
             double w;
             Entity entity = list.get(v);
-            if (entity.isImmuneToExplosion() || !((w = (double)(MathHelper.sqrt(entity.squaredDistanceTo(vec3d)) / q)) <= 1.0) || (aa = (double)MathHelper.sqrt((x = entity.getX() - this.x) * x + (y = (entity instanceof TntEntity ? entity.getY() : entity.getEyeY()) - this.y) * y + (z = entity.getZ() - this.z) * z)) == 0.0) continue;
+            if (entity.isImmuneToExplosion() || !((w = Math.sqrt(entity.squaredDistanceTo(vec3d)) / (double)q) <= 1.0) || (aa = Math.sqrt((x = entity.getX() - this.x) * x + (y = (entity instanceof TntEntity ? entity.getY() : entity.getEyeY()) - this.y) * y + (z = entity.getZ() - this.z) * z)) == 0.0) continue;
             x /= aa;
             y /= aa;
             z /= aa;
@@ -211,7 +212,7 @@ public class Explosion {
                 ad = ProtectionEnchantment.transformExplosionKnockback((LivingEntity)entity, ac);
             }
             entity.setVelocity(entity.getVelocity().add(x * ad, y * ad, z * ad));
-            if (!(entity instanceof PlayerEntity) || (playerEntity = (PlayerEntity)entity).isSpectator() || playerEntity.isCreative() && playerEntity.abilities.flying) continue;
+            if (!(entity instanceof PlayerEntity) || (playerEntity = (PlayerEntity)entity).isSpectator() || playerEntity.isCreative() && playerEntity.getAbilities().flying) continue;
             this.affectedPlayers.put(playerEntity, new Vec3d(x * ac, y * ac, z * ac));
         }
     }
@@ -239,12 +240,12 @@ public class Explosion {
                 BlockPos blockPos2 = blockPos.toImmutable();
                 this.world.getProfiler().push("explosion_blocks");
                 if (block.shouldDropItemsOnExplosion(this) && this.world instanceof ServerWorld) {
-                    BlockEntity blockEntity = block.hasBlockEntity() ? this.world.getBlockEntity(blockPos) : null;
+                    BlockEntity blockEntity = blockState.hasBlockEntity() ? this.world.getBlockEntity(blockPos) : null;
                     LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).random(this.world.random).parameter(LootContextParameters.ORIGIN, Vec3d.ofCenter(blockPos)).parameter(LootContextParameters.TOOL, ItemStack.EMPTY).optionalParameter(LootContextParameters.BLOCK_ENTITY, blockEntity).optionalParameter(LootContextParameters.THIS_ENTITY, this.entity);
                     if (this.destructionType == DestructionType.DESTROY) {
                         builder.parameter(LootContextParameters.EXPLOSION_RADIUS, Float.valueOf(this.power));
                     }
-                    blockState.getDroppedStacks(builder).forEach(itemStack -> Explosion.method_24023((ObjectArrayList<Pair<ItemStack, BlockPos>>)objectArrayList, itemStack, blockPos2));
+                    blockState.getDroppedStacks(builder).forEach(stack -> Explosion.tryMergeStack((ObjectArrayList<Pair<ItemStack, BlockPos>>)objectArrayList, stack, blockPos2));
                 }
                 this.world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 3);
                 block.onDestroyedByExplosion(this.world, blockPos, this);
@@ -262,18 +263,18 @@ public class Explosion {
         }
     }
 
-    private static void method_24023(ObjectArrayList<Pair<ItemStack, BlockPos>> objectArrayList, ItemStack itemStack, BlockPos blockPos) {
-        int i = objectArrayList.size();
+    private static void tryMergeStack(ObjectArrayList<Pair<ItemStack, BlockPos>> stacks, ItemStack stack, BlockPos pos) {
+        int i = stacks.size();
         for (int j = 0; j < i; ++j) {
-            Pair pair = (Pair)objectArrayList.get(j);
-            ItemStack itemStack2 = (ItemStack)pair.getFirst();
-            if (!ItemEntity.canMerge(itemStack2, itemStack)) continue;
-            ItemStack itemStack3 = ItemEntity.merge(itemStack2, itemStack, 16);
-            objectArrayList.set(j, (Object)Pair.of((Object)itemStack3, (Object)pair.getSecond()));
-            if (!itemStack.isEmpty()) continue;
+            Pair pair = (Pair)stacks.get(j);
+            ItemStack itemStack = (ItemStack)pair.getFirst();
+            if (!ItemEntity.canMerge(itemStack, stack)) continue;
+            ItemStack itemStack2 = ItemEntity.merge(itemStack, stack, 16);
+            stacks.set(j, (Object)Pair.of((Object)itemStack2, (Object)((BlockPos)pair.getSecond())));
+            if (!stack.isEmpty()) continue;
             return;
         }
-        objectArrayList.add((Object)Pair.of((Object)itemStack, (Object)blockPos));
+        stacks.add((Object)Pair.of((Object)stack, (Object)pos));
     }
 
     public DamageSource getDamageSource() {
@@ -310,11 +311,28 @@ public class Explosion {
         return this.affectedBlocks;
     }
 
-    public static enum DestructionType {
-        NONE,
-        BREAK,
-        DESTROY;
+    public static final class DestructionType
+    extends Enum<DestructionType> {
+        public static final /* enum */ DestructionType NONE = new DestructionType();
+        public static final /* enum */ DestructionType BREAK = new DestructionType();
+        public static final /* enum */ DestructionType DESTROY = new DestructionType();
+        private static final /* synthetic */ DestructionType[] field_18688;
 
+        public static DestructionType[] values() {
+            return (DestructionType[])field_18688.clone();
+        }
+
+        public static DestructionType valueOf(String string) {
+            return Enum.valueOf(DestructionType.class, string);
+        }
+
+        private static /* synthetic */ DestructionType[] method_36693() {
+            return new DestructionType[]{NONE, BREAK, DESTROY};
+        }
+
+        static {
+            field_18688 = DestructionType.method_36693();
+        }
     }
 }
 

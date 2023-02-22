@@ -38,12 +38,20 @@ import org.jetbrains.annotations.Nullable;
 public class BambooBlock
 extends Block
 implements Fertilizable {
+    protected static final float field_30997 = 3.0f;
+    protected static final float field_30998 = 5.0f;
+    protected static final float field_30999 = 1.5f;
     protected static final VoxelShape SMALL_LEAVES_SHAPE = Block.createCuboidShape(5.0, 0.0, 5.0, 11.0, 16.0, 11.0);
     protected static final VoxelShape LARGE_LEAVES_SHAPE = Block.createCuboidShape(3.0, 0.0, 3.0, 13.0, 16.0, 13.0);
     protected static final VoxelShape NO_LEAVES_SHAPE = Block.createCuboidShape(6.5, 0.0, 6.5, 9.5, 16.0, 9.5);
     public static final IntProperty AGE = Properties.AGE_1;
     public static final EnumProperty<BambooLeaves> LEAVES = Properties.BAMBOO_LEAVES;
     public static final IntProperty STAGE = Properties.STAGE;
+    public static final int field_31000 = 16;
+    public static final int field_31001 = 0;
+    public static final int field_31002 = 1;
+    public static final int field_31003 = 0;
+    public static final int field_31004 = 1;
 
     public BambooBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -84,6 +92,11 @@ implements Fertilizable {
     }
 
     @Override
+    public boolean isShapeFullCube(BlockState state, BlockView world, BlockPos pos) {
+        return false;
+    }
+
+    @Override
     @Nullable
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         FluidState fluidState = ctx.getWorld().getFluidState(ctx.getBlockPos());
@@ -100,7 +113,7 @@ implements Fertilizable {
                 return (BlockState)this.getDefaultState().with(AGE, i);
             }
             BlockState blockState2 = ctx.getWorld().getBlockState(ctx.getBlockPos().up());
-            if (blockState2.isOf(Blocks.BAMBOO) || blockState2.isOf(Blocks.BAMBOO_SAPLING)) {
+            if (blockState2.isOf(Blocks.BAMBOO)) {
                 return (BlockState)this.getDefaultState().with(AGE, blockState2.get(AGE));
             }
             return Blocks.BAMBOO_SAPLING.getDefaultState();

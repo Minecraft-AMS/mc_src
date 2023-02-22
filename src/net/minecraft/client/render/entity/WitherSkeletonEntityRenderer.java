@@ -9,8 +9,9 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.SkeletonEntityRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.AbstractSkeletonEntity;
 import net.minecraft.util.Identifier;
@@ -20,8 +21,8 @@ public class WitherSkeletonEntityRenderer
 extends SkeletonEntityRenderer {
     private static final Identifier TEXTURE = new Identifier("textures/entity/skeleton/wither_skeleton.png");
 
-    public WitherSkeletonEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public WitherSkeletonEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, EntityModelLayers.WITHER_SKELETON, EntityModelLayers.WITHER_SKELETON_INNER_ARMOR, EntityModelLayers.WITHER_SKELETON_OUTER_ARMOR);
     }
 
     @Override

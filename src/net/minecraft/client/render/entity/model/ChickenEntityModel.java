@@ -11,7 +11,12 @@ package net.minecraft.client.render.entity.model;
 import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
@@ -19,6 +24,7 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class ChickenEntityModel<T extends Entity>
 extends AnimalModel<T> {
+    public static final String RED_THING = "red_thing";
     private final ModelPart head;
     private final ModelPart body;
     private final ModelPart rightLeg;
@@ -28,32 +34,31 @@ extends AnimalModel<T> {
     private final ModelPart beak;
     private final ModelPart wattle;
 
-    public ChickenEntityModel() {
+    public ChickenEntityModel(ModelPart root) {
+        this.head = root.getChild("head");
+        this.beak = root.getChild("beak");
+        this.wattle = root.getChild(RED_THING);
+        this.body = root.getChild("body");
+        this.rightLeg = root.getChild("right_leg");
+        this.leftLeg = root.getChild("left_leg");
+        this.rightWing = root.getChild("right_wing");
+        this.leftWing = root.getChild("left_wing");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
         int i = 16;
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-2.0f, -6.0f, -2.0f, 4.0f, 6.0f, 3.0f, 0.0f);
-        this.head.setPivot(0.0f, 15.0f, -4.0f);
-        this.beak = new ModelPart(this, 14, 0);
-        this.beak.addCuboid(-2.0f, -4.0f, -4.0f, 4.0f, 2.0f, 2.0f, 0.0f);
-        this.beak.setPivot(0.0f, 15.0f, -4.0f);
-        this.wattle = new ModelPart(this, 14, 4);
-        this.wattle.addCuboid(-1.0f, -2.0f, -3.0f, 2.0f, 2.0f, 2.0f, 0.0f);
-        this.wattle.setPivot(0.0f, 15.0f, -4.0f);
-        this.body = new ModelPart(this, 0, 9);
-        this.body.addCuboid(-3.0f, -4.0f, -3.0f, 6.0f, 8.0f, 6.0f, 0.0f);
-        this.body.setPivot(0.0f, 16.0f, 0.0f);
-        this.rightLeg = new ModelPart(this, 26, 0);
-        this.rightLeg.addCuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
-        this.rightLeg.setPivot(-2.0f, 19.0f, 1.0f);
-        this.leftLeg = new ModelPart(this, 26, 0);
-        this.leftLeg.addCuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
-        this.leftLeg.setPivot(1.0f, 19.0f, 1.0f);
-        this.rightWing = new ModelPart(this, 24, 13);
-        this.rightWing.addCuboid(0.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f);
-        this.rightWing.setPivot(-4.0f, 13.0f, 0.0f);
-        this.leftWing = new ModelPart(this, 24, 13);
-        this.leftWing.addCuboid(-1.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f);
-        this.leftWing.setPivot(4.0f, 13.0f, 0.0f);
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-2.0f, -6.0f, -2.0f, 4.0f, 6.0f, 3.0f), ModelTransform.pivot(0.0f, 15.0f, -4.0f));
+        modelPartData.addChild("beak", ModelPartBuilder.create().uv(14, 0).cuboid(-2.0f, -4.0f, -4.0f, 4.0f, 2.0f, 2.0f), ModelTransform.pivot(0.0f, 15.0f, -4.0f));
+        modelPartData.addChild(RED_THING, ModelPartBuilder.create().uv(14, 4).cuboid(-1.0f, -2.0f, -3.0f, 2.0f, 2.0f, 2.0f), ModelTransform.pivot(0.0f, 15.0f, -4.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 9).cuboid(-3.0f, -4.0f, -3.0f, 6.0f, 8.0f, 6.0f), ModelTransform.of(0.0f, 16.0f, 0.0f, 1.5707964f, 0.0f, 0.0f));
+        ModelPartBuilder modelPartBuilder = ModelPartBuilder.create().uv(26, 0).cuboid(-1.0f, 0.0f, -3.0f, 3.0f, 5.0f, 3.0f);
+        modelPartData.addChild("right_leg", modelPartBuilder, ModelTransform.pivot(-2.0f, 19.0f, 1.0f));
+        modelPartData.addChild("left_leg", modelPartBuilder, ModelTransform.pivot(1.0f, 19.0f, 1.0f));
+        modelPartData.addChild("right_wing", ModelPartBuilder.create().uv(24, 13).cuboid(0.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f), ModelTransform.pivot(-4.0f, 13.0f, 0.0f));
+        modelPartData.addChild("left_wing", ModelPartBuilder.create().uv(24, 13).cuboid(-1.0f, 0.0f, -3.0f, 1.0f, 4.0f, 6.0f), ModelTransform.pivot(4.0f, 13.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override
@@ -74,7 +79,6 @@ extends AnimalModel<T> {
         this.beak.yaw = this.head.yaw;
         this.wattle.pitch = this.head.pitch;
         this.wattle.yaw = this.head.yaw;
-        this.body.pitch = 1.5707964f;
         this.rightLeg.pitch = MathHelper.cos(limbAngle * 0.6662f) * 1.4f * limbDistance;
         this.leftLeg.pitch = MathHelper.cos(limbAngle * 0.6662f + (float)Math.PI) * 1.4f * limbDistance;
         this.rightWing.roll = animationProgress;

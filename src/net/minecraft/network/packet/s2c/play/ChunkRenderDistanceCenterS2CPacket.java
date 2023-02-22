@@ -1,40 +1,29 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class ChunkRenderDistanceCenterS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int chunkX;
-    private int chunkZ;
-
-    public ChunkRenderDistanceCenterS2CPacket() {
-    }
+    private final int chunkX;
+    private final int chunkZ;
 
     public ChunkRenderDistanceCenterS2CPacket(int x, int z) {
         this.chunkX = x;
         this.chunkZ = z;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ChunkRenderDistanceCenterS2CPacket(PacketByteBuf buf) {
         this.chunkX = buf.readVarInt();
         this.chunkZ = buf.readVarInt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.chunkX);
         buf.writeVarInt(this.chunkZ);
     }
@@ -44,12 +33,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onChunkRenderDistanceCenter(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getChunkX() {
         return this.chunkX;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getChunkZ() {
         return this.chunkZ;
     }

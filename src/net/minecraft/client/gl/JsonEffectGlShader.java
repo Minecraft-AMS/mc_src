@@ -28,6 +28,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InvalidClassException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
@@ -35,9 +36,10 @@ import java.util.Map;
 import java.util.function.IntSupplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gl.EffectGlShader;
+import net.minecraft.client.gl.EffectProgram;
 import net.minecraft.client.gl.GlBlendState;
 import net.minecraft.client.gl.GlProgramManager;
-import net.minecraft.client.gl.GlShader;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.Program;
 import net.minecraft.client.gl.ShaderParseException;
@@ -53,10 +55,12 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class JsonEffectGlShader
-implements GlShader,
+implements EffectGlShader,
 AutoCloseable {
+    private static final String PROGRAM_DIRECTORY = "shaders/program/";
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Uniform DEFAULT_UNIFORM = new Uniform();
+    private static final boolean field_32683 = true;
     private static JsonEffectGlShader activeShader;
     private static int activeProgramRef;
     private final Map<String, IntSupplier> samplerBinds = Maps.newHashMap();
@@ -71,11 +75,11 @@ AutoCloseable {
     private final GlBlendState blendState;
     private final List<Integer> attribLocs;
     private final List<String> attribNames;
-    private final Program vertexShader;
-    private final Program fragmentShader;
+    private final EffectProgram vertexShader;
+    private final EffectProgram fragmentShader;
 
     public JsonEffectGlShader(ResourceManager resource, String name) throws IOException {
-        Identifier identifier = new Identifier("shaders/program/" + name + ".json");
+        Identifier identifier = new Identifier(PROGRAM_DIRECTORY + name + ".json");
         this.name = name;
         Resource resource2 = null;
         try {
@@ -134,8 +138,8 @@ AutoCloseable {
                 }
             }
             this.blendState = JsonEffectGlShader.deserializeBlendState(JsonHelper.getObject(jsonObject, "blend", null));
-            this.vertexShader = JsonEffectGlShader.getShader(resource, Program.Type.VERTEX, string);
-            this.fragmentShader = JsonEffectGlShader.getShader(resource, Program.Type.FRAGMENT, string2);
+            this.vertexShader = JsonEffectGlShader.loadEffect(resource, Program.Type.VERTEX, string);
+            this.fragmentShader = JsonEffectGlShader.loadEffect(resource, Program.Type.FRAGMENT, string2);
             this.programRef = GlProgramManager.createProgram();
             GlProgramManager.linkProgram(this);
             this.finalizeUniformsAndSamplers();
@@ -147,9 +151,9 @@ AutoCloseable {
             }
         }
         catch (Exception exception4) {
-            String string2 = resource2 != null ? " (" + resource2.getResourcePackName() + ")" : "";
+            Object string2 = resource2 != null ? " (" + resource2.getResourcePackName() + ")" : "";
             ShaderParseException shaderParseException4 = ShaderParseException.wrap(exception4);
-            shaderParseException4.addFaultyFile(identifier.getPath() + string2);
+            shaderParseException4.addFaultyFile(identifier.getPath() + (String)string2);
             throw shaderParseException4;
         }
         finally {
@@ -161,19 +165,25 @@ AutoCloseable {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public static Program getShader(ResourceManager resourceManager, Program.Type type, String name) throws IOException {
-        Program program = type.getLoadedShaders().get(name);
+    public static EffectProgram loadEffect(ResourceManager resourceManager, Program.Type type, String name) throws IOException {
+        EffectProgram effectProgram;
+        Program program = type.getProgramCache().get(name);
+        if (program != null && !(program instanceof EffectProgram)) {
+            throw new InvalidClassException("Program is not of type EffectProgram");
+        }
         if (program == null) {
-            Identifier identifier = new Identifier("shaders/program/" + name + type.getFileExtension());
+            Identifier identifier = new Identifier(PROGRAM_DIRECTORY + name + type.getFileExtension());
             Resource resource = resourceManager.getResource(identifier);
             try {
-                program = Program.createFromResource(type, name, resource.getInputStream(), resource.getResourcePackName());
+                effectProgram = EffectProgram.createFromResource(type, name, resource.getInputStream(), resource.getResourcePackName());
             }
             finally {
                 IOUtils.closeQuietly((Closeable)resource);
             }
+        } else {
+            effectProgram = (EffectProgram)program;
         }
-        return program;
+        return effectProgram;
     }
 
     public static GlBlendState deserializeBlendState(JsonObject json) {
@@ -234,9 +244,9 @@ AutoCloseable {
         activeShader = null;
         for (int i = 0; i < this.samplerShaderLocs.size(); ++i) {
             if (this.samplerBinds.get(this.samplerNames.get(i)) == null) continue;
-            GlStateManager.activeTexture(33984 + i);
-            GlStateManager.disableTexture();
-            GlStateManager.bindTexture(0);
+            GlStateManager._activeTexture(33984 + i);
+            GlStateManager._disableTexture();
+            GlStateManager._bindTexture(0);
         }
     }
 
@@ -304,7 +314,7 @@ AutoCloseable {
             String string2 = glUniform.getName();
             int k = GlUniform.getUniformLocation(this.programRef, string2);
             if (k == -1) {
-                LOGGER.warn("Could not find uniform named {} in the specified shader program.", (Object)string2);
+                LOGGER.warn("Shader {} could not find uniform named {} in the specified shader program.", (Object)this.name, (Object)string2);
                 continue;
             }
             this.uniformLocs.add(k);
@@ -380,6 +390,16 @@ AutoCloseable {
     @Override
     public Program getFragmentShader() {
         return this.fragmentShader;
+    }
+
+    @Override
+    public void attachReferencedShaders() {
+        this.fragmentShader.attachTo(this);
+        this.vertexShader.attachTo(this);
+    }
+
+    public String getName() {
+        return this.name;
     }
 
     @Override

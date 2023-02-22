@@ -21,6 +21,7 @@ import net.minecraft.world.World;
 public class FernBlock
 extends PlantBlock
 implements Fertilizable {
+    protected static final float field_31261 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 13.0, 14.0);
 
     protected FernBlock(AbstractBlock.Settings settings) {
@@ -44,9 +45,9 @@ implements Fertilizable {
 
     @Override
     public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
-        TallPlantBlock tallPlantBlock = (TallPlantBlock)(this == Blocks.FERN ? Blocks.LARGE_FERN : Blocks.TALL_GRASS);
+        TallPlantBlock tallPlantBlock = (TallPlantBlock)(state.isOf(Blocks.FERN) ? Blocks.LARGE_FERN : Blocks.TALL_GRASS);
         if (tallPlantBlock.getDefaultState().canPlaceAt(world, pos) && world.isAir(pos.up())) {
-            tallPlantBlock.placeAt(world, pos, 2);
+            TallPlantBlock.placeAt(world, tallPlantBlock.getDefaultState(), pos, 2);
         }
     }
 

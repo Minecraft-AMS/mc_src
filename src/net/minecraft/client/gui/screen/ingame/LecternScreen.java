@@ -20,7 +20,6 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerListener;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.collection.DefaultedList;
 
 @Environment(value=EnvType.CLIENT)
 public class LecternScreen
@@ -28,11 +27,6 @@ extends BookScreen
 implements ScreenHandlerProvider<LecternScreenHandler> {
     private final LecternScreenHandler handler;
     private final ScreenHandlerListener listener = new ScreenHandlerListener(){
-
-        @Override
-        public void onHandlerRegistered(ScreenHandler handler, DefaultedList<ItemStack> stacks) {
-            LecternScreen.this.updatePageProvider();
-        }
 
         @Override
         public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack) {
@@ -77,8 +71,8 @@ implements ScreenHandlerProvider<LecternScreenHandler> {
     @Override
     protected void addCloseButton() {
         if (this.client.player.canModifyBlocks()) {
-            this.addButton(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, ScreenTexts.DONE, buttonWidget -> this.client.openScreen(null)));
-            this.addButton(new ButtonWidget(this.width / 2 + 2, 196, 98, 20, new TranslatableText("lectern.take_book"), buttonWidget -> this.sendButtonPressPacket(3)));
+            this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, ScreenTexts.DONE, button -> this.onClose()));
+            this.addDrawableChild(new ButtonWidget(this.width / 2 + 2, 196, 98, 20, new TranslatableText("lectern.take_book"), button -> this.sendButtonPressPacket(3)));
         } else {
             super.addCloseButton();
         }
@@ -112,13 +106,18 @@ implements ScreenHandlerProvider<LecternScreenHandler> {
         return false;
     }
 
-    private void updatePageProvider() {
+    void updatePageProvider() {
         ItemStack itemStack = this.handler.getBookItem();
         this.setPageProvider(BookScreen.Contents.create(itemStack));
     }
 
-    private void updatePage() {
+    void updatePage() {
         this.setPage(this.handler.getPage());
+    }
+
+    @Override
+    protected void closeScreen() {
+        this.client.player.closeHandledScreen();
     }
 
     @Override

@@ -13,8 +13,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import net.minecraft.block.DoorBlock;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.NavigationConditions;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.ai.pathing.Path;
@@ -63,7 +64,7 @@ extends Goal {
         if (!serverWorld.isNearOccupiedPointOfInterest(blockPos, 6)) {
             return false;
         }
-        Vec3d vec3d = TargetFinder.findGroundTarget(this.mob, 15, 7, blockPos2 -> {
+        Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, blockPos2 -> {
             if (!serverWorld.isNearOccupiedPointOfInterest((BlockPos)blockPos2)) {
                 return Double.NEGATIVE_INFINITY;
             }
@@ -87,7 +88,7 @@ extends Goal {
         this.targetPath = mobNavigation.findPathTo(this.target, 0);
         mobNavigation.setCanPathThroughDoors(bl);
         if (this.targetPath == null) {
-            Vec3d vec3d2 = TargetFinder.findTargetTowards(this.mob, 10, 7, Vec3d.ofBottomCenter(this.target));
+            Vec3d vec3d2 = NoPenaltyTargeting.find(this.mob, 10, 7, Vec3d.ofBottomCenter(this.target), 1.5707963705062866);
             if (vec3d2 == null) {
                 return false;
             }
@@ -102,7 +103,7 @@ extends Goal {
             PathNode pathNode = this.targetPath.getNode(i);
             BlockPos blockPos22 = new BlockPos(pathNode.x, pathNode.y + 1, pathNode.z);
             if (!DoorBlock.isWoodenDoor(this.mob.world, blockPos22)) continue;
-            this.targetPath = this.mob.getNavigation().findPathTo(pathNode.x, pathNode.y, pathNode.z, 0);
+            this.targetPath = this.mob.getNavigation().findPathTo(pathNode.x, (double)pathNode.y, pathNode.z, 0);
             break;
         }
         return this.targetPath != null;

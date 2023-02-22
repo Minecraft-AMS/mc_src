@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.entity.player.PlayerEntity;
@@ -33,14 +27,18 @@ import net.minecraft.util.math.BlockPos;
 
 public class LoomScreenHandler
 extends ScreenHandler {
+    private static final int field_30826 = 4;
+    private static final int field_30827 = 31;
+    private static final int field_30828 = 31;
+    private static final int field_30829 = 40;
     private final ScreenHandlerContext context;
-    private final Property selectedPattern = Property.create();
-    private Runnable inventoryChangeListener = () -> {};
-    private final Slot bannerSlot;
-    private final Slot dyeSlot;
+    final Property selectedPattern = Property.create();
+    Runnable inventoryChangeListener = () -> {};
+    final Slot bannerSlot;
+    final Slot dyeSlot;
     private final Slot patternSlot;
     private final Slot outputSlot;
-    private long lastTakeResultTime;
+    long lastTakeResultTime;
     private final Inventory input = new SimpleInventory(3){
 
         @Override
@@ -96,20 +94,20 @@ extends ScreenHandler {
             }
 
             @Override
-            public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
+            public void onTakeItem(PlayerEntity player, ItemStack stack) {
                 LoomScreenHandler.this.bannerSlot.takeStack(1);
                 LoomScreenHandler.this.dyeSlot.takeStack(1);
                 if (!LoomScreenHandler.this.bannerSlot.hasStack() || !LoomScreenHandler.this.dyeSlot.hasStack()) {
                     LoomScreenHandler.this.selectedPattern.set(0);
                 }
-                context.run((world, blockPos) -> {
+                context.run((world, pos) -> {
                     long l = world.getTime();
                     if (LoomScreenHandler.this.lastTakeResultTime != l) {
-                        world.playSound(null, (BlockPos)blockPos, SoundEvents.UI_LOOM_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                        world.playSound(null, (BlockPos)pos, SoundEvents.UI_LOOM_TAKE_RESULT, SoundCategory.BLOCKS, 1.0f, 1.0f);
                         LoomScreenHandler.this.lastTakeResultTime = l;
                     }
                 });
-                return super.onTakeItem(player, stack);
+                super.onTakeItem(player, stack);
             }
         });
         for (i = 0; i < 3; ++i) {
@@ -123,7 +121,6 @@ extends ScreenHandler {
         this.addProperty(this.selectedPattern);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSelectedPattern() {
         return this.selectedPattern.get();
     }
@@ -149,12 +146,12 @@ extends ScreenHandler {
         ItemStack itemStack2 = this.dyeSlot.getStack();
         ItemStack itemStack3 = this.patternSlot.getStack();
         ItemStack itemStack4 = this.outputSlot.getStack();
-        if (!itemStack4.isEmpty() && (itemStack.isEmpty() || itemStack2.isEmpty() || this.selectedPattern.get() <= 0 || this.selectedPattern.get() >= BannerPattern.COUNT - BannerPattern.field_24417 && itemStack3.isEmpty())) {
+        if (!itemStack4.isEmpty() && (itemStack.isEmpty() || itemStack2.isEmpty() || this.selectedPattern.get() <= 0 || this.selectedPattern.get() >= BannerPattern.COUNT - BannerPattern.HAS_PATTERN_ITEM_COUNT && itemStack3.isEmpty())) {
             this.outputSlot.setStack(ItemStack.EMPTY);
             this.selectedPattern.set(0);
         } else if (!itemStack3.isEmpty() && itemStack3.getItem() instanceof BannerPatternItem) {
             boolean bl;
-            NbtCompound nbtCompound = itemStack.getOrCreateSubTag("BlockEntityTag");
+            NbtCompound nbtCompound = itemStack.getOrCreateSubNbt("BlockEntityTag");
             boolean bl2 = bl = nbtCompound.contains("Patterns", 9) && !itemStack.isEmpty() && nbtCompound.getList("Patterns", 10).size() >= 6;
             if (bl) {
                 this.selectedPattern.set(0);
@@ -166,7 +163,6 @@ extends ScreenHandler {
         this.sendContentUpdates();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setInventoryChangeListener(Runnable inventoryChangeListener) {
         this.inventoryChangeListener = inventoryChangeListener;
     }
@@ -202,7 +198,7 @@ extends ScreenHandler {
     @Override
     public void close(PlayerEntity player) {
         super.close(player);
-        this.context.run((world, blockPos) -> this.dropInventory(player, playerEntity.world, this.input));
+        this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 
     private void updateOutputSlot() {
@@ -216,7 +212,7 @@ extends ScreenHandler {
                 itemStack3.setCount(1);
                 BannerPattern bannerPattern = BannerPattern.values()[this.selectedPattern.get()];
                 DyeColor dyeColor = ((DyeItem)itemStack2.getItem()).getColor();
-                NbtCompound nbtCompound = itemStack3.getOrCreateSubTag("BlockEntityTag");
+                NbtCompound nbtCompound = itemStack3.getOrCreateSubNbt("BlockEntityTag");
                 if (nbtCompound.contains("Patterns", 9)) {
                     nbtList = nbtCompound.getList("Patterns", 10);
                 } else {
@@ -234,22 +230,18 @@ extends ScreenHandler {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Slot getBannerSlot() {
         return this.bannerSlot;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Slot getDyeSlot() {
         return this.dyeSlot;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Slot getPatternSlot() {
         return this.patternSlot;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Slot getOutputSlot() {
         return this.outputSlot;
     }

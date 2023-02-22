@@ -66,6 +66,7 @@ import net.minecraft.server.command.GameModeCommand;
 import net.minecraft.server.command.GameRuleCommand;
 import net.minecraft.server.command.GiveCommand;
 import net.minecraft.server.command.HelpCommand;
+import net.minecraft.server.command.ItemCommand;
 import net.minecraft.server.command.KickCommand;
 import net.minecraft.server.command.KillCommand;
 import net.minecraft.server.command.ListCommand;
@@ -79,7 +80,6 @@ import net.minecraft.server.command.PlaySoundCommand;
 import net.minecraft.server.command.PublishCommand;
 import net.minecraft.server.command.RecipeCommand;
 import net.minecraft.server.command.ReloadCommand;
-import net.minecraft.server.command.ReplaceItemCommand;
 import net.minecraft.server.command.SayCommand;
 import net.minecraft.server.command.ScheduleCommand;
 import net.minecraft.server.command.ScoreboardCommand;
@@ -110,6 +110,7 @@ import net.minecraft.server.dedicated.command.DeOpCommand;
 import net.minecraft.server.dedicated.command.OpCommand;
 import net.minecraft.server.dedicated.command.PardonCommand;
 import net.minecraft.server.dedicated.command.PardonIpCommand;
+import net.minecraft.server.dedicated.command.PerfCommand;
 import net.minecraft.server.dedicated.command.SaveAllCommand;
 import net.minecraft.server.dedicated.command.SaveOffCommand;
 import net.minecraft.server.dedicated.command.SaveOnCommand;
@@ -131,6 +132,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class CommandManager {
     private static final Logger LOGGER = LogManager.getLogger();
+    public static final int field_31837 = 0;
+    public static final int field_31838 = 1;
+    public static final int field_31839 = 2;
+    public static final int field_31840 = 3;
+    public static final int field_31841 = 4;
     private final CommandDispatcher<ServerCommandSource> dispatcher = new CommandDispatcher();
 
     public CommandManager(RegistrationEnvironment environment) {
@@ -156,6 +162,7 @@ public class CommandManager {
         GameRuleCommand.register(this.dispatcher);
         GiveCommand.register(this.dispatcher);
         HelpCommand.register(this.dispatcher);
+        ItemCommand.register(this.dispatcher);
         KickCommand.register(this.dispatcher);
         KillCommand.register(this.dispatcher);
         ListCommand.register(this.dispatcher);
@@ -167,7 +174,6 @@ public class CommandManager {
         PlaySoundCommand.register(this.dispatcher);
         ReloadCommand.register(this.dispatcher);
         RecipeCommand.register(this.dispatcher);
-        ReplaceItemCommand.register(this.dispatcher);
         SayCommand.register(this.dispatcher);
         ScheduleCommand.register(this.dispatcher);
         ScoreboardCommand.register(this.dispatcher);
@@ -200,6 +206,7 @@ public class CommandManager {
             OpCommand.register(this.dispatcher);
             PardonCommand.register(this.dispatcher);
             PardonIpCommand.register(this.dispatcher);
+            PerfCommand.register(this.dispatcher);
             SaveAllCommand.register(this.dispatcher);
             SaveOffCommand.register(this.dispatcher);
             SaveOnCommand.register(this.dispatcher);
@@ -210,8 +217,8 @@ public class CommandManager {
         if (environment.integrated) {
             PublishCommand.register(this.dispatcher);
         }
-        this.dispatcher.findAmbiguities((commandNode, commandNode2, commandNode3, collection) -> LOGGER.warn("Ambiguity between arguments {} and {} with inputs: {}", (Object)this.dispatcher.getPath(commandNode2), (Object)this.dispatcher.getPath(commandNode3), (Object)collection));
-        this.dispatcher.setConsumer((commandContext, bl, i) -> ((ServerCommandSource)commandContext.getSource()).onCommandComplete((CommandContext<ServerCommandSource>)commandContext, bl, i));
+        this.dispatcher.findAmbiguities((parent, child, sibling, inputs) -> LOGGER.warn("Ambiguity between arguments {} and {} with inputs: {}", (Object)this.dispatcher.getPath(child), (Object)this.dispatcher.getPath(sibling), (Object)inputs));
+        this.dispatcher.setConsumer((context, success, result) -> ((ServerCommandSource)context.getSource()).onCommandComplete((CommandContext<ServerCommandSource>)context, success, result));
     }
 
     /*
@@ -222,7 +229,7 @@ public class CommandManager {
         if (stringReader.canRead() && stringReader.peek() == '/') {
             stringReader.skip();
         }
-        commandSource.getMinecraftServer().getProfiler().push(command);
+        commandSource.getServer().getProfiler().push(command);
         try {
             int n = this.dispatcher.execute(stringReader, (Object)commandSource);
             return n;
@@ -264,13 +271,13 @@ public class CommandManager {
             commandSource.sendError(new TranslatableText("command.failed").styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, mutableText2))));
             if (SharedConstants.isDevelopment) {
                 commandSource.sendError(new LiteralText(Util.getInnermostMessage(exception)));
-                LOGGER.error("'" + command + "' threw an exception", (Throwable)exception);
+                LOGGER.error("'{}' threw an exception", (Object)command, (Object)exception);
             }
             int n = 0;
             return n;
         }
         finally {
-            commandSource.getMinecraftServer().getProfiler().pop();
+            commandSource.getServer().getProfiler().pop();
         }
     }
 
@@ -282,14 +289,14 @@ public class CommandManager {
         player.networkHandler.sendPacket(new CommandTreeS2CPacket((RootCommandNode<CommandSource>)rootCommandNode));
     }
 
-    private void makeTreeForSource(CommandNode<ServerCommandSource> tree, CommandNode<CommandSource> result, ServerCommandSource source, Map<CommandNode<ServerCommandSource>, CommandNode<CommandSource>> resultNodes) {
+    private void makeTreeForSource(CommandNode<ServerCommandSource> tree, CommandNode<CommandSource> result, ServerCommandSource source2, Map<CommandNode<ServerCommandSource>, CommandNode<CommandSource>> resultNodes) {
         for (CommandNode commandNode : tree.getChildren()) {
             RequiredArgumentBuilder requiredArgumentBuilder;
-            if (!commandNode.canUse((Object)source)) continue;
+            if (!commandNode.canUse((Object)source2)) continue;
             ArgumentBuilder argumentBuilder = commandNode.createBuilder();
-            argumentBuilder.requires(commandSource -> true);
+            argumentBuilder.requires(source -> true);
             if (argumentBuilder.getCommand() != null) {
-                argumentBuilder.executes(commandContext -> 0);
+                argumentBuilder.executes(context -> 0);
             }
             if (argumentBuilder instanceof RequiredArgumentBuilder && (requiredArgumentBuilder = (RequiredArgumentBuilder)argumentBuilder).getSuggestionsProvider() != null) {
                 requiredArgumentBuilder.suggests(SuggestionProviders.getLocalProvider((SuggestionProvider<CommandSource>)requiredArgumentBuilder.getSuggestionsProvider()));
@@ -301,7 +308,7 @@ public class CommandManager {
             resultNodes.put((CommandNode<ServerCommandSource>)commandNode, (CommandNode<CommandSource>)commandNode2);
             result.addChild(commandNode2);
             if (commandNode.getChildren().isEmpty()) continue;
-            this.makeTreeForSource((CommandNode<ServerCommandSource>)commandNode, (CommandNode<CommandSource>)commandNode2, source, resultNodes);
+            this.makeTreeForSource((CommandNode<ServerCommandSource>)commandNode, (CommandNode<CommandSource>)commandNode2, source2, resultNodes);
         }
     }
 
@@ -346,24 +353,41 @@ public class CommandManager {
     public static void checkMissing() {
         RootCommandNode rootCommandNode = new CommandManager(RegistrationEnvironment.ALL).getDispatcher().getRoot();
         Set<ArgumentType<?>> set = ArgumentTypes.getAllArgumentTypes(rootCommandNode);
-        Set set2 = set.stream().filter(argumentType -> !ArgumentTypes.hasClass(argumentType)).collect(Collectors.toSet());
+        Set set2 = set.stream().filter(type -> !ArgumentTypes.hasClass(type)).collect(Collectors.toSet());
         if (!set2.isEmpty()) {
-            LOGGER.warn("Missing type registration for following arguments:\n {}", (Object)set2.stream().map(argumentType -> "\t" + argumentType).collect(Collectors.joining(",\n")));
+            LOGGER.warn("Missing type registration for following arguments:\n {}", (Object)set2.stream().map(type -> "\t" + type).collect(Collectors.joining(",\n")));
             throw new IllegalStateException("Unregistered argument types");
         }
     }
 
-    public static enum RegistrationEnvironment {
-        ALL(true, true),
-        DEDICATED(false, true),
-        INTEGRATED(true, false);
+    public static final class RegistrationEnvironment
+    extends Enum<RegistrationEnvironment> {
+        public static final /* enum */ RegistrationEnvironment ALL = new RegistrationEnvironment(true, true);
+        public static final /* enum */ RegistrationEnvironment DEDICATED = new RegistrationEnvironment(false, true);
+        public static final /* enum */ RegistrationEnvironment INTEGRATED = new RegistrationEnvironment(true, false);
+        final boolean integrated;
+        final boolean dedicated;
+        private static final /* synthetic */ RegistrationEnvironment[] field_25424;
 
-        private final boolean integrated;
-        private final boolean dedicated;
+        public static RegistrationEnvironment[] values() {
+            return (RegistrationEnvironment[])field_25424.clone();
+        }
+
+        public static RegistrationEnvironment valueOf(String string) {
+            return Enum.valueOf(RegistrationEnvironment.class, string);
+        }
 
         private RegistrationEnvironment(boolean integrated, boolean dedicated) {
             this.integrated = integrated;
             this.dedicated = dedicated;
+        }
+
+        private static /* synthetic */ RegistrationEnvironment[] method_36791() {
+            return new RegistrationEnvironment[]{ALL, DEDICATED, INTEGRATED};
+        }
+
+        static {
+            field_25424 = RegistrationEnvironment.method_36791();
         }
     }
 

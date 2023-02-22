@@ -4,7 +4,7 @@
 package net.minecraft.item;
 
 import java.util.List;
-import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.decoration.LeashKnotEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -26,8 +26,8 @@ extends Item {
     public ActionResult useOnBlock(ItemUsageContext context) {
         BlockPos blockPos;
         World world = context.getWorld();
-        Block block = world.getBlockState(blockPos = context.getBlockPos()).getBlock();
-        if (block.isIn(BlockTags.FENCES)) {
+        BlockState blockState = world.getBlockState(blockPos = context.getBlockPos());
+        if (blockState.isIn(BlockTags.FENCES)) {
             PlayerEntity playerEntity = context.getPlayer();
             if (!world.isClient && playerEntity != null) {
                 LeadItem.attachHeldMobsToBlock(playerEntity, world, blockPos);
@@ -49,6 +49,7 @@ extends Item {
             if (mobEntity.getHoldingEntity() != player) continue;
             if (leashKnotEntity == null) {
                 leashKnotEntity = LeashKnotEntity.getOrCreate(world, pos);
+                leashKnotEntity.onPlace();
             }
             mobEntity.attachLeash(leashKnotEntity, true);
             bl = true;

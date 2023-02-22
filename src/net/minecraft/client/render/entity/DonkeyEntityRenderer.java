@@ -14,9 +14,10 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.HorseBaseEntityRenderer;
 import net.minecraft.client.render.entity.model.DonkeyEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
@@ -27,8 +28,8 @@ public class DonkeyEntityRenderer<T extends AbstractDonkeyEntity>
 extends HorseBaseEntityRenderer<T, DonkeyEntityModel<T>> {
     private static final Map<EntityType<?>, Identifier> TEXTURES = Maps.newHashMap((Map)ImmutableMap.of(EntityType.DONKEY, (Object)new Identifier("textures/entity/horse/donkey.png"), EntityType.MULE, (Object)new Identifier("textures/entity/horse/mule.png")));
 
-    public DonkeyEntityRenderer(EntityRenderDispatcher dispatcher, float scale) {
-        super(dispatcher, new DonkeyEntityModel(0.0f), scale);
+    public DonkeyEntityRenderer(EntityRendererFactory.Context ctx, float scale, EntityModelLayer layer) {
+        super(ctx, new DonkeyEntityModel(ctx.getPart(layer)), scale);
     }
 
     @Override

@@ -11,10 +11,12 @@ import java.io.PrintStream;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.ComposterBlock;
 import net.minecraft.block.FireBlock;
+import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.dispenser.DispenserBehavior;
 import net.minecraft.command.EntitySelectorOptions;
 import net.minecraft.command.argument.ArgumentTypes;
@@ -37,7 +39,7 @@ import org.apache.logging.log4j.Logger;
 
 public class Bootstrap {
     public static final PrintStream SYSOUT = System.out;
-    private static boolean initialized;
+    private static volatile boolean initialized;
     private static final Logger LOGGER;
 
     public static void initialize() {
@@ -56,6 +58,7 @@ public class Bootstrap {
         BrewingRecipeRegistry.registerDefaults();
         EntitySelectorOptions.register();
         DispenserBehavior.registerDefaults();
+        CauldronBehavior.registerBehavior();
         ArgumentTypes.register();
         RequiredTagListRegistry.validateRegistrations();
         Bootstrap.setOutputStreams();
@@ -92,17 +95,33 @@ public class Bootstrap {
         Bootstrap.collectMissingTranslations(Registry.ITEM, Item::getTranslationKey, set);
         Bootstrap.collectMissingTranslations(Registry.ENCHANTMENT, Enchantment::getTranslationKey, set);
         Bootstrap.collectMissingTranslations(Registry.BLOCK, Block::getTranslationKey, set);
-        Bootstrap.collectMissingTranslations(Registry.CUSTOM_STAT, identifier -> "stat." + identifier.toString().replace(':', '.'), set);
+        Bootstrap.collectMissingTranslations(Registry.CUSTOM_STAT, stat -> "stat." + stat.toString().replace(':', '.'), set);
         Bootstrap.collectMissingGameRuleTranslations(set);
         return set;
     }
 
-    public static void logMissing() {
+    public static void ensureBootstrapped(Supplier<String> callerGetter) {
         if (!initialized) {
-            throw new IllegalArgumentException("Not bootstrapped");
+            throw Bootstrap.createNotBootstrappedException(callerGetter);
         }
+    }
+
+    private static RuntimeException createNotBootstrappedException(Supplier<String> callerGetter) {
+        try {
+            String string = callerGetter.get();
+            return new IllegalArgumentException("Not bootstrapped (called from " + string + ")");
+        }
+        catch (Exception exception) {
+            IllegalArgumentException runtimeException = new IllegalArgumentException("Not bootstrapped (failed to resolve location)");
+            runtimeException.addSuppressed(exception);
+            return runtimeException;
+        }
+    }
+
+    public static void logMissing() {
+        Bootstrap.ensureBootstrapped(() -> "validate");
         if (SharedConstants.isDevelopment) {
-            Bootstrap.getMissingTranslations().forEach(string -> LOGGER.error("Missing translations: " + string));
+            Bootstrap.getMissingTranslations().forEach(key -> LOGGER.error("Missing translations: {}", key));
             CommandManager.checkMissing();
         }
         DefaultAttributeRegistry.checkMissing();

@@ -38,7 +38,7 @@ public class StructureAccessor {
     }
 
     public Stream<? extends StructureStart<?>> getStructuresWithChildren(ChunkSectionPos pos2, StructureFeature<?> feature) {
-        return this.world.getChunk(pos2.getSectionX(), pos2.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences(feature).stream().map(pos -> ChunkSectionPos.from(new ChunkPos((long)pos), 0)).map(pos -> this.getStructureStart((ChunkSectionPos)pos, feature, this.world.getChunk(pos.getSectionX(), pos.getSectionZ(), ChunkStatus.STRUCTURE_STARTS))).filter(structureStart -> structureStart != null && structureStart.hasChildren());
+        return this.world.getChunk(pos2.getSectionX(), pos2.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences(feature).stream().map(long_ -> ChunkSectionPos.from(new ChunkPos((long)long_), this.world.getBottomSectionCoord())).map(pos -> this.getStructureStart((ChunkSectionPos)pos, feature, this.world.getChunk(pos.getSectionX(), pos.getSectionZ(), ChunkStatus.STRUCTURE_STARTS))).filter(structureStart -> structureStart != null && structureStart.hasChildren());
     }
 
     @Nullable
@@ -59,7 +59,12 @@ public class StructureAccessor {
     }
 
     public StructureStart<?> getStructureAt(BlockPos pos, boolean matchChildren, StructureFeature<?> feature) {
-        return (StructureStart)DataFixUtils.orElse(this.getStructuresWithChildren(ChunkSectionPos.from(pos), feature).filter(structureStart -> structureStart.getBoundingBox().contains(pos)).filter(structureStart -> !matchChildren || structureStart.getChildren().stream().anyMatch(piece -> piece.getBoundingBox().contains(pos))).findFirst(), StructureStart.DEFAULT);
+        return (StructureStart)DataFixUtils.orElse(this.getStructuresWithChildren(ChunkSectionPos.from(pos), feature).filter(structureStart -> {
+            if (matchChildren) {
+                return structureStart.getChildren().stream().anyMatch(piece -> piece.getBoundingBox().contains(pos));
+            }
+            return structureStart.setBoundingBoxFromChildren().contains(pos);
+        }).findFirst(), StructureStart.DEFAULT);
     }
 }
 

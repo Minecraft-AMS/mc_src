@@ -5,16 +5,12 @@
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.serialization.Codec
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.particle;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.command.argument.BlockArgumentParser;
@@ -74,7 +70,6 @@ implements ParticleEffect {
         return this.type;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockState getBlockState() {
         return this.blockState;
     }

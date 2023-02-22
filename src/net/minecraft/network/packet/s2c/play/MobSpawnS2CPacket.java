@@ -1,16 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -21,31 +14,28 @@ import net.minecraft.util.registry.Registry;
 
 public class MobSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private UUID uuid;
-    private int entityTypeId;
-    private double x;
-    private double y;
-    private double z;
-    private int velocityX;
-    private int velocityY;
-    private int velocityZ;
-    private byte yaw;
-    private byte pitch;
-    private byte headYaw;
-
-    public MobSpawnS2CPacket() {
-    }
+    private final int id;
+    private final UUID uuid;
+    private final int entityTypeId;
+    private final double x;
+    private final double y;
+    private final double z;
+    private final int velocityX;
+    private final int velocityY;
+    private final int velocityZ;
+    private final byte yaw;
+    private final byte pitch;
+    private final byte headYaw;
 
     public MobSpawnS2CPacket(LivingEntity entity) {
-        this.id = entity.getEntityId();
+        this.id = entity.getId();
         this.uuid = entity.getUuid();
         this.entityTypeId = Registry.ENTITY_TYPE.getRawId(entity.getType());
         this.x = entity.getX();
         this.y = entity.getY();
         this.z = entity.getZ();
-        this.yaw = (byte)(entity.yaw * 256.0f / 360.0f);
-        this.pitch = (byte)(entity.pitch * 256.0f / 360.0f);
+        this.yaw = (byte)(entity.getYaw() * 256.0f / 360.0f);
+        this.pitch = (byte)(entity.getPitch() * 256.0f / 360.0f);
         this.headYaw = (byte)(entity.headYaw * 256.0f / 360.0f);
         double d = 3.9;
         Vec3d vec3d = entity.getVelocity();
@@ -57,8 +47,7 @@ implements Packet<ClientPlayPacketListener> {
         this.velocityZ = (int)(g * 8000.0);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public MobSpawnS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.uuid = buf.readUuid();
         this.entityTypeId = buf.readVarInt();
@@ -74,7 +63,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeUuid(this.uuid);
         buf.writeVarInt(this.entityTypeId);
@@ -94,62 +83,50 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onMobSpawn(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public UUID getUuid() {
         return this.uuid;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getEntityTypeId() {
         return this.entityTypeId;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityX() {
         return this.velocityX;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityY() {
         return this.velocityY;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityZ() {
         return this.velocityZ;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getYaw() {
         return this.yaw;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getPitch() {
         return this.pitch;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getHeadYaw() {
         return this.headYaw;
     }

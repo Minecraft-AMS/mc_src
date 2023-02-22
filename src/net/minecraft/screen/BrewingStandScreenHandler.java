@@ -1,20 +1,13 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.potion.Potion;
@@ -29,6 +22,16 @@ import net.minecraft.server.network.ServerPlayerEntity;
 
 public class BrewingStandScreenHandler
 extends ScreenHandler {
+    private static final int field_30763 = 0;
+    private static final int field_30764 = 2;
+    private static final int field_30765 = 3;
+    private static final int field_30766 = 4;
+    private static final int field_30767 = 5;
+    private static final int field_30768 = 2;
+    private static final int field_30769 = 5;
+    private static final int field_30770 = 32;
+    private static final int field_30771 = 32;
+    private static final int field_30772 = 41;
     private final Inventory inventory;
     private final PropertyDelegate propertyDelegate;
     private final Slot ingredientSlot;
@@ -93,34 +96,41 @@ extends ScreenHandler {
         return itemStack;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getFuel() {
         return this.propertyDelegate.get(1);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getBrewTime() {
         return this.propertyDelegate.get(0);
     }
 
-    static class FuelSlot
+    static class PotionSlot
     extends Slot {
-        public FuelSlot(Inventory inventory, int i, int j, int k) {
+        public PotionSlot(Inventory inventory, int i, int j, int k) {
             super(inventory, i, j, k);
         }
 
         @Override
         public boolean canInsert(ItemStack stack) {
-            return FuelSlot.matches(stack);
-        }
-
-        public static boolean matches(ItemStack stack) {
-            return stack.getItem() == Items.BLAZE_POWDER;
+            return PotionSlot.matches(stack);
         }
 
         @Override
         public int getMaxItemCount() {
-            return 64;
+            return 1;
+        }
+
+        @Override
+        public void onTakeItem(PlayerEntity player, ItemStack stack) {
+            Potion potion = PotionUtil.getPotion(stack);
+            if (player instanceof ServerPlayerEntity) {
+                Criteria.BREWED_POTION.trigger((ServerPlayerEntity)player, potion);
+            }
+            super.onTakeItem(player, stack);
+        }
+
+        public static boolean matches(ItemStack stack) {
+            return stack.isOf(Items.POTION) || stack.isOf(Items.SPLASH_POTION) || stack.isOf(Items.LINGERING_POTION) || stack.isOf(Items.GLASS_BOTTLE);
         }
     }
 
@@ -141,35 +151,24 @@ extends ScreenHandler {
         }
     }
 
-    static class PotionSlot
+    static class FuelSlot
     extends Slot {
-        public PotionSlot(Inventory inventory, int i, int j, int k) {
+        public FuelSlot(Inventory inventory, int i, int j, int k) {
             super(inventory, i, j, k);
         }
 
         @Override
         public boolean canInsert(ItemStack stack) {
-            return PotionSlot.matches(stack);
+            return FuelSlot.matches(stack);
+        }
+
+        public static boolean matches(ItemStack stack) {
+            return stack.isOf(Items.BLAZE_POWDER);
         }
 
         @Override
         public int getMaxItemCount() {
-            return 1;
-        }
-
-        @Override
-        public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
-            Potion potion = PotionUtil.getPotion(stack);
-            if (player instanceof ServerPlayerEntity) {
-                Criteria.BREWED_POTION.trigger((ServerPlayerEntity)player, potion);
-            }
-            super.onTakeItem(player, stack);
-            return stack;
-        }
-
-        public static boolean matches(ItemStack stack) {
-            Item item = stack.getItem();
-            return item == Items.POTION || item == Items.SPLASH_POTION || item == Items.LINGERING_POTION || item == Items.GLASS_BOTTLE;
+            return 64;
         }
     }
 }

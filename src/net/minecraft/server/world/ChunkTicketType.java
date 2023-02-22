@@ -22,17 +22,17 @@ public class ChunkTicketType<T> {
     public static final ChunkTicketType<Integer> POST_TELEPORT = ChunkTicketType.create("post_teleport", Integer::compareTo, 5);
     public static final ChunkTicketType<ChunkPos> UNKNOWN = ChunkTicketType.create("unknown", Comparator.comparingLong(ChunkPos::toLong), 1);
 
-    public static <T> ChunkTicketType<T> create(String name, Comparator<T> comparator) {
-        return new ChunkTicketType<T>(name, comparator, 0L);
+    public static <T> ChunkTicketType<T> create(String name, Comparator<T> argumentComparator) {
+        return new ChunkTicketType<T>(name, argumentComparator, 0L);
     }
 
-    public static <T> ChunkTicketType<T> create(String name, Comparator<T> comparator, int expiryTicks) {
-        return new ChunkTicketType<T>(name, comparator, expiryTicks);
+    public static <T> ChunkTicketType<T> create(String name, Comparator<T> argumentComparator, int expiryTicks) {
+        return new ChunkTicketType<T>(name, argumentComparator, expiryTicks);
     }
 
-    protected ChunkTicketType(String name, Comparator<T> comparator, long expiryTicks) {
+    protected ChunkTicketType(String name, Comparator<T> argumentComparator, long expiryTicks) {
         this.name = name;
-        this.argumentComparator = comparator;
+        this.argumentComparator = argumentComparator;
         this.expiryTicks = expiryTicks;
     }
 

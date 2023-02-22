@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -14,14 +12,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.Durations;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.IronGolemLookGoal;
 import net.minecraft.entity.ai.goal.IronGolemWanderAroundGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
@@ -46,7 +41,6 @@ import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.GolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -57,22 +51,25 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class IronGolemEntity
 extends GolemEntity
 implements Angerable {
     protected static final TrackedData<Byte> IRON_GOLEM_FLAGS = DataTracker.registerData(IronGolemEntity.class, TrackedDataHandlerRegistry.BYTE);
+    private static final int HEALTH_PER_INGOT = 25;
     private int attackTicksLeft;
     private int lookingAtVillagerTicksLeft;
-    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
     private UUID angryAt;
 
@@ -92,8 +89,8 @@ implements Angerable {
         this.goalSelector.add(8, new LookAroundGoal(this));
         this.targetSelector.add(1, new TrackIronGolemTargetGoal(this));
         this.targetSelector.add(2, new RevengeGoal(this, new Class[0]));
-        this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
-        this.targetSelector.add(3, new FollowTargetGoal<MobEntity>(this, MobEntity.class, 5, false, false, livingEntity -> livingEntity instanceof Monster && !(livingEntity instanceof CreeperEntity)));
+        this.targetSelector.add(3, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
+        this.targetSelector.add(3, new ActiveTargetGoal<MobEntity>(this, MobEntity.class, 5, false, false, entity -> entity instanceof Monster && !(entity instanceof CreeperEntity)));
         this.targetSelector.add(4, new UniversalAngerGoal<IronGolemEntity>(this, false));
     }
 
@@ -133,7 +130,7 @@ implements Angerable {
         if (this.lookingAtVillagerTicksLeft > 0) {
             --this.lookingAtVillagerTicksLeft;
         }
-        if (IronGolemEntity.squaredHorizontalLength(this.getVelocity()) > 2.500000277905201E-7 && this.random.nextInt(5) == 0 && !(blockState = this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), j = MathHelper.floor(this.getY() - (double)0.2f), k = MathHelper.floor(this.getZ())))).isAir()) {
+        if (this.getVelocity().horizontalLengthSquared() > 2.500000277905201E-7 && this.random.nextInt(5) == 0 && !(blockState = this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), j = MathHelper.floor(this.getY() - (double)0.2f), k = MathHelper.floor(this.getZ())))).isAir()) {
             this.world.addParticle(new BlockStateParticleEffect(ParticleTypes.BLOCK, blockState), this.getX() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), this.getY() + 0.1, this.getZ() + ((double)this.random.nextFloat() - 0.5) * (double)this.getWidth(), 4.0 * ((double)this.random.nextFloat() - 0.5), 0.5, ((double)this.random.nextFloat() - 0.5) * 4.0);
         }
         if (!this.world.isClient) {
@@ -163,12 +160,12 @@ implements Angerable {
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         this.setPlayerCreated(nbt.getBoolean("PlayerCreated"));
-        this.angerFromTag((ServerWorld)this.world, nbt);
+        this.readAngerFromNbt(this.world, nbt);
     }
 
     @Override
     public void chooseRandomAngerTime() {
-        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+        this.setAngerTime(ANGER_TIME_RANGE.get(this.random));
     }
 
     @Override
@@ -204,7 +201,7 @@ implements Angerable {
         boolean bl = target.damage(DamageSource.mob(this), g);
         if (bl) {
             target.setVelocity(target.getVelocity().add(0.0, 0.4f, 0.0));
-            this.dealDamage(this, target);
+            this.applyDamageEffects(this, target);
         }
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_ATTACK, 1.0f, 1.0f);
         return bl;
@@ -225,7 +222,6 @@ implements Angerable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 4) {
             this.attackTicksLeft = 10;
@@ -239,7 +235,6 @@ implements Angerable {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getAttackTicksLeft() {
         return this.attackTicksLeft;
     }
@@ -267,8 +262,7 @@ implements Angerable {
     @Override
     protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        Item item = itemStack.getItem();
-        if (item != Items.IRON_INGOT) {
+        if (!itemStack.isOf(Items.IRON_INGOT)) {
             return ActionResult.PASS;
         }
         float f = this.getHealth();
@@ -278,7 +272,8 @@ implements Angerable {
         }
         float g = 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f;
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_REPAIR, 1.0f, g);
-        if (!player.abilities.creativeMode) {
+        this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
+        if (!player.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
         return ActionResult.success(this.world.isClient);
@@ -289,7 +284,6 @@ implements Angerable {
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_STEP, 1.0f, 1.0f);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getLookingAtVillagerTicks() {
         return this.lookingAtVillagerTicksLeft;
     }
@@ -330,19 +324,27 @@ implements Angerable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d method_29919() {
+    public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.875f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 
-    public static enum Crack {
-        NONE(1.0f),
-        LOW(0.75f),
-        MEDIUM(0.5f),
-        HIGH(0.25f);
-
+    public static final class Crack
+    extends Enum<Crack> {
+        public static final /* enum */ Crack NONE = new Crack(1.0f);
+        public static final /* enum */ Crack LOW = new Crack(0.75f);
+        public static final /* enum */ Crack MEDIUM = new Crack(0.5f);
+        public static final /* enum */ Crack HIGH = new Crack(0.25f);
         private static final List<Crack> VALUES;
         private final float maxHealthFraction;
+        private static final /* synthetic */ Crack[] field_21085;
+
+        public static Crack[] values() {
+            return (Crack[])field_21085.clone();
+        }
+
+        public static Crack valueOf(String string) {
+            return Enum.valueOf(Crack.class, string);
+        }
 
         private Crack(float maxHealthFraction) {
             this.maxHealthFraction = maxHealthFraction;
@@ -356,7 +358,12 @@ implements Angerable {
             return NONE;
         }
 
+        private static /* synthetic */ Crack[] method_36638() {
+            return new Crack[]{NONE, LOW, MEDIUM, HIGH};
+        }
+
         static {
+            field_21085 = Crack.method_36638();
             VALUES = (List)Stream.of(Crack.values()).sorted(Comparator.comparingDouble(crack -> crack.maxHealthFraction)).collect(ImmutableList.toImmutableList());
         }
     }

@@ -1,16 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
 import java.util.List;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -76,7 +70,7 @@ extends ScreenHandler {
 
             @Override
             public boolean canInsert(ItemStack stack) {
-                return stack.getItem() == Items.LAPIS_LAZULI;
+                return stack.isOf(Items.LAPIS_LAZULI);
             }
         });
         for (i = 0; i < 3; ++i) {
@@ -110,29 +104,29 @@ extends ScreenHandler {
                     this.enchantmentLevel[i] = -1;
                 }
             } else {
-                this.context.run((world, blockPos) -> {
+                this.context.run((world, pos) -> {
                     int j;
                     int i = 0;
                     for (j = -1; j <= 1; ++j) {
                         for (int k = -1; k <= 1; ++k) {
-                            if (j == 0 && k == 0 || !world.isAir(blockPos.add(k, 0, j)) || !world.isAir(blockPos.add(k, 1, j))) continue;
-                            if (world.getBlockState(blockPos.add(k * 2, 0, j * 2)).isOf(Blocks.BOOKSHELF)) {
+                            if (j == 0 && k == 0 || !world.isAir(pos.add(k, 0, j)) || !world.isAir(pos.add(k, 1, j))) continue;
+                            if (world.getBlockState(pos.add(k * 2, 0, j * 2)).isOf(Blocks.BOOKSHELF)) {
                                 ++i;
                             }
-                            if (world.getBlockState(blockPos.add(k * 2, 1, j * 2)).isOf(Blocks.BOOKSHELF)) {
+                            if (world.getBlockState(pos.add(k * 2, 1, j * 2)).isOf(Blocks.BOOKSHELF)) {
                                 ++i;
                             }
                             if (k == 0 || j == 0) continue;
-                            if (world.getBlockState(blockPos.add(k * 2, 0, j)).isOf(Blocks.BOOKSHELF)) {
+                            if (world.getBlockState(pos.add(k * 2, 0, j)).isOf(Blocks.BOOKSHELF)) {
                                 ++i;
                             }
-                            if (world.getBlockState(blockPos.add(k * 2, 1, j)).isOf(Blocks.BOOKSHELF)) {
+                            if (world.getBlockState(pos.add(k * 2, 1, j)).isOf(Blocks.BOOKSHELF)) {
                                 ++i;
                             }
-                            if (world.getBlockState(blockPos.add(k, 0, j * 2)).isOf(Blocks.BOOKSHELF)) {
+                            if (world.getBlockState(pos.add(k, 0, j * 2)).isOf(Blocks.BOOKSHELF)) {
                                 ++i;
                             }
-                            if (!world.getBlockState(blockPos.add(k, 1, j * 2)).isOf(Blocks.BOOKSHELF)) continue;
+                            if (!world.getBlockState(pos.add(k, 1, j * 2)).isOf(Blocks.BOOKSHELF)) continue;
                             ++i;
                         }
                     }
@@ -162,22 +156,21 @@ extends ScreenHandler {
         ItemStack itemStack = this.inventory.getStack(0);
         ItemStack itemStack2 = this.inventory.getStack(1);
         int i = id + 1;
-        if ((itemStack2.isEmpty() || itemStack2.getCount() < i) && !player.abilities.creativeMode) {
+        if ((itemStack2.isEmpty() || itemStack2.getCount() < i) && !player.getAbilities().creativeMode) {
             return false;
         }
-        if (this.enchantmentPower[id] > 0 && !itemStack.isEmpty() && (player.experienceLevel >= i && player.experienceLevel >= this.enchantmentPower[id] || player.abilities.creativeMode)) {
-            this.context.run((world, blockPos) -> {
+        if (this.enchantmentPower[id] > 0 && !itemStack.isEmpty() && (player.experienceLevel >= i && player.experienceLevel >= this.enchantmentPower[id] || player.getAbilities().creativeMode)) {
+            this.context.run((world, pos) -> {
                 ItemStack itemStack3 = itemStack;
                 List<EnchantmentLevelEntry> list = this.generateEnchantments(itemStack3, id, this.enchantmentPower[id]);
                 if (!list.isEmpty()) {
-                    boolean bl;
                     player.applyEnchantmentCosts(itemStack3, i);
-                    boolean bl2 = bl = itemStack3.getItem() == Items.BOOK;
+                    boolean bl = itemStack3.isOf(Items.BOOK);
                     if (bl) {
                         itemStack3 = new ItemStack(Items.ENCHANTED_BOOK);
-                        NbtCompound nbtCompound = itemStack.getTag();
+                        NbtCompound nbtCompound = itemStack.getNbt();
                         if (nbtCompound != null) {
-                            itemStack3.setTag(nbtCompound.copy());
+                            itemStack3.setNbt(nbtCompound.copy());
                         }
                         this.inventory.setStack(0, itemStack3);
                     }
@@ -189,7 +182,7 @@ extends ScreenHandler {
                         }
                         itemStack3.addEnchantment(enchantmentLevelEntry.enchantment, enchantmentLevelEntry.level);
                     }
-                    if (!playerEntity.abilities.creativeMode) {
+                    if (!playerEntity.getAbilities().creativeMode) {
                         itemStack2.decrement(i);
                         if (itemStack2.isEmpty()) {
                             this.inventory.setStack(1, ItemStack.EMPTY);
@@ -202,7 +195,7 @@ extends ScreenHandler {
                     this.inventory.markDirty();
                     this.seed.set(player.getEnchantmentTableSeed());
                     this.onContentChanged(this.inventory);
-                    world.playSound(null, (BlockPos)blockPos, SoundEvents.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.BLOCKS, 1.0f, world.random.nextFloat() * 0.1f + 0.9f);
+                    world.playSound(null, (BlockPos)pos, SoundEvents.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.BLOCKS, 1.0f, world.random.nextFloat() * 0.1f + 0.9f);
                 }
             });
             return true;
@@ -213,13 +206,12 @@ extends ScreenHandler {
     private List<EnchantmentLevelEntry> generateEnchantments(ItemStack stack, int slot, int level) {
         this.random.setSeed(this.seed.get() + slot);
         List<EnchantmentLevelEntry> list = EnchantmentHelper.generateEnchantments(this.random, stack, level, false);
-        if (stack.getItem() == Items.BOOK && list.size() > 1) {
+        if (stack.isOf(Items.BOOK) && list.size() > 1) {
             list.remove(this.random.nextInt(list.size()));
         }
         return list;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getLapisCount() {
         ItemStack itemStack = this.inventory.getStack(1);
         if (itemStack.isEmpty()) {
@@ -228,7 +220,6 @@ extends ScreenHandler {
         return itemStack.getCount();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSeed() {
         return this.seed.get();
     }
@@ -236,7 +227,7 @@ extends ScreenHandler {
     @Override
     public void close(PlayerEntity player) {
         super.close(player);
-        this.context.run((world, blockPos) -> this.dropInventory(player, playerEntity.world, this.inventory));
+        this.context.run((world, pos) -> this.dropInventory(player, this.inventory));
     }
 
     @Override
@@ -259,7 +250,7 @@ extends ScreenHandler {
                 if (!this.insertItem(itemStack2, 2, 38, true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (itemStack2.getItem() == Items.LAPIS_LAZULI) {
+            } else if (itemStack2.isOf(Items.LAPIS_LAZULI)) {
                 if (!this.insertItem(itemStack2, 1, 2, true)) {
                     return ItemStack.EMPTY;
                 }

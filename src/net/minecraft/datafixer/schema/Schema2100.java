@@ -23,20 +23,20 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    protected static void method_21746(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> Schema100.targetItems(schema));
+    protected static void registerEntity(Schema schema, Map<String, Supplier<TypeTemplate>> entityTypes, String name) {
+        schema.register(entityTypes, name, () -> Schema100.targetItems(schema));
     }
 
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
-        Schema2100.method_21746(schema, map, "minecraft:bee");
-        Schema2100.method_21746(schema, map, "minecraft:bee_stinger");
+        Schema2100.registerEntity(schema, map, "minecraft:bee");
+        Schema2100.registerEntity(schema, map, "minecraft:bee_stinger");
         return map;
     }
 
     public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema schema) {
         Map map = super.registerBlockEntities(schema);
-        schema.register(map, "minecraft:beehive", () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema)), (String)"Bees", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"EntityData", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema)))));
+        schema.register(map, "minecraft:beehive", () -> DSL.optionalFields((String)"Bees", (TypeTemplate)DSL.list((TypeTemplate)DSL.optionalFields((String)"EntityData", (TypeTemplate)TypeReferences.ENTITY_TREE.in(schema)))));
         return map;
     }
 }

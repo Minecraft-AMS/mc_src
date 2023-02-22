@@ -10,7 +10,8 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.BipedEntityRenderer;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.VexEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.VexEntity;
@@ -23,8 +24,8 @@ extends BipedEntityRenderer<VexEntity, VexEntityModel> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/illager/vex.png");
     private static final Identifier CHARGING_TEXTURE = new Identifier("textures/entity/illager/vex_charging.png");
 
-    public VexEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new VexEntityModel(), 0.3f);
+    public VexEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new VexEntityModel(context.getPart(EntityModelLayers.VEX)), 0.3f);
     }
 
     @Override

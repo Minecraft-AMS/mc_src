@@ -39,11 +39,11 @@ public class PlayerListEntry {
     private String model;
     @Nullable
     private Text displayName;
-    private int field_3738;
-    private int field_3736;
-    private long field_3737;
-    private long field_3747;
-    private long field_3746;
+    private int lastHealth;
+    private int health;
+    private long lastHealthTime;
+    private long blinkingHeartTime;
+    private long showTime;
 
     public PlayerListEntry(PlayerListS2CPacket.Entry playerListPacketEntry) {
         this.profile = playerListPacketEntry.getProfile();
@@ -71,6 +71,10 @@ public class PlayerListEntry {
 
     protected void setLatency(int latency) {
         this.latency = latency;
+    }
+
+    public boolean hasCape() {
+        return this.getCapeTexture() != null;
     }
 
     public boolean hasSkinTexture() {
@@ -114,10 +118,10 @@ public class PlayerListEntry {
         synchronized (playerListEntry) {
             if (!this.texturesLoaded) {
                 this.texturesLoaded = true;
-                MinecraftClient.getInstance().getSkinProvider().loadSkin(this.profile, (type, identifier, minecraftProfileTexture) -> {
-                    this.textures.put(type, identifier);
+                MinecraftClient.getInstance().getSkinProvider().loadSkin(this.profile, (type, id, texture) -> {
+                    this.textures.put(type, id);
                     if (type == MinecraftProfileTexture.Type.SKIN) {
-                        this.model = minecraftProfileTexture.getMetadata("model");
+                        this.model = texture.getMetadata("model");
                         if (this.model == null) {
                             this.model = "default";
                         }
@@ -136,44 +140,44 @@ public class PlayerListEntry {
         return this.displayName;
     }
 
-    public int method_2973() {
-        return this.field_3738;
+    public int getLastHealth() {
+        return this.lastHealth;
     }
 
-    public void method_2972(int i) {
-        this.field_3738 = i;
+    public void setLastHealth(int lastHealth) {
+        this.lastHealth = lastHealth;
     }
 
-    public int method_2960() {
-        return this.field_3736;
+    public int getHealth() {
+        return this.health;
     }
 
-    public void method_2965(int i) {
-        this.field_3736 = i;
+    public void setHealth(int health) {
+        this.health = health;
     }
 
-    public long method_2974() {
-        return this.field_3737;
+    public long getLastHealthTime() {
+        return this.lastHealthTime;
     }
 
-    public void method_2978(long l) {
-        this.field_3737 = l;
+    public void setLastHealthTime(long lastHealthTime) {
+        this.lastHealthTime = lastHealthTime;
     }
 
-    public long method_2961() {
-        return this.field_3747;
+    public long getBlinkingHeartTime() {
+        return this.blinkingHeartTime;
     }
 
-    public void method_2975(long l) {
-        this.field_3747 = l;
+    public void setBlinkingHeartTime(long blinkingHeartTime) {
+        this.blinkingHeartTime = blinkingHeartTime;
     }
 
-    public long method_2976() {
-        return this.field_3746;
+    public long getShowTime() {
+        return this.showTime;
     }
 
-    public void method_2964(long l) {
-        this.field_3746 = l;
+    public void setShowTime(long showTime) {
+        this.showTime = showTime;
     }
 }
 

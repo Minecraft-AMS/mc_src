@@ -4,9 +4,9 @@
 package net.minecraft.entity.passive;
 
 import java.util.Random;
-import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.Bucketable;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -27,10 +27,8 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.WaterCreatureEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.FluidTags;
@@ -43,7 +41,8 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 
 public abstract class FishEntity
-extends WaterCreatureEntity {
+extends WaterCreatureEntity
+implements Bucketable {
     private static final TrackedData<Boolean> FROM_BUCKET = DataTracker.registerData(FishEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 
     public FishEntity(EntityType<? extends FishEntity> entityType, World world) {
@@ -85,10 +84,12 @@ extends WaterCreatureEntity {
         this.dataTracker.startTracking(FROM_BUCKET, false);
     }
 
-    private boolean isFromBucket() {
+    @Override
+    public boolean isFromBucket() {
         return this.dataTracker.get(FROM_BUCKET);
     }
 
+    @Override
     public void setFromBucket(boolean fromBucket) {
         this.dataTracker.set(FROM_BUCKET, fromBucket);
     }
@@ -145,33 +146,23 @@ extends WaterCreatureEntity {
 
     @Override
     protected ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.WATER_BUCKET && this.isAlive()) {
-            this.playSound(SoundEvents.ITEM_BUCKET_FILL_FISH, 1.0f, 1.0f);
-            itemStack.decrement(1);
-            ItemStack itemStack2 = this.getFishBucketItem();
-            this.copyDataToStack(itemStack2);
-            if (!this.world.isClient) {
-                Criteria.FILLED_BUCKET.trigger((ServerPlayerEntity)player, itemStack2);
-            }
-            if (itemStack.isEmpty()) {
-                player.setStackInHand(hand, itemStack2);
-            } else if (!player.inventory.insertStack(itemStack2)) {
-                player.dropItem(itemStack2, false);
-            }
-            this.remove();
-            return ActionResult.success(this.world.isClient);
-        }
-        return super.interactMob(player, hand);
+        return Bucketable.tryBucket(player, hand, this).orElse(super.interactMob(player, hand));
     }
 
-    protected void copyDataToStack(ItemStack stack) {
-        if (this.hasCustomName()) {
-            stack.setCustomName(this.getCustomName());
-        }
+    @Override
+    public void copyDataToStack(ItemStack stack) {
+        Bucketable.copyDataToStack(this, stack);
     }
 
-    protected abstract ItemStack getFishBucketItem();
+    @Override
+    public void copyDataFromNbt(NbtCompound nbt) {
+        Bucketable.copyDataFromNbt(this, nbt);
+    }
+
+    @Override
+    public SoundEvent getBucketedSound() {
+        return SoundEvents.ITEM_BUCKET_FILL_FISH;
+    }
 
     protected boolean hasSelfControl() {
         return true;
@@ -212,12 +203,13 @@ extends WaterCreatureEntity {
             double e = this.targetY - this.fish.getY();
             double g = this.targetZ - this.fish.getZ();
             if (e != 0.0) {
-                double h = MathHelper.sqrt(d * d + e * e + g * g);
+                double h = Math.sqrt(d * d + e * e + g * g);
                 this.fish.setVelocity(this.fish.getVelocity().add(0.0, (double)this.fish.getMovementSpeed() * (e / h) * 0.1, 0.0));
             }
             if (d != 0.0 || g != 0.0) {
                 float i = (float)(MathHelper.atan2(g, d) * 57.2957763671875) - 90.0f;
-                this.fish.bodyYaw = this.fish.yaw = this.wrapDegrees(this.fish.yaw, i, 90.0f);
+                this.fish.setYaw(this.wrapDegrees(this.fish.getYaw(), i, 90.0f));
+                this.fish.bodyYaw = this.fish.getYaw();
             }
         }
     }

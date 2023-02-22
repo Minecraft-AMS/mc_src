@@ -16,15 +16,24 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
-public enum NarratorMode {
-    OFF(0, "options.narrator.off"),
-    ALL(1, "options.narrator.all"),
-    CHAT(2, "options.narrator.chat"),
-    SYSTEM(3, "options.narrator.system");
-
+public final class NarratorMode
+extends Enum<NarratorMode> {
+    public static final /* enum */ NarratorMode OFF = new NarratorMode(0, "options.narrator.off");
+    public static final /* enum */ NarratorMode ALL = new NarratorMode(1, "options.narrator.all");
+    public static final /* enum */ NarratorMode CHAT = new NarratorMode(2, "options.narrator.chat");
+    public static final /* enum */ NarratorMode SYSTEM = new NarratorMode(3, "options.narrator.system");
     private static final NarratorMode[] VALUES;
     private final int id;
     private final Text name;
+    private static final /* synthetic */ NarratorMode[] field_18183;
+
+    public static NarratorMode[] values() {
+        return (NarratorMode[])field_18183.clone();
+    }
+
+    public static NarratorMode valueOf(String string) {
+        return Enum.valueOf(NarratorMode.class, string);
+    }
 
     private NarratorMode(int id, String name) {
         this.id = id;
@@ -43,7 +52,12 @@ public enum NarratorMode {
         return VALUES[MathHelper.floorMod(id, VALUES.length)];
     }
 
+    private static /* synthetic */ NarratorMode[] method_36864() {
+        return new NarratorMode[]{OFF, ALL, CHAT, SYSTEM};
+    }
+
     static {
+        field_18183 = NarratorMode.method_36864();
         VALUES = (NarratorMode[])Arrays.stream(NarratorMode.values()).sorted(Comparator.comparingInt(NarratorMode::getId)).toArray(NarratorMode[]::new);
     }
 }

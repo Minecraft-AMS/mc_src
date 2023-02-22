@@ -26,7 +26,7 @@ import net.minecraft.util.registry.Registry;
 public class EntitySummonArgumentType
 implements ArgumentType<Identifier> {
     private static final Collection<String> EXAMPLES = Arrays.asList("minecraft:pig", "cow");
-    public static final DynamicCommandExceptionType NOT_FOUND_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("entity.notFound", object));
+    public static final DynamicCommandExceptionType NOT_FOUND_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("entity.notFound", id));
 
     public static EntitySummonArgumentType entitySummon() {
         return new EntitySummonArgumentType();
@@ -36,9 +36,9 @@ implements ArgumentType<Identifier> {
         return EntitySummonArgumentType.validate((Identifier)context.getArgument(name, Identifier.class));
     }
 
-    private static Identifier validate(Identifier identifier) throws CommandSyntaxException {
-        Registry.ENTITY_TYPE.getOrEmpty(identifier).filter(EntityType::isSummonable).orElseThrow(() -> NOT_FOUND_EXCEPTION.create((Object)identifier));
-        return identifier;
+    private static Identifier validate(Identifier id) throws CommandSyntaxException {
+        Registry.ENTITY_TYPE.getOrEmpty(id).filter(EntityType::isSummonable).orElseThrow(() -> NOT_FOUND_EXCEPTION.create((Object)id));
+        return id;
     }
 
     public Identifier parse(StringReader stringReader) throws CommandSyntaxException {
@@ -49,8 +49,8 @@ implements ArgumentType<Identifier> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

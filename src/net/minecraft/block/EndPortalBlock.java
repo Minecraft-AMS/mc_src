@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -32,15 +26,15 @@ import net.minecraft.world.World;
 
 public class EndPortalBlock
 extends BlockWithEntity {
-    protected static final VoxelShape SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 12.0, 16.0);
+    protected static final VoxelShape SHAPE = Block.createCuboidShape(0.0, 6.0, 0.0, 16.0, 12.0, 16.0);
 
     protected EndPortalBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new EndPortalBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new EndPortalBlockEntity(pos, state);
     }
 
     @Override
@@ -61,7 +55,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         double d = (double)pos.getX() + random.nextDouble();
         double e = (double)pos.getY() + 0.8;
@@ -70,7 +63,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
     }

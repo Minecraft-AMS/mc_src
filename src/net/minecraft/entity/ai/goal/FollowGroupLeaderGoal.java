@@ -1,8 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.datafixers.DataFixUtils
  */
 package net.minecraft.entity.ai.goal;
 
+import com.mojang.datafixers.DataFixUtils;
 import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.entity.ai.goal.Goal;
@@ -10,6 +14,7 @@ import net.minecraft.entity.passive.SchoolingFishEntity;
 
 public class FollowGroupLeaderGoal
 extends Goal {
+    private static final int MIN_SEARCH_DELAY = 200;
     private final SchoolingFishEntity fish;
     private int moveDelay;
     private int checkSurroundingDelay;
@@ -38,7 +43,7 @@ extends Goal {
         this.checkSurroundingDelay = this.getSurroundingSearchDelay(this.fish);
         Predicate<SchoolingFishEntity> predicate = schoolingFishEntity -> schoolingFishEntity.canHaveMoreFishInGroup() || !schoolingFishEntity.hasLeader();
         List<SchoolingFishEntity> list = this.fish.world.getEntitiesByClass(this.fish.getClass(), this.fish.getBoundingBox().expand(8.0, 8.0, 8.0), predicate);
-        SchoolingFishEntity schoolingFishEntity2 = list.stream().filter(SchoolingFishEntity::canHaveMoreFishInGroup).findAny().orElse(this.fish);
+        SchoolingFishEntity schoolingFishEntity2 = (SchoolingFishEntity)DataFixUtils.orElse(list.stream().filter(SchoolingFishEntity::canHaveMoreFishInGroup).findAny(), (Object)this.fish);
         schoolingFishEntity2.pullInOtherFish(list.stream().filter(schoolingFishEntity -> !schoolingFishEntity.hasLeader()));
         return this.fish.hasLeader();
     }

@@ -20,5 +20,7 @@ public interface GlShader {
     public Program getVertexShader();
 
     public Program getFragmentShader();
+
+    public void attachReferencedShaders();
 }
 

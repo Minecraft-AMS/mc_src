@@ -9,11 +9,11 @@ package net.minecraft.world.gen.treedecorator;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
+import java.util.function.BiConsumer;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.VineBlock;
-import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.treedecorator.TreeDecorator;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
@@ -29,20 +29,20 @@ extends TreeDecorator {
     }
 
     @Override
-    public void generate(StructureWorldAccess world, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions, Set<BlockPos> placedStates, BlockBox box) {
+    public void generate(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions) {
         logPositions.forEach(pos -> {
             BlockPos blockPos;
             if (random.nextInt(3) > 0 && Feature.isAir(world, blockPos = pos.west())) {
-                this.placeVine(world, blockPos, VineBlock.EAST, placedStates, box);
+                TrunkVineTreeDecorator.placeVine(replacer, blockPos, VineBlock.EAST);
             }
             if (random.nextInt(3) > 0 && Feature.isAir(world, blockPos = pos.east())) {
-                this.placeVine(world, blockPos, VineBlock.WEST, placedStates, box);
+                TrunkVineTreeDecorator.placeVine(replacer, blockPos, VineBlock.WEST);
             }
             if (random.nextInt(3) > 0 && Feature.isAir(world, blockPos = pos.north())) {
-                this.placeVine(world, blockPos, VineBlock.SOUTH, placedStates, box);
+                TrunkVineTreeDecorator.placeVine(replacer, blockPos, VineBlock.SOUTH);
             }
             if (random.nextInt(3) > 0 && Feature.isAir(world, blockPos = pos.south())) {
-                this.placeVine(world, blockPos, VineBlock.NORTH, placedStates, box);
+                TrunkVineTreeDecorator.placeVine(replacer, blockPos, VineBlock.NORTH);
             }
         });
     }

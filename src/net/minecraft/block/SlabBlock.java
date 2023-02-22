@@ -89,7 +89,7 @@ implements Waterloggable {
     public boolean canReplace(BlockState state, ItemPlacementContext context) {
         ItemStack itemStack = context.getStack();
         SlabType slabType = state.get(TYPE);
-        if (slabType == SlabType.DOUBLE || itemStack.getItem() != this.asItem()) {
+        if (slabType == SlabType.DOUBLE || !itemStack.isOf(this.asItem())) {
             return false;
         }
         if (context.canReplaceExisting()) {

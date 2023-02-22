@@ -24,6 +24,7 @@ import net.minecraft.world.poi.PointOfInterestStorage;
 
 public class WalkTowardJobSiteTask
 extends Task<VillagerEntity> {
+    private static final int RUN_TIME = 1200;
     final float speed;
 
     public WalkTowardJobSiteTask(float speed) {

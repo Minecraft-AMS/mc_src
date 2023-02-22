@@ -19,8 +19,9 @@ import org.jetbrains.annotations.Nullable;
 public class ChargingPlayerPhase
 extends AbstractPhase {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_30431 = 10;
     private Vec3d pathTarget;
-    private int field_7037;
+    private int chargingTicks;
 
     public ChargingPlayerPhase(EnderDragonEntity enderDragonEntity) {
         super(enderDragonEntity);
@@ -33,20 +34,20 @@ extends AbstractPhase {
             this.dragon.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
             return;
         }
-        if (this.field_7037 > 0 && this.field_7037++ >= 10) {
+        if (this.chargingTicks > 0 && this.chargingTicks++ >= 10) {
             this.dragon.getPhaseManager().setPhase(PhaseType.HOLDING_PATTERN);
             return;
         }
         double d = this.pathTarget.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
         if (d < 100.0 || d > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
-            ++this.field_7037;
+            ++this.chargingTicks;
         }
     }
 
     @Override
     public void beginPhase() {
         this.pathTarget = null;
-        this.field_7037 = 0;
+        this.chargingTicks = 0;
     }
 
     public void setPathTarget(Vec3d pathTarget) {

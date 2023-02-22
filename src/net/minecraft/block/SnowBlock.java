@@ -30,8 +30,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class SnowBlock
 extends Block {
+    public static final int MAX_LAYERS = 8;
     public static final IntProperty LAYERS = Properties.LAYERS;
     protected static final VoxelShape[] LAYERS_TO_SHAPE = new VoxelShape[]{VoxelShapes.empty(), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 2.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 4.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 6.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 10.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 12.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 14.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 16.0, 16.0)};
+    public static final int field_31248 = 5;
 
     protected SnowBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -88,7 +90,7 @@ extends Block {
         if (blockState.isOf(Blocks.HONEY_BLOCK) || blockState.isOf(Blocks.SOUL_SAND)) {
             return true;
         }
-        return Block.isFaceFullSquare(blockState.getCollisionShape(world, pos.down()), Direction.UP) || blockState.getBlock() == this && blockState.get(LAYERS) == 8;
+        return Block.isFaceFullSquare(blockState.getCollisionShape(world, pos.down()), Direction.UP) || blockState.isOf(this) && blockState.get(LAYERS) == 8;
     }
 
     @Override
@@ -110,7 +112,7 @@ extends Block {
     @Override
     public boolean canReplace(BlockState state, ItemPlacementContext context) {
         int i = state.get(LAYERS);
-        if (context.getStack().getItem() == this.asItem() && i < 8) {
+        if (context.getStack().isOf(this.asItem()) && i < 8) {
             if (context.canReplaceExisting()) {
                 return context.getSide() == Direction.UP;
             }

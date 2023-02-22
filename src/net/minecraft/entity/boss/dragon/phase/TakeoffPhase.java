@@ -18,8 +18,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class TakeoffPhase
 extends AbstractPhase {
-    private boolean field_7056;
-    private Path field_7054;
+    private boolean shouldFindNewPath;
+    private Path path;
     private Vec3d pathTarget;
 
     public TakeoffPhase(EnderDragonEntity enderDragonEntity) {
@@ -28,9 +28,9 @@ extends AbstractPhase {
 
     @Override
     public void serverTick() {
-        if (this.field_7056 || this.field_7054 == null) {
-            this.field_7056 = false;
-            this.method_6858();
+        if (this.shouldFindNewPath || this.path == null) {
+            this.shouldFindNewPath = false;
+            this.updatePath();
         } else {
             BlockPos blockPos = this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN);
             if (!blockPos.isWithinDistance(this.dragon.getPos(), 10.0)) {
@@ -41,12 +41,12 @@ extends AbstractPhase {
 
     @Override
     public void beginPhase() {
-        this.field_7056 = true;
-        this.field_7054 = null;
+        this.shouldFindNewPath = true;
+        this.path = null;
         this.pathTarget = null;
     }
 
-    private void method_6858() {
+    private void updatePath() {
         int i = this.dragon.getNearestPathNodeIndex();
         Vec3d vec3d = this.dragon.getRotationVectorFromPhase(1.0f);
         int j = this.dragon.getNearestPathNodeIndex(-vec3d.x * 40.0, 105.0, -vec3d.z * 40.0);
@@ -57,17 +57,17 @@ extends AbstractPhase {
         } else if ((j %= 12) < 0) {
             j += 12;
         }
-        this.field_7054 = this.dragon.findPath(i, j, null);
-        this.method_6859();
+        this.path = this.dragon.findPath(i, j, null);
+        this.followPath();
     }
 
-    private void method_6859() {
-        if (this.field_7054 != null) {
-            this.field_7054.next();
-            if (!this.field_7054.isFinished()) {
+    private void followPath() {
+        if (this.path != null) {
+            this.path.next();
+            if (!this.path.isFinished()) {
                 double d;
-                BlockPos vec3i = this.field_7054.method_31032();
-                this.field_7054.next();
+                BlockPos vec3i = this.path.getCurrentNodePos();
+                this.path.next();
                 while ((d = (double)((float)vec3i.getY() + this.dragon.getRandom().nextFloat() * 20.0f)) < (double)vec3i.getY()) {
                 }
                 this.pathTarget = new Vec3d(vec3i.getX(), d, vec3i.getZ());

@@ -1,14 +1,7 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
-
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 public class MapColor {
     public static final MapColor[] COLORS = new MapColor[64];
@@ -64,13 +57,16 @@ public class MapColor {
     public static final MapColor TERRACOTTA_GREEN = new MapColor(49, 5001770);
     public static final MapColor TERRACOTTA_RED = new MapColor(50, 9321518);
     public static final MapColor TERRACOTTA_BLACK = new MapColor(51, 2430480);
-    public static final MapColor field_25702 = new MapColor(52, 12398641);
-    public static final MapColor field_25703 = new MapColor(53, 9715553);
-    public static final MapColor field_25704 = new MapColor(54, 6035741);
-    public static final MapColor field_25705 = new MapColor(55, 1474182);
-    public static final MapColor field_25706 = new MapColor(56, 3837580);
-    public static final MapColor field_25707 = new MapColor(57, 5647422);
-    public static final MapColor field_25708 = new MapColor(58, 1356933);
+    public static final MapColor DULL_RED = new MapColor(52, 12398641);
+    public static final MapColor DULL_PINK = new MapColor(53, 9715553);
+    public static final MapColor DARK_CRIMSON = new MapColor(54, 6035741);
+    public static final MapColor TEAL = new MapColor(55, 1474182);
+    public static final MapColor DARK_AQUA = new MapColor(56, 3837580);
+    public static final MapColor DARK_DULL_PINK = new MapColor(57, 5647422);
+    public static final MapColor BRIGHT_TEAL = new MapColor(58, 1356933);
+    public static final MapColor DEEPSLATE_GRAY = new MapColor(59, 0x646464);
+    public static final MapColor RAW_IRON_PINK = new MapColor(60, 14200723);
+    public static final MapColor LICHEN_GREEN = new MapColor(61, 8365974);
     public final int color;
     public final int id;
 
@@ -83,7 +79,6 @@ public class MapColor {
         MapColor.COLORS[id] = this;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getRenderColor(int shade) {
         int i = 220;
         if (shade == 3) {

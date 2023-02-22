@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.player.PlayerEntity;
@@ -27,11 +23,18 @@ import org.jetbrains.annotations.Nullable;
 
 public class BeaconScreenHandler
 extends ScreenHandler {
+    private static final int field_30756 = 0;
+    private static final int field_30757 = 1;
+    private static final int field_30758 = 3;
+    private static final int field_30759 = 1;
+    private static final int field_30760 = 28;
+    private static final int field_30761 = 28;
+    private static final int field_30762 = 37;
     private final Inventory payment = new SimpleInventory(1){
 
         @Override
         public boolean isValid(int slot, ItemStack stack) {
-            return stack.getItem().isIn(ItemTags.BEACON_PAYMENT_ITEMS);
+            return stack.isIn(ItemTags.BEACON_PAYMENT_ITEMS);
         }
 
         @Override
@@ -119,19 +122,16 @@ extends ScreenHandler {
         return itemStack;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getProperties() {
         return this.propertyDelegate.get(0);
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public StatusEffect getPrimaryEffect() {
         return StatusEffect.byRawId(this.propertyDelegate.get(1));
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public StatusEffect getSecondaryEffect() {
         return StatusEffect.byRawId(this.propertyDelegate.get(2));
     }
@@ -144,7 +144,6 @@ extends ScreenHandler {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean hasPayment() {
         return !this.payment.getStack(0).isEmpty();
     }
@@ -157,7 +156,7 @@ extends ScreenHandler {
 
         @Override
         public boolean canInsert(ItemStack stack) {
-            return stack.getItem().isIn(ItemTags.BEACON_PAYMENT_ITEMS);
+            return stack.isIn(ItemTags.BEACON_PAYMENT_ITEMS);
         }
 
         @Override

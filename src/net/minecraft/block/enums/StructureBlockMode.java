@@ -1,31 +1,34 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block.enums;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.StringIdentifiable;
 
-public enum StructureBlockMode implements StringIdentifiable
-{
-    SAVE("save"),
-    LOAD("load"),
-    CORNER("corner"),
-    DATA("data");
-
+public final class StructureBlockMode
+extends Enum<StructureBlockMode>
+implements StringIdentifiable {
+    public static final /* enum */ StructureBlockMode SAVE = new StructureBlockMode("save");
+    public static final /* enum */ StructureBlockMode LOAD = new StructureBlockMode("load");
+    public static final /* enum */ StructureBlockMode CORNER = new StructureBlockMode("corner");
+    public static final /* enum */ StructureBlockMode DATA = new StructureBlockMode("data");
     private final String name;
-    private final Text field_26444;
+    private final Text text;
+    private static final /* synthetic */ StructureBlockMode[] field_12700;
+
+    public static StructureBlockMode[] values() {
+        return (StructureBlockMode[])field_12700.clone();
+    }
+
+    public static StructureBlockMode valueOf(String string) {
+        return Enum.valueOf(StructureBlockMode.class, string);
+    }
 
     private StructureBlockMode(String name) {
         this.name = name;
-        this.field_26444 = new TranslatableText("structure_block.mode_info." + name);
+        this.text = new TranslatableText("structure_block.mode_info." + name);
     }
 
     @Override
@@ -33,9 +36,16 @@ public enum StructureBlockMode implements StringIdentifiable
         return this.name;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public Text method_30844() {
-        return this.field_26444;
+    public Text asText() {
+        return this.text;
+    }
+
+    private static /* synthetic */ StructureBlockMode[] method_36737() {
+        return new StructureBlockMode[]{SAVE, LOAD, CORNER, DATA};
+    }
+
+    static {
+        field_12700 = StructureBlockMode.method_36737();
     }
 }
 

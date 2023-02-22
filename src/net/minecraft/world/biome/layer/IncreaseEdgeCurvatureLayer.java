@@ -7,10 +7,19 @@ import net.minecraft.world.biome.layer.BiomeLayers;
 import net.minecraft.world.biome.layer.type.DiagonalCrossSamplingLayer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 
-public enum IncreaseEdgeCurvatureLayer implements DiagonalCrossSamplingLayer
-{
-    INSTANCE;
+public final class IncreaseEdgeCurvatureLayer
+extends Enum<IncreaseEdgeCurvatureLayer>
+implements DiagonalCrossSamplingLayer {
+    public static final /* enum */ IncreaseEdgeCurvatureLayer INSTANCE = new IncreaseEdgeCurvatureLayer();
+    private static final /* synthetic */ IncreaseEdgeCurvatureLayer[] field_16057;
 
+    public static IncreaseEdgeCurvatureLayer[] values() {
+        return (IncreaseEdgeCurvatureLayer[])field_16057.clone();
+    }
+
+    public static IncreaseEdgeCurvatureLayer valueOf(String string) {
+        return Enum.valueOf(IncreaseEdgeCurvatureLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, int sw, int se, int ne, int nw, int center) {
@@ -49,6 +58,14 @@ public enum IncreaseEdgeCurvatureLayer implements DiagonalCrossSamplingLayer
             }
         }
         return center;
+    }
+
+    private static /* synthetic */ IncreaseEdgeCurvatureLayer[] method_36770() {
+        return new IncreaseEdgeCurvatureLayer[]{INSTANCE};
+    }
+
+    static {
+        field_16057 = IncreaseEdgeCurvatureLayer.method_36770();
     }
 }
 

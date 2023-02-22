@@ -8,6 +8,7 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
+ *  com.mojang.datafixers.util.Either
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  */
@@ -18,15 +19,18 @@ import com.google.common.collect.Lists;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.tag.SetTag;
@@ -85,6 +89,16 @@ public interface Tag<T> {
         public String toString() {
             return "#" + this.id + "?";
         }
+
+        @Override
+        public void forEachGroupId(Consumer<Identifier> consumer) {
+            consumer.accept(this.id);
+        }
+
+        @Override
+        public boolean canAdd(Predicate<Identifier> existenceTest, Predicate<Identifier> duplicationTest) {
+            return true;
+        }
     }
 
     public static class TagEntry
@@ -113,6 +127,16 @@ public interface Tag<T> {
         public String toString() {
             return "#" + this.id;
         }
+
+        @Override
+        public boolean canAdd(Predicate<Identifier> existenceTest, Predicate<Identifier> duplicationTest) {
+            return duplicationTest.test(this.id);
+        }
+
+        @Override
+        public void forEachTagId(Consumer<Identifier> consumer) {
+            consumer.accept(this.id);
+        }
     }
 
     public static class OptionalObjectEntry
@@ -140,8 +164,13 @@ public interface Tag<T> {
             json.add((JsonElement)jsonObject);
         }
 
+        @Override
+        public boolean canAdd(Predicate<Identifier> existenceTest, Predicate<Identifier> duplicationTest) {
+            return true;
+        }
+
         public String toString() {
-            return this.id.toString() + "?";
+            return this.id + "?";
         }
     }
 
@@ -168,6 +197,11 @@ public interface Tag<T> {
             json.add(this.id.toString());
         }
 
+        @Override
+        public boolean canAdd(Predicate<Identifier> existenceTest, Predicate<Identifier> duplicationTest) {
+            return existenceTest.test(this.id);
+        }
+
         public String toString() {
             return this.id.toString();
         }
@@ -177,6 +211,14 @@ public interface Tag<T> {
         public <T> boolean resolve(Function<Identifier, Tag<T>> var1, Function<Identifier, T> var2, Consumer<T> var3);
 
         public void addToJson(JsonArray var1);
+
+        default public void forEachTagId(Consumer<Identifier> consumer) {
+        }
+
+        default public void forEachGroupId(Consumer<Identifier> consumer) {
+        }
+
+        public boolean canAdd(Predicate<Identifier> var1, Predicate<Identifier> var2);
     }
 
     public static class Builder {
@@ -199,25 +241,38 @@ public interface Tag<T> {
             return this.add(new ObjectEntry(id), source);
         }
 
+        public Builder addOptional(Identifier id, String source) {
+            return this.add(new OptionalObjectEntry(id), source);
+        }
+
         public Builder addTag(Identifier id, String source) {
             return this.add(new TagEntry(id), source);
         }
 
-        public <T> Optional<Tag<T>> build(Function<Identifier, Tag<T>> tagGetter, Function<Identifier, T> objectGetter) {
+        public Builder addOptionalTag(Identifier id, String source) {
+            return this.add(new OptionalTagEntry(id), source);
+        }
+
+        public <T> Either<Collection<TrackedEntry>, Tag<T>> build(Function<Identifier, Tag<T>> tagGetter, Function<Identifier, T> objectGetter) {
             ImmutableSet.Builder builder = ImmutableSet.builder();
+            ArrayList list = Lists.newArrayList();
             for (TrackedEntry trackedEntry : this.entries) {
                 if (trackedEntry.getEntry().resolve(tagGetter, objectGetter, arg_0 -> ((ImmutableSet.Builder)builder).add(arg_0))) continue;
-                return Optional.empty();
+                list.add(trackedEntry);
             }
-            return Optional.of(Tag.of(builder.build()));
+            return list.isEmpty() ? Either.right(Tag.of(builder.build())) : Either.left((Object)list);
         }
 
         public Stream<TrackedEntry> streamEntries() {
             return this.entries.stream();
         }
 
-        public <T> Stream<TrackedEntry> streamUnresolvedEntries(Function<Identifier, Tag<T>> tagGetter, Function<Identifier, T> objectGetter) {
-            return this.streamEntries().filter(trackedEntry -> !trackedEntry.getEntry().resolve(tagGetter, objectGetter, object -> {}));
+        public void forEachTagId(Consumer<Identifier> consumer) {
+            this.entries.forEach(trackedEntry -> trackedEntry.entry.forEachTagId(consumer));
+        }
+
+        public void forEachGroupId(Consumer<Identifier> consumer) {
+            this.entries.forEach(trackedEntry -> trackedEntry.entry.forEachGroupId(consumer));
         }
 
         public Builder read(JsonObject json, String source) {
@@ -266,10 +321,10 @@ public interface Tag<T> {
     }
 
     public static class TrackedEntry {
-        private final Entry entry;
+        final Entry entry;
         private final String source;
 
-        private TrackedEntry(Entry entry, String source) {
+        TrackedEntry(Entry entry, String source) {
             this.entry = entry;
             this.source = source;
         }
@@ -278,8 +333,12 @@ public interface Tag<T> {
             return this.entry;
         }
 
+        public String getSource() {
+            return this.source;
+        }
+
         public String toString() {
-            return this.entry.toString() + " (from " + this.source + ")";
+            return this.entry + " (from " + this.source + ")";
         }
     }
 }

@@ -3,14 +3,21 @@
  * 
  * Could not load the following classes:
  *  com.google.gson.JsonObject
+ *  com.google.gson.JsonParseException
  *  com.mojang.bridge.game.GameVersion
+ *  com.mojang.bridge.game.PackType
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
 package net.minecraft;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.mojang.bridge.game.GameVersion;
+import com.mojang.bridge.game.PackType;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.UUID;
@@ -22,62 +29,61 @@ import org.apache.logging.log4j.Logger;
 public class MinecraftVersion
 implements GameVersion {
     private static final Logger LOGGER = LogManager.getLogger();
-    public static final GameVersion field_25319 = new MinecraftVersion();
+    public static final GameVersion GAME_VERSION = new MinecraftVersion();
     private final String id;
     private final String name;
     private final boolean stable;
     private final int worldVersion;
     private final int protocolVersion;
-    private final int packVersion;
+    private final int resourcePackVersion;
+    private final int dataPackVersion;
     private final Date buildTime;
     private final String releaseTarget;
 
     private MinecraftVersion() {
         this.id = UUID.randomUUID().toString().replaceAll("-", "");
-        this.name = "1.16.5";
+        this.name = "1.17.1";
         this.stable = true;
-        this.worldVersion = 2586;
-        this.protocolVersion = SharedConstants.method_31372();
-        this.packVersion = 6;
+        this.worldVersion = 2730;
+        this.protocolVersion = SharedConstants.getProtocolVersion();
+        this.resourcePackVersion = 7;
+        this.dataPackVersion = 7;
         this.buildTime = new Date();
-        this.releaseTarget = "1.16.5";
+        this.releaseTarget = "1.17.1";
     }
 
-    private MinecraftVersion(JsonObject jsonObject) {
-        this.id = JsonHelper.getString(jsonObject, "id");
-        this.name = JsonHelper.getString(jsonObject, "name");
-        this.releaseTarget = JsonHelper.getString(jsonObject, "release_target");
-        this.stable = JsonHelper.getBoolean(jsonObject, "stable");
-        this.worldVersion = JsonHelper.getInt(jsonObject, "world_version");
-        this.protocolVersion = JsonHelper.getInt(jsonObject, "protocol_version");
-        this.packVersion = JsonHelper.getInt(jsonObject, "pack_version");
-        this.buildTime = Date.from(ZonedDateTime.parse(JsonHelper.getString(jsonObject, "build_time")).toInstant());
+    private MinecraftVersion(JsonObject json) {
+        this.id = JsonHelper.getString(json, "id");
+        this.name = JsonHelper.getString(json, "name");
+        this.releaseTarget = JsonHelper.getString(json, "release_target");
+        this.stable = JsonHelper.getBoolean(json, "stable");
+        this.worldVersion = JsonHelper.getInt(json, "world_version");
+        this.protocolVersion = JsonHelper.getInt(json, "protocol_version");
+        JsonObject jsonObject = JsonHelper.getObject(json, "pack_version");
+        this.resourcePackVersion = JsonHelper.getInt(jsonObject, "resource");
+        this.dataPackVersion = JsonHelper.getInt(jsonObject, "data");
+        this.buildTime = Date.from(ZonedDateTime.parse(JsonHelper.getString(json, "build_time")).toInstant());
     }
 
     /*
-     * Exception decompiling
+     * Enabled aggressive exception aggregation
      */
     public static GameVersion create() {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 4 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+        try (InputStream inputStream = MinecraftVersion.class.getResourceAsStream("/version.json");){
+            MinecraftVersion minecraftVersion;
+            if (inputStream == null) {
+                LOGGER.warn("Missing version information!");
+                GameVersion gameVersion = GAME_VERSION;
+                return gameVersion;
+            }
+            try (InputStreamReader inputStreamReader = new InputStreamReader(inputStream);){
+                minecraftVersion = new MinecraftVersion(JsonHelper.deserialize(inputStreamReader));
+            }
+            return minecraftVersion;
+        }
+        catch (JsonParseException | IOException exception) {
+            throw new IllegalStateException("Game version information is corrupt", exception);
+        }
     }
 
     public String getId() {
@@ -100,8 +106,8 @@ implements GameVersion {
         return this.protocolVersion;
     }
 
-    public int getPackVersion() {
-        return this.packVersion;
+    public int getPackVersion(PackType packType) {
+        return packType == PackType.DATA ? this.dataPackVersion : this.resourcePackVersion;
     }
 
     public Date getBuildTime() {

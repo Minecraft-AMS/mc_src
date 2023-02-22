@@ -56,38 +56,38 @@ import net.minecraft.util.math.MathHelper;
 
 public class DataCommand {
     private static final SimpleCommandExceptionType MERGE_FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.data.merge.failed"));
-    private static final DynamicCommandExceptionType GET_INVALID_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.get.invalid", object));
-    private static final DynamicCommandExceptionType GET_UNKNOWN_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.get.unknown", object));
+    private static final DynamicCommandExceptionType GET_INVALID_EXCEPTION = new DynamicCommandExceptionType(path -> new TranslatableText("commands.data.get.invalid", path));
+    private static final DynamicCommandExceptionType GET_UNKNOWN_EXCEPTION = new DynamicCommandExceptionType(path -> new TranslatableText("commands.data.get.unknown", path));
     private static final SimpleCommandExceptionType GET_MULTIPLE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.data.get.multiple"));
-    private static final DynamicCommandExceptionType MODIFY_EXPECTED_LIST_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.expected_list", object));
-    private static final DynamicCommandExceptionType MODIFY_EXPECTED_OBJECT_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.expected_object", object));
-    private static final DynamicCommandExceptionType MODIFY_INVALID_INDEX_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.data.modify.invalid_index", object));
+    private static final DynamicCommandExceptionType MODIFY_EXPECTED_LIST_EXCEPTION = new DynamicCommandExceptionType(nbt -> new TranslatableText("commands.data.modify.expected_list", nbt));
+    private static final DynamicCommandExceptionType MODIFY_EXPECTED_OBJECT_EXCEPTION = new DynamicCommandExceptionType(nbt -> new TranslatableText("commands.data.modify.expected_object", nbt));
+    private static final DynamicCommandExceptionType MODIFY_INVALID_INDEX_EXCEPTION = new DynamicCommandExceptionType(index -> new TranslatableText("commands.data.modify.invalid_index", index));
     public static final List<Function<String, ObjectType>> OBJECT_TYPE_FACTORIES = ImmutableList.of(EntityDataObject.TYPE_FACTORY, BlockDataObject.TYPE_FACTORY, StorageDataObject.TYPE_FACTORY);
-    public static final List<ObjectType> TARGET_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(function -> (ObjectType)function.apply("target")).collect(ImmutableList.toImmutableList());
-    public static final List<ObjectType> SOURCE_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(function -> (ObjectType)function.apply("source")).collect(ImmutableList.toImmutableList());
+    public static final List<ObjectType> TARGET_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(factory -> (ObjectType)factory.apply("target")).collect(ImmutableList.toImmutableList());
+    public static final List<ObjectType> SOURCE_OBJECT_TYPES = (List)OBJECT_TYPE_FACTORIES.stream().map(factory -> (ObjectType)factory.apply("source")).collect(ImmutableList.toImmutableList());
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)CommandManager.literal("data").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2));
+        LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)CommandManager.literal("data").requires(source -> source.hasPermissionLevel(2));
         for (ObjectType objectType : TARGET_OBJECT_TYPES) {
-            ((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)literalArgumentBuilder.then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("merge"), argumentBuilder -> argumentBuilder.then(CommandManager.argument("nbt", NbtCompoundArgumentType.nbtCompound()).executes(commandContext -> DataCommand.executeMerge((ServerCommandSource)commandContext.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)commandContext), NbtCompoundArgumentType.getNbtCompound(commandContext, "nbt"))))))).then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("get"), argumentBuilder -> argumentBuilder.executes(commandContext -> DataCommand.executeGet((ServerCommandSource)commandContext.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)commandContext))).then(((RequiredArgumentBuilder)CommandManager.argument("path", NbtPathArgumentType.nbtPath()).executes(commandContext -> DataCommand.executeGet((ServerCommandSource)commandContext.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)commandContext), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)commandContext, "path")))).then(CommandManager.argument("scale", DoubleArgumentType.doubleArg()).executes(commandContext -> DataCommand.executeGet((ServerCommandSource)commandContext.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)commandContext), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)commandContext, "path"), DoubleArgumentType.getDouble((CommandContext)commandContext, (String)"scale")))))))).then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("remove"), argumentBuilder -> argumentBuilder.then(CommandManager.argument("path", NbtPathArgumentType.nbtPath()).executes(commandContext -> DataCommand.executeRemove((ServerCommandSource)commandContext.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)commandContext), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)commandContext, "path"))))))).then(DataCommand.addModifyArgument((argumentBuilder, modifyArgumentCreator) -> argumentBuilder.then(CommandManager.literal("insert").then(CommandManager.argument("index", IntegerArgumentType.integer()).then(modifyArgumentCreator.create((commandContext, nbtCompound, nbtPath, list) -> {
-                int i = IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"index");
-                return DataCommand.executeInsert(i, nbtCompound, nbtPath, list);
-            })))).then(CommandManager.literal("prepend").then(modifyArgumentCreator.create((commandContext, nbtCompound, nbtPath, list) -> DataCommand.executeInsert(0, nbtCompound, nbtPath, list)))).then(CommandManager.literal("append").then(modifyArgumentCreator.create((commandContext, nbtCompound, nbtPath, list) -> DataCommand.executeInsert(-1, nbtCompound, nbtPath, list)))).then(CommandManager.literal("set").then(modifyArgumentCreator.create((commandContext, nbtCompound, nbtPath, list) -> nbtPath.put(nbtCompound, ((NbtElement)Iterables.getLast((Iterable)list))::copy)))).then(CommandManager.literal("merge").then(modifyArgumentCreator.create((commandContext, nbtCompound, nbtPath, list) -> {
-                List<NbtElement> collection = nbtPath.getOrInit(nbtCompound, NbtCompound::new);
+            ((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)literalArgumentBuilder.then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("merge"), builder -> builder.then(CommandManager.argument("nbt", NbtCompoundArgumentType.nbtCompound()).executes(context -> DataCommand.executeMerge((ServerCommandSource)context.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)context), NbtCompoundArgumentType.getNbtCompound(context, "nbt"))))))).then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("get"), builder -> builder.executes(context -> DataCommand.executeGet((ServerCommandSource)context.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)context))).then(((RequiredArgumentBuilder)CommandManager.argument("path", NbtPathArgumentType.nbtPath()).executes(context -> DataCommand.executeGet((ServerCommandSource)context.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)context), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)context, "path")))).then(CommandManager.argument("scale", DoubleArgumentType.doubleArg()).executes(context -> DataCommand.executeGet((ServerCommandSource)context.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)context), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)context, "path"), DoubleArgumentType.getDouble((CommandContext)context, (String)"scale")))))))).then(objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("remove"), builder -> builder.then(CommandManager.argument("path", NbtPathArgumentType.nbtPath()).executes(context -> DataCommand.executeRemove((ServerCommandSource)context.getSource(), objectType.getObject((CommandContext<ServerCommandSource>)context), NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)context, "path"))))))).then(DataCommand.addModifyArgument((builder, modifier) -> builder.then(CommandManager.literal("insert").then(CommandManager.argument("index", IntegerArgumentType.integer()).then(modifier.create((context, sourceNbt, path, elements) -> {
+                int i = IntegerArgumentType.getInteger((CommandContext)context, (String)"index");
+                return DataCommand.executeInsert(i, sourceNbt, path, elements);
+            })))).then(CommandManager.literal("prepend").then(modifier.create((context, sourceNbt, path, elements) -> DataCommand.executeInsert(0, sourceNbt, path, elements)))).then(CommandManager.literal("append").then(modifier.create((context, sourceNbt, path, elements) -> DataCommand.executeInsert(-1, sourceNbt, path, elements)))).then(CommandManager.literal("set").then(modifier.create((context, sourceNbt, path, elements) -> path.put((NbtElement)sourceNbt, ((NbtElement)Iterables.getLast((Iterable)elements))::copy)))).then(CommandManager.literal("merge").then(modifier.create((context, sourceNbt, path, elements) -> {
+                List<NbtElement> collection = path.getOrInit(sourceNbt, NbtCompound::new);
                 int i = 0;
                 for (NbtElement nbtElement : collection) {
                     if (!(nbtElement instanceof NbtCompound)) {
                         throw MODIFY_EXPECTED_OBJECT_EXCEPTION.create((Object)nbtElement);
                     }
-                    NbtCompound nbtCompound2 = (NbtCompound)nbtElement;
-                    NbtCompound nbtCompound3 = nbtCompound2.copy();
-                    for (NbtElement nbtElement2 : list) {
+                    NbtCompound nbtCompound = (NbtCompound)nbtElement;
+                    NbtCompound nbtCompound2 = nbtCompound.copy();
+                    for (NbtElement nbtElement2 : elements) {
                         if (!(nbtElement2 instanceof NbtCompound)) {
                             throw MODIFY_EXPECTED_OBJECT_EXCEPTION.create((Object)nbtElement2);
                         }
-                        nbtCompound2.copyFrom((NbtCompound)nbtElement2);
+                        nbtCompound.copyFrom((NbtCompound)nbtElement2);
                     }
-                    i += nbtCompound3.equals(nbtCompound2) ? 0 : 1;
+                    i += nbtCompound2.equals(nbtCompound) ? 0 : 1;
                 }
                 return i;
             })))));
@@ -123,24 +123,24 @@ public class DataCommand {
     private static ArgumentBuilder<ServerCommandSource, ?> addModifyArgument(BiConsumer<ArgumentBuilder<ServerCommandSource, ?>, ModifyArgumentCreator> subArgumentAdder) {
         LiteralArgumentBuilder<ServerCommandSource> literalArgumentBuilder = CommandManager.literal("modify");
         for (ObjectType objectType : TARGET_OBJECT_TYPES) {
-            objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)literalArgumentBuilder, argumentBuilder -> {
-                RequiredArgumentBuilder<ServerCommandSource, NbtPathArgumentType.NbtPath> argumentBuilder2 = CommandManager.argument("targetPath", NbtPathArgumentType.nbtPath());
+            objectType.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)literalArgumentBuilder, builder -> {
+                RequiredArgumentBuilder<ServerCommandSource, NbtPathArgumentType.NbtPath> argumentBuilder = CommandManager.argument("targetPath", NbtPathArgumentType.nbtPath());
                 for (ObjectType objectType2 : SOURCE_OBJECT_TYPES) {
-                    subArgumentAdder.accept((ArgumentBuilder<ServerCommandSource, ?>)argumentBuilder2, modifyOperation -> objectType2.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("from"), argumentBuilder -> argumentBuilder.executes(commandContext -> {
-                        List<NbtElement> list = Collections.singletonList(objectType2.getObject((CommandContext<ServerCommandSource>)commandContext).getNbt());
-                        return DataCommand.executeModify((CommandContext<ServerCommandSource>)commandContext, objectType, modifyOperation, list);
-                    }).then(CommandManager.argument("sourcePath", NbtPathArgumentType.nbtPath()).executes(commandContext -> {
-                        DataCommandObject dataCommandObject = objectType2.getObject((CommandContext<ServerCommandSource>)commandContext);
-                        NbtPathArgumentType.NbtPath nbtPath = NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)commandContext, "sourcePath");
+                    subArgumentAdder.accept((ArgumentBuilder<ServerCommandSource, ?>)argumentBuilder, modifier -> objectType2.addArgumentsToBuilder((ArgumentBuilder<ServerCommandSource, ?>)CommandManager.literal("from"), builder -> builder.executes(context -> {
+                        List<NbtElement> list = Collections.singletonList(objectType2.getObject((CommandContext<ServerCommandSource>)context).getNbt());
+                        return DataCommand.executeModify((CommandContext<ServerCommandSource>)context, objectType, modifier, list);
+                    }).then(CommandManager.argument("sourcePath", NbtPathArgumentType.nbtPath()).executes(context -> {
+                        DataCommandObject dataCommandObject = objectType2.getObject((CommandContext<ServerCommandSource>)context);
+                        NbtPathArgumentType.NbtPath nbtPath = NbtPathArgumentType.getNbtPath((CommandContext<ServerCommandSource>)context, "sourcePath");
                         List<NbtElement> list = nbtPath.get(dataCommandObject.getNbt());
-                        return DataCommand.executeModify((CommandContext<ServerCommandSource>)commandContext, objectType, modifyOperation, list);
+                        return DataCommand.executeModify((CommandContext<ServerCommandSource>)context, objectType, modifier, list);
                     }))));
                 }
-                subArgumentAdder.accept((ArgumentBuilder<ServerCommandSource, ?>)argumentBuilder2, modifyOperation -> (LiteralArgumentBuilder)CommandManager.literal("value").then(CommandManager.argument("value", NbtElementArgumentType.nbtElement()).executes(commandContext -> {
-                    List<NbtElement> list = Collections.singletonList(NbtElementArgumentType.getNbtElement(commandContext, "value"));
-                    return DataCommand.executeModify((CommandContext<ServerCommandSource>)commandContext, objectType, modifyOperation, list);
+                subArgumentAdder.accept((ArgumentBuilder<ServerCommandSource, ?>)argumentBuilder, modifier -> CommandManager.literal("value").then(CommandManager.argument("value", NbtElementArgumentType.nbtElement()).executes(context -> {
+                    List<NbtElement> list = Collections.singletonList(NbtElementArgumentType.getNbtElement(context, "value"));
+                    return DataCommand.executeModify((CommandContext<ServerCommandSource>)context, objectType, modifier, list);
                 })));
-                return argumentBuilder.then(argumentBuilder2);
+                return builder.then(argumentBuilder);
             });
         }
         return literalArgumentBuilder;
@@ -230,12 +230,12 @@ public class DataCommand {
         public ArgumentBuilder<ServerCommandSource, ?> addArgumentsToBuilder(ArgumentBuilder<ServerCommandSource, ?> var1, Function<ArgumentBuilder<ServerCommandSource, ?>, ArgumentBuilder<ServerCommandSource, ?>> var2);
     }
 
-    static interface ModifyArgumentCreator {
-        public ArgumentBuilder<ServerCommandSource, ?> create(ModifyOperation var1);
-    }
-
     static interface ModifyOperation {
         public int modify(CommandContext<ServerCommandSource> var1, NbtCompound var2, NbtPathArgumentType.NbtPath var3, List<NbtElement> var4) throws CommandSyntaxException;
+    }
+
+    static interface ModifyArgumentCreator {
+        public ArgumentBuilder<ServerCommandSource, ?> create(ModifyOperation var1);
     }
 }
 

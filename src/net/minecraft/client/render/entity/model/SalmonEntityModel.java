@@ -2,67 +2,54 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class SalmonEntityModel<T extends Entity>
-extends CompositeEntityModel<T> {
-    private final ModelPart torso;
+extends SinglePartEntityModel<T> {
+    private static final String BODY_FRONT = "body_front";
+    private static final String BODY_BACK = "body_back";
+    private final ModelPart root;
     private final ModelPart tail;
-    private final ModelPart head;
-    private final ModelPart rightFin;
-    private final ModelPart leftFin;
 
-    public SalmonEntityModel() {
-        this.textureWidth = 32;
-        this.textureHeight = 32;
+    public SalmonEntityModel(ModelPart root) {
+        this.root = root;
+        this.tail = root.getChild(BODY_BACK);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
         int i = 20;
-        this.torso = new ModelPart(this, 0, 0);
-        this.torso.addCuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f);
-        this.torso.setPivot(0.0f, 20.0f, 0.0f);
-        this.tail = new ModelPart(this, 0, 13);
-        this.tail.addCuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f);
-        this.tail.setPivot(0.0f, 20.0f, 8.0f);
-        this.head = new ModelPart(this, 22, 0);
-        this.head.addCuboid(-1.0f, -2.0f, -3.0f, 2.0f, 4.0f, 3.0f);
-        this.head.setPivot(0.0f, 20.0f, 0.0f);
-        ModelPart modelPart = new ModelPart(this, 20, 10);
-        modelPart.addCuboid(0.0f, -2.5f, 0.0f, 0.0f, 5.0f, 6.0f);
-        modelPart.setPivot(0.0f, 0.0f, 8.0f);
-        this.tail.addChild(modelPart);
-        ModelPart modelPart2 = new ModelPart(this, 2, 1);
-        modelPart2.addCuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 3.0f);
-        modelPart2.setPivot(0.0f, -4.5f, 5.0f);
-        this.torso.addChild(modelPart2);
-        ModelPart modelPart3 = new ModelPart(this, 0, 2);
-        modelPart3.addCuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 4.0f);
-        modelPart3.setPivot(0.0f, -4.5f, -1.0f);
-        this.tail.addChild(modelPart3);
-        this.rightFin = new ModelPart(this, -4, 0);
-        this.rightFin.addCuboid(-2.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f);
-        this.rightFin.setPivot(-1.5f, 21.5f, 0.0f);
-        this.rightFin.roll = -0.7853982f;
-        this.leftFin = new ModelPart(this, 0, 0);
-        this.leftFin.addCuboid(0.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f);
-        this.leftFin.setPivot(1.5f, 21.5f, 0.0f);
-        this.leftFin.roll = 0.7853982f;
+        ModelPartData modelPartData2 = modelPartData.addChild(BODY_FRONT, ModelPartBuilder.create().uv(0, 0).cuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f), ModelTransform.pivot(0.0f, 20.0f, 0.0f));
+        ModelPartData modelPartData3 = modelPartData.addChild(BODY_BACK, ModelPartBuilder.create().uv(0, 13).cuboid(-1.5f, -2.5f, 0.0f, 3.0f, 5.0f, 8.0f), ModelTransform.pivot(0.0f, 20.0f, 8.0f));
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(22, 0).cuboid(-1.0f, -2.0f, -3.0f, 2.0f, 4.0f, 3.0f), ModelTransform.pivot(0.0f, 20.0f, 0.0f));
+        modelPartData3.addChild("back_fin", ModelPartBuilder.create().uv(20, 10).cuboid(0.0f, -2.5f, 0.0f, 0.0f, 5.0f, 6.0f), ModelTransform.pivot(0.0f, 0.0f, 8.0f));
+        modelPartData2.addChild("top_front_fin", ModelPartBuilder.create().uv(2, 1).cuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 3.0f), ModelTransform.pivot(0.0f, -4.5f, 5.0f));
+        modelPartData3.addChild("top_back_fin", ModelPartBuilder.create().uv(0, 2).cuboid(0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 4.0f), ModelTransform.pivot(0.0f, -4.5f, -1.0f));
+        modelPartData.addChild("right_fin", ModelPartBuilder.create().uv(-4, 0).cuboid(-2.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f), ModelTransform.of(-1.5f, 21.5f, 0.0f, 0.0f, 0.0f, -0.7853982f));
+        modelPartData.addChild("left_fin", ModelPartBuilder.create().uv(0, 0).cuboid(0.0f, 0.0f, 0.0f, 2.0f, 0.0f, 2.0f), ModelTransform.of(1.5f, 21.5f, 0.0f, 0.0f, 0.0f, 0.7853982f));
+        return TexturedModelData.of(modelData, 32, 32);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.torso, (Object)this.tail, (Object)this.head, (Object)this.rightFin, (Object)this.leftFin);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override

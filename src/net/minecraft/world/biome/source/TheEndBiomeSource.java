@@ -7,8 +7,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome.source;
 
@@ -18,8 +16,6 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.dynamic.RegistryLookupCodec;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
@@ -32,6 +28,9 @@ import net.minecraft.world.gen.ChunkRandom;
 public class TheEndBiomeSource
 extends BiomeSource {
     public static final Codec<TheEndBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RegistryLookupCodec.of(Registry.BIOME_KEY).forGetter(theEndBiomeSource -> theEndBiomeSource.biomeRegistry), (App)Codec.LONG.fieldOf("seed").stable().forGetter(theEndBiomeSource -> theEndBiomeSource.seed)).apply((Applicative)instance, instance.stable(TheEndBiomeSource::new)));
+    private static final float field_30985 = -0.9f;
+    public static final int field_30984 = 64;
+    private static final long field_30986 = 4096L;
     private final SimplexNoiseSampler noise;
     private final Registry<Biome> biomeRegistry;
     private final long seed;
@@ -55,7 +54,7 @@ extends BiomeSource {
         this.smallIslandsBiome = smallIslandsBiome;
         this.barrensBiome = barrensBiome;
         ChunkRandom chunkRandom = new ChunkRandom(seed);
-        chunkRandom.consume(17292);
+        chunkRandom.skip(17292);
         this.noise = new SimplexNoiseSampler(chunkRandom);
     }
 
@@ -65,7 +64,6 @@ extends BiomeSource {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public BiomeSource withSeed(long seed) {
         return new TheEndBiomeSource(this.biomeRegistry, seed, this.centerBiome, this.highlandsBiome, this.midlandsBiome, this.smallIslandsBiome, this.barrensBiome);
     }

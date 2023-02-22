@@ -3,26 +3,31 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
- *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
+ *  com.mojang.datafixers.util.Pair
  */
 package net.minecraft.item;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.mojang.datafixers.util.Pair;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemConvertible;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
+import net.minecraft.item.Items;
 import net.minecraft.item.MiningToolItem;
 import net.minecraft.item.ToolMaterial;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -30,23 +35,27 @@ import net.minecraft.world.World;
 
 public class HoeItem
 extends MiningToolItem {
-    private static final Set<Block> EFFECTIVE_BLOCKS = ImmutableSet.of((Object)Blocks.NETHER_WART_BLOCK, (Object)Blocks.WARPED_WART_BLOCK, (Object)Blocks.HAY_BLOCK, (Object)Blocks.DRIED_KELP_BLOCK, (Object)Blocks.TARGET, (Object)Blocks.SHROOMLIGHT, (Object[])new Block[]{Blocks.SPONGE, Blocks.WET_SPONGE, Blocks.JUNGLE_LEAVES, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.ACACIA_LEAVES, Blocks.BIRCH_LEAVES});
-    protected static final Map<Block, BlockState> TILLED_BLOCKS = Maps.newHashMap((Map)ImmutableMap.of((Object)Blocks.GRASS_BLOCK, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.GRASS_PATH, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.DIRT, (Object)Blocks.FARMLAND.getDefaultState(), (Object)Blocks.COARSE_DIRT, (Object)Blocks.DIRT.getDefaultState()));
+    protected static final Map<Block, Pair<Predicate<ItemUsageContext>, Consumer<ItemUsageContext>>> TILLING_ACTIONS = Maps.newHashMap((Map)ImmutableMap.of((Object)Blocks.GRASS_BLOCK, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.DIRT_PATH, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.DIRT, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.FARMLAND.getDefaultState())), (Object)Blocks.COARSE_DIRT, (Object)Pair.of(HoeItem::canTillFarmland, HoeItem.createTillAction(Blocks.DIRT.getDefaultState())), (Object)Blocks.ROOTED_DIRT, (Object)Pair.of(itemUsageContext -> true, HoeItem.createTillAndDropAction(Blocks.DIRT.getDefaultState(), Items.HANGING_ROOTS))));
 
     protected HoeItem(ToolMaterial material, int attackDamage, float attackSpeed, Item.Settings settings) {
-        super(attackDamage, attackSpeed, material, EFFECTIVE_BLOCKS, settings);
+        super(attackDamage, attackSpeed, material, BlockTags.HOE_MINEABLE, settings);
     }
 
     @Override
     public ActionResult useOnBlock(ItemUsageContext context) {
-        BlockState blockState;
+        BlockPos blockPos;
         World world = context.getWorld();
-        BlockPos blockPos = context.getBlockPos();
-        if (context.getSide() != Direction.DOWN && world.getBlockState(blockPos.up()).isAir() && (blockState = TILLED_BLOCKS.get(world.getBlockState(blockPos).getBlock())) != null) {
+        Pair<Predicate<ItemUsageContext>, Consumer<ItemUsageContext>> pair = TILLING_ACTIONS.get(world.getBlockState(blockPos = context.getBlockPos()).getBlock());
+        if (pair == null) {
+            return ActionResult.PASS;
+        }
+        Predicate predicate = (Predicate)pair.getFirst();
+        Consumer consumer = (Consumer)pair.getSecond();
+        if (predicate.test(context)) {
             PlayerEntity playerEntity = context.getPlayer();
             world.playSound(playerEntity, blockPos, SoundEvents.ITEM_HOE_TILL, SoundCategory.BLOCKS, 1.0f, 1.0f);
             if (!world.isClient) {
-                world.setBlockState(blockPos, blockState, 11);
+                consumer.accept(context);
                 if (playerEntity != null) {
                     context.getStack().damage(1, playerEntity, p -> p.sendToolBreakStatus(context.getHand()));
                 }
@@ -54,6 +63,21 @@ extends MiningToolItem {
             return ActionResult.success(world.isClient);
         }
         return ActionResult.PASS;
+    }
+
+    public static Consumer<ItemUsageContext> createTillAction(BlockState result) {
+        return context -> context.getWorld().setBlockState(context.getBlockPos(), result, 11);
+    }
+
+    public static Consumer<ItemUsageContext> createTillAndDropAction(BlockState result, ItemConvertible droppedItem) {
+        return context -> {
+            context.getWorld().setBlockState(context.getBlockPos(), result, 11);
+            Block.dropStack(context.getWorld(), context.getBlockPos(), context.getSide(), new ItemStack(droppedItem));
+        };
+    }
+
+    public static boolean canTillFarmland(ItemUsageContext context) {
+        return context.getSide() != Direction.DOWN && context.getWorld().getBlockState(context.getBlockPos().up()).isAir();
     }
 }
 

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -23,19 +17,15 @@ import net.minecraft.world.explosion.Explosion;
 
 public class FireballEntity
 extends AbstractFireballEntity {
-    public int explosionPower = 1;
+    private int explosionPower = 1;
 
     public FireballEntity(EntityType<? extends FireballEntity> entityType, World world) {
         super((EntityType<? extends AbstractFireballEntity>)entityType, world);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public FireballEntity(World world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        super((EntityType<? extends AbstractFireballEntity>)EntityType.FIREBALL, x, y, z, velocityX, velocityY, velocityZ, world);
-    }
-
-    public FireballEntity(World world, LivingEntity owner, double velocityX, double velocityY, double velocityZ) {
+    public FireballEntity(World world, LivingEntity owner, double velocityX, double velocityY, double velocityZ, int explosionPower) {
         super((EntityType<? extends AbstractFireballEntity>)EntityType.FIREBALL, owner, velocityX, velocityY, velocityZ, world);
+        this.explosionPower = explosionPower;
     }
 
     @Override
@@ -44,7 +34,7 @@ extends AbstractFireballEntity {
         if (!this.world.isClient) {
             boolean bl = this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING);
             this.world.createExplosion(null, this.getX(), this.getY(), this.getZ(), this.explosionPower, bl, bl ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE);
-            this.remove();
+            this.discard();
         }
     }
 
@@ -58,21 +48,21 @@ extends AbstractFireballEntity {
         Entity entity2 = this.getOwner();
         entity.damage(DamageSource.fireball(this, entity2), 6.0f);
         if (entity2 instanceof LivingEntity) {
-            this.dealDamage((LivingEntity)entity2, entity);
+            this.applyDamageEffects((LivingEntity)entity2, entity);
         }
     }
 
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putInt("ExplosionPower", this.explosionPower);
+        nbt.putByte("ExplosionPower", (byte)this.explosionPower);
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("ExplosionPower", 99)) {
-            this.explosionPower = nbt.getInt("ExplosionPower");
+            this.explosionPower = nbt.getByte("ExplosionPower");
         }
     }
 }

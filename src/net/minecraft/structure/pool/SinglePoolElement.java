@@ -45,6 +45,7 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -53,7 +54,7 @@ public class SinglePoolElement
 extends StructurePoolElement {
     private static final Codec<Either<Identifier, Structure>> field_24951 = Codec.of(SinglePoolElement::method_28877, (Decoder)Identifier.CODEC.map(Either::left));
     public static final Codec<SinglePoolElement> field_24952 = RecordCodecBuilder.create(instance -> instance.group(SinglePoolElement.method_28882(), SinglePoolElement.method_28880(), SinglePoolElement.method_28883()).apply((Applicative)instance, SinglePoolElement::new));
-    protected final Either<Identifier, Structure> field_24015;
+    protected final Either<Identifier, Structure> location;
     protected final Supplier<StructureProcessorList> processors;
 
     private static <T> DataResult<T> method_28877(Either<Identifier, Structure> either, DynamicOps<T> dynamicOps, T object) {
@@ -61,7 +62,7 @@ extends StructurePoolElement {
         if (!optional.isPresent()) {
             return DataResult.error((String)"Can not serialize a runtime pool element");
         }
-        return Identifier.CODEC.encode(optional.get(), dynamicOps, object);
+        return Identifier.CODEC.encode((Object)((Identifier)optional.get()), dynamicOps, object);
     }
 
     protected static <E extends SinglePoolElement> RecordCodecBuilder<E, Supplier<StructureProcessorList>> method_28880() {
@@ -69,21 +70,27 @@ extends StructurePoolElement {
     }
 
     protected static <E extends SinglePoolElement> RecordCodecBuilder<E, Either<Identifier, Structure>> method_28882() {
-        return field_24951.fieldOf("location").forGetter(singlePoolElement -> singlePoolElement.field_24015);
+        return field_24951.fieldOf("location").forGetter(singlePoolElement -> singlePoolElement.location);
     }
 
-    protected SinglePoolElement(Either<Identifier, Structure> either, Supplier<StructureProcessorList> supplier, StructurePool.Projection projection) {
+    protected SinglePoolElement(Either<Identifier, Structure> location, Supplier<StructureProcessorList> processors, StructurePool.Projection projection) {
         super(projection);
-        this.field_24015 = either;
-        this.processors = supplier;
+        this.location = location;
+        this.processors = processors;
     }
 
     public SinglePoolElement(Structure structure) {
         this((Either<Identifier, Structure>)Either.right((Object)structure), () -> StructureProcessorLists.EMPTY, StructurePool.Projection.RIGID);
     }
 
+    @Override
+    public Vec3i getStart(StructureManager structureManager, BlockRotation rotation) {
+        Structure structure = this.method_27233(structureManager);
+        return structure.getRotatedSize(rotation);
+    }
+
     private Structure method_27233(StructureManager structureManager) {
-        return (Structure)this.field_24015.map(structureManager::getStructureOrBlank, Function.identity());
+        return (Structure)this.location.map(structureManager::getStructureOrBlank, Function.identity());
     }
 
     public List<Structure.StructureBlockInfo> getDataStructureBlocks(StructureManager structureManager, BlockPos pos, BlockRotation rotation, boolean mirroredAndRotated) {
@@ -92,7 +99,7 @@ extends StructurePoolElement {
         ArrayList list2 = Lists.newArrayList();
         for (Structure.StructureBlockInfo structureBlockInfo : list) {
             StructureBlockMode structureBlockMode;
-            if (structureBlockInfo.tag == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.tag.getString("mode"))) != StructureBlockMode.DATA) continue;
+            if (structureBlockInfo.nbt == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt.getString("mode"))) != StructureBlockMode.DATA) continue;
             list2.add(structureBlockInfo);
         }
         return list2;
@@ -148,7 +155,7 @@ extends StructurePoolElement {
     }
 
     public String toString() {
-        return "Single[" + this.field_24015 + "]";
+        return "Single[" + this.location + "]";
     }
 }
 

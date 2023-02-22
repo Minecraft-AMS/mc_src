@@ -35,15 +35,19 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.feature.EndSpikeFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class EndSpikeFeature
 extends Feature<EndSpikeFeatureConfig> {
+    public static final int field_31516 = 10;
+    private static final int field_31517 = 42;
     private static final LoadingCache<Long, List<Spike>> CACHE = CacheBuilder.newBuilder().expireAfterWrite(5L, TimeUnit.MINUTES).build((CacheLoader)new SpikeCache());
 
     public EndSpikeFeature(Codec<EndSpikeFeatureConfig> codec) {
@@ -57,7 +61,11 @@ extends Feature<EndSpikeFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, EndSpikeFeatureConfig endSpikeFeatureConfig) {
+    public boolean generate(FeatureContext<EndSpikeFeatureConfig> context) {
+        EndSpikeFeatureConfig endSpikeFeatureConfig = context.getConfig();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        Random random = context.getRandom();
+        BlockPos blockPos = context.getOrigin();
         List<Spike> list = endSpikeFeatureConfig.getSpikes();
         if (list.isEmpty()) {
             list = EndSpikeFeature.getSpikes(structureWorldAccess);
@@ -71,7 +79,7 @@ extends Feature<EndSpikeFeatureConfig> {
 
     private void generateSpike(ServerWorldAccess world, Random random, EndSpikeFeatureConfig config, Spike spike) {
         int i = spike.getRadius();
-        for (BlockPos blockPos : BlockPos.iterate(new BlockPos(spike.getCenterX() - i, 0, spike.getCenterZ() - i), new BlockPos(spike.getCenterX() + i, spike.getHeight() + 10, spike.getCenterZ() + i))) {
+        for (BlockPos blockPos : BlockPos.iterate(new BlockPos(spike.getCenterX() - i, world.getBottomY(), spike.getCenterZ() - i), new BlockPos(spike.getCenterX() + i, spike.getHeight() + 10, spike.getCenterZ() + i))) {
             if (blockPos.getSquaredDistance(spike.getCenterX(), blockPos.getY(), spike.getCenterZ(), false) <= (double)(i * i + 1) && blockPos.getY() < spike.getHeight()) {
                 this.setBlockState(world, blockPos, Blocks.OBSIDIAN.getDefaultState());
                 continue;
@@ -108,32 +116,6 @@ extends Feature<EndSpikeFeatureConfig> {
         this.setBlockState(world, new BlockPos(spike.getCenterX(), spike.getHeight(), spike.getCenterZ()), Blocks.BEDROCK.getDefaultState());
     }
 
-    static class SpikeCache
-    extends CacheLoader<Long, List<Spike>> {
-        private SpikeCache() {
-        }
-
-        public List<Spike> load(Long long_) {
-            List list = IntStream.range(0, 10).boxed().collect(Collectors.toList());
-            Collections.shuffle(list, new Random(long_));
-            ArrayList list2 = Lists.newArrayList();
-            for (int i = 0; i < 10; ++i) {
-                int j = MathHelper.floor(42.0 * Math.cos(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
-                int k = MathHelper.floor(42.0 * Math.sin(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
-                int l = (Integer)list.get(i);
-                int m = 2 + l / 3;
-                int n = 76 + l * 3;
-                boolean bl = l == 1 || l == 2;
-                list2.add(new Spike(j, k, m, n, bl));
-            }
-            return list2;
-        }
-
-        public /* synthetic */ Object load(Object object) throws Exception {
-            return this.load((Long)object);
-        }
-    }
-
     public static class Spike {
         public static final Codec<Spike> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("centerX").orElse((Object)0).forGetter(spike -> spike.centerX), (App)Codec.INT.fieldOf("centerZ").orElse((Object)0).forGetter(spike -> spike.centerZ), (App)Codec.INT.fieldOf("radius").orElse((Object)0).forGetter(spike -> spike.radius), (App)Codec.INT.fieldOf("height").orElse((Object)0).forGetter(spike -> spike.height), (App)Codec.BOOL.fieldOf("guarded").orElse((Object)false).forGetter(spike -> spike.guarded)).apply((Applicative)instance, Spike::new));
         private final int centerX;
@@ -149,11 +131,11 @@ extends Feature<EndSpikeFeatureConfig> {
             this.radius = radius;
             this.height = height;
             this.guarded = guarded;
-            this.boundingBox = new Box(centerX - radius, 0.0, centerZ - radius, centerX + radius, 256.0, centerZ + radius);
+            this.boundingBox = new Box(centerX - radius, DimensionType.MIN_HEIGHT, centerZ - radius, centerX + radius, DimensionType.MAX_COLUMN_HEIGHT, centerZ + radius);
         }
 
         public boolean isInChunk(BlockPos pos) {
-            return pos.getX() >> 4 == this.centerX >> 4 && pos.getZ() >> 4 == this.centerZ >> 4;
+            return ChunkSectionPos.getSectionCoord(pos.getX()) == ChunkSectionPos.getSectionCoord(this.centerX) && ChunkSectionPos.getSectionCoord(pos.getZ()) == ChunkSectionPos.getSectionCoord(this.centerZ);
         }
 
         public int getCenterX() {
@@ -178,6 +160,32 @@ extends Feature<EndSpikeFeatureConfig> {
 
         public Box getBoundingBox() {
             return this.boundingBox;
+        }
+    }
+
+    static class SpikeCache
+    extends CacheLoader<Long, List<Spike>> {
+        SpikeCache() {
+        }
+
+        public List<Spike> load(Long long_) {
+            List list = IntStream.range(0, 10).boxed().collect(Collectors.toList());
+            Collections.shuffle(list, new Random(long_));
+            ArrayList list2 = Lists.newArrayList();
+            for (int i = 0; i < 10; ++i) {
+                int j = MathHelper.floor(42.0 * Math.cos(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
+                int k = MathHelper.floor(42.0 * Math.sin(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
+                int l = (Integer)list.get(i);
+                int m = 2 + l / 3;
+                int n = 76 + l * 3;
+                boolean bl = l == 1 || l == 2;
+                list2.add(new Spike(j, k, m, n, bl));
+            }
+            return list2;
+        }
+
+        public /* synthetic */ Object load(Object seed) throws Exception {
+            return this.load((Long)seed);
         }
     }
 }

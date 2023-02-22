@@ -2,15 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.Advancement;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -20,38 +15,30 @@ import org.jetbrains.annotations.Nullable;
 
 public class AdvancementTabC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private Action action;
-    private Identifier tabToOpen;
+    private final Action action;
+    @Nullable
+    private final Identifier tabToOpen;
 
-    public AdvancementTabC2SPacket() {
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public AdvancementTabC2SPacket(Action action, @Nullable Identifier tab) {
         this.action = action;
         this.tabToOpen = tab;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static AdvancementTabC2SPacket open(Advancement advancement) {
         return new AdvancementTabC2SPacket(Action.OPENED_TAB, advancement.getId());
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static AdvancementTabC2SPacket close() {
         return new AdvancementTabC2SPacket(Action.CLOSED_SCREEN, null);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public AdvancementTabC2SPacket(PacketByteBuf buf) {
         this.action = buf.readEnumConstant(Action.class);
-        if (this.action == Action.OPENED_TAB) {
-            this.tabToOpen = buf.readIdentifier();
-        }
+        this.tabToOpen = this.action == Action.OPENED_TAB ? buf.readIdentifier() : null;
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeEnumConstant(this.action);
         if (this.action == Action.OPENED_TAB) {
             buf.writeIdentifier(this.tabToOpen);
@@ -67,14 +54,32 @@ implements Packet<ServerPlayPacketListener> {
         return this.action;
     }
 
+    @Nullable
     public Identifier getTabToOpen() {
         return this.tabToOpen;
     }
 
-    public static enum Action {
-        OPENED_TAB,
-        CLOSED_SCREEN;
+    public static final class Action
+    extends Enum<Action> {
+        public static final /* enum */ Action OPENED_TAB = new Action();
+        public static final /* enum */ Action CLOSED_SCREEN = new Action();
+        private static final /* synthetic */ Action[] field_13022;
 
+        public static Action[] values() {
+            return (Action[])field_13022.clone();
+        }
+
+        public static Action valueOf(String string) {
+            return Enum.valueOf(Action.class, string);
+        }
+
+        private static /* synthetic */ Action[] method_36962() {
+            return new Action[]{OPENED_TAB, CLOSED_SCREEN};
+        }
+
+        static {
+            field_13022 = Action.method_36962();
+        }
     }
 }
 

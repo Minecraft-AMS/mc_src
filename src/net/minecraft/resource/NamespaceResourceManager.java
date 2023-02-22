@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
@@ -26,8 +24,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceImpl;
 import net.minecraft.resource.ResourceManager;
@@ -39,7 +35,7 @@ import org.apache.logging.log4j.Logger;
 
 public class NamespaceResourceManager
 implements ResourceManager {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
     protected final List<ResourcePack> packList = Lists.newArrayList();
     private final ResourceType type;
     private final String namespace;
@@ -54,7 +50,6 @@ implements ResourceManager {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Set<String> getAllNamespaces() {
         return ImmutableSet.of((Object)this.namespace);
     }
@@ -80,7 +75,6 @@ implements ResourceManager {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean containsResource(Identifier id) {
         if (!this.isPathAbsolute(id)) {
             return false;
@@ -135,7 +129,6 @@ implements ResourceManager {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Stream<ResourcePack> streamResourcePacks() {
         return this.packList.stream();
     }

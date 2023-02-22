@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Sets
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.entity.ai.goal;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -40,6 +42,7 @@ public class GoalSelector {
     private final Set<PrioritizedGoal> goals = Sets.newLinkedHashSet();
     private final Supplier<Profiler> profiler;
     private final EnumSet<Goal.Control> disabledControls = EnumSet.noneOf(Goal.Control.class);
+    private int field_30212;
     private int timeInterval = 3;
 
     public GoalSelector(Supplier<Profiler> profiler) {
@@ -48,6 +51,11 @@ public class GoalSelector {
 
     public void add(int priority, Goal goal) {
         this.goals.add(new PrioritizedGoal(priority, goal));
+    }
+
+    @VisibleForTesting
+    public void clear() {
+        this.goals.clear();
     }
 
     public void remove(Goal goal) {
@@ -85,8 +93,16 @@ public class GoalSelector {
         profiler.pop();
     }
 
+    public Set<PrioritizedGoal> getGoals() {
+        return this.goals;
+    }
+
     public Stream<PrioritizedGoal> getRunningGoals() {
         return this.goals.stream().filter(PrioritizedGoal::isRunning);
+    }
+
+    public void setTimeInterval(int timeInterval) {
+        this.timeInterval = timeInterval;
     }
 
     public void disableControl(Goal.Control control) {

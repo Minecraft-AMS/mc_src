@@ -11,15 +11,21 @@ package net.minecraft.client.render.entity;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EndCrystalEntityRenderer;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.util.Identifier;
@@ -41,11 +47,12 @@ extends EntityRenderer<EnderDragonEntity> {
     private static final RenderLayer DRAGON_EYES = RenderLayer.getEyes(EYE_TEXTURE);
     private static final RenderLayer CRYSTAL_BEAM_LAYER = RenderLayer.getEntitySmoothCutout(CRYSTAL_BEAM_TEXTURE);
     private static final float HALF_SQRT_3 = (float)(Math.sqrt(3.0) / 2.0);
-    private final DragonEntityModel model = new DragonEntityModel();
+    private final DragonEntityModel model;
 
-    public EnderDragonEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public EnderDragonEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
         this.shadowRadius = 0.5f;
+        this.model = new DragonEntityModel(context.getPart(EntityModelLayers.ENDER_DRAGON));
     }
 
     @Override
@@ -62,8 +69,8 @@ extends EntityRenderer<EnderDragonEntity> {
         this.model.animateModel(enderDragonEntity, 0.0f, 0.0f, g);
         if (enderDragonEntity.ticksSinceDeath > 0) {
             float k = (float)enderDragonEntity.ticksSinceDeath / 200.0f;
-            VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityAlpha(EXPLOSION_TEXTURE, k));
-            this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
+            VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getEntityAlpha(EXPLOSION_TEXTURE));
+            this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, k);
             VertexConsumer vertexConsumer2 = vertexConsumerProvider.getBuffer(DRAGON_DECAL);
             this.model.render(matrixStack, vertexConsumer2, i, OverlayTexture.getUv(0.0f, bl), 1.0f, 1.0f, 1.0f, 1.0f);
         } else {
@@ -118,7 +125,6 @@ extends EntityRenderer<EnderDragonEntity> {
 
     private static void method_23157(VertexConsumer vertices, Matrix4f matrix, int alpha) {
         vertices.vertex(matrix, 0.0f, 0.0f, 0.0f).color(255, 255, 255, alpha).next();
-        vertices.vertex(matrix, 0.0f, 0.0f, 0.0f).color(255, 255, 255, alpha).next();
     }
 
     private static void method_23156(VertexConsumer vertices, Matrix4f matrix, float y, float x) {
@@ -170,6 +176,33 @@ extends EntityRenderer<EnderDragonEntity> {
         return TEXTURE;
     }
 
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        float f = -16.0f;
+        ModelPartData modelPartData2 = modelPartData.addChild("head", ModelPartBuilder.create().cuboid("upperlip", -6.0f, -1.0f, -24.0f, 12, 5, 16, 176, 44).cuboid("upperhead", -8.0f, -8.0f, -10.0f, 16, 16, 16, 112, 30).mirrored().cuboid("scale", -5.0f, -12.0f, -4.0f, 2, 4, 6, 0, 0).cuboid("nostril", -5.0f, -3.0f, -22.0f, 2, 2, 4, 112, 0).mirrored().cuboid("scale", 3.0f, -12.0f, -4.0f, 2, 4, 6, 0, 0).cuboid("nostril", 3.0f, -3.0f, -22.0f, 2, 2, 4, 112, 0), ModelTransform.NONE);
+        modelPartData2.addChild("jaw", ModelPartBuilder.create().cuboid("jaw", -6.0f, 0.0f, -16.0f, 12, 4, 16, 176, 65), ModelTransform.pivot(0.0f, 4.0f, -8.0f));
+        modelPartData.addChild("neck", ModelPartBuilder.create().cuboid("box", -5.0f, -5.0f, -5.0f, 10, 10, 10, 192, 104).cuboid("scale", -1.0f, -9.0f, -3.0f, 2, 4, 6, 48, 0), ModelTransform.NONE);
+        modelPartData.addChild("body", ModelPartBuilder.create().cuboid("body", -12.0f, 0.0f, -16.0f, 24, 24, 64, 0, 0).cuboid("scale", -1.0f, -6.0f, -10.0f, 2, 6, 12, 220, 53).cuboid("scale", -1.0f, -6.0f, 10.0f, 2, 6, 12, 220, 53).cuboid("scale", -1.0f, -6.0f, 30.0f, 2, 6, 12, 220, 53), ModelTransform.pivot(0.0f, 4.0f, 8.0f));
+        ModelPartData modelPartData3 = modelPartData.addChild("left_wing", ModelPartBuilder.create().mirrored().cuboid("bone", 0.0f, -4.0f, -4.0f, 56, 8, 8, 112, 88).cuboid("skin", 0.0f, 0.0f, 2.0f, 56, 0, 56, -56, 88), ModelTransform.pivot(12.0f, 5.0f, 2.0f));
+        modelPartData3.addChild("left_wing_tip", ModelPartBuilder.create().mirrored().cuboid("bone", 0.0f, -2.0f, -2.0f, 56, 4, 4, 112, 136).cuboid("skin", 0.0f, 0.0f, 2.0f, 56, 0, 56, -56, 144), ModelTransform.pivot(56.0f, 0.0f, 0.0f));
+        ModelPartData modelPartData4 = modelPartData.addChild("left_front_leg", ModelPartBuilder.create().cuboid("main", -4.0f, -4.0f, -4.0f, 8, 24, 8, 112, 104), ModelTransform.pivot(12.0f, 20.0f, 2.0f));
+        ModelPartData modelPartData5 = modelPartData4.addChild("left_front_leg_tip", ModelPartBuilder.create().cuboid("main", -3.0f, -1.0f, -3.0f, 6, 24, 6, 226, 138), ModelTransform.pivot(0.0f, 20.0f, -1.0f));
+        modelPartData5.addChild("left_front_foot", ModelPartBuilder.create().cuboid("main", -4.0f, 0.0f, -12.0f, 8, 4, 16, 144, 104), ModelTransform.pivot(0.0f, 23.0f, 0.0f));
+        ModelPartData modelPartData6 = modelPartData.addChild("left_hind_leg", ModelPartBuilder.create().cuboid("main", -8.0f, -4.0f, -8.0f, 16, 32, 16, 0, 0), ModelTransform.pivot(16.0f, 16.0f, 42.0f));
+        ModelPartData modelPartData7 = modelPartData6.addChild("left_hind_leg_tip", ModelPartBuilder.create().cuboid("main", -6.0f, -2.0f, 0.0f, 12, 32, 12, 196, 0), ModelTransform.pivot(0.0f, 32.0f, -4.0f));
+        modelPartData7.addChild("left_hind_foot", ModelPartBuilder.create().cuboid("main", -9.0f, 0.0f, -20.0f, 18, 6, 24, 112, 0), ModelTransform.pivot(0.0f, 31.0f, 4.0f));
+        ModelPartData modelPartData8 = modelPartData.addChild("right_wing", ModelPartBuilder.create().cuboid("bone", -56.0f, -4.0f, -4.0f, 56, 8, 8, 112, 88).cuboid("skin", -56.0f, 0.0f, 2.0f, 56, 0, 56, -56, 88), ModelTransform.pivot(-12.0f, 5.0f, 2.0f));
+        modelPartData8.addChild("right_wing_tip", ModelPartBuilder.create().cuboid("bone", -56.0f, -2.0f, -2.0f, 56, 4, 4, 112, 136).cuboid("skin", -56.0f, 0.0f, 2.0f, 56, 0, 56, -56, 144), ModelTransform.pivot(-56.0f, 0.0f, 0.0f));
+        ModelPartData modelPartData9 = modelPartData.addChild("right_front_leg", ModelPartBuilder.create().cuboid("main", -4.0f, -4.0f, -4.0f, 8, 24, 8, 112, 104), ModelTransform.pivot(-12.0f, 20.0f, 2.0f));
+        ModelPartData modelPartData10 = modelPartData9.addChild("right_front_leg_tip", ModelPartBuilder.create().cuboid("main", -3.0f, -1.0f, -3.0f, 6, 24, 6, 226, 138), ModelTransform.pivot(0.0f, 20.0f, -1.0f));
+        modelPartData10.addChild("right_front_foot", ModelPartBuilder.create().cuboid("main", -4.0f, 0.0f, -12.0f, 8, 4, 16, 144, 104), ModelTransform.pivot(0.0f, 23.0f, 0.0f));
+        ModelPartData modelPartData11 = modelPartData.addChild("right_hind_leg", ModelPartBuilder.create().cuboid("main", -8.0f, -4.0f, -8.0f, 16, 32, 16, 0, 0), ModelTransform.pivot(-16.0f, 16.0f, 42.0f));
+        ModelPartData modelPartData12 = modelPartData11.addChild("right_hind_leg_tip", ModelPartBuilder.create().cuboid("main", -6.0f, -2.0f, 0.0f, 12, 32, 12, 196, 0), ModelTransform.pivot(0.0f, 32.0f, -4.0f));
+        modelPartData12.addChild("right_hind_foot", ModelPartBuilder.create().cuboid("main", -9.0f, 0.0f, -20.0f, 18, 6, 24, 112, 0), ModelTransform.pivot(0.0f, 31.0f, 4.0f));
+        return TexturedModelData.of(modelData, 256, 256);
+    }
+
     @Environment(value=EnvType.CLIENT)
     public static class DragonEntityModel
     extends EntityModel<EnderDragonEntity> {
@@ -177,116 +210,47 @@ extends EntityRenderer<EnderDragonEntity> {
         private final ModelPart neck;
         private final ModelPart jaw;
         private final ModelPart body;
-        private ModelPart wing;
-        private ModelPart field_21548;
-        private ModelPart field_21549;
-        private ModelPart field_21550;
-        private ModelPart field_21551;
-        private ModelPart field_21552;
-        private ModelPart field_21553;
-        private ModelPart field_21554;
-        private ModelPart field_21555;
-        private ModelPart wingTip;
-        private ModelPart frontLeg;
-        private ModelPart frontLegTip;
-        private ModelPart frontFoot;
-        private ModelPart rearLeg;
-        private ModelPart rearLegTip;
-        private ModelPart rearFoot;
+        private final ModelPart leftWing;
+        private final ModelPart leftWingTip;
+        private final ModelPart leftFrontLeg;
+        private final ModelPart leftFrontLegTip;
+        private final ModelPart leftFrontFoot;
+        private final ModelPart leftHindLeg;
+        private final ModelPart leftHindLegTip;
+        private final ModelPart leftHindFoot;
+        private final ModelPart rightWing;
+        private final ModelPart rightWingTip;
+        private final ModelPart rightFrontLeg;
+        private final ModelPart rightFrontLegTip;
+        private final ModelPart rightFrontFoot;
+        private final ModelPart rightHindLeg;
+        private final ModelPart rightHindLegTip;
+        private final ModelPart rightHindFoot;
         @Nullable
         private EnderDragonEntity dragon;
         private float tickDelta;
 
-        public DragonEntityModel() {
-            this.textureWidth = 256;
-            this.textureHeight = 256;
-            float f = -16.0f;
-            this.head = new ModelPart(this);
-            this.head.addCuboid("upperlip", -6.0f, -1.0f, -24.0f, 12, 5, 16, 0.0f, 176, 44);
-            this.head.addCuboid("upperhead", -8.0f, -8.0f, -10.0f, 16, 16, 16, 0.0f, 112, 30);
-            this.head.mirror = true;
-            this.head.addCuboid("scale", -5.0f, -12.0f, -4.0f, 2, 4, 6, 0.0f, 0, 0);
-            this.head.addCuboid("nostril", -5.0f, -3.0f, -22.0f, 2, 2, 4, 0.0f, 112, 0);
-            this.head.mirror = false;
-            this.head.addCuboid("scale", 3.0f, -12.0f, -4.0f, 2, 4, 6, 0.0f, 0, 0);
-            this.head.addCuboid("nostril", 3.0f, -3.0f, -22.0f, 2, 2, 4, 0.0f, 112, 0);
-            this.jaw = new ModelPart(this);
-            this.jaw.setPivot(0.0f, 4.0f, -8.0f);
-            this.jaw.addCuboid("jaw", -6.0f, 0.0f, -16.0f, 12, 4, 16, 0.0f, 176, 65);
-            this.head.addChild(this.jaw);
-            this.neck = new ModelPart(this);
-            this.neck.addCuboid("box", -5.0f, -5.0f, -5.0f, 10, 10, 10, 0.0f, 192, 104);
-            this.neck.addCuboid("scale", -1.0f, -9.0f, -3.0f, 2, 4, 6, 0.0f, 48, 0);
-            this.body = new ModelPart(this);
-            this.body.setPivot(0.0f, 4.0f, 8.0f);
-            this.body.addCuboid("body", -12.0f, 0.0f, -16.0f, 24, 24, 64, 0.0f, 0, 0);
-            this.body.addCuboid("scale", -1.0f, -6.0f, -10.0f, 2, 6, 12, 0.0f, 220, 53);
-            this.body.addCuboid("scale", -1.0f, -6.0f, 10.0f, 2, 6, 12, 0.0f, 220, 53);
-            this.body.addCuboid("scale", -1.0f, -6.0f, 30.0f, 2, 6, 12, 0.0f, 220, 53);
-            this.wing = new ModelPart(this);
-            this.wing.mirror = true;
-            this.wing.setPivot(12.0f, 5.0f, 2.0f);
-            this.wing.addCuboid("bone", 0.0f, -4.0f, -4.0f, 56, 8, 8, 0.0f, 112, 88);
-            this.wing.addCuboid("skin", 0.0f, 0.0f, 2.0f, 56, 0, 56, 0.0f, -56, 88);
-            this.field_21548 = new ModelPart(this);
-            this.field_21548.mirror = true;
-            this.field_21548.setPivot(56.0f, 0.0f, 0.0f);
-            this.field_21548.addCuboid("bone", 0.0f, -2.0f, -2.0f, 56, 4, 4, 0.0f, 112, 136);
-            this.field_21548.addCuboid("skin", 0.0f, 0.0f, 2.0f, 56, 0, 56, 0.0f, -56, 144);
-            this.wing.addChild(this.field_21548);
-            this.field_21549 = new ModelPart(this);
-            this.field_21549.setPivot(12.0f, 20.0f, 2.0f);
-            this.field_21549.addCuboid("main", -4.0f, -4.0f, -4.0f, 8, 24, 8, 0.0f, 112, 104);
-            this.field_21550 = new ModelPart(this);
-            this.field_21550.setPivot(0.0f, 20.0f, -1.0f);
-            this.field_21550.addCuboid("main", -3.0f, -1.0f, -3.0f, 6, 24, 6, 0.0f, 226, 138);
-            this.field_21549.addChild(this.field_21550);
-            this.field_21551 = new ModelPart(this);
-            this.field_21551.setPivot(0.0f, 23.0f, 0.0f);
-            this.field_21551.addCuboid("main", -4.0f, 0.0f, -12.0f, 8, 4, 16, 0.0f, 144, 104);
-            this.field_21550.addChild(this.field_21551);
-            this.field_21552 = new ModelPart(this);
-            this.field_21552.setPivot(16.0f, 16.0f, 42.0f);
-            this.field_21552.addCuboid("main", -8.0f, -4.0f, -8.0f, 16, 32, 16, 0.0f, 0, 0);
-            this.field_21553 = new ModelPart(this);
-            this.field_21553.setPivot(0.0f, 32.0f, -4.0f);
-            this.field_21553.addCuboid("main", -6.0f, -2.0f, 0.0f, 12, 32, 12, 0.0f, 196, 0);
-            this.field_21552.addChild(this.field_21553);
-            this.field_21554 = new ModelPart(this);
-            this.field_21554.setPivot(0.0f, 31.0f, 4.0f);
-            this.field_21554.addCuboid("main", -9.0f, 0.0f, -20.0f, 18, 6, 24, 0.0f, 112, 0);
-            this.field_21553.addChild(this.field_21554);
-            this.field_21555 = new ModelPart(this);
-            this.field_21555.setPivot(-12.0f, 5.0f, 2.0f);
-            this.field_21555.addCuboid("bone", -56.0f, -4.0f, -4.0f, 56, 8, 8, 0.0f, 112, 88);
-            this.field_21555.addCuboid("skin", -56.0f, 0.0f, 2.0f, 56, 0, 56, 0.0f, -56, 88);
-            this.wingTip = new ModelPart(this);
-            this.wingTip.setPivot(-56.0f, 0.0f, 0.0f);
-            this.wingTip.addCuboid("bone", -56.0f, -2.0f, -2.0f, 56, 4, 4, 0.0f, 112, 136);
-            this.wingTip.addCuboid("skin", -56.0f, 0.0f, 2.0f, 56, 0, 56, 0.0f, -56, 144);
-            this.field_21555.addChild(this.wingTip);
-            this.frontLeg = new ModelPart(this);
-            this.frontLeg.setPivot(-12.0f, 20.0f, 2.0f);
-            this.frontLeg.addCuboid("main", -4.0f, -4.0f, -4.0f, 8, 24, 8, 0.0f, 112, 104);
-            this.frontLegTip = new ModelPart(this);
-            this.frontLegTip.setPivot(0.0f, 20.0f, -1.0f);
-            this.frontLegTip.addCuboid("main", -3.0f, -1.0f, -3.0f, 6, 24, 6, 0.0f, 226, 138);
-            this.frontLeg.addChild(this.frontLegTip);
-            this.frontFoot = new ModelPart(this);
-            this.frontFoot.setPivot(0.0f, 23.0f, 0.0f);
-            this.frontFoot.addCuboid("main", -4.0f, 0.0f, -12.0f, 8, 4, 16, 0.0f, 144, 104);
-            this.frontLegTip.addChild(this.frontFoot);
-            this.rearLeg = new ModelPart(this);
-            this.rearLeg.setPivot(-16.0f, 16.0f, 42.0f);
-            this.rearLeg.addCuboid("main", -8.0f, -4.0f, -8.0f, 16, 32, 16, 0.0f, 0, 0);
-            this.rearLegTip = new ModelPart(this);
-            this.rearLegTip.setPivot(0.0f, 32.0f, -4.0f);
-            this.rearLegTip.addCuboid("main", -6.0f, -2.0f, 0.0f, 12, 32, 12, 0.0f, 196, 0);
-            this.rearLeg.addChild(this.rearLegTip);
-            this.rearFoot = new ModelPart(this);
-            this.rearFoot.setPivot(0.0f, 31.0f, 4.0f);
-            this.rearFoot.addCuboid("main", -9.0f, 0.0f, -20.0f, 18, 6, 24, 0.0f, 112, 0);
-            this.rearLegTip.addChild(this.rearFoot);
+        public DragonEntityModel(ModelPart part) {
+            this.head = part.getChild("head");
+            this.jaw = this.head.getChild("jaw");
+            this.neck = part.getChild("neck");
+            this.body = part.getChild("body");
+            this.leftWing = part.getChild("left_wing");
+            this.leftWingTip = this.leftWing.getChild("left_wing_tip");
+            this.leftFrontLeg = part.getChild("left_front_leg");
+            this.leftFrontLegTip = this.leftFrontLeg.getChild("left_front_leg_tip");
+            this.leftFrontFoot = this.leftFrontLegTip.getChild("left_front_foot");
+            this.leftHindLeg = part.getChild("left_hind_leg");
+            this.leftHindLegTip = this.leftHindLeg.getChild("left_hind_leg_tip");
+            this.leftHindFoot = this.leftHindLegTip.getChild("left_hind_foot");
+            this.rightWing = part.getChild("right_wing");
+            this.rightWingTip = this.rightWing.getChild("right_wing_tip");
+            this.rightFrontLeg = part.getChild("right_front_leg");
+            this.rightFrontLegTip = this.rightFrontLeg.getChild("right_front_leg_tip");
+            this.rightFrontFoot = this.rightFrontLegTip.getChild("right_front_foot");
+            this.rightHindLeg = part.getChild("right_hind_leg");
+            this.rightHindLegTip = this.rightHindLeg.getChild("right_hind_leg_tip");
+            this.rightHindFoot = this.rightHindLegTip.getChild("right_hind_foot");
         }
 
         @Override
@@ -329,7 +293,7 @@ extends EntityRenderer<EnderDragonEntity> {
                 i = (float)((double)i + Math.sin(this.neck.pitch) * 10.0);
                 j = (float)((double)j - Math.cos(this.neck.yaw) * Math.cos(this.neck.pitch) * 10.0);
                 h = (float)((double)h - Math.sin(this.neck.yaw) * Math.cos(this.neck.pitch) * 10.0);
-                this.neck.render(matrices, vertices, light, overlay);
+                this.neck.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
             }
             this.head.pivotY = i;
             this.head.pivotZ = j;
@@ -338,24 +302,24 @@ extends EntityRenderer<EnderDragonEntity> {
             this.head.yaw = MathHelper.fwrapDegrees(fs[0] - ds[0]) * ((float)Math.PI / 180);
             this.head.pitch = MathHelper.fwrapDegrees(this.dragon.getChangeInNeckPitch(6, ds, fs)) * ((float)Math.PI / 180) * 1.5f * 5.0f;
             this.head.roll = -MathHelper.fwrapDegrees(fs[0] - (double)m) * ((float)Math.PI / 180);
-            this.head.render(matrices, vertices, light, overlay);
+            this.head.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
             matrices.push();
             matrices.translate(0.0, 1.0, 0.0);
             matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-l * 1.5f));
             matrices.translate(0.0, -1.0, 0.0);
             this.body.roll = 0.0f;
-            this.body.render(matrices, vertices, light, overlay);
+            this.body.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
             float q = f * ((float)Math.PI * 2);
-            this.wing.pitch = 0.125f - (float)Math.cos(q) * 0.2f;
-            this.wing.yaw = -0.25f;
-            this.wing.roll = -((float)(Math.sin(q) + 0.125)) * 0.8f;
-            this.field_21548.roll = (float)(Math.sin(q + 2.0f) + 0.5) * 0.75f;
-            this.field_21555.pitch = this.wing.pitch;
-            this.field_21555.yaw = -this.wing.yaw;
-            this.field_21555.roll = -this.wing.roll;
-            this.wingTip.roll = -this.field_21548.roll;
-            this.method_23838(matrices, vertices, light, overlay, g, this.wing, this.field_21549, this.field_21550, this.field_21551, this.field_21552, this.field_21553, this.field_21554);
-            this.method_23838(matrices, vertices, light, overlay, g, this.field_21555, this.frontLeg, this.frontLegTip, this.frontFoot, this.rearLeg, this.rearLegTip, this.rearFoot);
+            this.leftWing.pitch = 0.125f - (float)Math.cos(q) * 0.2f;
+            this.leftWing.yaw = -0.25f;
+            this.leftWing.roll = -((float)(Math.sin(q) + 0.125)) * 0.8f;
+            this.leftWingTip.roll = (float)(Math.sin(q + 2.0f) + 0.5) * 0.75f;
+            this.rightWing.pitch = this.leftWing.pitch;
+            this.rightWing.yaw = -this.leftWing.yaw;
+            this.rightWing.roll = -this.leftWing.roll;
+            this.rightWingTip.roll = -this.leftWingTip.roll;
+            this.setLimbRotation(matrices, vertices, light, overlay, g, this.leftWing, this.leftFrontLeg, this.leftFrontLegTip, this.leftFrontFoot, this.leftHindLeg, this.leftHindLegTip, this.leftHindFoot, alpha);
+            this.setLimbRotation(matrices, vertices, light, overlay, g, this.rightWing, this.rightFrontLeg, this.rightFrontLegTip, this.rightFrontFoot, this.rightHindLeg, this.rightHindLegTip, this.rightHindFoot, alpha);
             matrices.pop();
             p = -((float)Math.sin(f * ((float)Math.PI * 2))) * 0.0f;
             n = f * ((float)Math.PI * 2);
@@ -375,21 +339,21 @@ extends EntityRenderer<EnderDragonEntity> {
                 i = (float)((double)i + Math.sin(this.neck.pitch) * 10.0);
                 j = (float)((double)j - Math.cos(this.neck.yaw) * Math.cos(this.neck.pitch) * 10.0);
                 h = (float)((double)h - Math.sin(this.neck.yaw) * Math.cos(this.neck.pitch) * 10.0);
-                this.neck.render(matrices, vertices, light, overlay);
+                this.neck.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
             }
             matrices.pop();
         }
 
-        private void method_23838(MatrixStack matrices, VertexConsumer vertices, int light, int overlay, float offset, ModelPart modelPart, ModelPart modelPart2, ModelPart modelPart3, ModelPart modelPart4, ModelPart modelPart5, ModelPart modelPart6, ModelPart modelPart7) {
-            modelPart5.pitch = 1.0f + offset * 0.1f;
-            modelPart6.pitch = 0.5f + offset * 0.1f;
-            modelPart7.pitch = 0.75f + offset * 0.1f;
-            modelPart2.pitch = 1.3f + offset * 0.1f;
-            modelPart3.pitch = -0.5f - offset * 0.1f;
-            modelPart4.pitch = 0.75f + offset * 0.1f;
-            modelPart.render(matrices, vertices, light, overlay);
-            modelPart2.render(matrices, vertices, light, overlay);
-            modelPart5.render(matrices, vertices, light, overlay);
+        private void setLimbRotation(MatrixStack matrices, VertexConsumer vertices, int light, int overlay, float offset, ModelPart wing, ModelPart frontLeg, ModelPart frontLegTip, ModelPart frontFoot, ModelPart hindLeg, ModelPart hindLegTip, ModelPart hindFoot, float f) {
+            hindLeg.pitch = 1.0f + offset * 0.1f;
+            hindLegTip.pitch = 0.5f + offset * 0.1f;
+            hindFoot.pitch = 0.75f + offset * 0.1f;
+            frontLeg.pitch = 1.3f + offset * 0.1f;
+            frontLegTip.pitch = -0.5f - offset * 0.1f;
+            frontFoot.pitch = 0.75f + offset * 0.1f;
+            wing.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, f);
+            frontLeg.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, f);
+            hindLeg.render(matrices, vertices, light, overlay, 1.0f, 1.0f, 1.0f, f);
         }
     }
 }

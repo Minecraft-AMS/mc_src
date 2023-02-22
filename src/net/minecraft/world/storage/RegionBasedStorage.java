@@ -22,6 +22,8 @@ import org.jetbrains.annotations.Nullable;
 
 public final class RegionBasedStorage
 implements AutoCloseable {
+    public static final String field_31425 = ".mca";
+    private static final int field_31426 = 256;
     private final Long2ObjectLinkedOpenHashMap<RegionFile> cachedRegionFiles = new Long2ObjectLinkedOpenHashMap();
     private final File directory;
     private final boolean dsync;
@@ -43,7 +45,7 @@ implements AutoCloseable {
         if (!this.directory.exists()) {
             this.directory.mkdirs();
         }
-        File file = new File(this.directory, "r." + pos.getRegionX() + "." + pos.getRegionZ() + ".mca");
+        File file = new File(this.directory, "r." + pos.getRegionX() + "." + pos.getRegionZ() + field_31425);
         RegionFile regionFile2 = new RegionFile(file, this.directory, this.dsync);
         this.cachedRegionFiles.putAndMoveToFirst(l, (Object)regionFile2);
         return regionFile2;
@@ -62,10 +64,14 @@ implements AutoCloseable {
         }
     }
 
-    protected void write(ChunkPos pos, NbtCompound nbt) throws IOException {
+    protected void write(ChunkPos pos, @Nullable NbtCompound nbt) throws IOException {
         RegionFile regionFile = this.getRegionFile(pos);
-        try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(pos);){
-            NbtIo.write(nbt, (DataOutput)dataOutputStream);
+        if (nbt == null) {
+            regionFile.method_31740(pos);
+        } else {
+            try (DataOutputStream dataOutputStream = regionFile.getChunkOutputStream(pos);){
+                NbtIo.write(nbt, (DataOutput)dataOutputStream);
+            }
         }
     }
 
@@ -83,9 +89,9 @@ implements AutoCloseable {
         throwableDeliverer.deliver();
     }
 
-    public void method_26982() throws IOException {
+    public void sync() throws IOException {
         for (RegionFile regionFile : this.cachedRegionFiles.values()) {
-            regionFile.method_26981();
+            regionFile.sync();
         }
     }
 }

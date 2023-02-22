@@ -31,6 +31,8 @@ import net.minecraft.util.math.Vec3f;
 @Environment(value=EnvType.CLIENT)
 public class ItemModelGenerator {
     public static final List<String> LAYERS = Lists.newArrayList((Object[])new String[]{"layer0", "layer1", "layer2", "layer3", "layer4"});
+    private static final float field_32806 = 7.5f;
+    private static final float field_32807 = 8.5f;
 
     public JsonUnbakedModel create(Function<SpriteIdentifier, Sprite> textureGetter, JsonUnbakedModel blockModel) {
         String string;
@@ -145,7 +147,7 @@ public class ItemModelGenerator {
         int i = sprite.getWidth();
         int j = sprite.getHeight();
         ArrayList list = Lists.newArrayList();
-        for (int k = 0; k < sprite.getFrameCount(); ++k) {
+        sprite.getDistinctFrameCount().forEach(k -> {
             for (int l = 0; l < j; ++l) {
                 for (int m = 0; m < i; ++m) {
                     boolean bl = !this.isPixelTransparent(sprite, k, m, l, i, j);
@@ -155,7 +157,7 @@ public class ItemModelGenerator {
                     this.buildCube(Side.RIGHT, list, sprite, k, m, l, i, j, bl);
                 }
             }
-        }
+        });
         return list;
     }
 
@@ -234,15 +236,24 @@ public class ItemModelGenerator {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static enum Side {
-        UP(Direction.UP, 0, -1),
-        DOWN(Direction.DOWN, 0, 1),
-        LEFT(Direction.EAST, -1, 0),
-        RIGHT(Direction.WEST, 1, 0);
-
+    static final class Side
+    extends Enum<Side> {
+        public static final /* enum */ Side UP = new Side(Direction.UP, 0, -1);
+        public static final /* enum */ Side DOWN = new Side(Direction.DOWN, 0, 1);
+        public static final /* enum */ Side LEFT = new Side(Direction.EAST, -1, 0);
+        public static final /* enum */ Side RIGHT = new Side(Direction.WEST, 1, 0);
         private final Direction direction;
         private final int offsetX;
         private final int offsetY;
+        private static final /* synthetic */ Side[] field_4282;
+
+        public static Side[] values() {
+            return (Side[])field_4282.clone();
+        }
+
+        public static Side valueOf(String string) {
+            return Enum.valueOf(Side.class, string);
+        }
 
         private Side(Direction direction, int offsetX, int offsetY) {
             this.direction = direction;
@@ -262,8 +273,16 @@ public class ItemModelGenerator {
             return this.offsetY;
         }
 
-        private boolean isVertical() {
+        boolean isVertical() {
             return this == DOWN || this == UP;
+        }
+
+        private static /* synthetic */ Side[] method_36921() {
+            return new Side[]{UP, DOWN, LEFT, RIGHT};
+        }
+
+        static {
+            field_4282 = Side.method_36921();
         }
     }
 }

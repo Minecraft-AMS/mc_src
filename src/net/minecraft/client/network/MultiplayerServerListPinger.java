@@ -46,7 +46,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.GenericFutureListener;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -54,8 +54,12 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.screen.ConnectScreen;
+import net.minecraft.client.network.Address;
+import net.minecraft.client.network.AllowedAddressResolver;
 import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.network.ClientConnection;
@@ -79,13 +83,20 @@ import org.apache.logging.log4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class MultiplayerServerListPinger {
-    private static final Splitter ZERO_SPLITTER = Splitter.on((char)'\u0000').limit(6);
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Splitter ZERO_SPLITTER = Splitter.on((char)'\u0000').limit(6);
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final Text CANNOT_CONNECT_TEXT = new TranslatableText("multiplayer.status.cannot_connect").formatted(Formatting.DARK_RED);
     private final List<ClientConnection> clientConnections = Collections.synchronizedList(Lists.newArrayList());
 
     public void add(final ServerInfo entry, final Runnable runnable) throws UnknownHostException {
         ServerAddress serverAddress = ServerAddress.parse(entry.address);
-        final ClientConnection clientConnection = ClientConnection.connect(InetAddress.getByName(serverAddress.getAddress()), serverAddress.getPort(), false);
+        Optional<InetSocketAddress> optional = AllowedAddressResolver.DEFAULT.resolve(serverAddress).map(Address::getInetSocketAddress);
+        if (!optional.isPresent()) {
+            this.showError(ConnectScreen.BLOCKED_HOST_TEXT, entry);
+            return;
+        }
+        final InetSocketAddress inetSocketAddress = optional.get();
+        final ClientConnection clientConnection = ClientConnection.connect(inetSocketAddress, false);
         this.clientConnections.add(clientConnection);
         entry.label = new TranslatableText("multiplayer.status.pinging");
         entry.ping = -1L;
@@ -112,7 +123,7 @@ public class MultiplayerServerListPinger {
                     entry.protocolVersion = 0;
                 }
                 if (serverMetadata.getPlayers() != null) {
-                    entry.playerCountLabel = MultiplayerServerListPinger.method_27647(serverMetadata.getPlayers().getOnlinePlayerCount(), serverMetadata.getPlayers().getPlayerLimit());
+                    entry.playerCountLabel = MultiplayerServerListPinger.createPlayerCountText(serverMetadata.getPlayers().getOnlinePlayerCount(), serverMetadata.getPlayers().getPlayerLimit());
                     ArrayList list = Lists.newArrayList();
                     if (ArrayUtils.isNotEmpty((Object[])serverMetadata.getPlayers().getSample())) {
                         for (GameProfile gameProfile : serverMetadata.getPlayers().getSample()) {
@@ -155,10 +166,8 @@ public class MultiplayerServerListPinger {
             @Override
             public void onDisconnected(Text reason) {
                 if (!this.sentQuery) {
-                    LOGGER.error("Can't ping {}: {}", (Object)entry.address, (Object)reason.getString());
-                    entry.label = new TranslatableText("multiplayer.status.cannot_connect").formatted(Formatting.DARK_RED);
-                    entry.playerCountLabel = LiteralText.EMPTY;
-                    MultiplayerServerListPinger.this.ping(entry);
+                    MultiplayerServerListPinger.this.showError(reason, entry);
+                    MultiplayerServerListPinger.this.ping(inetSocketAddress, entry);
                 }
             }
 
@@ -176,11 +185,16 @@ public class MultiplayerServerListPinger {
         }
     }
 
-    private void ping(final ServerInfo serverInfo) {
-        final ServerAddress serverAddress = ServerAddress.parse(serverInfo.address);
+    void showError(Text error, ServerInfo info) {
+        LOGGER.error("Can't ping {}: {}", (Object)info.address, (Object)error.getString());
+        info.label = CANNOT_CONNECT_TEXT;
+        info.playerCountLabel = LiteralText.EMPTY;
+    }
+
+    void ping(final InetSocketAddress address, final ServerInfo info) {
         ((Bootstrap)((Bootstrap)((Bootstrap)new Bootstrap().group((EventLoopGroup)ClientConnection.CLIENT_IO_GROUP.get())).handler((ChannelHandler)new ChannelInitializer<Channel>(){
 
-            protected void initChannel(Channel channel) throws Exception {
+            protected void initChannel(Channel channel) {
                 try {
                     channel.config().setOption(ChannelOption.TCP_NODELAY, (Object)true);
                 }
@@ -192,8 +206,8 @@ public class MultiplayerServerListPinger {
                     /*
                      * WARNING - Removed try catching itself - possible behaviour change.
                      */
-                    public void channelActive(ChannelHandlerContext channelHandlerContext) throws Exception {
-                        super.channelActive(channelHandlerContext);
+                    public void channelActive(ChannelHandlerContext context) throws Exception {
+                        super.channelActive(context);
                         ByteBuf byteBuf = Unpooled.buffer();
                         try {
                             byteBuf.writeByte(254);
@@ -204,55 +218,53 @@ public class MultiplayerServerListPinger {
                             for (char c : cs) {
                                 byteBuf.writeChar((int)c);
                             }
-                            byteBuf.writeShort(7 + 2 * serverAddress.getAddress().length());
+                            byteBuf.writeShort(7 + 2 * address.getHostName().length());
                             byteBuf.writeByte(127);
-                            cs = serverAddress.getAddress().toCharArray();
+                            cs = address.getHostName().toCharArray();
                             byteBuf.writeShort(cs.length);
                             for (char c : cs) {
                                 byteBuf.writeChar((int)c);
                             }
-                            byteBuf.writeInt(serverAddress.getPort());
-                            channelHandlerContext.channel().writeAndFlush((Object)byteBuf).addListener((GenericFutureListener)ChannelFutureListener.CLOSE_ON_FAILURE);
+                            byteBuf.writeInt(address.getPort());
+                            context.channel().writeAndFlush((Object)byteBuf).addListener((GenericFutureListener)ChannelFutureListener.CLOSE_ON_FAILURE);
                         }
                         finally {
                             byteBuf.release();
                         }
                     }
 
-                    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) {
+                        String string;
+                        String[] strings;
                         short s = byteBuf.readUnsignedByte();
-                        if (s == 255) {
-                            String string = new String(byteBuf.readBytes(byteBuf.readShort() * 2).array(), StandardCharsets.UTF_16BE);
-                            String[] strings = (String[])Iterables.toArray((Iterable)ZERO_SPLITTER.split((CharSequence)string), String.class);
-                            if ("\u00a71".equals(strings[0])) {
-                                int i = MathHelper.parseInt(strings[1], 0);
-                                String string2 = strings[2];
-                                String string3 = strings[3];
-                                int j = MathHelper.parseInt(strings[4], -1);
-                                int k = MathHelper.parseInt(strings[5], -1);
-                                serverInfo.protocolVersion = -1;
-                                serverInfo.version = new LiteralText(string2);
-                                serverInfo.label = new LiteralText(string3);
-                                serverInfo.playerCountLabel = MultiplayerServerListPinger.method_27647(j, k);
-                            }
+                        if (s == 255 && "\u00a71".equals((strings = (String[])Iterables.toArray((Iterable)ZERO_SPLITTER.split((CharSequence)(string = new String(byteBuf.readBytes(byteBuf.readShort() * 2).array(), StandardCharsets.UTF_16BE))), String.class))[0])) {
+                            int i = MathHelper.parseInt(strings[1], 0);
+                            String string2 = strings[2];
+                            String string3 = strings[3];
+                            int j = MathHelper.parseInt(strings[4], -1);
+                            int k = MathHelper.parseInt(strings[5], -1);
+                            info.protocolVersion = -1;
+                            info.version = new LiteralText(string2);
+                            info.label = new LiteralText(string3);
+                            info.playerCountLabel = MultiplayerServerListPinger.createPlayerCountText(j, k);
                         }
                         channelHandlerContext.close();
                     }
 
-                    public void exceptionCaught(ChannelHandlerContext channelHandlerContext, Throwable throwable) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext channelHandlerContext, Throwable throwable) {
                         channelHandlerContext.close();
                     }
 
-                    protected /* synthetic */ void channelRead0(ChannelHandlerContext channelHandlerContext, Object object) throws Exception {
-                        this.channelRead0(channelHandlerContext, (ByteBuf)object);
+                    protected /* synthetic */ void channelRead0(ChannelHandlerContext context, Object buf) throws Exception {
+                        this.channelRead0(context, (ByteBuf)buf);
                     }
                 }});
             }
-        })).channel(NioSocketChannel.class)).connect(serverAddress.getAddress(), serverAddress.getPort());
+        })).channel(NioSocketChannel.class)).connect(address.getAddress(), address.getPort());
     }
 
-    private static Text method_27647(int i, int j) {
-        return new LiteralText(Integer.toString(i)).append(new LiteralText("/").formatted(Formatting.DARK_GRAY)).append(Integer.toString(j)).formatted(Formatting.GRAY);
+    static Text createPlayerCountText(int current, int max) {
+        return new LiteralText(Integer.toString(current)).append(new LiteralText("/").formatted(Formatting.DARK_GRAY)).append(Integer.toString(max)).formatted(Formatting.GRAY);
     }
 
     /*

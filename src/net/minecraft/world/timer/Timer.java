@@ -32,6 +32,9 @@ import org.apache.logging.log4j.Logger;
 
 public class Timer<T> {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String CALLBACK_KEY = "Callback";
+    private static final String NAME_KEY = "Name";
+    private static final String TRIGGER_TIME_KEY = "TriggerTime";
     private final TimerCallbackSerializer<T> callback;
     private final Queue<Event<T>> events = new PriorityQueue<Event<T>>(Timer.createEventComparator());
     private UnsignedLong eventCounter = UnsignedLong.ZERO;
@@ -73,7 +76,7 @@ public class Timer<T> {
             return;
         }
         this.eventCounter = this.eventCounter.plus(UnsignedLong.ONE);
-        Event event = new Event(triggerTime, this.eventCounter, name, callback);
+        Event<T> event = new Event<T>(triggerTime, this.eventCounter, name, callback);
         this.eventsByName.put((Object)name, (Object)triggerTime, event);
         this.events.add(event);
     }
@@ -91,20 +94,20 @@ public class Timer<T> {
     }
 
     private void addEvent(NbtCompound nbt) {
-        NbtCompound nbtCompound = nbt.getCompound("Callback");
+        NbtCompound nbtCompound = nbt.getCompound(CALLBACK_KEY);
         TimerCallback<T> timerCallback = this.callback.deserialize(nbtCompound);
         if (timerCallback != null) {
-            String string = nbt.getString("Name");
-            long l = nbt.getLong("TriggerTime");
+            String string = nbt.getString(NAME_KEY);
+            long l = nbt.getLong(TRIGGER_TIME_KEY);
             this.setEvent(string, l, timerCallback);
         }
     }
 
     private NbtCompound serialize(Event<T> event) {
         NbtCompound nbtCompound = new NbtCompound();
-        nbtCompound.putString("Name", event.name);
-        nbtCompound.putLong("TriggerTime", event.triggerTime);
-        nbtCompound.put("Callback", this.callback.serialize(event.callback));
+        nbtCompound.putString(NAME_KEY, event.name);
+        nbtCompound.putLong(TRIGGER_TIME_KEY, event.triggerTime);
+        nbtCompound.put(CALLBACK_KEY, this.callback.serialize(event.callback));
         return nbtCompound;
     }
 
@@ -120,11 +123,11 @@ public class Timer<T> {
         public final String name;
         public final TimerCallback<T> callback;
 
-        private Event(long triggerTime, UnsignedLong id, String name, TimerCallback<T> callback) {
-            this.triggerTime = triggerTime;
-            this.id = id;
-            this.name = name;
-            this.callback = callback;
+        Event(long l, UnsignedLong unsignedLong, String string, TimerCallback<T> timerCallback) {
+            this.triggerTime = l;
+            this.id = unsignedLong;
+            this.name = string;
+            this.callback = timerCallback;
         }
     }
 }

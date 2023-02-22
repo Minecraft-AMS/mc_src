@@ -91,10 +91,27 @@ extends AbstractPressurePlateBlock {
         builder.add(POWERED);
     }
 
-    public static enum ActivationRule {
-        EVERYTHING,
-        MOBS;
+    public static final class ActivationRule
+    extends Enum<ActivationRule> {
+        public static final /* enum */ ActivationRule EVERYTHING = new ActivationRule();
+        public static final /* enum */ ActivationRule MOBS = new ActivationRule();
+        private static final /* synthetic */ ActivationRule[] field_11363;
 
+        public static ActivationRule[] values() {
+            return (ActivationRule[])field_11363.clone();
+        }
+
+        public static ActivationRule valueOf(String string) {
+            return Enum.valueOf(ActivationRule.class, string);
+        }
+
+        private static /* synthetic */ ActivationRule[] method_36707() {
+            return new ActivationRule[]{EVERYTHING, MOBS};
+        }
+
+        static {
+            field_11363 = ActivationRule.method_36707();
+        }
     }
 }
 

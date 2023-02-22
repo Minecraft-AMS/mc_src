@@ -15,17 +15,18 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.scoreboard.AbstractTeam;
-import net.minecraft.world.Difficulty;
 import org.jetbrains.annotations.Nullable;
 
 public final class EntityPredicates {
     public static final Predicate<Entity> VALID_ENTITY = Entity::isAlive;
-    public static final Predicate<LivingEntity> VALID_LIVING_ENTITY = LivingEntity::isAlive;
+    public static final Predicate<Entity> VALID_LIVING_ENTITY = entity -> entity.isAlive() && entity instanceof LivingEntity;
     public static final Predicate<Entity> NOT_MOUNTED = entity -> entity.isAlive() && !entity.hasPassengers() && !entity.hasVehicle();
     public static final Predicate<Entity> VALID_INVENTORIES = entity -> entity instanceof Inventory && entity.isAlive();
     public static final Predicate<Entity> EXCEPT_CREATIVE_OR_SPECTATOR = entity -> !(entity instanceof PlayerEntity) || !entity.isSpectator() && !((PlayerEntity)entity).isCreative();
-    public static final Predicate<Entity> EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL = entity -> !(entity instanceof PlayerEntity) || !entity.isSpectator() && !((PlayerEntity)entity).isCreative() && entity.world.getDifficulty() != Difficulty.PEACEFUL;
     public static final Predicate<Entity> EXCEPT_SPECTATOR = entity -> !entity.isSpectator();
+
+    private EntityPredicates() {
+    }
 
     public static Predicate<Entity> maxDistance(double x, double y, double z, double max) {
         double d = max * max;

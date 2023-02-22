@@ -2,15 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.fluid;
 
+import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -24,6 +21,7 @@ import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.tag.FluidTags;
@@ -38,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class LavaFluid
 extends FlowableFluid {
+    public static final float field_31729 = 0.44444445f;
+
     @Override
     public Fluid getFlowing() {
         return Fluids.FLOWING_LAVA;
@@ -54,7 +54,6 @@ extends FlowableFluid {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(World world, BlockPos pos, FluidState state, Random random) {
         BlockPos blockPos = pos.up();
         if (world.getBlockState(blockPos).isAir() && !world.getBlockState(blockPos).isOpaqueFullCube(world, blockPos)) {
@@ -113,7 +112,7 @@ extends FlowableFluid {
     }
 
     private boolean hasBurnableBlock(WorldView world, BlockPos pos) {
-        if (pos.getY() >= 0 && pos.getY() < 256 && !world.isChunkLoaded(pos)) {
+        if (pos.getY() >= world.getBottomY() && pos.getY() < world.getTopY() && !world.isChunkLoaded(pos)) {
             return false;
         }
         return world.getBlockState(pos).getMaterial().isBurnable();
@@ -121,7 +120,6 @@ extends FlowableFluid {
 
     @Override
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public ParticleEffect getParticle() {
         return ParticleTypes.DRIPPING_LAVA;
     }
@@ -202,6 +200,11 @@ extends FlowableFluid {
     @Override
     protected float getBlastResistance() {
         return 100.0f;
+    }
+
+    @Override
+    public Optional<SoundEvent> getBucketFillSound() {
+        return Optional.of(SoundEvents.ITEM_BUCKET_FILL_LAVA);
     }
 
     public static class Flowing

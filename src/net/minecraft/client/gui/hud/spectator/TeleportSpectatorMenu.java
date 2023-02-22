@@ -13,6 +13,7 @@ package net.minecraft.client.gui.hud.spectator;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -34,7 +35,7 @@ import net.minecraft.world.GameMode;
 public class TeleportSpectatorMenu
 implements SpectatorMenuCommandGroup,
 SpectatorMenuCommand {
-    private static final Ordering<PlayerListEntry> ORDERING = Ordering.from((playerListEntry, playerListEntry2) -> ComparisonChain.start().compare((Comparable)playerListEntry.getProfile().getId(), (Comparable)playerListEntry2.getProfile().getId()).result());
+    private static final Ordering<PlayerListEntry> ORDERING = Ordering.from((a, b) -> ComparisonChain.start().compare((Comparable)a.getProfile().getId(), (Comparable)b.getProfile().getId()).result());
     private static final Text TELEPORT_TEXT = new TranslatableText("spectatorMenu.teleport");
     private static final Text PROMPT_TEXT = new TranslatableText("spectatorMenu.teleport.prompt");
     private final List<SpectatorMenuCommand> elements = Lists.newArrayList();
@@ -72,7 +73,7 @@ SpectatorMenuCommand {
 
     @Override
     public void renderIcon(MatrixStack matrices, float f, int i) {
-        MinecraftClient.getInstance().getTextureManager().bindTexture(SpectatorHud.SPECTATOR_TEXTURE);
+        RenderSystem.setShaderTexture(0, SpectatorHud.SPECTATOR_TEXTURE);
         DrawableHelper.drawTexture(matrices, 0, 0, 0.0f, 0.0f, 16, 16, 256, 256);
     }
 

@@ -22,10 +22,13 @@ import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
 import net.minecraft.client.util.SelectionManager;
@@ -35,19 +38,21 @@ import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
+import net.minecraft.util.SignType;
 import net.minecraft.util.math.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class SignEditScreen
 extends Screen {
-    private final SignBlockEntityRenderer.SignModel model = new SignBlockEntityRenderer.SignModel();
     private final SignBlockEntity sign;
     private int ticksSinceOpened;
     private int currentRow;
     private SelectionManager selectionManager;
-    private final String[] text = (String[])IntStream.range(0, 4).mapToObj(sign::getTextOnRow).map(Text::getString).toArray(String[]::new);
+    private SignType signType;
+    private SignBlockEntityRenderer.SignModel model;
+    private final String[] text = (String[])IntStream.range(0, 4).mapToObj(row -> sign.getTextOnRow(row, filtered)).map(Text::getString).toArray(String[]::new);
 
-    public SignEditScreen(SignBlockEntity sign) {
+    public SignEditScreen(SignBlockEntity sign, boolean filtered) {
         super(new TranslatableText("sign.edit"));
         this.sign = sign;
     }
@@ -55,12 +60,15 @@ extends Screen {
     @Override
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120, 200, 20, ScreenTexts.DONE, buttonWidget -> this.finishEditing()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120, 200, 20, ScreenTexts.DONE, button -> this.finishEditing()));
         this.sign.setEditable(false);
-        this.selectionManager = new SelectionManager(() -> this.text[this.currentRow], string -> {
-            this.text[this.currentRow] = string;
-            this.sign.setTextOnRow(this.currentRow, new LiteralText((String)string));
-        }, SelectionManager.makeClipboardGetter(this.client), SelectionManager.makeClipboardSetter(this.client), string -> this.client.textRenderer.getWidth((String)string) <= 90);
+        this.selectionManager = new SelectionManager(() -> this.text[this.currentRow], text -> {
+            this.text[this.currentRow] = text;
+            this.sign.setTextOnRow(this.currentRow, new LiteralText((String)text));
+        }, SelectionManager.makeClipboardGetter(this.client), SelectionManager.makeClipboardSetter(this.client), text -> this.client.textRenderer.getWidth((String)text) <= 90);
+        BlockState blockState = this.sign.getCachedState();
+        this.signType = SignBlockEntityRenderer.getSignType(blockState.getBlock());
+        this.model = SignBlockEntityRenderer.createSignModel(this.client.getEntityModelLoader(), this.signType);
     }
 
     @Override
@@ -76,14 +84,14 @@ extends Screen {
     @Override
     public void tick() {
         ++this.ticksSinceOpened;
-        if (!this.sign.getType().supports(this.sign.getCachedState().getBlock())) {
+        if (!this.sign.getType().supports(this.sign.getCachedState())) {
             this.finishEditing();
         }
     }
 
     private void finishEditing() {
         this.sign.markDirty();
-        this.client.openScreen(null);
+        this.client.setScreen(null);
     }
 
     @Override
@@ -139,12 +147,10 @@ extends Screen {
         matrices.push();
         matrices.scale(0.6666667f, -0.6666667f, -0.6666667f);
         VertexConsumerProvider.Immediate immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
-        SpriteIdentifier spriteIdentifier = SignBlockEntityRenderer.getModelTexture(blockState.getBlock());
+        SpriteIdentifier spriteIdentifier = TexturedRenderLayers.getSignTextureId(this.signType);
         VertexConsumer vertexConsumer = spriteIdentifier.getVertexConsumer(immediate, this.model::getLayer);
-        this.model.field.render(matrices, vertexConsumer, 0xF000F0, OverlayTexture.DEFAULT_UV);
-        if (bl) {
-            this.model.foot.render(matrices, vertexConsumer, 0xF000F0, OverlayTexture.DEFAULT_UV);
-        }
+        this.model.stick.visible = bl;
+        this.model.root.render(matrices, vertexConsumer, 0xF000F0, OverlayTexture.DEFAULT_UV);
         matrices.pop();
         float h = 0.010416667f;
         matrices.translate(0.0, 0.3333333432674408, 0.046666666865348816);
@@ -186,10 +192,11 @@ extends Screen {
             int v = Math.max(s, t);
             Tessellator tessellator = Tessellator.getInstance();
             BufferBuilder bufferBuilder = tessellator.getBuffer();
+            RenderSystem.setShader(GameRenderer::getPositionColorShader);
             RenderSystem.disableTexture();
             RenderSystem.enableColorLogicOp();
             RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-            bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+            bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
             bufferBuilder.vertex(matrix4f, u, l + this.client.textRenderer.fontHeight, 0.0f).color(0, 0, 255, 255).next();
             bufferBuilder.vertex(matrix4f, v, l + this.client.textRenderer.fontHeight, 0.0f).color(0, 0, 255, 255).next();
             bufferBuilder.vertex(matrix4f, v, l, 0.0f).color(0, 0, 255, 255).next();

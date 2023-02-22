@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -17,25 +10,27 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class EntityAnimationS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private int animationId;
-
-    public EntityAnimationS2CPacket() {
-    }
+    public static final int SWING_MAIN_HAND = 0;
+    public static final int DAMAGE = 1;
+    public static final int WAKE_UP = 2;
+    public static final int SWING_OFF_HAND = 3;
+    public static final int CRIT = 4;
+    public static final int ENCHANTED_HIT = 5;
+    private final int id;
+    private final int animationId;
 
     public EntityAnimationS2CPacket(Entity entity, int animationId) {
-        this.id = entity.getEntityId();
+        this.id = entity.getId();
         this.animationId = animationId;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public EntityAnimationS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.animationId = buf.readUnsignedByte();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeByte(this.animationId);
     }
@@ -45,12 +40,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onEntityAnimation(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getAnimationId() {
         return this.animationId;
     }

@@ -30,9 +30,9 @@ implements AutoCloseable {
     @Nullable
     private FeatureUpdater featureUpdater;
 
-    public VersionedChunkStorage(File file, DataFixer dataFixer, boolean bl) {
+    public VersionedChunkStorage(File directory, DataFixer dataFixer, boolean dsync) {
         this.dataFixer = dataFixer;
-        this.worker = new StorageIoWorker(file, bl, "chunk");
+        this.worker = new StorageIoWorker(directory, dsync, "chunk");
     }
 
     public NbtCompound updateChunkNbt(RegistryKey<World> worldKey, Supplier<PersistentStateManager> persistentStateManagerFactory, NbtCompound nbt) {
@@ -68,7 +68,7 @@ implements AutoCloseable {
     }
 
     public void completeAll() {
-        this.worker.completeAll().join();
+        this.worker.completeAll(true).join();
     }
 
     @Override

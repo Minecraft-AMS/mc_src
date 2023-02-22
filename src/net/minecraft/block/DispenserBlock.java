@@ -47,14 +47,15 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.PositionImpl;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class DispenserBlock
 extends BlockWithEntity {
     public static final DirectionProperty FACING = FacingBlock.FACING;
     public static final BooleanProperty TRIGGERED = Properties.TRIGGERED;
     private static final Map<Item, DispenserBehavior> BEHAVIORS = (Map)Util.make(new Object2ObjectOpenHashMap(), object2ObjectOpenHashMap -> object2ObjectOpenHashMap.defaultReturnValue((Object)new ItemDispenserBehavior()));
+    private static final int SCHEDULED_TICK_DELAY = 4;
 
     public static void registerBehavior(ItemConvertible provider, DispenserBehavior behavior) {
         BEHAVIORS.put(provider.asItem(), behavior);
@@ -88,6 +89,7 @@ extends BlockWithEntity {
         int i = dispenserBlockEntity.chooseNonEmptySlot();
         if (i < 0) {
             world.syncWorldEvent(1001, pos, 0);
+            world.emitGameEvent(GameEvent.DISPENSE_FAIL, pos);
             return;
         }
         ItemStack itemStack = dispenserBlockEntity.getStack(i);
@@ -119,8 +121,8 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new DispenserBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new DispenserBlockEntity(pos, state);
     }
 
     @Override

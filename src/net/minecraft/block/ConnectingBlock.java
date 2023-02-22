@@ -2,10 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
  */
 package net.minecraft.block;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import java.util.Map;
 import net.minecraft.block.AbstractBlock;
@@ -30,14 +32,14 @@ extends Block {
     public static final BooleanProperty WEST = Properties.WEST;
     public static final BooleanProperty UP = Properties.UP;
     public static final BooleanProperty DOWN = Properties.DOWN;
-    public static final Map<Direction, BooleanProperty> FACING_PROPERTIES = Util.make(Maps.newEnumMap(Direction.class), enumMap -> {
-        enumMap.put(Direction.NORTH, NORTH);
-        enumMap.put(Direction.EAST, EAST);
-        enumMap.put(Direction.SOUTH, SOUTH);
-        enumMap.put(Direction.WEST, WEST);
-        enumMap.put(Direction.UP, UP);
-        enumMap.put(Direction.DOWN, DOWN);
-    });
+    public static final Map<Direction, BooleanProperty> FACING_PROPERTIES = ImmutableMap.copyOf((Map)Util.make(Maps.newEnumMap(Direction.class), directions -> {
+        directions.put(Direction.NORTH, NORTH);
+        directions.put(Direction.EAST, EAST);
+        directions.put(Direction.SOUTH, SOUTH);
+        directions.put(Direction.WEST, WEST);
+        directions.put(Direction.UP, UP);
+        directions.put(Direction.DOWN, DOWN);
+    }));
     protected final VoxelShape[] CONNECTIONS_TO_SHAPE;
 
     protected ConnectingBlock(float radius, AbstractBlock.Settings settings) {

@@ -14,14 +14,23 @@ import net.fabricmc.api.Environment;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
-public enum AttackIndicator {
-    OFF(0, "options.off"),
-    CROSSHAIR(1, "options.attack.crosshair"),
-    HOTBAR(2, "options.attack.hotbar");
-
+public final class AttackIndicator
+extends Enum<AttackIndicator> {
+    public static final /* enum */ AttackIndicator OFF = new AttackIndicator(0, "options.off");
+    public static final /* enum */ AttackIndicator CROSSHAIR = new AttackIndicator(1, "options.attack.crosshair");
+    public static final /* enum */ AttackIndicator HOTBAR = new AttackIndicator(2, "options.attack.hotbar");
     private static final AttackIndicator[] VALUES;
     private final int id;
     private final String translationKey;
+    private static final /* synthetic */ AttackIndicator[] field_18157;
+
+    public static AttackIndicator[] values() {
+        return (AttackIndicator[])field_18157.clone();
+    }
+
+    public static AttackIndicator valueOf(String string) {
+        return Enum.valueOf(AttackIndicator.class, string);
+    }
 
     private AttackIndicator(int id, String translationKey) {
         this.id = id;
@@ -40,7 +49,12 @@ public enum AttackIndicator {
         return VALUES[MathHelper.floorMod(id, VALUES.length)];
     }
 
+    private static /* synthetic */ AttackIndicator[] method_36858() {
+        return new AttackIndicator[]{OFF, CROSSHAIR, HOTBAR};
+    }
+
     static {
+        field_18157 = AttackIndicator.method_36858();
         VALUES = (AttackIndicator[])Arrays.stream(AttackIndicator.values()).sorted(Comparator.comparingInt(AttackIndicator::getId)).toArray(AttackIndicator[]::new);
     }
 }

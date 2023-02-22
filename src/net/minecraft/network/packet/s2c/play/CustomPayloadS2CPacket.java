@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -17,10 +10,10 @@ import net.minecraft.util.Identifier;
 
 public class CustomPayloadS2CPacket
 implements Packet<ClientPlayPacketListener> {
+    private static final int MAX_PAYLOAD_SIZE = 0x100000;
     public static final Identifier BRAND = new Identifier("brand");
     public static final Identifier DEBUG_PATH = new Identifier("debug/path");
     public static final Identifier DEBUG_NEIGHBORS_UPDATE = new Identifier("debug/neighbors_update");
-    public static final Identifier DEBUG_CAVES = new Identifier("debug/caves");
     public static final Identifier DEBUG_STRUCTURES = new Identifier("debug/structures");
     public static final Identifier DEBUG_WORLDGEN_ATTEMPT = new Identifier("debug/worldgen_attempt");
     public static final Identifier DEBUG_POI_TICKET_COUNT = new Identifier("debug/poi_ticket_count");
@@ -34,11 +27,10 @@ implements Packet<ClientPlayPacketListener> {
     public static final Identifier DEBUG_GAME_TEST_ADD_MARKER = new Identifier("debug/game_test_add_marker");
     public static final Identifier DEBUG_GAME_TEST_CLEAR = new Identifier("debug/game_test_clear");
     public static final Identifier DEBUG_RAIDS = new Identifier("debug/raids");
-    private Identifier channel;
-    private PacketByteBuf data;
-
-    public CustomPayloadS2CPacket() {
-    }
+    public static final Identifier DEBUG_GAME_EVENT = new Identifier("debug/game_event");
+    public static final Identifier DEBUG_GAME_EVENT_LISTENERS = new Identifier("debug/game_event_listeners");
+    private final Identifier channel;
+    private final PacketByteBuf data;
 
     public CustomPayloadS2CPacket(Identifier channel, PacketByteBuf data) {
         this.channel = channel;
@@ -48,18 +40,17 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public CustomPayloadS2CPacket(PacketByteBuf buf) {
         this.channel = buf.readIdentifier();
         int i = buf.readableBytes();
         if (i < 0 || i > 0x100000) {
-            throw new IOException("Payload may not be larger than 1048576 bytes");
+            throw new IllegalArgumentException("Payload may not be larger than 1048576 bytes");
         }
         this.data = new PacketByteBuf(buf.readBytes(i));
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeIdentifier(this.channel);
         buf.writeBytes(this.data.copy());
     }
@@ -69,12 +60,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onCustomPayload(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Identifier getChannel() {
         return this.channel;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public PacketByteBuf getData() {
         return new PacketByteBuf(this.data.copy());
     }

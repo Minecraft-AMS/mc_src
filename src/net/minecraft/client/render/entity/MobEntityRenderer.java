@@ -14,7 +14,7 @@ import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.util.math.MatrixStack;
@@ -30,8 +30,10 @@ import net.minecraft.world.LightType;
 @Environment(value=EnvType.CLIENT)
 public abstract class MobEntityRenderer<T extends MobEntity, M extends EntityModel<T>>
 extends LivingEntityRenderer<T, M> {
-    public MobEntityRenderer(EntityRenderDispatcher entityRenderDispatcher, M entityModel, float f) {
-        super(entityRenderDispatcher, entityModel, f);
+    public static final int LEASH_PIECE_COUNT = 24;
+
+    public MobEntityRenderer(EntityRendererFactory.Context context, M entityModel, float f) {
+        super(context, entityModel, f);
     }
 
     @Override
@@ -58,72 +60,59 @@ extends LivingEntityRenderer<T, M> {
         if (entity == null) {
             return;
         }
-        this.method_4073(mobEntity, g, matrixStack, vertexConsumerProvider, entity);
+        this.renderLeash(mobEntity, g, matrixStack, vertexConsumerProvider, entity);
     }
 
-    private <E extends Entity> void method_4073(T mobEntity, float f, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, E entity) {
-        matrixStack.push();
-        Vec3d vec3d = entity.method_30951(f);
-        double d = (double)(MathHelper.lerp(f, ((MobEntity)mobEntity).bodyYaw, ((MobEntity)mobEntity).prevBodyYaw) * ((float)Math.PI / 180)) + 1.5707963267948966;
-        Vec3d vec3d2 = ((Entity)mobEntity).method_29919();
+    private <E extends Entity> void renderLeash(T entity, float tickDelta, MatrixStack matrices, VertexConsumerProvider provider, E holdingEntity) {
+        int u;
+        matrices.push();
+        Vec3d vec3d = holdingEntity.method_30951(tickDelta);
+        double d = (double)(MathHelper.lerp(tickDelta, ((MobEntity)entity).bodyYaw, ((MobEntity)entity).prevBodyYaw) * ((float)Math.PI / 180)) + 1.5707963267948966;
+        Vec3d vec3d2 = ((Entity)entity).getLeashOffset();
         double e = Math.cos(d) * vec3d2.z + Math.sin(d) * vec3d2.x;
-        double g = Math.sin(d) * vec3d2.z - Math.cos(d) * vec3d2.x;
-        double h = MathHelper.lerp((double)f, ((MobEntity)mobEntity).prevX, ((Entity)mobEntity).getX()) + e;
-        double i = MathHelper.lerp((double)f, ((MobEntity)mobEntity).prevY, ((Entity)mobEntity).getY()) + vec3d2.y;
-        double j = MathHelper.lerp((double)f, ((MobEntity)mobEntity).prevZ, ((Entity)mobEntity).getZ()) + g;
-        matrixStack.translate(e, vec3d2.y, g);
-        float k = (float)(vec3d.x - h);
-        float l = (float)(vec3d.y - i);
-        float m = (float)(vec3d.z - j);
-        float n = 0.025f;
-        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getLeash());
-        Matrix4f matrix4f = matrixStack.peek().getModel();
-        float o = MathHelper.fastInverseSqrt(k * k + m * m) * 0.025f / 2.0f;
-        float p = m * o;
-        float q = k * o;
-        BlockPos blockPos = new BlockPos(((Entity)mobEntity).getCameraPosVec(f));
-        BlockPos blockPos2 = new BlockPos(entity.getCameraPosVec(f));
-        int r = this.getBlockLight(mobEntity, blockPos);
-        int s = this.dispatcher.getRenderer(entity).getBlockLight(entity, blockPos2);
-        int t = ((MobEntity)mobEntity).world.getLightLevel(LightType.SKY, blockPos);
-        int u = ((MobEntity)mobEntity).world.getLightLevel(LightType.SKY, blockPos2);
-        MobEntityRenderer.method_23186(vertexConsumer, matrix4f, k, l, m, r, s, t, u, 0.025f, 0.025f, p, q);
-        MobEntityRenderer.method_23186(vertexConsumer, matrix4f, k, l, m, r, s, t, u, 0.025f, 0.0f, p, q);
-        matrixStack.pop();
+        double f = Math.sin(d) * vec3d2.z - Math.cos(d) * vec3d2.x;
+        double g = MathHelper.lerp((double)tickDelta, ((MobEntity)entity).prevX, ((Entity)entity).getX()) + e;
+        double h = MathHelper.lerp((double)tickDelta, ((MobEntity)entity).prevY, ((Entity)entity).getY()) + vec3d2.y;
+        double i = MathHelper.lerp((double)tickDelta, ((MobEntity)entity).prevZ, ((Entity)entity).getZ()) + f;
+        matrices.translate(e, vec3d2.y, f);
+        float j = (float)(vec3d.x - g);
+        float k = (float)(vec3d.y - h);
+        float l = (float)(vec3d.z - i);
+        float m = 0.025f;
+        VertexConsumer vertexConsumer = provider.getBuffer(RenderLayer.getLeash());
+        Matrix4f matrix4f = matrices.peek().getModel();
+        float n = MathHelper.fastInverseSqrt(j * j + l * l) * 0.025f / 2.0f;
+        float o = l * n;
+        float p = j * n;
+        BlockPos blockPos = new BlockPos(((Entity)entity).getCameraPosVec(tickDelta));
+        BlockPos blockPos2 = new BlockPos(holdingEntity.getCameraPosVec(tickDelta));
+        int q = this.getBlockLight(entity, blockPos);
+        int r = this.dispatcher.getRenderer(holdingEntity).getBlockLight(holdingEntity, blockPos2);
+        int s = ((MobEntity)entity).world.getLightLevel(LightType.SKY, blockPos);
+        int t = ((MobEntity)entity).world.getLightLevel(LightType.SKY, blockPos2);
+        for (u = 0; u <= 24; ++u) {
+            MobEntityRenderer.renderLeashPiece(vertexConsumer, matrix4f, j, k, l, q, r, s, t, 0.025f, 0.025f, o, p, u, false);
+        }
+        for (u = 24; u >= 0; --u) {
+            MobEntityRenderer.renderLeashPiece(vertexConsumer, matrix4f, j, k, l, q, r, s, t, 0.025f, 0.0f, o, p, u, true);
+        }
+        matrices.pop();
     }
 
-    public static void method_23186(VertexConsumer vertexConsumer, Matrix4f matrix4f, float f, float g, float h, int i, int j, int k, int l, float m, float n, float o, float p) {
-        int q = 24;
-        for (int r = 0; r < 24; ++r) {
-            float s = (float)r / 23.0f;
-            int t = (int)MathHelper.lerp(s, i, j);
-            int u = (int)MathHelper.lerp(s, k, l);
-            int v = LightmapTextureManager.pack(t, u);
-            MobEntityRenderer.method_23187(vertexConsumer, matrix4f, v, f, g, h, m, n, 24, r, false, o, p);
-            MobEntityRenderer.method_23187(vertexConsumer, matrix4f, v, f, g, h, m, n, 24, r + 1, true, o, p);
-        }
-    }
-
-    public static void method_23187(VertexConsumer vertexConsumer, Matrix4f matrix4f, int i, float f, float g, float h, float j, float k, int l, int m, boolean bl, float n, float o) {
-        float p = 0.5f;
-        float q = 0.4f;
-        float r = 0.3f;
-        if (m % 2 == 0) {
-            p *= 0.7f;
-            q *= 0.7f;
-            r *= 0.7f;
-        }
-        float s = (float)m / (float)l;
-        float t = f * s;
-        float u = g > 0.0f ? g * s * s : g - g * (1.0f - s) * (1.0f - s);
-        float v = h * s;
-        if (!bl) {
-            vertexConsumer.vertex(matrix4f, t + n, u + j - k, v - o).color(p, q, r, 1.0f).light(i).next();
-        }
-        vertexConsumer.vertex(matrix4f, t - n, u + k, v + o).color(p, q, r, 1.0f).light(i).next();
-        if (bl) {
-            vertexConsumer.vertex(matrix4f, t + n, u + j - k, v - o).color(p, q, r, 1.0f).light(i).next();
-        }
+    private static void renderLeashPiece(VertexConsumer vertexConsumer, Matrix4f modelMatrix, float f, float g, float h, int leashedEntityBlockLight, int holdingEntityBlockLight, int leashedEntitySkyLight, int holdingEntitySkyLight, float i, float j, float k, float l, int pieceIndex, boolean isLeashKnot) {
+        float m = (float)pieceIndex / 24.0f;
+        int n = (int)MathHelper.lerp(m, leashedEntityBlockLight, holdingEntityBlockLight);
+        int o = (int)MathHelper.lerp(m, leashedEntitySkyLight, holdingEntitySkyLight);
+        int p = LightmapTextureManager.pack(n, o);
+        float q = pieceIndex % 2 == (isLeashKnot ? 1 : 0) ? 0.7f : 1.0f;
+        float r = 0.5f * q;
+        float s = 0.4f * q;
+        float t = 0.3f * q;
+        float u = f * m;
+        float v = g > 0.0f ? g * m * m : g - g * (1.0f - m) * (1.0f - m);
+        float w = h * m;
+        vertexConsumer.vertex(modelMatrix, u - k, v + j, w + l).color(r, s, t, 1.0f).light(p).next();
+        vertexConsumer.vertex(modelMatrix, u + k, v + i - j, w - l).color(r, s, t, 1.0f).light(p).next();
     }
 }
 

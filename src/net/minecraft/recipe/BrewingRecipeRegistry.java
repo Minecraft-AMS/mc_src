@@ -21,12 +21,13 @@ import net.minecraft.recipe.Ingredient;
 import net.minecraft.util.registry.Registry;
 
 public class BrewingRecipeRegistry {
+    public static final int field_30942 = 20;
     private static final List<Recipe<Potion>> POTION_RECIPES = Lists.newArrayList();
     private static final List<Recipe<Item>> ITEM_RECIPES = Lists.newArrayList();
     private static final List<Ingredient> POTION_TYPES = Lists.newArrayList();
-    private static final Predicate<ItemStack> POTION_TYPE_PREDICATE = itemStack -> {
+    private static final Predicate<ItemStack> POTION_TYPE_PREDICATE = stack -> {
         for (Ingredient ingredient : POTION_TYPES) {
-            if (!ingredient.test((ItemStack)itemStack)) continue;
+            if (!ingredient.test((ItemStack)stack)) continue;
             return true;
         }
         return false;
@@ -39,7 +40,7 @@ public class BrewingRecipeRegistry {
     protected static boolean isItemRecipeIngredient(ItemStack stack) {
         int j = ITEM_RECIPES.size();
         for (int i = 0; i < j; ++i) {
-            if (!((Recipe)ITEM_RECIPES.get(i)).ingredient.test(stack)) continue;
+            if (!BrewingRecipeRegistry.ITEM_RECIPES.get((int)i).ingredient.test(stack)) continue;
             return true;
         }
         return false;
@@ -48,7 +49,7 @@ public class BrewingRecipeRegistry {
     protected static boolean isPotionRecipeIngredient(ItemStack stack) {
         int j = POTION_RECIPES.size();
         for (int i = 0; i < j; ++i) {
-            if (!((Recipe)POTION_RECIPES.get(i)).ingredient.test(stack)) continue;
+            if (!BrewingRecipeRegistry.POTION_RECIPES.get((int)i).ingredient.test(stack)) continue;
             return true;
         }
         return false;
@@ -57,7 +58,7 @@ public class BrewingRecipeRegistry {
     public static boolean isBrewable(Potion potion) {
         int j = POTION_RECIPES.size();
         for (int i = 0; i < j; ++i) {
-            if (((Recipe)POTION_RECIPES.get(i)).output != potion) continue;
+            if (BrewingRecipeRegistry.POTION_RECIPES.get((int)i).output != potion) continue;
             return true;
         }
         return false;
@@ -75,7 +76,7 @@ public class BrewingRecipeRegistry {
         int j = ITEM_RECIPES.size();
         for (int i = 0; i < j; ++i) {
             Recipe<Item> recipe = ITEM_RECIPES.get(i);
-            if (((Recipe)recipe).input != item || !((Recipe)recipe).ingredient.test(ingredient)) continue;
+            if (recipe.input != item || !recipe.ingredient.test(ingredient)) continue;
             return true;
         }
         return false;
@@ -86,7 +87,7 @@ public class BrewingRecipeRegistry {
         int j = POTION_RECIPES.size();
         for (int i = 0; i < j; ++i) {
             Recipe<Potion> recipe = POTION_RECIPES.get(i);
-            if (((Recipe)recipe).input != potion || !((Recipe)recipe).ingredient.test(ingredient)) continue;
+            if (recipe.input != potion || !recipe.ingredient.test(ingredient)) continue;
             return true;
         }
         return false;
@@ -101,14 +102,14 @@ public class BrewingRecipeRegistry {
             int j = ITEM_RECIPES.size();
             for (i = 0; i < j; ++i) {
                 recipe = ITEM_RECIPES.get(i);
-                if (((Recipe)recipe).input != item || !((Recipe)recipe).ingredient.test(input)) continue;
-                return PotionUtil.setPotion(new ItemStack((ItemConvertible)((Recipe)recipe).output), potion);
+                if (recipe.input != item || !recipe.ingredient.test(input)) continue;
+                return PotionUtil.setPotion(new ItemStack((ItemConvertible)recipe.output), potion);
             }
             j = POTION_RECIPES.size();
             for (i = 0; i < j; ++i) {
                 recipe = POTION_RECIPES.get(i);
-                if (((Recipe)recipe).input != potion || !((Recipe)recipe).ingredient.test(input)) continue;
-                return PotionUtil.setPotion(new ItemStack(item), (Potion)((Recipe)recipe).output);
+                if (recipe.input != potion || !recipe.ingredient.test(input)) continue;
+                return PotionUtil.setPotion(new ItemStack(item), (Potion)recipe.output);
             }
         }
         return ingredient;
@@ -199,14 +200,14 @@ public class BrewingRecipeRegistry {
     }
 
     static class Recipe<T> {
-        private final T input;
-        private final Ingredient ingredient;
-        private final T output;
+        final T input;
+        final Ingredient ingredient;
+        final T output;
 
-        public Recipe(T object, Ingredient ingredient, T object2) {
-            this.input = object;
+        public Recipe(T input, Ingredient ingredient, T output) {
+            this.input = input;
             this.ingredient = ingredient;
-            this.output = object2;
+            this.output = output;
         }
     }
 }

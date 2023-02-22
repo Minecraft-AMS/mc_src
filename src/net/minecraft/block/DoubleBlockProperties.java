@@ -80,19 +80,36 @@ public class DoubleBlockProperties {
         }
     }
 
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type SINGLE = new Type();
+        public static final /* enum */ Type FIRST = new Type();
+        public static final /* enum */ Type SECOND = new Type();
+        private static final /* synthetic */ Type[] field_21786;
+
+        public static Type[] values() {
+            return (Type[])field_21786.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36705() {
+            return new Type[]{SINGLE, FIRST, SECOND};
+        }
+
+        static {
+            field_21786 = Type.method_36705();
+        }
+    }
+
     public static interface PropertyRetriever<S, T> {
         public T getFromBoth(S var1, S var2);
 
         public T getFrom(S var1);
 
         public T getFallback();
-    }
-
-    public static enum Type {
-        SINGLE,
-        FIRST,
-        SECOND;
-
     }
 }
 

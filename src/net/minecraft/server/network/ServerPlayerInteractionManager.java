@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.server.network;
 
@@ -11,9 +12,7 @@ import java.util.Objects;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.CommandBlock;
-import net.minecraft.block.JigsawBlock;
-import net.minecraft.block.StructureBlock;
+import net.minecraft.block.OperatorBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
@@ -33,13 +32,15 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 public class ServerPlayerInteractionManager {
     private static final Logger LOGGER = LogManager.getLogger();
-    public ServerWorld world;
-    public ServerPlayerEntity player;
-    private GameMode gameMode = GameMode.NOT_SET;
-    private GameMode previousGameMode = GameMode.NOT_SET;
+    protected ServerWorld world;
+    protected final ServerPlayerEntity player;
+    private GameMode gameMode = GameMode.DEFAULT;
+    @Nullable
+    private GameMode previousGameMode;
     private boolean mining;
     private int startMiningTime;
     private BlockPos miningPos = BlockPos.ORIGIN;
@@ -49,18 +50,23 @@ public class ServerPlayerInteractionManager {
     private int failedStartMiningTime;
     private int blockBreakingProgress = -1;
 
-    public ServerPlayerInteractionManager(ServerWorld world) {
-        this.world = world;
+    public ServerPlayerInteractionManager(ServerPlayerEntity player) {
+        this.player = player;
+        this.world = player.getServerWorld();
     }
 
-    public void setGameMode(GameMode gameMode) {
-        this.setGameMode(gameMode, gameMode != this.gameMode ? this.gameMode : this.previousGameMode);
+    public boolean changeGameMode(GameMode gameMode) {
+        if (gameMode == this.gameMode) {
+            return false;
+        }
+        this.setGameMode(gameMode, this.gameMode);
+        return true;
     }
 
-    public void setGameMode(GameMode gameMode, GameMode previousGameMode) {
+    protected void setGameMode(GameMode gameMode, @Nullable GameMode previousGameMode) {
         this.previousGameMode = previousGameMode;
         this.gameMode = gameMode;
-        gameMode.setAbilities(this.player.abilities);
+        gameMode.setAbilities(this.player.getAbilities());
         this.player.sendAbilitiesUpdate();
         this.player.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_GAME_MODE, this.player));
         this.world.updateSleepingPlayers();
@@ -70,6 +76,7 @@ public class ServerPlayerInteractionManager {
         return this.gameMode;
     }
 
+    @Nullable
     public GameMode getPreviousGameMode() {
         return this.previousGameMode;
     }
@@ -80,13 +87,6 @@ public class ServerPlayerInteractionManager {
 
     public boolean isCreative() {
         return this.gameMode.isCreative();
-    }
-
-    public void setGameModeIfNotPresent(GameMode gameMode) {
-        if (this.gameMode == GameMode.NOT_SET) {
-            this.gameMode = gameMode;
-        }
-        this.setGameMode(this.gameMode);
     }
 
     public void update() {
@@ -105,7 +105,7 @@ public class ServerPlayerInteractionManager {
         } else if (this.mining) {
             BlockState blockState = this.world.getBlockState(this.miningPos);
             if (blockState.isAir()) {
-                this.world.setBlockBreakingInfo(this.player.getEntityId(), this.miningPos, -1);
+                this.world.setBlockBreakingInfo(this.player.getId(), this.miningPos, -1);
                 this.blockBreakingProgress = -1;
                 this.mining = false;
             } else {
@@ -119,7 +119,7 @@ public class ServerPlayerInteractionManager {
         float f = state.calcBlockBreakingDelta(this.player, this.player.world, pos) * (float)(j + 1);
         int k = (int)(f * 10.0f);
         if (k != this.blockBreakingProgress) {
-            this.world.setBlockBreakingInfo(this.player.getEntityId(), pos, k);
+            this.world.setBlockBreakingInfo(this.player.getId(), pos, k);
             this.blockBreakingProgress = k;
         }
         return f;
@@ -167,7 +167,7 @@ public class ServerPlayerInteractionManager {
                 this.mining = true;
                 this.miningPos = pos.toImmutable();
                 int i = (int)(h * 10.0f);
-                this.world.setBlockBreakingInfo(this.player.getEntityId(), pos, i);
+                this.world.setBlockBreakingInfo(this.player.getId(), pos, i);
                 this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, true, "actual start of destroying"));
                 this.blockBreakingProgress = i;
             }
@@ -179,7 +179,7 @@ public class ServerPlayerInteractionManager {
                     float k = blockState.calcBlockBreakingDelta(this.player, this.player.world, pos) * (float)(j + 1);
                     if (k >= 0.7f) {
                         this.mining = false;
-                        this.world.setBlockBreakingInfo(this.player.getEntityId(), pos, -1);
+                        this.world.setBlockBreakingInfo(this.player.getId(), pos, -1);
                         this.finishMining(pos, action, "destroyed");
                         return;
                     }
@@ -195,11 +195,11 @@ public class ServerPlayerInteractionManager {
         } else if (action == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK) {
             this.mining = false;
             if (!Objects.equals(this.miningPos, pos)) {
-                LOGGER.warn("Mismatch in destroy block pos: " + this.miningPos + " " + pos);
-                this.world.setBlockBreakingInfo(this.player.getEntityId(), this.miningPos, -1);
+                LOGGER.warn("Mismatch in destroy block pos: {} {}", (Object)this.miningPos, (Object)pos);
+                this.world.setBlockBreakingInfo(this.player.getId(), this.miningPos, -1);
                 this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(this.miningPos, this.world.getBlockState(this.miningPos), action, true, "aborted mismatched destroying"));
             }
-            this.world.setBlockBreakingInfo(this.player.getEntityId(), pos, -1);
+            this.world.setBlockBreakingInfo(this.player.getId(), pos, -1);
             this.player.networkHandler.sendPacket(new PlayerActionResponseS2CPacket(pos, this.world.getBlockState(pos), action, true, "aborted destroying"));
         }
     }
@@ -219,7 +219,7 @@ public class ServerPlayerInteractionManager {
         }
         BlockEntity blockEntity = this.world.getBlockEntity(pos);
         Block block = blockState.getBlock();
-        if ((block instanceof CommandBlock || block instanceof StructureBlock || block instanceof JigsawBlock) && !this.player.isCreativeLevelTwoOp()) {
+        if (block instanceof OperatorBlock && !this.player.isCreativeLevelTwoOp()) {
             this.world.updateListeners(pos, blockState, blockState, 3);
             return false;
         }
@@ -272,7 +272,7 @@ public class ServerPlayerInteractionManager {
             player.setStackInHand(hand, ItemStack.EMPTY);
         }
         if (!player.isUsingItem()) {
-            player.refreshScreenHandler(player.playerScreenHandler);
+            player.playerScreenHandler.syncState();
         }
         return typedActionResult.getResult();
     }
@@ -294,7 +294,7 @@ public class ServerPlayerInteractionManager {
         boolean bl2 = player.shouldCancelInteraction() && bl;
         ItemStack itemStack = stack.copy();
         if (!bl2 && (actionResult = blockState.onUse(world, player, hand, hitResult)).isAccepted()) {
-            Criteria.ITEM_USED_ON_BLOCK.test(player, blockPos, itemStack);
+            Criteria.ITEM_USED_ON_BLOCK.trigger(player, blockPos, itemStack);
             return actionResult;
         }
         if (stack.isEmpty() || player.getItemCooldownManager().isCoolingDown(stack.getItem())) {
@@ -309,7 +309,7 @@ public class ServerPlayerInteractionManager {
             actionResult2 = stack.useOnBlock(itemUsageContext);
         }
         if (actionResult2.isAccepted()) {
-            Criteria.ITEM_USED_ON_BLOCK.test(player, blockPos, itemStack);
+            Criteria.ITEM_USED_ON_BLOCK.trigger(player, blockPos, itemStack);
         }
         return actionResult2;
     }

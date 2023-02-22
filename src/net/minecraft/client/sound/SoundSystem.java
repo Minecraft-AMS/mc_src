@@ -63,7 +63,13 @@ import org.jetbrains.annotations.Nullable;
 public class SoundSystem {
     private static final Marker MARKER = MarkerManager.getMarker((String)"SOUNDS");
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Set<Identifier> unknownSounds = Sets.newHashSet();
+    private static final float field_33021 = 0.5f;
+    private static final float field_33022 = 2.0f;
+    private static final float field_33023 = 0.0f;
+    private static final float field_33024 = 1.0f;
+    private static final int field_33025 = 20;
+    private static final Set<Identifier> UNKNOWN_SOUNDS = Sets.newHashSet();
+    public static final String FOR_THE_DEBUG = "FOR THE DEBUG!";
     private final SoundManager loader;
     private final GameOptions settings;
     private boolean started;
@@ -89,12 +95,12 @@ public class SoundSystem {
     }
 
     public void reloadSounds() {
-        unknownSounds.clear();
+        UNKNOWN_SOUNDS.clear();
         for (SoundEvent soundEvent : Registry.SOUND_EVENT) {
             Identifier identifier = soundEvent.getId();
             if (this.loader.get(identifier) != null) continue;
             LOGGER.warn("Missing sound for event: {}", (Object)Registry.SOUND_EVENT.getId(soundEvent));
-            unknownSounds.add(identifier);
+            UNKNOWN_SOUNDS.add(identifier);
         }
         this.stop();
         this.start();
@@ -132,8 +138,8 @@ public class SoundSystem {
             this.listener.setVolume(volume);
             return;
         }
-        this.sources.forEach((soundInstance, sourceManager) -> {
-            float f = this.getAdjustedVolume((SoundInstance)soundInstance);
+        this.sources.forEach((source2, sourceManager) -> {
+            float f = this.getAdjustedVolume((SoundInstance)source2);
             sourceManager.run(source -> {
                 if (f <= 0.0f) {
                     source.stop();
@@ -163,7 +169,7 @@ public class SoundSystem {
     public void stopAll() {
         if (this.started) {
             this.taskQueue.restart();
-            this.sources.values().forEach(sourceManager -> sourceManager.run(Source::stop));
+            this.sources.values().forEach(source -> source.run(Source::stop));
             this.sources.clear();
             this.channel.close();
             this.startTicks.clear();
@@ -287,14 +293,14 @@ public class SoundSystem {
         WeightedSoundSet weightedSoundSet = sound.getSoundSet(this.loader);
         Identifier identifier = sound.getId();
         if (weightedSoundSet == null) {
-            if (unknownSounds.add(identifier)) {
+            if (UNKNOWN_SOUNDS.add(identifier)) {
                 LOGGER.warn(MARKER, "Unable to play unknown soundEvent: {}", (Object)identifier);
             }
             return;
         }
         Sound sound2 = sound.getSound();
         if (sound2 == SoundManager.MISSING_SOUND) {
-            if (unknownSounds.add(identifier)) {
+            if (UNKNOWN_SOUNDS.add(identifier)) {
                 LOGGER.warn(MARKER, "Unable to play empty soundEvent: {}", (Object)identifier);
             }
             return;
@@ -305,7 +311,7 @@ public class SoundSystem {
         float h = this.getAdjustedVolume(sound);
         float i = this.getAdjustedPitch(sound);
         SoundInstance.AttenuationType attenuationType = sound.getAttenuationType();
-        boolean bl = sound.isLooping();
+        boolean bl = sound.isRelative();
         if (h == 0.0f && !sound.shouldAlwaysPlay()) {
             LOGGER.debug(MARKER, "Skipped playing sound {}, volume was zero.", (Object)sound2.getIdentifier());
             return;

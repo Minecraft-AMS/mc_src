@@ -10,6 +10,7 @@
 package net.minecraft.client.render.model;
 
 import com.google.common.collect.Lists;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
@@ -20,7 +21,8 @@ import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.util.collection.WeightedPicker;
+import net.minecraft.util.collection.Weighted;
+import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.Direction;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,18 +30,18 @@ import org.jetbrains.annotations.Nullable;
 public class WeightedBakedModel
 implements BakedModel {
     private final int totalWeight;
-    private final List<Entry> models;
+    private final List<Weighted.Present<BakedModel>> models;
     private final BakedModel defaultModel;
 
-    public WeightedBakedModel(List<Entry> models) {
+    public WeightedBakedModel(List<Weighted.Present<BakedModel>> models) {
         this.models = models;
-        this.totalWeight = WeightedPicker.getWeightSum(models);
-        this.defaultModel = models.get((int)0).model;
+        this.totalWeight = Weighting.getWeightSum(models);
+        this.defaultModel = models.get(0).getData();
     }
 
     @Override
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction face, Random random) {
-        return WeightedPicker.getAt(this.models, (int)(Math.abs((int)((int)random.nextLong())) % this.totalWeight)).model.getQuads(state, face, random);
+        return Weighting.getAt(this.models, Math.abs((int)random.nextLong()) % this.totalWeight).map(present -> ((BakedModel)present.getData()).getQuads(state, face, random)).orElse(Collections.emptyList());
     }
 
     @Override
@@ -63,8 +65,8 @@ implements BakedModel {
     }
 
     @Override
-    public Sprite getSprite() {
-        return this.defaultModel.getSprite();
+    public Sprite getParticleSprite() {
+        return this.defaultModel.getParticleSprite();
     }
 
     @Override
@@ -78,34 +80,23 @@ implements BakedModel {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static class Entry
-    extends WeightedPicker.Entry {
-        protected final BakedModel model;
-
-        public Entry(BakedModel model, int weight) {
-            super(weight);
-            this.model = model;
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public static class Builder {
-        private final List<Entry> models = Lists.newArrayList();
+        private final List<Weighted.Present<BakedModel>> models = Lists.newArrayList();
 
         public Builder add(@Nullable BakedModel model, int weight) {
             if (model != null) {
-                this.models.add(new Entry(model, weight));
+                this.models.add(Weighted.of(model, weight));
             }
             return this;
         }
 
         @Nullable
-        public BakedModel getFirst() {
+        public BakedModel build() {
             if (this.models.isEmpty()) {
                 return null;
             }
             if (this.models.size() == 1) {
-                return this.models.get((int)0).model;
+                return this.models.get(0).getData();
             }
             return new WeightedBakedModel(this.models);
         }

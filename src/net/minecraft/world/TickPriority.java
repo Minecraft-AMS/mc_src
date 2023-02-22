@@ -3,16 +3,25 @@
  */
 package net.minecraft.world;
 
-public enum TickPriority {
-    EXTREMELY_HIGH(-3),
-    VERY_HIGH(-2),
-    HIGH(-1),
-    NORMAL(0),
-    LOW(1),
-    VERY_LOW(2),
-    EXTREMELY_LOW(3);
-
+public final class TickPriority
+extends Enum<TickPriority> {
+    public static final /* enum */ TickPriority EXTREMELY_HIGH = new TickPriority(-3);
+    public static final /* enum */ TickPriority VERY_HIGH = new TickPriority(-2);
+    public static final /* enum */ TickPriority HIGH = new TickPriority(-1);
+    public static final /* enum */ TickPriority NORMAL = new TickPriority(0);
+    public static final /* enum */ TickPriority LOW = new TickPriority(1);
+    public static final /* enum */ TickPriority VERY_LOW = new TickPriority(2);
+    public static final /* enum */ TickPriority EXTREMELY_LOW = new TickPriority(3);
     private final int index;
+    private static final /* synthetic */ TickPriority[] field_9312;
+
+    public static TickPriority[] values() {
+        return (TickPriority[])field_9312.clone();
+    }
+
+    public static TickPriority valueOf(String string) {
+        return Enum.valueOf(TickPriority.class, string);
+    }
 
     private TickPriority(int index) {
         this.index = index;
@@ -31,6 +40,14 @@ public enum TickPriority {
 
     public int getIndex() {
         return this.index;
+    }
+
+    private static /* synthetic */ TickPriority[] method_36697() {
+        return new TickPriority[]{EXTREMELY_HIGH, VERY_HIGH, HIGH, NORMAL, LOW, VERY_LOW, EXTREMELY_LOW};
+    }
+
+    static {
+        field_9312 = TickPriority.method_36697();
     }
 }
 

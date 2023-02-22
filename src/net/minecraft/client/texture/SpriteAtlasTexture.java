@@ -17,6 +17,7 @@ package net.minecraft.client.texture;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import java.io.IOException;
@@ -39,7 +40,6 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.TextureStitcher;
 import net.minecraft.client.texture.TextureStitcherCannotFitException;
 import net.minecraft.client.texture.TextureTickListener;
-import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.client.util.PngFile;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
@@ -64,26 +64,27 @@ implements TextureTickListener {
     public static final Identifier BLOCK_ATLAS_TEXTURE = PlayerScreenHandler.BLOCK_ATLAS_TEXTURE;
     @Deprecated
     public static final Identifier PARTICLE_ATLAS_TEXTURE = new Identifier("textures/atlas/particles.png");
-    private final List<Sprite> animatedSprites = Lists.newArrayList();
+    private static final String PNG_EXTENSION = ".png";
+    private final List<TextureTickListener> animatedSprites = Lists.newArrayList();
     private final Set<Identifier> spritesToLoad = Sets.newHashSet();
     private final Map<Identifier, Sprite> sprites = Maps.newHashMap();
     private final Identifier id;
     private final int maxTextureSize;
 
-    public SpriteAtlasTexture(Identifier identifier) {
-        this.id = identifier;
+    public SpriteAtlasTexture(Identifier id) {
+        this.id = id;
         this.maxTextureSize = RenderSystem.maxSupportedTextureSize();
     }
 
     @Override
-    public void load(ResourceManager manager) throws IOException {
+    public void load(ResourceManager manager) {
     }
 
     public void upload(Data data) {
         this.spritesToLoad.clear();
         this.spritesToLoad.addAll(data.spriteIds);
         LOGGER.info("Created: {}x{}x{} {}-atlas", (Object)data.width, (Object)data.height, (Object)data.maxLevel, (Object)this.id);
-        TextureUtil.allocate(this.getGlId(), data.maxLevel, data.width, data.height);
+        TextureUtil.prepareImage(this.getGlId(), data.maxLevel, data.width, data.height);
         this.clear();
         for (Sprite sprite : data.sprites) {
             this.sprites.put(sprite.getId(), sprite);
@@ -97,8 +98,9 @@ implements TextureTickListener {
                 crashReportSection.add("Sprite", sprite);
                 throw new CrashException(crashReport);
             }
-            if (!sprite.isAnimated()) continue;
-            this.animatedSprites.add(sprite);
+            TextureTickListener textureTickListener = sprite.getAnimation();
+            if (textureTickListener == null) continue;
+            this.animatedSprites.add(textureTickListener);
         }
     }
 
@@ -153,7 +155,7 @@ implements TextureTickListener {
 
     private Collection<Sprite.Info> loadSprites(ResourceManager resourceManager, Set<Identifier> ids) {
         ArrayList list = Lists.newArrayList();
-        ConcurrentLinkedQueue<Sprite.Info> concurrentLinkedQueue = new ConcurrentLinkedQueue<Sprite.Info>();
+        ConcurrentLinkedQueue<Sprite.Info> queue = new ConcurrentLinkedQueue<Sprite.Info>();
         for (Identifier identifier : ids) {
             if (MissingSprite.getMissingSpriteId().equals(identifier)) continue;
             list.add(CompletableFuture.runAsync(() -> {
@@ -165,7 +167,7 @@ implements TextureTickListener {
                     if (animationResourceMetadata == null) {
                         animationResourceMetadata = AnimationResourceMetadata.EMPTY;
                     }
-                    Pair<Integer, Integer> pair = animationResourceMetadata.method_24141(pngFile.width, pngFile.height);
+                    Pair<Integer, Integer> pair = animationResourceMetadata.ensureImageSize(pngFile.width, pngFile.height);
                     info = new Sprite.Info(identifier, (Integer)pair.getFirst(), (Integer)pair.getSecond(), animationResourceMetadata);
                 }
                 catch (RuntimeException runtimeException) {
@@ -176,64 +178,78 @@ implements TextureTickListener {
                     LOGGER.error("Using missing texture, unable to load {} : {}", (Object)identifier2, (Object)iOException);
                     return;
                 }
-                concurrentLinkedQueue.add(info);
+                queue.add(info);
             }, Util.getMainWorkerExecutor()));
         }
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).join();
-        return concurrentLinkedQueue;
+        return queue;
     }
 
     private List<Sprite> loadSprites(ResourceManager resourceManager, TextureStitcher textureStitcher, int maxLevel) {
-        ConcurrentLinkedQueue concurrentLinkedQueue = new ConcurrentLinkedQueue();
+        ConcurrentLinkedQueue queue = new ConcurrentLinkedQueue();
         ArrayList list = Lists.newArrayList();
         textureStitcher.getStitchedSprites((info, atlasWidth, atlasHeight, x, y) -> {
             if (info == MissingSprite.getMissingInfo()) {
                 MissingSprite missingSprite = MissingSprite.getMissingSprite(this, maxLevel, atlasWidth, atlasHeight, x, y);
-                concurrentLinkedQueue.add(missingSprite);
+                queue.add(missingSprite);
             } else {
                 list.add(CompletableFuture.runAsync(() -> {
                     Sprite sprite = this.loadSprite(resourceManager, info, atlasWidth, atlasHeight, maxLevel, x, y);
                     if (sprite != null) {
-                        concurrentLinkedQueue.add(sprite);
+                        queue.add(sprite);
                     }
                 }, Util.getMainWorkerExecutor()));
             }
         });
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).join();
-        return Lists.newArrayList(concurrentLinkedQueue);
+        return Lists.newArrayList(queue);
     }
 
-    /*
-     * Enabled aggressive block sorting
-     * Enabled unnecessary exception pruning
-     * Enabled aggressive exception aggregation
-     */
     @Nullable
     private Sprite loadSprite(ResourceManager container, Sprite.Info info, int atlasWidth, int atlasHeight, int maxLevel, int x, int y) {
-        Identifier identifier = this.getTexturePath(info.getId());
-        try (Resource resource = container.getResource(identifier);){
-            NativeImage nativeImage = NativeImage.read(resource.getInputStream());
-            Sprite sprite = new Sprite(this, info, maxLevel, atlasWidth, atlasHeight, x, y, nativeImage);
-            return sprite;
+        Sprite sprite;
+        block9: {
+            Identifier identifier = this.getTexturePath(info.getId());
+            Resource resource = container.getResource(identifier);
+            try {
+                NativeImage nativeImage = NativeImage.read(resource.getInputStream());
+                sprite = new Sprite(this, info, maxLevel, atlasWidth, atlasHeight, x, y, nativeImage);
+                if (resource == null) break block9;
+            }
+            catch (Throwable throwable) {
+                try {
+                    if (resource != null) {
+                        try {
+                            resource.close();
+                        }
+                        catch (Throwable throwable2) {
+                            throwable.addSuppressed(throwable2);
+                        }
+                    }
+                    throw throwable;
+                }
+                catch (RuntimeException runtimeException) {
+                    LOGGER.error("Unable to parse metadata from {}", (Object)identifier, (Object)runtimeException);
+                    return null;
+                }
+                catch (IOException iOException) {
+                    LOGGER.error("Using missing texture, unable to load {}", (Object)identifier, (Object)iOException);
+                    return null;
+                }
+            }
+            resource.close();
         }
-        catch (RuntimeException runtimeException) {
-            LOGGER.error("Unable to parse metadata from {}", (Object)identifier, (Object)runtimeException);
-            return null;
-        }
-        catch (IOException iOException) {
-            LOGGER.error("Using missing texture, unable to load {}", (Object)identifier, (Object)iOException);
-            return null;
-        }
+        return sprite;
     }
 
     private Identifier getTexturePath(Identifier id) {
-        return new Identifier(id.getNamespace(), String.format("textures/%s%s", id.getPath(), ".png"));
+        return new Identifier(id.getNamespace(), String.format("textures/%s%s", id.getPath(), PNG_EXTENSION));
     }
 
     public void tickAnimatedSprites() {
         this.bindTexture();
-        for (Sprite sprite : this.animatedSprites) {
-            sprite.tickAnimation();
+        for (TextureTickListener textureTickListener : this.animatedSprites) {
+            textureTickListener.tick();
         }
     }
 

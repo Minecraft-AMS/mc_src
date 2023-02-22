@@ -23,6 +23,7 @@
 package net.minecraft.client.util;
 
 import com.mojang.blaze3d.platform.GLX;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -34,11 +35,12 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.WindowEventHandler;
 import net.minecraft.client.WindowSettings;
-import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.client.util.GlException;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.MacWindowUtil;
 import net.minecraft.client.util.Monitor;
 import net.minecraft.client.util.MonitorTracker;
 import net.minecraft.client.util.VideoMode;
@@ -103,9 +105,10 @@ implements AutoCloseable {
         GLFW.glfwDefaultWindowHints();
         GLFW.glfwWindowHint((int)139265, (int)196609);
         GLFW.glfwWindowHint((int)139275, (int)221185);
-        GLFW.glfwWindowHint((int)139266, (int)2);
-        GLFW.glfwWindowHint((int)139267, (int)0);
-        GLFW.glfwWindowHint((int)139272, (int)0);
+        GLFW.glfwWindowHint((int)139266, (int)3);
+        GLFW.glfwWindowHint((int)139267, (int)2);
+        GLFW.glfwWindowHint((int)139272, (int)204801);
+        GLFW.glfwWindowHint((int)139270, (int)1);
         this.handle = GLFW.glfwCreateWindow((int)this.width, (int)this.height, (CharSequence)title, (long)(this.fullscreen && monitor != null ? monitor.getHandle() : 0L), (long)0L);
         if (monitor != null) {
             VideoMode videoMode2 = monitor.findClosestVideoMode(this.fullscreen ? this.videoMode : Optional.empty());
@@ -198,7 +201,7 @@ implements AutoCloseable {
         RenderSystem.assertThread(RenderSystem::isInInitPhase);
         ByteBuffer byteBuffer = null;
         try {
-            byteBuffer = TextureUtil.readAllToByteBuffer(in);
+            byteBuffer = TextureUtil.readResource(in);
             byteBuffer.rewind();
             ByteBuffer byteBuffer2 = STBImage.stbi_load_from_memory((ByteBuffer)byteBuffer, (IntBuffer)x, (IntBuffer)y, (IntBuffer)channels, (int)0);
             return byteBuffer2;
@@ -282,8 +285,8 @@ implements AutoCloseable {
         int[] is = new int[1];
         int[] js = new int[1];
         GLFW.glfwGetFramebufferSize((long)this.handle, (int[])is, (int[])js);
-        this.framebufferWidth = is[0];
-        this.framebufferHeight = js[0];
+        this.framebufferWidth = is[0] > 0 ? is[0] : 1;
+        this.framebufferHeight = js[0] > 0 ? js[0] : 1;
     }
 
     private void onWindowSizeChanged(long window, int width, int height) {
@@ -349,6 +352,9 @@ implements AutoCloseable {
                 LOGGER.warn("Failed to find suitable monitor for fullscreen mode");
                 this.fullscreen = false;
             } else {
+                if (MinecraftClient.IS_SYSTEM_MAC) {
+                    MacWindowUtil.toggleFullscreen(this.handle);
+                }
                 VideoMode videoMode = monitor.findClosestVideoMode(this.videoMode);
                 if (!bl) {
                     this.windowedX = this.x;
@@ -373,6 +379,13 @@ implements AutoCloseable {
 
     public void toggleFullscreen() {
         this.fullscreen = !this.fullscreen;
+    }
+
+    public void setWindowedSize(int width, int height) {
+        this.windowedWidth = width;
+        this.windowedHeight = height;
+        this.fullscreen = false;
+        this.updateWindowRegion();
     }
 
     private void updateFullscreen(boolean vsync) {
@@ -426,6 +439,14 @@ implements AutoCloseable {
         return this.framebufferHeight;
     }
 
+    public void setFramebufferWidth(int framebufferWidth) {
+        this.framebufferWidth = framebufferWidth;
+    }
+
+    public void setFramebufferHeight(int framebufferHeight) {
+        this.framebufferHeight = framebufferHeight;
+    }
+
     public int getWidth() {
         return this.width;
     }
@@ -466,7 +487,7 @@ implements AutoCloseable {
     @Environment(value=EnvType.CLIENT)
     public static class GlErroredException
     extends GlException {
-        private GlErroredException(String string) {
+        GlErroredException(String string) {
             super(string);
         }
     }

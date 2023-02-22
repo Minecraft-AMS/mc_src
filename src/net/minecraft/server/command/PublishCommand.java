@@ -28,17 +28,17 @@ import net.minecraft.text.TranslatableText;
 
 public class PublishCommand {
     private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.publish.failed"));
-    private static final DynamicCommandExceptionType ALREADY_PUBLISHED_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.publish.alreadyPublished", object));
+    private static final DynamicCommandExceptionType ALREADY_PUBLISHED_EXCEPTION = new DynamicCommandExceptionType(port -> new TranslatableText("commands.publish.alreadyPublished", port));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("publish").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(4))).executes(commandContext -> PublishCommand.execute((ServerCommandSource)commandContext.getSource(), NetworkUtils.findLocalPort()))).then(CommandManager.argument("port", IntegerArgumentType.integer((int)0, (int)65535)).executes(commandContext -> PublishCommand.execute((ServerCommandSource)commandContext.getSource(), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"port")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("publish").requires(source -> source.hasPermissionLevel(4))).executes(context -> PublishCommand.execute((ServerCommandSource)context.getSource(), NetworkUtils.findLocalPort()))).then(CommandManager.argument("port", IntegerArgumentType.integer((int)0, (int)65535)).executes(context -> PublishCommand.execute((ServerCommandSource)context.getSource(), IntegerArgumentType.getInteger((CommandContext)context, (String)"port")))));
     }
 
     private static int execute(ServerCommandSource source, int port) throws CommandSyntaxException {
-        if (source.getMinecraftServer().isRemote()) {
-            throw ALREADY_PUBLISHED_EXCEPTION.create((Object)source.getMinecraftServer().getServerPort());
+        if (source.getServer().isRemote()) {
+            throw ALREADY_PUBLISHED_EXCEPTION.create((Object)source.getServer().getServerPort());
         }
-        if (!source.getMinecraftServer().openToLan(source.getMinecraftServer().getDefaultGameMode(), false, port)) {
+        if (!source.getServer().openToLan(null, false, port)) {
             throw FAILED_EXCEPTION.create();
         }
         source.sendFeedback(new TranslatableText("commands.publish.success", port), true);

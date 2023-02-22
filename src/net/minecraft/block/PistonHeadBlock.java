@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Arrays;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -40,12 +34,16 @@ public class PistonHeadBlock
 extends FacingBlock {
     public static final EnumProperty<PistonType> TYPE = Properties.PISTON_TYPE;
     public static final BooleanProperty SHORT = Properties.SHORT;
+    public static final float field_31377 = 4.0f;
     protected static final VoxelShape EAST_HEAD_SHAPE = Block.createCuboidShape(12.0, 0.0, 0.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape WEST_HEAD_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 4.0, 16.0, 16.0);
     protected static final VoxelShape SOUTH_HEAD_SHAPE = Block.createCuboidShape(0.0, 0.0, 12.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape NORTH_HEAD_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 16.0, 4.0);
     protected static final VoxelShape UP_HEAD_SHAPE = Block.createCuboidShape(0.0, 12.0, 0.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape DOWN_HEAD_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 4.0, 16.0);
+    protected static final float field_31378 = 2.0f;
+    protected static final float field_31379 = 6.0f;
+    protected static final float field_31380 = 10.0f;
     protected static final VoxelShape UP_ARM_SHAPE = Block.createCuboidShape(6.0, -4.0, 6.0, 10.0, 12.0, 10.0);
     protected static final VoxelShape DOWN_ARM_SHAPE = Block.createCuboidShape(6.0, 4.0, 6.0, 10.0, 20.0, 10.0);
     protected static final VoxelShape SOUTH_ARM_SHAPE = Block.createCuboidShape(6.0, 6.0, -4.0, 10.0, 10.0, 12.0);
@@ -58,11 +56,11 @@ extends FacingBlock {
     protected static final VoxelShape SHORT_NORTH_ARM_SHAPE = Block.createCuboidShape(6.0, 6.0, 4.0, 10.0, 10.0, 16.0);
     protected static final VoxelShape SHORT_EAST_ARM_SHAPE = Block.createCuboidShape(0.0, 6.0, 6.0, 12.0, 10.0, 10.0);
     protected static final VoxelShape SHORT_WEST_ARM_SHAPE = Block.createCuboidShape(4.0, 6.0, 6.0, 16.0, 10.0, 10.0);
-    private static final VoxelShape[] field_26660 = PistonHeadBlock.method_31019(true);
-    private static final VoxelShape[] field_26661 = PistonHeadBlock.method_31019(false);
+    private static final VoxelShape[] SHORT_HEAD_SHAPES = PistonHeadBlock.getHeadShapes(true);
+    private static final VoxelShape[] HEAD_SHAPES = PistonHeadBlock.getHeadShapes(false);
 
-    private static VoxelShape[] method_31019(boolean bl) {
-        return (VoxelShape[])Arrays.stream(Direction.values()).map(direction -> PistonHeadBlock.getHeadShape(direction, bl)).toArray(VoxelShape[]::new);
+    private static VoxelShape[] getHeadShapes(boolean shortHead) {
+        return (VoxelShape[])Arrays.stream(Direction.values()).map(direction -> PistonHeadBlock.getHeadShape(direction, shortHead)).toArray(VoxelShape[]::new);
     }
 
     private static VoxelShape getHeadShape(Direction direction, boolean shortHead) {
@@ -99,18 +97,18 @@ extends FacingBlock {
 
     @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return (state.get(SHORT) != false ? field_26660 : field_26661)[state.get(FACING).ordinal()];
+        return (state.get(SHORT) != false ? SHORT_HEAD_SHAPES : HEAD_SHAPES)[state.get(FACING).ordinal()];
     }
 
-    private boolean method_26980(BlockState blockState, BlockState blockState2) {
-        Block block = blockState.get(TYPE) == PistonType.DEFAULT ? Blocks.PISTON : Blocks.STICKY_PISTON;
-        return blockState2.isOf(block) && blockState2.get(PistonBlock.EXTENDED) != false && blockState2.get(FACING) == blockState.get(FACING);
+    private boolean isAttached(BlockState headState, BlockState pistonState) {
+        Block block = headState.get(TYPE) == PistonType.DEFAULT ? Blocks.PISTON : Blocks.STICKY_PISTON;
+        return pistonState.isOf(block) && pistonState.get(PistonBlock.EXTENDED) != false && pistonState.get(FACING) == headState.get(FACING);
     }
 
     @Override
     public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
         BlockPos blockPos;
-        if (!world.isClient && player.abilities.creativeMode && this.method_26980(state, world.getBlockState(blockPos = pos.offset(state.get(FACING).getOpposite())))) {
+        if (!world.isClient && player.getAbilities().creativeMode && this.isAttached(state, world.getBlockState(blockPos = pos.offset(state.get(FACING).getOpposite())))) {
             world.breakBlock(blockPos, false);
         }
         super.onBreak(world, pos, state, player);
@@ -123,7 +121,7 @@ extends FacingBlock {
         }
         super.onStateReplaced(state, world, pos, newState, moved);
         BlockPos blockPos = pos.offset(state.get(FACING).getOpposite());
-        if (this.method_26980(state, world.getBlockState(blockPos))) {
+        if (this.isAttached(state, world.getBlockState(blockPos))) {
             world.breakBlock(blockPos, true);
         }
     }
@@ -139,7 +137,7 @@ extends FacingBlock {
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.offset(state.get(FACING).getOpposite()));
-        return this.method_26980(state, blockState) || blockState.isOf(Blocks.MOVING_PISTON) && blockState.get(FACING) == state.get(FACING);
+        return this.isAttached(state, blockState) || blockState.isOf(Blocks.MOVING_PISTON) && blockState.get(FACING) == state.get(FACING);
     }
 
     @Override
@@ -151,7 +149,6 @@ extends FacingBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return new ItemStack(state.get(TYPE) == PistonType.STICKY ? Blocks.STICKY_PISTON : Blocks.PISTON);
     }

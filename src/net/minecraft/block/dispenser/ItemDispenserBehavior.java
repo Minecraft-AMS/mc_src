@@ -42,11 +42,11 @@ implements DispenserBehavior {
     }
 
     protected void playSound(BlockPointer pointer) {
-        pointer.getWorld().syncWorldEvent(1000, pointer.getBlockPos(), 0);
+        pointer.getWorld().syncWorldEvent(1000, pointer.getPos(), 0);
     }
 
     protected void spawnParticles(BlockPointer pointer, Direction side) {
-        pointer.getWorld().syncWorldEvent(2000, pointer.getBlockPos(), side.getId());
+        pointer.getWorld().syncWorldEvent(2000, pointer.getPos(), side.getId());
     }
 }
 

@@ -8,12 +8,27 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.level.storage.AlphaChunkDataArray;
 
 public class AlphaChunkIo {
+    private static final int field_31416 = 7;
+    private static final HeightLimitView WORLD = new HeightLimitView(){
+
+        @Override
+        public int getBottomY() {
+            return 0;
+        }
+
+        @Override
+        public int getHeight() {
+            return 128;
+        }
+    };
+
     public static AlphaChunk readAlphaChunk(NbtCompound nbt) {
         int i = nbt.getInt("xPos");
         int j = nbt.getInt("zPos");
@@ -87,7 +102,7 @@ public class AlphaChunkIo {
             nbtList.add(nbtCompound);
         }
         nbt.put("Sections", nbtList);
-        nbt.putIntArray("Biomes", new BiomeArray(impl.get(Registry.BIOME_KEY), new ChunkPos(alphaChunk.x, alphaChunk.z), biomeSource).toIntArray());
+        nbt.putIntArray("Biomes", new BiomeArray(impl.get(Registry.BIOME_KEY), WORLD, new ChunkPos(alphaChunk.x, alphaChunk.z), biomeSource).toIntArray());
         nbt.put("Entities", alphaChunk.entities);
         nbt.put("TileEntities", alphaChunk.blockEntities);
         if (alphaChunk.blockTicks != null) {

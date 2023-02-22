@@ -16,8 +16,6 @@
  *  com.mojang.brigadier.exceptions.SimpleCommandExceptionType
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  */
@@ -38,8 +36,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import java.lang.reflect.Type;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.InvalidIdentifierException;
 import net.minecraft.util.JsonHelper;
@@ -48,19 +44,22 @@ import org.jetbrains.annotations.Nullable;
 
 public class Identifier
 implements Comparable<Identifier> {
-    public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(Identifier::method_29186, Identifier::toString).stable();
+    public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(Identifier::validate, Identifier::toString).stable();
     private static final SimpleCommandExceptionType COMMAND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.id.invalid"));
+    public static final char NAMESPACE_SEPARATOR = ':';
+    public static final String DEFAULT_NAMESPACE = "minecraft";
+    public static final String REALMS_NAMESPACE = "realms";
     protected final String namespace;
     protected final String path;
 
     protected Identifier(String[] id) {
-        this.namespace = StringUtils.isEmpty((CharSequence)id[0]) ? "minecraft" : id[0];
+        this.namespace = StringUtils.isEmpty((CharSequence)id[0]) ? DEFAULT_NAMESPACE : id[0];
         this.path = id[1];
         if (!Identifier.isNamespaceValid(this.namespace)) {
-            throw new InvalidIdentifierException("Non [a-z0-9_.-] character in namespace of location: " + this.namespace + ':' + this.path);
+            throw new InvalidIdentifierException("Non [a-z0-9_.-] character in namespace of location: " + this.namespace + ":" + this.path);
         }
         if (!Identifier.isPathValid(this.path)) {
-            throw new InvalidIdentifierException("Non [a-z0-9/._-] character in path of location: " + this.namespace + ':' + this.path);
+            throw new InvalidIdentifierException("Non [a-z0-9/._-] character in path of location: " + this.namespace + ":" + this.path);
         }
     }
 
@@ -87,7 +86,7 @@ implements Comparable<Identifier> {
     }
 
     protected static String[] split(String id, char delimiter) {
-        String[] strings = new String[]{"minecraft", id};
+        String[] strings = new String[]{DEFAULT_NAMESPACE, id};
         int i = id.indexOf(delimiter);
         if (i >= 0) {
             strings[1] = id.substring(i + 1, id.length());
@@ -98,12 +97,12 @@ implements Comparable<Identifier> {
         return strings;
     }
 
-    private static DataResult<Identifier> method_29186(String string) {
+    private static DataResult<Identifier> validate(String id) {
         try {
-            return DataResult.success((Object)new Identifier(string));
+            return DataResult.success((Object)new Identifier(id));
         }
         catch (InvalidIdentifierException invalidIdentifierException) {
-            return DataResult.error((String)("Not a valid resource location: " + string + " " + invalidIdentifierException.getMessage()));
+            return DataResult.error((String)("Not a valid resource location: " + id + " " + invalidIdentifierException.getMessage()));
         }
     }
 
@@ -116,15 +115,15 @@ implements Comparable<Identifier> {
     }
 
     public String toString() {
-        return this.namespace + ':' + this.path;
+        return this.namespace + ":" + this.path;
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object instanceof Identifier) {
-            Identifier identifier = (Identifier)object;
+        if (o instanceof Identifier) {
+            Identifier identifier = (Identifier)o;
             return this.namespace.equals(identifier.namespace) && this.path.equals(identifier.path);
         }
         return false;
@@ -141,6 +140,10 @@ implements Comparable<Identifier> {
             i = this.namespace.compareTo(identifier.namespace);
         }
         return i;
+    }
+
+    public String toUnderscoreSeparatedString() {
+        return this.toString().replace('/', '_').replace(':', '_');
     }
 
     public static Identifier fromCommandInput(StringReader reader) throws CommandSyntaxException {
@@ -186,15 +189,14 @@ implements Comparable<Identifier> {
         return character == '_' || character == '-' || character >= 'a' && character <= 'z' || character >= '0' && character <= '9' || character == '.';
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static boolean isValid(String id) {
         String[] strings = Identifier.split(id, ':');
-        return Identifier.isNamespaceValid(StringUtils.isEmpty((CharSequence)strings[0]) ? "minecraft" : strings[0]) && Identifier.isPathValid(strings[1]);
+        return Identifier.isNamespaceValid(StringUtils.isEmpty((CharSequence)strings[0]) ? DEFAULT_NAMESPACE : strings[0]) && Identifier.isPathValid(strings[1]);
     }
 
     @Override
-    public /* synthetic */ int compareTo(Object object) {
-        return this.compareTo((Identifier)object);
+    public /* synthetic */ int compareTo(Object other) {
+        return this.compareTo((Identifier)other);
     }
 
     public static class Serializer

@@ -2,15 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.fluid;
 
+import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -25,6 +22,7 @@ import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.tag.FluidTags;
@@ -54,7 +52,6 @@ extends FlowableFluid {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(World world, BlockPos pos, FluidState state, Random random) {
         if (!state.isStill() && !state.get(FALLING).booleanValue()) {
             if (random.nextInt(64) == 0) {
@@ -67,7 +64,6 @@ extends FlowableFluid {
 
     @Override
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public ParticleEffect getParticle() {
         return ParticleTypes.DRIPPING_WATER;
     }
@@ -79,7 +75,7 @@ extends FlowableFluid {
 
     @Override
     protected void beforeBreakingBlock(WorldAccess world, BlockPos pos, BlockState state) {
-        BlockEntity blockEntity = state.getBlock().hasBlockEntity() ? world.getBlockEntity(pos) : null;
+        BlockEntity blockEntity = state.hasBlockEntity() ? world.getBlockEntity(pos) : null;
         Block.dropStacks(state, world, pos, blockEntity);
     }
 
@@ -116,6 +112,11 @@ extends FlowableFluid {
     @Override
     protected float getBlastResistance() {
         return 100.0f;
+    }
+
+    @Override
+    public Optional<SoundEvent> getBucketFillSound() {
+        return Optional.of(SoundEvents.ITEM_BUCKET_FILL);
     }
 
     public static class Flowing

@@ -2,100 +2,89 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  com.google.common.collect.Lists
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
+import com.google.common.collect.Lists;
 import java.util.Collection;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.List;
 import net.minecraft.item.map.MapIcon;
 import net.minecraft.item.map.MapState;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import org.jetbrains.annotations.Nullable;
 
 public class MapUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private byte scale;
-    private boolean showIcons;
-    private boolean locked;
-    private MapIcon[] icons;
-    private int startX;
-    private int startZ;
-    private int width;
-    private int height;
-    private byte[] colors;
+    private final int id;
+    private final byte scale;
+    private final boolean locked;
+    @Nullable
+    private final List<MapIcon> icons;
+    @Nullable
+    private final MapState.UpdateData updateData;
 
-    public MapUpdateS2CPacket() {
-    }
-
-    public MapUpdateS2CPacket(int id, byte scale, boolean showIcons, boolean locked, Collection<MapIcon> icons, byte[] mapColors, int startX, int startZ, int width, int height) {
+    public MapUpdateS2CPacket(int id, byte scale, boolean showIcons, @Nullable Collection<MapIcon> icons, @Nullable MapState.UpdateData updateData) {
         this.id = id;
         this.scale = scale;
-        this.showIcons = showIcons;
-        this.locked = locked;
-        this.icons = icons.toArray(new MapIcon[icons.size()]);
-        this.startX = startX;
-        this.startZ = startZ;
-        this.width = width;
-        this.height = height;
-        this.colors = new byte[width * height];
-        for (int i = 0; i < width; ++i) {
-            for (int j = 0; j < height; ++j) {
-                this.colors[i + j * width] = mapColors[startX + i + (startZ + j) * 128];
-            }
-        }
+        this.locked = showIcons;
+        this.icons = icons != null ? Lists.newArrayList(icons) : null;
+        this.updateData = updateData;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public MapUpdateS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.scale = buf.readByte();
-        this.showIcons = buf.readBoolean();
         this.locked = buf.readBoolean();
-        this.icons = new MapIcon[buf.readVarInt()];
-        for (int i = 0; i < this.icons.length; ++i) {
-            MapIcon.Type type = buf.readEnumConstant(MapIcon.Type.class);
-            this.icons[i] = new MapIcon(type, buf.readByte(), buf.readByte(), (byte)(buf.readByte() & 0xF), buf.readBoolean() ? buf.readText() : null);
-        }
-        this.width = buf.readUnsignedByte();
-        if (this.width > 0) {
-            this.height = buf.readUnsignedByte();
-            this.startX = buf.readUnsignedByte();
-            this.startZ = buf.readUnsignedByte();
-            this.colors = buf.readByteArray();
+        this.icons = buf.readBoolean() ? buf.readList(b -> {
+            MapIcon.Type type = b.readEnumConstant(MapIcon.Type.class);
+            return new MapIcon(type, b.readByte(), b.readByte(), (byte)(b.readByte() & 0xF), b.readBoolean() ? b.readText() : null);
+        }) : null;
+        short i = buf.readUnsignedByte();
+        if (i > 0) {
+            short j = buf.readUnsignedByte();
+            short k = buf.readUnsignedByte();
+            short l = buf.readUnsignedByte();
+            byte[] bs = buf.readByteArray();
+            this.updateData = new MapState.UpdateData(k, l, i, j, bs);
+        } else {
+            this.updateData = null;
         }
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeByte(this.scale);
-        buf.writeBoolean(this.showIcons);
         buf.writeBoolean(this.locked);
-        buf.writeVarInt(this.icons.length);
-        for (MapIcon mapIcon : this.icons) {
-            buf.writeEnumConstant(mapIcon.getType());
-            buf.writeByte(mapIcon.getX());
-            buf.writeByte(mapIcon.getZ());
-            buf.writeByte(mapIcon.getRotation() & 0xF);
-            if (mapIcon.getText() != null) {
-                buf.writeBoolean(true);
-                buf.writeText(mapIcon.getText());
-                continue;
-            }
+        if (this.icons != null) {
+            buf.writeBoolean(true);
+            buf.writeCollection(this.icons, (b, icon) -> {
+                b.writeEnumConstant(icon.getType());
+                b.writeByte(icon.getX());
+                b.writeByte(icon.getZ());
+                b.writeByte(icon.getRotation() & 0xF);
+                if (icon.getText() != null) {
+                    b.writeBoolean(true);
+                    b.writeText(icon.getText());
+                } else {
+                    b.writeBoolean(false);
+                }
+            });
+        } else {
             buf.writeBoolean(false);
         }
-        buf.writeByte(this.width);
-        if (this.width > 0) {
-            buf.writeByte(this.height);
-            buf.writeByte(this.startX);
-            buf.writeByte(this.startZ);
-            buf.writeByteArray(this.colors);
+        if (this.updateData != null) {
+            buf.writeByte(this.updateData.width);
+            buf.writeByte(this.updateData.height);
+            buf.writeByte(this.updateData.startX);
+            buf.writeByte(this.updateData.startZ);
+            buf.writeByteArray(this.updateData.colors);
+        } else {
+            buf.writeByte(0);
         }
     }
 
@@ -104,28 +93,26 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onMapUpdate(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void apply(MapState mapState) {
-        int i;
-        mapState.scale = this.scale;
-        mapState.showIcons = this.showIcons;
-        mapState.locked = this.locked;
-        mapState.icons.clear();
-        for (i = 0; i < this.icons.length; ++i) {
-            MapIcon mapIcon = this.icons[i];
-            mapState.icons.put("icon-" + i, mapIcon);
+        if (this.icons != null) {
+            mapState.replaceIcons(this.icons);
         }
-        for (i = 0; i < this.width; ++i) {
-            for (int j = 0; j < this.height; ++j) {
-                mapState.colors[this.startX + i + (this.startZ + j) * 128] = this.colors[i + j * this.width];
-            }
+        if (this.updateData != null) {
+            this.updateData.setColorsTo(mapState);
         }
+    }
+
+    public byte getScale() {
+        return this.scale;
+    }
+
+    public boolean isLocked() {
+        return this.locked;
     }
 }
 

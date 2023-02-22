@@ -11,6 +11,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.feature.StuckObjectsFeatureRenderer;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -24,11 +25,10 @@ import net.minecraft.util.math.MathHelper;
 public class StuckArrowsFeatureRenderer<T extends LivingEntity, M extends PlayerEntityModel<T>>
 extends StuckObjectsFeatureRenderer<T, M> {
     private final EntityRenderDispatcher dispatcher;
-    private ArrowEntity arrow;
 
-    public StuckArrowsFeatureRenderer(LivingEntityRenderer<T, M> livingEntityRenderer) {
-        super(livingEntityRenderer);
-        this.dispatcher = livingEntityRenderer.getRenderManager();
+    public StuckArrowsFeatureRenderer(EntityRendererFactory.Context context, LivingEntityRenderer<T, M> entityRenderer) {
+        super(entityRenderer);
+        this.dispatcher = context.getRenderDispatcher();
     }
 
     @Override
@@ -39,12 +39,12 @@ extends StuckObjectsFeatureRenderer<T, M> {
     @Override
     protected void renderObject(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, Entity entity, float directionX, float directionY, float directionZ, float tickDelta) {
         float f = MathHelper.sqrt(directionX * directionX + directionZ * directionZ);
-        this.arrow = new ArrowEntity(entity.world, entity.getX(), entity.getY(), entity.getZ());
-        this.arrow.yaw = (float)(Math.atan2(directionX, directionZ) * 57.2957763671875);
-        this.arrow.pitch = (float)(Math.atan2(directionY, f) * 57.2957763671875);
-        this.arrow.prevYaw = this.arrow.yaw;
-        this.arrow.prevPitch = this.arrow.pitch;
-        this.dispatcher.render(this.arrow, 0.0, 0.0, 0.0, 0.0f, tickDelta, matrices, vertexConsumers, light);
+        ArrowEntity arrowEntity = new ArrowEntity(entity.world, entity.getX(), entity.getY(), entity.getZ());
+        arrowEntity.setYaw((float)(Math.atan2(directionX, directionZ) * 57.2957763671875));
+        arrowEntity.setPitch((float)(Math.atan2(directionY, f) * 57.2957763671875));
+        arrowEntity.prevYaw = arrowEntity.getYaw();
+        arrowEntity.prevPitch = arrowEntity.getPitch();
+        this.dispatcher.render(arrowEntity, 0.0, 0.0, 0.0, 0.0f, tickDelta, matrices, vertexConsumers, light);
     }
 }
 

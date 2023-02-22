@@ -26,11 +26,28 @@ public abstract class HitResult {
         return this.pos;
     }
 
-    public static enum Type {
-        MISS,
-        BLOCK,
-        ENTITY;
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type MISS = new Type();
+        public static final /* enum */ Type BLOCK = new Type();
+        public static final /* enum */ Type ENTITY = new Type();
+        private static final /* synthetic */ Type[] field_1334;
 
+        public static Type[] values() {
+            return (Type[])field_1334.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36796() {
+            return new Type[]{MISS, BLOCK, ENTITY};
+        }
+
+        static {
+            field_1334 = Type.method_36796();
+        }
     }
 }
 

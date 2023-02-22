@@ -28,6 +28,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
 
 public class MemoryModuleType<U> {
@@ -58,6 +59,7 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<LivingEntity> HURT_BY_ENTITY = MemoryModuleType.register("hurt_by_entity");
     public static final MemoryModuleType<LivingEntity> AVOID_TARGET = MemoryModuleType.register("avoid_target");
     public static final MemoryModuleType<LivingEntity> NEAREST_HOSTILE = MemoryModuleType.register("nearest_hostile");
+    public static final MemoryModuleType<LivingEntity> NEAREST_ATTACKABLE = MemoryModuleType.register("nearest_attackable");
     public static final MemoryModuleType<GlobalPos> HIDING_PLACE = MemoryModuleType.register("hiding_place");
     public static final MemoryModuleType<Long> HEARD_BELL_TIME = MemoryModuleType.register("heard_bell_time");
     public static final MemoryModuleType<Long> CANT_REACH_WALK_TARGET_SINCE = MemoryModuleType.register("cant_reach_walk_target_since");
@@ -68,6 +70,15 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<PassiveEntity> NEAREST_VISIBLE_ADULT = MemoryModuleType.register("nearest_visible_adult");
     public static final MemoryModuleType<ItemEntity> NEAREST_VISIBLE_WANTED_ITEM = MemoryModuleType.register("nearest_visible_wanted_item");
     public static final MemoryModuleType<MobEntity> NEAREST_VISIBLE_NEMESIS = MemoryModuleType.register("nearest_visible_nemesis");
+    public static final MemoryModuleType<Integer> PLAY_DEAD_TICKS = MemoryModuleType.register("play_dead_ticks", Codec.INT);
+    public static final MemoryModuleType<PlayerEntity> TEMPTING_PLAYER = MemoryModuleType.register("tempting_player");
+    public static final MemoryModuleType<Integer> TEMPTATION_COOLDOWN_TICKS = MemoryModuleType.register("temptation_cooldown_ticks", Codec.INT);
+    public static final MemoryModuleType<Boolean> IS_TEMPTED = MemoryModuleType.register("is_tempted", Codec.BOOL);
+    public static final MemoryModuleType<Integer> LONG_JUMP_COOLING_DOWN = MemoryModuleType.register("long_jump_cooling_down", Codec.INT);
+    public static final MemoryModuleType<Boolean> LONG_JUMP_MID_JUMP = MemoryModuleType.register("long_jump_mid_jump");
+    public static final MemoryModuleType<Boolean> HAS_HUNTING_COOLDOWN = MemoryModuleType.register("has_hunting_cooldown", Codec.BOOL);
+    public static final MemoryModuleType<Integer> RAM_COOLDOWN_TICKS = MemoryModuleType.register("ram_cooldown_ticks", Codec.INT);
+    public static final MemoryModuleType<Vec3d> RAM_TARGET = MemoryModuleType.register("ram_target");
     public static final MemoryModuleType<UUID> ANGRY_AT = MemoryModuleType.register("angry_at", DynamicSerializableUuid.CODEC);
     public static final MemoryModuleType<Boolean> UNIVERSAL_ANGER = MemoryModuleType.register("universal_anger", Codec.BOOL);
     public static final MemoryModuleType<Boolean> ADMIRING_ITEM = MemoryModuleType.register("admiring_item", Codec.BOOL);

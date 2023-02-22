@@ -16,6 +16,8 @@ import net.minecraft.util.Identifier;
 public class DefaultSkinHelper {
     private static final Identifier STEVE_SKIN = new Identifier("textures/entity/steve.png");
     private static final Identifier ALEX_SKIN = new Identifier("textures/entity/alex.png");
+    private static final String DEFAULT = "default";
+    private static final String SLIM = "slim";
 
     public static Identifier getTexture() {
         return STEVE_SKIN;
@@ -30,9 +32,9 @@ public class DefaultSkinHelper {
 
     public static String getModel(UUID uuid) {
         if (DefaultSkinHelper.shouldUseSlimModel(uuid)) {
-            return "slim";
+            return SLIM;
         }
-        return "default";
+        return DEFAULT;
     }
 
     private static boolean shouldUseSlimModel(UUID uuid) {

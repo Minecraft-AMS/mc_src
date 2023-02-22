@@ -74,7 +74,7 @@ public class EntityAttributeModifier {
     }
 
     public String toString() {
-        return "AttributeModifier{amount=" + this.value + ", operation=" + (Object)((Object)this.operation) + ", name='" + this.nameGetter.get() + '\'' + ", id=" + this.uuid + '}';
+        return "AttributeModifier{amount=" + this.value + ", operation=" + this.operation + ", name='" + this.nameGetter.get() + "', id=" + this.uuid + "}";
     }
 
     public NbtCompound toNbt() {
@@ -99,13 +99,22 @@ public class EntityAttributeModifier {
         }
     }
 
-    public static enum Operation {
-        ADDITION(0),
-        MULTIPLY_BASE(1),
-        MULTIPLY_TOTAL(2);
-
+    public static final class Operation
+    extends Enum<Operation> {
+        public static final /* enum */ Operation ADDITION = new Operation(0);
+        public static final /* enum */ Operation MULTIPLY_BASE = new Operation(1);
+        public static final /* enum */ Operation MULTIPLY_TOTAL = new Operation(2);
         private static final Operation[] VALUES;
         private final int id;
+        private static final /* synthetic */ Operation[] field_6333;
+
+        public static Operation[] values() {
+            return (Operation[])field_6333.clone();
+        }
+
+        public static Operation valueOf(String string) {
+            return Enum.valueOf(Operation.class, string);
+        }
 
         private Operation(int id) {
             this.id = id;
@@ -122,7 +131,12 @@ public class EntityAttributeModifier {
             return VALUES[id];
         }
 
+        private static /* synthetic */ Operation[] method_36614() {
+            return new Operation[]{ADDITION, MULTIPLY_BASE, MULTIPLY_TOTAL};
+        }
+
         static {
+            field_6333 = Operation.method_36614();
             VALUES = new Operation[]{ADDITION, MULTIPLY_BASE, MULTIPLY_TOTAL};
         }
     }

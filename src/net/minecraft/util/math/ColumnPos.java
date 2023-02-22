@@ -4,8 +4,15 @@
 package net.minecraft.util.math;
 
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 
 public class ColumnPos {
+    private static final long field_29757 = 32L;
+    private static final long field_29758 = 0xFFFFFFFFL;
+    private static final int field_29759 = 1664525;
+    private static final int field_29760 = 1013904223;
+    private static final int field_29761 = -559038737;
     public final int x;
     public final int z;
 
@@ -19,6 +26,18 @@ public class ColumnPos {
         this.z = pos.getZ();
     }
 
+    public ChunkPos toChunkPos() {
+        return new ChunkPos(ChunkSectionPos.getSectionCoord(this.x), ChunkSectionPos.getSectionCoord(this.z));
+    }
+
+    public long pack() {
+        return ColumnPos.pack(this.x, this.z);
+    }
+
+    public static long pack(int x, int z) {
+        return (long)x & 0xFFFFFFFFL | ((long)z & 0xFFFFFFFFL) << 32;
+    }
+
     public String toString() {
         return "[" + this.x + ", " + this.z + "]";
     }
@@ -29,12 +48,12 @@ public class ColumnPos {
         return i ^ j;
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object instanceof ColumnPos) {
-            ColumnPos columnPos = (ColumnPos)object;
+        if (o instanceof ColumnPos) {
+            ColumnPos columnPos = (ColumnPos)o;
             return this.x == columnPos.x && this.z == columnPos.z;
         }
         return false;

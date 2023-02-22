@@ -3,29 +3,24 @@
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 
 public class ResourcePackStatusC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private Status status;
-
-    public ResourcePackStatusC2SPacket() {
-    }
+    private final Status status;
 
     public ResourcePackStatusC2SPacket(Status status) {
         this.status = status;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ResourcePackStatusC2SPacket(PacketByteBuf buf) {
         this.status = buf.readEnumConstant(Status.class);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeEnumConstant(this.status);
     }
 
@@ -34,12 +29,33 @@ implements Packet<ServerPlayPacketListener> {
         serverPlayPacketListener.onResourcePackStatus(this);
     }
 
-    public static enum Status {
-        SUCCESSFULLY_LOADED,
-        DECLINED,
-        FAILED_DOWNLOAD,
-        ACCEPTED;
+    public Status getStatus() {
+        return this.status;
+    }
 
+    public static final class Status
+    extends Enum<Status> {
+        public static final /* enum */ Status SUCCESSFULLY_LOADED = new Status();
+        public static final /* enum */ Status DECLINED = new Status();
+        public static final /* enum */ Status FAILED_DOWNLOAD = new Status();
+        public static final /* enum */ Status ACCEPTED = new Status();
+        private static final /* synthetic */ Status[] field_13019;
+
+        public static Status[] values() {
+            return (Status[])field_13019.clone();
+        }
+
+        public static Status valueOf(String string) {
+            return Enum.valueOf(Status.class, string);
+        }
+
+        private static /* synthetic */ Status[] method_36961() {
+            return new Status[]{SUCCESSFULLY_LOADED, DECLINED, FAILED_DOWNLOAD, ACCEPTED};
+        }
+
+        static {
+            field_13019 = Status.method_36961();
+        }
     }
 }
 

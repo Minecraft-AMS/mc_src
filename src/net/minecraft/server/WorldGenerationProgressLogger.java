@@ -49,6 +49,10 @@ implements WorldGenerationProgressListener {
     }
 
     @Override
+    public void start() {
+    }
+
+    @Override
     public void stop() {
         LOGGER.info("Time elapsed: {} ms", (Object)(Util.getMeasuringTimeMs() - this.startTime));
         this.nextMessageTime = Long.MAX_VALUE;

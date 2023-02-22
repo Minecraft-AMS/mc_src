@@ -28,7 +28,7 @@ import net.minecraft.util.Identifier;
 
 public class KilledByCrossbowCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("killed_by_crossbow");
+    static final Identifier ID = new Identifier("killed_by_crossbow");
 
     @Override
     public Identifier getId() {
@@ -42,6 +42,7 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, extendeds, intRange);
     }
 
+    @Override
     public void trigger(ServerPlayerEntity player, Collection<Entity> piercingKilledEntities) {
         ArrayList list = Lists.newArrayList();
         HashSet set = Sets.newHashSet();
@@ -49,7 +50,7 @@ extends AbstractCriterion<Conditions> {
             set.add(entity.getType());
             list.add(EntityPredicate.createAdvancementEntityLootContext(player, entity));
         }
-        this.test(player, conditions -> conditions.matches(list, set.size()));
+        this.trigger(player, (T conditions) -> conditions.matches(list, set.size()));
     }
 
     @Override

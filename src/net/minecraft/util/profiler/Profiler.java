@@ -1,18 +1,15 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.profiler;
 
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.profiler.DummyProfiler;
+import net.minecraft.util.profiler.SampleType;
 
 public interface Profiler {
+    public static final String ROOT_NAME = "root";
+
     public void startTick();
 
     public void endTick();
@@ -25,75 +22,81 @@ public interface Profiler {
 
     public void swap(String var1);
 
-    @Environment(value=EnvType.CLIENT)
     public void swap(Supplier<String> var1);
+
+    public void markSampleType(SampleType var1);
 
     public void visit(String var1);
 
     public void visit(Supplier<String> var1);
 
-    public static Profiler union(final Profiler profiler, final Profiler profiler2) {
-        if (profiler == DummyProfiler.INSTANCE) {
-            return profiler2;
+    public static Profiler union(final Profiler a, final Profiler b) {
+        if (a == DummyProfiler.INSTANCE) {
+            return b;
         }
-        if (profiler2 == DummyProfiler.INSTANCE) {
-            return profiler;
+        if (b == DummyProfiler.INSTANCE) {
+            return a;
         }
         return new Profiler(){
 
             @Override
             public void startTick() {
-                profiler.startTick();
-                profiler2.startTick();
+                a.startTick();
+                b.startTick();
             }
 
             @Override
             public void endTick() {
-                profiler.endTick();
-                profiler2.endTick();
+                a.endTick();
+                b.endTick();
             }
 
             @Override
             public void push(String location) {
-                profiler.push(location);
-                profiler2.push(location);
+                a.push(location);
+                b.push(location);
             }
 
             @Override
             public void push(Supplier<String> locationGetter) {
-                profiler.push(locationGetter);
-                profiler2.push(locationGetter);
+                a.push(locationGetter);
+                b.push(locationGetter);
+            }
+
+            @Override
+            public void markSampleType(SampleType type) {
+                a.markSampleType(type);
+                b.markSampleType(type);
             }
 
             @Override
             public void pop() {
-                profiler.pop();
-                profiler2.pop();
+                a.pop();
+                b.pop();
             }
 
             @Override
             public void swap(String location) {
-                profiler.swap(location);
-                profiler2.swap(location);
+                a.swap(location);
+                b.swap(location);
             }
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             public void swap(Supplier<String> locationGetter) {
-                profiler.swap(locationGetter);
-                profiler2.swap(locationGetter);
+                a.swap(locationGetter);
+                b.swap(locationGetter);
             }
 
             @Override
             public void visit(String marker) {
-                profiler.visit(marker);
-                profiler2.visit(marker);
+                a.visit(marker);
+                b.visit(marker);
             }
 
             @Override
             public void visit(Supplier<String> markerGetter) {
-                profiler.visit(markerGetter);
-                profiler2.visit(markerGetter);
+                a.visit(markerGetter);
+                b.visit(markerGetter);
             }
         };
     }

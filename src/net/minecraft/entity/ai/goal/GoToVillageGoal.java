@@ -8,7 +8,7 @@ package net.minecraft.entity.ai.goal;
 
 import java.util.EnumSet;
 import java.util.Random;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.mob.PathAwareEntity;
@@ -21,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class GoToVillageGoal
 extends Goal {
+    private static final int field_30228 = 10;
     private final PathAwareEntity mob;
     private final int searchRange;
     @Nullable
@@ -48,7 +49,7 @@ extends Goal {
         if (!serverWorld.isNearOccupiedPointOfInterest(blockPos2, 6)) {
             return false;
         }
-        Vec3d vec3d = TargetFinder.findGroundTarget(this.mob, 15, 7, blockPos -> -serverWorld.getOccupiedPointOfInterestDistance(ChunkSectionPos.from(blockPos)));
+        Vec3d vec3d = FuzzyTargeting.find(this.mob, 15, 7, blockPos -> -serverWorld.getOccupiedPointOfInterestDistance(ChunkSectionPos.from(blockPos)));
         this.targetPosition = vec3d == null ? null : new BlockPos(vec3d);
         return this.targetPosition != null;
     }

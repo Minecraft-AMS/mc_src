@@ -21,7 +21,7 @@ import net.minecraft.util.Identifier;
 
 public class PlayerHurtEntityCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("player_hurt_entity");
+    static final Identifier ID = new Identifier("player_hurt_entity");
 
     @Override
     public Identifier getId() {
@@ -37,7 +37,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, Entity entity, DamageSource damage, float dealt, float taken, boolean blocked) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, entity);
-        this.test(player, conditions -> conditions.matches(player, lootContext, damage, dealt, taken, blocked));
+        this.trigger(player, conditions -> conditions.matches(player, lootContext, damage, dealt, taken, blocked));
     }
 
     @Override
@@ -56,8 +56,28 @@ extends AbstractCriterion<Conditions> {
             this.entity = entity;
         }
 
-        public static Conditions create(DamagePredicate.Builder hurtEntityPredicateBuilder) {
-            return new Conditions(EntityPredicate.Extended.EMPTY, hurtEntityPredicateBuilder.build(), EntityPredicate.Extended.EMPTY);
+        public static Conditions create() {
+            return new Conditions(EntityPredicate.Extended.EMPTY, DamagePredicate.ANY, EntityPredicate.Extended.EMPTY);
+        }
+
+        public static Conditions create(DamagePredicate damagePredicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, damagePredicate, EntityPredicate.Extended.EMPTY);
+        }
+
+        public static Conditions create(DamagePredicate.Builder damagePredicateBuilder) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, damagePredicateBuilder.build(), EntityPredicate.Extended.EMPTY);
+        }
+
+        public static Conditions create(EntityPredicate hurtEntityPredicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, DamagePredicate.ANY, EntityPredicate.Extended.ofLegacy(hurtEntityPredicate));
+        }
+
+        public static Conditions create(DamagePredicate damagePredicate, EntityPredicate hurtEntityPredicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, damagePredicate, EntityPredicate.Extended.ofLegacy(hurtEntityPredicate));
+        }
+
+        public static Conditions create(DamagePredicate.Builder damagePredicateBuilder, EntityPredicate hurtEntityPredicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, damagePredicateBuilder.build(), EntityPredicate.Extended.ofLegacy(hurtEntityPredicate));
         }
 
         public boolean matches(ServerPlayerEntity player, LootContext entityContext, DamageSource source, float dealt, float taken, boolean blocked) {

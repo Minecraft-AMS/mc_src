@@ -15,9 +15,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.client.render.entity.model.MinecartEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
@@ -31,18 +32,19 @@ import net.minecraft.util.math.Vec3f;
 public class MinecartEntityRenderer<T extends AbstractMinecartEntity>
 extends EntityRenderer<T> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/minecart.png");
-    protected final EntityModel<T> model = new MinecartEntityModel();
+    protected final EntityModel<T> model;
 
-    public MinecartEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public MinecartEntityRenderer(EntityRendererFactory.Context ctx, EntityModelLayer layer) {
+        super(ctx);
         this.shadowRadius = 0.7f;
+        this.model = new MinecartEntityModel(ctx.getPart(layer));
     }
 
     @Override
     public void render(T abstractMinecartEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
         super.render(abstractMinecartEntity, f, g, matrixStack, vertexConsumerProvider, i);
         matrixStack.push();
-        long l = (long)((Entity)abstractMinecartEntity).getEntityId() * 493286711L;
+        long l = (long)((Entity)abstractMinecartEntity).getId() * 493286711L;
         l = l * l * 4392167121L + l * 98761L;
         float h = (((float)(l >> 16 & 7L) + 0.5f) / 8.0f - 0.5f) * 0.004f;
         float j = (((float)(l >> 20 & 7L) + 0.5f) / 8.0f - 0.5f) * 0.004f;
@@ -53,7 +55,7 @@ extends EntityRenderer<T> {
         double m = MathHelper.lerp((double)g, ((AbstractMinecartEntity)abstractMinecartEntity).lastRenderZ, ((Entity)abstractMinecartEntity).getZ());
         double n = 0.3f;
         Vec3d vec3d = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRail(d, e, m);
-        float o = MathHelper.lerp(g, ((AbstractMinecartEntity)abstractMinecartEntity).prevPitch, ((AbstractMinecartEntity)abstractMinecartEntity).pitch);
+        float o = MathHelper.lerp(g, ((AbstractMinecartEntity)abstractMinecartEntity).prevPitch, ((Entity)abstractMinecartEntity).getPitch());
         if (vec3d != null) {
             Vec3d vec3d2 = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRailWithOffset(d, e, m, 0.3f);
             Vec3d vec3d3 = ((AbstractMinecartEntity)abstractMinecartEntity).snapPositionToRailWithOffset(d, e, m, -0.3f);

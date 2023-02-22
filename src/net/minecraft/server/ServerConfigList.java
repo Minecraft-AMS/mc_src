@@ -86,7 +86,7 @@ public abstract class ServerConfigList<K, V extends ServerConfigEntry<K>> {
     }
 
     public String[] getNames() {
-        return this.map.keySet().toArray(new String[this.map.size()]);
+        return this.map.keySet().toArray(new String[0]);
     }
 
     public boolean isEmpty() {
@@ -120,7 +120,7 @@ public abstract class ServerConfigList<K, V extends ServerConfigEntry<K>> {
 
     public void save() throws IOException {
         JsonArray jsonArray = new JsonArray();
-        this.map.values().stream().map(serverConfigEntry -> Util.make(new JsonObject(), serverConfigEntry::fromJson)).forEach(arg_0 -> ((JsonArray)jsonArray).add(arg_0));
+        this.map.values().stream().map(entry -> Util.make(new JsonObject(), entry::write)).forEach(arg_0 -> ((JsonArray)jsonArray).add(arg_0));
         try (BufferedWriter bufferedWriter = Files.newWriter((File)this.file, (Charset)StandardCharsets.UTF_8);){
             GSON.toJson((JsonElement)jsonArray, (Appendable)bufferedWriter);
         }

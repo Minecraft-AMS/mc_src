@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.chunk;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.collection.IdList;
@@ -64,7 +61,6 @@ implements Palette<T> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void fromPacket(PacketByteBuf buf) {
         this.map.clear();
         int i = buf.readVarInt();
@@ -91,6 +87,7 @@ implements Palette<T> {
         return i;
     }
 
+    @Override
     public int getIndexBits() {
         return this.map.size();
     }
@@ -105,7 +102,7 @@ implements Palette<T> {
 
     public void writeNbt(NbtList nbt) {
         for (int i = 0; i < this.getIndexBits(); ++i) {
-            nbt.add(this.elementSerializer.apply(this.map.get(i)));
+            nbt.add((NbtElement)this.elementSerializer.apply(this.map.get(i)));
         }
     }
 }

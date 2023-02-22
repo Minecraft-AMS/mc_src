@@ -12,13 +12,19 @@ package net.minecraft.world;
 
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.DataFixer;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PushbackInputStream;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
+import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.world.PersistentState;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,35 +45,33 @@ public class PersistentStateManager {
         return new File(this.directory, id + ".dat");
     }
 
-    public <T extends PersistentState> T getOrCreate(Supplier<T> factory, String id) {
-        T persistentState = this.get(factory, id);
+    public <T extends PersistentState> T getOrCreate(Function<NbtCompound, T> function, Supplier<T> supplier, String string) {
+        T persistentState = this.get(function, string);
         if (persistentState != null) {
             return persistentState;
         }
-        PersistentState persistentState2 = (PersistentState)factory.get();
-        this.set(persistentState2);
+        PersistentState persistentState2 = (PersistentState)supplier.get();
+        this.set(string, persistentState2);
         return (T)persistentState2;
     }
 
     @Nullable
-    public <T extends PersistentState> T get(Supplier<T> factory, String id) {
+    public <T extends PersistentState> T get(Function<NbtCompound, T> function, String id) {
         PersistentState persistentState = this.loadedStates.get(id);
         if (persistentState == null && !this.loadedStates.containsKey(id)) {
-            persistentState = this.readFromFile(factory, id);
+            persistentState = this.readFromFile(function, id);
             this.loadedStates.put(id, persistentState);
         }
         return (T)persistentState;
     }
 
     @Nullable
-    private <T extends PersistentState> T readFromFile(Supplier<T> factory, String id) {
+    private <T extends PersistentState> T readFromFile(Function<NbtCompound, T> function, String id) {
         try {
             File file = this.getFile(id);
             if (file.exists()) {
-                PersistentState persistentState = (PersistentState)factory.get();
                 NbtCompound nbtCompound = this.readNbt(id, SharedConstants.getGameVersion().getWorldVersion());
-                persistentState.fromTag(nbtCompound.getCompound("data"));
-                return (T)persistentState;
+                return (T)((PersistentState)function.apply(nbtCompound.getCompound("data")));
             }
         }
         catch (Exception exception) {
@@ -76,34 +80,28 @@ public class PersistentStateManager {
         return null;
     }
 
-    public void set(PersistentState state) {
-        this.loadedStates.put(state.getId(), state);
+    public void set(String string, PersistentState persistentState) {
+        this.loadedStates.put(string, persistentState);
     }
 
-    /*
-     * Exception decompiling
-     */
     public NbtCompound readNbt(String id, int dataVersion) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+        File file = this.getFile(id);
+        try (FileInputStream fileInputStream = new FileInputStream(file);){
+            NbtCompound nbtCompound;
+            try (PushbackInputStream pushbackInputStream = new PushbackInputStream(fileInputStream, 2);){
+                NbtCompound nbtCompound2;
+                if (this.isCompressed(pushbackInputStream)) {
+                    nbtCompound2 = NbtIo.readCompressed(pushbackInputStream);
+                } else {
+                    try (DataInputStream dataInputStream = new DataInputStream(pushbackInputStream);){
+                        nbtCompound2 = NbtIo.read(dataInputStream);
+                    }
+                }
+                int i = nbtCompound2.contains("DataVersion", 99) ? nbtCompound2.getInt("DataVersion") : 1343;
+                nbtCompound = NbtHelper.update(this.dataFixer, DataFixTypes.SAVED_DATA, nbtCompound2, i, dataVersion);
+            }
+            return nbtCompound;
+        }
     }
 
     private boolean isCompressed(PushbackInputStream pushbackInputStream) throws IOException {
@@ -121,10 +119,11 @@ public class PersistentStateManager {
     }
 
     public void save() {
-        for (PersistentState persistentState : this.loadedStates.values()) {
-            if (persistentState == null) continue;
-            persistentState.save(this.getFile(persistentState.getId()));
-        }
+        this.loadedStates.forEach((string, persistentState) -> {
+            if (persistentState != null) {
+                persistentState.save(this.getFile((String)string));
+            }
+        });
     }
 }
 

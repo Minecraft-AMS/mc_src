@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
@@ -10,6 +13,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.Hopper;
 import net.minecraft.block.entity.HopperBlockEntity;
 import net.minecraft.entity.Entity;
@@ -38,6 +43,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class HopperBlock
 extends BlockWithEntity {
@@ -114,8 +120,14 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new HopperBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new HopperBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return world.isClient ? null : HopperBlock.checkType(type, BlockEntityType.HOPPER, HopperBlockEntity::serverTick);
     }
 
     @Override
@@ -207,7 +219,7 @@ extends BlockWithEntity {
     public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof HopperBlockEntity) {
-            ((HopperBlockEntity)blockEntity).onEntityCollided(entity);
+            HopperBlockEntity.onEntityCollided(world, pos, state, entity, (HopperBlockEntity)blockEntity);
         }
     }
 

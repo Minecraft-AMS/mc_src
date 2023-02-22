@@ -29,7 +29,7 @@ public interface StringIdentifiable {
 
     public static <E extends Enum<E>> Codec<E> createCodec(Supplier<E[]> enumValues, Function<? super String, ? extends E> fromString) {
         Enum[] enums = (Enum[])enumValues.get();
-        return StringIdentifiable.createCodec(Enum::ordinal, ordinal -> enums[ordinal], fromString);
+        return StringIdentifiable.createCodec(object -> ((Enum)object).ordinal(), ordinal -> enums[ordinal], fromString);
     }
 
     public static <E extends StringIdentifiable> Codec<E> createCodec(final ToIntFunction<E> compressedEncoder, final IntFunction<E> compressedDecoder, final Function<? super String, ? extends E> decoder) {
@@ -44,9 +44,9 @@ public interface StringIdentifiable {
 
             public <T> DataResult<Pair<E, T>> decode(DynamicOps<T> dynamicOps, T object) {
                 if (dynamicOps.compressMaps()) {
-                    return dynamicOps.getNumberValue(object).flatMap(number -> Optional.ofNullable(compressedDecoder.apply(number.intValue())).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element id: " + number)))).map(stringIdentifiable -> Pair.of((Object)stringIdentifiable, (Object)dynamicOps.empty()));
+                    return dynamicOps.getNumberValue(object).flatMap(id -> Optional.ofNullable((StringIdentifiable)compressedDecoder.apply(id.intValue())).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element id: " + id)))).map(stringIdentifiable -> Pair.of((Object)stringIdentifiable, (Object)dynamicOps.empty()));
                 }
-                return dynamicOps.getStringValue(object).flatMap(string -> Optional.ofNullable(decoder.apply(string)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element name: " + string)))).map(stringIdentifiable -> Pair.of((Object)stringIdentifiable, (Object)dynamicOps.empty()));
+                return dynamicOps.getStringValue(object).flatMap(name -> Optional.ofNullable((StringIdentifiable)decoder.apply(name)).map(DataResult::success).orElseGet(() -> DataResult.error((String)("Unknown element name: " + name)))).map(stringIdentifiable -> Pair.of((Object)stringIdentifiable, (Object)dynamicOps.empty()));
             }
 
             public String toString() {
@@ -59,14 +59,14 @@ public interface StringIdentifiable {
         };
     }
 
-    public static Keyable method_28142(final StringIdentifiable[] stringIdentifiables) {
+    public static Keyable toKeyable(final StringIdentifiable[] values) {
         return new Keyable(){
 
             public <T> Stream<T> keys(DynamicOps<T> dynamicOps) {
                 if (dynamicOps.compressMaps()) {
-                    return IntStream.range(0, stringIdentifiables.length).mapToObj(arg_0 -> dynamicOps.createInt(arg_0));
+                    return IntStream.range(0, values.length).mapToObj(arg_0 -> dynamicOps.createInt(arg_0));
                 }
-                return Arrays.stream(stringIdentifiables).map(StringIdentifiable::asString).map(arg_0 -> dynamicOps.createString(arg_0));
+                return Arrays.stream(values).map(StringIdentifiable::asString).map(arg_0 -> dynamicOps.createString(arg_0));
             }
         };
     }

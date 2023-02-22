@@ -10,12 +10,11 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtLong
 extends AbstractNbtNumber {
+    private static final int field_33201 = 128;
     public static final NbtType<NbtLong> TYPE = new NbtType<NbtLong>(){
 
         @Override
@@ -46,13 +45,13 @@ extends AbstractNbtNumber {
     };
     private final long value;
 
-    private NbtLong(long value) {
-        this.value = value;
+    NbtLong(long l) {
+        this.value = l;
     }
 
     public static NbtLong of(long value) {
         if (value >= -128L && value <= 1024L) {
-            return Cache.VALUES[(int)value + 128];
+            return Cache.VALUES[(int)value - -128];
         }
         return new NbtLong(value);
     }
@@ -72,11 +71,6 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public String toString() {
-        return this.value + "L";
-    }
-
-    @Override
     public NbtLong copy() {
         return this;
     }
@@ -93,9 +87,8 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("L").formatted(RED);
-        return new LiteralText(String.valueOf(this.value)).append(text).formatted(GOLD);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitLong(this);
     }
 
     @Override
@@ -139,7 +132,12 @@ extends AbstractNbtNumber {
     }
 
     static class Cache {
+        private static final int field_33202 = 1024;
+        private static final int field_33203 = -128;
         static final NbtLong[] VALUES = new NbtLong[1153];
+
+        private Cache() {
+        }
 
         static {
             for (int i = 0; i < VALUES.length; ++i) {

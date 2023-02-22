@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Dismounting;
 import net.minecraft.entity.Entity;
@@ -36,7 +32,6 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.mob.ZombifiedPiglinEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
@@ -78,8 +73,8 @@ Saddleable {
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 1.25));
         this.goalSelector.add(3, new AnimalMateGoal(this, 1.0));
-        this.goalSelector.add(4, new TemptGoal((PathAwareEntity)this, 1.2, Ingredient.ofItems(Items.CARROT_ON_A_STICK), false));
-        this.goalSelector.add(4, new TemptGoal((PathAwareEntity)this, 1.2, false, BREEDING_INGREDIENT));
+        this.goalSelector.add(4, new TemptGoal(this, 1.2, Ingredient.ofItems(Items.CARROT_ON_A_STICK), false));
+        this.goalSelector.add(4, new TemptGoal(this, 1.2, BREEDING_INGREDIENT, false));
         this.goalSelector.add(5, new FollowParentGoal(this, 1.1));
         this.goalSelector.add(6, new WanderAroundFarGoal(this, 1.0));
         this.goalSelector.add(7, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
@@ -93,10 +88,7 @@ Saddleable {
     @Override
     @Nullable
     public Entity getPrimaryPassenger() {
-        if (this.getPassengerList().isEmpty()) {
-            return null;
-        }
-        return this.getPassengerList().get(0);
+        return this.getFirstPassenger();
     }
 
     @Override
@@ -106,7 +98,7 @@ Saddleable {
             return false;
         }
         PlayerEntity playerEntity = (PlayerEntity)entity;
-        return playerEntity.getMainHandStack().getItem() == Items.CARROT_ON_A_STICK || playerEntity.getOffHandStack().getItem() == Items.CARROT_ON_A_STICK;
+        return playerEntity.getMainHandStack().isOf(Items.CARROT_ON_A_STICK) || playerEntity.getOffHandStack().isOf(Items.CARROT_ON_A_STICK);
     }
 
     @Override
@@ -168,7 +160,7 @@ Saddleable {
         ActionResult actionResult = super.interactMob(player, hand);
         if (!actionResult.isAccepted()) {
             ItemStack itemStack = player.getStackInHand(hand);
-            if (itemStack.getItem() == Items.SADDLE) {
+            if (itemStack.isOf(Items.SADDLE)) {
                 return itemStack.useOnEntity(player, this, hand);
             }
             return ActionResult.PASS;
@@ -230,7 +222,7 @@ Saddleable {
         if (world.getDifficulty() != Difficulty.PEACEFUL) {
             ZombifiedPiglinEntity zombifiedPiglinEntity = EntityType.ZOMBIFIED_PIGLIN.create(world);
             zombifiedPiglinEntity.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_SWORD));
-            zombifiedPiglinEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
+            zombifiedPiglinEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             zombifiedPiglinEntity.setAiDisabled(this.isAiDisabled());
             zombifiedPiglinEntity.setBaby(this.isBaby());
             if (this.hasCustomName()) {
@@ -239,7 +231,7 @@ Saddleable {
             }
             zombifiedPiglinEntity.setPersistent();
             world.spawnEntity(zombifiedPiglinEntity);
-            this.remove();
+            this.discard();
         } else {
             super.onStruckByLightning(world, lightning);
         }
@@ -276,8 +268,7 @@ Saddleable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d method_29919() {
+    public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.6f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 

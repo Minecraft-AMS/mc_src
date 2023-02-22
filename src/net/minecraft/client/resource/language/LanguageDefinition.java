@@ -68,8 +68,8 @@ Comparable<LanguageDefinition> {
     }
 
     @Override
-    public /* synthetic */ int compareTo(Object object) {
-        return this.compareTo((LanguageDefinition)object);
+    public /* synthetic */ int compareTo(Object other) {
+        return this.compareTo((LanguageDefinition)other);
     }
 }
 

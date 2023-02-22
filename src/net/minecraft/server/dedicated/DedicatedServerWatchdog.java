@@ -31,6 +31,8 @@ import org.apache.logging.log4j.Logger;
 public class DedicatedServerWatchdog
 implements Runnable {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final long field_29664 = 10000L;
+    private static final int field_29665 = 1;
     private final MinecraftDedicatedServer server;
     private final long maxTickTime;
 
@@ -42,7 +44,7 @@ implements Runnable {
     @Override
     public void run() {
         while (this.server.isRunning()) {
-            long l = this.server.getServerStartTime();
+            long l = this.server.getTimeReference();
             long m = Util.getMeasuringTimeMs();
             long n = m - l;
             if (n > this.maxTickTime) {
@@ -60,12 +62,12 @@ implements Runnable {
                     stringBuilder.append("\n");
                 }
                 CrashReport crashReport = new CrashReport("Watching Server", error);
-                this.server.populateCrashReport(crashReport);
+                this.server.addSystemDetails(crashReport.getSystemDetailsSection());
                 CrashReportSection crashReportSection = crashReport.addElement("Thread Dump");
                 crashReportSection.add("Threads", stringBuilder);
                 CrashReportSection crashReportSection2 = crashReport.addElement("Performance stats");
                 crashReportSection2.add("Random tick rate", () -> this.server.getSaveProperties().getGameRules().get(GameRules.RANDOM_TICK_SPEED).toString());
-                crashReportSection2.add("Level stats", () -> Streams.stream(this.server.getWorlds()).map(serverWorld -> serverWorld.getRegistryKey() + ": " + serverWorld.method_31268()).collect(Collectors.joining(",\n")));
+                crashReportSection2.add("Level stats", () -> Streams.stream(this.server.getWorlds()).map(serverWorld -> serverWorld.getRegistryKey() + ": " + serverWorld.getDebugString()).collect(Collectors.joining(",\n")));
                 Bootstrap.println("Crash report:\n" + crashReport.asString());
                 File file = new File(new File(this.server.getRunDirectory(), "crash-reports"), "crash-" + new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date()) + "-server.txt");
                 if (crashReport.writeToFile(file)) {

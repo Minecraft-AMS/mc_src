@@ -56,6 +56,12 @@ public class BlockArgumentParser {
     public static final Dynamic3CommandExceptionType INVALID_PROPERTY_EXCEPTION = new Dynamic3CommandExceptionType((object, object2, object3) -> new TranslatableText("argument.block.property.invalid", object, object3, object2));
     public static final Dynamic2CommandExceptionType EMPTY_PROPERTY_EXCEPTION = new Dynamic2CommandExceptionType((object, object2) -> new TranslatableText("argument.block.property.novalue", object, object2));
     public static final SimpleCommandExceptionType UNCLOSED_PROPERTIES_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.block.property.unclosed"));
+    private static final char field_32800 = '[';
+    private static final char field_32801 = '{';
+    private static final char field_32802 = ']';
+    private static final char field_32803 = '=';
+    private static final char field_32804 = ',';
+    private static final char field_32805 = '#';
     private static final BiFunction<SuggestionsBuilder, TagGroup<Block>, CompletableFuture<Suggestions>> SUGGEST_DEFAULT = (suggestionsBuilder, tagGroup) -> suggestionsBuilder.buildFuture();
     private final StringReader reader;
     private final boolean allowTag;
@@ -136,7 +142,7 @@ public class BlockArgumentParser {
         String string = suggestionsBuilder.getRemaining().toLowerCase(Locale.ROOT);
         for (Property<?> property : this.blockState.getProperties()) {
             if (this.blockProperties.containsKey(property) || !property.getName().startsWith(string)) continue;
-            suggestionsBuilder.suggest(property.getName() + '=');
+            suggestionsBuilder.suggest(property.getName() + "=");
         }
         return suggestionsBuilder.buildFuture();
     }
@@ -148,7 +154,7 @@ public class BlockArgumentParser {
             for (Block block : tag.values()) {
                 for (Property<?> property : block.getStateManager().getProperties()) {
                     if (this.tagProperties.containsKey(property.getName()) || !property.getName().startsWith(string)) continue;
-                    suggestionsBuilder.suggest(property.getName() + '=');
+                    suggestionsBuilder.suggest(property.getName() + "=");
                 }
             }
         }
@@ -165,11 +171,11 @@ public class BlockArgumentParser {
     private boolean hasBlockEntity(TagGroup<Block> tagGroup) {
         Tag<Block> tag;
         if (this.blockState != null) {
-            return this.blockState.getBlock().hasBlockEntity();
+            return this.blockState.hasBlockEntity();
         }
         if (this.tagId != null && (tag = tagGroup.getTag(this.tagId)) != null) {
             for (Block block : tag.values()) {
-                if (!block.hasBlockEntity()) continue;
+                if (!block.getDefaultState().hasBlockEntity()) continue;
                 return true;
             }
         }
@@ -235,7 +241,7 @@ public class BlockArgumentParser {
             boolean bl = false;
             boolean bl2 = false;
             Iterator<Block> iterator = tag.values().iterator();
-            while (!(!iterator.hasNext() || (bl |= !(block = iterator.next()).getStateManager().getProperties().isEmpty()) && (bl2 |= block.hasBlockEntity()))) {
+            while (!(!iterator.hasNext() || (bl |= !(block = iterator.next()).getStateManager().getProperties().isEmpty()) && (bl2 |= block.getDefaultState().hasBlockEntity()))) {
             }
             if (bl) {
                 suggestionsBuilder.suggest(String.valueOf('['));
@@ -252,7 +258,7 @@ public class BlockArgumentParser {
             if (!this.blockState.getBlock().getStateManager().getProperties().isEmpty()) {
                 suggestionsBuilder.suggest(String.valueOf('['));
             }
-            if (this.blockState.getBlock().hasBlockEntity()) {
+            if (this.blockState.hasBlockEntity()) {
                 suggestionsBuilder.suggest(String.valueOf('{'));
             }
         }
@@ -391,7 +397,7 @@ public class BlockArgumentParser {
             throw INVALID_PROPERTY_EXCEPTION.createWithContext((ImmutableStringReader)this.reader, (Object)this.blockId.toString(), (Object)property.getName(), (Object)string);
         }
         this.blockState = (BlockState)this.blockState.with(property, (Comparable)optional.get());
-        this.blockProperties.put(property, (Comparable<?>)optional.get());
+        this.blockProperties.put(property, (Comparable)optional.get());
     }
 
     public static String stringifyBlockState(BlockState blockState) {

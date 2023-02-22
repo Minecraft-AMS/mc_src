@@ -40,12 +40,29 @@ public abstract class Goal {
         return this.controls;
     }
 
-    public static enum Control {
-        MOVE,
-        LOOK,
-        JUMP,
-        TARGET;
+    public static final class Control
+    extends Enum<Control> {
+        public static final /* enum */ Control MOVE = new Control();
+        public static final /* enum */ Control LOOK = new Control();
+        public static final /* enum */ Control JUMP = new Control();
+        public static final /* enum */ Control TARGET = new Control();
+        private static final /* synthetic */ Control[] field_18409;
 
+        public static Control[] values() {
+            return (Control[])field_18409.clone();
+        }
+
+        public static Control valueOf(String string) {
+            return Enum.valueOf(Control.class, string);
+        }
+
+        private static /* synthetic */ Control[] method_36621() {
+            return new Control[]{MOVE, LOOK, JUMP, TARGET};
+        }
+
+        static {
+            field_18409 = Control.method_36621();
+        }
     }
 }
 

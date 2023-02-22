@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile.thrown;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
@@ -17,8 +11,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.network.Packet;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -43,7 +35,6 @@ extends ProjectileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         double d = this.getBoundingBox().getAverageSideLength() * 4.0;
         if (Double.isNaN(d)) {
@@ -56,7 +47,7 @@ extends ProjectileEntity {
     public void tick() {
         float h;
         super.tick();
-        HitResult hitResult = ProjectileUtil.getCollision(this, this::method_26958);
+        HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
         boolean bl = false;
         if (hitResult.getType() == HitResult.Type.BLOCK) {
             BlockPos blockPos = ((BlockHitResult)hitResult).getBlockPos();
@@ -66,8 +57,8 @@ extends ProjectileEntity {
                 bl = true;
             } else if (blockState.isOf(Blocks.END_GATEWAY)) {
                 BlockEntity blockEntity = this.world.getBlockEntity(blockPos);
-                if (blockEntity instanceof EndGatewayBlockEntity && EndGatewayBlockEntity.method_30276(this)) {
-                    ((EndGatewayBlockEntity)blockEntity).tryTeleportingEntity(this);
+                if (blockEntity instanceof EndGatewayBlockEntity && EndGatewayBlockEntity.canTeleport(this)) {
+                    EndGatewayBlockEntity.tryTeleportingEntity(this.world, blockPos, blockState, this, (EndGatewayBlockEntity)blockEntity);
                 }
                 bl = true;
             }
@@ -80,7 +71,7 @@ extends ProjectileEntity {
         double d = this.getX() + vec3d.x;
         double e = this.getY() + vec3d.y;
         double f = this.getZ() + vec3d.z;
-        this.method_26962();
+        this.updateRotation();
         if (this.isTouchingWater()) {
             for (int i = 0; i < 4; ++i) {
                 float g = 0.25f;
@@ -100,11 +91,6 @@ extends ProjectileEntity {
 
     protected float getGravity() {
         return 0.03f;
-    }
-
-    @Override
-    public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this);
     }
 }
 

@@ -55,8 +55,8 @@ implements DataProvider {
     private final DataGenerator root;
     private final List<Pair<Supplier<Consumer<BiConsumer<Identifier, LootTable.Builder>>>, LootContextType>> lootTypeGenerators = ImmutableList.of((Object)Pair.of(FishingLootTableGenerator::new, (Object)LootContextTypes.FISHING), (Object)Pair.of(ChestLootTableGenerator::new, (Object)LootContextTypes.CHEST), (Object)Pair.of(EntityLootTableGenerator::new, (Object)LootContextTypes.ENTITY), (Object)Pair.of(BlockLootTableGenerator::new, (Object)LootContextTypes.BLOCK), (Object)Pair.of(BarterLootTableGenerator::new, (Object)LootContextTypes.BARTER), (Object)Pair.of(GiftLootTableGenerator::new, (Object)LootContextTypes.GIFT));
 
-    public LootTablesProvider(DataGenerator dataGenerator) {
-        this.root = dataGenerator;
+    public LootTablesProvider(DataGenerator root) {
+        this.root = root;
     }
 
     @Override
@@ -76,7 +76,7 @@ implements DataProvider {
         map.forEach((identifier, lootTable) -> LootManager.validate(lootTableReporter, identifier, lootTable));
         Multimap<String, String> multimap = lootTableReporter.getMessages();
         if (!multimap.isEmpty()) {
-            multimap.forEach((string, string2) -> LOGGER.warn("Found validation problem in " + string + ": " + string2));
+            multimap.forEach((string, string2) -> LOGGER.warn("Found validation problem in {}: {}", string, string2));
             throw new IllegalStateException("Failed to validate loot tables, see logs");
         }
         map.forEach((identifier, lootTable) -> {

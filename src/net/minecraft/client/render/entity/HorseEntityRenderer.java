@@ -12,10 +12,11 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.HorseBaseEntityRenderer;
 import net.minecraft.client.render.entity.feature.HorseArmorFeatureRenderer;
 import net.minecraft.client.render.entity.feature.HorseMarkingFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.HorseEntityModel;
 import net.minecraft.entity.passive.HorseColor;
 import net.minecraft.entity.passive.HorseEntity;
@@ -35,10 +36,10 @@ extends HorseBaseEntityRenderer<HorseEntity, HorseEntityModel<HorseEntity>> {
         enumMap.put(HorseColor.DARKBROWN, new Identifier("textures/entity/horse/horse_darkbrown.png"));
     });
 
-    public HorseEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new HorseEntityModel(0.0f), 1.1f);
+    public HorseEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new HorseEntityModel(context.getPart(EntityModelLayers.HORSE)), 1.1f);
         this.addFeature(new HorseMarkingFeatureRenderer(this));
-        this.addFeature(new HorseArmorFeatureRenderer(this));
+        this.addFeature(new HorseArmorFeatureRenderer(this, context.getModelLoader()));
     }
 
     @Override

@@ -13,6 +13,7 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.RandomBooleanFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class RandomBooleanFeature
 extends Feature<RandomBooleanFeatureConfig> {
@@ -21,7 +22,12 @@ extends Feature<RandomBooleanFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, RandomBooleanFeatureConfig randomBooleanFeatureConfig) {
+    public boolean generate(FeatureContext<RandomBooleanFeatureConfig> context) {
+        Random random = context.getRandom();
+        RandomBooleanFeatureConfig randomBooleanFeatureConfig = context.getConfig();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        ChunkGenerator chunkGenerator = context.getGenerator();
+        BlockPos blockPos = context.getOrigin();
         boolean bl = random.nextBoolean();
         if (bl) {
             return randomBooleanFeatureConfig.featureTrue.get().generate(structureWorldAccess, chunkGenerator, random, blockPos);

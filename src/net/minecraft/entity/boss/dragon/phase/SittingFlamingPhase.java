@@ -16,9 +16,12 @@ import net.minecraft.util.math.Vec3d;
 
 public class SittingFlamingPhase
 extends AbstractSittingPhase {
+    private static final int field_30433 = 200;
+    private static final int field_30434 = 4;
+    private static final int field_30435 = 10;
     private int ticks;
-    private int field_7052;
-    private AreaEffectCloudEntity field_7051;
+    private int timesRun;
+    private AreaEffectCloudEntity dragonBreathEntity;
 
     public SittingFlamingPhase(EnderDragonEntity enderDragonEntity) {
         super(enderDragonEntity);
@@ -49,7 +52,7 @@ extends AbstractSittingPhase {
     public void serverTick() {
         ++this.ticks;
         if (this.ticks >= 200) {
-            if (this.field_7052 >= 4) {
+            if (this.timesRun >= 4) {
                 this.dragon.getPhaseManager().setPhase(PhaseType.TAKEOFF);
             } else {
                 this.dragon.getPhaseManager().setPhase(PhaseType.SITTING_SCANNING);
@@ -70,27 +73,27 @@ extends AbstractSittingPhase {
                 mutable.set(d, h, e);
             }
             h = MathHelper.floor(h) + 1;
-            this.field_7051 = new AreaEffectCloudEntity(this.dragon.world, d, h, e);
-            this.field_7051.setOwner(this.dragon);
-            this.field_7051.setRadius(5.0f);
-            this.field_7051.setDuration(200);
-            this.field_7051.setParticleType(ParticleTypes.DRAGON_BREATH);
-            this.field_7051.addEffect(new StatusEffectInstance(StatusEffects.INSTANT_DAMAGE));
-            this.dragon.world.spawnEntity(this.field_7051);
+            this.dragonBreathEntity = new AreaEffectCloudEntity(this.dragon.world, d, h, e);
+            this.dragonBreathEntity.setOwner(this.dragon);
+            this.dragonBreathEntity.setRadius(5.0f);
+            this.dragonBreathEntity.setDuration(200);
+            this.dragonBreathEntity.setParticleType(ParticleTypes.DRAGON_BREATH);
+            this.dragonBreathEntity.addEffect(new StatusEffectInstance(StatusEffects.INSTANT_DAMAGE));
+            this.dragon.world.spawnEntity(this.dragonBreathEntity);
         }
     }
 
     @Override
     public void beginPhase() {
         this.ticks = 0;
-        ++this.field_7052;
+        ++this.timesRun;
     }
 
     @Override
     public void endPhase() {
-        if (this.field_7051 != null) {
-            this.field_7051.remove();
-            this.field_7051 = null;
+        if (this.dragonBreathEntity != null) {
+            this.dragonBreathEntity.discard();
+            this.dragonBreathEntity = null;
         }
     }
 
@@ -98,8 +101,8 @@ extends AbstractSittingPhase {
         return PhaseType.SITTING_FLAMING;
     }
 
-    public void method_6857() {
-        this.field_7052 = 0;
+    public void reset() {
+        this.timesRun = 0;
     }
 }
 

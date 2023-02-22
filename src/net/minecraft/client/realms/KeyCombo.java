@@ -25,6 +25,10 @@ public class KeyCombo {
         this.chars = keys;
     }
 
+    public KeyCombo(char[] keys) {
+        this(keys, () -> {});
+    }
+
     public boolean keyPressed(char key) {
         if (key == this.chars[this.matchIndex++]) {
             if (this.matchIndex == this.chars.length) {
@@ -43,7 +47,7 @@ public class KeyCombo {
     }
 
     public String toString() {
-        return "KeyCombo{chars=" + Arrays.toString(this.chars) + ", matchIndex=" + this.matchIndex + '}';
+        return "KeyCombo{chars=" + Arrays.toString(this.chars) + ", matchIndex=" + this.matchIndex + "}";
     }
 }
 

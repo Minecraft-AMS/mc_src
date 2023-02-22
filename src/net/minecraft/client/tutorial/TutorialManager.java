@@ -16,13 +16,16 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.input.Input;
+import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.toast.TutorialToast;
+import net.minecraft.client.tutorial.BundleTutorial;
 import net.minecraft.client.tutorial.TutorialStep;
 import net.minecraft.client.tutorial.TutorialStepHandler;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.KeybindText;
 import net.minecraft.text.Text;
+import net.minecraft.util.ClickType;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -34,10 +37,12 @@ public class TutorialManager {
     private final MinecraftClient client;
     @Nullable
     private TutorialStepHandler currentHandler;
-    private List<class_5524> field_26893 = Lists.newArrayList();
+    private final List<Entry> entries = Lists.newArrayList();
+    private final BundleTutorial bundleTutorial;
 
-    public TutorialManager(MinecraftClient client) {
+    public TutorialManager(MinecraftClient client, GameOptions options) {
         this.client = client;
+        this.bundleTutorial = new BundleTutorial(this, options);
     }
 
     public void onMovement(Input input) {
@@ -91,18 +96,18 @@ public class TutorialManager {
         this.currentHandler = this.client.options.tutorialStep.createHandler(this);
     }
 
-    public void method_31365(TutorialToast tutorialToast, int i) {
-        this.field_26893.add(new class_5524(tutorialToast, i));
-        this.client.getToastManager().add(tutorialToast);
+    public void add(TutorialToast toast, int ticks) {
+        this.entries.add(new Entry(toast, ticks));
+        this.client.getToastManager().add(toast);
     }
 
-    public void method_31364(TutorialToast tutorialToast) {
-        this.field_26893.removeIf(arg -> ((class_5524)arg).field_26894 == tutorialToast);
-        tutorialToast.hide();
+    public void remove(TutorialToast toast) {
+        this.entries.removeIf(entry -> entry.toast == toast);
+        toast.hide();
     }
 
     public void tick() {
-        this.field_26893.removeIf(object -> ((class_5524)object).method_31368());
+        this.entries.removeIf(Entry::tick);
         if (this.currentHandler != null) {
             if (this.client.world != null) {
                 this.currentHandler.tick();
@@ -127,32 +132,36 @@ public class TutorialManager {
         return this.client;
     }
 
-    public GameMode getGameMode() {
+    public boolean isInSurvival() {
         if (this.client.interactionManager == null) {
-            return GameMode.NOT_SET;
+            return false;
         }
-        return this.client.interactionManager.getCurrentGameMode();
+        return this.client.interactionManager.getCurrentGameMode() == GameMode.SURVIVAL;
     }
 
     public static Text keyToText(String name) {
         return new KeybindText("key." + name).formatted(Formatting.BOLD);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    static final class class_5524 {
-        private final TutorialToast field_26894;
-        private final int field_26895;
-        private int field_26896;
+    public void onPickupSlotClick(ItemStack cursorStack, ItemStack slotStack, ClickType clickType) {
+        this.bundleTutorial.onPickupSlotClick(cursorStack, slotStack, clickType);
+    }
 
-        private class_5524(TutorialToast tutorialToast, int i) {
-            this.field_26894 = tutorialToast;
-            this.field_26895 = i;
+    @Environment(value=EnvType.CLIENT)
+    static final class Entry {
+        final TutorialToast toast;
+        private final int expiry;
+        private int age;
+
+        Entry(TutorialToast toast, int expiry) {
+            this.toast = toast;
+            this.expiry = expiry;
         }
 
-        private boolean method_31368() {
-            this.field_26894.setProgress(Math.min((float)(++this.field_26896) / (float)this.field_26895, 1.0f));
-            if (this.field_26896 > this.field_26895) {
-                this.field_26894.hide();
+        private boolean tick() {
+            this.toast.setProgress(Math.min((float)(++this.age) / (float)this.expiry, 1.0f));
+            if (this.age > this.expiry) {
+                this.toast.hide();
                 return true;
             }
             return false;

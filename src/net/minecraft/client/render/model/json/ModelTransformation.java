@@ -95,7 +95,42 @@ public class ModelTransformation {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class Deserializer
+    public static final class Mode
+    extends Enum<Mode> {
+        public static final /* enum */ Mode NONE = new Mode();
+        public static final /* enum */ Mode THIRD_PERSON_LEFT_HAND = new Mode();
+        public static final /* enum */ Mode THIRD_PERSON_RIGHT_HAND = new Mode();
+        public static final /* enum */ Mode FIRST_PERSON_LEFT_HAND = new Mode();
+        public static final /* enum */ Mode FIRST_PERSON_RIGHT_HAND = new Mode();
+        public static final /* enum */ Mode HEAD = new Mode();
+        public static final /* enum */ Mode GUI = new Mode();
+        public static final /* enum */ Mode GROUND = new Mode();
+        public static final /* enum */ Mode FIXED = new Mode();
+        private static final /* synthetic */ Mode[] field_4314;
+
+        public static Mode[] values() {
+            return (Mode[])field_4314.clone();
+        }
+
+        public static Mode valueOf(String string) {
+            return Enum.valueOf(Mode.class, string);
+        }
+
+        public boolean isFirstPerson() {
+            return this == FIRST_PERSON_LEFT_HAND || this == FIRST_PERSON_RIGHT_HAND;
+        }
+
+        private static /* synthetic */ Mode[] method_36922() {
+            return new Mode[]{NONE, THIRD_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND, HEAD, GUI, GROUND, FIXED};
+        }
+
+        static {
+            field_4314 = Mode.method_36922();
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    protected static class Deserializer
     implements JsonDeserializer<ModelTransformation> {
         protected Deserializer() {
         }
@@ -128,24 +163,6 @@ public class ModelTransformation {
 
         public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
             return this.deserialize(functionJson, unused, context);
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static enum Mode {
-        NONE,
-        THIRD_PERSON_LEFT_HAND,
-        THIRD_PERSON_RIGHT_HAND,
-        FIRST_PERSON_LEFT_HAND,
-        FIRST_PERSON_RIGHT_HAND,
-        HEAD,
-        GUI,
-        GROUND,
-        FIXED;
-
-
-        public boolean isFirstPerson() {
-            return this == FIRST_PERSON_LEFT_HAND || this == FIRST_PERSON_RIGHT_HAND;
         }
     }
 }

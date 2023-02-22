@@ -6,8 +6,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome.source;
 
@@ -17,8 +15,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeSource;
 
@@ -42,7 +38,6 @@ extends BiomeSource {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public BiomeSource withSeed(long seed) {
         return this;
     }

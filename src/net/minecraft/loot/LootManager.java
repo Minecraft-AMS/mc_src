@@ -48,24 +48,24 @@ extends JsonDataLoader {
     @Override
     protected void apply(Map<Identifier, JsonElement> map, ResourceManager resourceManager, Profiler profiler) {
         ImmutableMap.Builder builder = ImmutableMap.builder();
-        JsonElement jsonElement2 = map.remove(LootTables.EMPTY);
-        if (jsonElement2 != null) {
+        JsonElement jsonElement = map.remove(LootTables.EMPTY);
+        if (jsonElement != null) {
             LOGGER.warn("Datapack tried to redefine {} loot table, ignoring", (Object)LootTables.EMPTY);
         }
-        map.forEach((identifier, jsonElement) -> {
+        map.forEach((id, json) -> {
             try {
-                LootTable lootTable = (LootTable)GSON.fromJson(jsonElement, LootTable.class);
-                builder.put(identifier, (Object)lootTable);
+                LootTable lootTable = (LootTable)GSON.fromJson(json, LootTable.class);
+                builder.put(id, (Object)lootTable);
             }
             catch (Exception exception) {
-                LOGGER.error("Couldn't parse loot table {}", identifier, (Object)exception);
+                LOGGER.error("Couldn't parse loot table {}", id, (Object)exception);
             }
         });
         builder.put((Object)LootTables.EMPTY, (Object)LootTable.EMPTY);
         ImmutableMap immutableMap = builder.build();
         LootTableReporter lootTableReporter = new LootTableReporter(LootContextTypes.GENERIC, this.conditionManager::get, arg_0 -> ((ImmutableMap)immutableMap).get(arg_0));
-        immutableMap.forEach((identifier, lootTable) -> LootManager.validate(lootTableReporter, identifier, lootTable));
-        lootTableReporter.getMessages().forEach((key, value) -> LOGGER.warn("Found validation problem in " + key + ": " + value));
+        immutableMap.forEach((id, lootTable) -> LootManager.validate(lootTableReporter, id, lootTable));
+        lootTableReporter.getMessages().forEach((key, value) -> LOGGER.warn("Found validation problem in {}: {}", key, value));
         this.tables = immutableMap;
     }
 

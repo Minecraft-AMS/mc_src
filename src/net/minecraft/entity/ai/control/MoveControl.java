@@ -3,8 +3,8 @@
  */
 package net.minecraft.entity.ai.control;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.ai.control.Control;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.PathNodeMaker;
 import net.minecraft.entity.ai.pathing.PathNodeType;
@@ -16,7 +16,11 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
 
-public class MoveControl {
+public class MoveControl
+implements Control {
+    public static final float field_30197 = 5.0E-4f;
+    public static final float field_30198 = 2.5000003E-7f;
+    protected static final int field_30199 = 90;
     protected final MobEntity entity;
     protected double targetX;
     protected double targetY;
@@ -67,8 +71,8 @@ public class MoveControl {
                 j = 1.0f;
             }
             j = g / j;
-            float k = MathHelper.sin(this.entity.yaw * ((float)Math.PI / 180));
-            float l = MathHelper.cos(this.entity.yaw * ((float)Math.PI / 180));
+            float k = MathHelper.sin(this.entity.getYaw() * ((float)Math.PI / 180));
+            float l = MathHelper.cos(this.entity.getYaw() * ((float)Math.PI / 180));
             float m = (h *= j) * l - (i *= j) * k;
             if (!this.method_25946(m, n = i * l + h * k)) {
                 this.forwardMovement = 1.0f;
@@ -89,13 +93,12 @@ public class MoveControl {
                 return;
             }
             float n = (float)(MathHelper.atan2(e, d) * 57.2957763671875) - 90.0f;
-            this.entity.yaw = this.wrapDegrees(this.entity.yaw, n, 90.0f);
+            this.entity.setYaw(this.wrapDegrees(this.entity.getYaw(), n, 90.0f));
             this.entity.setMovementSpeed((float)(this.speed * this.entity.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED)));
             BlockPos blockPos = this.entity.getBlockPos();
             BlockState blockState = this.entity.world.getBlockState(blockPos);
-            Block block = blockState.getBlock();
             VoxelShape voxelShape = blockState.getCollisionShape(this.entity.world, blockPos);
-            if (o > (double)this.entity.stepHeight && d * d + e * e < (double)Math.max(1.0f, this.entity.getWidth()) || !voxelShape.isEmpty() && this.entity.getY() < voxelShape.getMax(Direction.Axis.Y) + (double)blockPos.getY() && !block.isIn(BlockTags.DOORS) && !block.isIn(BlockTags.FENCES)) {
+            if (o > (double)this.entity.stepHeight && d * d + e * e < (double)Math.max(1.0f, this.entity.getWidth()) || !voxelShape.isEmpty() && this.entity.getY() < voxelShape.getMax(Direction.Axis.Y) + (double)blockPos.getY() && !blockState.isIn(BlockTags.DOORS) && !blockState.isIn(BlockTags.FENCES)) {
                 this.entity.getJumpControl().setActive();
                 this.state = State.JUMPING;
             }
@@ -112,7 +115,7 @@ public class MoveControl {
     private boolean method_25946(float f, float g) {
         PathNodeMaker pathNodeMaker;
         EntityNavigation entityNavigation = this.entity.getNavigation();
-        return entityNavigation == null || (pathNodeMaker = entityNavigation.getNodeMaker()) == null || pathNodeMaker.getDefaultNodeType(this.entity.world, MathHelper.floor(this.entity.getX() + (double)f), MathHelper.floor(this.entity.getY()), MathHelper.floor(this.entity.getZ() + (double)g)) == PathNodeType.WALKABLE;
+        return entityNavigation == null || (pathNodeMaker = entityNavigation.getNodeMaker()) == null || pathNodeMaker.getDefaultNodeType(this.entity.world, MathHelper.floor(this.entity.getX() + (double)f), this.entity.getBlockY(), MathHelper.floor(this.entity.getZ() + (double)g)) == PathNodeType.WALKABLE;
     }
 
     protected float wrapDegrees(float from, float to, float max) {
@@ -144,12 +147,29 @@ public class MoveControl {
         return this.targetZ;
     }
 
-    public static enum State {
-        WAIT,
-        MOVE_TO,
-        STRAFE,
-        JUMPING;
+    protected static final class State
+    extends Enum<State> {
+        public static final /* enum */ State WAIT = new State();
+        public static final /* enum */ State MOVE_TO = new State();
+        public static final /* enum */ State STRAFE = new State();
+        public static final /* enum */ State JUMPING = new State();
+        private static final /* synthetic */ State[] field_6375;
 
+        public static State[] values() {
+            return (State[])field_6375.clone();
+        }
+
+        public static State valueOf(String string) {
+            return Enum.valueOf(State.class, string);
+        }
+
+        private static /* synthetic */ State[] method_36619() {
+            return new State[]{WAIT, MOVE_TO, STRAFE, JUMPING};
+        }
+
+        static {
+            field_6375 = State.method_36619();
+        }
     }
 }
 

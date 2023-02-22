@@ -50,15 +50,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class LootTable {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
     public static final LootTable EMPTY = new LootTable(LootContextTypes.EMPTY, new LootPool[0], new LootFunction[0]);
     public static final LootContextType GENERIC = LootContextTypes.GENERIC;
-    private final LootContextType type;
-    private final LootPool[] pools;
-    private final LootFunction[] functions;
+    final LootContextType type;
+    final LootPool[] pools;
+    final LootFunction[] functions;
     private final BiFunction<ItemStack, LootContext, ItemStack> combinedFunction;
 
-    private LootTable(LootContextType type, LootPool[] pools, LootFunction[] functions) {
+    LootTable(LootContextType type, LootPool[] pools, LootFunction[] functions) {
         this.type = type;
         this.pools = pools;
         this.functions = functions;
@@ -180,49 +180,6 @@ public class LootTable {
         return new Builder();
     }
 
-    public static class Serializer
-    implements JsonDeserializer<LootTable>,
-    JsonSerializer<LootTable> {
-        public LootTable deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            JsonObject jsonObject = JsonHelper.asObject(jsonElement, "loot table");
-            LootPool[] lootPools = JsonHelper.deserialize(jsonObject, "pools", new LootPool[0], jsonDeserializationContext, LootPool[].class);
-            LootContextType lootContextType = null;
-            if (jsonObject.has("type")) {
-                String string = JsonHelper.getString(jsonObject, "type");
-                lootContextType = LootContextTypes.get(new Identifier(string));
-            }
-            LootFunction[] lootFunctions = JsonHelper.deserialize(jsonObject, "functions", new LootFunction[0], jsonDeserializationContext, LootFunction[].class);
-            return new LootTable(lootContextType != null ? lootContextType : LootContextTypes.GENERIC, lootPools, lootFunctions);
-        }
-
-        public JsonElement serialize(LootTable lootTable, Type type, JsonSerializationContext jsonSerializationContext) {
-            JsonObject jsonObject = new JsonObject();
-            if (lootTable.type != GENERIC) {
-                Identifier identifier = LootContextTypes.getId(lootTable.type);
-                if (identifier != null) {
-                    jsonObject.addProperty("type", identifier.toString());
-                } else {
-                    LOGGER.warn("Failed to find id for param set " + lootTable.type);
-                }
-            }
-            if (lootTable.pools.length > 0) {
-                jsonObject.add("pools", jsonSerializationContext.serialize((Object)lootTable.pools));
-            }
-            if (!ArrayUtils.isEmpty((Object[])lootTable.functions)) {
-                jsonObject.add("functions", jsonSerializationContext.serialize((Object)lootTable.functions));
-            }
-            return jsonObject;
-        }
-
-        public /* synthetic */ JsonElement serialize(Object supplier, Type unused, JsonSerializationContext context) {
-            return this.serialize((LootTable)supplier, unused, context);
-        }
-
-        public /* synthetic */ Object deserialize(JsonElement json, Type unused, JsonDeserializationContext context) throws JsonParseException {
-            return this.deserialize(json, unused, context);
-        }
-    }
-
     public static class Builder
     implements LootFunctionConsumingBuilder<Builder> {
         private final List<LootPool> pools = Lists.newArrayList();
@@ -262,6 +219,49 @@ public class LootTable {
         @Override
         public /* synthetic */ Object apply(LootFunction.Builder function) {
             return this.apply(function);
+        }
+    }
+
+    public static class Serializer
+    implements JsonDeserializer<LootTable>,
+    JsonSerializer<LootTable> {
+        public LootTable deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            JsonObject jsonObject = JsonHelper.asObject(jsonElement, "loot table");
+            LootPool[] lootPools = JsonHelper.deserialize(jsonObject, "pools", new LootPool[0], jsonDeserializationContext, LootPool[].class);
+            LootContextType lootContextType = null;
+            if (jsonObject.has("type")) {
+                String string = JsonHelper.getString(jsonObject, "type");
+                lootContextType = LootContextTypes.get(new Identifier(string));
+            }
+            LootFunction[] lootFunctions = JsonHelper.deserialize(jsonObject, "functions", new LootFunction[0], jsonDeserializationContext, LootFunction[].class);
+            return new LootTable(lootContextType != null ? lootContextType : LootContextTypes.GENERIC, lootPools, lootFunctions);
+        }
+
+        public JsonElement serialize(LootTable lootTable, Type type, JsonSerializationContext jsonSerializationContext) {
+            JsonObject jsonObject = new JsonObject();
+            if (lootTable.type != GENERIC) {
+                Identifier identifier = LootContextTypes.getId(lootTable.type);
+                if (identifier != null) {
+                    jsonObject.addProperty("type", identifier.toString());
+                } else {
+                    LOGGER.warn("Failed to find id for param set {}", (Object)lootTable.type);
+                }
+            }
+            if (lootTable.pools.length > 0) {
+                jsonObject.add("pools", jsonSerializationContext.serialize((Object)lootTable.pools));
+            }
+            if (!ArrayUtils.isEmpty((Object[])lootTable.functions)) {
+                jsonObject.add("functions", jsonSerializationContext.serialize((Object)lootTable.functions));
+            }
+            return jsonObject;
+        }
+
+        public /* synthetic */ JsonElement serialize(Object supplier, Type unused, JsonSerializationContext context) {
+            return this.serialize((LootTable)supplier, unused, context);
+        }
+
+        public /* synthetic */ Object deserialize(JsonElement json, Type unused, JsonDeserializationContext context) throws JsonParseException {
+            return this.deserialize(json, unused, context);
         }
     }
 }

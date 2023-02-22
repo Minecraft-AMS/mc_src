@@ -28,7 +28,10 @@ extends VertexConsumer {
 
     @Override
     default public VertexConsumer vertex(double x, double y, double z) {
-        if (this.getCurrentElement().getDataType() != VertexFormatElement.Format.FLOAT) {
+        if (this.getCurrentElement().getType() != VertexFormatElement.Type.POSITION) {
+            return this;
+        }
+        if (this.getCurrentElement().getDataType() != VertexFormatElement.DataType.FLOAT || this.getCurrentElement().getLength() != 3) {
             throw new IllegalStateException();
         }
         this.putFloat(0, (float)x);
@@ -44,7 +47,7 @@ extends VertexConsumer {
         if (vertexFormatElement.getType() != VertexFormatElement.Type.COLOR) {
             return this;
         }
-        if (vertexFormatElement.getDataType() != VertexFormatElement.Format.UBYTE) {
+        if (vertexFormatElement.getDataType() != VertexFormatElement.DataType.UBYTE || vertexFormatElement.getLength() != 4) {
             throw new IllegalStateException();
         }
         this.putByte(0, (byte)red);
@@ -61,7 +64,7 @@ extends VertexConsumer {
         if (vertexFormatElement.getType() != VertexFormatElement.Type.UV || vertexFormatElement.getTextureIndex() != 0) {
             return this;
         }
-        if (vertexFormatElement.getDataType() != VertexFormatElement.Format.FLOAT) {
+        if (vertexFormatElement.getDataType() != VertexFormatElement.DataType.FLOAT || vertexFormatElement.getLength() != 2) {
             throw new IllegalStateException();
         }
         this.putFloat(0, u);
@@ -85,7 +88,7 @@ extends VertexConsumer {
         if (vertexFormatElement.getType() != VertexFormatElement.Type.UV || vertexFormatElement.getTextureIndex() != index) {
             return this;
         }
-        if (vertexFormatElement.getDataType() != VertexFormatElement.Format.SHORT) {
+        if (vertexFormatElement.getDataType() != VertexFormatElement.DataType.SHORT || vertexFormatElement.getLength() != 2) {
             throw new IllegalStateException();
         }
         this.putShort(0, u);
@@ -100,17 +103,17 @@ extends VertexConsumer {
         if (vertexFormatElement.getType() != VertexFormatElement.Type.NORMAL) {
             return this;
         }
-        if (vertexFormatElement.getDataType() != VertexFormatElement.Format.BYTE) {
+        if (vertexFormatElement.getDataType() != VertexFormatElement.DataType.BYTE || vertexFormatElement.getLength() != 3) {
             throw new IllegalStateException();
         }
-        this.putByte(0, BufferVertexConsumer.method_24212(x));
-        this.putByte(1, BufferVertexConsumer.method_24212(y));
-        this.putByte(2, BufferVertexConsumer.method_24212(z));
+        this.putByte(0, BufferVertexConsumer.packByte(x));
+        this.putByte(1, BufferVertexConsumer.packByte(y));
+        this.putByte(2, BufferVertexConsumer.packByte(z));
         this.nextElement();
         return this;
     }
 
-    public static byte method_24212(float f) {
+    public static byte packByte(float f) {
         return (byte)((int)(MathHelper.clamp(f, -1.0f, 1.0f) * 127.0f) & 0xFF);
     }
 }

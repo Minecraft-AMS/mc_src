@@ -30,6 +30,7 @@ public class AngleArgumentType
 implements ArgumentType<Angle> {
     private static final Collection<String> EXAMPLES = Arrays.asList("0", "~", "~-5");
     public static final SimpleCommandExceptionType INCOMPLETE_ANGLE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.angle.incomplete"));
+    public static final SimpleCommandExceptionType INVALID_ANGLE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.angle.invalid"));
 
     public static AngleArgumentType angle() {
         return new AngleArgumentType();
@@ -40,11 +41,15 @@ implements ArgumentType<Angle> {
     }
 
     public Angle parse(StringReader stringReader) throws CommandSyntaxException {
+        float f;
         if (!stringReader.canRead()) {
             throw INCOMPLETE_ANGLE_EXCEPTION.createWithContext((ImmutableStringReader)stringReader);
         }
         boolean bl = CoordinateArgument.isRelative(stringReader);
-        float f = stringReader.canRead() && stringReader.peek() != ' ' ? stringReader.readFloat() : 0.0f;
+        float f2 = f = stringReader.canRead() && stringReader.peek() != ' ' ? stringReader.readFloat() : 0.0f;
+        if (Float.isNaN(f) || Float.isInfinite(f)) {
+            throw INVALID_ANGLE_EXCEPTION.createWithContext((ImmutableStringReader)stringReader);
+        }
         return new Angle(f, bl);
     }
 
@@ -52,15 +57,15 @@ implements ArgumentType<Angle> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 
     public static final class Angle {
         private final float angle;
         private final boolean relative;
 
-        private Angle(float angle, boolean relative) {
+        Angle(float angle, boolean relative) {
             this.angle = angle;
             this.relative = relative;
         }

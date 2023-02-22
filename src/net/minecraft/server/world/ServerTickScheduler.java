@@ -18,13 +18,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.crash.CrashException;
@@ -40,10 +38,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class ServerTickScheduler<T>
 implements TickScheduler<T> {
+    public static final int field_30975 = 65536;
     protected final Predicate<T> invalidObjPredicate;
     private final Function<T, Identifier> idToName;
     private final Set<ScheduledTick<T>> scheduledTickActions = Sets.newHashSet();
-    private final TreeSet<ScheduledTick<T>> scheduledTickActionsInOrder = Sets.newTreeSet(ScheduledTick.getComparator());
+    private final Set<ScheduledTick<T>> scheduledTickActionsInOrder = Sets.newTreeSet(ScheduledTick.getComparator());
     private final ServerWorld world;
     private final Queue<ScheduledTick<T>> currentTickActions = Queues.newArrayDeque();
     private final List<ScheduledTick<T>> consumedTickActions = Lists.newArrayList();
@@ -65,13 +64,12 @@ implements TickScheduler<T> {
         if (i > 65536) {
             i = 65536;
         }
-        ServerChunkManager serverChunkManager = this.world.getChunkManager();
         Iterator<ScheduledTick<T>> iterator = this.scheduledTickActionsInOrder.iterator();
         this.world.getProfiler().push("cleaning");
         while (i > 0 && iterator.hasNext()) {
             scheduledTick = iterator.next();
             if (scheduledTick.time > this.world.getTime()) break;
-            if (!serverChunkManager.shouldTickBlock(scheduledTick.pos)) continue;
+            if (!this.world.method_37117(scheduledTick.pos)) continue;
             iterator.remove();
             this.scheduledTickActions.remove(scheduledTick);
             this.currentTickActions.add(scheduledTick);
@@ -79,7 +77,7 @@ implements TickScheduler<T> {
         }
         this.world.getProfiler().swap("ticking");
         while ((scheduledTick = this.currentTickActions.poll()) != null) {
-            if (serverChunkManager.shouldTickBlock(scheduledTick.pos)) {
+            if (this.world.method_37117(scheduledTick.pos)) {
                 try {
                     this.consumedTickActions.add(scheduledTick);
                     this.tickConsumer.accept(scheduledTick);
@@ -88,7 +86,7 @@ implements TickScheduler<T> {
                 catch (Throwable throwable) {
                     CrashReport crashReport = CrashReport.create(throwable, "Exception while ticking");
                     CrashReportSection crashReportSection = crashReport.addElement("Block being ticked");
-                    CrashReportSection.addBlockInfo(crashReportSection, scheduledTick.pos, null);
+                    CrashReportSection.addBlockInfo(crashReportSection, this.world, scheduledTick.pos, null);
                     throw new CrashException(crashReport);
                 }
             }
@@ -105,11 +103,11 @@ implements TickScheduler<T> {
     }
 
     public List<ScheduledTick<T>> getScheduledTicksInChunk(ChunkPos pos, boolean updateState, boolean getStaleTicks) {
-        int i = (pos.x << 4) - 2;
+        int i = pos.getStartX() - 2;
         int j = i + 16 + 2;
-        int k = (pos.z << 4) - 2;
+        int k = pos.getStartZ() - 2;
         int l = k + 16 + 2;
-        return this.getScheduledTicks(new BlockBox(i, 0, k, j, 256, l), updateState, getStaleTicks);
+        return this.getScheduledTicks(new BlockBox(i, this.world.getBottomY(), k, j, this.world.getTopY(), l), updateState, getStaleTicks);
     }
 
     public List<ScheduledTick<T>> getScheduledTicks(BlockBox bounds, boolean updateState, boolean getStaleTicks) {
@@ -130,7 +128,7 @@ implements TickScheduler<T> {
         while (iterator.hasNext()) {
             ScheduledTick<T> scheduledTick = iterator.next();
             BlockPos blockPos = scheduledTick.pos;
-            if (blockPos.getX() < bounds.minX || blockPos.getX() >= bounds.maxX || blockPos.getZ() < bounds.minZ || blockPos.getZ() >= bounds.maxZ) continue;
+            if (blockPos.getX() < bounds.getMinX() || blockPos.getX() >= bounds.getMaxX() || blockPos.getZ() < bounds.getMinZ() || blockPos.getZ() >= bounds.getMaxZ()) continue;
             if (move) {
                 iterator.remove();
             }
@@ -191,6 +189,7 @@ implements TickScheduler<T> {
         }
     }
 
+    @Override
     public int getTicks() {
         return this.scheduledTickActions.size();
     }

@@ -9,8 +9,9 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.GuardianEntityRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.ElderGuardianEntity;
 import net.minecraft.entity.mob.GuardianEntity;
@@ -21,8 +22,8 @@ public class ElderGuardianEntityRenderer
 extends GuardianEntityRenderer {
     public static final Identifier TEXTURE = new Identifier("textures/entity/guardian_elder.png");
 
-    public ElderGuardianEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, 1.2f);
+    public ElderGuardianEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, 1.2f, EntityModelLayers.ELDER_GUARDIAN);
     }
 
     @Override

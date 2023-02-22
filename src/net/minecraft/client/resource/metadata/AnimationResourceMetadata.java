@@ -3,7 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -11,11 +10,8 @@
 package net.minecraft.client.resource.metadata;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.metadata.AnimationFrameResourceMetadata;
@@ -24,11 +20,14 @@ import net.minecraft.client.resource.metadata.AnimationResourceMetadataReader;
 @Environment(value=EnvType.CLIENT)
 public class AnimationResourceMetadata {
     public static final AnimationResourceMetadataReader READER = new AnimationResourceMetadataReader();
+    public static final String KEY = "animation";
+    public static final int EMPTY_FRAME_TIME = 1;
+    public static final int UNDEFINED = -1;
     public static final AnimationResourceMetadata EMPTY = new AnimationResourceMetadata((List)Lists.newArrayList(), -1, -1, 1, false){
 
         @Override
-        public Pair<Integer, Integer> method_24141(int i, int j) {
-            return Pair.of((Object)i, (Object)j);
+        public Pair<Integer, Integer> ensureImageSize(int x, int y) {
+            return Pair.of((Object)x, (Object)y);
         }
     };
     private final List<AnimationFrameResourceMetadata> frames;
@@ -45,32 +44,32 @@ public class AnimationResourceMetadata {
         this.interpolate = interpolate;
     }
 
-    private static boolean method_24142(int i, int j) {
-        return i / j * j == i;
+    private static boolean isMultipleOf(int dividend, int divisor) {
+        return dividend / divisor * divisor == dividend;
     }
 
-    public Pair<Integer, Integer> method_24141(int i, int j) {
-        Pair<Integer, Integer> pair = this.method_24143(i, j);
-        int k = (Integer)pair.getFirst();
-        int l = (Integer)pair.getSecond();
-        if (!AnimationResourceMetadata.method_24142(i, k) || !AnimationResourceMetadata.method_24142(j, l)) {
-            throw new IllegalArgumentException(String.format("Image size %s,%s is not multiply of frame size %s,%s", i, j, k, l));
+    public Pair<Integer, Integer> ensureImageSize(int x, int y) {
+        Pair<Integer, Integer> pair = this.getSize(x, y);
+        int i = (Integer)pair.getFirst();
+        int j = (Integer)pair.getSecond();
+        if (!AnimationResourceMetadata.isMultipleOf(x, i) || !AnimationResourceMetadata.isMultipleOf(y, j)) {
+            throw new IllegalArgumentException(String.format("Image size %s,%s is not multiply of frame size %s,%s", x, y, i, j));
         }
         return pair;
     }
 
-    private Pair<Integer, Integer> method_24143(int i, int j) {
+    private Pair<Integer, Integer> getSize(int defaultWidth, int defaultHeight) {
         if (this.width != -1) {
             if (this.height != -1) {
                 return Pair.of((Object)this.width, (Object)this.height);
             }
-            return Pair.of((Object)this.width, (Object)j);
+            return Pair.of((Object)this.width, (Object)defaultHeight);
         }
         if (this.height != -1) {
-            return Pair.of((Object)i, (Object)this.height);
+            return Pair.of((Object)defaultWidth, (Object)this.height);
         }
-        int k = Math.min(i, j);
-        return Pair.of((Object)k, (Object)k);
+        int i = Math.min(defaultWidth, defaultHeight);
+        return Pair.of((Object)i, (Object)i);
     }
 
     public int getHeight(int defaultHeight) {
@@ -81,10 +80,6 @@ public class AnimationResourceMetadata {
         return this.width == -1 ? defaultWidth : this.width;
     }
 
-    public int getFrameCount() {
-        return this.frames.size();
-    }
-
     public int getDefaultFrameTime() {
         return this.defaultFrameTime;
     }
@@ -93,28 +88,16 @@ public class AnimationResourceMetadata {
         return this.interpolate;
     }
 
-    private AnimationFrameResourceMetadata getFrame(int frameIndex) {
-        return this.frames.get(frameIndex);
-    }
-
-    public int getFrameTime(int frameIndex) {
-        AnimationFrameResourceMetadata animationFrameResourceMetadata = this.getFrame(frameIndex);
-        if (animationFrameResourceMetadata.usesDefaultFrameTime()) {
-            return this.defaultFrameTime;
-        }
-        return animationFrameResourceMetadata.getTime();
-    }
-
-    public int getFrameIndex(int frameIndex) {
-        return this.frames.get(frameIndex).getIndex();
-    }
-
-    public Set<Integer> getFrameIndexSet() {
-        HashSet set = Sets.newHashSet();
+    public void forEachFrame(FrameConsumer consumer) {
         for (AnimationFrameResourceMetadata animationFrameResourceMetadata : this.frames) {
-            set.add(animationFrameResourceMetadata.getIndex());
+            consumer.accept(animationFrameResourceMetadata.getIndex(), animationFrameResourceMetadata.getTime(this.defaultFrameTime));
         }
-        return set;
+    }
+
+    @FunctionalInterface
+    @Environment(value=EnvType.CLIENT)
+    public static interface FrameConsumer {
+        public void accept(int var1, int var2);
     }
 }
 

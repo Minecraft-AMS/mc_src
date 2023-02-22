@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -17,25 +10,23 @@ import net.minecraft.util.math.BlockPos;
 
 public class PlayerSpawnPositionS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private BlockPos pos;
-    private float angle;
-
-    public PlayerSpawnPositionS2CPacket() {
-    }
+    private final BlockPos pos;
+    private final float angle;
 
     public PlayerSpawnPositionS2CPacket(BlockPos pos, float angle) {
         this.pos = pos;
         this.angle = angle;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PlayerSpawnPositionS2CPacket(PacketByteBuf buf) {
         this.pos = buf.readBlockPos();
+        this.angle = buf.readFloat();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeBlockPos(this.pos);
+        buf.writeFloat(this.angle);
     }
 
     @Override
@@ -43,12 +34,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerSpawnPosition(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockPos getPos() {
         return this.pos;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getAngle() {
         return this.angle;
     }

@@ -17,6 +17,8 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.WallMountedBlock;
 import net.minecraft.block.entity.BellBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.enums.Attachment;
 import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.Entity;
@@ -43,6 +45,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class BellBlock
@@ -62,6 +65,7 @@ extends BlockWithEntity {
     private static final VoxelShape NORTH_WALL_SHAPE = VoxelShapes.union(BELL_SHAPE, Block.createCuboidShape(7.0, 13.0, 0.0, 9.0, 15.0, 13.0));
     private static final VoxelShape SOUTH_WALL_SHAPE = VoxelShapes.union(BELL_SHAPE, Block.createCuboidShape(7.0, 13.0, 3.0, 9.0, 15.0, 16.0));
     private static final VoxelShape HANGING_SHAPE = VoxelShapes.union(BELL_SHAPE, Block.createCuboidShape(7.0, 13.0, 7.0, 9.0, 16.0, 9.0));
+    public static final int field_31014 = 1;
 
     public BellBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -97,7 +101,7 @@ extends BlockWithEntity {
         BlockPos blockPos = hitResult.getBlockPos();
         boolean bl3 = bl2 = !bl || this.isPointOnBell(state, direction, hitResult.getPos().y - (double)blockPos.getY());
         if (bl2) {
-            boolean bl32 = this.ring(world, blockPos, direction);
+            boolean bl32 = this.ring(player, world, blockPos, direction);
             if (bl32 && player != null) {
                 player.incrementStat(Stats.BELL_RING);
             }
@@ -128,6 +132,10 @@ extends BlockWithEntity {
     }
 
     public boolean ring(World world, BlockPos pos, @Nullable Direction direction) {
+        return this.ring(null, world, pos, direction);
+    }
+
+    public boolean ring(@Nullable Entity entity, World world, BlockPos pos, @Nullable Direction direction) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (!world.isClient && blockEntity instanceof BellBlockEntity) {
             if (direction == null) {
@@ -135,6 +143,7 @@ extends BlockWithEntity {
             }
             ((BellBlockEntity)blockEntity).activate(direction);
             world.playSound(null, pos, SoundEvents.BLOCK_BELL_USE, SoundCategory.BLOCKS, 2.0f, 1.0f);
+            world.emitGameEvent(entity, GameEvent.RING_BELL, pos);
             return true;
         }
         return false;
@@ -262,8 +271,14 @@ extends BlockWithEntity {
 
     @Override
     @Nullable
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new BellBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new BellBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return BellBlock.checkType(type, BlockEntityType.BELL, world.isClient ? BellBlockEntity::clientTick : BellBlockEntity::serverTick);
     }
 
     @Override

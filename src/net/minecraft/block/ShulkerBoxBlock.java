@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -20,13 +16,15 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.FacingBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.PiglinBrain;
-import net.minecraft.entity.mob.ShulkerLidCollisions;
+import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
@@ -54,6 +52,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
@@ -75,8 +74,14 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new ShulkerBoxBlockEntity(this.color);
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new ShulkerBoxBlockEntity(this.color, pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return ShulkerBoxBlock.checkType(type, BlockEntityType.SHULKER_BOX, ShulkerBoxBlockEntity::tick);
     }
 
     @Override
@@ -94,15 +99,8 @@ extends BlockWithEntity {
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof ShulkerBoxBlockEntity) {
-            boolean bl;
             ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity)blockEntity;
-            if (shulkerBoxBlockEntity.getAnimationStage() == ShulkerBoxBlockEntity.AnimationStage.CLOSED) {
-                Direction direction = state.get(FACING);
-                bl = world.isSpaceEmpty(ShulkerLidCollisions.getLidCollisionBox(pos, direction));
-            } else {
-                bl = true;
-            }
-            if (bl) {
+            if (ShulkerBoxBlock.canOpen(state, world, pos, shulkerBoxBlockEntity)) {
                 player.openHandledScreen(shulkerBoxBlockEntity);
                 player.incrementStat(Stats.OPEN_SHULKER_BOX);
                 PiglinBrain.onGuardedBlockInteracted(player, true);
@@ -110,6 +108,14 @@ extends BlockWithEntity {
             return ActionResult.CONSUME;
         }
         return ActionResult.PASS;
+    }
+
+    private static boolean canOpen(BlockState state, World world, BlockPos pos, ShulkerBoxBlockEntity entity) {
+        if (entity.getAnimationStage() != ShulkerBoxBlockEntity.AnimationStage.CLOSED) {
+            return true;
+        }
+        Box box = ShulkerEntity.method_33347(state.get(FACING), 0.0f, 0.5f).offset(pos).contract(1.0E-6);
+        return world.isSpaceEmpty(box);
     }
 
     @Override
@@ -131,7 +137,7 @@ extends BlockWithEntity {
                 ItemStack itemStack = ShulkerBoxBlock.getItemStack(this.getColor());
                 NbtCompound nbtCompound = shulkerBoxBlockEntity.writeInventoryNbt(new NbtCompound());
                 if (!nbtCompound.isEmpty()) {
-                    itemStack.putSubTag("BlockEntityTag", nbtCompound);
+                    itemStack.setSubNbt("BlockEntityTag", nbtCompound);
                 }
                 if (shulkerBoxBlockEntity.hasCustomName()) {
                     itemStack.setCustomName(shulkerBoxBlockEntity.getCustomName());
@@ -181,10 +187,9 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable BlockView world, List<Text> tooltip, TooltipContext options) {
         super.appendTooltip(stack, world, tooltip, options);
-        NbtCompound nbtCompound = stack.getSubTag("BlockEntityTag");
+        NbtCompound nbtCompound = stack.getSubNbt("BlockEntityTag");
         if (nbtCompound != null) {
             if (nbtCompound.contains("LootTable", 8)) {
                 tooltip.add(new LiteralText("???????"));
@@ -235,25 +240,22 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         ItemStack itemStack = super.getPickStack(world, pos, state);
         ShulkerBoxBlockEntity shulkerBoxBlockEntity = (ShulkerBoxBlockEntity)world.getBlockEntity(pos);
         NbtCompound nbtCompound = shulkerBoxBlockEntity.writeInventoryNbt(new NbtCompound());
         if (!nbtCompound.isEmpty()) {
-            itemStack.putSubTag("BlockEntityTag", nbtCompound);
+            itemStack.setSubNbt("BlockEntityTag", nbtCompound);
         }
         return itemStack;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static DyeColor getColor(Item item) {
         return ShulkerBoxBlock.getColor(Block.getBlockFromItem(item));
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static DyeColor getColor(Block block) {
         if (block instanceof ShulkerBoxBlock) {
             return ((ShulkerBoxBlock)block).getColor();

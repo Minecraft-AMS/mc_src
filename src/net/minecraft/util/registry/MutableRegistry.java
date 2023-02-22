@@ -22,5 +22,7 @@ extends Registry<T> {
     public abstract <V extends T> V add(RegistryKey<T> var1, V var2, Lifecycle var3);
 
     public abstract <V extends T> V replace(OptionalInt var1, RegistryKey<T> var2, V var3, Lifecycle var4);
+
+    public abstract boolean isEmpty();
 }
 

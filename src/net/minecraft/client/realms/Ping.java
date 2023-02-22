@@ -81,22 +81,39 @@ public class Ping {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static enum Region {
-        US_EAST_1("us-east-1", "ec2.us-east-1.amazonaws.com"),
-        US_WEST_2("us-west-2", "ec2.us-west-2.amazonaws.com"),
-        US_WEST_1("us-west-1", "ec2.us-west-1.amazonaws.com"),
-        EU_WEST_1("eu-west-1", "ec2.eu-west-1.amazonaws.com"),
-        AP_SOUTHEAST_1("ap-southeast-1", "ec2.ap-southeast-1.amazonaws.com"),
-        AP_SOUTHEAST_2("ap-southeast-2", "ec2.ap-southeast-2.amazonaws.com"),
-        AP_NORTHEAST_1("ap-northeast-1", "ec2.ap-northeast-1.amazonaws.com"),
-        SA_EAST_1("sa-east-1", "ec2.sa-east-1.amazonaws.com");
+    static final class Region
+    extends Enum<Region> {
+        public static final /* enum */ Region US_EAST_1 = new Region("us-east-1", "ec2.us-east-1.amazonaws.com");
+        public static final /* enum */ Region US_WEST_2 = new Region("us-west-2", "ec2.us-west-2.amazonaws.com");
+        public static final /* enum */ Region US_WEST_1 = new Region("us-west-1", "ec2.us-west-1.amazonaws.com");
+        public static final /* enum */ Region EU_WEST_1 = new Region("eu-west-1", "ec2.eu-west-1.amazonaws.com");
+        public static final /* enum */ Region AP_SOUTHEAST_1 = new Region("ap-southeast-1", "ec2.ap-southeast-1.amazonaws.com");
+        public static final /* enum */ Region AP_SOUTHEAST_2 = new Region("ap-southeast-2", "ec2.ap-southeast-2.amazonaws.com");
+        public static final /* enum */ Region AP_NORTHEAST_1 = new Region("ap-northeast-1", "ec2.ap-northeast-1.amazonaws.com");
+        public static final /* enum */ Region SA_EAST_1 = new Region("sa-east-1", "ec2.sa-east-1.amazonaws.com");
+        final String name;
+        final String endpoint;
+        private static final /* synthetic */ Region[] field_19575;
 
-        private final String name;
-        private final String endpoint;
+        public static Region[] values() {
+            return (Region[])field_19575.clone();
+        }
+
+        public static Region valueOf(String name) {
+            return Enum.valueOf(Region.class, name);
+        }
 
         private Region(String name, String endpoint) {
             this.name = name;
             this.endpoint = endpoint;
+        }
+
+        private static /* synthetic */ Region[] method_36845() {
+            return new Region[]{US_EAST_1, US_WEST_2, US_WEST_1, EU_WEST_1, AP_SOUTHEAST_1, AP_SOUTHEAST_2, AP_NORTHEAST_1, SA_EAST_1};
+        }
+
+        static {
+            field_19575 = Region.method_36845();
         }
     }
 }

@@ -16,6 +16,7 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -53,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 public class SpiderEntity
 extends HostileEntity {
     private static final TrackedData<Byte> SPIDER_FLAGS = DataTracker.registerData(SpiderEntity.class, TrackedDataHandlerRegistry.BYTE);
+    private static final float field_30498 = 0.1f;
 
     public SpiderEntity(EntityType<? extends SpiderEntity> entityType, World world) {
         super((EntityType<? extends HostileEntity>)entityType, world);
@@ -67,8 +69,8 @@ extends HostileEntity {
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
         this.goalSelector.add(6, new LookAroundGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class));
-        this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>(this, IronGolemEntity.class));
+        this.targetSelector.add(2, new TargetGoal<PlayerEntity>(this, PlayerEntity.class));
+        this.targetSelector.add(3, new TargetGoal<IronGolemEntity>(this, IronGolemEntity.class));
     }
 
     @Override
@@ -161,7 +163,7 @@ extends HostileEntity {
         entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         if (world.getRandom().nextInt(100) == 0) {
             SkeletonEntity skeletonEntity = EntityType.SKELETON.create(this.world);
-            skeletonEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, 0.0f);
+            skeletonEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), 0.0f);
             skeletonEntity.initialize(world, difficulty, spawnReason, null, null);
             skeletonEntity.startRiding(this);
         }
@@ -180,22 +182,6 @@ extends HostileEntity {
     @Override
     protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
         return 0.65f;
-    }
-
-    static class FollowTargetGoal<T extends LivingEntity>
-    extends net.minecraft.entity.ai.goal.FollowTargetGoal<T> {
-        public FollowTargetGoal(SpiderEntity spider, Class<T> targetEntityClass) {
-            super((MobEntity)spider, targetEntityClass, true);
-        }
-
-        @Override
-        public boolean canStart() {
-            float f = this.mob.getBrightnessAtEyes();
-            if (f >= 0.5f) {
-                return false;
-            }
-            return super.canStart();
-        }
     }
 
     static class AttackGoal
@@ -222,6 +208,22 @@ extends HostileEntity {
         @Override
         protected double getSquaredMaxAttackDistance(LivingEntity entity) {
             return 4.0f + entity.getWidth();
+        }
+    }
+
+    static class TargetGoal<T extends LivingEntity>
+    extends ActiveTargetGoal<T> {
+        public TargetGoal(SpiderEntity spider, Class<T> targetEntityClass) {
+            super((MobEntity)spider, targetEntityClass, true);
+        }
+
+        @Override
+        public boolean canStart() {
+            float f = this.mob.getBrightnessAtEyes();
+            if (f >= 0.5f) {
+                return false;
+            }
+            return super.canStart();
         }
     }
 

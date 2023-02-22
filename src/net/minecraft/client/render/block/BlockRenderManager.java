@@ -39,12 +39,14 @@ public class BlockRenderManager
 implements SynchronousResourceReloader {
     private final BlockModels models;
     private final BlockModelRenderer blockModelRenderer;
+    private final BuiltinModelItemRenderer builtinModelItemRenderer;
     private final FluidRenderer fluidRenderer;
     private final Random random = new Random();
     private final BlockColors blockColors;
 
-    public BlockRenderManager(BlockModels models, BlockColors blockColors) {
+    public BlockRenderManager(BlockModels models, BuiltinModelItemRenderer builtinModelItemRenderer, BlockColors blockColors) {
         this.models = models;
+        this.builtinModelItemRenderer = builtinModelItemRenderer;
         this.blockColors = blockColors;
         this.blockModelRenderer = new BlockModelRenderer(this.blockColors);
         this.fluidRenderer = new FluidRenderer();
@@ -74,7 +76,7 @@ implements SynchronousResourceReloader {
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Tesselating block in world");
             CrashReportSection crashReportSection = crashReport.addElement("Block being tesselated");
-            CrashReportSection.addBlockInfo(crashReportSection, pos, state);
+            CrashReportSection.addBlockInfo(crashReportSection, world, pos, state);
             throw new CrashException(crashReport);
         }
     }
@@ -86,7 +88,7 @@ implements SynchronousResourceReloader {
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Tesselating liquid in world");
             CrashReportSection crashReportSection = crashReport.addElement("Block being tesselated");
-            CrashReportSection.addBlockInfo(crashReportSection, pos, null);
+            CrashReportSection.addBlockInfo(crashReportSection, world, pos, null);
             throw new CrashException(crashReport);
         }
     }
@@ -115,7 +117,7 @@ implements SynchronousResourceReloader {
                 break;
             }
             case ENTITYBLOCK_ANIMATED: {
-                BuiltinModelItemRenderer.INSTANCE.render(new ItemStack(state.getBlock()), ModelTransformation.Mode.NONE, matrices, vertexConsumer, light, overlay);
+                this.builtinModelItemRenderer.render(new ItemStack(state.getBlock()), ModelTransformation.Mode.NONE, matrices, vertexConsumer, light, overlay);
             }
         }
     }

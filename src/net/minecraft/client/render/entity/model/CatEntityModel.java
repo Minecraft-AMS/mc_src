@@ -9,6 +9,7 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelUtil;
 import net.minecraft.client.render.entity.model.OcelotEntityModel;
 import net.minecraft.entity.passive.CatEntity;
@@ -21,8 +22,8 @@ extends OcelotEntityModel<T> {
     private float tailCurlAnimation;
     private float headDownAnimation;
 
-    public CatEntityModel(float f) {
-        super(f);
+    public CatEntityModel(ModelPart modelPart) {
+        super(modelPart);
     }
 
     @Override
@@ -38,11 +39,11 @@ extends OcelotEntityModel<T> {
             this.rightFrontLeg.pitch = 0.0f;
             this.rightFrontLeg.roll = 0.0f;
             this.rightFrontLeg.pivotX = -1.2f;
-            this.leftBackLeg.pitch = 0.0f;
-            this.rightBackLeg.pitch = 0.0f;
-            this.rightBackLeg.roll = 0.0f;
-            this.rightBackLeg.pivotX = -1.1f;
-            this.rightBackLeg.pivotY = 18.0f;
+            this.leftHindLeg.pitch = 0.0f;
+            this.rightHindLeg.pitch = 0.0f;
+            this.rightHindLeg.roll = 0.0f;
+            this.rightHindLeg.pivotX = -1.1f;
+            this.rightHindLeg.pivotY = 18.0f;
         }
         super.animateModel(catEntity, f, g, h);
         if (((TameableEntity)catEntity).isInSittingPose()) {
@@ -63,12 +64,12 @@ extends OcelotEntityModel<T> {
             this.rightFrontLeg.pitch = -0.15707964f;
             this.rightFrontLeg.pivotY = 16.1f;
             this.rightFrontLeg.pivotZ = -7.0f;
-            this.leftBackLeg.pitch = -1.5707964f;
-            this.leftBackLeg.pivotY = 21.0f;
-            this.leftBackLeg.pivotZ = 1.0f;
-            this.rightBackLeg.pitch = -1.5707964f;
-            this.rightBackLeg.pivotY = 21.0f;
-            this.rightBackLeg.pivotZ = 1.0f;
+            this.leftHindLeg.pitch = -1.5707964f;
+            this.leftHindLeg.pivotY = 21.0f;
+            this.leftHindLeg.pivotZ = 1.0f;
+            this.rightHindLeg.pitch = -1.5707964f;
+            this.rightHindLeg.pivotY = 21.0f;
+            this.rightHindLeg.pivotZ = 1.0f;
             this.animationState = 3;
         }
     }
@@ -83,11 +84,11 @@ extends OcelotEntityModel<T> {
             this.rightFrontLeg.pitch = -0.47079635f;
             this.rightFrontLeg.roll = -0.2f;
             this.rightFrontLeg.pivotX = -0.2f;
-            this.leftBackLeg.pitch = -0.4f;
-            this.rightBackLeg.pitch = 0.5f;
-            this.rightBackLeg.roll = -0.5f;
-            this.rightBackLeg.pivotX = -0.3f;
-            this.rightBackLeg.pivotY = 20.0f;
+            this.leftHindLeg.pitch = -0.4f;
+            this.rightHindLeg.pitch = 0.5f;
+            this.rightHindLeg.roll = -0.5f;
+            this.rightHindLeg.pivotX = -0.3f;
+            this.rightHindLeg.pivotY = 20.0f;
             this.upperTail.pitch = ModelUtil.interpolateAngle(this.upperTail.pitch, 0.8f, this.tailCurlAnimation);
             this.lowerTail.pitch = ModelUtil.interpolateAngle(this.lowerTail.pitch, -0.4f, this.tailCurlAnimation);
         }

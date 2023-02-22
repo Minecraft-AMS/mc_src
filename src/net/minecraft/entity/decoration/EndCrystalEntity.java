@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.decoration;
 
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -20,6 +16,8 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.network.Packet;
@@ -48,8 +46,8 @@ extends Entity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.NONE;
     }
 
     @Override
@@ -100,8 +98,8 @@ extends Entity {
         if (source.getAttacker() instanceof EnderDragonEntity) {
             return false;
         }
-        if (!this.removed && !this.world.isClient) {
-            this.remove();
+        if (!this.isRemoved() && !this.world.isClient) {
+            this.remove(Entity.RemovalReason.KILLED);
             if (!source.isExplosive()) {
                 this.world.createExplosion(null, this.getX(), this.getY(), this.getZ(), 6.0f, Explosion.DestructionType.DESTROY);
             }
@@ -141,9 +139,13 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         return super.shouldRender(distance) || this.getBeamTarget() != null;
+    }
+
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(Items.END_CRYSTAL);
     }
 
     @Override

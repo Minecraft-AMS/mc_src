@@ -1,14 +1,7 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.profiler;
-
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 public final class ProfilerTiming
 implements Comparable<ProfilerTiming> {
@@ -35,7 +28,6 @@ implements Comparable<ProfilerTiming> {
         return profilerTiming.name.compareTo(this.name);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getColor() {
         return (this.name.hashCode() & 0xAAAAAA) + 0x444444;
     }

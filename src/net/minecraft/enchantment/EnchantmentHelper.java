@@ -38,7 +38,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.collection.WeightedPicker;
+import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
 import org.apache.commons.lang3.mutable.MutableFloat;
@@ -46,23 +46,51 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
 
 public class EnchantmentHelper {
+    private static final String ID_KEY = "id";
+    private static final String LEVEL_KEY = "lvl";
+
+    public static NbtCompound createNbt(@Nullable Identifier id, int lvl) {
+        NbtCompound nbtCompound = new NbtCompound();
+        nbtCompound.putString(ID_KEY, String.valueOf(id));
+        nbtCompound.putShort(LEVEL_KEY, (short)lvl);
+        return nbtCompound;
+    }
+
+    public static void writeLevelToNbt(NbtCompound nbt, int lvl) {
+        nbt.putShort(LEVEL_KEY, (short)lvl);
+    }
+
+    public static int getLevelFromNbt(NbtCompound nbt) {
+        return MathHelper.clamp(nbt.getInt(LEVEL_KEY), 0, 255);
+    }
+
+    @Nullable
+    public static Identifier getIdFromNbt(NbtCompound nbt) {
+        return Identifier.tryParse(nbt.getString(ID_KEY));
+    }
+
+    @Nullable
+    public static Identifier getEnchantmentId(Enchantment enchantment) {
+        return Registry.ENCHANTMENT.getId(enchantment);
+    }
+
     public static int getLevel(Enchantment enchantment, ItemStack stack) {
         if (stack.isEmpty()) {
             return 0;
         }
-        Identifier identifier = Registry.ENCHANTMENT.getId(enchantment);
+        Identifier identifier = EnchantmentHelper.getEnchantmentId(enchantment);
         NbtList nbtList = stack.getEnchantments();
         for (int i = 0; i < nbtList.size(); ++i) {
             NbtCompound nbtCompound = nbtList.getCompound(i);
-            Identifier identifier2 = Identifier.tryParse(nbtCompound.getString("id"));
+            Identifier identifier2 = EnchantmentHelper.getIdFromNbt(nbtCompound);
             if (identifier2 == null || !identifier2.equals(identifier)) continue;
-            return MathHelper.clamp(nbtCompound.getInt("lvl"), 0, 255);
+            return EnchantmentHelper.getLevelFromNbt(nbtCompound);
         }
         return 0;
     }
 
     public static Map<Enchantment, Integer> get(ItemStack stack) {
-        NbtList nbtList = stack.getItem() == Items.ENCHANTED_BOOK ? EnchantedBookItem.getEnchantmentNbt(stack) : stack.getEnchantments();
+        NbtList nbtList = stack.isOf(Items.ENCHANTED_BOOK) ? EnchantedBookItem.getEnchantmentNbt(stack) : stack.getEnchantments();
         return EnchantmentHelper.fromNbt(nbtList);
     }
 
@@ -70,7 +98,7 @@ public class EnchantmentHelper {
         LinkedHashMap map = Maps.newLinkedHashMap();
         for (int i = 0; i < list.size(); ++i) {
             NbtCompound nbtCompound = list.getCompound(i);
-            Registry.ENCHANTMENT.getOrEmpty(Identifier.tryParse(nbtCompound.getString("id"))).ifPresent(enchantment -> map.put(enchantment, nbtCompound.getInt("lvl")));
+            Registry.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> map.put(enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
         }
         return map;
     }
@@ -81,17 +109,14 @@ public class EnchantmentHelper {
             Enchantment enchantment = entry.getKey();
             if (enchantment == null) continue;
             int i = entry.getValue();
-            NbtCompound nbtCompound = new NbtCompound();
-            nbtCompound.putString("id", String.valueOf(Registry.ENCHANTMENT.getId(enchantment)));
-            nbtCompound.putShort("lvl", (short)i);
-            nbtList.add(nbtCompound);
-            if (stack.getItem() != Items.ENCHANTED_BOOK) continue;
+            nbtList.add(EnchantmentHelper.createNbt(EnchantmentHelper.getEnchantmentId(enchantment), i));
+            if (!stack.isOf(Items.ENCHANTED_BOOK)) continue;
             EnchantedBookItem.addEnchantment(stack, new EnchantmentLevelEntry(enchantment, i));
         }
         if (nbtList.isEmpty()) {
-            stack.removeSubTag("Enchantments");
-        } else if (stack.getItem() != Items.ENCHANTED_BOOK) {
-            stack.putSubTag("Enchantments", nbtList);
+            stack.removeSubNbt("Enchantments");
+        } else if (!stack.isOf(Items.ENCHANTED_BOOK)) {
+            stack.setSubNbt("Enchantments", nbtList);
         }
     }
 
@@ -101,9 +126,8 @@ public class EnchantmentHelper {
         }
         NbtList nbtList = stack.getEnchantments();
         for (int i = 0; i < nbtList.size(); ++i) {
-            String string = nbtList.getCompound(i).getString("id");
-            int j = nbtList.getCompound(i).getInt("lvl");
-            Registry.ENCHANTMENT.getOrEmpty(Identifier.tryParse(string)).ifPresent(enchantment -> consumer.accept((Enchantment)enchantment, j));
+            NbtCompound nbtCompound = nbtList.getCompound(i);
+            Registry.ENCHANTMENT.getOrEmpty(EnchantmentHelper.getIdFromNbt(nbtCompound)).ifPresent(enchantment -> consumer.accept((Enchantment)enchantment, EnchantmentHelper.getLevelFromNbt(nbtCompound)));
         }
     }
 
@@ -271,9 +295,8 @@ public class EnchantmentHelper {
     }
 
     public static ItemStack enchant(Random random, ItemStack target, int level, boolean treasureAllowed) {
-        boolean bl;
         List<EnchantmentLevelEntry> list = EnchantmentHelper.generateEnchantments(random, target, level, treasureAllowed);
-        boolean bl2 = bl = target.getItem() == Items.BOOK;
+        boolean bl = target.isOf(Items.BOOK);
         if (bl) {
             target = new ItemStack(Items.ENCHANTED_BOOK);
         }
@@ -298,11 +321,13 @@ public class EnchantmentHelper {
         float f = (random.nextFloat() + random.nextFloat() - 1.0f) * 0.15f;
         List<EnchantmentLevelEntry> list2 = EnchantmentHelper.getPossibleEntries(level = MathHelper.clamp(Math.round((float)level + (float)level * f), 1, Integer.MAX_VALUE), stack, treasureAllowed);
         if (!list2.isEmpty()) {
-            list.add(WeightedPicker.getRandom(random, list2));
+            Weighting.getRandom(random, list2).ifPresent(list::add);
             while (random.nextInt(50) <= level) {
-                EnchantmentHelper.removeConflicts(list2, (EnchantmentLevelEntry)Util.getLast(list));
+                if (!list.isEmpty()) {
+                    EnchantmentHelper.removeConflicts(list2, (EnchantmentLevelEntry)Util.getLast(list));
+                }
                 if (list2.isEmpty()) break;
-                list.add(WeightedPicker.getRandom(random, list2));
+                Weighting.getRandom(random, list2).ifPresent(list::add);
                 level /= 2;
             }
         }
@@ -328,7 +353,7 @@ public class EnchantmentHelper {
     public static List<EnchantmentLevelEntry> getPossibleEntries(int power, ItemStack stack, boolean treasureAllowed) {
         ArrayList list = Lists.newArrayList();
         Item item = stack.getItem();
-        boolean bl = stack.getItem() == Items.BOOK;
+        boolean bl = stack.isOf(Items.BOOK);
         block0: for (Enchantment enchantment : Registry.ENCHANTMENT) {
             if (enchantment.isTreasure() && !treasureAllowed || !enchantment.isAvailableForRandomSelection() || !enchantment.type.isAcceptableItem(item) && !bl) continue;
             for (int i = enchantment.getMaxLevel(); i > enchantment.getMinLevel() - 1; --i) {

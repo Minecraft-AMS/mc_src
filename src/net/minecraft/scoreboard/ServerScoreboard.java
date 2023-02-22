@@ -11,9 +11,9 @@ package net.minecraft.scoreboard;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.ScoreboardDisplayS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScoreboardObjectiveUpdateS2CPacket;
@@ -22,6 +22,7 @@ import net.minecraft.network.packet.s2c.play.TeamS2CPacket;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
+import net.minecraft.scoreboard.ScoreboardState;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -31,7 +32,7 @@ public class ServerScoreboard
 extends Scoreboard {
     private final MinecraftServer server;
     private final Set<ScoreboardObjective> objectives = Sets.newHashSet();
-    private Runnable[] updateListeners = new Runnable[0];
+    private final List<Runnable> updateListeners = Lists.newArrayList();
 
     public ServerScoreboard(MinecraftServer server) {
         this.server = server;
@@ -86,7 +87,7 @@ extends Scoreboard {
     @Override
     public boolean addPlayerToTeam(String playerName, Team team) {
         if (super.addPlayerToTeam(playerName, team)) {
-            this.server.getPlayerManager().sendToAll(new TeamS2CPacket(team, Arrays.asList(playerName), 3));
+            this.server.getPlayerManager().sendToAll(TeamS2CPacket.changePlayerTeam(team, playerName, TeamS2CPacket.Operation.ADD));
             this.runUpdateListeners();
             return true;
         }
@@ -96,7 +97,7 @@ extends Scoreboard {
     @Override
     public void removePlayerFromTeam(String playerName, Team team) {
         super.removePlayerFromTeam(playerName, team);
-        this.server.getPlayerManager().sendToAll(new TeamS2CPacket(team, Arrays.asList(playerName), 4));
+        this.server.getPlayerManager().sendToAll(TeamS2CPacket.changePlayerTeam(team, playerName, TeamS2CPacket.Operation.REMOVE));
         this.runUpdateListeners();
     }
 
@@ -127,27 +128,26 @@ extends Scoreboard {
     @Override
     public void updateScoreboardTeamAndPlayers(Team team) {
         super.updateScoreboardTeamAndPlayers(team);
-        this.server.getPlayerManager().sendToAll(new TeamS2CPacket(team, 0));
+        this.server.getPlayerManager().sendToAll(TeamS2CPacket.updateTeam(team, true));
         this.runUpdateListeners();
     }
 
     @Override
     public void updateScoreboardTeam(Team team) {
         super.updateScoreboardTeam(team);
-        this.server.getPlayerManager().sendToAll(new TeamS2CPacket(team, 2));
+        this.server.getPlayerManager().sendToAll(TeamS2CPacket.updateTeam(team, false));
         this.runUpdateListeners();
     }
 
     @Override
     public void updateRemovedTeam(Team team) {
         super.updateRemovedTeam(team);
-        this.server.getPlayerManager().sendToAll(new TeamS2CPacket(team, 1));
+        this.server.getPlayerManager().sendToAll(TeamS2CPacket.updateRemovedTeam(team));
         this.runUpdateListeners();
     }
 
     public void addUpdateListener(Runnable listener) {
-        this.updateListeners = Arrays.copyOf(this.updateListeners, this.updateListeners.length + 1);
-        this.updateListeners[this.updateListeners.length - 1] = listener;
+        this.updateListeners.add(listener);
     }
 
     protected void runUpdateListeners() {
@@ -208,10 +208,37 @@ extends Scoreboard {
         return i;
     }
 
-    public static enum UpdateMode {
-        CHANGE,
-        REMOVE;
+    public ScoreboardState createState() {
+        ScoreboardState scoreboardState = new ScoreboardState(this);
+        this.addUpdateListener(scoreboardState::markDirty);
+        return scoreboardState;
+    }
 
+    public ScoreboardState stateFromNbt(NbtCompound nbt) {
+        return this.createState().readNbt(nbt);
+    }
+
+    public static final class UpdateMode
+    extends Enum<UpdateMode> {
+        public static final /* enum */ UpdateMode CHANGE = new UpdateMode();
+        public static final /* enum */ UpdateMode REMOVE = new UpdateMode();
+        private static final /* synthetic */ UpdateMode[] field_13429;
+
+        public static UpdateMode[] values() {
+            return (UpdateMode[])field_13429.clone();
+        }
+
+        public static UpdateMode valueOf(String string) {
+            return Enum.valueOf(UpdateMode.class, string);
+        }
+
+        private static /* synthetic */ UpdateMode[] method_36963() {
+            return new UpdateMode[]{CHANGE, REMOVE};
+        }
+
+        static {
+            field_13429 = UpdateMode.method_36963();
+        }
     }
 }
 

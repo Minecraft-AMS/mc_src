@@ -47,7 +47,7 @@ extends PersistentProjectileEntity {
     protected void onHit(LivingEntity target) {
         super.onHit(target);
         StatusEffectInstance statusEffectInstance = new StatusEffectInstance(StatusEffects.GLOWING, this.duration, 0);
-        target.addStatusEffect(statusEffectInstance);
+        target.addStatusEffect(statusEffectInstance, this.getEffectCause());
     }
 
     @Override

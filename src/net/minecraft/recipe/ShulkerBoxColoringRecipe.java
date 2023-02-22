@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.inventory.CraftingInventory;
@@ -63,14 +57,13 @@ extends SpecialCraftingRecipe {
             dyeItem = (DyeItem)item;
         }
         ItemStack itemStack3 = ShulkerBoxBlock.getItemStack(dyeItem.getColor());
-        if (itemStack.hasTag()) {
-            itemStack3.setTag(itemStack.getTag().copy());
+        if (itemStack.hasNbt()) {
+            itemStack3.setNbt(itemStack.getNbt().copy());
         }
         return itemStack3;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= 2;
     }

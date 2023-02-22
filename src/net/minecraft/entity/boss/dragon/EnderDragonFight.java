@@ -73,6 +73,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnderDragonFight {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int CHECK_DRAGON_SEEN_INTERVAL = 1200;
+    private static final int CRYSTAL_COUNTING_INTERVAL = 100;
+    private static final int field_31445 = 20;
+    private static final int field_31446 = 8;
+    public static final int field_31441 = 9;
+    private static final int field_31447 = 20;
+    private static final int field_31448 = 96;
+    public static final int field_31442 = 128;
     private static final Predicate<Entity> VALID_ENTITY = EntityPredicates.VALID_ENTITY.and(EntityPredicates.maxDistance(0.0, 128.0, 0.0, 192.0));
     private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(new TranslatableText("entity.minecraft.ender_dragon"), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
     private final ServerWorld world;
@@ -93,6 +101,9 @@ public class EnderDragonFight {
 
     public EnderDragonFight(ServerWorld world, long gatewaysSeed, NbtCompound nbt) {
         this.world = world;
+        if (nbt.contains("NeedsStateScanning")) {
+            this.doLegacyCheck = nbt.getBoolean("NeedsStateScanning");
+        }
         if (nbt.contains("DragonKilled", 99)) {
             if (nbt.containsUuid("Dragon")) {
                 this.dragonUuid = nbt.getUuid("Dragon");
@@ -123,6 +134,7 @@ public class EnderDragonFight {
 
     public NbtCompound toNbt() {
         NbtCompound nbtCompound = new NbtCompound();
+        nbtCompound.putBoolean("NeedsStateScanning", this.doLegacyCheck);
         if (this.dragonUuid != null) {
             nbtCompound.putUuid("Dragon", this.dragonUuid);
         }
@@ -187,7 +199,7 @@ public class EnderDragonFight {
                 this.generateEndPortal(false);
             }
         }
-        List<EnderDragonEntity> list = this.world.getAliveEnderDragons();
+        List<? extends EnderDragonEntity> list = this.world.getAliveEnderDragons();
         if (list.isEmpty()) {
             this.dragonKilled = true;
         } else {
@@ -197,7 +209,7 @@ public class EnderDragonFight {
             this.dragonKilled = false;
             if (!bl) {
                 LOGGER.info("But we didn't have a portal, let's remove it.");
-                enderDragonEntity.remove();
+                enderDragonEntity.discard();
                 this.dragonUuid = null;
             }
         }
@@ -207,7 +219,7 @@ public class EnderDragonFight {
     }
 
     private void checkDragonSeen() {
-        List<EnderDragonEntity> list = this.world.getAliveEnderDragons();
+        List<? extends EnderDragonEntity> list = this.world.getAliveEnderDragons();
         if (list.isEmpty()) {
             LOGGER.debug("Haven't seen the dragon, respawning it");
             this.createDragon();
@@ -258,14 +270,14 @@ public class EnderDragonFight {
                     BlockPattern.Result result;
                     if (!(blockEntity instanceof EndPortalBlockEntity) || (result = this.endPortalPattern.searchAround(this.world, blockEntity.getPos())) == null) continue;
                     BlockPos blockPos = result.translate(3, 3, 3).getBlockPos();
-                    if (this.exitPortalLocation == null && blockPos.getX() == 0 && blockPos.getZ() == 0) {
+                    if (this.exitPortalLocation == null) {
                         this.exitPortalLocation = blockPos;
                     }
                     return result;
                 }
             }
         }
-        for (j = i = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, EndPortalFeature.ORIGIN).getY(); j >= 0; --j) {
+        for (j = i = this.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, EndPortalFeature.ORIGIN).getY(); j >= this.world.getBottomY(); --j) {
             BlockPattern.Result result2 = this.endPortalPattern.searchAround(this.world, new BlockPos(EndPortalFeature.ORIGIN.getX(), j, EndPortalFeature.ORIGIN.getZ()));
             if (result2 == null) continue;
             if (this.exitPortalLocation == null) {
@@ -407,7 +419,7 @@ public class EnderDragonFight {
                     LOGGER.debug("Couldn't find a portal, so we made one.");
                     this.generateEndPortal(true);
                 } else {
-                    LOGGER.debug("Found the exit portal & temporarily using it.");
+                    LOGGER.debug("Found the exit portal & saved its location for next time.");
                 }
                 blockPos = this.exitPortalLocation;
             }

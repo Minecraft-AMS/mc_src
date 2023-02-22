@@ -13,8 +13,8 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.util.Identifier;
@@ -30,8 +30,8 @@ extends EntityRenderer<ExperienceOrbEntity> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/experience_orb.png");
     private static final RenderLayer LAYER = RenderLayer.getItemEntityTranslucentCull(TEXTURE);
 
-    public ExperienceOrbEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public ExperienceOrbEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
         this.shadowRadius = 0.15f;
         this.shadowOpacity = 0.75f;
     }
@@ -53,7 +53,7 @@ extends EntityRenderer<ExperienceOrbEntity> {
         float o = 0.5f;
         float p = 0.25f;
         float q = 255.0f;
-        float r = ((float)experienceOrbEntity.renderTicks + g) / 2.0f;
+        float r = ((float)experienceOrbEntity.age + g) / 2.0f;
         int s = (int)((MathHelper.sin(r + 0.0f) + 1.0f) * 0.5f * 255.0f);
         int t = 255;
         int u = (int)((MathHelper.sin(r + 4.1887903f) + 1.0f) * 0.1f * 255.0f);
@@ -66,16 +66,16 @@ extends EntityRenderer<ExperienceOrbEntity> {
         MatrixStack.Entry entry = matrixStack.peek();
         Matrix4f matrix4f = entry.getModel();
         Matrix3f matrix3f = entry.getNormal();
-        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, -0.5f, -0.25f, s, 255, u, h, m, i);
-        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, 0.5f, -0.25f, s, 255, u, k, m, i);
-        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, 0.5f, 0.75f, s, 255, u, k, l, i);
-        ExperienceOrbEntityRenderer.method_23171(vertexConsumer, matrix4f, matrix3f, -0.5f, 0.75f, s, 255, u, h, l, i);
+        ExperienceOrbEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, -0.5f, -0.25f, s, 255, u, h, m, i);
+        ExperienceOrbEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, 0.5f, -0.25f, s, 255, u, k, m, i);
+        ExperienceOrbEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, 0.5f, 0.75f, s, 255, u, k, l, i);
+        ExperienceOrbEntityRenderer.vertex(vertexConsumer, matrix4f, matrix3f, -0.5f, 0.75f, s, 255, u, h, l, i);
         matrixStack.pop();
         super.render(experienceOrbEntity, f, g, matrixStack, vertexConsumerProvider, i);
     }
 
-    private static void method_23171(VertexConsumer vertexConsumer, Matrix4f matrix4f, Matrix3f matrix3f, float f, float g, int i, int j, int k, float h, float l, int m) {
-        vertexConsumer.vertex(matrix4f, f, g, 0.0f).color(i, j, k, 128).texture(h, l).overlay(OverlayTexture.DEFAULT_UV).light(m).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+    private static void vertex(VertexConsumer vertexConsumer, Matrix4f modelMatrix, Matrix3f normalMatrix, float x, float y, int red, int green, int blue, float u, float v, int light) {
+        vertexConsumer.vertex(modelMatrix, x, y, 0.0f).color(red, green, blue, 128).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(normalMatrix, 0.0f, 1.0f, 0.0f).next();
     }
 
     @Override

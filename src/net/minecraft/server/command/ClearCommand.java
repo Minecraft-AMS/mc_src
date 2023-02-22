@@ -31,20 +31,19 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.TranslatableText;
 
 public class ClearCommand {
-    private static final DynamicCommandExceptionType FAILED_SINGLE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("clear.failed.single", object));
-    private static final DynamicCommandExceptionType FAILED_MULTIPLE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("clear.failed.multiple", object));
+    private static final DynamicCommandExceptionType FAILED_SINGLE_EXCEPTION = new DynamicCommandExceptionType(playerName -> new TranslatableText("clear.failed.single", playerName));
+    private static final DynamicCommandExceptionType FAILED_MULTIPLE_EXCEPTION = new DynamicCommandExceptionType(playerCount -> new TranslatableText("clear.failed.multiple", playerCount));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("clear").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).executes(commandContext -> ClearCommand.execute((ServerCommandSource)commandContext.getSource(), Collections.singleton(((ServerCommandSource)commandContext.getSource()).getPlayer()), itemStack -> true, -1))).then(((RequiredArgumentBuilder)CommandManager.argument("targets", EntityArgumentType.players()).executes(commandContext -> ClearCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), itemStack -> true, -1))).then(((RequiredArgumentBuilder)CommandManager.argument("item", ItemPredicateArgumentType.itemPredicate()).executes(commandContext -> ClearCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), ItemPredicateArgumentType.getItemPredicate((CommandContext<ServerCommandSource>)commandContext, "item"), -1))).then(CommandManager.argument("maxCount", IntegerArgumentType.integer((int)0)).executes(commandContext -> ClearCommand.execute((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), ItemPredicateArgumentType.getItemPredicate((CommandContext<ServerCommandSource>)commandContext, "item"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"maxCount")))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("clear").requires(source -> source.hasPermissionLevel(2))).executes(context -> ClearCommand.execute((ServerCommandSource)context.getSource(), Collections.singleton(((ServerCommandSource)context.getSource()).getPlayer()), stack -> true, -1))).then(((RequiredArgumentBuilder)CommandManager.argument("targets", EntityArgumentType.players()).executes(context -> ClearCommand.execute((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), stack -> true, -1))).then(((RequiredArgumentBuilder)CommandManager.argument("item", ItemPredicateArgumentType.itemPredicate()).executes(context -> ClearCommand.execute((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), ItemPredicateArgumentType.getItemPredicate((CommandContext<ServerCommandSource>)context, "item"), -1))).then(CommandManager.argument("maxCount", IntegerArgumentType.integer((int)0)).executes(context -> ClearCommand.execute((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), ItemPredicateArgumentType.getItemPredicate((CommandContext<ServerCommandSource>)context, "item"), IntegerArgumentType.getInteger((CommandContext)context, (String)"maxCount")))))));
     }
 
     private static int execute(ServerCommandSource source, Collection<ServerPlayerEntity> targets, Predicate<ItemStack> item, int maxCount) throws CommandSyntaxException {
         int i = 0;
         for (ServerPlayerEntity serverPlayerEntity : targets) {
-            i += serverPlayerEntity.inventory.remove(item, maxCount, serverPlayerEntity.playerScreenHandler.method_29281());
+            i += serverPlayerEntity.getInventory().remove(item, maxCount, serverPlayerEntity.playerScreenHandler.getCraftingInput());
             serverPlayerEntity.currentScreenHandler.sendContentUpdates();
-            serverPlayerEntity.playerScreenHandler.onContentChanged(serverPlayerEntity.inventory);
-            serverPlayerEntity.updateCursorStack();
+            serverPlayerEntity.playerScreenHandler.onContentChanged(serverPlayerEntity.getInventory());
         }
         if (i == 0) {
             if (targets.size() == 1) {

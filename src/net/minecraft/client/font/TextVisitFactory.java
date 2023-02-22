@@ -1,23 +1,17 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.font;
 
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.CharacterVisitor;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Style;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Unit;
 
-@Environment(value=EnvType.CLIENT)
 public class TextVisitFactory {
+    private static final char field_29861 = '\ufffd';
     private static final Optional<Object> VISIT_TERMINATED = Optional.of(Unit.INSTANCE);
 
     private static boolean visitRegularCharacter(Style style, CharacterVisitor visitor, int index, char c) {
@@ -131,9 +125,9 @@ public class TextVisitFactory {
         return stringBuilder.toString();
     }
 
-    public static String method_31402(StringVisitable stringVisitable) {
+    public static String removeFormattingCodes(StringVisitable text) {
         StringBuilder stringBuilder = new StringBuilder();
-        TextVisitFactory.visitFormatted(stringVisitable, Style.EMPTY, (int i, Style style, int j) -> {
+        TextVisitFactory.visitFormatted(text, Style.EMPTY, (int i, Style style, int j) -> {
             stringBuilder.appendCodePoint(j);
             return true;
         });

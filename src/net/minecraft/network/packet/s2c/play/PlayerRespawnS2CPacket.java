@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -18,23 +14,22 @@ import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
+import org.jetbrains.annotations.Nullable;
 
 public class PlayerRespawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private DimensionType field_25322;
-    private RegistryKey<World> dimension;
-    private long sha256Seed;
-    private GameMode gameMode;
-    private GameMode previousGameMode;
-    private boolean debugWorld;
-    private boolean flatWorld;
-    private boolean keepPlayerAttributes;
+    private final DimensionType dimensionType;
+    private final RegistryKey<World> dimension;
+    private final long sha256Seed;
+    private final GameMode gameMode;
+    @Nullable
+    private final GameMode previousGameMode;
+    private final boolean debugWorld;
+    private final boolean flatWorld;
+    private final boolean keepPlayerAttributes;
 
-    public PlayerRespawnS2CPacket() {
-    }
-
-    public PlayerRespawnS2CPacket(DimensionType dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes) {
-        this.field_25322 = dimensionType;
+    public PlayerRespawnS2CPacket(DimensionType dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, @Nullable GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes) {
+        this.dimensionType = dimensionType;
         this.dimension = dimension;
         this.sha256Seed = sha256Seed;
         this.gameMode = gameMode;
@@ -44,71 +39,63 @@ implements Packet<ClientPlayPacketListener> {
         this.keepPlayerAttributes = keepPlayerAttributes;
     }
 
-    @Override
-    public void apply(ClientPlayPacketListener clientPlayPacketListener) {
-        clientPlayPacketListener.onPlayerRespawn(this);
-    }
-
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        this.field_25322 = buf.decode(DimensionType.REGISTRY_CODEC).get();
+    public PlayerRespawnS2CPacket(PacketByteBuf buf) {
+        this.dimensionType = buf.decode(DimensionType.REGISTRY_CODEC).get();
         this.dimension = RegistryKey.of(Registry.WORLD_KEY, buf.readIdentifier());
         this.sha256Seed = buf.readLong();
         this.gameMode = GameMode.byId(buf.readUnsignedByte());
-        this.previousGameMode = GameMode.byId(buf.readUnsignedByte());
+        this.previousGameMode = GameMode.getOrNull(buf.readByte());
         this.debugWorld = buf.readBoolean();
         this.flatWorld = buf.readBoolean();
         this.keepPlayerAttributes = buf.readBoolean();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
-        buf.encode(DimensionType.REGISTRY_CODEC, () -> this.field_25322);
+    public void write(PacketByteBuf buf) {
+        buf.encode(DimensionType.REGISTRY_CODEC, () -> this.dimensionType);
         buf.writeIdentifier(this.dimension.getValue());
         buf.writeLong(this.sha256Seed);
         buf.writeByte(this.gameMode.getId());
-        buf.writeByte(this.previousGameMode.getId());
+        buf.writeByte(GameMode.getId(this.previousGameMode));
         buf.writeBoolean(this.debugWorld);
         buf.writeBoolean(this.flatWorld);
         buf.writeBoolean(this.keepPlayerAttributes);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public DimensionType method_29445() {
-        return this.field_25322;
+    @Override
+    public void apply(ClientPlayPacketListener clientPlayPacketListener) {
+        clientPlayPacketListener.onPlayerRespawn(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public DimensionType getDimensionType() {
+        return this.dimensionType;
+    }
+
     public RegistryKey<World> getDimension() {
         return this.dimension;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public long getSha256Seed() {
         return this.sha256Seed;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public GameMode getGameMode() {
         return this.gameMode;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    @Nullable
     public GameMode getPreviousGameMode() {
         return this.previousGameMode;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isDebugWorld() {
         return this.debugWorld;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isFlatWorld() {
         return this.flatWorld;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldKeepPlayerAttributes() {
         return this.keepPlayerAttributes;
     }

@@ -1,16 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.decoration.painting.PaintingEntity;
 import net.minecraft.entity.decoration.painting.PaintingMotive;
 import net.minecraft.network.Packet;
@@ -22,25 +15,21 @@ import net.minecraft.util.registry.Registry;
 
 public class PaintingSpawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private UUID uuid;
-    private BlockPos pos;
-    private Direction facing;
-    private int motiveId;
-
-    public PaintingSpawnS2CPacket() {
-    }
+    private final int id;
+    private final UUID uuid;
+    private final BlockPos pos;
+    private final Direction facing;
+    private final int motiveId;
 
     public PaintingSpawnS2CPacket(PaintingEntity entity) {
-        this.id = entity.getEntityId();
+        this.id = entity.getId();
         this.uuid = entity.getUuid();
         this.pos = entity.getDecorationBlockPos();
         this.facing = entity.getHorizontalFacing();
         this.motiveId = Registry.PAINTING_MOTIVE.getRawId(entity.motive);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PaintingSpawnS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.uuid = buf.readUuid();
         this.motiveId = buf.readVarInt();
@@ -49,7 +38,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeUuid(this.uuid);
         buf.writeVarInt(this.motiveId);
@@ -62,27 +51,22 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPaintingSpawn(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public UUID getPaintingUuid() {
         return this.uuid;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockPos getPos() {
         return this.pos;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Direction getFacing() {
         return this.facing;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public PaintingMotive getMotive() {
         return Registry.PAINTING_MOTIVE.get(this.motiveId);
     }

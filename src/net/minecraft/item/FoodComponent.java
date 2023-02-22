@@ -20,7 +20,7 @@ public class FoodComponent {
     private final boolean snack;
     private final List<Pair<StatusEffectInstance, Float>> statusEffects;
 
-    private FoodComponent(int hunger, float saturationModifier, boolean meat, boolean alwaysEdible, boolean snack, List<Pair<StatusEffectInstance, Float>> statusEffects) {
+    FoodComponent(int hunger, float saturationModifier, boolean meat, boolean alwaysEdible, boolean snack, List<Pair<StatusEffectInstance, Float>> statusEffects) {
         this.hunger = hunger;
         this.saturationModifier = saturationModifier;
         this.meat = meat;

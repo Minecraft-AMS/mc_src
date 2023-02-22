@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.brain.task;
 
@@ -13,12 +16,15 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.brain.BlockPosLookTarget;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
+import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -27,6 +33,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
 
 public class LookTargetUtil {
     public static void lookAtAndWalkTowardsEachOther(LivingEntity first, LivingEntity second, float speed) {
@@ -89,19 +96,18 @@ public class LookTargetUtil {
         return ChunkSectionPos.stream(center, radius).filter(chunkSectionPos -> world.getOccupiedPointOfInterestDistance((ChunkSectionPos)chunkSectionPos) < i).min(Comparator.comparingInt(world::getOccupiedPointOfInterestDistance)).orElse(center);
     }
 
-    public static boolean method_25940(MobEntity mobEntity, LivingEntity livingEntity, int i) {
-        Item item = mobEntity.getMainHandStack().getItem();
-        if (item instanceof RangedWeaponItem && mobEntity.canUseRangedWeapon((RangedWeaponItem)item)) {
-            int j = ((RangedWeaponItem)item).getRange() - i;
-            return mobEntity.isInRange(livingEntity, j);
+    public static boolean isTargetWithinAttackRange(MobEntity source, LivingEntity target, int rangedWeaponReachReduction) {
+        Item item = source.getMainHandStack().getItem();
+        if (item instanceof RangedWeaponItem && source.canUseRangedWeapon((RangedWeaponItem)item)) {
+            int i = ((RangedWeaponItem)item).getRange() - rangedWeaponReachReduction;
+            return source.isInRange(target, i);
         }
-        return LookTargetUtil.method_25941(mobEntity, livingEntity);
+        return LookTargetUtil.isTargetWithinMeleeRange(source, target);
     }
 
-    public static boolean method_25941(LivingEntity livingEntity, LivingEntity livingEntity2) {
-        double e;
-        double d = livingEntity.squaredDistanceTo(livingEntity2.getX(), livingEntity2.getY(), livingEntity2.getZ());
-        return d <= (e = (double)(livingEntity.getWidth() * 2.0f * (livingEntity.getWidth() * 2.0f) + livingEntity2.getWidth()));
+    public static boolean isTargetWithinMeleeRange(MobEntity source, LivingEntity target) {
+        double d = source.squaredDistanceTo(target.getX(), target.getY(), target.getZ());
+        return d <= source.squaredAttackRange(target);
     }
 
     public static boolean isNewTargetTooFar(LivingEntity source, LivingEntity target, double extraDistance) {
@@ -135,13 +141,23 @@ public class LookTargetUtil {
         return source.squaredDistanceTo(vec3d) < source.squaredDistanceTo(vec3d2) ? first : second;
     }
 
-    public static Optional<LivingEntity> getEntity(LivingEntity entity, MemoryModuleType<UUID> uuidMemoryModule) {
-        Optional<UUID> optional = entity.getBrain().getOptionalMemory(uuidMemoryModule);
-        return optional.map(uUID -> (LivingEntity)((ServerWorld)livingEntity.world).getEntity((UUID)uUID));
+    public static Optional<LivingEntity> getEntity(LivingEntity entity2, MemoryModuleType<UUID> uuidMemoryModule) {
+        Optional<UUID> optional = entity2.getBrain().getOptionalMemory(uuidMemoryModule);
+        return optional.map(uUID -> ((ServerWorld)livingEntity.world).getEntity((UUID)uUID)).map(entity -> entity instanceof LivingEntity ? (LivingEntity)entity : null);
     }
 
     public static Stream<VillagerEntity> streamSeenVillagers(VillagerEntity villager, Predicate<VillagerEntity> filter) {
         return villager.getBrain().getOptionalMemory(MemoryModuleType.MOBS).map(list -> list.stream().filter(livingEntity -> livingEntity instanceof VillagerEntity && livingEntity != villager).map(livingEntity -> (VillagerEntity)livingEntity).filter(LivingEntity::isAlive).filter(filter)).orElseGet(Stream::empty);
+    }
+
+    @Nullable
+    public static Vec3d find(PathAwareEntity entity, int horizontalRange, int verticalRange) {
+        Vec3d vec3d = NoPenaltyTargeting.find(entity, horizontalRange, verticalRange);
+        int i = 0;
+        while (vec3d != null && !entity.world.getBlockState(new BlockPos(vec3d)).canPathfindThrough(entity.world, new BlockPos(vec3d), NavigationType.WATER) && i++ < 10) {
+            vec3d = NoPenaltyTargeting.find(entity, horizontalRange, verticalRange);
+        }
+        return vec3d;
     }
 }
 

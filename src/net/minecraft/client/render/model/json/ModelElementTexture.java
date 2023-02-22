@@ -67,8 +67,10 @@ public class ModelElementTexture {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class Deserializer
+    protected static class Deserializer
     implements JsonDeserializer<ModelElementTexture> {
+        private static final int DEFAULT_ROTATION = 0;
+
         protected Deserializer() {
         }
 

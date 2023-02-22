@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.village;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
@@ -145,7 +141,6 @@ implements Inventory {
         this.inventory.clear();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getMerchantRewardedExperience() {
         return this.merchantRewardedExperience;
     }

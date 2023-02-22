@@ -45,7 +45,7 @@ extends AbstractClientPlayerEntity {
     @Override
     public void tick() {
         super.tick();
-        this.method_29242(this, false);
+        this.updateLimbs(this, false);
     }
 
     @Override
@@ -54,11 +54,11 @@ extends AbstractClientPlayerEntity {
             double d = this.getX() + (this.serverX - this.getX()) / (double)this.bodyTrackingIncrements;
             double e = this.getY() + (this.serverY - this.getY()) / (double)this.bodyTrackingIncrements;
             double f = this.getZ() + (this.serverZ - this.getZ()) / (double)this.bodyTrackingIncrements;
-            this.yaw = (float)((double)this.yaw + MathHelper.wrapDegrees(this.serverYaw - (double)this.yaw) / (double)this.bodyTrackingIncrements);
-            this.pitch = (float)((double)this.pitch + (this.serverPitch - (double)this.pitch) / (double)this.bodyTrackingIncrements);
+            this.setYaw(this.getYaw() + (float)MathHelper.wrapDegrees(this.serverYaw - (double)this.getYaw()) / (float)this.bodyTrackingIncrements);
+            this.setPitch(this.getPitch() + (float)(this.serverPitch - (double)this.getPitch()) / (float)this.bodyTrackingIncrements);
             --this.bodyTrackingIncrements;
             this.setPosition(d, e, f);
-            this.setRotation(this.yaw, this.pitch);
+            this.setRotation(this.getYaw(), this.getPitch());
         }
         if (this.headTrackingIncrements > 0) {
             this.headYaw = (float)((double)this.headYaw + MathHelper.wrapDegrees(this.serverHeadYaw - (double)this.headYaw) / (double)this.headTrackingIncrements);
@@ -66,12 +66,7 @@ extends AbstractClientPlayerEntity {
         }
         this.prevStrideDistance = this.strideDistance;
         this.tickHandSwing();
-        float g = !this.onGround || this.isDead() ? 0.0f : Math.min(0.1f, MathHelper.sqrt(OtherClientPlayerEntity.squaredHorizontalLength(this.getVelocity())));
-        if (this.onGround || this.isDead()) {
-            float h = 0.0f;
-        } else {
-            float h = (float)Math.atan(-this.getVelocity().y * (double)0.2f) * 15.0f;
-        }
+        float g = !this.onGround || this.isDead() ? 0.0f : (float)Math.min(0.1, this.getVelocity().horizontalLength());
         this.strideDistance += (g - this.strideDistance) * 0.4f;
         this.world.getProfiler().push("push");
         this.tickCramming();

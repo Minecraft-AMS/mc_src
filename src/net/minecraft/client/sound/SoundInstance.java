@@ -30,7 +30,7 @@ public interface SoundInstance {
 
     public boolean isRepeatable();
 
-    public boolean isLooping();
+    public boolean isRelative();
 
     public int getRepeatDelay();
 
@@ -55,10 +55,27 @@ public interface SoundInstance {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum AttenuationType {
-        NONE,
-        LINEAR;
+    public static final class AttenuationType
+    extends Enum<AttenuationType> {
+        public static final /* enum */ AttenuationType NONE = new AttenuationType();
+        public static final /* enum */ AttenuationType LINEAR = new AttenuationType();
+        private static final /* synthetic */ AttenuationType[] field_5477;
 
+        public static AttenuationType[] values() {
+            return (AttenuationType[])field_5477.clone();
+        }
+
+        public static AttenuationType valueOf(String string) {
+            return Enum.valueOf(AttenuationType.class, string);
+        }
+
+        private static /* synthetic */ AttenuationType[] method_36927() {
+            return new AttenuationType[]{NONE, LINEAR};
+        }
+
+        static {
+            field_5477 = AttenuationType.method_36927();
+        }
     }
 }
 

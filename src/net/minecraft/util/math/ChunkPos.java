@@ -11,12 +11,20 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkPos {
     public static final long MARKER = ChunkPos.toLong(1875016, 1875016);
+    private static final long field_30953 = 32L;
+    private static final long field_30954 = 0xFFFFFFFFL;
+    private static final int field_30955 = 5;
+    private static final int field_30956 = 31;
     public final int x;
     public final int z;
+    private static final int field_30957 = 1664525;
+    private static final int field_30958 = 1013904223;
+    private static final int field_30959 = -559038737;
 
     public ChunkPos(int x, int z) {
         this.x = x;
@@ -24,8 +32,8 @@ public class ChunkPos {
     }
 
     public ChunkPos(BlockPos pos) {
-        this.x = pos.getX() >> 4;
-        this.z = pos.getZ() >> 4;
+        this.x = ChunkSectionPos.getSectionCoord(pos.getX());
+        this.z = ChunkSectionPos.getSectionCoord(pos.getZ());
     }
 
     public ChunkPos(long pos) {
@@ -39,6 +47,10 @@ public class ChunkPos {
 
     public static long toLong(int chunkX, int chunkZ) {
         return (long)chunkX & 0xFFFFFFFFL | ((long)chunkZ & 0xFFFFFFFFL) << 32;
+    }
+
+    public static long toLong(BlockPos pos) {
+        return ChunkPos.toLong(ChunkSectionPos.getSectionCoord(pos.getX()), ChunkSectionPos.getSectionCoord(pos.getZ()));
     }
 
     public static int getPackedX(long pos) {
@@ -66,20 +78,28 @@ public class ChunkPos {
         return false;
     }
 
+    public int getCenterX() {
+        return this.getOffsetX(8);
+    }
+
+    public int getCenterZ() {
+        return this.getOffsetZ(8);
+    }
+
     public int getStartX() {
-        return this.x << 4;
+        return ChunkSectionPos.getBlockCoord(this.x);
     }
 
     public int getStartZ() {
-        return this.z << 4;
+        return ChunkSectionPos.getBlockCoord(this.z);
     }
 
     public int getEndX() {
-        return (this.x << 4) + 15;
+        return this.getOffsetX(15);
     }
 
     public int getEndZ() {
-        return (this.z << 4) + 15;
+        return this.getOffsetZ(15);
     }
 
     public int getRegionX() {
@@ -98,6 +118,22 @@ public class ChunkPos {
         return this.z & 0x1F;
     }
 
+    public BlockPos getBlockPos(int offsetX, int y, int offsetZ) {
+        return new BlockPos(this.getOffsetX(offsetX), y, this.getOffsetZ(offsetZ));
+    }
+
+    public int getOffsetX(int offset) {
+        return ChunkSectionPos.getOffsetPos(this.x, offset);
+    }
+
+    public int getOffsetZ(int offset) {
+        return ChunkSectionPos.getOffsetPos(this.z, offset);
+    }
+
+    public BlockPos getCenterAtY(int y) {
+        return new BlockPos(this.getCenterX(), y, this.getCenterZ());
+    }
+
     public String toString() {
         return "[" + this.x + ", " + this.z + "]";
     }
@@ -106,8 +142,8 @@ public class ChunkPos {
         return new BlockPos(this.getStartX(), 0, this.getStartZ());
     }
 
-    public int method_24022(ChunkPos chunkPos) {
-        return Math.max(Math.abs(this.x - chunkPos.x), Math.abs(this.z - chunkPos.z));
+    public int getChebyshevDistance(ChunkPos pos) {
+        return Math.max(Math.abs(this.x - pos.x), Math.abs(this.z - pos.z));
     }
 
     public static Stream<ChunkPos> stream(ChunkPos center, int radius) {

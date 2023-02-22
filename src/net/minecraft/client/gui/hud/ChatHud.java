@@ -39,6 +39,7 @@ import org.jetbrains.annotations.Nullable;
 public class ChatHud
 extends DrawableHelper {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_32180 = 100;
     private final MinecraftClient client;
     private final List<String> messageHistory = Lists.newArrayList();
     private final List<ChatHudLine<Text>> messages = Lists.newArrayList();
@@ -46,7 +47,7 @@ extends DrawableHelper {
     private final Deque<Text> messageQueue = Queues.newArrayDeque();
     private int scrolledLines;
     private boolean hasUnreadNewMessages;
-    private long lastMessageAddedTime = 0L;
+    private long lastMessageAddedTime;
 
     public ChatHud(MinecraftClient client) {
         this.client = client;
@@ -70,13 +71,13 @@ extends DrawableHelper {
         if (this.isChatFocused()) {
             bl = true;
         }
-        double d = this.getChatScale();
-        int k = MathHelper.ceil((double)this.getWidth() / d);
-        RenderSystem.pushMatrix();
-        RenderSystem.translatef(2.0f, 8.0f, 0.0f);
-        RenderSystem.scaled(d, d, 1.0);
-        double e = this.client.options.chatOpacity * (double)0.9f + (double)0.1f;
-        double f = this.client.options.textBackgroundOpacity;
+        float f = (float)this.getChatScale();
+        int k = MathHelper.ceil((float)this.getWidth() / f);
+        matrices.push();
+        matrices.translate(4.0, 8.0, 0.0);
+        matrices.scale(f, f, 1.0f);
+        double d = this.client.options.chatOpacity * (double)0.9f + (double)0.1f;
+        double e = this.client.options.textBackgroundOpacity;
         double g = 9.0 * (this.client.options.chatLineSpacing + 1.0);
         double h = -8.0 * (this.client.options.chatLineSpacing + 1.0) + 4.0 * this.client.options.chatLineSpacing;
         int l = 0;
@@ -84,25 +85,24 @@ extends DrawableHelper {
             ChatHudLine<OrderedText> chatHudLine = this.visibleMessages.get(m + this.scrolledLines);
             if (chatHudLine == null || (n = tickDelta - chatHudLine.getCreationTick()) >= 200 && !bl) continue;
             double o = bl ? 1.0 : ChatHud.getMessageOpacityMultiplier(n);
-            p = (int)(255.0 * o * e);
-            q = (int)(255.0 * o * f);
+            p = (int)(255.0 * o * d);
+            q = (int)(255.0 * o * e);
             ++l;
             if (p <= 3) continue;
             boolean r = false;
             double s = (double)(-m) * g;
             matrices.push();
             matrices.translate(0.0, 0.0, 50.0);
-            ChatHud.fill(matrices, -2, (int)(s - g), 0 + k + 4, (int)s, q << 24);
+            ChatHud.fill(matrices, -4, (int)(s - g), 0 + k + 4, (int)s, q << 24);
             RenderSystem.enableBlend();
             matrices.translate(0.0, 0.0, 50.0);
             this.client.textRenderer.drawWithShadow(matrices, chatHudLine.getText(), 0.0f, (float)((int)(s + h)), 0xFFFFFF + (p << 24));
-            RenderSystem.disableAlphaTest();
             RenderSystem.disableBlend();
             matrices.pop();
         }
         if (!this.messageQueue.isEmpty()) {
-            m = (int)(128.0 * e);
-            int t = (int)(255.0 * f);
+            m = (int)(128.0 * d);
+            int t = (int)(255.0 * e);
             matrices.push();
             matrices.translate(0.0, 0.0, 50.0);
             ChatHud.fill(matrices, -2, 0, k + 4, 9, t << 24);
@@ -110,24 +110,23 @@ extends DrawableHelper {
             matrices.translate(0.0, 0.0, 50.0);
             this.client.textRenderer.drawWithShadow(matrices, new TranslatableText("chat.queue", this.messageQueue.size()), 0.0f, 1.0f, 0xFFFFFF + (m << 24));
             matrices.pop();
-            RenderSystem.disableAlphaTest();
             RenderSystem.disableBlend();
         }
         if (bl) {
             m = this.client.textRenderer.fontHeight;
-            RenderSystem.translatef(-3.0f, 0.0f, 0.0f);
-            int t = j * m + j;
-            n = l * m + l;
+            int t = j * m;
+            n = l * m;
             int u = this.scrolledLines * n / j;
             int v = n * n / t;
             if (t != n) {
                 p = u > 0 ? 170 : 96;
                 q = this.hasUnreadNewMessages ? 0xCC3333 : 0x3333AA;
+                matrices.translate(-4.0, 0.0, 0.0);
                 ChatHud.fill(matrices, 0, -u, 2, -u - v, q + (p << 24));
                 ChatHud.fill(matrices, 2, -u, 1, -u - v, 0xCCCCCC + (p << 24));
             }
         }
-        RenderSystem.popMatrix();
+        matrices.pop();
     }
 
     private boolean isChatHidden() {

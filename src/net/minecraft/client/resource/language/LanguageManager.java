@@ -40,20 +40,21 @@ import org.apache.logging.log4j.Logger;
 public class LanguageManager
 implements SynchronousResourceReloader {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final LanguageDefinition field_25291 = new LanguageDefinition("en_us", "US", "English", false);
-    private Map<String, LanguageDefinition> languageDefs = ImmutableMap.of((Object)"en_us", (Object)field_25291);
+    public static final String DEFAULT_LANGUAGE_CODE = "en_us";
+    private static final LanguageDefinition ENGLISH_US = new LanguageDefinition("en_us", "US", "English", false);
+    private Map<String, LanguageDefinition> languageDefs = ImmutableMap.of((Object)"en_us", (Object)ENGLISH_US);
     private String currentLanguageCode;
-    private LanguageDefinition language = field_25291;
+    private LanguageDefinition language = ENGLISH_US;
 
-    public LanguageManager(String string) {
-        this.currentLanguageCode = string;
+    public LanguageManager(String languageCode) {
+        this.currentLanguageCode = languageCode;
     }
 
-    private static Map<String, LanguageDefinition> method_29393(Stream<ResourcePack> stream) {
+    private static Map<String, LanguageDefinition> loadAvailableLanguages(Stream<ResourcePack> packs) {
         HashMap map = Maps.newHashMap();
-        stream.forEach(resourcePack -> {
+        packs.forEach(pack -> {
             try {
-                LanguageResourceMetadata languageResourceMetadata = resourcePack.parseMetadata(LanguageResourceMetadata.READER);
+                LanguageResourceMetadata languageResourceMetadata = pack.parseMetadata(LanguageResourceMetadata.READER);
                 if (languageResourceMetadata != null) {
                     for (LanguageDefinition languageDefinition : languageResourceMetadata.getLanguageDefinitions()) {
                         map.putIfAbsent(languageDefinition.getCode(), languageDefinition);
@@ -61,7 +62,7 @@ implements SynchronousResourceReloader {
                 }
             }
             catch (IOException | RuntimeException exception) {
-                LOGGER.warn("Unable to parse language metadata section of resourcepack: {}", (Object)resourcePack.getName(), (Object)exception);
+                LOGGER.warn("Unable to parse language metadata section of resourcepack: {}", (Object)pack.getName(), (Object)exception);
             }
         });
         return ImmutableMap.copyOf((Map)map);
@@ -69,15 +70,15 @@ implements SynchronousResourceReloader {
 
     @Override
     public void reload(ResourceManager manager) {
-        this.languageDefs = LanguageManager.method_29393(manager.streamResourcePacks());
-        LanguageDefinition languageDefinition = this.languageDefs.getOrDefault("en_us", field_25291);
+        this.languageDefs = LanguageManager.loadAvailableLanguages(manager.streamResourcePacks());
+        LanguageDefinition languageDefinition = this.languageDefs.getOrDefault(DEFAULT_LANGUAGE_CODE, ENGLISH_US);
         this.language = this.languageDefs.getOrDefault(this.currentLanguageCode, languageDefinition);
         ArrayList list = Lists.newArrayList((Object[])new LanguageDefinition[]{languageDefinition});
         if (this.language != languageDefinition) {
             list.add(this.language);
         }
         TranslationStorage translationStorage = TranslationStorage.load(manager, list);
-        I18n.method_29391(translationStorage);
+        I18n.setLanguage(translationStorage);
         Language.setInstance(translationStorage);
     }
 

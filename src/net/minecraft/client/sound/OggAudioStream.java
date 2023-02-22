@@ -37,6 +37,7 @@ import org.lwjgl.system.MemoryUtil;
 @Environment(value=EnvType.CLIENT)
 public class OggAudioStream
 implements AudioStream {
+    private static final int field_31898 = 8192;
     private long pointer;
     private final AudioFormat format;
     private final InputStream inputStream;
@@ -111,7 +112,7 @@ implements AudioStream {
             return false;
         }
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
-            block24: {
+            block14: {
                 int k;
                 PointerBuffer pointerBuffer = memoryStack.mallocPointer(1);
                 IntBuffer intBuffer = memoryStack.mallocInt(1);
@@ -123,7 +124,7 @@ implements AudioStream {
                     if (j == 1) {
                         this.increaseBufferSize();
                         if (this.readHeader()) continue;
-                        break block24;
+                        break block14;
                     }
                     if (j != 0) {
                         throw new IOException("Failed to read Ogg file " + j);
@@ -197,7 +198,7 @@ implements AudioStream {
     static class ChannelList {
         private final List<ByteBuffer> buffers = Lists.newArrayList();
         private final int size;
-        private int currentBufferSize;
+        int currentBufferSize;
         private ByteBuffer buffer;
 
         public ChannelList(int size) {

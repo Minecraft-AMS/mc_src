@@ -35,13 +35,13 @@ extends SimpleResourceReload<Summary> {
             AtomicLong atomicLong2 = new AtomicLong();
             ProfilerSystem profilerSystem = new ProfilerSystem(Util.nanoTimeSupplier, () -> 0, false);
             ProfilerSystem profilerSystem2 = new ProfilerSystem(Util.nanoTimeSupplier, () -> 0, false);
-            CompletableFuture<Void> completableFuture = reloader.reload(synchronizer, resourceManager, profilerSystem, profilerSystem2, runnable -> prepare.execute(() -> {
+            CompletableFuture<Void> completableFuture = reloader.reload(synchronizer, resourceManager, profilerSystem, profilerSystem2, preparation -> prepare.execute(() -> {
                 long l = Util.getMeasuringTimeNano();
-                runnable.run();
+                preparation.run();
                 atomicLong.addAndGet(Util.getMeasuringTimeNano() - l);
-            }), runnable -> apply.execute(() -> {
+            }), application -> apply.execute(() -> {
                 long l = Util.getMeasuringTimeNano();
-                runnable.run();
+                application.run();
                 atomicLong2.addAndGet(Util.getMeasuringTimeNano() - l);
             }));
             return completableFuture.thenApplyAsync(void_ -> new Summary(reloader.getName(), profilerSystem.getResult(), profilerSystem2.getResult(), atomicLong, atomicLong2), applyExecutor);
@@ -53,7 +53,7 @@ extends SimpleResourceReload<Summary> {
     private void finish(List<Summary> summaries) {
         this.reloadTimer.stop();
         int i = 0;
-        LOGGER.info("Resource reload finished after " + this.reloadTimer.elapsed(TimeUnit.MILLISECONDS) + " ms");
+        LOGGER.info("Resource reload finished after {} ms", (Object)this.reloadTimer.elapsed(TimeUnit.MILLISECONDS));
         for (Summary summary : summaries) {
             ProfileResult profileResult = summary.prepareProfile;
             ProfileResult profileResult2 = summary.applyProfile;
@@ -61,20 +61,20 @@ extends SimpleResourceReload<Summary> {
             int k = (int)((double)summary.applyTimeMs.get() / 1000000.0);
             int l = j + k;
             String string = summary.name;
-            LOGGER.info(string + " took approximately " + l + " ms (" + j + " ms preparing, " + k + " ms applying)");
+            LOGGER.info("{} took approximately {} ms ({} ms preparing, {} ms applying)", (Object)string, (Object)l, (Object)j, (Object)k);
             i += k;
         }
-        LOGGER.info("Total blocking time: " + i + " ms");
+        LOGGER.info("Total blocking time: {} ms", (Object)i);
     }
 
     public static class Summary {
-        private final String name;
-        private final ProfileResult prepareProfile;
-        private final ProfileResult applyProfile;
-        private final AtomicLong prepareTimeMs;
-        private final AtomicLong applyTimeMs;
+        final String name;
+        final ProfileResult prepareProfile;
+        final ProfileResult applyProfile;
+        final AtomicLong prepareTimeMs;
+        final AtomicLong applyTimeMs;
 
-        private Summary(String name, ProfileResult prepareProfile, ProfileResult applyProfile, AtomicLong prepareTimeMs, AtomicLong applyTimeMs) {
+        Summary(String name, ProfileResult prepareProfile, ProfileResult applyProfile, AtomicLong prepareTimeMs, AtomicLong applyTimeMs) {
             this.name = name;
             this.prepareProfile = prepareProfile;
             this.applyProfile = applyProfile;

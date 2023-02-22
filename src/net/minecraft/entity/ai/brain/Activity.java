@@ -21,6 +21,9 @@ public class Activity {
     public static final Activity ADMIRE_ITEM = Activity.register("admire_item");
     public static final Activity AVOID = Activity.register("avoid");
     public static final Activity RIDE = Activity.register("ride");
+    public static final Activity PLAY_DEAD = Activity.register("play_dead");
+    public static final Activity LONG_JUMP = Activity.register("long_jump");
+    public static final Activity RAM = Activity.register("ram");
     private final String id;
     private final int hashCode;
 
@@ -37,14 +40,14 @@ public class Activity {
         return Registry.register(Registry.ACTIVITY, id, new Activity(id));
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object == null || this.getClass() != object.getClass()) {
+        if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
-        Activity activity = (Activity)object;
+        Activity activity = (Activity)o;
         return this.id.equals(activity.id);
     }
 

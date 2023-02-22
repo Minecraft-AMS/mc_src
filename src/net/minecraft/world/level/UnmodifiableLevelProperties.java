@@ -10,6 +10,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.level.ServerWorldProperties;
@@ -17,12 +18,12 @@ import net.minecraft.world.timer.Timer;
 
 public class UnmodifiableLevelProperties
 implements ServerWorldProperties {
-    private final SaveProperties field_24179;
+    private final SaveProperties saveProperties;
     private final ServerWorldProperties worldProperties;
 
-    public UnmodifiableLevelProperties(SaveProperties saveProperties, ServerWorldProperties serverWorldProperties) {
-        this.field_24179 = saveProperties;
-        this.worldProperties = serverWorldProperties;
+    public UnmodifiableLevelProperties(SaveProperties saveProperties, ServerWorldProperties worldProperties) {
+        this.saveProperties = saveProperties;
+        this.worldProperties = worldProperties;
     }
 
     @Override
@@ -57,7 +58,7 @@ implements ServerWorldProperties {
 
     @Override
     public String getLevelName() {
-        return this.field_24179.getLevelName();
+        return this.saveProperties.getLevelName();
     }
 
     @Override
@@ -91,7 +92,7 @@ implements ServerWorldProperties {
 
     @Override
     public GameMode getGameMode() {
-        return this.field_24179.getGameMode();
+        return this.saveProperties.getGameMode();
     }
 
     @Override
@@ -144,12 +145,12 @@ implements ServerWorldProperties {
 
     @Override
     public boolean isHardcore() {
-        return this.field_24179.isHardcore();
+        return this.saveProperties.isHardcore();
     }
 
     @Override
     public boolean areCommandsAllowed() {
-        return this.field_24179.areCommandsAllowed();
+        return this.saveProperties.areCommandsAllowed();
     }
 
     @Override
@@ -163,7 +164,7 @@ implements ServerWorldProperties {
 
     @Override
     public GameRules getGameRules() {
-        return this.field_24179.getGameRules();
+        return this.saveProperties.getGameRules();
     }
 
     @Override
@@ -177,12 +178,12 @@ implements ServerWorldProperties {
 
     @Override
     public Difficulty getDifficulty() {
-        return this.field_24179.getDifficulty();
+        return this.saveProperties.getDifficulty();
     }
 
     @Override
     public boolean isDifficultyLocked() {
-        return this.field_24179.isDifficultyLocked();
+        return this.saveProperties.isDifficultyLocked();
     }
 
     @Override
@@ -209,13 +210,18 @@ implements ServerWorldProperties {
     }
 
     @Override
+    public UUID getWanderingTraderId() {
+        return null;
+    }
+
+    @Override
     public void setWanderingTraderId(UUID uuid) {
     }
 
     @Override
-    public void populateCrashReport(CrashReportSection reportSection) {
+    public void populateCrashReport(CrashReportSection reportSection, HeightLimitView world) {
         reportSection.add("Derived", true);
-        this.worldProperties.populateCrashReport(reportSection);
+        this.worldProperties.populateCrashReport(reportSection, world);
     }
 }
 

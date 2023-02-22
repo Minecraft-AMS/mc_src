@@ -19,8 +19,6 @@
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.Validate
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -52,8 +50,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Random;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.dynamic.RegistryCodec;
@@ -150,7 +146,7 @@ extends MutableRegistry<T> {
 
     @Override
     public Optional<RegistryKey<T>> getKey(T entry) {
-        return Optional.ofNullable(this.keyToEntry.inverse().get(entry));
+        return Optional.ofNullable((RegistryKey)this.keyToEntry.inverse().get(entry));
     }
 
     @Override
@@ -204,6 +200,12 @@ extends MutableRegistry<T> {
         return Collections.unmodifiableMap(this.keyToEntry).entrySet();
     }
 
+    @Override
+    public boolean isEmpty() {
+        return this.idToEntry.isEmpty();
+    }
+
+    @Override
     @Nullable
     public T getRandom(Random random) {
         if (this.randomEntries == null) {
@@ -217,9 +219,13 @@ extends MutableRegistry<T> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean containsId(Identifier id) {
         return this.idToEntry.containsKey((Object)id);
+    }
+
+    @Override
+    public boolean contains(RegistryKey<T> key) {
+        return this.keyToEntry.containsKey(key);
     }
 
     public static <T> Codec<SimpleRegistry<T>> createRegistryManagerCodec(RegistryKey<? extends Registry<T>> key, Lifecycle lifecycle, Codec<T> entryCodec) {

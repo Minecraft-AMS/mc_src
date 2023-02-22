@@ -20,7 +20,7 @@ import net.minecraft.util.Identifier;
 
 public class CuredZombieVillagerCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("cured_zombie_villager");
+    static final Identifier ID = new Identifier("cured_zombie_villager");
 
     @Override
     public Identifier getId() {
@@ -37,7 +37,7 @@ extends AbstractCriterion<Conditions> {
     public void trigger(ServerPlayerEntity player, ZombieEntity zombie, VillagerEntity villager) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, zombie);
         LootContext lootContext2 = EntityPredicate.createAdvancementEntityLootContext(player, villager);
-        this.test(player, conditions -> conditions.matches(lootContext, lootContext2));
+        this.trigger(player, conditions -> conditions.matches(lootContext, lootContext2));
     }
 
     @Override

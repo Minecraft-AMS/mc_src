@@ -23,7 +23,7 @@ import net.minecraft.util.Identifier;
 
 public class ChanneledLightningCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("channeled_lightning");
+    static final Identifier ID = new Identifier("channeled_lightning");
 
     @Override
     public Identifier getId() {
@@ -36,9 +36,10 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, extendeds);
     }
 
+    @Override
     public void trigger(ServerPlayerEntity player, Collection<? extends Entity> victims) {
         List list = victims.stream().map(entity -> EntityPredicate.createAdvancementEntityLootContext(player, entity)).collect(Collectors.toList());
-        this.test(player, conditions -> conditions.matches(list));
+        this.trigger(player, (T conditions) -> conditions.matches(list));
     }
 
     @Override

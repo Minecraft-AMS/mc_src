@@ -49,33 +49,45 @@ import org.jetbrains.annotations.Nullable;
 public class OptimizeWorldScreen
 extends Screen {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Object2IntMap<RegistryKey<World>> DIMENSION_COLORS = (Object2IntMap)Util.make(new Object2IntOpenCustomHashMap(Util.identityHashStrategy()), object2IntOpenCustomHashMap -> {
-        object2IntOpenCustomHashMap.put(World.OVERWORLD, -13408734);
-        object2IntOpenCustomHashMap.put(World.NETHER, -10075085);
-        object2IntOpenCustomHashMap.put(World.END, -8943531);
-        object2IntOpenCustomHashMap.defaultReturnValue(-2236963);
+    private static final Object2IntMap<RegistryKey<World>> DIMENSION_COLORS = (Object2IntMap)Util.make(new Object2IntOpenCustomHashMap(Util.identityHashStrategy()), colors -> {
+        colors.put(World.OVERWORLD, -13408734);
+        colors.put(World.NETHER, -10075085);
+        colors.put(World.END, -8943531);
+        colors.defaultReturnValue(-2236963);
     });
     private final BooleanConsumer callback;
     private final WorldUpdater updater;
 
-    /*
-     * Enabled aggressive block sorting
-     * Enabled unnecessary exception pruning
-     * Enabled aggressive exception aggregation
-     */
     @Nullable
     public static OptimizeWorldScreen create(MinecraftClient client, BooleanConsumer callback, DataFixer dataFixer, LevelStorage.Session storageSession, boolean eraseCache) {
         DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-        try (MinecraftClient.IntegratedResourceManager integratedResourceManager = client.method_29604(impl, MinecraftClient::method_29598, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, storageSession);){
+        MinecraftClient.IntegratedResourceManager integratedResourceManager = client.createIntegratedResourceManager(impl, MinecraftClient::loadDataPackSettings, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, storageSession);
+        try {
             SaveProperties saveProperties = integratedResourceManager.getSaveProperties();
             storageSession.backupLevelDataFile(impl, saveProperties);
             ImmutableSet<RegistryKey<World>> immutableSet = saveProperties.getGeneratorOptions().getWorlds();
             OptimizeWorldScreen optimizeWorldScreen = new OptimizeWorldScreen(callback, dataFixer, storageSession, saveProperties.getLevelInfo(), eraseCache, immutableSet);
+            if (integratedResourceManager != null) {
+                integratedResourceManager.close();
+            }
             return optimizeWorldScreen;
         }
-        catch (Exception exception) {
-            LOGGER.warn("Failed to load datapacks, can't optimize world", (Throwable)exception);
-            return null;
+        catch (Throwable throwable) {
+            try {
+                if (integratedResourceManager != null) {
+                    try {
+                        integratedResourceManager.close();
+                    }
+                    catch (Throwable throwable2) {
+                        throwable.addSuppressed(throwable2);
+                    }
+                }
+                throw throwable;
+            }
+            catch (Exception exception) {
+                LOGGER.warn("Failed to load datapacks, can't optimize world", (Throwable)exception);
+                return null;
+            }
         }
     }
 
@@ -88,7 +100,7 @@ extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 150, 200, 20, ScreenTexts.CANCEL, buttonWidget -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 150, 200, 20, ScreenTexts.CANCEL, button -> {
             this.updater.cancel();
             this.callback.accept(false);
         }));
@@ -126,7 +138,7 @@ extends Screen {
             OptimizeWorldScreen.drawTextWithShadow(matrices, this.textRenderer, new TranslatableText("optimizeWorld.info.skipped", this.updater.getSkippedChunkCount()), i, 40 + this.textRenderer.fontHeight + 3, 0xA0A0A0);
             OptimizeWorldScreen.drawTextWithShadow(matrices, this.textRenderer, new TranslatableText("optimizeWorld.info.total", this.updater.getTotalChunkCount()), i, 40 + (this.textRenderer.fontHeight + 3) * 2, 0xA0A0A0);
             int m = 0;
-            for (RegistryKey registryKey : this.updater.method_28304()) {
+            for (RegistryKey registryKey : this.updater.getWorlds()) {
                 int n = MathHelper.floor(this.updater.getProgress(registryKey) * (float)(j - i));
                 OptimizeWorldScreen.fill(matrices, i + m, k, i + m + n, l, DIMENSION_COLORS.getInt((Object)registryKey));
                 m += n;

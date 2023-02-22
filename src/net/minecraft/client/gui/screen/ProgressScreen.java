@@ -29,9 +29,11 @@ implements ProgressListener {
     private Text task;
     private int progress;
     private boolean done;
+    private final boolean closeAfterFinished;
 
-    public ProgressScreen() {
+    public ProgressScreen(boolean closeAfterFinished) {
         super(NarratorManager.EMPTY);
+        this.closeAfterFinished = closeAfterFinished;
     }
 
     @Override
@@ -40,19 +42,19 @@ implements ProgressListener {
     }
 
     @Override
-    public void method_15412(Text text) {
-        this.method_15413(text);
+    public void setTitle(Text title) {
+        this.setTitleAndTask(title);
     }
 
     @Override
-    public void method_15413(Text text) {
-        this.title = text;
-        this.method_15414(new TranslatableText("progress.working"));
+    public void setTitleAndTask(Text title) {
+        this.title = title;
+        this.setTask(new TranslatableText("progress.working"));
     }
 
     @Override
-    public void method_15414(Text text) {
-        this.task = text;
+    public void setTask(Text task) {
+        this.task = task;
         this.progressStagePercentage(0);
     }
 
@@ -69,8 +71,8 @@ implements ProgressListener {
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         if (this.done) {
-            if (!this.client.isConnectedToRealms()) {
-                this.client.openScreen(null);
+            if (this.closeAfterFinished) {
+                this.client.setScreen(null);
             }
             return;
         }

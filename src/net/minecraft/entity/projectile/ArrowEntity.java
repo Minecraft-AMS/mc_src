@@ -3,16 +3,13 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile;
 
 import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.data.DataTracker;
@@ -33,7 +30,10 @@ import net.minecraft.world.World;
 
 public class ArrowEntity
 extends PersistentProjectileEntity {
+    private static final int field_30660 = 600;
+    private static final int field_30658 = -1;
     private static final TrackedData<Integer> COLOR = DataTracker.registerData(ArrowEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final byte field_30659 = 0;
     private Potion potion = Potions.EMPTY;
     private final Set<StatusEffectInstance> effects = Sets.newHashSet();
     private boolean colorSet;
@@ -51,7 +51,7 @@ extends PersistentProjectileEntity {
     }
 
     public void initFromStack(ItemStack stack) {
-        if (stack.getItem() == Items.TIPPED_ARROW) {
+        if (stack.isOf(Items.TIPPED_ARROW)) {
             int i;
             this.potion = PotionUtil.getPotion(stack);
             List<StatusEffectInstance> collection = PotionUtil.getCustomPotionEffects(stack);
@@ -65,7 +65,7 @@ extends PersistentProjectileEntity {
             } else {
                 this.setColor(i);
             }
-        } else if (stack.getItem() == Items.ARROW) {
+        } else if (stack.isOf(Items.ARROW)) {
             this.potion = Potions.EMPTY;
             this.effects.clear();
             this.dataTracker.set(COLOR, -1);
@@ -73,7 +73,7 @@ extends PersistentProjectileEntity {
     }
 
     public static int getCustomPotionColor(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getTag();
+        NbtCompound nbtCompound = stack.getNbt();
         if (nbtCompound != null && nbtCompound.contains("CustomPotionColor", 99)) {
             return nbtCompound.getInt("CustomPotionColor");
         }
@@ -144,7 +144,7 @@ extends PersistentProjectileEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        if (this.potion != Potions.EMPTY && this.potion != null) {
+        if (this.potion != Potions.EMPTY) {
             nbt.putString("Potion", Registry.POTION.getId(this.potion).toString());
         }
         if (this.colorSet) {
@@ -178,12 +178,13 @@ extends PersistentProjectileEntity {
     @Override
     protected void onHit(LivingEntity target) {
         super.onHit(target);
+        Entity entity = this.getEffectCause();
         for (StatusEffectInstance statusEffectInstance : this.potion.getEffects()) {
-            target.addStatusEffect(new StatusEffectInstance(statusEffectInstance.getEffectType(), Math.max(statusEffectInstance.getDuration() / 8, 1), statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()));
+            target.addStatusEffect(new StatusEffectInstance(statusEffectInstance.getEffectType(), Math.max(statusEffectInstance.getDuration() / 8, 1), statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()), entity);
         }
         if (!this.effects.isEmpty()) {
             for (StatusEffectInstance statusEffectInstance : this.effects) {
-                target.addStatusEffect(statusEffectInstance);
+                target.addStatusEffect(statusEffectInstance, entity);
             }
         }
     }
@@ -197,13 +198,12 @@ extends PersistentProjectileEntity {
         PotionUtil.setPotion(itemStack, this.potion);
         PotionUtil.setCustomPotionEffects(itemStack, this.effects);
         if (this.colorSet) {
-            itemStack.getOrCreateTag().putInt("CustomPotionColor", this.getColor());
+            itemStack.getOrCreateNbt().putInt("CustomPotionColor", this.getColor());
         }
         return itemStack;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 0) {
             int i = this.getColor();

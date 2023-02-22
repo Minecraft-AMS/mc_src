@@ -17,8 +17,8 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.BlockRenderManager;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.FallingBlockEntity;
@@ -29,8 +29,8 @@ import net.minecraft.world.World;
 @Environment(value=EnvType.CLIENT)
 public class FallingBlockEntityRenderer
 extends EntityRenderer<FallingBlockEntity> {
-    public FallingBlockEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public FallingBlockEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
         this.shadowRadius = 0.5f;
     }
 

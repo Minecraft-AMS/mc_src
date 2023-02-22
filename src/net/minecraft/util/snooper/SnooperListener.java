@@ -7,5 +7,9 @@ import net.minecraft.util.snooper.Snooper;
 
 public interface SnooperListener {
     public void addSnooperInfo(Snooper var1);
+
+    public void addInitialSnooperInfo(Snooper var1);
+
+    public boolean isSnooperEnabled();
 }
 

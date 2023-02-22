@@ -23,57 +23,66 @@ extends SurfaceBuilder<TernarySurfaceConfig> {
     }
 
     @Override
-    public void generate(Random random, Chunk chunk, Biome biome, int i, int j, int k, double d, BlockState blockState, BlockState blockState2, int l, long m, TernarySurfaceConfig ternarySurfaceConfig) {
-        this.generate(random, chunk, biome, i, j, k, d, blockState, blockState2, ternarySurfaceConfig.getTopMaterial(), ternarySurfaceConfig.getUnderMaterial(), ternarySurfaceConfig.getUnderwaterMaterial(), l);
+    public void generate(Random random, Chunk chunk, Biome biome, int i, int j, int k, double d, BlockState blockState, BlockState blockState2, int l, int m, long n, TernarySurfaceConfig ternarySurfaceConfig) {
+        this.generate(random, chunk, biome, i, j, k, d, blockState, blockState2, ternarySurfaceConfig.getTopMaterial(), ternarySurfaceConfig.getUnderMaterial(), ternarySurfaceConfig.getUnderwaterMaterial(), l, m);
     }
 
-    protected void generate(Random random, Chunk chunk, Biome biome, int x, int z, int height, double noise, BlockState defaultBlock, BlockState fluidBlock, BlockState topBlock, BlockState underBlock, BlockState underwaterBlock, int seaLevel) {
-        BlockState blockState = topBlock;
-        BlockState blockState2 = underBlock;
+    protected void generate(Random random, Chunk chunk, Biome biome, int x, int z, int height, double noise, BlockState defaultBlock, BlockState fluidBlock, BlockState topBlock, BlockState underBlock, BlockState underwaterBlock, int seaLevel, int i) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        int i = -1;
         int j = (int)(noise / 3.0 + 3.0 + random.nextDouble() * 0.25);
-        int k = x & 0xF;
-        int l = z & 0xF;
-        for (int m = height; m >= 0; --m) {
-            mutable.set(k, m, l);
-            BlockState blockState3 = chunk.getBlockState(mutable);
-            if (blockState3.isAir()) {
-                i = -1;
-                continue;
-            }
-            if (!blockState3.isOf(defaultBlock.getBlock())) continue;
-            if (i == -1) {
-                if (j <= 0) {
-                    blockState = Blocks.AIR.getDefaultState();
-                    blockState2 = defaultBlock;
-                } else if (m >= seaLevel - 4 && m <= seaLevel + 1) {
-                    blockState = topBlock;
-                    blockState2 = underBlock;
-                }
-                if (m < seaLevel && (blockState == null || blockState.isAir())) {
-                    blockState = biome.getTemperature(mutable.set(x, m, z)) < 0.15f ? Blocks.ICE.getDefaultState() : fluidBlock;
-                    mutable.set(k, m, l);
-                }
-                i = j;
-                if (m >= seaLevel - 1) {
-                    chunk.setBlockState(mutable, blockState, false);
+        if (j == 0) {
+            boolean bl = false;
+            for (int k = height; k >= i; --k) {
+                mutable.set(x, k, z);
+                BlockState blockState = chunk.getBlockState(mutable);
+                if (blockState.isAir()) {
+                    bl = false;
                     continue;
                 }
-                if (m < seaLevel - 7 - j) {
-                    blockState = Blocks.AIR.getDefaultState();
-                    blockState2 = defaultBlock;
-                    chunk.setBlockState(mutable, underwaterBlock, false);
+                if (!blockState.isOf(defaultBlock.getBlock())) continue;
+                if (!bl) {
+                    BlockState blockState2 = k >= seaLevel ? Blocks.AIR.getDefaultState() : (k == seaLevel - 1 ? (biome.getTemperature(mutable) < 0.15f ? Blocks.ICE.getDefaultState() : fluidBlock) : (k >= seaLevel - (7 + j) ? defaultBlock : underwaterBlock));
+                    chunk.setBlockState(mutable, blockState2, false);
+                }
+                bl = true;
+            }
+        } else {
+            BlockState blockState3 = underBlock;
+            int k = -1;
+            for (int l = height; l >= i; --l) {
+                mutable.set(x, l, z);
+                BlockState blockState2 = chunk.getBlockState(mutable);
+                if (blockState2.isAir()) {
+                    k = -1;
                     continue;
                 }
-                chunk.setBlockState(mutable, blockState2, false);
-                continue;
+                if (!blockState2.isOf(defaultBlock.getBlock())) continue;
+                if (k == -1) {
+                    BlockState blockState4;
+                    k = j;
+                    if (l >= seaLevel + 2) {
+                        blockState4 = topBlock;
+                    } else if (l >= seaLevel - 1) {
+                        blockState3 = underBlock;
+                        blockState4 = topBlock;
+                    } else if (l >= seaLevel - 4) {
+                        blockState3 = underBlock;
+                        blockState4 = underBlock;
+                    } else if (l >= seaLevel - (7 + j)) {
+                        blockState4 = blockState3;
+                    } else {
+                        blockState3 = defaultBlock;
+                        blockState4 = underwaterBlock;
+                    }
+                    chunk.setBlockState(mutable, blockState4, false);
+                    continue;
+                }
+                if (k <= 0) continue;
+                chunk.setBlockState(mutable, blockState3, false);
+                if (--k != 0 || !blockState3.isOf(Blocks.SAND) || j <= 1) continue;
+                k = random.nextInt(4) + Math.max(0, l - seaLevel);
+                blockState3 = blockState3.isOf(Blocks.RED_SAND) ? Blocks.RED_SANDSTONE.getDefaultState() : Blocks.SANDSTONE.getDefaultState();
             }
-            if (i <= 0) continue;
-            chunk.setBlockState(mutable, blockState2, false);
-            if (--i != 0 || !blockState2.isOf(Blocks.SAND) || j <= 1) continue;
-            i = random.nextInt(4) + Math.max(0, m - 63);
-            blockState2 = blockState2.isOf(Blocks.RED_SAND) ? Blocks.RED_SANDSTONE.getDefaultState() : Blocks.SANDSTONE.getDefaultState();
         }
     }
 }

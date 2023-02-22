@@ -1,9 +1,5 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.scoreboard;
 
@@ -20,43 +16,29 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.world.PersistentState;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class ScoreboardState
 extends PersistentState {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private Scoreboard scoreboard;
-    private NbtCompound tag;
+    public static final String field_31893 = "scoreboard";
+    private final Scoreboard scoreboard;
 
-    public ScoreboardState() {
-        super("scoreboard");
-    }
-
-    public void setScoreboard(Scoreboard scoreboard) {
+    public ScoreboardState(Scoreboard scoreboard) {
         this.scoreboard = scoreboard;
-        if (this.tag != null) {
-            this.fromTag(this.tag);
-        }
     }
 
-    @Override
-    public void fromTag(NbtCompound tag) {
-        if (this.scoreboard == null) {
-            this.tag = tag;
-            return;
+    public ScoreboardState readNbt(NbtCompound nbt) {
+        this.readObjectivesNbt(nbt.getList("Objectives", 10));
+        this.scoreboard.readNbt(nbt.getList("PlayerScores", 10));
+        if (nbt.contains("DisplaySlots", 10)) {
+            this.readDisplaySlotsNbt(nbt.getCompound("DisplaySlots"));
         }
-        this.readObjectivesNbt(tag.getList("Objectives", 10));
-        this.scoreboard.readNbt(tag.getList("PlayerScores", 10));
-        if (tag.contains("DisplaySlots", 10)) {
-            this.readDisplaySlotsNbt(tag.getCompound("DisplaySlots"));
+        if (nbt.contains("Teams", 9)) {
+            this.readTeamsNbt(nbt.getList("Teams", 10));
         }
-        if (tag.contains("Teams", 9)) {
-            this.readTeamsNbt(tag.getList("Teams", 10));
-        }
+        return this;
     }
 
-    protected void readTeamsNbt(NbtList nbt) {
+    private void readTeamsNbt(NbtList nbt) {
         for (int i = 0; i < nbt.size(); ++i) {
             AbstractTeam.CollisionRule collisionRule;
             AbstractTeam.VisibilityRule visibilityRule;
@@ -99,13 +81,13 @@ extends PersistentState {
         }
     }
 
-    protected void readTeamPlayersNbt(Team team, NbtList nbt) {
+    private void readTeamPlayersNbt(Team team, NbtList nbt) {
         for (int i = 0; i < nbt.size(); ++i) {
             this.scoreboard.addPlayerToTeam(nbt.getString(i), team);
         }
     }
 
-    protected void readDisplaySlotsNbt(NbtCompound nbt) {
+    private void readDisplaySlotsNbt(NbtCompound nbt) {
         for (int i = 0; i < 19; ++i) {
             if (!nbt.contains("slot_" + i, 8)) continue;
             String string = nbt.getString("slot_" + i);
@@ -114,7 +96,7 @@ extends PersistentState {
         }
     }
 
-    protected void readObjectivesNbt(NbtList nbt) {
+    private void readObjectivesNbt(NbtList nbt) {
         for (int i = 0; i < nbt.size(); ++i) {
             NbtCompound nbtCompound = nbt.getCompound(i);
             ScoreboardCriterion.getOrCreateStatCriterion(nbtCompound.getString("CriteriaName")).ifPresent(scoreboardCriterion -> {
@@ -131,10 +113,6 @@ extends PersistentState {
 
     @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
-        if (this.scoreboard == null) {
-            LOGGER.warn("Tried to save scoreboard without having a scoreboard...");
-            return nbt;
-        }
         nbt.put("Objectives", this.objectivesToNbt());
         nbt.put("PlayerScores", this.scoreboard.toNbt());
         nbt.put("Teams", this.teamsToNbt());
@@ -142,7 +120,7 @@ extends PersistentState {
         return nbt;
     }
 
-    protected NbtList teamsToNbt() {
+    private NbtList teamsToNbt() {
         NbtList nbtList = new NbtList();
         Collection<Team> collection = this.scoreboard.getTeams();
         for (Team team : collection) {
@@ -169,7 +147,7 @@ extends PersistentState {
         return nbtList;
     }
 
-    protected void writeDisplaySlotsNbt(NbtCompound nbt) {
+    private void writeDisplaySlotsNbt(NbtCompound nbt) {
         NbtCompound nbtCompound = new NbtCompound();
         boolean bl = false;
         for (int i = 0; i < 19; ++i) {
@@ -183,7 +161,7 @@ extends PersistentState {
         }
     }
 
-    protected NbtList objectivesToNbt() {
+    private NbtList objectivesToNbt() {
         NbtList nbtList = new NbtList();
         Collection<ScoreboardObjective> collection = this.scoreboard.getObjectives();
         for (ScoreboardObjective scoreboardObjective : collection) {

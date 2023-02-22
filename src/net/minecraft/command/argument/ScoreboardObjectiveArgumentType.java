@@ -31,9 +31,9 @@ import net.minecraft.text.TranslatableText;
 public class ScoreboardObjectiveArgumentType
 implements ArgumentType<String> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "*", "012");
-    private static final DynamicCommandExceptionType UNKNOWN_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("arguments.objective.notFound", object));
-    private static final DynamicCommandExceptionType READONLY_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("arguments.objective.readonly", object));
-    public static final DynamicCommandExceptionType LONG_NAME_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("commands.scoreboard.objectives.add.longName", object));
+    private static final DynamicCommandExceptionType UNKNOWN_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("arguments.objective.notFound", name));
+    private static final DynamicCommandExceptionType READONLY_OBJECTIVE_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("arguments.objective.readonly", name));
+    public static final DynamicCommandExceptionType LONG_NAME_EXCEPTION = new DynamicCommandExceptionType(maxLength -> new TranslatableText("commands.scoreboard.objectives.add.longName", maxLength));
 
     public static ScoreboardObjectiveArgumentType scoreboardObjective() {
         return new ScoreboardObjectiveArgumentType();
@@ -41,7 +41,7 @@ implements ArgumentType<String> {
 
     public static ScoreboardObjective getObjective(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         String string = (String)context.getArgument(name, String.class);
-        ServerScoreboard scoreboard = ((ServerCommandSource)context.getSource()).getMinecraftServer().getScoreboard();
+        ServerScoreboard scoreboard = ((ServerCommandSource)context.getSource()).getServer().getScoreboard();
         ScoreboardObjective scoreboardObjective = scoreboard.getNullableObjective(string);
         if (scoreboardObjective == null) {
             throw UNKNOWN_OBJECTIVE_EXCEPTION.create((Object)string);
@@ -67,7 +67,7 @@ implements ArgumentType<String> {
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
         if (context.getSource() instanceof ServerCommandSource) {
-            return CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getMinecraftServer().getScoreboard().getObjectiveNames(), builder);
+            return CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getScoreboard().getObjectiveNames(), builder);
         }
         if (context.getSource() instanceof CommandSource) {
             CommandSource commandSource = (CommandSource)context.getSource();
@@ -80,8 +80,8 @@ implements ArgumentType<String> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

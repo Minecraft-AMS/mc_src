@@ -35,6 +35,7 @@ import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.PostProcessShader;
 import net.minecraft.client.gl.ShaderParseException;
+import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.resource.Resource;
@@ -47,6 +48,7 @@ import org.apache.commons.io.IOUtils;
 @Environment(value=EnvType.CLIENT)
 public class ShaderEffect
 implements AutoCloseable {
+    private static final String MAIN_TARGET_NAME = "minecraft:main";
     private final Framebuffer mainTarget;
     private final ResourceManager resourceManager;
     private final String name;
@@ -112,9 +114,9 @@ implements AutoCloseable {
             }
             catch (Exception exception2) {
                 try {
-                    String string = resource != null ? " (" + resource.getResourcePackName() + ")" : "";
+                    Object string = resource != null ? " (" + resource.getResourcePackName() + ")" : "";
                     ShaderParseException shaderParseException2 = ShaderParseException.wrap(exception2);
-                    shaderParseException2.addFaultyFile(location.getPath() + string);
+                    shaderParseException2.addFaultyFile(location.getPath() + (String)string);
                     throw shaderParseException2;
                 }
                 catch (Throwable throwable) {
@@ -199,6 +201,7 @@ implements AutoCloseable {
                                 }
                             }
                             IOUtils.closeQuietly((Closeable)resource);
+                            RenderSystem.setShaderTexture(0, identifier);
                             textureManager.bindTexture(identifier);
                             AbstractTexture abstractTexture = textureManager.getTexture(identifier);
                             int j = JsonHelper.getInt(jsonObject2, "width");
@@ -293,7 +296,7 @@ implements AutoCloseable {
     }
 
     public void addTarget(String name, int width, int height) {
-        Framebuffer framebuffer = new Framebuffer(width, height, true, MinecraftClient.IS_SYSTEM_MAC);
+        SimpleFramebuffer framebuffer = new SimpleFramebuffer(width, height, true, MinecraftClient.IS_SYSTEM_MAC);
         framebuffer.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         this.targetsByName.put(name, framebuffer);
         if (width == this.width && height == this.height) {
@@ -319,7 +322,7 @@ implements AutoCloseable {
     }
 
     private void setupProjectionMatrix() {
-        this.projectionMatrix = Matrix4f.projectionMatrix(this.mainTarget.textureWidth, this.mainTarget.textureHeight, 0.1f, 1000.0f);
+        this.projectionMatrix = Matrix4f.projectionMatrix(0.0f, this.mainTarget.textureWidth, this.mainTarget.textureHeight, 0.0f, 0.1f, 1000.0f);
     }
 
     public void setupDimensions(int targetsWidth, int targetsHeight) {
@@ -358,7 +361,7 @@ implements AutoCloseable {
         if (name == null) {
             return null;
         }
-        if (name.equals("minecraft:main")) {
+        if (name.equals(MAIN_TARGET_NAME)) {
             return this.mainTarget;
         }
         return this.targetsByName.get(name);

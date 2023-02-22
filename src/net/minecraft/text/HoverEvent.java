@@ -8,8 +8,6 @@
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonSyntaxException
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -28,8 +26,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -47,7 +43,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class HoverEvent {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
     private final Action<?> action;
     private final Object contents;
 
@@ -63,7 +59,7 @@ public class HoverEvent {
     @Nullable
     public <T> T getValue(Action<T> action) {
         if (this.action == action) {
-            return (T)((Action)action).cast(this.contents);
+            return action.cast(this.contents);
         }
         return null;
     }
@@ -80,7 +76,7 @@ public class HoverEvent {
     }
 
     public String toString() {
-        return "HoverEvent{action=" + this.action + ", value='" + this.contents + '\'' + '}';
+        return "HoverEvent{action=" + this.action + ", value='" + this.contents + "'}";
     }
 
     public int hashCode() {
@@ -95,7 +91,7 @@ public class HoverEvent {
         if (string == null) {
             return null;
         }
-        Action action = Action.byName(string);
+        Action<?> action = Action.byName(string);
         if (action == null) {
             return null;
         }
@@ -119,9 +115,9 @@ public class HoverEvent {
 
     public static class Action<T> {
         public static final Action<Text> SHOW_TEXT = new Action<Text>("show_text", true, Text.Serializer::fromJson, Text.Serializer::toJsonTree, Function.identity());
-        public static final Action<ItemStackContent> SHOW_ITEM = new Action<ItemStackContent>("show_item", true, jsonElement -> ItemStackContent.method_27684(jsonElement), object -> ItemStackContent.method_27686((ItemStackContent)object), text -> ItemStackContent.method_27685(text));
+        public static final Action<ItemStackContent> SHOW_ITEM = new Action<ItemStackContent>("show_item", true, ItemStackContent::parse, ItemStackContent::toJson, ItemStackContent::parse);
         public static final Action<EntityContent> SHOW_ENTITY = new Action<EntityContent>("show_entity", true, EntityContent::parse, EntityContent::toJson, EntityContent::parse);
-        private static final Map<String, Action> BY_NAME = (Map)Stream.of(SHOW_TEXT, SHOW_ITEM, SHOW_ENTITY).collect(ImmutableMap.toImmutableMap(Action::getName, action -> action));
+        private static final Map<String, Action<?>> BY_NAME = (Map)Stream.of(SHOW_TEXT, SHOW_ITEM, SHOW_ENTITY).collect(ImmutableMap.toImmutableMap(Action::getName, action -> action));
         private final String name;
         private final boolean parsable;
         private final Function<JsonElement, T> deserializer;
@@ -145,11 +141,11 @@ public class HoverEvent {
         }
 
         @Nullable
-        public static Action byName(String name) {
+        public static Action<?> byName(String name) {
             return BY_NAME.get(name);
         }
 
-        private T cast(Object o) {
+        T cast(Object o) {
             return (T)o;
         }
 
@@ -184,45 +180,43 @@ public class HoverEvent {
         private final Item item;
         private final int count;
         @Nullable
-        private final NbtCompound tag;
+        private final NbtCompound nbt;
         @Nullable
-        @Environment(value=EnvType.CLIENT)
         private ItemStack stack;
 
-        ItemStackContent(Item item, int count, @Nullable NbtCompound tag) {
+        ItemStackContent(Item item, int count, @Nullable NbtCompound nbt) {
             this.item = item;
             this.count = count;
-            this.tag = tag;
+            this.nbt = nbt;
         }
 
         public ItemStackContent(ItemStack stack) {
-            this(stack.getItem(), stack.getCount(), stack.getTag() != null ? stack.getTag().copy() : null);
+            this(stack.getItem(), stack.getCount(), stack.getNbt() != null ? stack.getNbt().copy() : null);
         }
 
-        public boolean equals(Object object) {
-            if (this == object) {
+        public boolean equals(Object o) {
+            if (this == o) {
                 return true;
             }
-            if (object == null || this.getClass() != object.getClass()) {
+            if (o == null || this.getClass() != o.getClass()) {
                 return false;
             }
-            ItemStackContent itemStackContent = (ItemStackContent)object;
-            return this.count == itemStackContent.count && this.item.equals(itemStackContent.item) && Objects.equals(this.tag, itemStackContent.tag);
+            ItemStackContent itemStackContent = (ItemStackContent)o;
+            return this.count == itemStackContent.count && this.item.equals(itemStackContent.item) && Objects.equals(this.nbt, itemStackContent.nbt);
         }
 
         public int hashCode() {
             int i = this.item.hashCode();
             i = 31 * i + this.count;
-            i = 31 * i + (this.tag != null ? this.tag.hashCode() : 0);
+            i = 31 * i + (this.nbt != null ? this.nbt.hashCode() : 0);
             return i;
         }
 
-        @Environment(value=EnvType.CLIENT)
         public ItemStack asStack() {
             if (this.stack == null) {
                 this.stack = new ItemStack(this.item, this.count);
-                if (this.tag != null) {
-                    this.stack.setTag(this.tag);
+                if (this.nbt != null) {
+                    this.stack.setNbt(this.nbt);
                 }
             }
             return this.stack;
@@ -266,8 +260,8 @@ public class HoverEvent {
             if (this.count != 1) {
                 jsonObject.addProperty("count", (Number)this.count);
             }
-            if (this.tag != null) {
-                jsonObject.addProperty("tag", this.tag.toString());
+            if (this.nbt != null) {
+                jsonObject.addProperty("tag", this.nbt.toString());
             }
             return jsonObject;
         }
@@ -279,7 +273,6 @@ public class HoverEvent {
         @Nullable
         public final Text name;
         @Nullable
-        @Environment(value=EnvType.CLIENT)
         private List<Text> tooltip;
 
         public EntityContent(EntityType<?> entityType, UUID uuid, @Nullable Text name) {
@@ -324,7 +317,6 @@ public class HoverEvent {
             return jsonObject;
         }
 
-        @Environment(value=EnvType.CLIENT)
         public List<Text> asTooltip() {
             if (this.tooltip == null) {
                 this.tooltip = Lists.newArrayList();
@@ -337,14 +329,14 @@ public class HoverEvent {
             return this.tooltip;
         }
 
-        public boolean equals(Object object) {
-            if (this == object) {
+        public boolean equals(Object o) {
+            if (this == o) {
                 return true;
             }
-            if (object == null || this.getClass() != object.getClass()) {
+            if (o == null || this.getClass() != o.getClass()) {
                 return false;
             }
-            EntityContent entityContent = (EntityContent)object;
+            EntityContent entityContent = (EntityContent)o;
             return this.entityType.equals(entityContent.entityType) && this.uuid.equals(entityContent.uuid) && Objects.equals(this.name, entityContent.name);
         }
 

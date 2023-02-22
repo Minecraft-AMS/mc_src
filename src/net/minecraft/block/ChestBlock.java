@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.floats.Float2FloatFunction
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
@@ -12,10 +10,9 @@ package net.minecraft.block;
 import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractChestBlock;
 import net.minecraft.block.Block;
@@ -26,6 +23,7 @@ import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.block.enums.ChestType;
@@ -45,6 +43,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
@@ -76,6 +75,9 @@ implements Waterloggable {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final EnumProperty<ChestType> CHEST_TYPE = Properties.CHEST_TYPE;
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
+    public static final int field_31057 = 1;
+    protected static final int field_31058 = 1;
+    protected static final int field_31059 = 14;
     protected static final VoxelShape DOUBLE_NORTH_SHAPE = Block.createCuboidShape(1.0, 0.0, 0.0, 15.0, 14.0, 15.0);
     protected static final VoxelShape DOUBLE_SOUTH_SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 14.0, 16.0);
     protected static final VoxelShape DOUBLE_WEST_SHAPE = Block.createCuboidShape(0.0, 0.0, 1.0, 15.0, 14.0, 15.0);
@@ -287,15 +289,19 @@ implements Waterloggable {
         return Stats.CUSTOM.getOrCreateStat(Stats.OPEN_CHEST);
     }
 
+    public BlockEntityType<? extends ChestBlockEntity> getExpectedEntityType() {
+        return (BlockEntityType)this.entityTypeRetriever.get();
+    }
+
     @Nullable
     public static Inventory getInventory(ChestBlock block, BlockState state, World world, BlockPos pos, boolean ignoreBlocked) {
         return block.getBlockEntitySource(state, world, pos, ignoreBlocked).apply(INVENTORY_RETRIEVER).orElse(null);
     }
 
     @Override
-    public DoubleBlockProperties.PropertySource<? extends ChestBlockEntity> getBlockEntitySource(BlockState state, World world, BlockPos pos, boolean ignoreBlocked) {
-        BiPredicate<WorldAccess, BlockPos> biPredicate = ignoreBlocked ? (worldAccess, blockPos) -> false : ChestBlock::isChestBlocked;
-        return DoubleBlockProperties.toPropertySource((BlockEntityType)this.entityTypeRetriever.get(), ChestBlock::getDoubleBlockType, ChestBlock::getFacing, FACING, state, world, pos, biPredicate);
+    public DoubleBlockProperties.PropertySource<? extends ChestBlockEntity> getBlockEntitySource(BlockState state, World world2, BlockPos pos2, boolean ignoreBlocked) {
+        BiPredicate<WorldAccess, BlockPos> biPredicate = ignoreBlocked ? (world, pos) -> false : ChestBlock::isChestBlocked;
+        return DoubleBlockProperties.toPropertySource((BlockEntityType)this.entityTypeRetriever.get(), ChestBlock::getDoubleBlockType, ChestBlock::getFacing, FACING, state, world2, pos2, biPredicate);
     }
 
     @Override
@@ -304,7 +310,6 @@ implements Waterloggable {
         return this.getBlockEntitySource(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction> getAnimationProgressRetriever(final ChestAnimationProgress chestAnimationProgress) {
         return new DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction>(){
 
@@ -331,8 +336,14 @@ implements Waterloggable {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new ChestBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new ChestBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return world.isClient ? ChestBlock.checkType(type, this.getExpectedEntityType(), ChestBlockEntity::clientTick) : null;
     }
 
     public static boolean isChestBlocked(WorldAccess world, BlockPos pos) {
@@ -383,6 +394,14 @@ implements Waterloggable {
     @Override
     public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
         return false;
+    }
+
+    @Override
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof ChestBlockEntity) {
+            ((ChestBlockEntity)blockEntity).onScheduledTick();
+        }
     }
 }
 

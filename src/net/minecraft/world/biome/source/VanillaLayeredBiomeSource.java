@@ -8,8 +8,6 @@
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.Lifecycle
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome.source;
 
@@ -20,8 +18,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.dynamic.RegistryLookupCodec;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
@@ -42,7 +38,7 @@ extends BiomeSource {
     private final Registry<Biome> biomeRegistry;
 
     public VanillaLayeredBiomeSource(long seed, boolean legacyBiomeInitLayer, boolean largeBiomes, Registry<Biome> biomeRegistry) {
-        super(BIOMES.stream().map(registryKey -> () -> (Biome)biomeRegistry.getOrThrow((RegistryKey<Biome>)registryKey)));
+        super(BIOMES.stream().map(key -> () -> (Biome)biomeRegistry.getOrThrow((RegistryKey<Biome>)key)));
         this.seed = seed;
         this.legacyBiomeInitLayer = legacyBiomeInitLayer;
         this.largeBiomes = largeBiomes;
@@ -56,7 +52,6 @@ extends BiomeSource {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public BiomeSource withSeed(long seed) {
         return new VanillaLayeredBiomeSource(seed, this.legacyBiomeInitLayer, this.largeBiomes, this.biomeRegistry);
     }

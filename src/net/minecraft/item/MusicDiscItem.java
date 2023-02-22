@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
@@ -12,8 +10,6 @@ package net.minecraft.item;
 import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.JukeboxBlock;
@@ -72,23 +68,19 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         tooltip.add(this.getDescription().formatted(Formatting.GRAY));
     }
 
-    @Environment(value=EnvType.CLIENT)
     public MutableText getDescription() {
         return new TranslatableText(this.getTranslationKey() + ".desc");
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static MusicDiscItem bySound(SoundEvent sound) {
         return MUSIC_DISCS.get(sound);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public SoundEvent getSound() {
         return this.sound;
     }

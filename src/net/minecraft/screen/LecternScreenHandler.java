@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
@@ -21,6 +15,12 @@ import net.minecraft.screen.slot.Slot;
 
 public class LecternScreenHandler
 extends ScreenHandler {
+    private static final int field_30824 = 1;
+    private static final int field_30825 = 1;
+    public static final int field_30820 = 1;
+    public static final int field_30821 = 2;
+    public static final int field_30822 = 3;
+    public static final int field_30823 = 100;
     private final Inventory inventory;
     private final PropertyDelegate propertyDelegate;
 
@@ -69,7 +69,7 @@ extends ScreenHandler {
                 }
                 ItemStack itemStack = this.inventory.removeStack(0);
                 this.inventory.markDirty();
-                if (!player.inventory.insertStack(itemStack)) {
+                if (!player.getInventory().insertStack(itemStack)) {
                     player.dropItem(itemStack, false);
                 }
                 return true;
@@ -89,12 +89,10 @@ extends ScreenHandler {
         return this.inventory.canPlayerUse(player);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getBookItem() {
         return this.inventory.getStack(0);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getPage() {
         return this.propertyDelegate.get(0);
     }

@@ -3,16 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.text;
 
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.Style;
 import net.minecraft.util.Unit;
 
@@ -26,7 +22,6 @@ public interface StringVisitable {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public <T> Optional<T> visit(StyledVisitor<T> styledVisitor, Style style) {
             return Optional.empty();
         }
@@ -34,7 +29,6 @@ public interface StringVisitable {
 
     public <T> Optional<T> visit(Visitor<T> var1);
 
-    @Environment(value=EnvType.CLIENT)
     public <T> Optional<T> visit(StyledVisitor<T> var1, Style var2);
 
     public static StringVisitable plain(final String string) {
@@ -46,14 +40,12 @@ public interface StringVisitable {
             }
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             public <T> Optional<T> visit(StyledVisitor<T> styledVisitor, Style style) {
                 return styledVisitor.accept(style, string);
             }
         };
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static StringVisitable styled(final String string, final Style style) {
         return new StringVisitable(){
 
@@ -69,13 +61,11 @@ public interface StringVisitable {
         };
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static StringVisitable concat(StringVisitable ... visitables) {
-        return StringVisitable.concat((List<StringVisitable>)ImmutableList.copyOf((Object[])visitables));
+        return StringVisitable.concat((List<? extends StringVisitable>)ImmutableList.copyOf((Object[])visitables));
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public static StringVisitable concat(final List<StringVisitable> visitables) {
+    public static StringVisitable concat(final List<? extends StringVisitable> visitables) {
         return new StringVisitable(){
 
             @Override
@@ -113,7 +103,6 @@ public interface StringVisitable {
         public Optional<T> accept(String var1);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static interface StyledVisitor<T> {
         public Optional<T> accept(Style var1, String var2);
     }

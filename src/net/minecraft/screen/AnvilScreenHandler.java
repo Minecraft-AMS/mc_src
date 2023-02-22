@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -11,8 +9,6 @@
 package net.minecraft.screen;
 
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AnvilBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.enchantment.Enchantment;
@@ -36,9 +32,18 @@ import org.apache.logging.log4j.Logger;
 public class AnvilScreenHandler
 extends ForgingScreenHandler {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final boolean field_30752 = false;
+    public static final int field_30751 = 50;
     private int repairItemUsage;
     private String newItemName;
     private final Property levelCost = Property.create();
+    private static final int field_30753 = 0;
+    private static final int field_30754 = 1;
+    private static final int field_30755 = 1;
+    private static final int field_30747 = 1;
+    private static final int field_30748 = 2;
+    private static final int field_30749 = 1;
+    private static final int field_30750 = 1;
 
     public AnvilScreenHandler(int syncId, PlayerInventory inventory) {
         this(syncId, inventory, ScreenHandlerContext.EMPTY);
@@ -56,12 +61,12 @@ extends ForgingScreenHandler {
 
     @Override
     protected boolean canTakeOutput(PlayerEntity player, boolean present) {
-        return (player.abilities.creativeMode || player.experienceLevel >= this.levelCost.get()) && this.levelCost.get() > 0;
+        return (player.getAbilities().creativeMode || player.experienceLevel >= this.levelCost.get()) && this.levelCost.get() > 0;
     }
 
     @Override
-    protected ItemStack onTakeOutput(PlayerEntity player, ItemStack stack) {
-        if (!player.abilities.creativeMode) {
+    protected void onTakeOutput(PlayerEntity player, ItemStack stack) {
+        if (!player.getAbilities().creativeMode) {
             player.addExperienceLevels(-this.levelCost.get());
         }
         this.input.setStack(0, ItemStack.EMPTY);
@@ -77,22 +82,21 @@ extends ForgingScreenHandler {
             this.input.setStack(1, ItemStack.EMPTY);
         }
         this.levelCost.set(0);
-        this.context.run((world, blockPos) -> {
-            BlockState blockState = world.getBlockState((BlockPos)blockPos);
-            if (!playerEntity.abilities.creativeMode && blockState.isIn(BlockTags.ANVIL) && player.getRandom().nextFloat() < 0.12f) {
+        this.context.run((world, pos) -> {
+            BlockState blockState = world.getBlockState((BlockPos)pos);
+            if (!playerEntity.getAbilities().creativeMode && blockState.isIn(BlockTags.ANVIL) && player.getRandom().nextFloat() < 0.12f) {
                 BlockState blockState2 = AnvilBlock.getLandingState(blockState);
                 if (blockState2 == null) {
-                    world.removeBlock((BlockPos)blockPos, false);
-                    world.syncWorldEvent(1029, (BlockPos)blockPos, 0);
+                    world.removeBlock((BlockPos)pos, false);
+                    world.syncWorldEvent(1029, (BlockPos)pos, 0);
                 } else {
-                    world.setBlockState((BlockPos)blockPos, blockState2, 2);
-                    world.syncWorldEvent(1030, (BlockPos)blockPos, 0);
+                    world.setBlockState((BlockPos)pos, blockState2, 2);
+                    world.syncWorldEvent(1030, (BlockPos)pos, 0);
                 }
             } else {
-                world.syncWorldEvent(1030, (BlockPos)blockPos, 0);
+                world.syncWorldEvent(1030, (BlockPos)pos, 0);
             }
         });
-        return stack;
     }
 
     @Override
@@ -114,7 +118,7 @@ extends ForgingScreenHandler {
         this.repairItemUsage = 0;
         if (!itemStack3.isEmpty()) {
             boolean bl;
-            boolean bl2 = bl = itemStack3.getItem() == Items.ENCHANTED_BOOK && !EnchantedBookItem.getEnchantmentNbt(itemStack3).isEmpty();
+            boolean bl2 = bl = itemStack3.isOf(Items.ENCHANTED_BOOK) && !EnchantedBookItem.getEnchantmentNbt(itemStack3).isEmpty();
             if (itemStack2.isDamageable() && itemStack2.getItem().canRepair(itemStack, itemStack3)) {
                 int m;
                 int l = Math.min(itemStack2.getDamage(), itemStack2.getMaxDamage() / 4);
@@ -131,7 +135,7 @@ extends ForgingScreenHandler {
                 }
                 this.repairItemUsage = m;
             } else {
-                if (!(bl || itemStack2.getItem() == itemStack3.getItem() && itemStack2.isDamageable())) {
+                if (!(bl || itemStack2.isOf(itemStack3.getItem()) && itemStack2.isDamageable())) {
                     this.output.setStack(0, ItemStack.EMPTY);
                     this.levelCost.set(0);
                     return;
@@ -159,7 +163,7 @@ extends ForgingScreenHandler {
                     int q = map.getOrDefault(enchantment, 0);
                     r = q == (r = map2.get(enchantment).intValue()) ? r + 1 : Math.max(r, q);
                     boolean bl4 = enchantment.isAcceptableItem(itemStack);
-                    if (this.player.abilities.creativeMode || itemStack.getItem() == Items.ENCHANTED_BOOK) {
+                    if (this.player.getAbilities().creativeMode || itemStack.isOf(Items.ENCHANTED_BOOK)) {
                         bl4 = true;
                     }
                     for (Enchantment enchantment2 : map.keySet()) {
@@ -226,7 +230,7 @@ extends ForgingScreenHandler {
         if (k == i && k > 0 && this.levelCost.get() >= 40) {
             this.levelCost.set(39);
         }
-        if (this.levelCost.get() >= 40 && !this.player.abilities.creativeMode) {
+        if (this.levelCost.get() >= 40 && !this.player.getAbilities().creativeMode) {
             itemStack2 = ItemStack.EMPTY;
         }
         if (!itemStack2.isEmpty()) {
@@ -261,7 +265,6 @@ extends ForgingScreenHandler {
         this.updateResult();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getLevelCost() {
         return this.levelCost.get();
     }

@@ -10,13 +10,12 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.util.math.MathHelper;
 
 public class NbtFloat
 extends AbstractNbtNumber {
+    private static final int field_33194 = 96;
     public static final NbtFloat ZERO = new NbtFloat(0.0f);
     public static final NbtType<NbtFloat> TYPE = new NbtType<NbtFloat>(){
 
@@ -74,11 +73,6 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public String toString() {
-        return this.value + "f";
-    }
-
-    @Override
     public NbtFloat copy() {
         return this;
     }
@@ -95,9 +89,8 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("f").formatted(RED);
-        return new LiteralText(String.valueOf(this.value)).append(text).formatted(GOLD);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitFloat(this);
     }
 
     @Override

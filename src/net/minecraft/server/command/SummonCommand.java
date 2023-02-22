@@ -39,11 +39,11 @@ import net.minecraft.world.World;
 
 public class SummonCommand {
     private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.summon.failed"));
-    private static final SimpleCommandExceptionType field_26629 = new SimpleCommandExceptionType((Message)new TranslatableText("commands.summon.failed.uuid"));
+    private static final SimpleCommandExceptionType FAILED_UUID_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.summon.failed.uuid"));
     private static final SimpleCommandExceptionType INVALID_POSITION_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.summon.invalidPosition"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("summon").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(((RequiredArgumentBuilder)CommandManager.argument("entity", EntitySummonArgumentType.entitySummon()).suggests(SuggestionProviders.SUMMONABLE_ENTITIES).executes(commandContext -> SummonCommand.execute((ServerCommandSource)commandContext.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)commandContext, "entity"), ((ServerCommandSource)commandContext.getSource()).getPosition(), new NbtCompound(), true))).then(((RequiredArgumentBuilder)CommandManager.argument("pos", Vec3ArgumentType.vec3()).executes(commandContext -> SummonCommand.execute((ServerCommandSource)commandContext.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)commandContext, "entity"), Vec3ArgumentType.getVec3((CommandContext<ServerCommandSource>)commandContext, "pos"), new NbtCompound(), true))).then(CommandManager.argument("nbt", NbtCompoundArgumentType.nbtCompound()).executes(commandContext -> SummonCommand.execute((ServerCommandSource)commandContext.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)commandContext, "entity"), Vec3ArgumentType.getVec3((CommandContext<ServerCommandSource>)commandContext, "pos"), NbtCompoundArgumentType.getNbtCompound(commandContext, "nbt"), false))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("summon").requires(source -> source.hasPermissionLevel(2))).then(((RequiredArgumentBuilder)CommandManager.argument("entity", EntitySummonArgumentType.entitySummon()).suggests(SuggestionProviders.SUMMONABLE_ENTITIES).executes(context -> SummonCommand.execute((ServerCommandSource)context.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)context, "entity"), ((ServerCommandSource)context.getSource()).getPosition(), new NbtCompound(), true))).then(((RequiredArgumentBuilder)CommandManager.argument("pos", Vec3ArgumentType.vec3()).executes(context -> SummonCommand.execute((ServerCommandSource)context.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)context, "entity"), Vec3ArgumentType.getVec3((CommandContext<ServerCommandSource>)context, "pos"), new NbtCompound(), true))).then(CommandManager.argument("nbt", NbtCompoundArgumentType.nbtCompound()).executes(context -> SummonCommand.execute((ServerCommandSource)context.getSource(), EntitySummonArgumentType.getEntitySummon((CommandContext<ServerCommandSource>)context, "entity"), Vec3ArgumentType.getVec3((CommandContext<ServerCommandSource>)context, "pos"), NbtCompoundArgumentType.getNbtCompound(context, "nbt"), false))))));
     }
 
     private static int execute(ServerCommandSource source, Identifier entity2, Vec3d pos, NbtCompound nbt, boolean initialize) throws CommandSyntaxException {
@@ -55,7 +55,7 @@ public class SummonCommand {
         nbtCompound.putString("id", entity2.toString());
         ServerWorld serverWorld = source.getWorld();
         Entity entity22 = EntityType.loadEntityWithPassengers(nbtCompound, serverWorld, entity -> {
-            entity.refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, entity.yaw, entity.pitch);
+            entity.refreshPositionAndAngles(vec3d.x, vec3d.y, vec3d.z, entity.getYaw(), entity.getPitch());
             return entity;
         });
         if (entity22 == null) {
@@ -65,7 +65,7 @@ public class SummonCommand {
             ((MobEntity)entity22).initialize(source.getWorld(), source.getWorld().getLocalDifficulty(entity22.getBlockPos()), SpawnReason.COMMAND, null, null);
         }
         if (!serverWorld.shouldCreateNewEntityWithPassenger(entity22)) {
-            throw field_26629.create();
+            throw FAILED_UUID_EXCEPTION.create();
         }
         source.sendFeedback(new TranslatableText("commands.summon.success", entity22.getDisplayName()), true);
         return 1;

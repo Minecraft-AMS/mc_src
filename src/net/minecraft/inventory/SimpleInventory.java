@@ -58,7 +58,7 @@ RecipeInputProvider {
     }
 
     public List<ItemStack> clearToList() {
-        List<ItemStack> list = this.stacks.stream().filter(itemStack -> !itemStack.isEmpty()).collect(Collectors.toList());
+        List<ItemStack> list = this.stacks.stream().filter(stack -> !stack.isEmpty()).collect(Collectors.toList());
         this.clear();
         return list;
     }
@@ -104,7 +104,7 @@ RecipeInputProvider {
     public boolean canInsert(ItemStack stack) {
         boolean bl = false;
         for (ItemStack itemStack : this.stacks) {
-            if (!itemStack.isEmpty() && (!this.canCombine(itemStack, stack) || itemStack.getCount() >= itemStack.getMaxCount())) continue;
+            if (!itemStack.isEmpty() && (!ItemStack.canCombine(itemStack, stack) || itemStack.getCount() >= itemStack.getMaxCount())) continue;
             bl = true;
             break;
         }
@@ -172,7 +172,7 @@ RecipeInputProvider {
     }
 
     public String toString() {
-        return this.stacks.stream().filter(itemStack -> !itemStack.isEmpty()).collect(Collectors.toList()).toString();
+        return this.stacks.stream().filter(stack -> !stack.isEmpty()).collect(Collectors.toList()).toString();
     }
 
     private void addToNewSlot(ItemStack stack) {
@@ -188,15 +188,11 @@ RecipeInputProvider {
     private void addToExistingSlot(ItemStack stack) {
         for (int i = 0; i < this.size; ++i) {
             ItemStack itemStack = this.getStack(i);
-            if (!this.canCombine(itemStack, stack)) continue;
+            if (!ItemStack.canCombine(itemStack, stack)) continue;
             this.transfer(stack, itemStack);
             if (!stack.isEmpty()) continue;
             return;
         }
-    }
-
-    private boolean canCombine(ItemStack one, ItemStack two) {
-        return one.getItem() == two.getItem() && ItemStack.areTagsEqual(one, two);
     }
 
     private void transfer(ItemStack source, ItemStack target) {

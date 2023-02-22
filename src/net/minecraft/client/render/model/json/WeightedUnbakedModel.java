@@ -91,7 +91,7 @@ implements UnbakedModel {
             BakedModel bakedModel = loader.bake(modelVariant.getLocation(), modelVariant);
             builder.add(bakedModel, modelVariant.getWeight());
         }
-        return builder.getFirst();
+        return builder.build();
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -105,10 +105,10 @@ implements UnbakedModel {
                     throw new JsonParseException("Empty variant array");
                 }
                 for (JsonElement jsonElement2 : jsonArray) {
-                    list.add(jsonDeserializationContext.deserialize(jsonElement2, ModelVariant.class));
+                    list.add((ModelVariant)jsonDeserializationContext.deserialize(jsonElement2, ModelVariant.class));
                 }
             } else {
-                list.add(jsonDeserializationContext.deserialize(jsonElement, ModelVariant.class));
+                list.add((ModelVariant)jsonDeserializationContext.deserialize(jsonElement, ModelVariant.class));
             }
             return new WeightedUnbakedModel(list);
         }

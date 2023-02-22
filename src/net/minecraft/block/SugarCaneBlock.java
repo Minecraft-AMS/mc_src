@@ -14,6 +14,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -25,6 +26,7 @@ import net.minecraft.world.WorldView;
 public class SugarCaneBlock
 extends Block {
     public static final IntProperty AGE = Properties.AGE_15;
+    protected static final float field_31258 = 6.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
 
     protected SugarCaneBlock(AbstractBlock.Settings settings) {
@@ -74,10 +76,10 @@ extends Block {
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos.down());
-        if (blockState.getBlock() == this) {
+        if (blockState.isOf(this)) {
             return true;
         }
-        if (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isOf(Blocks.DIRT) || blockState.isOf(Blocks.COARSE_DIRT) || blockState.isOf(Blocks.PODZOL) || blockState.isOf(Blocks.SAND) || blockState.isOf(Blocks.RED_SAND)) {
+        if (blockState.isIn(BlockTags.DIRT) || blockState.isOf(Blocks.SAND) || blockState.isOf(Blocks.RED_SAND)) {
             BlockPos blockPos = pos.down();
             for (Direction direction : Direction.Type.HORIZONTAL) {
                 BlockState blockState2 = world.getBlockState(blockPos.offset(direction));

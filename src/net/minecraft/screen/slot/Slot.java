@@ -3,15 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.mojang.datafixers.util.Pair
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.screen.slot;
 
 import com.mojang.datafixers.util.Pair;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.Optional;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -48,9 +45,8 @@ public class Slot {
     protected void onCrafted(ItemStack stack) {
     }
 
-    public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
+    public void onTakeItem(PlayerEntity player, ItemStack stack) {
         this.markDirty();
-        return stack;
     }
 
     public boolean canInsert(ItemStack stack) {
@@ -79,11 +75,10 @@ public class Slot {
     }
 
     public int getMaxItemCount(ItemStack stack) {
-        return this.getMaxItemCount();
+        return Math.min(this.getMaxItemCount(), stack.getMaxCount());
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public Pair<Identifier, Identifier> getBackgroundSprite() {
         return null;
     }
@@ -96,9 +91,59 @@ public class Slot {
         return true;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public boolean doDrawHoveringEffect() {
+    public boolean isEnabled() {
         return true;
+    }
+
+    public Optional<ItemStack> tryTakeStackRange(int min, int max, PlayerEntity player) {
+        if (!this.canTakeItems(player)) {
+            return Optional.empty();
+        }
+        if (!this.canTakePartial(player) && max < this.getStack().getCount()) {
+            return Optional.empty();
+        }
+        ItemStack itemStack = this.takeStack(min = Math.min(min, max));
+        if (itemStack.isEmpty()) {
+            return Optional.empty();
+        }
+        if (this.getStack().isEmpty()) {
+            this.setStack(ItemStack.EMPTY);
+        }
+        return Optional.of(itemStack);
+    }
+
+    public ItemStack takeStackRange(int min, int max, PlayerEntity player) {
+        Optional<ItemStack> optional = this.tryTakeStackRange(min, max, player);
+        optional.ifPresent(stack -> this.onTakeItem(player, (ItemStack)stack));
+        return optional.orElse(ItemStack.EMPTY);
+    }
+
+    public ItemStack insertStack(ItemStack stack) {
+        return this.insertStack(stack, stack.getCount());
+    }
+
+    public ItemStack insertStack(ItemStack stack, int count) {
+        if (stack.isEmpty() || !this.canInsert(stack)) {
+            return stack;
+        }
+        ItemStack itemStack = this.getStack();
+        int i = Math.min(Math.min(count, stack.getCount()), this.getMaxItemCount(stack) - itemStack.getCount());
+        if (itemStack.isEmpty()) {
+            this.setStack(stack.split(i));
+        } else if (ItemStack.canCombine(itemStack, stack)) {
+            stack.decrement(i);
+            itemStack.increment(i);
+            this.setStack(itemStack);
+        }
+        return stack;
+    }
+
+    public boolean canTakePartial(PlayerEntity player) {
+        return this.canTakeItems(player) && this.canInsert(this.getStack());
+    }
+
+    public int getIndex() {
+        return this.index;
     }
 }
 

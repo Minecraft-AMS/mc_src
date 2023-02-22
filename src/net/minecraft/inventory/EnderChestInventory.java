@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.inventory;
 
@@ -9,9 +12,11 @@ import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import org.jetbrains.annotations.Nullable;
 
 public class EnderChestInventory
 extends SimpleInventory {
+    @Nullable
     private EnderChestBlockEntity activeBlockEntity;
 
     public EnderChestInventory() {
@@ -20,6 +25,10 @@ extends SimpleInventory {
 
     public void setActiveBlockEntity(EnderChestBlockEntity blockEntity) {
         this.activeBlockEntity = blockEntity;
+    }
+
+    public boolean isActiveBlockEntity(EnderChestBlockEntity blockEntity) {
+        return this.activeBlockEntity == blockEntity;
     }
 
     @Override
@@ -61,7 +70,7 @@ extends SimpleInventory {
     @Override
     public void onOpen(PlayerEntity player) {
         if (this.activeBlockEntity != null) {
-            this.activeBlockEntity.onOpen();
+            this.activeBlockEntity.onOpen(player);
         }
         super.onOpen(player);
     }
@@ -69,7 +78,7 @@ extends SimpleInventory {
     @Override
     public void onClose(PlayerEntity player) {
         if (this.activeBlockEntity != null) {
-            this.activeBlockEntity.onClose();
+            this.activeBlockEntity.onClose(player);
         }
         super.onClose(player);
         this.activeBlockEntity = null;

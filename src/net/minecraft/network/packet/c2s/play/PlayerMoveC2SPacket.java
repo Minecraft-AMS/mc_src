@@ -1,51 +1,37 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 
-public class PlayerMoveC2SPacket
+public abstract class PlayerMoveC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    protected double x;
-    protected double y;
-    protected double z;
-    protected float yaw;
-    protected float pitch;
-    protected boolean onGround;
-    protected boolean changePosition;
-    protected boolean changeLook;
+    protected final double x;
+    protected final double y;
+    protected final double z;
+    protected final float yaw;
+    protected final float pitch;
+    protected final boolean onGround;
+    protected final boolean changePosition;
+    protected final boolean changeLook;
 
-    public PlayerMoveC2SPacket() {
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public PlayerMoveC2SPacket(boolean onGround) {
+    protected PlayerMoveC2SPacket(double x, double y, double z, float yaw, float pitch, boolean onGround, boolean changePosition, boolean changeLook) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.yaw = yaw;
+        this.pitch = pitch;
         this.onGround = onGround;
+        this.changePosition = changePosition;
+        this.changeLook = changeLook;
     }
 
     @Override
     public void apply(ServerPlayPacketListener serverPlayPacketListener) {
         serverPlayPacketListener.onPlayerMove(this);
-    }
-
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        this.onGround = buf.readUnsignedByte() != 0;
-    }
-
-    @Override
-    public void write(PacketByteBuf buf) throws IOException {
-        buf.writeByte(this.onGround ? 1 : 0);
     }
 
     public double getX(double currentX) {
@@ -72,104 +58,99 @@ implements Packet<ServerPlayPacketListener> {
         return this.onGround;
     }
 
-    public static class LookOnly
+    public boolean changesPosition() {
+        return this.changePosition;
+    }
+
+    public boolean changesLook() {
+        return this.changeLook;
+    }
+
+    public static class OnGroundOnly
     extends PlayerMoveC2SPacket {
-        public LookOnly() {
-            this.changeLook = true;
+        public OnGroundOnly(boolean onGround) {
+            super(0.0, 0.0, 0.0, 0.0f, 0.0f, onGround, false, false);
         }
 
-        @Environment(value=EnvType.CLIENT)
-        public LookOnly(float yaw, float pitch, boolean onGround) {
-            this.yaw = yaw;
-            this.pitch = pitch;
-            this.onGround = onGround;
-            this.changeLook = true;
+        public static OnGroundOnly read(PacketByteBuf buf) {
+            boolean bl = buf.readUnsignedByte() != 0;
+            return new OnGroundOnly(bl);
         }
 
         @Override
-        public void read(PacketByteBuf buf) throws IOException {
-            this.yaw = buf.readFloat();
-            this.pitch = buf.readFloat();
-            super.read(buf);
-        }
-
-        @Override
-        public void write(PacketByteBuf buf) throws IOException {
-            buf.writeFloat(this.yaw);
-            buf.writeFloat(this.pitch);
-            super.write(buf);
+        public void write(PacketByteBuf buf) {
+            buf.writeByte(this.onGround ? 1 : 0);
         }
     }
 
-    public static class PositionOnly
+    public static class LookAndOnGround
     extends PlayerMoveC2SPacket {
-        public PositionOnly() {
-            this.changePosition = true;
+        public LookAndOnGround(float yaw, float pitch, boolean onGround) {
+            super(0.0, 0.0, 0.0, yaw, pitch, onGround, false, true);
         }
 
-        @Environment(value=EnvType.CLIENT)
-        public PositionOnly(double x, double y, double z, boolean onGround) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.onGround = onGround;
-            this.changePosition = true;
-        }
-
-        @Override
-        public void read(PacketByteBuf buf) throws IOException {
-            this.x = buf.readDouble();
-            this.y = buf.readDouble();
-            this.z = buf.readDouble();
-            super.read(buf);
+        public static LookAndOnGround read(PacketByteBuf buf) {
+            float f = buf.readFloat();
+            float g = buf.readFloat();
+            boolean bl = buf.readUnsignedByte() != 0;
+            return new LookAndOnGround(f, g, bl);
         }
 
         @Override
-        public void write(PacketByteBuf buf) throws IOException {
+        public void write(PacketByteBuf buf) {
+            buf.writeFloat(this.yaw);
+            buf.writeFloat(this.pitch);
+            buf.writeByte(this.onGround ? 1 : 0);
+        }
+    }
+
+    public static class PositionAndOnGround
+    extends PlayerMoveC2SPacket {
+        public PositionAndOnGround(double x, double y, double z, boolean onGround) {
+            super(x, y, z, 0.0f, 0.0f, onGround, true, false);
+        }
+
+        public static PositionAndOnGround read(PacketByteBuf buf) {
+            double d = buf.readDouble();
+            double e = buf.readDouble();
+            double f = buf.readDouble();
+            boolean bl = buf.readUnsignedByte() != 0;
+            return new PositionAndOnGround(d, e, f, bl);
+        }
+
+        @Override
+        public void write(PacketByteBuf buf) {
             buf.writeDouble(this.x);
             buf.writeDouble(this.y);
             buf.writeDouble(this.z);
-            super.write(buf);
+            buf.writeByte(this.onGround ? 1 : 0);
         }
     }
 
-    public static class Both
+    public static class Full
     extends PlayerMoveC2SPacket {
-        public Both() {
-            this.changePosition = true;
-            this.changeLook = true;
+        public Full(double x, double y, double z, float yaw, float pitch, boolean onGround) {
+            super(x, y, z, yaw, pitch, onGround, true, true);
         }
 
-        @Environment(value=EnvType.CLIENT)
-        public Both(double x, double y, double z, float yaw, float pitch, boolean onGround) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.yaw = yaw;
-            this.pitch = pitch;
-            this.onGround = onGround;
-            this.changeLook = true;
-            this.changePosition = true;
+        public static Full read(PacketByteBuf buf) {
+            double d = buf.readDouble();
+            double e = buf.readDouble();
+            double f = buf.readDouble();
+            float g = buf.readFloat();
+            float h = buf.readFloat();
+            boolean bl = buf.readUnsignedByte() != 0;
+            return new Full(d, e, f, g, h, bl);
         }
 
         @Override
-        public void read(PacketByteBuf buf) throws IOException {
-            this.x = buf.readDouble();
-            this.y = buf.readDouble();
-            this.z = buf.readDouble();
-            this.yaw = buf.readFloat();
-            this.pitch = buf.readFloat();
-            super.read(buf);
-        }
-
-        @Override
-        public void write(PacketByteBuf buf) throws IOException {
+        public void write(PacketByteBuf buf) {
             buf.writeDouble(this.x);
             buf.writeDouble(this.y);
             buf.writeDouble(this.z);
             buf.writeFloat(this.yaw);
             buf.writeFloat(this.pitch);
-            super.write(buf);
+            buf.writeByte(this.onGround ? 1 : 0);
         }
     }
 }

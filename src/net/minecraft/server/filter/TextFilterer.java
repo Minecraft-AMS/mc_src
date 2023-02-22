@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Strings
  *  com.google.common.collect.ImmutableList
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
@@ -9,11 +10,14 @@
  *  com.google.gson.stream.JsonReader
  *  com.google.gson.stream.JsonWriter
  *  com.mojang.authlib.GameProfile
+ *  org.apache.commons.codec.binary.Base64
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.server.filter;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -28,13 +32,15 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.SharedConstants;
@@ -42,8 +48,10 @@ import net.minecraft.server.filter.TextStream;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.thread.TaskExecutor;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 public class TextFilterer
 implements AutoCloseable {
@@ -55,15 +63,51 @@ implements AutoCloseable {
         return thread;
     };
     private final URL chatEndpoint;
-    private final URL joinEndpoint;
-    private final URL leaveEndpoint;
+    final URL joinEndpoint;
+    final URL leaveEndpoint;
     private final String apiKey;
     private final int ruleId;
     private final String serverId;
-    private final HashIgnorer ignorer;
-    private final ExecutorService executor;
+    final HashIgnorer ignorer;
+    final ExecutorService executor;
 
-    private void sendJoinOrLeaveRequest(GameProfile gameProfile, URL endpoint, Executor executor) {
+    private TextFilterer(URI apiUrl, String apiKey, int ruleId, String serverId, HashIgnorer ignorer, int threadsNumber) throws MalformedURLException {
+        this.apiKey = apiKey;
+        this.ruleId = ruleId;
+        this.serverId = serverId;
+        this.ignorer = ignorer;
+        this.chatEndpoint = apiUrl.resolve("/v1/chat").toURL();
+        this.joinEndpoint = apiUrl.resolve("/v1/join").toURL();
+        this.leaveEndpoint = apiUrl.resolve("/v1/leave").toURL();
+        this.executor = Executors.newFixedThreadPool(threadsNumber, THREAD_FACTORY);
+    }
+
+    @Nullable
+    public static TextFilterer load(String config) {
+        if (Strings.isNullOrEmpty((String)config)) {
+            return null;
+        }
+        try {
+            JsonObject jsonObject = JsonHelper.deserialize(config);
+            URI uRI = new URI(JsonHelper.getString(jsonObject, "apiServer"));
+            String string = JsonHelper.getString(jsonObject, "apiKey");
+            if (string.isEmpty()) {
+                throw new IllegalArgumentException("Missing API key");
+            }
+            int i = JsonHelper.getInt(jsonObject, "ruleId", 1);
+            String string2 = JsonHelper.getString(jsonObject, "serverId", "");
+            int j = JsonHelper.getInt(jsonObject, "hashesToDrop", -1);
+            int k = JsonHelper.getInt(jsonObject, "maxConcurrentRequests", 7);
+            HashIgnorer hashIgnorer = HashIgnorer.dropHashes(j);
+            return new TextFilterer(uRI, new Base64().encodeToString(string.getBytes(StandardCharsets.US_ASCII)), i, string2, hashIgnorer, k);
+        }
+        catch (Exception exception) {
+            LOGGER.warn("Failed to parse chat filter config {}", (Object)config, (Object)exception);
+            return null;
+        }
+    }
+
+    void sendJoinOrLeaveRequest(GameProfile gameProfile, URL endpoint, Executor executor) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("server", this.serverId);
         jsonObject.addProperty("room", "Chat");
@@ -79,9 +123,9 @@ implements AutoCloseable {
         });
     }
 
-    private CompletableFuture<Optional<String>> filterMessage(GameProfile gameProfile, String message, HashIgnorer ignorer, Executor executor) {
+    CompletableFuture<TextStream.Message> filterMessage(GameProfile gameProfile, String message, HashIgnorer ignorer, Executor executor) {
         if (message.isEmpty()) {
-            return CompletableFuture.completedFuture(Optional.of(""));
+            return CompletableFuture.completedFuture(TextStream.Message.EMPTY);
         }
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("rule", (Number)this.ruleId);
@@ -95,18 +139,18 @@ implements AutoCloseable {
                 JsonObject jsonObject2 = this.sendJsonRequest(jsonObject, this.chatEndpoint);
                 boolean bl = JsonHelper.getBoolean(jsonObject2, "response", false);
                 if (bl) {
-                    return Optional.of(message);
+                    return TextStream.Message.permitted(message);
                 }
                 String string2 = JsonHelper.getString(jsonObject2, "hashed", null);
                 if (string2 == null) {
-                    return Optional.empty();
+                    return TextStream.Message.censored(message);
                 }
                 int i = JsonHelper.getArray(jsonObject2, "hashes").size();
-                return ignorer.shouldIgnore(string2, i) ? Optional.empty() : Optional.of(string2);
+                return ignorer.shouldIgnore(string2, i) ? TextStream.Message.censored(message) : new TextStream.Message(message, string2);
             }
             catch (Exception exception) {
                 LOGGER.warn("Failed to validate message '{}'", (Object)message, (Object)exception);
-                return Optional.empty();
+                return TextStream.Message.censored(message);
             }
         }, executor);
     }
@@ -127,7 +171,6 @@ implements AutoCloseable {
      */
     private JsonObject sendJsonRequest(JsonObject payload, URL endpoint) throws IOException {
         HttpURLConnection httpURLConnection = this.createConnection(payload, endpoint);
-        Throwable throwable = null;
         try (InputStream inputStream = httpURLConnection.getInputStream();){
             JsonObject jsonObject;
             if (httpURLConnection.getResponseCode() == 204) {
@@ -137,15 +180,9 @@ implements AutoCloseable {
             try {
                 jsonObject = Streams.parse((JsonReader)new JsonReader((Reader)new InputStreamReader(inputStream))).getAsJsonObject();
             }
-            catch (Throwable throwable2) {
-                try {
-                    this.consumeFully(inputStream);
-                    throw throwable2;
-                }
-                catch (Throwable throwable3) {
-                    throwable = throwable3;
-                    throw throwable3;
-                }
+            catch (Throwable throwable) {
+                this.consumeFully(inputStream);
+                throw throwable;
             }
             this.consumeFully(inputStream);
             return jsonObject;
@@ -188,10 +225,33 @@ implements AutoCloseable {
 
     @FunctionalInterface
     public static interface HashIgnorer {
-        public static final HashIgnorer NEVER_IGNORE = (string, i) -> false;
-        public static final HashIgnorer IGNORE_IF_MATCHES_ALL = (string, i) -> string.length() == i;
+        public static final HashIgnorer NEVER_IGNORE = (hashes, hashesSize) -> false;
+        public static final HashIgnorer IGNORE_IF_MATCHES_ALL = (hashes, hashesSize) -> hashes.length() == hashesSize;
+
+        public static HashIgnorer internalDropHashes(int hashesToDrop) {
+            return (hashes, hashesSize) -> hashesSize >= hashesToDrop;
+        }
+
+        public static HashIgnorer dropHashes(int hashesToDrop) {
+            switch (hashesToDrop) {
+                case -1: {
+                    return NEVER_IGNORE;
+                }
+                case 0: {
+                    return IGNORE_IF_MATCHES_ALL;
+                }
+            }
+            return HashIgnorer.internalDropHashes(hashesToDrop);
+        }
 
         public boolean shouldIgnore(String var1, int var2);
+    }
+
+    public static class FailedHttpRequestException
+    extends RuntimeException {
+        FailedHttpRequestException(String message) {
+            super(message);
+        }
     }
 
     class Impl
@@ -199,7 +259,7 @@ implements AutoCloseable {
         private final GameProfile gameProfile;
         private final Executor executor;
 
-        private Impl(GameProfile gameProfile) {
+        Impl(GameProfile gameProfile) {
             this.gameProfile = gameProfile;
             TaskExecutor<Runnable> taskExecutor = TaskExecutor.create(TextFilterer.this.executor, "chat stream for " + gameProfile.getName());
             this.executor = taskExecutor::send;
@@ -216,21 +276,14 @@ implements AutoCloseable {
         }
 
         @Override
-        public CompletableFuture<Optional<List<String>>> filterTexts(List<String> texts) {
-            List list2 = (List)texts.stream().map(string -> TextFilterer.this.filterMessage(this.gameProfile, string, TextFilterer.this.ignorer, this.executor)).collect(ImmutableList.toImmutableList());
-            return ((CompletableFuture)Util.combine(list2).thenApply(list -> Optional.of(list.stream().map(optional -> optional.orElse("")).collect(ImmutableList.toImmutableList())))).exceptionally(throwable -> Optional.empty());
+        public CompletableFuture<List<TextStream.Message>> filterTexts(List<String> texts) {
+            List list = (List)texts.stream().map(string -> TextFilterer.this.filterMessage(this.gameProfile, (String)string, TextFilterer.this.ignorer, this.executor)).collect(ImmutableList.toImmutableList());
+            return Util.combine(list).exceptionally(throwable -> ImmutableList.of());
         }
 
         @Override
-        public CompletableFuture<Optional<String>> filterText(String text) {
+        public CompletableFuture<TextStream.Message> filterText(String text) {
             return TextFilterer.this.filterMessage(this.gameProfile, text, TextFilterer.this.ignorer, this.executor);
-        }
-    }
-
-    public static class FailedHttpRequestException
-    extends RuntimeException {
-        private FailedHttpRequestException(String message) {
-            super(message);
         }
     }
 }

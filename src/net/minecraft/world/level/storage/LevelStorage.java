@@ -12,8 +12,6 @@
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.Lifecycle
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -55,8 +53,6 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.datafixer.Schemas;
@@ -71,6 +67,7 @@ import net.minecraft.util.FileNameUtil;
 import net.minecraft.util.ProgressListener;
 import net.minecraft.util.Util;
 import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.crash.CrashMemoryReserve;
 import net.minecraft.util.dynamic.RegistryLookupCodec;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
@@ -92,12 +89,13 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class LevelStorage {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final DateTimeFormatter TIME_FORMATTER = new DateTimeFormatterBuilder().appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD).appendLiteral('-').appendValue(ChronoField.MONTH_OF_YEAR, 2).appendLiteral('-').appendValue(ChronoField.DAY_OF_MONTH, 2).appendLiteral('_').appendValue(ChronoField.HOUR_OF_DAY, 2).appendLiteral('-').appendValue(ChronoField.MINUTE_OF_HOUR, 2).appendLiteral('-').appendValue(ChronoField.SECOND_OF_MINUTE, 2).toFormatter();
+    static final Logger LOGGER = LogManager.getLogger();
+    static final DateTimeFormatter TIME_FORMATTER = new DateTimeFormatterBuilder().appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD).appendLiteral('-').appendValue(ChronoField.MONTH_OF_YEAR, 2).appendLiteral('-').appendValue(ChronoField.DAY_OF_MONTH, 2).appendLiteral('_').appendValue(ChronoField.HOUR_OF_DAY, 2).appendLiteral('-').appendValue(ChronoField.MINUTE_OF_HOUR, 2).appendLiteral('-').appendValue(ChronoField.SECOND_OF_MINUTE, 2).toFormatter();
+    private static final String DEFAULT_ICON = "icon.png";
     private static final ImmutableList<String> GENERATOR_OPTION_KEYS = ImmutableList.of((Object)"RandomSeed", (Object)"generatorName", (Object)"generatorOptions", (Object)"generatorVersion", (Object)"legacy_custom_options", (Object)"MapFeatures", (Object)"BonusChest");
-    private final Path savesDirectory;
+    final Path savesDirectory;
     private final Path backupsDirectory;
-    private final DataFixer dataFixer;
+    final DataFixer dataFixer;
 
     public LevelStorage(Path savesDirectory, Path backupsDirectory, DataFixer dataFixer) {
         this.dataFixer = dataFixer;
@@ -124,10 +122,10 @@ public class LevelStorage {
         }
         Dynamic dynamic2 = dataFixer.update(TypeReferences.CHUNK_GENERATOR_SETTINGS, dynamic, version, SharedConstants.getGameVersion().getWorldVersion());
         DataResult dataResult = GeneratorOptions.CODEC.parse(dynamic2);
-        return Pair.of((Object)dataResult.resultOrPartial(Util.method_29188("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseGet(() -> {
-            Registry registry = (Registry)RegistryLookupCodec.of(Registry.DIMENSION_TYPE_KEY).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Dimension type registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get dimension registry"));
-            Registry registry2 = (Registry)RegistryLookupCodec.of(Registry.BIOME_KEY).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Biome registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get biome registry"));
-            Registry registry3 = (Registry)RegistryLookupCodec.of(Registry.NOISE_SETTINGS_WORLDGEN).codec().parse(dynamic2).resultOrPartial(Util.method_29188("Noise settings registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get noise settings registry"));
+        return Pair.of((Object)dataResult.resultOrPartial(Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseGet(() -> {
+            Registry registry = (Registry)RegistryLookupCodec.of(Registry.DIMENSION_TYPE_KEY).codec().parse(dynamic2).resultOrPartial(Util.addPrefix("Dimension type registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get dimension registry"));
+            Registry registry2 = (Registry)RegistryLookupCodec.of(Registry.BIOME_KEY).codec().parse(dynamic2).resultOrPartial(Util.addPrefix("Biome registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get biome registry"));
+            Registry registry3 = (Registry)RegistryLookupCodec.of(Registry.CHUNK_GENERATOR_SETTINGS_KEY).codec().parse(dynamic2).resultOrPartial(Util.addPrefix("Noise settings registry: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).orElseThrow(() -> new IllegalStateException("Failed to get noise settings registry"));
             return GeneratorOptions.getDefaultOptions(registry, registry2, registry3);
         }), (Object)dataResult.lifecycle());
     }
@@ -136,7 +134,10 @@ public class LevelStorage {
         return DataPackSettings.CODEC.parse(dynamic).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElse(DataPackSettings.SAFE_MODE);
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public String getFormatName() {
+        return "Anvil";
+    }
+
     public List<LevelSummary> getLevelList() throws LevelStorageException {
         File[] files;
         if (!Files.isDirectory(this.savesDirectory, new LinkOption[0])) {
@@ -153,19 +154,27 @@ public class LevelStorage {
                 LOGGER.warn("Failed to read {} lock", (Object)file, (Object)exception);
                 continue;
             }
-            LevelSummary levelSummary = this.readLevelProperties(file, this.createLevelDataParser(file, bl));
-            if (levelSummary == null) continue;
-            list.add(levelSummary);
+            try {
+                LevelSummary levelSummary = this.readLevelProperties(file, this.createLevelDataParser(file, bl));
+                if (levelSummary == null) continue;
+                list.add(levelSummary);
+            }
+            catch (OutOfMemoryError outOfMemoryError) {
+                CrashMemoryReserve.releaseMemory();
+                System.gc();
+                LOGGER.fatal("Ran out of memory trying to read summary of {}", (Object)file);
+                throw outOfMemoryError;
+            }
         }
         return list;
     }
 
-    private int getCurrentVersion() {
+    int getCurrentVersion() {
         return 19133;
     }
 
     @Nullable
-    private <T> T readLevelProperties(File file, BiFunction<File, DataFixer, T> levelDataParser) {
+    <T> T readLevelProperties(File file, BiFunction<File, DataFixer, T> levelDataParser) {
         T object;
         if (!file.exists()) {
             return null;
@@ -197,7 +206,7 @@ public class LevelStorage {
         }
     }
 
-    private static BiFunction<File, DataFixer, LevelProperties> createLevelDataParser(DynamicOps<NbtElement> dynamicOps, DataPackSettings dataPackSettings) {
+    static BiFunction<File, DataFixer, LevelProperties> createLevelDataParser(DynamicOps<NbtElement> dynamicOps, DataPackSettings dataPackSettings) {
         return (file, dataFixer) -> {
             try {
                 NbtCompound nbtCompound = NbtIo.readCompressed(file);
@@ -218,7 +227,7 @@ public class LevelStorage {
         };
     }
 
-    private BiFunction<File, DataFixer, LevelSummary> createLevelDataParser(File file, boolean locked) {
+    BiFunction<File, DataFixer, LevelSummary> createLevelDataParser(File file, boolean locked) {
         return (file2, dataFixer) -> {
             try {
                 NbtCompound nbtCompound = NbtIo.readCompressed(file2);
@@ -230,7 +239,7 @@ public class LevelStorage {
                 int j = saveVersionInfo.getLevelFormatVersion();
                 if (j == 19132 || j == 19133) {
                     boolean bl2 = j != this.getCurrentVersion();
-                    File file3 = new File(file, "icon.png");
+                    File file3 = new File(file, DEFAULT_ICON);
                     DataPackSettings dataPackSettings = dynamic.get("DataPacks").result().map(LevelStorage::parseDataPackSettings).orElse(DataPackSettings.SAFE_MODE);
                     LevelInfo levelInfo = LevelInfo.fromDynamic(dynamic, dataPackSettings);
                     return new LevelSummary(levelInfo, saveVersionInfo, file.getName(), bl2, locked, file3);
@@ -244,7 +253,6 @@ public class LevelStorage {
         };
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isLevelNameValid(String name) {
         try {
             Path path = this.savesDirectory.resolve(name);
@@ -257,17 +265,14 @@ public class LevelStorage {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean levelExists(String name) {
         return Files.isDirectory(this.savesDirectory.resolve(name), new LinkOption[0]);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Path getSavesDirectory() {
         return this.savesDirectory;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Path getBackupsDirectory() {
         return this.backupsDirectory;
     }
@@ -278,8 +283,8 @@ public class LevelStorage {
 
     public class Session
     implements AutoCloseable {
-        private final SessionLock lock;
-        private final Path directory;
+        final SessionLock lock;
+        final Path directory;
         private final String directoryName;
         private final Map<WorldSavePath, Path> paths = Maps.newHashMap();
 
@@ -314,7 +319,7 @@ public class LevelStorage {
 
         public boolean needsConversion() {
             LevelSummary levelSummary = this.getLevelSummary();
-            return levelSummary != null && levelSummary.method_29586().getLevelFormatVersion() != LevelStorage.this.getCurrentVersion();
+            return levelSummary != null && levelSummary.getVersionInfo().getLevelFormatVersion() != LevelStorage.this.getCurrentVersion();
         }
 
         public boolean convert(ProgressListener progressListener) {
@@ -325,19 +330,19 @@ public class LevelStorage {
         @Nullable
         public LevelSummary getLevelSummary() {
             this.checkValid();
-            return (LevelSummary)LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.this.createLevelDataParser(this.directory.toFile(), false));
+            return LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.this.createLevelDataParser(this.directory.toFile(), false));
         }
 
         @Nullable
         public SaveProperties readLevelProperties(DynamicOps<NbtElement> dynamicOps, DataPackSettings dataPackSettings) {
             this.checkValid();
-            return (SaveProperties)LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.createLevelDataParser((DynamicOps<NbtElement>)dynamicOps, dataPackSettings));
+            return LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage.createLevelDataParser(dynamicOps, dataPackSettings));
         }
 
         @Nullable
         public DataPackSettings getDataPackSettings() {
             this.checkValid();
-            return (DataPackSettings)LevelStorage.this.readLevelProperties(this.directory.toFile(), (file, dataFixer) -> LevelStorage.readDataPackSettings(file, dataFixer));
+            return LevelStorage.this.readLevelProperties(this.directory.toFile(), LevelStorage::readDataPackSettings);
         }
 
         public void backupLevelDataFile(DynamicRegistryManager dynamicRegistryManager, SaveProperties saveProperties) {
@@ -361,12 +366,13 @@ public class LevelStorage {
             }
         }
 
-        public File getIconFile() {
-            this.checkValid();
-            return this.directory.resolve("icon.png").toFile();
+        public Optional<Path> getIconFile() {
+            if (!this.lock.isValid()) {
+                return Optional.empty();
+            }
+            return Optional.of(this.directory.resolve(LevelStorage.DEFAULT_ICON));
         }
 
-        @Environment(value=EnvType.CLIENT)
         public void deleteSessionLock() throws IOException {
             this.checkValid();
             final Path path = this.directory.resolve("session.lock");
@@ -423,7 +429,6 @@ public class LevelStorage {
             }
         }
 
-        @Environment(value=EnvType.CLIENT)
         public void save(String name) throws IOException {
             this.checkValid();
             File file = new File(LevelStorage.this.savesDirectory.toFile(), this.directoryName);
@@ -439,7 +444,6 @@ public class LevelStorage {
             }
         }
 
-        @Environment(value=EnvType.CLIENT)
         public long createBackup() throws IOException {
             this.checkValid();
             String string = LocalDateTime.now().format(TIME_FORMATTER) + "_" + this.directoryName;

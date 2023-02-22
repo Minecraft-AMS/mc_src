@@ -14,11 +14,22 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
-public enum BlankGlyph implements RenderableGlyph
-{
-    INSTANCE;
-
+public final class BlankGlyph
+extends Enum<BlankGlyph>
+implements RenderableGlyph {
+    public static final /* enum */ BlankGlyph INSTANCE = new BlankGlyph();
+    private static final int field_32228 = 5;
+    private static final int field_32229 = 8;
     private static final NativeImage IMAGE;
+    private static final /* synthetic */ BlankGlyph[] field_2282;
+
+    public static BlankGlyph[] values() {
+        return (BlankGlyph[])field_2282.clone();
+    }
+
+    public static BlankGlyph valueOf(String string) {
+        return Enum.valueOf(BlankGlyph.class, string);
+    }
 
     @Override
     public int getWidth() {
@@ -50,12 +61,17 @@ public enum BlankGlyph implements RenderableGlyph
         return true;
     }
 
+    private static /* synthetic */ BlankGlyph[] method_36874() {
+        return new BlankGlyph[]{INSTANCE};
+    }
+
     static {
-        IMAGE = Util.make(new NativeImage(NativeImage.Format.ABGR, 5, 8, false), nativeImage -> {
+        field_2282 = BlankGlyph.method_36874();
+        IMAGE = Util.make(new NativeImage(NativeImage.Format.RGBA, 5, 8, false), nativeImage -> {
             for (int i = 0; i < 8; ++i) {
                 for (int j = 0; j < 5; ++j) {
                     boolean bl = j == 0 || j + 1 == 5 || i == 0 || i + 1 == 8;
-                    nativeImage.setPixelColor(j, i, bl ? -1 : 0);
+                    nativeImage.setColor(j, i, bl ? -1 : 0);
                 }
             }
             nativeImage.untrack();

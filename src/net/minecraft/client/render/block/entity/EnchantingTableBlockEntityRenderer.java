@@ -13,9 +13,10 @@ import net.minecraft.block.entity.EnchantingTableBlockEntity;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.entity.model.BookModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
@@ -25,12 +26,12 @@ import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class EnchantingTableBlockEntityRenderer
-extends BlockEntityRenderer<EnchantingTableBlockEntity> {
+implements BlockEntityRenderer<EnchantingTableBlockEntity> {
     public static final SpriteIdentifier BOOK_TEXTURE = new SpriteIdentifier(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, new Identifier("entity/enchanting_table_book"));
-    private final BookModel book = new BookModel();
+    private final BookModel book;
 
-    public EnchantingTableBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
-        super(blockEntityRenderDispatcher);
+    public EnchantingTableBlockEntityRenderer(BlockEntityRendererFactory.Context ctx) {
+        this.book = new BookModel(ctx.getLayerModelPart(EntityModelLayers.BOOK));
     }
 
     @Override

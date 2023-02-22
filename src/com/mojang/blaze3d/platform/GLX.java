@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.base.Joiner
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
@@ -14,21 +13,16 @@
  *  org.lwjgl.glfw.GLFWErrorCallback
  *  org.lwjgl.glfw.GLFWErrorCallbackI
  *  org.lwjgl.glfw.GLFWVidMode
- *  org.lwjgl.opengl.GL
- *  org.lwjgl.opengl.GL11
- *  org.lwjgl.opengl.GLCapabilities
  *  oshi.SystemInfo
- *  oshi.hardware.Processor
+ *  oshi.hardware.CentralProcessor
  */
 package com.mojang.blaze3d.platform;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -36,9 +30,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.GlDebug;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.Window;
+import net.minecraft.util.annotation.DeobfuscateClass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.Version;
@@ -46,25 +43,21 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GLCapabilities;
 import oshi.SystemInfo;
-import oshi.hardware.Processor;
+import oshi.hardware.CentralProcessor;
 
 @Environment(value=EnvType.CLIENT)
+@DeobfuscateClass
 public class GLX {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static String capsString = "";
     private static String cpuInfo;
-    private static final Map<Integer, String> LOOKUP_MAP;
 
     public static String getOpenGLVersionString() {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         if (GLFW.glfwGetCurrentContext() == 0L) {
             return "NO CONTEXT";
         }
-        return GlStateManager.getString(7937) + " GL version " + GlStateManager.getString(7938) + ", " + GlStateManager.getString(7936);
+        return GlStateManager._getString(7937) + " GL version " + GlStateManager._getString(7938) + ", " + GlStateManager._getString(7936);
     }
 
     public static int _getRefreshRate(Window window) {
@@ -114,29 +107,16 @@ public class GLX {
         return GLFW.glfwWindowShouldClose((long)window.getHandle());
     }
 
-    public static void _setupNvFogDistance() {
-        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        if (GL.getCapabilities().GL_NV_fog_distance) {
-            GlStateManager.fogi(34138, 34139);
-        }
-    }
-
     public static void _init(int debugVerbosity, boolean debugSync) {
         RenderSystem.assertThread(RenderSystem::isInInitPhase);
-        GLCapabilities gLCapabilities = GL.getCapabilities();
-        capsString = "Using framebuffer using " + GlStateManager.initFramebufferSupport(gLCapabilities);
         try {
-            Processor[] processors = new SystemInfo().getHardware().getProcessors();
-            cpuInfo = String.format("%dx %s", processors.length, processors[0]).replaceAll("\\s+", " ");
+            CentralProcessor centralProcessor = new SystemInfo().getHardware().getProcessor();
+            cpuInfo = String.format("%dx %s", centralProcessor.getLogicalProcessorCount(), centralProcessor.getProcessorIdentifier().getName()).replaceAll("\\s+", " ");
         }
         catch (Throwable throwable) {
             // empty catch block
         }
         GlDebug.enableDebug(debugVerbosity, debugSync);
-    }
-
-    public static String _getCapsString() {
-        return capsString;
     }
 
     public static String _getCpuInfo() {
@@ -145,47 +125,46 @@ public class GLX {
 
     public static void _renderCrosshair(int size, boolean drawX, boolean drawY, boolean drawZ) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        GlStateManager.disableTexture();
-        GlStateManager.depthMask(false);
+        GlStateManager._disableTexture();
+        GlStateManager._depthMask(false);
+        GlStateManager._disableCull();
+        RenderSystem.setShader(GameRenderer::getRenderTypeLinesShader);
         Tessellator tessellator = RenderSystem.renderThreadTesselator();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        GL11.glLineWidth((float)4.0f);
-        bufferBuilder.begin(1, VertexFormats.POSITION_COLOR);
+        RenderSystem.lineWidth(4.0f);
+        bufferBuilder.begin(VertexFormat.DrawMode.LINES, VertexFormats.LINES);
         if (drawX) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(size, 0.0, 0.0).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).normal(1.0f, 0.0f, 0.0f).next();
+            bufferBuilder.vertex(size, 0.0, 0.0).color(0, 0, 0, 255).normal(1.0f, 0.0f, 0.0f).next();
         }
         if (drawY) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(0.0, size, 0.0).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).normal(0.0f, 1.0f, 0.0f).next();
+            bufferBuilder.vertex(0.0, size, 0.0).color(0, 0, 0, 255).normal(0.0f, 1.0f, 0.0f).next();
         }
         if (drawZ) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).next();
-            bufferBuilder.vertex(0.0, 0.0, size).color(0, 0, 0, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 0, 0, 255).normal(0.0f, 0.0f, 1.0f).next();
+            bufferBuilder.vertex(0.0, 0.0, size).color(0, 0, 0, 255).normal(0.0f, 0.0f, 1.0f).next();
         }
         tessellator.draw();
-        GL11.glLineWidth((float)2.0f);
-        bufferBuilder.begin(1, VertexFormats.POSITION_COLOR);
+        RenderSystem.lineWidth(2.0f);
+        bufferBuilder.begin(VertexFormat.DrawMode.LINES, VertexFormats.LINES);
         if (drawX) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(255, 0, 0, 255).next();
-            bufferBuilder.vertex(size, 0.0, 0.0).color(255, 0, 0, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(255, 0, 0, 255).normal(1.0f, 0.0f, 0.0f).next();
+            bufferBuilder.vertex(size, 0.0, 0.0).color(255, 0, 0, 255).normal(1.0f, 0.0f, 0.0f).next();
         }
         if (drawY) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 255, 0, 255).next();
-            bufferBuilder.vertex(0.0, size, 0.0).color(0, 255, 0, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(0, 255, 0, 255).normal(0.0f, 1.0f, 0.0f).next();
+            bufferBuilder.vertex(0.0, size, 0.0).color(0, 255, 0, 255).normal(0.0f, 1.0f, 0.0f).next();
         }
         if (drawZ) {
-            bufferBuilder.vertex(0.0, 0.0, 0.0).color(127, 127, 255, 255).next();
-            bufferBuilder.vertex(0.0, 0.0, size).color(127, 127, 255, 255).next();
+            bufferBuilder.vertex(0.0, 0.0, 0.0).color(127, 127, 255, 255).normal(0.0f, 0.0f, 1.0f).next();
+            bufferBuilder.vertex(0.0, 0.0, size).color(127, 127, 255, 255).normal(0.0f, 0.0f, 1.0f).next();
         }
         tessellator.draw();
-        GL11.glLineWidth((float)1.0f);
-        GlStateManager.depthMask(true);
-        GlStateManager.enableTexture();
-    }
-
-    public static String getErrorString(int code) {
-        return LOOKUP_MAP.get(code);
+        RenderSystem.lineWidth(1.0f);
+        GlStateManager._enableCull();
+        GlStateManager._depthMask(true);
+        GlStateManager._enableTexture();
     }
 
     public static <T> T make(Supplier<T> factory) {
@@ -195,20 +174,6 @@ public class GLX {
     public static <T> T make(T object, Consumer<T> initializer) {
         initializer.accept(object);
         return object;
-    }
-
-    static {
-        LOOKUP_MAP = GLX.make(Maps.newHashMap(), hashMap -> {
-            hashMap.put(0, "No error");
-            hashMap.put(1280, "Enum parameter is invalid for this function");
-            hashMap.put(1281, "Parameter is invalid for this function");
-            hashMap.put(1282, "Current state is invalid for this function");
-            hashMap.put(1283, "Stack overflow");
-            hashMap.put(1284, "Stack underflow");
-            hashMap.put(1285, "Out of memory");
-            hashMap.put(1286, "Operation on incomplete framebuffer");
-            hashMap.put(1286, "Operation on incomplete framebuffer");
-        });
     }
 }
 

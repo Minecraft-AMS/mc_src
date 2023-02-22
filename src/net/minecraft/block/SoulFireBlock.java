@@ -5,7 +5,6 @@ package net.minecraft.block;
 
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractFireBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.tag.BlockTags;
@@ -30,11 +29,11 @@ extends AbstractFireBlock {
 
     @Override
     public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
-        return SoulFireBlock.isSoulBase(world.getBlockState(pos.down()).getBlock());
+        return SoulFireBlock.isSoulBase(world.getBlockState(pos.down()));
     }
 
-    public static boolean isSoulBase(Block block) {
-        return block.isIn(BlockTags.SOUL_FIRE_BASE_BLOCKS);
+    public static boolean isSoulBase(BlockState state) {
+        return state.isIn(BlockTags.SOUL_FIRE_BASE_BLOCKS);
     }
 
     @Override

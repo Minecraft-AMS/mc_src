@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
@@ -13,8 +11,6 @@ import com.google.common.collect.Maps;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
@@ -25,7 +21,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.NavigationConditions;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -60,8 +56,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class VindicatorEntity
 extends IllagerEntity {
-    private static final Predicate<Difficulty> DIFFICULTY_ALLOWS_DOOR_BREAKING_PREDICATE = difficulty -> difficulty == Difficulty.NORMAL || difficulty == Difficulty.HARD;
-    private boolean johnny;
+    private static final String JOHNNY_KEY = "Johnny";
+    static final Predicate<Difficulty> DIFFICULTY_ALLOWS_DOOR_BREAKING_PREDICATE = difficulty -> difficulty == Difficulty.NORMAL || difficulty == Difficulty.HARD;
+    boolean johnny;
 
     public VindicatorEntity(EntityType<? extends VindicatorEntity> entityType, World world) {
         super((EntityType<? extends IllagerEntity>)entityType, world);
@@ -76,10 +73,10 @@ extends IllagerEntity {
         this.goalSelector.add(3, new RaiderEntity.PatrolApproachGoal(this, this, 10.0f));
         this.goalSelector.add(4, new AttackGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
-        this.targetSelector.add(4, new FollowEntityGoal(this));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
+        this.targetSelector.add(4, new TargetGoal(this));
         this.goalSelector.add(8, new WanderAroundGoal(this, 0.6));
         this.goalSelector.add(9, new LookAtEntityGoal(this, PlayerEntity.class, 3.0f, 1.0f));
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 8.0f));
@@ -102,12 +99,11 @@ extends IllagerEntity {
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
         if (this.johnny) {
-            nbt.putBoolean("Johnny", true);
+            nbt.putBoolean(JOHNNY_KEY, true);
         }
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public IllagerEntity.State getState() {
         if (this.isAttacking()) {
             return IllagerEntity.State.ATTACKING;
@@ -121,8 +117,8 @@ extends IllagerEntity {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        if (nbt.contains("Johnny", 99)) {
-            this.johnny = nbt.getBoolean("Johnny");
+        if (nbt.contains(JOHNNY_KEY, 99)) {
+            this.johnny = nbt.getBoolean(JOHNNY_KEY);
         }
     }
 
@@ -162,7 +158,7 @@ extends IllagerEntity {
     @Override
     public void setCustomName(@Nullable Text name) {
         super.setCustomName(name);
-        if (!this.johnny && name != null && name.getString().equals("Johnny")) {
+        if (!this.johnny && name != null && name.getString().equals(JOHNNY_KEY)) {
             this.johnny = true;
         }
     }
@@ -198,24 +194,6 @@ extends IllagerEntity {
             EnchantmentHelper.set(map, itemStack);
         }
         this.equipStack(EquipmentSlot.MAINHAND, itemStack);
-    }
-
-    static class FollowEntityGoal
-    extends FollowTargetGoal<LivingEntity> {
-        public FollowEntityGoal(VindicatorEntity vindicator) {
-            super(vindicator, LivingEntity.class, 0, true, true, LivingEntity::isMobOrPlayer);
-        }
-
-        @Override
-        public boolean canStart() {
-            return ((VindicatorEntity)this.mob).johnny && super.canStart();
-        }
-
-        @Override
-        public void start() {
-            super.start();
-            this.mob.setDespawnCounter(0);
-        }
     }
 
     static class BreakDoorGoal
@@ -257,6 +235,24 @@ extends IllagerEntity {
                 return f * 2.0f * (f * 2.0f) + entity.getWidth();
             }
             return super.getSquaredMaxAttackDistance(entity);
+        }
+    }
+
+    static class TargetGoal
+    extends ActiveTargetGoal<LivingEntity> {
+        public TargetGoal(VindicatorEntity vindicator) {
+            super(vindicator, LivingEntity.class, 0, true, true, LivingEntity::isMobOrPlayer);
+        }
+
+        @Override
+        public boolean canStart() {
+            return ((VindicatorEntity)this.mob).johnny && super.canStart();
+        }
+
+        @Override
+        public void start() {
+            super.start();
+            this.mob.setDespawnCounter(0);
         }
     }
 }

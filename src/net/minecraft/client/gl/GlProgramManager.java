@@ -22,36 +22,35 @@ import org.apache.logging.log4j.Logger;
 public class GlProgramManager {
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public static void useProgram(int i) {
+    public static void useProgram(int program) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        GlStateManager.useProgram(i);
+        GlStateManager._glUseProgram(program);
     }
 
-    public static void deleteProgram(GlShader glShader) {
+    public static void deleteProgram(GlShader shader) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        glShader.getFragmentShader().release();
-        glShader.getVertexShader().release();
-        GlStateManager.deleteProgram(glShader.getProgramRef());
+        shader.getFragmentShader().release();
+        shader.getVertexShader().release();
+        GlStateManager.glDeleteProgram(shader.getProgramRef());
     }
 
     public static int createProgram() throws IOException {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        int i = GlStateManager.createProgram();
+        int i = GlStateManager.glCreateProgram();
         if (i <= 0) {
             throw new IOException("Could not create shader program (returned program ID " + i + ")");
         }
         return i;
     }
 
-    public static void linkProgram(GlShader glShader) throws IOException {
+    public static void linkProgram(GlShader shader) {
         RenderSystem.assertThread(RenderSystem::isOnRenderThread);
-        glShader.getFragmentShader().attachTo(glShader);
-        glShader.getVertexShader().attachTo(glShader);
-        GlStateManager.linkProgram(glShader.getProgramRef());
-        int i = GlStateManager.getProgram(glShader.getProgramRef(), 35714);
+        shader.attachReferencedShaders();
+        GlStateManager.glLinkProgram(shader.getProgramRef());
+        int i = GlStateManager.glGetProgrami(shader.getProgramRef(), 35714);
         if (i == 0) {
-            LOGGER.warn("Error encountered when linking program containing VS {} and FS {}. Log output:", (Object)glShader.getVertexShader().getName(), (Object)glShader.getFragmentShader().getName());
-            LOGGER.warn(GlStateManager.getProgramInfoLog(glShader.getProgramRef(), 32768));
+            LOGGER.warn("Error encountered when linking program containing VS {} and FS {}. Log output:", (Object)shader.getVertexShader().getName(), (Object)shader.getFragmentShader().getName());
+            LOGGER.warn(GlStateManager.glGetProgramInfoLog(shader.getProgramRef(), 32768));
         }
     }
 }

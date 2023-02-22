@@ -6,8 +6,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.village;
 
@@ -15,23 +13,23 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.village.VillagerType;
 
 public class VillagerData {
+    public static final int field_30613 = 1;
+    public static final int field_30614 = 5;
     private static final int[] LEVEL_BASE_EXPERIENCE = new int[]{0, 10, 70, 150, 250};
     public static final Codec<VillagerData> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.VILLAGER_TYPE.fieldOf("type").orElseGet(() -> VillagerType.PLAINS).forGetter(villagerData -> villagerData.type), (App)Registry.VILLAGER_PROFESSION.fieldOf("profession").orElseGet(() -> VillagerProfession.NONE).forGetter(villagerData -> villagerData.profession), (App)Codec.INT.fieldOf("level").orElse((Object)1).forGetter(villagerData -> villagerData.level)).apply((Applicative)instance, VillagerData::new));
     private final VillagerType type;
     private final VillagerProfession profession;
     private final int level;
 
-    public VillagerData(VillagerType villagerType, VillagerProfession villagerProfession, int i) {
-        this.type = villagerType;
-        this.profession = villagerProfession;
-        this.level = Math.max(1, i);
+    public VillagerData(VillagerType type, VillagerProfession profession, int level) {
+        this.type = type;
+        this.profession = profession;
+        this.level = Math.max(1, level);
     }
 
     public VillagerType getType() {
@@ -58,7 +56,6 @@ public class VillagerData {
         return new VillagerData(this.type, this.profession, level);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static int getLowerLevelExperience(int level) {
         return VillagerData.canLevelUp(level) ? LEVEL_BASE_EXPERIENCE[level - 1] : 0;
     }

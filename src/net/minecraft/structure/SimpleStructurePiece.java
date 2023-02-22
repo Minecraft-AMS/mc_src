@@ -13,16 +13,20 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.StructureBlockMode;
 import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
+import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.util.BlockRotation;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -37,32 +41,41 @@ import org.apache.logging.log4j.Logger;
 public abstract class SimpleStructurePiece
 extends StructurePiece {
     private static final Logger LOGGER = LogManager.getLogger();
+    protected final String identifier;
     protected Structure structure;
     protected StructurePlacementData placementData;
     protected BlockPos pos;
 
-    public SimpleStructurePiece(StructurePieceType structurePieceType, int i) {
-        super(structurePieceType, i);
-    }
-
-    public SimpleStructurePiece(StructurePieceType structurePieceType, NbtCompound nbtCompound) {
-        super(structurePieceType, nbtCompound);
-        this.pos = new BlockPos(nbtCompound.getInt("TPX"), nbtCompound.getInt("TPY"), nbtCompound.getInt("TPZ"));
-    }
-
-    protected void setStructureData(Structure structure, BlockPos pos, StructurePlacementData placementData) {
-        this.structure = structure;
+    public SimpleStructurePiece(StructurePieceType type, int i, StructureManager structureManager, Identifier identifier, String string, StructurePlacementData placementData, BlockPos pos) {
+        super(type, i, structureManager.getStructureOrBlank(identifier).calculateBoundingBox(placementData, pos));
         this.setOrientation(Direction.NORTH);
+        this.identifier = string;
         this.pos = pos;
+        this.structure = structureManager.getStructureOrBlank(identifier);
         this.placementData = placementData;
-        this.boundingBox = structure.calculateBoundingBox(placementData, pos);
+    }
+
+    public SimpleStructurePiece(StructurePieceType type, NbtCompound nbtCompound, ServerWorld world, Function<Identifier, StructurePlacementData> function) {
+        super(type, nbtCompound);
+        this.setOrientation(Direction.NORTH);
+        this.identifier = nbtCompound.getString("Template");
+        this.pos = new BlockPos(nbtCompound.getInt("TPX"), nbtCompound.getInt("TPY"), nbtCompound.getInt("TPZ"));
+        Identifier identifier = this.getId();
+        this.structure = world.getStructureManager().getStructureOrBlank(identifier);
+        this.placementData = function.apply(identifier);
+        this.boundingBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
+    }
+
+    protected Identifier getId() {
+        return new Identifier(this.identifier);
     }
 
     @Override
-    protected void toNbt(NbtCompound tag) {
-        tag.putInt("TPX", this.pos.getX());
-        tag.putInt("TPY", this.pos.getY());
-        tag.putInt("TPZ", this.pos.getZ());
+    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+        nbt.putInt("TPX", this.pos.getX());
+        nbt.putInt("TPY", this.pos.getY());
+        nbt.putInt("TPZ", this.pos.getZ());
+        nbt.putString("Template", this.identifier);
     }
 
     @Override
@@ -73,13 +86,13 @@ extends StructurePiece {
             List<Structure.StructureBlockInfo> list = this.structure.getInfosForBlock(this.pos, this.placementData, Blocks.STRUCTURE_BLOCK);
             for (Structure.StructureBlockInfo structureBlockInfo : list) {
                 StructureBlockMode structureBlockMode;
-                if (structureBlockInfo.tag == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.tag.getString("mode"))) != StructureBlockMode.DATA) continue;
-                this.handleMetadata(structureBlockInfo.tag.getString("metadata"), structureBlockInfo.pos, world, random, boundingBox);
+                if (structureBlockInfo.nbt == null || (structureBlockMode = StructureBlockMode.valueOf(structureBlockInfo.nbt.getString("mode"))) != StructureBlockMode.DATA) continue;
+                this.handleMetadata(structureBlockInfo.nbt.getString("metadata"), structureBlockInfo.pos, world, random, boundingBox);
             }
             List<Structure.StructureBlockInfo> list2 = this.structure.getInfosForBlock(this.pos, this.placementData, Blocks.JIGSAW);
             for (Structure.StructureBlockInfo structureBlockInfo2 : list2) {
-                if (structureBlockInfo2.tag == null) continue;
-                String string = structureBlockInfo2.tag.getString("final_state");
+                if (structureBlockInfo2.nbt == null) continue;
+                String string = structureBlockInfo2.nbt.getString("final_state");
                 BlockArgumentParser blockArgumentParser = new BlockArgumentParser(new StringReader(string), false);
                 BlockState blockState = Blocks.AIR.getDefaultState();
                 try {

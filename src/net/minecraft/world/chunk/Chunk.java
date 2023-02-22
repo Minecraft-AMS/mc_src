@@ -32,6 +32,8 @@ import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
+import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.event.listener.GameEventDispatcher;
 import net.minecraft.world.gen.feature.StructureFeature;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.Nullable;
@@ -39,10 +41,14 @@ import org.jetbrains.annotations.Nullable;
 public interface Chunk
 extends BlockView,
 StructureHolder {
+    default public GameEventDispatcher getGameEventDispatcher(int ySectionCoord) {
+        return GameEventDispatcher.EMPTY;
+    }
+
     @Nullable
     public BlockState setBlockState(BlockPos var1, BlockState var2, boolean var3);
 
-    public void setBlockEntity(BlockPos var1, BlockEntity var2);
+    public void setBlockEntity(BlockEntity var1);
 
     public void addEntity(Entity var1);
 
@@ -59,38 +65,48 @@ StructureHolder {
 
     default public int getHighestNonEmptySectionYOffset() {
         ChunkSection chunkSection = this.getHighestNonEmptySection();
-        return chunkSection == null ? 0 : chunkSection.getYOffset();
+        return chunkSection == null ? this.getBottomY() : chunkSection.getYOffset();
     }
 
     public Set<BlockPos> getBlockEntityPositions();
 
     public ChunkSection[] getSectionArray();
 
+    default public ChunkSection getSection(int yIndex) {
+        ChunkSection[] chunkSections = this.getSectionArray();
+        if (chunkSections[yIndex] == WorldChunk.EMPTY_SECTION) {
+            chunkSections[yIndex] = new ChunkSection(this.sectionIndexToCoord(yIndex));
+        }
+        return chunkSections[yIndex];
+    }
+
     public Collection<Map.Entry<Heightmap.Type, Heightmap>> getHeightmaps();
 
-    public void setHeightmap(Heightmap.Type var1, long[] var2);
+    default public void setHeightmap(Heightmap.Type type, long[] heightmap) {
+        this.getHeightmap(type).setTo(this, type, heightmap);
+    }
 
     public Heightmap getHeightmap(Heightmap.Type var1);
 
     public int sampleHeightmap(Heightmap.Type var1, int var2, int var3);
 
-    public ChunkPos getPos();
+    public BlockPos method_35319(Heightmap.Type var1);
 
-    public void setLastSaveTime(long var1);
+    public ChunkPos getPos();
 
     public Map<StructureFeature<?>, StructureStart<?>> getStructureStarts();
 
     public void setStructureStarts(Map<StructureFeature<?>, StructureStart<?>> var1);
 
     default public boolean areSectionsEmptyBetween(int lowerHeight, int upperHeight) {
-        if (lowerHeight < 0) {
-            lowerHeight = 0;
+        if (lowerHeight < this.getBottomY()) {
+            lowerHeight = this.getBottomY();
         }
-        if (upperHeight >= 256) {
-            upperHeight = 255;
+        if (upperHeight >= this.getTopY()) {
+            upperHeight = this.getTopY() - 1;
         }
         for (int i = lowerHeight; i <= upperHeight; i += 16) {
-            if (ChunkSection.isEmpty(this.getSectionArray()[i >> 4])) continue;
+            if (ChunkSection.isEmpty(this.getSectionArray()[this.getSectionIndex(i)])) continue;
             return false;
         }
         return true;

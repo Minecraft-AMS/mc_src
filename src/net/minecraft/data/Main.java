@@ -23,6 +23,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.OptionSpecBuilder;
+import net.minecraft.SharedConstants;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.SnbtProvider;
 import net.minecraft.data.client.BlockStateDefinitionProvider;
@@ -35,13 +36,17 @@ import net.minecraft.data.server.AdvancementsProvider;
 import net.minecraft.data.server.BlockTagsProvider;
 import net.minecraft.data.server.EntityTypeTagsProvider;
 import net.minecraft.data.server.FluidTagsProvider;
+import net.minecraft.data.server.GameEventTagsProvider;
 import net.minecraft.data.server.ItemTagsProvider;
 import net.minecraft.data.server.LootTablesProvider;
 import net.minecraft.data.server.RecipesProvider;
 import net.minecraft.data.validate.StructureValidatorProvider;
+import net.minecraft.obfuscate.DontObfuscate;
 
 public class Main {
-    public static void main(String[] strings) throws IOException {
+    @DontObfuscate
+    public static void main(String[] args) throws IOException {
+        SharedConstants.createGameVersion();
         OptionParser optionParser = new OptionParser();
         AbstractOptionSpec optionSpec = optionParser.accepts("help", "Show the help menu").forHelp();
         OptionSpecBuilder optionSpec2 = optionParser.accepts("server", "Include server generators");
@@ -52,7 +57,7 @@ public class Main {
         OptionSpecBuilder optionSpec7 = optionParser.accepts("all", "Include all generators");
         ArgumentAcceptingOptionSpec optionSpec8 = optionParser.accepts("output", "Output folder").withRequiredArg().defaultsTo((Object)"generated", (Object[])new String[0]);
         ArgumentAcceptingOptionSpec optionSpec9 = optionParser.accepts("input", "Input folder").withRequiredArg();
-        OptionSet optionSet = optionParser.parse(strings);
+        OptionSet optionSet = optionParser.parse(args);
         if (optionSet.has((OptionSpec)optionSpec) || !optionSet.hasOptions()) {
             optionParser.printHelpOn((OutputStream)System.out);
             return;
@@ -71,29 +76,30 @@ public class Main {
     public static DataGenerator create(Path output, Collection<Path> inputs, boolean includeClient, boolean includeServer, boolean includeDev, boolean includeReports, boolean validate) {
         DataGenerator dataGenerator = new DataGenerator(output, inputs);
         if (includeClient || includeServer) {
-            dataGenerator.install(new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
+            dataGenerator.addProvider(new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
         }
         if (includeClient) {
-            dataGenerator.install(new BlockStateDefinitionProvider(dataGenerator));
+            dataGenerator.addProvider(new BlockStateDefinitionProvider(dataGenerator));
         }
         if (includeServer) {
-            dataGenerator.install(new FluidTagsProvider(dataGenerator));
+            dataGenerator.addProvider(new FluidTagsProvider(dataGenerator));
             BlockTagsProvider blockTagsProvider = new BlockTagsProvider(dataGenerator);
-            dataGenerator.install(blockTagsProvider);
-            dataGenerator.install(new ItemTagsProvider(dataGenerator, blockTagsProvider));
-            dataGenerator.install(new EntityTypeTagsProvider(dataGenerator));
-            dataGenerator.install(new RecipesProvider(dataGenerator));
-            dataGenerator.install(new AdvancementsProvider(dataGenerator));
-            dataGenerator.install(new LootTablesProvider(dataGenerator));
+            dataGenerator.addProvider(blockTagsProvider);
+            dataGenerator.addProvider(new ItemTagsProvider(dataGenerator, blockTagsProvider));
+            dataGenerator.addProvider(new EntityTypeTagsProvider(dataGenerator));
+            dataGenerator.addProvider(new RecipesProvider(dataGenerator));
+            dataGenerator.addProvider(new AdvancementsProvider(dataGenerator));
+            dataGenerator.addProvider(new LootTablesProvider(dataGenerator));
+            dataGenerator.addProvider(new GameEventTagsProvider(dataGenerator));
         }
         if (includeDev) {
-            dataGenerator.install(new NbtProvider(dataGenerator));
+            dataGenerator.addProvider(new NbtProvider(dataGenerator));
         }
         if (includeReports) {
-            dataGenerator.install(new BlockListProvider(dataGenerator));
-            dataGenerator.install(new RegistryDumpProvider(dataGenerator));
-            dataGenerator.install(new CommandSyntaxProvider(dataGenerator));
-            dataGenerator.install(new BiomeListProvider(dataGenerator));
+            dataGenerator.addProvider(new BlockListProvider(dataGenerator));
+            dataGenerator.addProvider(new RegistryDumpProvider(dataGenerator));
+            dataGenerator.addProvider(new CommandSyntaxProvider(dataGenerator));
+            dataGenerator.addProvider(new BiomeListProvider(dataGenerator));
         }
         return dataGenerator;
     }

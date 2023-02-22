@@ -38,7 +38,7 @@ extends ValueObject {
             realmsServerAddress.resourcePackHash = JsonUtils.getStringOr("resourcePackHash", jsonObject, null);
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse RealmsServerAddress: " + exception.getMessage());
+            LOGGER.error("Could not parse RealmsServerAddress: {}", (Object)exception.getMessage());
         }
         return realmsServerAddress;
     }

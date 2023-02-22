@@ -49,7 +49,7 @@ extends FeatureRenderer<T, M> {
         matrixStack.pop();
     }
 
-    private void renderItem(LivingEntity entity, ItemStack stack, ModelTransformation.Mode transformationMode, Arm arm, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+    protected void renderItem(LivingEntity entity, ItemStack stack, ModelTransformation.Mode transformationMode, Arm arm, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
         if (stack.isEmpty()) {
             return;
         }

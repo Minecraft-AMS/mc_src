@@ -27,9 +27,10 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeBookGhostSlots {
+    @Nullable
     private Recipe<?> recipe;
     private final List<GhostInputSlot> slots = Lists.newArrayList();
-    private float time;
+    float time;
 
     public void reset() {
         this.recipe = null;
@@ -103,7 +104,10 @@ public class RecipeBookGhostSlots {
         }
 
         public ItemStack getCurrentItemStack() {
-            ItemStack[] itemStacks = this.ingredient.getMatchingStacksClient();
+            ItemStack[] itemStacks = this.ingredient.getMatchingStacks();
+            if (itemStacks.length == 0) {
+                return ItemStack.EMPTY;
+            }
             return itemStacks[MathHelper.floor(RecipeBookGhostSlots.this.time / 30.0f) % itemStacks.length];
         }
     }

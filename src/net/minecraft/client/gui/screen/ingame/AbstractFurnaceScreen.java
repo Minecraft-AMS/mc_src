@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screen.recipebook.AbstractFurnaceRecipeBookScree
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.AbstractFurnaceScreenHandler;
@@ -44,19 +45,18 @@ implements RecipeBookProvider {
         super.init();
         this.narrow = this.width < 379;
         this.recipeBook.initialize(this.width, this.height, this.client, this.narrow, (AbstractRecipeScreenHandler)this.handler);
-        this.x = this.recipeBook.findLeftEdge(this.narrow, this.width, this.backgroundWidth);
-        this.addButton(new TexturedButtonWidget(this.x + 20, this.height / 2 - 49, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
-            this.recipeBook.reset(this.narrow);
+        this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
+        this.addDrawableChild(new TexturedButtonWidget(this.x + 20, this.height / 2 - 49, 20, 18, 0, 0, 19, RECIPE_BUTTON_TEXTURE, button -> {
             this.recipeBook.toggleOpen();
-            this.x = this.recipeBook.findLeftEdge(this.narrow, this.width, this.backgroundWidth);
+            this.x = this.recipeBook.findLeftEdge(this.width, this.backgroundWidth);
             ((TexturedButtonWidget)button).setPos(this.x + 20, this.height / 2 - 49);
         }));
         this.titleX = (this.backgroundWidth - this.textRenderer.getWidth(this.title)) / 2;
     }
 
     @Override
-    public void tick() {
-        super.tick();
+    public void handledScreenTick() {
+        super.handledScreenTick();
         this.recipeBook.update();
     }
 
@@ -78,8 +78,9 @@ implements RecipeBookProvider {
     @Override
     protected void drawBackground(MatrixStack matrices, float delta, int mouseX, int mouseY) {
         int k;
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.client.getTextureManager().bindTexture(this.background);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderTexture(0, this.background);
         int i = this.x;
         int j = this.y;
         this.drawTexture(matrices, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);

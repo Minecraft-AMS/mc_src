@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity;
@@ -11,8 +9,6 @@ package net.minecraft.entity;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MovementType;
@@ -28,20 +24,25 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.FluidTags;
+import net.minecraft.tag.ItemTags;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class ItemEntity
 extends Entity {
     private static final TrackedData<ItemStack> STACK = DataTracker.registerData(ItemEntity.class, TrackedDataHandlerRegistry.ITEM_STACK);
+    private static final int DESPAWN_AGE = 6000;
+    private static final int CANNOT_PICK_UP_DELAY = Short.MAX_VALUE;
+    private static final int NEVER_DESPAWN_AGE = Short.MIN_VALUE;
     private int itemAge;
     private int pickupDelay;
     private int health = 5;
@@ -51,33 +52,37 @@ extends Entity {
 
     public ItemEntity(EntityType<? extends ItemEntity> entityType, World world) {
         super(entityType, world);
-        this.uniqueOffset = (float)(Math.random() * Math.PI * 2.0);
-    }
-
-    public ItemEntity(World world, double x, double y, double z) {
-        this((EntityType<? extends ItemEntity>)EntityType.ITEM, world);
-        this.setPosition(x, y, z);
-        this.yaw = this.random.nextFloat() * 360.0f;
-        this.setVelocity(this.random.nextDouble() * 0.2 - 0.1, 0.2, this.random.nextDouble() * 0.2 - 0.1);
+        this.uniqueOffset = this.random.nextFloat() * (float)Math.PI * 2.0f;
+        this.setYaw(this.random.nextFloat() * 360.0f);
     }
 
     public ItemEntity(World world, double x, double y, double z, ItemStack stack) {
-        this(world, x, y, z);
+        this(world, x, y, z, stack, world.random.nextDouble() * 0.2 - 0.1, 0.2, world.random.nextDouble() * 0.2 - 0.1);
+    }
+
+    public ItemEntity(World world, double x, double y, double z, ItemStack stack, double velocityX, double velocityY, double velocityZ) {
+        this((EntityType<? extends ItemEntity>)EntityType.ITEM, world);
+        this.setPosition(x, y, z);
+        this.setVelocity(velocityX, velocityY, velocityZ);
         this.setStack(stack);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    private ItemEntity(ItemEntity itemEntity) {
-        super(itemEntity.getType(), itemEntity.world);
-        this.setStack(itemEntity.getStack().copy());
-        this.copyPositionAndRotation(itemEntity);
-        this.itemAge = itemEntity.itemAge;
-        this.uniqueOffset = itemEntity.uniqueOffset;
+    private ItemEntity(ItemEntity entity) {
+        super(entity.getType(), entity.world);
+        this.setStack(entity.getStack().copy());
+        this.copyPositionAndRotation(entity);
+        this.itemAge = entity.itemAge;
+        this.uniqueOffset = entity.uniqueOffset;
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    public boolean occludeVibrationSignals() {
+        return ItemTags.OCCLUDES_VIBRATION_SIGNALS.contains(this.getStack().getItem());
+    }
+
+    @Override
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.NONE;
     }
 
     @Override
@@ -90,7 +95,7 @@ extends Entity {
         double d;
         int i;
         if (this.getStack().isEmpty()) {
-            this.remove();
+            this.discard();
             return;
         }
         super.tick();
@@ -105,19 +110,19 @@ extends Entity {
         if (this.isTouchingWater() && this.getFluidHeight(FluidTags.WATER) > (double)f) {
             this.applyWaterBuoyancy();
         } else if (this.isInLava() && this.getFluidHeight(FluidTags.LAVA) > (double)f) {
-            this.method_24348();
+            this.applyLavaBuoyancy();
         } else if (!this.hasNoGravity()) {
             this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
         }
         if (this.world.isClient) {
             this.noClip = false;
         } else {
-            boolean bl = this.noClip = !this.world.isSpaceEmpty(this);
+            boolean bl = this.noClip = !this.world.isSpaceEmpty(this, this.getBoundingBox().contract(1.0E-7), entity -> true);
             if (this.noClip) {
                 this.pushOutOfBlocks(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
             }
         }
-        if (!this.onGround || ItemEntity.squaredHorizontalLength(this.getVelocity()) > (double)1.0E-5f || (this.age + this.getEntityId()) % 4 == 0) {
+        if (!this.onGround || this.getVelocity().horizontalLengthSquared() > (double)1.0E-5f || (this.age + this.getId()) % 4 == 0) {
             this.move(MovementType.SELF, this.getVelocity());
             float g = 0.98f;
             if (this.onGround) {
@@ -133,13 +138,8 @@ extends Entity {
         }
         boolean bl = MathHelper.floor(this.prevX) != MathHelper.floor(this.getX()) || MathHelper.floor(this.prevY) != MathHelper.floor(this.getY()) || MathHelper.floor(this.prevZ) != MathHelper.floor(this.getZ());
         int n = i = bl ? 2 : 40;
-        if (this.age % i == 0) {
-            if (this.world.getFluidState(this.getBlockPos()).isIn(FluidTags.LAVA) && !this.isFireImmune()) {
-                this.playSound(SoundEvents.ENTITY_GENERIC_BURN, 0.4f, 2.0f + this.random.nextFloat() * 0.4f);
-            }
-            if (!this.world.isClient && this.canMerge()) {
-                this.tryMerge();
-            }
+        if (this.age % i == 0 && !this.world.isClient && this.canMerge()) {
+            this.tryMerge();
         }
         if (this.itemAge != Short.MIN_VALUE) {
             ++this.itemAge;
@@ -149,7 +149,7 @@ extends Entity {
             this.velocityDirty = true;
         }
         if (!this.world.isClient && this.itemAge >= 6000) {
-            this.remove();
+            this.discard();
         }
     }
 
@@ -158,7 +158,7 @@ extends Entity {
         this.setVelocity(vec3d.x * (double)0.99f, vec3d.y + (double)(vec3d.y < (double)0.06f ? 5.0E-4f : 0.0f), vec3d.z * (double)0.99f);
     }
 
-    private void method_24348() {
+    private void applyLavaBuoyancy() {
         Vec3d vec3d = this.getVelocity();
         this.setVelocity(vec3d.x * (double)0.95f, vec3d.y + (double)(vec3d.y < (double)0.06f ? 5.0E-4f : 0.0f), vec3d.z * (double)0.95f);
     }
@@ -171,7 +171,7 @@ extends Entity {
         for (ItemEntity itemEntity2 : list) {
             if (!itemEntity2.canMerge()) continue;
             this.tryMerge(itemEntity2);
-            if (!this.removed) continue;
+            if (!this.isRemoved()) continue;
             break;
         }
     }
@@ -195,16 +195,16 @@ extends Entity {
     }
 
     public static boolean canMerge(ItemStack stack1, ItemStack stack2) {
-        if (stack2.getItem() != stack1.getItem()) {
+        if (!stack2.isOf(stack1.getItem())) {
             return false;
         }
         if (stack2.getCount() + stack1.getCount() > stack2.getMaxCount()) {
             return false;
         }
-        if (stack2.hasTag() ^ stack1.hasTag()) {
+        if (stack2.hasNbt() ^ stack1.hasNbt()) {
             return false;
         }
-        return !stack2.hasTag() || stack2.getTag().equals(stack1.getTag());
+        return !stack2.hasNbt() || stack2.getNbt().equals(stack1.getNbt());
     }
 
     public static ItemStack merge(ItemStack stack1, ItemStack stack2, int maxCount) {
@@ -225,7 +225,7 @@ extends Entity {
         targetEntity.pickupDelay = Math.max(targetEntity.pickupDelay, sourceEntity.pickupDelay);
         targetEntity.itemAge = Math.min(targetEntity.itemAge, sourceEntity.itemAge);
         if (sourceStack.isEmpty()) {
-            sourceEntity.remove();
+            sourceEntity.discard();
         }
     }
 
@@ -239,7 +239,7 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.getStack().isEmpty() && this.getStack().getItem() == Items.NETHER_STAR && source.isExplosive()) {
+        if (!this.getStack().isEmpty() && this.getStack().isOf(Items.NETHER_STAR) && source.isExplosive()) {
             return false;
         }
         if (!this.getStack().getItem().damage(source)) {
@@ -247,10 +247,12 @@ extends Entity {
         }
         this.scheduleVelocityUpdate();
         this.health = (int)((float)this.health - amount);
+        this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
         if (this.health <= 0) {
-            this.remove();
+            this.getStack().onItemEntityDestroyed(this);
+            this.discard();
         }
-        return false;
+        return true;
     }
 
     @Override
@@ -285,7 +287,7 @@ extends Entity {
         NbtCompound nbtCompound = nbt.getCompound("Item");
         this.setStack(ItemStack.fromNbt(nbtCompound));
         if (this.getStack().isEmpty()) {
-            this.remove();
+            this.discard();
         }
     }
 
@@ -297,14 +299,14 @@ extends Entity {
         ItemStack itemStack = this.getStack();
         Item item = itemStack.getItem();
         int i = itemStack.getCount();
-        if (this.pickupDelay == 0 && (this.owner == null || this.owner.equals(player.getUuid())) && player.inventory.insertStack(itemStack)) {
+        if (this.pickupDelay == 0 && (this.owner == null || this.owner.equals(player.getUuid())) && player.getInventory().insertStack(itemStack)) {
             player.sendPickup(this, i);
             if (itemStack.isEmpty()) {
-                this.remove();
+                this.discard();
                 itemStack.setCount(i);
             }
             player.increaseStat(Stats.PICKED_UP.getOrCreateStat(item), i);
-            player.method_29499(this);
+            player.triggerItemPickedUpByEntityCriteria(this);
         }
     }
 
@@ -366,7 +368,6 @@ extends Entity {
         this.thrower = uuid;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getItemAge() {
         return this.itemAge;
     }
@@ -391,6 +392,10 @@ extends Entity {
         return this.pickupDelay > 0;
     }
 
+    public void setNeverDespawn() {
+        this.itemAge = Short.MIN_VALUE;
+    }
+
     public void setCovetedItem() {
         this.itemAge = -6000;
     }
@@ -400,9 +405,8 @@ extends Entity {
         this.itemAge = 5999;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public float method_27314(float f) {
-        return ((float)this.getItemAge() + f) / 20.0f + this.uniqueOffset;
+    public float getRotation(float tickDelta) {
+        return ((float)this.getItemAge() + tickDelta) / 20.0f + this.uniqueOffset;
     }
 
     @Override
@@ -410,9 +414,13 @@ extends Entity {
         return new EntitySpawnS2CPacket(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ItemEntity method_29271() {
+    public ItemEntity copy() {
         return new ItemEntity(this);
+    }
+
+    @Override
+    public SoundCategory getSoundCategory() {
+        return SoundCategory.AMBIENT;
     }
 }
 

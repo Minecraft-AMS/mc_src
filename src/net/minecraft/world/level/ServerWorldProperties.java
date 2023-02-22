@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.level;
 
@@ -7,9 +10,11 @@ import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.MutableWorldProperties;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.timer.Timer;
+import org.jetbrains.annotations.Nullable;
 
 public interface ServerWorldProperties
 extends MutableWorldProperties {
@@ -26,8 +31,8 @@ extends MutableWorldProperties {
     public int getThunderTime();
 
     @Override
-    default public void populateCrashReport(CrashReportSection reportSection) {
-        MutableWorldProperties.super.populateCrashReport(reportSection);
+    default public void populateCrashReport(CrashReportSection reportSection, HeightLimitView world) {
+        MutableWorldProperties.super.populateCrashReport(reportSection, world);
         reportSection.add("Level name", this::getLevelName);
         reportSection.add("Level game mode", () -> String.format("Game mode: %s (ID %d). Hardcore: %b. Cheats: %b", this.getGameMode().getName(), this.getGameMode().getId(), this.isHardcore(), this.areCommandsAllowed()));
         reportSection.add("Level weather", () -> String.format("Rain time: %d (now: %b), thunder time: %d (now: %b)", this.getRainTime(), this.isRaining(), this.getThunderTime(), this.isThundering()));
@@ -44,6 +49,9 @@ extends MutableWorldProperties {
     public int getWanderingTraderSpawnChance();
 
     public void setWanderingTraderSpawnChance(int var1);
+
+    @Nullable
+    public UUID getWanderingTraderId();
 
     public void setWanderingTraderId(UUID var1);
 

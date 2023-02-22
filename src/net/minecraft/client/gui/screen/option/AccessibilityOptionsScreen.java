@@ -22,7 +22,8 @@ import net.minecraft.util.Util;
 @Environment(value=EnvType.CLIENT)
 public class AccessibilityOptionsScreen
 extends NarratorOptionsScreen {
-    private static final Option[] OPTIONS = new Option[]{Option.NARRATOR, Option.SUBTITLES, Option.TEXT_BACKGROUND_OPACITY, Option.TEXT_BACKGROUND, Option.CHAT_OPACITY, Option.CHAT_LINE_SPACING, Option.CHAT_DELAY_INSTANT, Option.AUTO_JUMP, Option.SNEAK_TOGGLED, Option.SPRINT_TOGGLED, Option.DISTORTION_EFFECT_SCALE, Option.FOV_EFFECT_SCALE};
+    private static final Option[] OPTIONS = new Option[]{Option.NARRATOR, Option.SUBTITLES, Option.TEXT_BACKGROUND_OPACITY, Option.TEXT_BACKGROUND, Option.CHAT_OPACITY, Option.CHAT_LINE_SPACING, Option.CHAT_DELAY_INSTANT, Option.AUTO_JUMP, Option.SNEAK_TOGGLED, Option.SPRINT_TOGGLED, Option.DISTORTION_EFFECT_SCALE, Option.FOV_EFFECT_SCALE, Option.MONOCHROME_LOGO};
+    private static final String GUIDE_URL = "https://aka.ms/MinecraftJavaAccessibility";
 
     public AccessibilityOptionsScreen(Screen parent, GameOptions gameOptions) {
         super(parent, gameOptions, new TranslatableText("options.accessibility.title"), OPTIONS);
@@ -30,13 +31,13 @@ extends NarratorOptionsScreen {
 
     @Override
     protected void initFooter() {
-        this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 27, 150, 20, new TranslatableText("options.accessibility.link"), button -> this.client.openScreen(new ConfirmChatLinkScreen(openInBrowser -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 27, 150, 20, new TranslatableText("options.accessibility.link"), button -> this.client.setScreen(new ConfirmChatLinkScreen(openInBrowser -> {
             if (openInBrowser) {
-                Util.getOperatingSystem().open("https://aka.ms/MinecraftJavaAccessibility");
+                Util.getOperatingSystem().open(GUIDE_URL);
             }
-            this.client.openScreen(this);
-        }, "https://aka.ms/MinecraftJavaAccessibility", true))));
-        this.addButton(new ButtonWidget(this.width / 2 + 5, this.height - 27, 150, 20, ScreenTexts.DONE, button -> this.client.openScreen(this.parent)));
+            this.client.setScreen(this);
+        }, GUIDE_URL, true))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, this.height - 27, 150, 20, ScreenTexts.DONE, button -> this.client.setScreen(this.parent)));
     }
 }
 

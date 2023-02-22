@@ -8,15 +8,16 @@
  *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.texture;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -33,7 +34,6 @@ import net.minecraft.client.texture.MissingSprite;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.texture.ResourceTexture;
 import net.minecraft.client.texture.TextureTickListener;
-import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
@@ -43,7 +43,6 @@ import net.minecraft.util.crash.CrashReportSection;
 import net.minecraft.util.profiler.Profiler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextureManager
@@ -79,11 +78,11 @@ AutoCloseable {
     }
 
     public void registerTexture(Identifier id, AbstractTexture texture) {
-        AbstractTexture abstractTexture = this.textures.put(id, texture = this.method_24303(id, texture));
+        AbstractTexture abstractTexture = this.textures.put(id, texture = this.loadTexture(id, texture));
         if (abstractTexture != texture) {
             if (abstractTexture != null && abstractTexture != MissingSprite.getMissingSpriteTexture()) {
                 this.tickListeners.remove(abstractTexture);
-                this.method_30299(id, abstractTexture);
+                this.closeTexture(id, abstractTexture);
             }
             if (texture instanceof TextureTickListener) {
                 this.tickListeners.add((TextureTickListener)((Object)texture));
@@ -91,41 +90,49 @@ AutoCloseable {
         }
     }
 
-    private void method_30299(Identifier identifier, AbstractTexture abstractTexture) {
-        if (abstractTexture != MissingSprite.getMissingSpriteTexture()) {
+    private void closeTexture(Identifier id, AbstractTexture texture) {
+        if (texture != MissingSprite.getMissingSpriteTexture()) {
             try {
-                abstractTexture.close();
+                texture.close();
             }
             catch (Exception exception) {
-                LOGGER.warn("Failed to close texture {}", (Object)identifier, (Object)exception);
+                LOGGER.warn("Failed to close texture {}", (Object)id, (Object)exception);
             }
         }
-        abstractTexture.clearGlId();
+        texture.clearGlId();
     }
 
-    private AbstractTexture method_24303(Identifier identifier, AbstractTexture abstractTexture) {
+    private AbstractTexture loadTexture(Identifier id, AbstractTexture texture) {
         try {
-            abstractTexture.load(this.resourceContainer);
-            return abstractTexture;
+            texture.load(this.resourceContainer);
+            return texture;
         }
         catch (IOException iOException) {
-            if (identifier != MISSING_IDENTIFIER) {
-                LOGGER.warn("Failed to load texture: {}", (Object)identifier, (Object)iOException);
+            if (id != MISSING_IDENTIFIER) {
+                LOGGER.warn("Failed to load texture: {}", (Object)id, (Object)iOException);
             }
             return MissingSprite.getMissingSpriteTexture();
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Registering texture");
             CrashReportSection crashReportSection = crashReport.addElement("Resource location being registered");
-            crashReportSection.add("Resource location", identifier);
-            crashReportSection.add("Texture object class", () -> abstractTexture.getClass().getName());
+            crashReportSection.add("Resource location", id);
+            crashReportSection.add("Texture object class", () -> texture.getClass().getName());
             throw new CrashException(crashReport);
         }
     }
 
-    @Nullable
     public AbstractTexture getTexture(Identifier id) {
-        return this.textures.get(id);
+        AbstractTexture abstractTexture = this.textures.get(id);
+        if (abstractTexture == null) {
+            abstractTexture = new ResourceTexture(id);
+            this.registerTexture(id, abstractTexture);
+        }
+        return abstractTexture;
+    }
+
+    public AbstractTexture getOrDefault(Identifier id, AbstractTexture fallback) {
+        return this.textures.getOrDefault(id, fallback);
     }
 
     public Identifier registerDynamicTexture(String prefix, NativeImageBackedTexture texture) {
@@ -134,10 +141,10 @@ AutoCloseable {
             integer = 1;
         } else {
             Integer n = integer;
-            Integer n2 = integer = Integer.valueOf(integer + 1);
+            integer = integer + 1;
         }
         this.dynamicIdCounters.put(prefix, integer);
-        Identifier identifier = new Identifier(String.format("dynamic/%s_%d", prefix, integer));
+        Identifier identifier = new Identifier(String.format(Locale.ROOT, "dynamic/%s_%d", prefix, integer));
         this.registerTexture(identifier, texture);
         return identifier;
     }
@@ -163,15 +170,15 @@ AutoCloseable {
     }
 
     public void destroyTexture(Identifier id) {
-        AbstractTexture abstractTexture = this.getTexture(id);
-        if (abstractTexture != null) {
-            TextureUtil.deleteId(abstractTexture.getGlId());
+        AbstractTexture abstractTexture = this.getOrDefault(id, MissingSprite.getMissingSpriteTexture());
+        if (abstractTexture != MissingSprite.getMissingSpriteTexture()) {
+            TextureUtil.releaseTextureId(abstractTexture.getGlId());
         }
     }
 
     @Override
     public void close() {
-        this.textures.forEach(this::method_30299);
+        this.textures.forEach(this::closeTexture);
         this.textures.clear();
         this.tickListeners.clear();
         this.dynamicIdCounters.clear();
@@ -181,7 +188,7 @@ AutoCloseable {
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
         return ((CompletableFuture)CompletableFuture.allOf(TitleScreen.loadTexturesAsync(this, prepareExecutor), this.loadTextureAsync(ClickableWidget.WIDGETS_TEXTURE, prepareExecutor)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(void_ -> {
             MissingSprite.getMissingSpriteTexture();
-            RealmsMainScreen.method_23765(this.resourceContainer);
+            RealmsMainScreen.loadImages(this.resourceContainer);
             Iterator<Map.Entry<Identifier, AbstractTexture>> iterator = this.textures.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<Identifier, AbstractTexture> entry = iterator.next();

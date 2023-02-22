@@ -11,9 +11,11 @@ package net.minecraft.loot.function;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
+import java.util.Set;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
+import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
@@ -22,11 +24,11 @@ import net.minecraft.util.JsonHelper;
 
 public class LimitCountLootFunction
 extends ConditionalLootFunction {
-    private final BoundedIntUnaryOperator limit;
+    final BoundedIntUnaryOperator limit;
 
-    private LimitCountLootFunction(LootCondition[] conditions, BoundedIntUnaryOperator limit) {
-        super(conditions);
-        this.limit = limit;
+    LimitCountLootFunction(LootCondition[] lootConditions, BoundedIntUnaryOperator boundedIntUnaryOperator) {
+        super(lootConditions);
+        this.limit = boundedIntUnaryOperator;
     }
 
     @Override
@@ -35,8 +37,13 @@ extends ConditionalLootFunction {
     }
 
     @Override
+    public Set<LootContextParameter<?>> getRequiredParameters() {
+        return this.limit.getRequiredParameters();
+    }
+
+    @Override
     public ItemStack process(ItemStack stack, LootContext context) {
-        int i = this.limit.applyAsInt(stack.getCount());
+        int i = this.limit.apply(context, stack.getCount());
         stack.setCount(i);
         return stack;
     }

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.projectile;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -43,11 +37,6 @@ extends ExplosiveProjectileEntity {
         super(EntityType.WITHER_SKULL, owner, directionX, directionY, directionZ, world);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public WitherSkullEntity(World world, double x, double y, double z, double directionX, double directionY, double directionZ) {
-        super(EntityType.WITHER_SKULL, x, y, z, directionX, directionY, directionZ, world);
-    }
-
     @Override
     protected float getDrag() {
         return this.isCharged() ? 0.73f : super.getDrag();
@@ -80,7 +69,7 @@ extends ExplosiveProjectileEntity {
             bl = entity.damage(DamageSource.witherSkull(this, livingEntity), 8.0f);
             if (bl) {
                 if (entity.isAlive()) {
-                    this.dealDamage(livingEntity, entity);
+                    this.applyDamageEffects(livingEntity, entity);
                 } else {
                     livingEntity.heal(5.0f);
                 }
@@ -96,7 +85,7 @@ extends ExplosiveProjectileEntity {
                 i = 40;
             }
             if (i > 0) {
-                ((LivingEntity)entity).addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 20 * i, 1));
+                ((LivingEntity)entity).addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 20 * i, 1), this.getEffectCause());
             }
         }
     }
@@ -107,7 +96,7 @@ extends ExplosiveProjectileEntity {
         if (!this.world.isClient) {
             Explosion.DestructionType destructionType = this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) ? Explosion.DestructionType.DESTROY : Explosion.DestructionType.NONE;
             this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), 1.0f, false, destructionType);
-            this.remove();
+            this.discard();
         }
     }
 

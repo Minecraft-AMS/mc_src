@@ -33,7 +33,9 @@ import net.minecraft.advancement.AdvancementProgress;
 import net.minecraft.advancement.PlayerAdvancementTracker;
 import net.minecraft.advancement.criterion.CriterionProgress;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.predicate.NumberRange;
+import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.server.ServerAdvancementLoader;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.network.ServerRecipeBook;
@@ -42,17 +44,24 @@ import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
 
 public class PlayerPredicate {
     public static final PlayerPredicate ANY = new Builder().build();
+    public static final int field_33928 = 100;
     private final NumberRange.IntRange experienceLevel;
+    @Nullable
     private final GameMode gameMode;
     private final Map<Stat<?>, NumberRange.IntRange> stats;
     private final Object2BooleanMap<Identifier> recipes;
     private final Map<Identifier, AdvancementPredicate> advancements;
+    private final EntityPredicate lookingAt;
 
     private static AdvancementPredicate criterionFromJson(JsonElement json) {
         if (json.isJsonPrimitive()) {
@@ -65,26 +74,27 @@ public class PlayerPredicate {
         return new AdvancementCriteriaPredicate((Object2BooleanMap<String>)object2BooleanMap);
     }
 
-    private PlayerPredicate(NumberRange.IntRange experienceLevel, GameMode gameMode, Map<Stat<?>, NumberRange.IntRange> stats, Object2BooleanMap<Identifier> recipes, Map<Identifier, AdvancementPredicate> advancements) {
+    PlayerPredicate(NumberRange.IntRange experienceLevel, @Nullable GameMode gameMode, Map<Stat<?>, NumberRange.IntRange> stats, Object2BooleanMap<Identifier> recipes, Map<Identifier, AdvancementPredicate> advancements, EntityPredicate lookingAt) {
         this.experienceLevel = experienceLevel;
         this.gameMode = gameMode;
         this.stats = stats;
         this.recipes = recipes;
         this.advancements = advancements;
+        this.lookingAt = lookingAt;
     }
 
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity2) {
         if (this == ANY) {
             return true;
         }
-        if (!(entity instanceof ServerPlayerEntity)) {
+        if (!(entity2 instanceof ServerPlayerEntity)) {
             return false;
         }
-        ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
+        ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity2;
         if (!this.experienceLevel.test(serverPlayerEntity.experienceLevel)) {
             return false;
         }
-        if (this.gameMode != GameMode.NOT_SET && this.gameMode != serverPlayerEntity.interactionManager.getGameMode()) {
+        if (this.gameMode != null && this.gameMode != serverPlayerEntity.interactionManager.getGameMode()) {
             return false;
         }
         ServerStatHandler statHandler = serverPlayerEntity.getStatHandler();
@@ -107,6 +117,19 @@ public class PlayerPredicate {
                 return false;
             }
         }
+        if (this.lookingAt != EntityPredicate.ANY) {
+            Vec3d vec3d = serverPlayerEntity.getEyePos();
+            Vec3d vec3d2 = serverPlayerEntity.getRotationVec(1.0f);
+            Vec3d vec3d3 = vec3d.add(vec3d2.x * 100.0, vec3d2.y * 100.0, vec3d2.z * 100.0);
+            EntityHitResult entityHitResult = ProjectileUtil.method_37226(serverPlayerEntity.world, serverPlayerEntity, vec3d, vec3d3, new Box(vec3d, vec3d3).expand(1.0), entity -> !entity.isSpectator(), 0.0f);
+            if (entityHitResult == null || entityHitResult.getType() != HitResult.Type.ENTITY) {
+                return false;
+            }
+            Entity entity22 = entityHitResult.getEntity();
+            if (!this.lookingAt.test(serverPlayerEntity, entity22) || !serverPlayerEntity.canSee(entity22)) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -117,7 +140,7 @@ public class PlayerPredicate {
         JsonObject jsonObject = JsonHelper.asObject(json, "player");
         NumberRange.IntRange intRange = NumberRange.IntRange.fromJson(jsonObject.get("level"));
         String string = JsonHelper.getString(jsonObject, "gamemode", "");
-        GameMode gameMode = GameMode.byName(string, GameMode.NOT_SET);
+        GameMode gameMode = GameMode.byName(string, null);
         HashMap map = Maps.newHashMap();
         JsonArray jsonArray = JsonHelper.getArray(jsonObject, "stats", null);
         if (jsonArray != null) {
@@ -148,7 +171,8 @@ public class PlayerPredicate {
             AdvancementPredicate advancementPredicate = PlayerPredicate.criterionFromJson((JsonElement)entry2.getValue());
             map2.put(identifier4, advancementPredicate);
         }
-        return new PlayerPredicate(intRange, gameMode, map, (Object2BooleanMap<Identifier>)object2BooleanMap, map2);
+        EntityPredicate entityPredicate = EntityPredicate.fromJson(jsonObject.get("looking_at"));
+        return new PlayerPredicate(intRange, gameMode, map, (Object2BooleanMap<Identifier>)object2BooleanMap, map2, entityPredicate);
     }
 
     private static <T> Stat<T> getStat(StatType<T> type, Identifier id) {
@@ -171,7 +195,7 @@ public class PlayerPredicate {
         }
         JsonObject jsonObject = new JsonObject();
         jsonObject.add("level", this.experienceLevel.toJson());
-        if (this.gameMode != GameMode.NOT_SET) {
+        if (this.gameMode != null) {
             jsonObject.addProperty("gamemode", this.gameMode.getName());
         }
         if (!this.stats.isEmpty()) {
@@ -187,7 +211,7 @@ public class PlayerPredicate {
         }
         if (!this.recipes.isEmpty()) {
             jsonObject2 = new JsonObject();
-            this.recipes.forEach((id, present) -> jsonObject2.addProperty(id.toString(), present));
+            this.recipes.forEach((id, boolean_) -> jsonObject2.addProperty(id.toString(), boolean_));
             jsonObject.add("recipes", (JsonElement)jsonObject2);
         }
         if (!this.advancements.isEmpty()) {
@@ -195,23 +219,36 @@ public class PlayerPredicate {
             this.advancements.forEach((id, advancementPredicate) -> jsonObject2.add(id.toString(), advancementPredicate.toJson()));
             jsonObject.add("advancements", (JsonElement)jsonObject2);
         }
+        jsonObject.add("looking_at", this.lookingAt.toJson());
         return jsonObject;
     }
 
     private static /* synthetic */ void method_22502(Object2BooleanMap object2BooleanMap, Map.Entry entry) {
         boolean bl = JsonHelper.asBoolean((JsonElement)entry.getValue(), "criterion test");
-        object2BooleanMap.put(entry.getKey(), bl);
+        object2BooleanMap.put((Object)((String)entry.getKey()), bl);
     }
 
-    public static class Builder {
-        private NumberRange.IntRange experienceLevel = NumberRange.IntRange.ANY;
-        private GameMode gamemode = GameMode.NOT_SET;
-        private final Map<Stat<?>, NumberRange.IntRange> stats = Maps.newHashMap();
-        private final Object2BooleanMap<Identifier> recipes = new Object2BooleanOpenHashMap();
-        private final Map<Identifier, AdvancementPredicate> advancements = Maps.newHashMap();
+    static class CompletedAdvancementPredicate
+    implements AdvancementPredicate {
+        private final boolean done;
 
-        public PlayerPredicate build() {
-            return new PlayerPredicate(this.experienceLevel, this.gamemode, this.stats, this.recipes, this.advancements);
+        public CompletedAdvancementPredicate(boolean done) {
+            this.done = done;
+        }
+
+        @Override
+        public JsonElement toJson() {
+            return new JsonPrimitive(Boolean.valueOf(this.done));
+        }
+
+        @Override
+        public boolean test(AdvancementProgress advancementProgress) {
+            return advancementProgress.isDone() == this.done;
+        }
+
+        @Override
+        public /* synthetic */ boolean test(Object progress) {
+            return this.test((AdvancementProgress)progress);
         }
     }
 
@@ -246,33 +283,62 @@ public class PlayerPredicate {
         }
     }
 
-    static class CompletedAdvancementPredicate
-    implements AdvancementPredicate {
-        private final boolean done;
-
-        public CompletedAdvancementPredicate(boolean done) {
-            this.done = done;
-        }
-
-        @Override
-        public JsonElement toJson() {
-            return new JsonPrimitive(Boolean.valueOf(this.done));
-        }
-
-        @Override
-        public boolean test(AdvancementProgress advancementProgress) {
-            return advancementProgress.isDone() == this.done;
-        }
-
-        @Override
-        public /* synthetic */ boolean test(Object progress) {
-            return this.test((AdvancementProgress)progress);
-        }
-    }
-
     static interface AdvancementPredicate
     extends Predicate<AdvancementProgress> {
         public JsonElement toJson();
+    }
+
+    public static class Builder {
+        private NumberRange.IntRange experienceLevel = NumberRange.IntRange.ANY;
+        @Nullable
+        private GameMode gameMode;
+        private final Map<Stat<?>, NumberRange.IntRange> stats = Maps.newHashMap();
+        private final Object2BooleanMap<Identifier> recipes = new Object2BooleanOpenHashMap();
+        private final Map<Identifier, AdvancementPredicate> advancements = Maps.newHashMap();
+        private EntityPredicate lookingAt = EntityPredicate.ANY;
+
+        public static Builder create() {
+            return new Builder();
+        }
+
+        public Builder experienceLevel(NumberRange.IntRange experienceLevel) {
+            this.experienceLevel = experienceLevel;
+            return this;
+        }
+
+        public Builder stat(Stat<?> stat, NumberRange.IntRange value) {
+            this.stats.put(stat, value);
+            return this;
+        }
+
+        public Builder recipe(Identifier id, boolean unlocked) {
+            this.recipes.put((Object)id, unlocked);
+            return this;
+        }
+
+        public Builder gameMode(GameMode gameMode) {
+            this.gameMode = gameMode;
+            return this;
+        }
+
+        public Builder lookingAt(EntityPredicate lookingAt) {
+            this.lookingAt = lookingAt;
+            return this;
+        }
+
+        public Builder advancement(Identifier id, boolean done) {
+            this.advancements.put(id, new CompletedAdvancementPredicate(done));
+            return this;
+        }
+
+        public Builder advancement(Identifier id, Map<String, Boolean> criteria) {
+            this.advancements.put(id, new AdvancementCriteriaPredicate((Object2BooleanMap<String>)new Object2BooleanOpenHashMap(criteria)));
+            return this;
+        }
+
+        public PlayerPredicate build() {
+            return new PlayerPredicate(this.experienceLevel, this.gameMode, this.stats, this.recipes, this.advancements, this.lookingAt);
+        }
     }
 }
 

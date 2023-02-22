@@ -32,11 +32,16 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractButtonBlock
 extends WallMountedBlock {
     public static final BooleanProperty POWERED = Properties.POWERED;
+    private static final int field_31040 = 1;
+    private static final int field_31041 = 2;
+    protected static final int field_31042 = 2;
+    protected static final int field_31043 = 3;
     protected static final VoxelShape CEILING_X_SHAPE = Block.createCuboidShape(6.0, 14.0, 5.0, 10.0, 16.0, 11.0);
     protected static final VoxelShape CEILING_Z_SHAPE = Block.createCuboidShape(5.0, 14.0, 6.0, 11.0, 16.0, 10.0);
     protected static final VoxelShape FLOOR_X_SHAPE = Block.createCuboidShape(6.0, 0.0, 5.0, 10.0, 2.0, 11.0);
@@ -104,6 +109,7 @@ extends WallMountedBlock {
         }
         this.powerOn(state, world, pos);
         this.playClickSound(player, world, pos, true);
+        world.emitGameEvent((Entity)player, GameEvent.BLOCK_PRESS, pos);
         return ActionResult.success(world.isClient);
     }
 
@@ -159,6 +165,7 @@ extends WallMountedBlock {
             world.setBlockState(pos, (BlockState)state.with(POWERED, false), 3);
             this.updateNeighbors(state, world, pos);
             this.playClickSound(null, world, pos, false);
+            world.emitGameEvent(GameEvent.BLOCK_UNPRESS, pos);
         }
     }
 
@@ -178,6 +185,7 @@ extends WallMountedBlock {
             world.setBlockState(pos, (BlockState)state.with(POWERED, bl), 3);
             this.updateNeighbors(state, world, pos);
             this.playClickSound(null, world, pos, bl);
+            world.emitGameEvent((Entity)list.stream().findFirst().orElse(null), bl ? GameEvent.BLOCK_PRESS : GameEvent.BLOCK_UNPRESS, pos);
         }
         if (bl) {
             world.getBlockTickScheduler().schedule(new BlockPos(pos), this, this.getPressTicks());

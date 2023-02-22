@@ -19,7 +19,7 @@ import net.minecraft.util.JsonHelper;
 
 public class RecipeUnlockedCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("recipe_unlocked");
+    static final Identifier ID = new Identifier("recipe_unlocked");
 
     @Override
     public Identifier getId() {
@@ -32,8 +32,9 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, identifier);
     }
 
+    @Override
     public void trigger(ServerPlayerEntity player, Recipe<?> recipe) {
-        this.test(player, conditions -> conditions.matches(recipe));
+        ((AbstractCriterion)this).trigger(player, (T conditions) -> conditions.matches(recipe));
     }
 
     public static Conditions create(Identifier id) {

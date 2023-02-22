@@ -20,6 +20,7 @@ import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.argument.NbtPathArgumentType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.DataCommand;
 import net.minecraft.server.command.ServerCommandSource;
@@ -29,7 +30,7 @@ import net.minecraft.util.Identifier;
 
 public class StorageDataObject
 implements DataCommandObject {
-    private static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(StorageDataObject.of((CommandContext<ServerCommandSource>)commandContext).getIds(), suggestionsBuilder);
+    static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(StorageDataObject.of((CommandContext<ServerCommandSource>)commandContext).getIds(), suggestionsBuilder);
     public static final Function<String, DataCommand.ObjectType> TYPE_FACTORY = string -> new DataCommand.ObjectType((String)string){
         final /* synthetic */ String field_20859;
         {
@@ -38,7 +39,7 @@ implements DataCommandObject {
 
         @Override
         public DataCommandObject getObject(CommandContext<ServerCommandSource> context) {
-            return new StorageDataObject(StorageDataObject.of((CommandContext<ServerCommandSource>)context), IdentifierArgumentType.getIdentifier(context, this.field_20859));
+            return new StorageDataObject(StorageDataObject.of(context), IdentifierArgumentType.getIdentifier(context, this.field_20859));
         }
 
         @Override
@@ -49,13 +50,13 @@ implements DataCommandObject {
     private final DataCommandStorage storage;
     private final Identifier id;
 
-    private static DataCommandStorage of(CommandContext<ServerCommandSource> commandContext) {
-        return ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getDataCommandStorage();
+    static DataCommandStorage of(CommandContext<ServerCommandSource> commandContext) {
+        return ((ServerCommandSource)commandContext.getSource()).getServer().getDataCommandStorage();
     }
 
-    private StorageDataObject(DataCommandStorage storage, Identifier id) {
-        this.storage = storage;
-        this.id = id;
+    StorageDataObject(DataCommandStorage dataCommandStorage, Identifier identifier) {
+        this.storage = dataCommandStorage;
+        this.id = identifier;
     }
 
     @Override
@@ -75,7 +76,7 @@ implements DataCommandObject {
 
     @Override
     public Text feedbackQuery(NbtElement element) {
-        return new TranslatableText("commands.data.storage.query", this.id, element.toText());
+        return new TranslatableText("commands.data.storage.query", this.id, NbtHelper.toPrettyPrintedText(element));
     }
 
     @Override

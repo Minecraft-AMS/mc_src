@@ -40,7 +40,7 @@ public class TeamMsgCommand {
     private static final SimpleCommandExceptionType NO_TEAM_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.teammsg.failed.noteam"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("teammsg").then(CommandManager.argument("message", MessageArgumentType.message()).executes(commandContext -> TeamMsgCommand.execute((ServerCommandSource)commandContext.getSource(), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)commandContext, "message")))));
+        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("teammsg").then(CommandManager.argument("message", MessageArgumentType.message()).executes(context -> TeamMsgCommand.execute((ServerCommandSource)context.getSource(), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)context, "message")))));
         dispatcher.register((LiteralArgumentBuilder)CommandManager.literal("tm").redirect((CommandNode)literalCommandNode));
     }
 
@@ -51,7 +51,7 @@ public class TeamMsgCommand {
             throw NO_TEAM_EXCEPTION.create();
         }
         MutableText text = team.getFormattedName().fillStyle(STYLE);
-        List<ServerPlayerEntity> list = source.getMinecraftServer().getPlayerManager().getPlayerList();
+        List<ServerPlayerEntity> list = source.getServer().getPlayerManager().getPlayerList();
         for (ServerPlayerEntity serverPlayerEntity : list) {
             if (serverPlayerEntity == entity) {
                 serverPlayerEntity.sendSystemMessage(new TranslatableText("chat.type.team.sent", text, source.getDisplayName(), message), entity.getUuid());

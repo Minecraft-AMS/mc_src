@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.BannerItem;
 import net.minecraft.item.ItemStack;
@@ -39,11 +33,11 @@ extends SpecialCraftingRecipe {
                 itemStack2 = itemStack3;
                 continue;
             }
-            if (itemStack3.getItem() == Items.SHIELD) {
+            if (itemStack3.isOf(Items.SHIELD)) {
                 if (!itemStack.isEmpty()) {
                     return false;
                 }
-                if (itemStack3.getSubTag("BlockEntityTag") != null) {
+                if (itemStack3.getSubNbt("BlockEntityTag") != null) {
                     return false;
                 }
                 itemStack = itemStack3;
@@ -65,21 +59,20 @@ extends SpecialCraftingRecipe {
                 itemStack = itemStack3;
                 continue;
             }
-            if (itemStack3.getItem() != Items.SHIELD) continue;
+            if (!itemStack3.isOf(Items.SHIELD)) continue;
             itemStack2 = itemStack3.copy();
         }
         if (itemStack2.isEmpty()) {
             return itemStack2;
         }
-        NbtCompound nbtCompound = itemStack.getSubTag("BlockEntityTag");
+        NbtCompound nbtCompound = itemStack.getSubNbt("BlockEntityTag");
         NbtCompound nbtCompound2 = nbtCompound == null ? new NbtCompound() : nbtCompound.copy();
         nbtCompound2.putInt("Base", ((BannerItem)itemStack.getItem()).getColor().getId());
-        itemStack2.putSubTag("BlockEntityTag", nbtCompound2);
+        itemStack2.setSubNbt("BlockEntityTag", nbtCompound2);
         return itemStack2;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= 2;
     }

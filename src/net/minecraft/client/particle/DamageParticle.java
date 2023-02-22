@@ -21,18 +21,20 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class DamageParticle
 extends SpriteBillboardParticle {
-    private DamageParticle(ClientWorld world, double x, double y, double z, double d, double e, double f) {
-        super(world, x, y, z, 0.0, 0.0, 0.0);
-        float g;
+    DamageParticle(ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+        super(clientWorld, d, e, f, 0.0, 0.0, 0.0);
+        float j;
+        this.field_28786 = 0.7f;
+        this.gravityStrength = 0.5f;
         this.velocityX *= (double)0.1f;
         this.velocityY *= (double)0.1f;
         this.velocityZ *= (double)0.1f;
-        this.velocityX += d * 0.4;
-        this.velocityY += e * 0.4;
-        this.velocityZ += f * 0.4;
-        this.colorRed = g = (float)(Math.random() * (double)0.3f + (double)0.6f);
-        this.colorGreen = g;
-        this.colorBlue = g;
+        this.velocityX += g * 0.4;
+        this.velocityY += h * 0.4;
+        this.velocityZ += i * 0.4;
+        this.colorRed = j = (float)(Math.random() * (double)0.3f + (double)0.6f);
+        this.colorGreen = j;
+        this.colorBlue = j;
         this.scale *= 0.75f;
         this.maxAge = Math.max((int)(6.0 / (Math.random() * 0.8 + 0.6)), 1);
         this.collidesWithWorld = false;
@@ -46,24 +48,9 @@ extends SpriteBillboardParticle {
 
     @Override
     public void tick() {
-        this.prevPosX = this.x;
-        this.prevPosY = this.y;
-        this.prevPosZ = this.z;
-        if (this.age++ >= this.maxAge) {
-            this.markDead();
-            return;
-        }
-        this.move(this.velocityX, this.velocityY, this.velocityZ);
+        super.tick();
         this.colorGreen = (float)((double)this.colorGreen * 0.96);
         this.colorBlue = (float)((double)this.colorBlue * 0.9);
-        this.velocityX *= (double)0.7f;
-        this.velocityY *= (double)0.7f;
-        this.velocityZ *= (double)0.7f;
-        this.velocityY -= (double)0.02f;
-        if (this.onGround) {
-            this.velocityX *= (double)0.7f;
-            this.velocityZ *= (double)0.7f;
-        }
     }
 
     @Override

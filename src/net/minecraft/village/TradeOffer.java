@@ -20,23 +20,23 @@ public class TradeOffer {
     private float priceMultiplier;
     private int merchantExperience = 1;
 
-    public TradeOffer(NbtCompound nbtCompound) {
-        this.firstBuyItem = ItemStack.fromNbt(nbtCompound.getCompound("buy"));
-        this.secondBuyItem = ItemStack.fromNbt(nbtCompound.getCompound("buyB"));
-        this.sellItem = ItemStack.fromNbt(nbtCompound.getCompound("sell"));
-        this.uses = nbtCompound.getInt("uses");
-        this.maxUses = nbtCompound.contains("maxUses", 99) ? nbtCompound.getInt("maxUses") : 4;
-        if (nbtCompound.contains("rewardExp", 1)) {
-            this.rewardingPlayerExperience = nbtCompound.getBoolean("rewardExp");
+    public TradeOffer(NbtCompound nbt) {
+        this.firstBuyItem = ItemStack.fromNbt(nbt.getCompound("buy"));
+        this.secondBuyItem = ItemStack.fromNbt(nbt.getCompound("buyB"));
+        this.sellItem = ItemStack.fromNbt(nbt.getCompound("sell"));
+        this.uses = nbt.getInt("uses");
+        this.maxUses = nbt.contains("maxUses", 99) ? nbt.getInt("maxUses") : 4;
+        if (nbt.contains("rewardExp", 1)) {
+            this.rewardingPlayerExperience = nbt.getBoolean("rewardExp");
         }
-        if (nbtCompound.contains("xp", 3)) {
-            this.merchantExperience = nbtCompound.getInt("xp");
+        if (nbt.contains("xp", 3)) {
+            this.merchantExperience = nbt.getInt("xp");
         }
-        if (nbtCompound.contains("priceMultiplier", 5)) {
-            this.priceMultiplier = nbtCompound.getFloat("priceMultiplier");
+        if (nbt.contains("priceMultiplier", 5)) {
+            this.priceMultiplier = nbt.getFloat("priceMultiplier");
         }
-        this.specialPrice = nbtCompound.getInt("specialPrice");
-        this.demandBonus = nbtCompound.getInt("demand");
+        this.specialPrice = nbt.getInt("specialPrice");
+        this.demandBonus = nbt.getInt("demand");
     }
 
     public TradeOffer(ItemStack buyItem, ItemStack sellItem, int maxUses, int merchantExperience, float priceMultiplier) {
@@ -51,15 +51,15 @@ public class TradeOffer {
         this(firstBuyItem, secondBuyItem, sellItem, uses, maxUses, merchantExperience, priceMultiplier, 0);
     }
 
-    public TradeOffer(ItemStack itemStack, ItemStack itemStack2, ItemStack itemStack3, int i, int j, int k, float f, int l) {
-        this.firstBuyItem = itemStack;
-        this.secondBuyItem = itemStack2;
-        this.sellItem = itemStack3;
-        this.uses = i;
-        this.maxUses = j;
-        this.merchantExperience = k;
-        this.priceMultiplier = f;
-        this.demandBonus = l;
+    public TradeOffer(ItemStack firstBuyItem, ItemStack secondBuyItem, ItemStack sellItem, int uses, int maxUses, int merchantExperience, float priceMultiplier, int demandBonus) {
+        this.firstBuyItem = firstBuyItem;
+        this.secondBuyItem = secondBuyItem;
+        this.sellItem = sellItem;
+        this.uses = uses;
+        this.maxUses = maxUses;
+        this.merchantExperience = merchantExperience;
+        this.priceMultiplier = priceMultiplier;
+        this.demandBonus = demandBonus;
     }
 
     public ItemStack getOriginalFirstBuyItem() {
@@ -142,7 +142,7 @@ public class TradeOffer {
         this.uses = this.maxUses;
     }
 
-    public boolean method_21834() {
+    public boolean hasBeenUsed() {
         return this.uses > 0;
     }
 
@@ -177,7 +177,7 @@ public class TradeOffer {
         if (itemStack.getItem().isDamageable()) {
             itemStack.setDamage(itemStack.getDamage());
         }
-        return ItemStack.areItemsEqualIgnoreDamage(itemStack, sample) && (!sample.hasTag() || itemStack.hasTag() && NbtHelper.matches(sample.getTag(), itemStack.getTag(), false));
+        return ItemStack.areItemsEqualIgnoreDamage(itemStack, sample) && (!sample.hasNbt() || itemStack.hasNbt() && NbtHelper.matches(sample.getNbt(), itemStack.getNbt(), false));
     }
 
     public boolean depleteBuyItems(ItemStack firstBuyStack, ItemStack secondBuyStack) {

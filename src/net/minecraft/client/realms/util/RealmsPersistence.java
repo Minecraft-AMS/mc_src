@@ -23,12 +23,23 @@ import org.apache.commons.io.FileUtils;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsPersistence {
+    private static final String FILE_NAME = "realms_persistence.json";
     private static final CheckedGson CHECKED_GSON = new CheckedGson();
+
+    public RealmsPersistenceData load() {
+        return RealmsPersistence.readFile();
+    }
+
+    public void save(RealmsPersistenceData data) {
+        RealmsPersistence.writeFile(data);
+    }
 
     public static RealmsPersistenceData readFile() {
         File file = RealmsPersistence.getFile();
         try {
-            return CHECKED_GSON.fromJson(FileUtils.readFileToString((File)file, (Charset)StandardCharsets.UTF_8), RealmsPersistenceData.class);
+            String string = FileUtils.readFileToString((File)file, (Charset)StandardCharsets.UTF_8);
+            RealmsPersistenceData realmsPersistenceData = CHECKED_GSON.fromJson(string, RealmsPersistenceData.class);
+            return realmsPersistenceData != null ? realmsPersistenceData : new RealmsPersistenceData();
         }
         catch (IOException iOException) {
             return new RealmsPersistenceData();
@@ -46,7 +57,7 @@ public class RealmsPersistence {
     }
 
     private static File getFile() {
-        return new File(MinecraftClient.getInstance().runDirectory, "realms_persistence.json");
+        return new File(MinecraftClient.getInstance().runDirectory, FILE_NAME);
     }
 
     @Environment(value=EnvType.CLIENT)

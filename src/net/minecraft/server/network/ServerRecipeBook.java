@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 
 public class ServerRecipeBook
 extends RecipeBook {
+    public static final String RECIPE_BOOK_KEY = "recipeBook";
     private static final Logger LOGGER = LogManager.getLogger();
 
     public int unlockRecipes(Collection<Recipe<?>> recipes, ServerPlayerEntity player) {

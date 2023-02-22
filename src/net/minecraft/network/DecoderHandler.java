@@ -43,11 +43,10 @@ extends ByteToMessageDecoder {
         }
         PacketByteBuf packetByteBuf = new PacketByteBuf(byteBuf);
         int i = packetByteBuf.readVarInt();
-        Packet<?> packet = ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getPacketHandler(this.side, i);
+        Packet<?> packet = ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getPacketHandler(this.side, i, packetByteBuf);
         if (packet == null) {
             throw new IOException("Bad packet id " + i);
         }
-        packet.read(packetByteBuf);
         if (packetByteBuf.readableBytes() > 0) {
             throw new IOException("Packet " + ((NetworkState)((Object)channelHandlerContext.channel().attr(ClientConnection.PROTOCOL_ATTRIBUTE_KEY).get())).getId() + "/" + i + " (" + packet.getClass().getSimpleName() + ") was larger than I expected, found " + packetByteBuf.readableBytes() + " bytes extra whilst reading packet " + i);
         }

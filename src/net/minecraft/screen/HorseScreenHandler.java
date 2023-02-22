@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
 import net.minecraft.entity.passive.HorseBaseEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -37,12 +31,11 @@ extends ScreenHandler {
 
             @Override
             public boolean canInsert(ItemStack stack) {
-                return stack.getItem() == Items.SADDLE && !this.hasStack() && entity.canBeSaddled();
+                return stack.isOf(Items.SADDLE) && !this.hasStack() && entity.canBeSaddled();
             }
 
             @Override
-            @Environment(value=EnvType.CLIENT)
-            public boolean doDrawHoveringEffect() {
+            public boolean isEnabled() {
                 return entity.canBeSaddled();
             }
         });
@@ -54,8 +47,7 @@ extends ScreenHandler {
             }
 
             @Override
-            @Environment(value=EnvType.CLIENT)
-            public boolean doDrawHoveringEffect() {
+            public boolean isEnabled() {
                 return entity.hasArmorSlot();
             }
 
@@ -64,7 +56,7 @@ extends ScreenHandler {
                 return 1;
             }
         });
-        if (entity instanceof AbstractDonkeyEntity && ((AbstractDonkeyEntity)entity).hasChest()) {
+        if (this.hasChest(entity)) {
             for (k = 0; k < 3; ++k) {
                 for (l = 0; l < ((AbstractDonkeyEntity)entity).getInventoryColumns(); ++l) {
                     this.addSlot(new Slot(inventory, 2 + l + k * ((AbstractDonkeyEntity)entity).getInventoryColumns(), 80 + l * 18, 18 + k * 18));
@@ -83,7 +75,11 @@ extends ScreenHandler {
 
     @Override
     public boolean canUse(PlayerEntity player) {
-        return this.inventory.canPlayerUse(player) && this.entity.isAlive() && this.entity.distanceTo(player) < 8.0f;
+        return !this.entity.areInventoriesDifferent(this.inventory) && this.inventory.canPlayerUse(player) && this.entity.isAlive() && this.entity.distanceTo(player) < 8.0f;
+    }
+
+    private boolean hasChest(HorseBaseEntity horse) {
+        return horse instanceof AbstractDonkeyEntity && ((AbstractDonkeyEntity)horse).hasChest();
     }
 
     @Override

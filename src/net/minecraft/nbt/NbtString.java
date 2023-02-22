@@ -10,12 +10,11 @@ import java.util.Objects;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtString
 implements NbtElement {
+    private static final int field_33241 = 288;
     public static final NbtType<NbtString> TYPE = new NbtType<NbtString>(){
 
         @Override
@@ -47,6 +46,10 @@ implements NbtElement {
         }
     };
     private static final NbtString EMPTY = new NbtString("");
+    private static final char field_33242 = '\"';
+    private static final char field_33243 = '\'';
+    private static final char field_33244 = '\\';
+    private static final char field_33245 = '\u0000';
     private final String value;
 
     private NbtString(String value) {
@@ -77,7 +80,7 @@ implements NbtElement {
 
     @Override
     public String toString() {
-        return NbtString.escape(this.value);
+        return NbtElement.super.asString();
     }
 
     @Override
@@ -102,11 +105,8 @@ implements NbtElement {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        String string = NbtString.escape(this.value);
-        String string2 = string.substring(0, 1);
-        MutableText text = new LiteralText(string.substring(1, string.length() - 1)).formatted(GREEN);
-        return new LiteralText(string2).append(text).append(string2);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitString(this);
     }
 
     public static String escape(String value) {

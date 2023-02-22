@@ -7,14 +7,16 @@
  */
 package net.minecraft.client.realms.gui.screen;
 
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.realms.RealmsLabel;
-import net.minecraft.client.realms.gui.screen.RealmsResetWorldScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
+import net.minecraft.client.realms.gui.screen.RealmsWorldGeneratorType;
+import net.minecraft.client.realms.gui.screen.ResetWorldInfo;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
@@ -22,18 +24,17 @@ import net.minecraft.text.TranslatableText;
 @Environment(value=EnvType.CLIENT)
 public class RealmsResetNormalWorldScreen
 extends RealmsScreen {
-    private static final Text field_26506 = new TranslatableText("mco.reset.world.seed");
-    private static final Text[] field_24205 = new Text[]{new TranslatableText("generator.default"), new TranslatableText("generator.flat"), new TranslatableText("generator.large_biomes"), new TranslatableText("generator.amplified")};
-    private final RealmsResetWorldScreen parent;
-    private RealmsLabel titleLabel;
+    private static final Text RESET_SEED_TEXT = new TranslatableText("mco.reset.world.seed");
+    private final Consumer<ResetWorldInfo> callback;
     private TextFieldWidget seedEdit;
-    private Boolean generateStructures = true;
-    private Integer levelTypeIndex = 0;
-    private Text field_24206;
+    private RealmsWorldGeneratorType generatorType = RealmsWorldGeneratorType.DEFAULT;
+    private boolean mapFeatures = true;
+    private final Text parentTitle;
 
-    public RealmsResetNormalWorldScreen(RealmsResetWorldScreen parent, Text text) {
-        this.parent = parent;
-        this.field_24206 = text;
+    public RealmsResetNormalWorldScreen(Consumer<ResetWorldInfo> callback, Text parentTitle) {
+        super(new TranslatableText("mco.reset.world.generate"));
+        this.callback = callback;
+        this.parentTitle = parentTitle;
     }
 
     @Override
@@ -45,23 +46,18 @@ extends RealmsScreen {
     @Override
     public void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.titleLabel = new RealmsLabel(new TranslatableText("mco.reset.world.generate"), this.width / 2, 17, 0xFFFFFF);
-        this.addChild(this.titleLabel);
         this.seedEdit = new TextFieldWidget(this.client.textRenderer, this.width / 2 - 100, RealmsResetNormalWorldScreen.row(2), 200, 20, null, new TranslatableText("mco.reset.world.seed"));
         this.seedEdit.setMaxLength(32);
-        this.addChild(this.seedEdit);
+        this.addSelectableChild(this.seedEdit);
         this.setInitialFocus(this.seedEdit);
-        this.addButton(new ButtonWidget(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(4), 205, 20, this.method_27458(), buttonWidget -> {
-            this.levelTypeIndex = (this.levelTypeIndex + 1) % field_24205.length;
-            buttonWidget.setMessage(this.method_27458());
+        this.addDrawableChild(CyclingButtonWidget.builder(RealmsWorldGeneratorType::getText).values((RealmsWorldGeneratorType[])RealmsWorldGeneratorType.values()).initially(this.generatorType).build(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(4), 205, 20, new TranslatableText("selectWorld.mapType"), (button, generatorType) -> {
+            this.generatorType = generatorType;
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(6) - 2, 205, 20, this.method_27459(), buttonWidget -> {
-            this.generateStructures = this.generateStructures == false;
-            buttonWidget.setMessage(this.method_27459());
+        this.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.mapFeatures).build(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(6) - 2, 205, 20, new TranslatableText("selectWorld.mapFeatures"), (button, mapFeatures) -> {
+            this.mapFeatures = mapFeatures;
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(12), 97, 20, this.field_24206, buttonWidget -> this.parent.resetWorld(new RealmsResetWorldScreen.ResetWorldInfo(this.seedEdit.getText(), this.levelTypeIndex, this.generateStructures))));
-        this.addButton(new ButtonWidget(this.width / 2 + 8, RealmsResetNormalWorldScreen.row(12), 97, 20, ScreenTexts.BACK, buttonWidget -> this.client.openScreen(this.parent)));
-        this.narrateLabels();
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, RealmsResetNormalWorldScreen.row(12), 97, 20, this.parentTitle, button -> this.callback.accept(new ResetWorldInfo(this.seedEdit.getText(), this.generatorType, this.mapFeatures))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 8, RealmsResetNormalWorldScreen.row(12), 97, 20, ScreenTexts.BACK, button -> this.onClose()));
     }
 
     @Override
@@ -70,29 +66,17 @@ extends RealmsScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) {
-            this.client.openScreen(this.parent);
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public void onClose() {
+        this.callback.accept(null);
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        this.titleLabel.render(this, matrices);
-        this.textRenderer.draw(matrices, field_26506, (float)(this.width / 2 - 100), (float)RealmsResetNormalWorldScreen.row(1), 0xA0A0A0);
+        RealmsResetNormalWorldScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 17, 0xFFFFFF);
+        this.textRenderer.draw(matrices, RESET_SEED_TEXT, (float)(this.width / 2 - 100), (float)RealmsResetNormalWorldScreen.row(1), 0xA0A0A0);
         this.seedEdit.render(matrices, mouseX, mouseY, delta);
         super.render(matrices, mouseX, mouseY, delta);
-    }
-
-    private Text method_27458() {
-        return new TranslatableText("selectWorld.mapType").append(" ").append(field_24205[this.levelTypeIndex]);
-    }
-
-    private Text method_27459() {
-        return ScreenTexts.composeToggleText(new TranslatableText("selectWorld.mapFeatures"), this.generateStructures);
     }
 }
 

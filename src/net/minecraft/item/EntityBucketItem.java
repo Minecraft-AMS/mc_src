@@ -2,20 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.Bucketable;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.passive.FishEntity;
 import net.minecraft.entity.passive.TropicalFishEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.Fluid;
@@ -25,48 +21,53 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class EntityBucketItem
 extends BucketItem {
     private final EntityType<?> entityType;
+    private final SoundEvent emptyingSound;
 
-    public EntityBucketItem(EntityType<?> type, Fluid fluid, Item.Settings settings) {
+    public EntityBucketItem(EntityType<?> type, Fluid fluid, SoundEvent emptyingSound, Item.Settings settings) {
         super(fluid, settings);
         this.entityType = type;
+        this.emptyingSound = emptyingSound;
     }
 
     @Override
-    public void onEmptied(World world, ItemStack stack, BlockPos pos) {
+    public void onEmptied(@Nullable PlayerEntity player, World world, ItemStack stack, BlockPos pos) {
         if (world instanceof ServerWorld) {
             this.spawnEntity((ServerWorld)world, stack, pos);
+            world.emitGameEvent((Entity)player, GameEvent.ENTITY_PLACE, pos);
         }
     }
 
     @Override
     protected void playEmptyingSound(@Nullable PlayerEntity player, WorldAccess world, BlockPos pos) {
-        world.playSound(player, pos, SoundEvents.ITEM_BUCKET_EMPTY_FISH, SoundCategory.NEUTRAL, 1.0f, 1.0f);
+        world.playSound(player, pos, this.emptyingSound, SoundCategory.NEUTRAL, 1.0f, 1.0f);
     }
 
     private void spawnEntity(ServerWorld world, ItemStack stack, BlockPos pos) {
         Entity entity = this.entityType.spawnFromItemStack(world, stack, null, pos, SpawnReason.BUCKET, true, false);
-        if (entity != null) {
-            ((FishEntity)entity).setFromBucket(true);
+        if (entity instanceof Bucketable) {
+            Bucketable bucketable = (Bucketable)((Object)entity);
+            bucketable.copyDataFromNbt(stack.getOrCreateNbt());
+            bucketable.setFromBucket(true);
         }
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         NbtCompound nbtCompound;
-        if (this.entityType == EntityType.TROPICAL_FISH && (nbtCompound = stack.getTag()) != null && nbtCompound.contains("BucketVariantTag", 3)) {
+        if (this.entityType == EntityType.TROPICAL_FISH && (nbtCompound = stack.getNbt()) != null && nbtCompound.contains("BucketVariantTag", 3)) {
             int i = nbtCompound.getInt("BucketVariantTag");
             Formatting[] formattings = new Formatting[]{Formatting.ITALIC, Formatting.GRAY};
             String string = "color.minecraft." + TropicalFishEntity.getBaseDyeColor(i);

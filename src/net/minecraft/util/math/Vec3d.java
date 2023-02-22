@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.math;
 
 import java.util.EnumSet;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
@@ -24,7 +18,6 @@ implements Position {
     public final double y;
     public final double z;
 
-    @Environment(value=EnvType.CLIENT)
     public static Vec3d unpackRgb(int rgb) {
         double d = (double)(rgb >> 16 & 0xFF) / 255.0;
         double e = (double)(rgb >> 8 & 0xFF) / 255.0;
@@ -63,7 +56,7 @@ implements Position {
     }
 
     public Vec3d normalize() {
-        double d = MathHelper.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+        double d = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
         if (d < 1.0E-4) {
             return ZERO;
         }
@@ -102,7 +95,7 @@ implements Position {
         double d = vec.x - this.x;
         double e = vec.y - this.y;
         double f = vec.z - this.z;
-        return MathHelper.sqrt(d * d + e * e + f * f);
+        return Math.sqrt(d * d + e * e + f * f);
     }
 
     public double squaredDistanceTo(Vec3d vec) {
@@ -123,7 +116,6 @@ implements Position {
         return this.multiply(value, value, value);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Vec3d negate() {
         return this.multiply(-1.0);
     }
@@ -137,11 +129,19 @@ implements Position {
     }
 
     public double length() {
-        return MathHelper.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+        return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
     }
 
     public double lengthSquared() {
         return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+
+    public double horizontalLength() {
+        return Math.sqrt(this.x * this.x + this.z * this.z);
+    }
+
+    public double horizontalLengthSquared() {
+        return this.x * this.x + this.z * this.z;
     }
 
     public boolean equals(Object o) {
@@ -175,6 +175,10 @@ implements Position {
         return "(" + this.x + ", " + this.y + ", " + this.z + ")";
     }
 
+    public Vec3d lerp(Vec3d to, double delta) {
+        return new Vec3d(MathHelper.lerp(delta, this.x, to.x), MathHelper.lerp(delta, this.y, to.y), MathHelper.lerp(delta, this.z, to.z));
+    }
+
     public Vec3d rotateX(float angle) {
         float f = MathHelper.cos(angle);
         float g = MathHelper.sin(angle);
@@ -193,7 +197,6 @@ implements Position {
         return new Vec3d(d, e, h);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Vec3d rotateZ(float angle) {
         float f = MathHelper.cos(angle);
         float g = MathHelper.sin(angle);
@@ -203,12 +206,10 @@ implements Position {
         return new Vec3d(d, e, h);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static Vec3d fromPolar(Vec2f polar) {
         return Vec3d.fromPolar(polar.x, polar.y);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static Vec3d fromPolar(float pitch, float yaw) {
         float f = MathHelper.cos(-yaw * ((float)Math.PI / 180) - (float)Math.PI);
         float g = MathHelper.sin(-yaw * ((float)Math.PI / 180) - (float)Math.PI);

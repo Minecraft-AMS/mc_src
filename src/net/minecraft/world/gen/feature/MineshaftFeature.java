@@ -10,14 +10,17 @@ import com.mojang.serialization.Codec;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.structure.MineshaftGenerator;
 import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.gen.ChunkRandom;
@@ -32,8 +35,8 @@ extends StructureFeature<MineshaftFeatureConfig> {
     }
 
     @Override
-    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, int i, int j, Biome biome, ChunkPos chunkPos, MineshaftFeatureConfig mineshaftFeatureConfig) {
-        chunkRandom.setCarverSeed(l, i, j);
+    protected boolean shouldStartAt(ChunkGenerator chunkGenerator, BiomeSource biomeSource, long l, ChunkRandom chunkRandom, ChunkPos chunkPos, Biome biome, ChunkPos chunkPos2, MineshaftFeatureConfig mineshaftFeatureConfig, HeightLimitView heightLimitView) {
+        chunkRandom.setCarverSeed(l, chunkPos.x, chunkPos.z);
         double d = mineshaftFeatureConfig.probability;
         return chunkRandom.nextDouble() < d;
     }
@@ -45,40 +48,52 @@ extends StructureFeature<MineshaftFeatureConfig> {
 
     public static class Start
     extends StructureStart<MineshaftFeatureConfig> {
-        public Start(StructureFeature<MineshaftFeatureConfig> structureFeature, int i, int j, BlockBox blockBox, int k, long l) {
-            super(structureFeature, i, j, blockBox, k, l);
+        public Start(StructureFeature<MineshaftFeatureConfig> structureFeature, ChunkPos chunkPos, int i, long l) {
+            super(structureFeature, chunkPos, i, l);
         }
 
         @Override
-        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, int i, int j, Biome biome, MineshaftFeatureConfig mineshaftFeatureConfig) {
-            MineshaftGenerator.MineshaftRoom mineshaftRoom = new MineshaftGenerator.MineshaftRoom(0, this.random, (i << 4) + 2, (j << 4) + 2, mineshaftFeatureConfig.type);
-            this.children.add(mineshaftRoom);
-            mineshaftRoom.fillOpenings(mineshaftRoom, this.children, this.random);
-            this.setBoundingBoxFromChildren();
+        public void init(DynamicRegistryManager dynamicRegistryManager, ChunkGenerator chunkGenerator, StructureManager structureManager, ChunkPos chunkPos, Biome biome, MineshaftFeatureConfig mineshaftFeatureConfig, HeightLimitView heightLimitView) {
+            MineshaftGenerator.MineshaftRoom mineshaftRoom = new MineshaftGenerator.MineshaftRoom(0, this.random, chunkPos.getOffsetX(2), chunkPos.getOffsetZ(2), mineshaftFeatureConfig.type);
+            this.addPiece(mineshaftRoom);
+            mineshaftRoom.fillOpenings(mineshaftRoom, this, this.random);
             if (mineshaftFeatureConfig.type == Type.MESA) {
-                int k = -5;
-                int l = chunkGenerator.getSeaLevel() - this.boundingBox.maxY + this.boundingBox.getBlockCountY() / 2 - -5;
-                this.boundingBox.move(0, l, 0);
-                for (StructurePiece structurePiece : this.children) {
-                    structurePiece.translate(0, l, 0);
-                }
+                int i = -5;
+                BlockBox blockBox = this.setBoundingBoxFromChildren();
+                int j = chunkGenerator.getSeaLevel() - blockBox.getMaxY() + blockBox.getBlockCountY() / 2 - -5;
+                this.translateUpward(j);
             } else {
-                this.randomUpwardTranslation(chunkGenerator.getSeaLevel(), this.random, 10);
+                this.randomUpwardTranslation(chunkGenerator.getSeaLevel(), chunkGenerator.getMinimumY(), this.random, 10);
             }
         }
     }
 
-    public static enum Type implements StringIdentifiable
-    {
-        NORMAL("normal"),
-        MESA("mesa");
-
+    public static final class Type
+    extends Enum<Type>
+    implements StringIdentifiable {
+        public static final /* enum */ Type NORMAL = new Type("normal", Blocks.OAK_LOG, Blocks.OAK_PLANKS, Blocks.OAK_FENCE);
+        public static final /* enum */ Type MESA = new Type("mesa", Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_PLANKS, Blocks.DARK_OAK_FENCE);
         public static final Codec<Type> CODEC;
         private static final Map<String, Type> BY_NAME;
         private final String name;
+        private final BlockState log;
+        private final BlockState planks;
+        private final BlockState fence;
+        private static final /* synthetic */ Type[] field_13688;
 
-        private Type(String name) {
+        public static Type[] values() {
+            return (Type[])field_13688.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private Type(String name, Block log, Block planks, Block fence) {
             this.name = name;
+            this.log = log.getDefaultState();
+            this.planks = planks.getDefaultState();
+            this.fence = fence.getDefaultState();
         }
 
         public String getName() {
@@ -96,12 +111,29 @@ extends StructureFeature<MineshaftFeatureConfig> {
             return Type.values()[index];
         }
 
+        public BlockState getLog() {
+            return this.log;
+        }
+
+        public BlockState getPlanks() {
+            return this.planks;
+        }
+
+        public BlockState getFence() {
+            return this.fence;
+        }
+
         @Override
         public String asString() {
             return this.name;
         }
 
+        private static /* synthetic */ Type[] method_36755() {
+            return new Type[]{NORMAL, MESA};
+        }
+
         static {
+            field_13688 = Type.method_36755();
             CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
             BY_NAME = Arrays.stream(Type.values()).collect(Collectors.toMap(Type::getName, type -> type));
         }

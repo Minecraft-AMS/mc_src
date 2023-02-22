@@ -9,8 +9,6 @@
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.Keyable
  *  com.mojang.serialization.Lifecycle
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.Validate
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -27,13 +25,12 @@ import com.mojang.serialization.Keyable;
 import com.mojang.serialization.Lifecycle;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.minecraft.SharedConstants;
+import net.minecraft.Bootstrap;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntityType;
@@ -59,6 +56,12 @@ import net.minecraft.loot.entry.LootPoolEntryType;
 import net.minecraft.loot.entry.LootPoolEntryTypes;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.loot.provider.nbt.LootNbtProviderType;
+import net.minecraft.loot.provider.nbt.LootNbtProviderTypes;
+import net.minecraft.loot.provider.number.LootNumberProviderType;
+import net.minecraft.loot.provider.number.LootNumberProviderTypes;
+import net.minecraft.loot.provider.score.LootScoreProviderType;
+import net.minecraft.loot.provider.score.LootScoreProviderTypes;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.potion.Potion;
@@ -78,7 +81,10 @@ import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.structure.rule.PosRuleTestType;
 import net.minecraft.structure.rule.RuleTestType;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import net.minecraft.util.collection.IndexedIterable;
+import net.minecraft.util.math.floatprovider.FloatProviderType;
+import net.minecraft.util.math.intprovider.IntProviderType;
 import net.minecraft.util.registry.BuiltinRegistries;
 import net.minecraft.util.registry.DefaultedRegistry;
 import net.minecraft.util.registry.MutableRegistry;
@@ -92,6 +98,8 @@ import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.dimension.DimensionOptions;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.event.GameEvent;
+import net.minecraft.world.event.PositionSourceType;
 import net.minecraft.world.gen.carver.Carver;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -103,6 +111,7 @@ import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.StructureFeature;
 import net.minecraft.world.gen.feature.size.FeatureSizeType;
 import net.minecraft.world.gen.foliage.FoliagePlacerType;
+import net.minecraft.world.gen.heightprovider.HeightProviderType;
 import net.minecraft.world.gen.placer.BlockPlacerType;
 import net.minecraft.world.gen.stateprovider.BlockStateProviderType;
 import net.minecraft.world.gen.surfacebuilder.ConfiguredSurfaceBuilder;
@@ -143,6 +152,8 @@ IndexedIterable<T> {
     public static final RegistryKey<Registry<RecipeType<?>>> RECIPE_TYPE_KEY = Registry.createRegistryKey("recipe_type");
     public static final RegistryKey<Registry<RecipeSerializer<?>>> RECIPE_SERIALIZER_KEY = Registry.createRegistryKey("recipe_serializer");
     public static final RegistryKey<Registry<EntityAttribute>> ATTRIBUTE_KEY = Registry.createRegistryKey("attribute");
+    public static final RegistryKey<Registry<GameEvent>> GAME_EVENT_KEY = Registry.createRegistryKey("game_event");
+    public static final RegistryKey<Registry<PositionSourceType<?>>> POSITION_SOURCE_TYPE_KEY = Registry.createRegistryKey("position_source_type");
     public static final RegistryKey<Registry<StatType<?>>> STAT_TYPE_KEY = Registry.createRegistryKey("stat_type");
     public static final RegistryKey<Registry<VillagerType>> VILLAGER_TYPE_KEY = Registry.createRegistryKey("villager_type");
     public static final RegistryKey<Registry<VillagerProfession>> VILLAGER_PROFESSION_KEY = Registry.createRegistryKey("villager_profession");
@@ -154,9 +165,13 @@ IndexedIterable<T> {
     public static final RegistryKey<Registry<LootPoolEntryType>> LOOT_POOL_ENTRY_TYPE_KEY = Registry.createRegistryKey("loot_pool_entry_type");
     public static final RegistryKey<Registry<LootFunctionType>> LOOT_FUNCTION_TYPE_KEY = Registry.createRegistryKey("loot_function_type");
     public static final RegistryKey<Registry<LootConditionType>> LOOT_CONDITION_TYPE_KEY = Registry.createRegistryKey("loot_condition_type");
+    public static final RegistryKey<Registry<LootNumberProviderType>> LOOT_NUMBER_PROVIDER_TYPE_KEY = Registry.createRegistryKey("loot_number_provider_type");
+    public static final RegistryKey<Registry<LootNbtProviderType>> LOOT_NBT_PROVIDER_TYPE_KEY = Registry.createRegistryKey("loot_nbt_provider_type");
+    public static final RegistryKey<Registry<LootScoreProviderType>> LOOT_SCORE_PROVIDER_TYPE_KEY = Registry.createRegistryKey("loot_score_provider_type");
     public static final RegistryKey<Registry<DimensionType>> DIMENSION_TYPE_KEY = Registry.createRegistryKey("dimension_type");
     public static final RegistryKey<Registry<World>> WORLD_KEY = Registry.createRegistryKey("dimension");
     public static final RegistryKey<Registry<DimensionOptions>> DIMENSION_KEY = Registry.createRegistryKey("dimension");
+    public static final DefaultedRegistry<GameEvent> GAME_EVENT = Registry.create(GAME_EVENT_KEY, "step", () -> GameEvent.STEP);
     public static final Registry<SoundEvent> SOUND_EVENT = Registry.create(SOUND_EVENT_KEY, () -> SoundEvents.ENTITY_ITEM_PICKUP);
     public static final DefaultedRegistry<Fluid> FLUID = Registry.create(FLUID_KEY, "empty", () -> Fluids.EMPTY);
     public static final Registry<StatusEffect> STATUS_EFFECT = Registry.create(MOB_EFFECT_KEY, () -> StatusEffects.LUCK);
@@ -176,6 +191,7 @@ IndexedIterable<T> {
     public static final Registry<RecipeType<?>> RECIPE_TYPE = Registry.create(RECIPE_TYPE_KEY, () -> RecipeType.CRAFTING);
     public static final Registry<RecipeSerializer<?>> RECIPE_SERIALIZER = Registry.create(RECIPE_SERIALIZER_KEY, () -> RecipeSerializer.SHAPELESS);
     public static final Registry<EntityAttribute> ATTRIBUTE = Registry.create(ATTRIBUTE_KEY, () -> EntityAttributes.GENERIC_LUCK);
+    public static final Registry<PositionSourceType<?>> POSITION_SOURCE_TYPE = Registry.create(POSITION_SOURCE_TYPE_KEY, () -> PositionSourceType.BLOCK);
     public static final Registry<StatType<?>> STAT_TYPE = Registry.create(STAT_TYPE_KEY, () -> Stats.USED);
     public static final DefaultedRegistry<VillagerType> VILLAGER_TYPE = Registry.create(VILLAGER_TYPE_KEY, "plains", () -> VillagerType.PLAINS);
     public static final DefaultedRegistry<VillagerProfession> VILLAGER_PROFESSION = Registry.create(VILLAGER_PROFESSION_KEY, "none", () -> VillagerProfession.NONE);
@@ -187,13 +203,22 @@ IndexedIterable<T> {
     public static final Registry<LootPoolEntryType> LOOT_POOL_ENTRY_TYPE = Registry.create(LOOT_POOL_ENTRY_TYPE_KEY, () -> LootPoolEntryTypes.EMPTY);
     public static final Registry<LootFunctionType> LOOT_FUNCTION_TYPE = Registry.create(LOOT_FUNCTION_TYPE_KEY, () -> LootFunctionTypes.SET_COUNT);
     public static final Registry<LootConditionType> LOOT_CONDITION_TYPE = Registry.create(LOOT_CONDITION_TYPE_KEY, () -> LootConditionTypes.INVERTED);
-    public static final RegistryKey<Registry<ChunkGeneratorSettings>> NOISE_SETTINGS_WORLDGEN = Registry.createRegistryKey("worldgen/noise_settings");
-    public static final RegistryKey<Registry<ConfiguredSurfaceBuilder<?>>> CONFIGURED_SURFACE_BUILDER_WORLDGEN = Registry.createRegistryKey("worldgen/configured_surface_builder");
-    public static final RegistryKey<Registry<ConfiguredCarver<?>>> CONFIGURED_CARVER_WORLDGEN = Registry.createRegistryKey("worldgen/configured_carver");
-    public static final RegistryKey<Registry<ConfiguredFeature<?, ?>>> CONFIGURED_FEATURE_WORLDGEN = Registry.createRegistryKey("worldgen/configured_feature");
-    public static final RegistryKey<Registry<ConfiguredStructureFeature<?, ?>>> CONFIGURED_STRUCTURE_FEATURE_WORLDGEN = Registry.createRegistryKey("worldgen/configured_structure_feature");
-    public static final RegistryKey<Registry<StructureProcessorList>> PROCESSOR_LIST_WORLDGEN = Registry.createRegistryKey("worldgen/processor_list");
-    public static final RegistryKey<Registry<StructurePool>> TEMPLATE_POOL_WORLDGEN = Registry.createRegistryKey("worldgen/template_pool");
+    public static final Registry<LootNumberProviderType> LOOT_NUMBER_PROVIDER_TYPE = Registry.create(LOOT_NUMBER_PROVIDER_TYPE_KEY, () -> LootNumberProviderTypes.CONSTANT);
+    public static final Registry<LootNbtProviderType> LOOT_NBT_PROVIDER_TYPE = Registry.create(LOOT_NBT_PROVIDER_TYPE_KEY, () -> LootNbtProviderTypes.CONTEXT);
+    public static final Registry<LootScoreProviderType> LOOT_SCORE_PROVIDER_TYPE = Registry.create(LOOT_SCORE_PROVIDER_TYPE_KEY, () -> LootScoreProviderTypes.CONTEXT);
+    public static final RegistryKey<Registry<FloatProviderType<?>>> FLOAT_PROVIDER_TYPE_KEY = Registry.createRegistryKey("float_provider_type");
+    public static final Registry<FloatProviderType<?>> FLOAT_PROVIDER_TYPE = Registry.create(FLOAT_PROVIDER_TYPE_KEY, () -> FloatProviderType.CONSTANT);
+    public static final RegistryKey<Registry<IntProviderType<?>>> INT_PROVIDER_TYPE_KEY = Registry.createRegistryKey("int_provider_type");
+    public static final Registry<IntProviderType<?>> INT_PROVIDER_TYPE = Registry.create(INT_PROVIDER_TYPE_KEY, () -> IntProviderType.CONSTANT);
+    public static final RegistryKey<Registry<HeightProviderType<?>>> HEIGHT_PROVIDER_TYPE_KEY = Registry.createRegistryKey("height_provider_type");
+    public static final Registry<HeightProviderType<?>> HEIGHT_PROVIDER_TYPE = Registry.create(HEIGHT_PROVIDER_TYPE_KEY, () -> HeightProviderType.CONSTANT);
+    public static final RegistryKey<Registry<ChunkGeneratorSettings>> CHUNK_GENERATOR_SETTINGS_KEY = Registry.createRegistryKey("worldgen/noise_settings");
+    public static final RegistryKey<Registry<ConfiguredSurfaceBuilder<?>>> CONFIGURED_SURFACE_BUILDER_KEY = Registry.createRegistryKey("worldgen/configured_surface_builder");
+    public static final RegistryKey<Registry<ConfiguredCarver<?>>> CONFIGURED_CARVER_KEY = Registry.createRegistryKey("worldgen/configured_carver");
+    public static final RegistryKey<Registry<ConfiguredFeature<?, ?>>> CONFIGURED_FEATURE_KEY = Registry.createRegistryKey("worldgen/configured_feature");
+    public static final RegistryKey<Registry<ConfiguredStructureFeature<?, ?>>> CONFIGURED_STRUCTURE_FEATURE_KEY = Registry.createRegistryKey("worldgen/configured_structure_feature");
+    public static final RegistryKey<Registry<StructureProcessorList>> STRUCTURE_PROCESSOR_LIST_KEY = Registry.createRegistryKey("worldgen/processor_list");
+    public static final RegistryKey<Registry<StructurePool>> STRUCTURE_POOL_KEY = Registry.createRegistryKey("worldgen/template_pool");
     public static final RegistryKey<Registry<Biome>> BIOME_KEY = Registry.createRegistryKey("worldgen/biome");
     public static final RegistryKey<Registry<SurfaceBuilder<?>>> SURFACE_BUILD_KEY = Registry.createRegistryKey("worldgen/surface_builder");
     public static final Registry<SurfaceBuilder<?>> SURFACE_BUILDER = Registry.create(SURFACE_BUILD_KEY, () -> SurfaceBuilder.DEFAULT);
@@ -237,10 +262,7 @@ IndexedIterable<T> {
     public static <T extends MutableRegistry<?>> void validate(MutableRegistry<T> registry) {
         registry.forEach(mutableRegistry2 -> {
             if (mutableRegistry2.getIds().isEmpty()) {
-                LOGGER.error("Registry '{}' was empty after loading", (Object)registry.getId(mutableRegistry2));
-                if (SharedConstants.isDevelopment) {
-                    throw new IllegalStateException("Registry: '" + registry.getId(mutableRegistry2) + "' is empty, not allowed, fix me!");
-                }
+                Util.error("Registry '" + registry.getId(mutableRegistry2) + "' was empty after loading");
             }
             if (mutableRegistry2 instanceof DefaultedRegistry) {
                 Identifier identifier = ((DefaultedRegistry)mutableRegistry2).getDefaultId();
@@ -273,6 +295,7 @@ IndexedIterable<T> {
     }
 
     protected Registry(RegistryKey<? extends Registry<T>> key, Lifecycle lifecycle) {
+        Bootstrap.ensureBootstrapped(() -> "registry " + key);
         this.registryKey = key;
         this.lifecycle = lifecycle;
     }
@@ -341,7 +364,6 @@ IndexedIterable<T> {
         return Optional.ofNullable(this.get(id));
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<T> getOrEmpty(@Nullable RegistryKey<T> key) {
         return Optional.ofNullable(this.get(key));
     }
@@ -358,12 +380,16 @@ IndexedIterable<T> {
 
     public abstract Set<Map.Entry<RegistryKey<T>, T>> getEntries();
 
+    @Nullable
+    public abstract T getRandom(Random var1);
+
     public Stream<T> stream() {
         return StreamSupport.stream(this.spliterator(), false);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public abstract boolean containsId(Identifier var1);
+
+    public abstract boolean contains(RegistryKey<T> var1);
 
     public static <T> T register(Registry<? super T> registry, String id, T entry) {
         return Registry.register(registry, new Identifier(id), entry);

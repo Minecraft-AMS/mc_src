@@ -34,8 +34,8 @@ import net.minecraft.world.World;
 
 public class DimensionArgumentType
 implements ArgumentType<Identifier> {
-    private static final Collection<String> EXAMPLES = Stream.of(World.OVERWORLD, World.NETHER).map(registryKey -> registryKey.getValue().toString()).collect(Collectors.toList());
-    private static final DynamicCommandExceptionType INVALID_DIMENSION_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.dimension.invalid", object));
+    private static final Collection<String> EXAMPLES = Stream.of(World.OVERWORLD, World.NETHER).map(key -> key.getValue().toString()).collect(Collectors.toList());
+    private static final DynamicCommandExceptionType INVALID_DIMENSION_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("argument.dimension.invalid", id));
 
     public Identifier parse(StringReader stringReader) throws CommandSyntaxException {
         return Identifier.fromCommandInput(stringReader);
@@ -59,15 +59,15 @@ implements ArgumentType<Identifier> {
     public static ServerWorld getDimensionArgument(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         Identifier identifier = (Identifier)context.getArgument(name, Identifier.class);
         RegistryKey<World> registryKey = RegistryKey.of(Registry.WORLD_KEY, identifier);
-        ServerWorld serverWorld = ((ServerCommandSource)context.getSource()).getMinecraftServer().getWorld(registryKey);
+        ServerWorld serverWorld = ((ServerCommandSource)context.getSource()).getServer().getWorld(registryKey);
         if (serverWorld == null) {
             throw INVALID_DIMENSION_EXCEPTION.create((Object)identifier);
         }
         return serverWorld;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

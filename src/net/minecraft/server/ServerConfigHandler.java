@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.BanEntry;
@@ -55,7 +56,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class ServerConfigHandler {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
     public static final File BANNED_IPS_FILE = new File("banned-ips.txt");
     public static final File BANNED_PLAYERS_FILE = new File("banned-players.txt");
     public static final File OPERATORS_FILE = new File("ops.txt");
@@ -270,11 +271,11 @@ public class ServerConfigHandler {
                 return null;
             }
         }
-        GameProfile gameProfile = server.getUserCache().findByName(name);
-        if (gameProfile != null && gameProfile.getId() != null) {
-            return gameProfile.getId();
+        Optional<UUID> optional = server.getUserCache().findByName(name).map(GameProfile::getId);
+        if (optional.isPresent()) {
+            return optional.get();
         }
-        if (server.isSinglePlayer() || !server.isOnlineMode()) {
+        if (server.isSingleplayer() || !server.isOnlineMode()) {
             return PlayerEntity.getUuidFromProfile(new GameProfile(null, name));
         }
         final ArrayList list = Lists.newArrayList();
@@ -313,7 +314,7 @@ public class ServerConfigHandler {
         }
         try {
             Object[] strings = list.toArray(new String[list.size()]);
-            ProfileLookupCallback profileLookupCallback = new ProfileLookupCallback((String[])strings){
+            ProfileLookupCallback profileLookupCallback = new ProfileLookupCallback(){
                 final /* synthetic */ String[] field_14340;
                 {
                     this.field_14340 = strings;
@@ -368,7 +369,7 @@ public class ServerConfigHandler {
         return true;
     }
 
-    private static void createDirectory(File directory) {
+    static void createDirectory(File directory) {
         if (directory.exists()) {
             if (directory.isDirectory()) {
                 return;
@@ -443,7 +444,7 @@ public class ServerConfigHandler {
         file.renameTo(file2);
     }
 
-    private static Date parseDate(String dateString, Date fallback) {
+    static Date parseDate(String dateString, Date fallback) {
         Date date;
         try {
             date = BanEntry.DATE_FORMAT.parse(dateString);
@@ -456,11 +457,11 @@ public class ServerConfigHandler {
 
     static class ServerConfigException
     extends RuntimeException {
-        private ServerConfigException(String title, Throwable other) {
+        ServerConfigException(String title, Throwable other) {
             super(title, other);
         }
 
-        private ServerConfigException(String title) {
+        ServerConfigException(String title) {
             super(title);
         }
     }

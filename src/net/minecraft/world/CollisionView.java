@@ -2,23 +2,22 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockCollisionSpliterator;
@@ -47,19 +46,19 @@ extends BlockView {
     }
 
     default public boolean isSpaceEmpty(Box box) {
-        return this.isSpaceEmpty(null, box, entity -> true);
+        return this.isSpaceEmpty(null, box, e -> true);
     }
 
-    default public boolean isSpaceEmpty(Entity entity2) {
-        return this.isSpaceEmpty(entity2, entity2.getBoundingBox(), entity -> true);
+    default public boolean isSpaceEmpty(Entity entity) {
+        return this.isSpaceEmpty(entity, entity.getBoundingBox(), e -> true);
     }
 
-    default public boolean isSpaceEmpty(Entity entity2, Box box) {
-        return this.isSpaceEmpty(entity2, box, entity -> true);
+    default public boolean isSpaceEmpty(Entity entity, Box box) {
+        return this.isSpaceEmpty(entity, box, e -> true);
     }
 
-    default public boolean isSpaceEmpty(@Nullable Entity entity, Box box, Predicate<Entity> predicate) {
-        return this.getCollisions(entity, box, predicate).allMatch(VoxelShape::isEmpty);
+    default public boolean isSpaceEmpty(@Nullable Entity entity, Box box, Predicate<Entity> filter) {
+        return this.getCollisions(entity, box, filter).allMatch(VoxelShape::isEmpty);
     }
 
     public Stream<VoxelShape> getEntityCollisions(@Nullable Entity var1, Box var2, Predicate<Entity> var3);
@@ -72,13 +71,22 @@ extends BlockView {
         return StreamSupport.stream(new BlockCollisionSpliterator(this, entity, box), false);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    default public boolean isBlockSpaceEmpty(@Nullable Entity entity, Box box, BiPredicate<BlockState, BlockPos> biPredicate) {
-        return this.getBlockCollisions(entity, box, biPredicate).allMatch(VoxelShape::isEmpty);
+    default public boolean hasBlockCollision(@Nullable Entity entity, Box box, BiPredicate<BlockState, BlockPos> predicate) {
+        return !this.getBlockCollisions(entity, box, predicate).allMatch(VoxelShape::isEmpty);
     }
 
-    default public Stream<VoxelShape> getBlockCollisions(@Nullable Entity entity, Box box, BiPredicate<BlockState, BlockPos> biPredicate) {
-        return StreamSupport.stream(new BlockCollisionSpliterator(this, entity, box, biPredicate), false);
+    default public Stream<VoxelShape> getBlockCollisions(@Nullable Entity entity, Box box, BiPredicate<BlockState, BlockPos> predicate) {
+        return StreamSupport.stream(new BlockCollisionSpliterator(this, entity, box, predicate), false);
+    }
+
+    default public Optional<Vec3d> findClosestCollision(@Nullable Entity entity, VoxelShape shape, Vec3d target, double x, double y, double z) {
+        if (shape.isEmpty()) {
+            return Optional.empty();
+        }
+        Box box2 = shape.getBoundingBox().expand(x, y, z);
+        VoxelShape voxelShape = this.getBlockCollisions(entity, box2).flatMap(collision -> collision.getBoundingBoxes().stream()).map(box -> box.expand(x / 2.0, y / 2.0, z / 2.0)).map(VoxelShapes::cuboid).reduce(VoxelShapes.empty(), VoxelShapes::union);
+        VoxelShape voxelShape2 = VoxelShapes.combineAndSimplify(shape, voxelShape, BooleanBiFunction.ONLY_FIRST);
+        return voxelShape2.getClosestPointTo(target);
     }
 }
 

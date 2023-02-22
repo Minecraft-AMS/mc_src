@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile;
@@ -11,8 +9,6 @@ package net.minecraft.entity.projectile;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -59,6 +55,7 @@ extends ProjectileEntity {
     private final Random velocityRandom = new Random();
     private boolean caughtFish;
     private int outOfOpenWaterTicks;
+    private static final int field_30665 = 10;
     private static final TrackedData<Integer> HOOK_ENTITY_ID = DataTracker.registerData(FishingBobberEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> CAUGHT_FISH = DataTracker.registerData(FishingBobberEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private int removalTimer;
@@ -67,33 +64,28 @@ extends ProjectileEntity {
     private int fishTravelCountdown;
     private float fishAngle;
     private boolean inOpenWater = true;
+    @Nullable
     private Entity hookedEntity;
     private State state = State.FLYING;
     private final int luckOfTheSeaLevel;
     private final int lureLevel;
 
-    private FishingBobberEntity(World world, PlayerEntity owner, int lureLevel, int luckOfTheSeaLevel) {
-        super((EntityType<? extends ProjectileEntity>)EntityType.FISHING_BOBBER, world);
+    private FishingBobberEntity(EntityType<? extends FishingBobberEntity> type, World world, int lureLevel, int luckOfTheSeaLevel) {
+        super((EntityType<? extends ProjectileEntity>)type, world);
         this.ignoreCameraFrustum = true;
-        this.setOwner(owner);
-        owner.fishHook = this;
         this.luckOfTheSeaLevel = Math.max(0, lureLevel);
         this.lureLevel = Math.max(0, luckOfTheSeaLevel);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public FishingBobberEntity(World world, PlayerEntity thrower, double x, double y, double z) {
-        this(world, thrower, 0, 0);
-        this.setPosition(x, y, z);
-        this.prevX = this.getX();
-        this.prevY = this.getY();
-        this.prevZ = this.getZ();
+    public FishingBobberEntity(EntityType<? extends FishingBobberEntity> entityType, World world) {
+        this(entityType, world, 0, 0);
     }
 
     public FishingBobberEntity(PlayerEntity thrower, World world, int lureLevel, int luckOfTheSeaLevel) {
-        this(world, thrower, lureLevel, luckOfTheSeaLevel);
-        float f = thrower.pitch;
-        float g = thrower.yaw;
+        this(EntityType.FISHING_BOBBER, world, lureLevel, luckOfTheSeaLevel);
+        this.setOwner(thrower);
+        float f = thrower.getPitch();
+        float g = thrower.getYaw();
         float h = MathHelper.cos(-g * ((float)Math.PI / 180) - (float)Math.PI);
         float i = MathHelper.sin(-g * ((float)Math.PI / 180) - (float)Math.PI);
         float j = -MathHelper.cos(-f * ((float)Math.PI / 180));
@@ -106,10 +98,10 @@ extends ProjectileEntity {
         double m = vec3d.length();
         vec3d = vec3d.multiply(0.6 / m + 0.5 + this.random.nextGaussian() * 0.0045, 0.6 / m + 0.5 + this.random.nextGaussian() * 0.0045, 0.6 / m + 0.5 + this.random.nextGaussian() * 0.0045);
         this.setVelocity(vec3d);
-        this.yaw = (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875);
-        this.pitch = (float)(MathHelper.atan2(vec3d.y, MathHelper.sqrt(FishingBobberEntity.squaredHorizontalLength(vec3d))) * 57.2957763671875);
-        this.prevYaw = this.yaw;
-        this.prevPitch = this.pitch;
+        this.setYaw((float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875));
+        this.setPitch((float)(MathHelper.atan2(vec3d.y, vec3d.horizontalLength()) * 57.2957763671875));
+        this.prevYaw = this.getYaw();
+        this.prevPitch = this.getPitch();
     }
 
     @Override
@@ -134,14 +126,12 @@ extends ProjectileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         double d = 64.0;
         return distance < 4096.0;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
     }
 
@@ -152,7 +142,7 @@ extends ProjectileEntity {
         super.tick();
         PlayerEntity playerEntity = this.getPlayerOwner();
         if (playerEntity == null) {
-            this.remove();
+            this.discard();
             return;
         }
         if (!this.world.isClient && this.removeIfInvalid(playerEntity)) {
@@ -161,7 +151,7 @@ extends ProjectileEntity {
         if (this.onGround) {
             ++this.removalTimer;
             if (this.removalTimer >= 1200) {
-                this.remove();
+                this.discard();
                 return;
             }
         } else {
@@ -189,8 +179,8 @@ extends ProjectileEntity {
         } else {
             if (this.state == State.HOOKED_IN_ENTITY) {
                 if (this.hookedEntity != null) {
-                    if (this.hookedEntity.removed) {
-                        this.hookedEntity = null;
+                    if (this.hookedEntity.isRemoved() || this.hookedEntity.world.getRegistryKey() != this.world.getRegistryKey()) {
+                        this.updateHookedEntityId(null);
                         this.state = State.FLYING;
                     } else {
                         this.setPosition(this.hookedEntity.getX(), this.hookedEntity.getBodyY(0.8), this.hookedEntity.getZ());
@@ -223,7 +213,7 @@ extends ProjectileEntity {
             this.setVelocity(this.getVelocity().add(0.0, -0.03, 0.0));
         }
         this.move(MovementType.SELF, this.getVelocity());
-        this.method_26962();
+        this.updateRotation();
         if (this.state == State.FLYING && (this.onGround || this.horizontalCollision)) {
             this.setVelocity(Vec3d.ZERO);
         }
@@ -233,34 +223,32 @@ extends ProjectileEntity {
     }
 
     private boolean removeIfInvalid(PlayerEntity player) {
-        boolean bl2;
         ItemStack itemStack = player.getMainHandStack();
         ItemStack itemStack2 = player.getOffHandStack();
-        boolean bl = itemStack.getItem() == Items.FISHING_ROD;
-        boolean bl3 = bl2 = itemStack2.getItem() == Items.FISHING_ROD;
-        if (player.removed || !player.isAlive() || !bl && !bl2 || this.squaredDistanceTo(player) > 1024.0) {
-            this.remove();
+        boolean bl = itemStack.isOf(Items.FISHING_ROD);
+        boolean bl2 = itemStack2.isOf(Items.FISHING_ROD);
+        if (player.isRemoved() || !player.isAlive() || !bl && !bl2 || this.squaredDistanceTo(player) > 1024.0) {
+            this.discard();
             return true;
         }
         return false;
     }
 
     private void checkForCollision() {
-        HitResult hitResult = ProjectileUtil.getCollision(this, this::method_26958);
+        HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
         this.onCollision(hitResult);
     }
 
     @Override
-    protected boolean method_26958(Entity entity) {
-        return super.method_26958(entity) || entity.isAlive() && entity instanceof ItemEntity;
+    protected boolean canHit(Entity entity) {
+        return super.canHit(entity) || entity.isAlive() && entity instanceof ItemEntity;
     }
 
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
         super.onEntityHit(entityHitResult);
         if (!this.world.isClient) {
-            this.hookedEntity = entityHitResult.getEntity();
-            this.updateHookedEntityId();
+            this.updateHookedEntityId(entityHitResult.getEntity());
         }
     }
 
@@ -270,8 +258,9 @@ extends ProjectileEntity {
         this.setVelocity(this.getVelocity().normalize().multiply(blockHitResult.squaredDistanceTo(this)));
     }
 
-    private void updateHookedEntityId() {
-        this.getDataTracker().set(HOOK_ENTITY_ID, this.hookedEntity.getEntityId() + 1);
+    private void updateHookedEntityId(@Nullable Entity entity) {
+        this.hookedEntity = entity;
+        this.getDataTracker().set(HOOK_ENTITY_ID, entity == null ? 0 : entity.getId() + 1);
     }
 
     private void tickFishingLogic(BlockPos pos) {
@@ -402,12 +391,12 @@ extends ProjectileEntity {
 
     public int use(ItemStack usedItem) {
         PlayerEntity playerEntity = this.getPlayerOwner();
-        if (this.world.isClient || playerEntity == null) {
+        if (this.world.isClient || playerEntity == null || this.removeIfInvalid(playerEntity)) {
             return 0;
         }
         int i = 0;
         if (this.hookedEntity != null) {
-            this.pullHookedEntity();
+            this.pullHookedEntity(this.hookedEntity);
             Criteria.FISHING_ROD_HOOKED.trigger((ServerPlayerEntity)playerEntity, usedItem, this, Collections.emptyList());
             this.world.sendEntityStatus(this, (byte)31);
             i = this.hookedEntity instanceof ItemEntity ? 3 : 5;
@@ -425,7 +414,7 @@ extends ProjectileEntity {
                 itemEntity.setVelocity(d * 0.1, e * 0.1 + Math.sqrt(Math.sqrt(d * d + e * e + f * f)) * 0.08, f * 0.1);
                 this.world.spawnEntity(itemEntity);
                 playerEntity.world.spawnEntity(new ExperienceOrbEntity(playerEntity.world, playerEntity.getX(), playerEntity.getY() + 0.5, playerEntity.getZ() + 0.5, this.random.nextInt(6) + 1));
-                if (!itemStack.getItem().isIn(ItemTags.FISHES)) continue;
+                if (!itemStack.isIn(ItemTags.FISHES)) continue;
                 playerEntity.increaseStat(Stats.FISH_CAUGHT, 1);
             }
             i = 1;
@@ -433,39 +422,53 @@ extends ProjectileEntity {
         if (this.onGround) {
             i = 2;
         }
-        this.remove();
+        this.discard();
         return i;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 31 && this.world.isClient && this.hookedEntity instanceof PlayerEntity && ((PlayerEntity)this.hookedEntity).isMainPlayer()) {
-            this.pullHookedEntity();
+            this.pullHookedEntity(this.hookedEntity);
         }
         super.handleStatus(status);
     }
 
-    protected void pullHookedEntity() {
-        Entity entity = this.getOwner();
-        if (entity == null) {
+    protected void pullHookedEntity(Entity entity) {
+        Entity entity2 = this.getOwner();
+        if (entity2 == null) {
             return;
         }
-        Vec3d vec3d = new Vec3d(entity.getX() - this.getX(), entity.getY() - this.getY(), entity.getZ() - this.getZ()).multiply(0.1);
-        this.hookedEntity.setVelocity(this.hookedEntity.getVelocity().add(vec3d));
+        Vec3d vec3d = new Vec3d(entity2.getX() - this.getX(), entity2.getY() - this.getY(), entity2.getZ() - this.getZ()).multiply(0.1);
+        entity.setVelocity(entity.getVelocity().add(vec3d));
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.NONE;
     }
 
     @Override
-    public void remove() {
-        super.remove();
+    public void remove(Entity.RemovalReason reason) {
+        this.setPlayerFishHook(null);
+        super.remove(reason);
+    }
+
+    @Override
+    public void onRemoved() {
+        this.setPlayerFishHook(null);
+    }
+
+    @Override
+    public void setOwner(@Nullable Entity entity) {
+        super.setOwner(entity);
+        this.setPlayerFishHook(this);
+    }
+
+    private void setPlayerFishHook(@Nullable FishingBobberEntity fishingBobber) {
         PlayerEntity playerEntity = this.getPlayerOwner();
         if (playerEntity != null) {
-            playerEntity.fishHook = null;
+            playerEntity.fishHook = fishingBobber;
         }
     }
 
@@ -488,21 +491,65 @@ extends ProjectileEntity {
     @Override
     public Packet<?> createSpawnPacket() {
         Entity entity = this.getOwner();
-        return new EntitySpawnS2CPacket(this, entity == null ? this.getEntityId() : entity.getEntityId());
+        return new EntitySpawnS2CPacket(this, entity == null ? this.getId() : entity.getId());
     }
 
-    static enum PositionType {
-        ABOVE_WATER,
-        INSIDE_WATER,
-        INVALID;
-
+    @Override
+    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
+        super.onSpawnPacket(packet);
+        if (this.getPlayerOwner() == null) {
+            int i = packet.getEntityData();
+            LOGGER.error("Failed to recreate fishing hook on client. {} (id: {}) is not a valid owner.", (Object)this.world.getEntityById(i), (Object)i);
+            this.kill();
+        }
     }
 
-    static enum State {
-        FLYING,
-        HOOKED_IN_ENTITY,
-        BOBBING;
+    static final class State
+    extends Enum<State> {
+        public static final /* enum */ State FLYING = new State();
+        public static final /* enum */ State HOOKED_IN_ENTITY = new State();
+        public static final /* enum */ State BOBBING = new State();
+        private static final /* synthetic */ State[] field_7181;
 
+        public static State[] values() {
+            return (State[])field_7181.clone();
+        }
+
+        public static State valueOf(String string) {
+            return Enum.valueOf(State.class, string);
+        }
+
+        private static /* synthetic */ State[] method_36664() {
+            return new State[]{FLYING, HOOKED_IN_ENTITY, BOBBING};
+        }
+
+        static {
+            field_7181 = State.method_36664();
+        }
+    }
+
+    static final class PositionType
+    extends Enum<PositionType> {
+        public static final /* enum */ PositionType ABOVE_WATER = new PositionType();
+        public static final /* enum */ PositionType INSIDE_WATER = new PositionType();
+        public static final /* enum */ PositionType INVALID = new PositionType();
+        private static final /* synthetic */ PositionType[] field_23239;
+
+        public static PositionType[] values() {
+            return (PositionType[])field_23239.clone();
+        }
+
+        public static PositionType valueOf(String string) {
+            return Enum.valueOf(PositionType.class, string);
+        }
+
+        private static /* synthetic */ PositionType[] method_36665() {
+            return new PositionType[]{ABOVE_WATER, INSIDE_WATER, INVALID};
+        }
+
+        static {
+            field_23239 = PositionType.method_36665();
+        }
     }
 }
 

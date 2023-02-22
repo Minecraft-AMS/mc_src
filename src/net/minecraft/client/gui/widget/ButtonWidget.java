@@ -7,8 +7,11 @@
  */
 package net.minecraft.client.gui.widget;
 
+import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
@@ -39,18 +42,27 @@ extends PressableWidget {
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         super.renderButton(matrices, mouseX, mouseY, delta);
         if (this.isHovered()) {
-            this.renderToolTip(matrices, mouseX, mouseY);
+            this.renderTooltip(matrices, mouseX, mouseY);
         }
     }
 
     @Override
-    public void renderToolTip(MatrixStack matrices, int mouseX, int mouseY) {
+    public void renderTooltip(MatrixStack matrices, int mouseX, int mouseY) {
         this.tooltipSupplier.onTooltip(this, matrices, mouseX, mouseY);
+    }
+
+    @Override
+    public void appendNarrations(NarrationMessageBuilder builder) {
+        this.appendDefaultNarrations(builder);
+        this.tooltipSupplier.supply(text -> builder.put(NarrationPart.HINT, (Text)text));
     }
 
     @Environment(value=EnvType.CLIENT)
     public static interface TooltipSupplier {
         public void onTooltip(ButtonWidget var1, MatrixStack var2, int var3, int var4);
+
+        default public void supply(Consumer<Text> consumer) {
+        }
     }
 
     @Environment(value=EnvType.CLIENT)

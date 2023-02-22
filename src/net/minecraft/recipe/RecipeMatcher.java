@@ -35,6 +35,7 @@ import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
 public class RecipeMatcher {
+    private static final int field_30653 = 0;
     public final Int2IntMap inputs = new Int2IntOpenHashMap();
 
     public void addUnenchantedInput(ItemStack stack) {
@@ -44,14 +45,14 @@ public class RecipeMatcher {
     }
 
     public void addInput(ItemStack stack) {
-        this.method_20478(stack, 64);
+        this.addInput(stack, 64);
     }
 
-    public void method_20478(ItemStack itemStack, int i) {
-        if (!itemStack.isEmpty()) {
-            int j = RecipeMatcher.getItemId(itemStack);
-            int k = Math.min(i, itemStack.getCount());
-            this.addInput(j, k);
+    public void addInput(ItemStack stack, int maxCount) {
+        if (!stack.isEmpty()) {
+            int i = RecipeMatcher.getItemId(stack);
+            int j = Math.min(maxCount, stack.getCount());
+            this.addInput(i, j);
         }
     }
 
@@ -59,11 +60,11 @@ public class RecipeMatcher {
         return Registry.ITEM.getRawId(stack.getItem());
     }
 
-    private boolean contains(int itemId) {
+    boolean contains(int itemId) {
         return this.inputs.get(itemId) > 0;
     }
 
-    private int consume(int itemId, int count) {
+    int consume(int itemId, int count) {
         int i = this.inputs.get(itemId);
         if (i >= count) {
             this.inputs.put(itemId, i - count);
@@ -72,7 +73,7 @@ public class RecipeMatcher {
         return 0;
     }
 
-    private void addInput(int itemId, int count) {
+    void addInput(int itemId, int count) {
         this.inputs.put(itemId, this.inputs.get(itemId) + count);
     }
 
@@ -81,7 +82,7 @@ public class RecipeMatcher {
     }
 
     public boolean match(Recipe<?> recipe, @Nullable IntList output, int multiplier) {
-        return new Filter(recipe).find(multiplier, output);
+        return new Matcher(recipe).match(multiplier, output);
     }
 
     public int countCrafts(Recipe<?> recipe, @Nullable IntList output) {
@@ -89,7 +90,7 @@ public class RecipeMatcher {
     }
 
     public int countCrafts(Recipe<?> recipe, int limit, @Nullable IntList output) {
-        return new Filter(recipe).countCrafts(limit, output);
+        return new Matcher(recipe).countCrafts(limit, output);
     }
 
     public static ItemStack getStackFromId(int itemId) {
@@ -103,75 +104,75 @@ public class RecipeMatcher {
         this.inputs.clear();
     }
 
-    class Filter {
+    class Matcher {
         private final Recipe<?> recipe;
         private final List<Ingredient> ingredients = Lists.newArrayList();
-        private final int ingredientCount;
-        private final int[] field_7551;
-        private final int field_7553;
-        private final BitSet field_7558;
-        private final IntList field_7557 = new IntArrayList();
+        private final int totalIngredients;
+        private final int[] requiredItems;
+        private final int totalRequiredItems;
+        private final BitSet requirementsMatrix;
+        private final IntList ingredientItemLookup = new IntArrayList();
 
-        public Filter(Recipe<?> recipe2) {
+        public Matcher(Recipe<?> recipe2) {
             this.recipe = recipe2;
             this.ingredients.addAll(recipe2.getIngredients());
             this.ingredients.removeIf(Ingredient::isEmpty);
-            this.ingredientCount = this.ingredients.size();
-            this.field_7551 = this.method_7422();
-            this.field_7553 = this.field_7551.length;
-            this.field_7558 = new BitSet(this.ingredientCount + this.field_7553 + this.ingredientCount + this.ingredientCount * this.field_7553);
+            this.totalIngredients = this.ingredients.size();
+            this.requiredItems = this.createItemRequirementList();
+            this.totalRequiredItems = this.requiredItems.length;
+            this.requirementsMatrix = new BitSet(this.totalIngredients + this.totalRequiredItems + this.totalIngredients + this.totalIngredients * this.totalRequiredItems);
             for (int i = 0; i < this.ingredients.size(); ++i) {
                 IntList intList = this.ingredients.get(i).getMatchingItemIds();
-                for (int j = 0; j < this.field_7553; ++j) {
-                    if (!intList.contains(this.field_7551[j])) continue;
-                    this.field_7558.set(this.method_7420(true, j, i));
+                for (int j = 0; j < this.totalRequiredItems; ++j) {
+                    if (!intList.contains(this.requiredItems[j])) continue;
+                    this.requirementsMatrix.set(this.getRequirementIndex(true, j, i));
                 }
             }
         }
 
-        public boolean find(int amount, @Nullable IntList outMatchingInputIds) {
+        public boolean match(int multiplier, @Nullable IntList output) {
             boolean bl2;
-            if (amount <= 0) {
+            if (multiplier <= 0) {
                 return true;
             }
             int i = 0;
-            while (this.method_7423(amount)) {
-                RecipeMatcher.this.consume(this.field_7551[this.field_7557.getInt(0)], amount);
-                int j = this.field_7557.size() - 1;
-                this.method_7421(this.field_7557.getInt(j));
+            while (this.checkRequirements(multiplier)) {
+                RecipeMatcher.this.consume(this.requiredItems[this.ingredientItemLookup.getInt(0)], multiplier);
+                int j = this.ingredientItemLookup.size() - 1;
+                this.unfulfillRequirement(this.ingredientItemLookup.getInt(j));
                 for (int k = 0; k < j; ++k) {
-                    this.method_7414((k & 1) == 0, this.field_7557.get(k), this.field_7557.get(k + 1));
+                    this.flipRequirement((k & 1) == 0, this.ingredientItemLookup.get(k), this.ingredientItemLookup.get(k + 1));
                 }
-                this.field_7557.clear();
-                this.field_7558.clear(0, this.ingredientCount + this.field_7553);
+                this.ingredientItemLookup.clear();
+                this.requirementsMatrix.clear(0, this.totalIngredients + this.totalRequiredItems);
                 ++i;
             }
-            boolean bl = i == this.ingredientCount;
-            boolean bl3 = bl2 = bl && outMatchingInputIds != null;
+            boolean bl = i == this.totalIngredients;
+            boolean bl3 = bl2 = bl && output != null;
             if (bl2) {
-                outMatchingInputIds.clear();
+                output.clear();
             }
-            this.field_7558.clear(0, this.ingredientCount + this.field_7553 + this.ingredientCount);
+            this.requirementsMatrix.clear(0, this.totalIngredients + this.totalRequiredItems + this.totalIngredients);
             int l = 0;
             DefaultedList<Ingredient> list = this.recipe.getIngredients();
             for (int m = 0; m < list.size(); ++m) {
                 if (bl2 && ((Ingredient)list.get(m)).isEmpty()) {
-                    outMatchingInputIds.add(0);
+                    output.add(0);
                     continue;
                 }
-                for (int n = 0; n < this.field_7553; ++n) {
-                    if (!this.method_7425(false, l, n)) continue;
-                    this.method_7414(true, n, l);
-                    RecipeMatcher.this.addInput(this.field_7551[n], amount);
+                for (int n = 0; n < this.totalRequiredItems; ++n) {
+                    if (!this.checkRequirement(false, l, n)) continue;
+                    this.flipRequirement(true, n, l);
+                    RecipeMatcher.this.addInput(this.requiredItems[n], multiplier);
                     if (!bl2) continue;
-                    outMatchingInputIds.add(this.field_7551[n]);
+                    output.add(this.requiredItems[n]);
                 }
                 ++l;
             }
             return bl;
         }
 
-        private int[] method_7422() {
+        private int[] createItemRequirementList() {
             IntAVLTreeSet intCollection = new IntAVLTreeSet();
             for (Ingredient ingredient : this.ingredients) {
                 intCollection.addAll((IntCollection)ingredient.getMatchingItemIds());
@@ -184,80 +185,80 @@ public class RecipeMatcher {
             return intCollection.toIntArray();
         }
 
-        private boolean method_7423(int i) {
-            int j = this.field_7553;
-            for (int k = 0; k < j; ++k) {
-                if (RecipeMatcher.this.inputs.get(this.field_7551[k]) < i) continue;
-                this.method_7413(false, k);
-                while (!this.field_7557.isEmpty()) {
-                    int o;
-                    int l = this.field_7557.size();
-                    boolean bl = (l & 1) == 1;
-                    int m = this.field_7557.getInt(l - 1);
-                    if (!bl && !this.method_7416(m)) break;
-                    int n = bl ? this.ingredientCount : j;
-                    for (o = 0; o < n; ++o) {
-                        if (this.method_7426(bl, o) || !this.method_7418(bl, m, o) || !this.method_7425(bl, m, o)) continue;
-                        this.method_7413(bl, o);
+        private boolean checkRequirements(int multiplier) {
+            int i = this.totalRequiredItems;
+            for (int j = 0; j < i; ++j) {
+                if (RecipeMatcher.this.inputs.get(this.requiredItems[j]) < multiplier) continue;
+                this.addRequirement(false, j);
+                while (!this.ingredientItemLookup.isEmpty()) {
+                    int n;
+                    int k = this.ingredientItemLookup.size();
+                    boolean bl = (k & 1) == 1;
+                    int l = this.ingredientItemLookup.getInt(k - 1);
+                    if (!bl && !this.getRequirement(l)) break;
+                    int m = bl ? this.totalIngredients : i;
+                    for (n = 0; n < m; ++n) {
+                        if (this.isRequirementUnfulfilled(bl, n) || !this.needsRequirement(bl, l, n) || !this.checkRequirement(bl, l, n)) continue;
+                        this.addRequirement(bl, n);
                         break;
                     }
-                    if ((o = this.field_7557.size()) != l) continue;
-                    this.field_7557.removeInt(o - 1);
+                    if ((n = this.ingredientItemLookup.size()) != k) continue;
+                    this.ingredientItemLookup.removeInt(n - 1);
                 }
-                if (this.field_7557.isEmpty()) continue;
+                if (this.ingredientItemLookup.isEmpty()) continue;
                 return true;
             }
             return false;
         }
 
-        private boolean method_7416(int i) {
-            return this.field_7558.get(this.method_7419(i));
+        private boolean getRequirement(int itemId) {
+            return this.requirementsMatrix.get(this.getRequirementIndex(itemId));
         }
 
-        private void method_7421(int i) {
-            this.field_7558.set(this.method_7419(i));
+        private void unfulfillRequirement(int itemId) {
+            this.requirementsMatrix.set(this.getRequirementIndex(itemId));
         }
 
-        private int method_7419(int i) {
-            return this.ingredientCount + this.field_7553 + i;
+        private int getRequirementIndex(int itemId) {
+            return this.totalIngredients + this.totalRequiredItems + itemId;
         }
 
-        private boolean method_7418(boolean bl, int i, int j) {
-            return this.field_7558.get(this.method_7420(bl, i, j));
+        private boolean needsRequirement(boolean reversed, int itemIndex, int ingredientIndex) {
+            return this.requirementsMatrix.get(this.getRequirementIndex(reversed, itemIndex, ingredientIndex));
         }
 
-        private boolean method_7425(boolean bl, int i, int j) {
-            return bl != this.field_7558.get(1 + this.method_7420(bl, i, j));
+        private boolean checkRequirement(boolean reversed, int itemIndex, int ingredientIndex) {
+            return reversed != this.requirementsMatrix.get(1 + this.getRequirementIndex(reversed, itemIndex, ingredientIndex));
         }
 
-        private void method_7414(boolean bl, int i, int j) {
-            this.field_7558.flip(1 + this.method_7420(bl, i, j));
+        private void flipRequirement(boolean reversed, int itemIndex, int ingredientIndex) {
+            this.requirementsMatrix.flip(1 + this.getRequirementIndex(reversed, itemIndex, ingredientIndex));
         }
 
-        private int method_7420(boolean bl, int i, int j) {
-            int k = bl ? i * this.ingredientCount + j : j * this.ingredientCount + i;
-            return this.ingredientCount + this.field_7553 + this.ingredientCount + 2 * k;
+        private int getRequirementIndex(boolean reversed, int itemIndex, int ingredientIndex) {
+            int i = reversed ? itemIndex * this.totalIngredients + ingredientIndex : ingredientIndex * this.totalIngredients + itemIndex;
+            return this.totalIngredients + this.totalRequiredItems + this.totalIngredients + 2 * i;
         }
 
-        private void method_7413(boolean bl, int i) {
-            this.field_7558.set(this.method_7424(bl, i));
-            this.field_7557.add(i);
+        private void addRequirement(boolean reversed, int itemId) {
+            this.requirementsMatrix.set(this.getRequirementIndex(reversed, itemId));
+            this.ingredientItemLookup.add(itemId);
         }
 
-        private boolean method_7426(boolean bl, int i) {
-            return this.field_7558.get(this.method_7424(bl, i));
+        private boolean isRequirementUnfulfilled(boolean reversed, int itemId) {
+            return this.requirementsMatrix.get(this.getRequirementIndex(reversed, itemId));
         }
 
-        private int method_7424(boolean bl, int i) {
-            return (bl ? 0 : this.ingredientCount) + i;
+        private int getRequirementIndex(boolean reversed, int itemId) {
+            return (reversed ? 0 : this.totalIngredients) + itemId;
         }
 
-        public int countCrafts(int limit, @Nullable IntList outMatchingInputIds) {
+        public int countCrafts(int minimum, @Nullable IntList output) {
             int k;
             int i = 0;
-            int j = Math.min(limit, this.method_7415()) + 1;
+            int j = Math.min(minimum, this.getMaximumCrafts()) + 1;
             while (true) {
-                if (this.find(k = (i + j) / 2, null)) {
+                if (this.match(k = (i + j) / 2, null)) {
                     if (j - i <= 1) break;
                     i = k;
                     continue;
@@ -265,12 +266,12 @@ public class RecipeMatcher {
                 j = k;
             }
             if (k > 0) {
-                this.find(k, outMatchingInputIds);
+                this.match(k, output);
             }
             return k;
         }
 
-        private int method_7415() {
+        private int getMaximumCrafts() {
             int i = Integer.MAX_VALUE;
             for (Ingredient ingredient : this.ingredients) {
                 int j = 0;

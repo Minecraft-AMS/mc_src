@@ -43,7 +43,7 @@ extends DataFix {
             if (!type2.equals((Object)((Typed)pair2.getSecond()).getType(), true, true)) {
                 throw new IllegalStateException(String.format("Dynamic type check failed: %s not equal to %s", type2, ((Typed)pair2.getSecond()).getType()));
             }
-            return Pair.of((Object)pair2.getFirst(), (Object)((Typed)pair2.getSecond()).getValue());
+            return Pair.of((Object)((String)pair2.getFirst()), (Object)((Typed)pair2.getSecond()).getValue());
         });
     }
 

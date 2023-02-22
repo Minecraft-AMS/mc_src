@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -48,9 +42,9 @@ extends Block {
     }
 
     @Override
-    public void onSteppedOn(World world, BlockPos pos, Entity entity) {
-        RedstoneOreBlock.light(world.getBlockState(pos), world, pos);
-        super.onSteppedOn(world, pos, entity);
+    public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
+        RedstoneOreBlock.light(state, world, pos);
+        super.onSteppedOn(world, pos, state, entity);
     }
 
     @Override
@@ -96,7 +90,6 @@ extends Block {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (state.get(LIT).booleanValue()) {
             RedstoneOreBlock.spawnParticles(world, pos);

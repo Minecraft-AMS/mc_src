@@ -14,7 +14,6 @@
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectIterator
- *  it.unimi.dsi.fastutil.objects.ObjectList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -37,10 +36,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -56,10 +55,12 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CampfireBlock;
 import net.minecraft.block.ComposterBlock;
+import net.minecraft.block.PointedDripstoneBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderEffect;
 import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -76,6 +77,7 @@ import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.BuiltChunkStorage;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.DimensionEffects;
 import net.minecraft.client.render.FpsSmoother;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.GameRenderer;
@@ -85,7 +87,7 @@ import net.minecraft.client.render.OverlayVertexConsumer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.RenderPhase;
-import net.minecraft.client.render.SkyProperties;
+import net.minecraft.client.render.Shader;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.VertexConsumer;
@@ -101,6 +103,7 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.texture.TextureManager;
+import net.minecraft.client.util.ParticleUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
@@ -134,19 +137,23 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.Vector4f;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.BlockView;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
@@ -161,6 +168,14 @@ public class WorldRenderer
 implements SynchronousResourceReloader,
 AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
+    public static final int field_32759 = 16;
+    public static final int field_32760 = 66;
+    public static final int field_32761 = 4356;
+    private static final float field_32762 = 512.0f;
+    private static final int field_32763 = 32;
+    private static final int field_32764 = 10;
+    private static final int field_32765 = 21;
+    private static final int field_32766 = 15;
     private static final Identifier MOON_PHASES = new Identifier("textures/environment/moon_phases.png");
     private static final Identifier SUN = new Identifier("textures/environment/sun.png");
     private static final Identifier CLOUDS = new Identifier("textures/environment/clouds.png");
@@ -172,13 +187,14 @@ AutoCloseable {
     private final MinecraftClient client;
     private final TextureManager textureManager;
     private final EntityRenderDispatcher entityRenderDispatcher;
+    private final BlockEntityRenderDispatcher blockEntityRenderDispatcher;
     private final BufferBuilderStorage bufferBuilders;
     private ClientWorld world;
     private Set<ChunkBuilder.BuiltChunk> chunksToRebuild = Sets.newLinkedHashSet();
-    private final ObjectList<ChunkInfo> visibleChunks = new ObjectArrayList(69696);
+    private final ObjectArrayList<ChunkInfo> visibleChunks = new ObjectArrayList();
     private final Set<BlockEntity> noCullingBlockEntities = Sets.newHashSet();
     private BuiltChunkStorage chunks;
-    private final VertexFormat skyVertexFormat = VertexFormats.POSITION;
+    private ChunkInfoList chunkInfos;
     @Nullable
     private VertexBuffer starsBuffer;
     @Nullable
@@ -226,10 +242,10 @@ AutoCloseable {
     private Vec3d lastCloudsColor = Vec3d.ZERO;
     private CloudRenderMode lastCloudsRenderMode;
     private ChunkBuilder chunkBuilder;
-    private final VertexFormat vertexFormat = VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL;
     private int viewDistance = -1;
     private int regularEntityCount;
     private int blockEntityCount;
+    private Frustum frustum;
     private boolean shouldCaptureFrustum;
     @Nullable
     private Frustum capturedFrustum;
@@ -247,6 +263,7 @@ AutoCloseable {
     public WorldRenderer(MinecraftClient client, BufferBuilderStorage bufferBuilders) {
         this.client = client;
         this.entityRenderDispatcher = client.getEntityRenderDispatcher();
+        this.blockEntityRenderDispatcher = client.getBlockEntityRenderDispatcher();
         this.bufferBuilders = bufferBuilders;
         this.textureManager = client.getTextureManager();
         for (int i = 0; i < 32; ++i) {
@@ -275,12 +292,9 @@ AutoCloseable {
         int k = MathHelper.floor(g);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.enableAlphaTest();
         RenderSystem.disableCull();
-        RenderSystem.normal3f(0.0f, 1.0f, 0.0f);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.defaultAlphaFunc();
         RenderSystem.enableDepthTest();
         int l = 5;
         if (MinecraftClient.isFancyGraphicsOrBetter()) {
@@ -289,7 +303,8 @@ AutoCloseable {
         RenderSystem.depthMask(MinecraftClient.isFabulousGraphicsOrBetter());
         int m = -1;
         float n = (float)this.ticks + f;
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShader(GameRenderer::getParticleShader);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int o = k - l; o <= k + l; ++o) {
             for (int p = i - l; p <= i + l; ++p) {
@@ -324,14 +339,14 @@ AutoCloseable {
                             tessellator.draw();
                         }
                         m = 0;
-                        this.client.getTextureManager().bindTexture(RAIN);
-                        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR_LIGHT);
+                        RenderSystem.setShaderTexture(0, RAIN);
+                        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR_LIGHT);
                     }
                     int y = this.ticks + p * p * 3121 + p * 45238971 + o * o * 418711 + o * 13761 & 0x1F;
                     z = -((float)y + f) / 32.0f * (3.0f + random.nextFloat());
-                    double aa = (double)((float)p + 0.5f) - d;
-                    double ab = (double)((float)o + 0.5f) - g;
-                    float ac = MathHelper.sqrt(aa * aa + ab * ab) / (float)l;
+                    double aa = (double)p + 0.5 - d;
+                    double ab = (double)o + 0.5 - g;
+                    float ac = (float)Math.sqrt(aa * aa + ab * ab) / (float)l;
                     ad = ((1.0f - ac * ac) * 0.5f + 0.5f) * h;
                     mutable.set(p, w, o);
                     int ae = WorldRenderer.getLightmapCoordinates(world, mutable);
@@ -346,20 +361,20 @@ AutoCloseable {
                         tessellator.draw();
                     }
                     m = 1;
-                    this.client.getTextureManager().bindTexture(SNOW);
-                    bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR_LIGHT);
+                    RenderSystem.setShaderTexture(0, SNOW);
+                    bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR_LIGHT);
                 }
                 float af = -((float)(this.ticks & 0x1FF) + f) / 512.0f;
                 z = (float)(random.nextDouble() + (double)n * 0.01 * (double)((float)random.nextGaussian()));
                 float ag = (float)(random.nextDouble() + (double)(n * (float)random.nextGaussian()) * 0.001);
-                double ah = (double)((float)p + 0.5f) - d;
-                double ai = (double)((float)o + 0.5f) - g;
-                ad = MathHelper.sqrt(ah * ah + ai * ai) / (float)l;
+                double ah = (double)p + 0.5 - d;
+                double ai = (double)o + 0.5 - g;
+                ad = (float)Math.sqrt(ah * ah + ai * ai) / (float)l;
                 float aj = ((1.0f - ad * ad) * 0.3f + 0.5f) * h;
                 mutable.set(p, w, o);
                 int ak = WorldRenderer.getLightmapCoordinates(world, mutable);
                 int al = ak >> 16 & 0xFFFF;
-                int am = (ak & 0xFFFF) * 3;
+                int am = ak & 0xFFFF;
                 int an = (al * 3 + 240) / 4;
                 int ao = (am * 3 + 240) / 4;
                 bufferBuilder.vertex((double)p - d - r + 0.5, (double)v - e, (double)o - g - s + 0.5).texture(0.0f + z, (float)u * 0.25f + af + ag).color(1.0f, 1.0f, 1.0f, aj).light(ao, an).next();
@@ -373,8 +388,6 @@ AutoCloseable {
         }
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
-        RenderSystem.defaultAlphaFunc();
-        RenderSystem.disableAlphaTest();
         manager.disable();
     }
 
@@ -393,7 +406,7 @@ AutoCloseable {
             int l = random.nextInt(21) - 10;
             BlockPos blockPos3 = worldView.getTopPosition(Heightmap.Type.MOTION_BLOCKING, blockPos.add(k, 0, l)).down();
             Biome biome = worldView.getBiome(blockPos3);
-            if (blockPos3.getY() <= 0 || blockPos3.getY() > blockPos.getY() + 10 || blockPos3.getY() < blockPos.getY() - 10 || biome.getPrecipitation() != Biome.Precipitation.RAIN || !(biome.getTemperature(blockPos3) >= 0.15f)) continue;
+            if (blockPos3.getY() <= worldView.getBottomY() || blockPos3.getY() > blockPos.getY() + 10 || blockPos3.getY() < blockPos.getY() - 10 || biome.getPrecipitation() != Biome.Precipitation.RAIN || !(biome.getTemperature(blockPos3) >= 0.15f)) continue;
             blockPos2 = blockPos3;
             if (this.client.options.particles == ParticlesMode.MINIMAL) break;
             double d = random.nextDouble();
@@ -429,10 +442,6 @@ AutoCloseable {
 
     @Override
     public void reload(ResourceManager manager) {
-        this.textureManager.bindTexture(FORCEFIELD);
-        RenderSystem.texParameter(3553, 10242, 10497);
-        RenderSystem.texParameter(3553, 10243, 10497);
-        RenderSystem.bindTexture(0);
         this.loadEntityOutlineShader();
         if (MinecraftClient.isFabulousGraphicsOrBetter()) {
             this.loadTransparencyShader();
@@ -492,7 +501,7 @@ AutoCloseable {
                     text = null;
                 }
                 this.client.options.graphicsMode = GraphicsMode.FANCY;
-                this.client.method_31186(shaderException, text);
+                this.client.onResourceReloadFailure(shaderException, text);
             }
             CrashReport crashReport = this.client.addDetailsToCrashReport(new CrashReport(string2, shaderException));
             this.client.options.graphicsMode = GraphicsMode.FANCY;
@@ -530,7 +539,7 @@ AutoCloseable {
     }
 
     protected boolean canDrawEntityOutlines() {
-        return this.entityOutlinesFramebuffer != null && this.entityOutlineShader != null && this.client.player != null;
+        return !this.client.gameRenderer.isRenderingPanorama() && this.entityOutlinesFramebuffer != null && this.entityOutlineShader != null && this.client.player != null;
     }
 
     private void renderDarkSky() {
@@ -539,9 +548,8 @@ AutoCloseable {
         if (this.darkSkyBuffer != null) {
             this.darkSkyBuffer.close();
         }
-        this.darkSkyBuffer = new VertexBuffer(this.skyVertexFormat);
-        this.renderSkyHalf(bufferBuilder, -16.0f, true);
-        bufferBuilder.end();
+        this.darkSkyBuffer = new VertexBuffer();
+        WorldRenderer.method_34550(bufferBuilder, -16.0f);
         this.darkSkyBuffer.upload(bufferBuilder);
     }
 
@@ -551,39 +559,31 @@ AutoCloseable {
         if (this.lightSkyBuffer != null) {
             this.lightSkyBuffer.close();
         }
-        this.lightSkyBuffer = new VertexBuffer(this.skyVertexFormat);
-        this.renderSkyHalf(bufferBuilder, 16.0f, false);
-        bufferBuilder.end();
+        this.lightSkyBuffer = new VertexBuffer();
+        WorldRenderer.method_34550(bufferBuilder, 16.0f);
         this.lightSkyBuffer.upload(bufferBuilder);
     }
 
-    private void renderSkyHalf(BufferBuilder buffer, float y, boolean bottom) {
-        int i = 64;
-        int j = 6;
-        buffer.begin(7, VertexFormats.POSITION);
-        for (int k = -384; k <= 384; k += 64) {
-            for (int l = -384; l <= 384; l += 64) {
-                float f = k;
-                float g = k + 64;
-                if (bottom) {
-                    g = k;
-                    f = k + 64;
-                }
-                buffer.vertex(f, y, l).next();
-                buffer.vertex(g, y, l).next();
-                buffer.vertex(g, y, l + 64).next();
-                buffer.vertex(f, y, l + 64).next();
-            }
+    private static void method_34550(BufferBuilder bufferBuilder, float f) {
+        float g = Math.signum(f) * 512.0f;
+        float h = 512.0f;
+        RenderSystem.setShader(GameRenderer::getPositionShader);
+        bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION);
+        bufferBuilder.vertex(0.0, f, 0.0).next();
+        for (int i = -180; i <= 180; i += 45) {
+            bufferBuilder.vertex(g * MathHelper.cos((float)i * ((float)Math.PI / 180)), f, 512.0f * MathHelper.sin((float)i * ((float)Math.PI / 180))).next();
         }
+        bufferBuilder.end();
     }
 
     private void renderStars() {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
+        RenderSystem.setShader(GameRenderer::getPositionShader);
         if (this.starsBuffer != null) {
             this.starsBuffer.close();
         }
-        this.starsBuffer = new VertexBuffer(this.skyVertexFormat);
+        this.starsBuffer = new VertexBuffer();
         this.renderStars(bufferBuilder);
         bufferBuilder.end();
         this.starsBuffer.upload(bufferBuilder);
@@ -591,7 +591,7 @@ AutoCloseable {
 
     private void renderStars(BufferBuilder buffer) {
         Random random = new Random(10842L);
-        buffer.begin(7, VertexFormats.POSITION);
+        buffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
         for (int i = 0; i < 1500; ++i) {
             double d = random.nextFloat() * 2.0f - 1.0f;
             double e = random.nextFloat() * 2.0f - 1.0f;
@@ -640,6 +640,7 @@ AutoCloseable {
         this.entityRenderDispatcher.setWorld(world);
         this.world = world;
         if (world != null) {
+            this.visibleChunks.ensureCapacity(4356 * world.countVerticalSections());
             this.reload();
         } else {
             this.chunksToRebuild.clear();
@@ -656,6 +657,14 @@ AutoCloseable {
         }
     }
 
+    public void reloadTransparencyShader() {
+        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+            this.loadTransparencyShader();
+        } else {
+            this.resetTransparencyShader();
+        }
+    }
+
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
@@ -664,11 +673,7 @@ AutoCloseable {
         if (this.world == null) {
             return;
         }
-        if (MinecraftClient.isFabulousGraphicsOrBetter()) {
-            this.loadTransparencyShader();
-        } else {
-            this.resetTransparencyShader();
-        }
+        this.reloadTransparencyShader();
         this.world.reloadColor();
         if (this.chunkBuilder == null) {
             this.chunkBuilder = new ChunkBuilder(this.world, this, Util.getMainWorkerExecutor(), this.client.is64Bit(), this.bufferBuilders.getBlockBufferBuilders());
@@ -688,6 +693,7 @@ AutoCloseable {
             this.noCullingBlockEntities.clear();
         }
         this.chunks = new BuiltChunkStorage(this.chunkBuilder, this.world, this.client.options.viewDistance, this);
+        this.chunkInfos = new ChunkInfoList(this.chunks.chunks.length);
         if (this.world != null && (entity = this.client.getCameraEntity()) != null) {
             this.chunks.updateCameraPosition(entity.getX(), entity.getZ());
         }
@@ -698,13 +704,13 @@ AutoCloseable {
         this.chunkBuilder.reset();
     }
 
-    public void onResized(int i, int j) {
+    public void onResized(int width, int height) {
         this.scheduleTerrainUpdate();
         if (this.entityOutlineShader != null) {
-            this.entityOutlineShader.setupDimensions(i, j);
+            this.entityOutlineShader.setupDimensions(width, height);
         }
         if (this.transparencyShader != null) {
-            this.transparencyShader.setupDimensions(i, j);
+            this.transparencyShader.setupDimensions(width, height);
         }
     }
 
@@ -714,7 +720,19 @@ AutoCloseable {
         return String.format("C: %d/%d %sD: %d, %s", j, i, this.client.chunkCullingEnabled ? "(s) " : "", this.viewDistance, this.chunkBuilder == null ? "null" : this.chunkBuilder.getDebugString());
     }
 
-    protected int getCompletedChunkCount() {
+    public ChunkBuilder getChunkBuilder() {
+        return this.chunkBuilder;
+    }
+
+    public double getChunkCount() {
+        return this.chunks.chunks.length;
+    }
+
+    public double getViewDistance() {
+        return this.viewDistance;
+    }
+
+    public int getCompletedChunkCount() {
         int i = 0;
         for (ChunkInfo chunkInfo : this.visibleChunks) {
             if (chunkInfo.chunk.getData().isEmpty()) continue;
@@ -733,98 +751,130 @@ AutoCloseable {
             this.reload();
         }
         this.world.getProfiler().push("camera");
-        double d = this.client.player.getX() - this.lastCameraChunkUpdateX;
-        double e = this.client.player.getY() - this.lastCameraChunkUpdateY;
-        double f = this.client.player.getZ() - this.lastCameraChunkUpdateZ;
-        if (this.cameraChunkX != this.client.player.chunkX || this.cameraChunkY != this.client.player.chunkY || this.cameraChunkZ != this.client.player.chunkZ || d * d + e * e + f * f > 16.0) {
-            this.lastCameraChunkUpdateX = this.client.player.getX();
-            this.lastCameraChunkUpdateY = this.client.player.getY();
-            this.lastCameraChunkUpdateZ = this.client.player.getZ();
-            this.cameraChunkX = this.client.player.chunkX;
-            this.cameraChunkY = this.client.player.chunkY;
-            this.cameraChunkZ = this.client.player.chunkZ;
-            this.chunks.updateCameraPosition(this.client.player.getX(), this.client.player.getZ());
+        double d = this.client.player.getX();
+        double e = this.client.player.getY();
+        double f = this.client.player.getZ();
+        double g = d - this.lastCameraChunkUpdateX;
+        double h = e - this.lastCameraChunkUpdateY;
+        double i = f - this.lastCameraChunkUpdateZ;
+        int j = ChunkSectionPos.getSectionCoord(d);
+        int k = ChunkSectionPos.getSectionCoord(e);
+        int l = ChunkSectionPos.getSectionCoord(f);
+        if (this.cameraChunkX != j || this.cameraChunkY != k || this.cameraChunkZ != l || g * g + h * h + i * i > 16.0) {
+            this.lastCameraChunkUpdateX = d;
+            this.lastCameraChunkUpdateY = e;
+            this.lastCameraChunkUpdateZ = f;
+            this.cameraChunkX = j;
+            this.cameraChunkY = k;
+            this.cameraChunkZ = l;
+            this.chunks.updateCameraPosition(d, f);
         }
         this.chunkBuilder.setCameraPosition(vec3d);
         this.world.getProfiler().swap("cull");
         this.client.getProfiler().swap("culling");
         BlockPos blockPos = camera.getBlockPos();
         ChunkBuilder.BuiltChunk builtChunk = this.chunks.getRenderedChunk(blockPos);
-        int i = 16;
+        int m = 16;
         BlockPos blockPos2 = new BlockPos(MathHelper.floor(vec3d.x / 16.0) * 16, MathHelper.floor(vec3d.y / 16.0) * 16, MathHelper.floor(vec3d.z / 16.0) * 16);
-        float g = camera.getPitch();
-        float h = camera.getYaw();
-        this.needsTerrainUpdate = this.needsTerrainUpdate || !this.chunksToRebuild.isEmpty() || vec3d.x != this.lastCameraX || vec3d.y != this.lastCameraY || vec3d.z != this.lastCameraZ || (double)g != this.lastCameraPitch || (double)h != this.lastCameraYaw;
+        float n = camera.getPitch();
+        float o = camera.getYaw();
+        this.needsTerrainUpdate = this.needsTerrainUpdate || !this.chunksToRebuild.isEmpty() || vec3d.x != this.lastCameraX || vec3d.y != this.lastCameraY || vec3d.z != this.lastCameraZ || (double)n != this.lastCameraPitch || (double)o != this.lastCameraYaw;
         this.lastCameraX = vec3d.x;
         this.lastCameraY = vec3d.y;
         this.lastCameraZ = vec3d.z;
-        this.lastCameraPitch = g;
-        this.lastCameraYaw = h;
+        this.lastCameraPitch = n;
+        this.lastCameraYaw = o;
         this.client.getProfiler().swap("update");
         if (!hasForcedFrustum && this.needsTerrainUpdate) {
             this.needsTerrainUpdate = false;
-            this.visibleChunks.clear();
-            ArrayDeque queue = Queues.newArrayDeque();
-            Entity.setRenderDistanceMultiplier(MathHelper.clamp((double)this.client.options.viewDistance / 8.0, 1.0, 2.5) * (double)this.client.options.entityDistanceScaling);
-            boolean bl = this.client.chunkCullingEnabled;
-            if (builtChunk == null) {
-                int j = blockPos.getY() > 0 ? 248 : 8;
-                int k = MathHelper.floor(vec3d.x / 16.0) * 16;
-                int l = MathHelper.floor(vec3d.z / 16.0) * 16;
-                Direction[] list = Lists.newArrayList();
-                for (int m = -this.viewDistance; m <= this.viewDistance; ++m) {
-                    for (int n = -this.viewDistance; n <= this.viewDistance; ++n) {
-                        ChunkBuilder.BuiltChunk builtChunk2 = this.chunks.getRenderedChunk(new BlockPos(k + (m << 4) + 8, j, l + (n << 4) + 8));
-                        if (builtChunk2 == null || !frustum.isVisible(builtChunk2.boundingBox)) continue;
-                        builtChunk2.setRebuildFrame(frame);
-                        list.add(new ChunkInfo(builtChunk2, null, 0));
-                    }
-                }
-                list.sort(Comparator.comparingDouble(chunkInfo -> blockPos.getSquaredDistance(((ChunkInfo)chunkInfo).chunk.getOrigin().add(8, 8, 8))));
-                queue.addAll(list);
-            } else {
-                if (spectator && this.world.getBlockState(blockPos).isOpaqueFullCube(this.world, blockPos)) {
-                    bl = false;
-                }
-                builtChunk.setRebuildFrame(frame);
-                queue.add(new ChunkInfo(builtChunk, null, 0));
-            }
-            this.client.getProfiler().push("iteration");
-            while (!queue.isEmpty()) {
-                ChunkInfo chunkInfo2 = (ChunkInfo)queue.poll();
-                ChunkBuilder.BuiltChunk builtChunk3 = chunkInfo2.chunk;
-                Direction direction = chunkInfo2.direction;
-                this.visibleChunks.add((Object)chunkInfo2);
-                for (Direction direction2 : DIRECTIONS) {
-                    ChunkBuilder.BuiltChunk builtChunk4 = this.getAdjacentChunk(blockPos2, builtChunk3, direction2);
-                    if (bl && chunkInfo2.canCull(direction2.getOpposite()) || bl && direction != null && !builtChunk3.getData().isVisibleThrough(direction.getOpposite(), direction2) || builtChunk4 == null || !builtChunk4.shouldBuild() || !builtChunk4.setRebuildFrame(frame) || !frustum.isVisible(builtChunk4.boundingBox)) continue;
-                    ChunkInfo chunkInfo22 = new ChunkInfo(builtChunk4, direction2, chunkInfo2.propagationLevel + 1);
-                    chunkInfo22.updateCullingState(chunkInfo2.cullingState, direction2);
-                    queue.add(chunkInfo22);
-                }
-            }
-            this.client.getProfiler().pop();
+            this.method_34808(frustum, frame, spectator, vec3d, blockPos, builtChunk, 16, blockPos2);
         }
         this.client.getProfiler().swap("rebuildNear");
         Set<ChunkBuilder.BuiltChunk> set = this.chunksToRebuild;
         this.chunksToRebuild = Sets.newLinkedHashSet();
-        for (ChunkInfo chunkInfo3 : this.visibleChunks) {
-            boolean bl2;
-            ChunkBuilder.BuiltChunk builtChunk3 = chunkInfo3.chunk;
-            if (!builtChunk3.needsRebuild() && !set.contains(builtChunk3)) continue;
+        for (ChunkInfo chunkInfo : this.visibleChunks) {
+            boolean bl;
+            ChunkBuilder.BuiltChunk builtChunk2 = chunkInfo.chunk;
+            if (!builtChunk2.needsRebuild() && !set.contains(builtChunk2)) continue;
             this.needsTerrainUpdate = true;
-            BlockPos blockPos3 = builtChunk3.getOrigin().add(8, 8, 8);
-            boolean bl = bl2 = blockPos3.getSquaredDistance(blockPos) < 768.0;
-            if (builtChunk3.needsImportantRebuild() || bl2) {
+            BlockPos blockPos3 = builtChunk2.getOrigin().add(8, 8, 8);
+            boolean bl2 = bl = blockPos3.getSquaredDistance(blockPos) < 768.0;
+            if (builtChunk2.needsImportantRebuild() || bl) {
                 this.client.getProfiler().push("build near");
-                this.chunkBuilder.rebuild(builtChunk3);
-                builtChunk3.cancelRebuild();
+                this.chunkBuilder.rebuild(builtChunk2);
+                builtChunk2.cancelRebuild();
                 this.client.getProfiler().pop();
                 continue;
             }
-            this.chunksToRebuild.add(builtChunk3);
+            this.chunksToRebuild.add(builtChunk2);
         }
         this.chunksToRebuild.addAll(set);
+        this.client.getProfiler().pop();
+    }
+
+    private void method_34808(Frustum frustum, int i, boolean bl, Vec3d vec3d, BlockPos blockPos, ChunkBuilder.BuiltChunk builtChunk, int j, BlockPos blockPos2) {
+        int k;
+        this.visibleChunks.clear();
+        ArrayDeque queue = Queues.newArrayDeque();
+        Entity.setRenderDistanceMultiplier(MathHelper.clamp((double)this.client.options.viewDistance / 8.0, 1.0, 2.5) * (double)this.client.options.entityDistanceScaling);
+        boolean bl2 = this.client.chunkCullingEnabled;
+        if (builtChunk == null) {
+            k = blockPos.getY() > this.world.getBottomY() ? this.world.getTopY() - 8 : this.world.getBottomY() + 8;
+            int l = MathHelper.floor(vec3d.x / (double)j) * j;
+            int m = MathHelper.floor(vec3d.z / (double)j) * j;
+            ArrayList list = Lists.newArrayList();
+            for (int n = -this.viewDistance; n <= this.viewDistance; ++n) {
+                for (int o = -this.viewDistance; o <= this.viewDistance; ++o) {
+                    ChunkBuilder.BuiltChunk builtChunk2 = this.chunks.getRenderedChunk(new BlockPos(l + ChunkSectionPos.getOffsetPos(n, 8), k, m + ChunkSectionPos.getOffsetPos(o, 8)));
+                    if (builtChunk2 == null || !frustum.isVisible(builtChunk2.boundingBox)) continue;
+                    builtChunk2.setRebuildFrame(i);
+                    list.add(new ChunkInfo(builtChunk2, null, 0));
+                }
+            }
+            list.sort(Comparator.comparingDouble(chunkInfo -> blockPos.getSquaredDistance(chunkInfo.chunk.getOrigin().add(8, 8, 8))));
+            queue.addAll(list);
+        } else {
+            if (bl && this.world.getBlockState(blockPos).isOpaqueFullCube(this.world, blockPos)) {
+                bl2 = false;
+            }
+            builtChunk.setRebuildFrame(i);
+            queue.add(new ChunkInfo(builtChunk, null, 0));
+        }
+        this.client.getProfiler().push("iteration");
+        k = this.client.options.viewDistance;
+        this.chunkInfos.update();
+        while (!queue.isEmpty()) {
+            ChunkInfo chunkInfo2 = (ChunkInfo)queue.poll();
+            ChunkBuilder.BuiltChunk builtChunk3 = chunkInfo2.chunk;
+            this.visibleChunks.add((Object)chunkInfo2);
+            for (Direction direction : DIRECTIONS) {
+                ChunkInfo chunkInfo22;
+                ChunkBuilder.BuiltChunk builtChunk4 = this.getAdjacentChunk(blockPos2, builtChunk3, direction);
+                if (bl2 && chunkInfo2.canCull(direction.getOpposite())) continue;
+                if (bl2 && chunkInfo2.hasAnyDirection()) {
+                    ChunkBuilder.ChunkData chunkData = builtChunk3.getData();
+                    boolean bl3 = false;
+                    for (int p = 0; p < DIRECTIONS.length; ++p) {
+                        if (!chunkInfo2.hasDirection(p) || !chunkData.isVisibleThrough(DIRECTIONS[p].getOpposite(), direction)) continue;
+                        bl3 = true;
+                        break;
+                    }
+                    if (!bl3) continue;
+                }
+                if (builtChunk4 == null || !builtChunk4.shouldBuild()) continue;
+                if (!builtChunk4.setRebuildFrame(i)) {
+                    chunkInfo22 = this.chunkInfos.getInfo(builtChunk4);
+                    if (chunkInfo22 == null) continue;
+                    chunkInfo22.addDirection(direction);
+                    continue;
+                }
+                if (!frustum.isVisible(builtChunk4.boundingBox)) continue;
+                chunkInfo22 = new ChunkInfo(builtChunk4, direction, chunkInfo2.propagationLevel + 1);
+                chunkInfo22.updateCullingState(chunkInfo2.cullingState, direction);
+                queue.add(chunkInfo22);
+                this.chunkInfos.setInfo(builtChunk4, chunkInfo22);
+            }
+        }
         this.client.getProfiler().pop();
     }
 
@@ -834,7 +884,7 @@ AutoCloseable {
         if (MathHelper.abs(pos.getX() - blockPos.getX()) > this.viewDistance * 16) {
             return null;
         }
-        if (blockPos.getY() < 0 || blockPos.getY() >= 256) {
+        if (blockPos.getY() < this.world.getBottomY() || blockPos.getY() >= this.world.getTopY()) {
             return null;
         }
         if (MathHelper.abs(pos.getZ() - blockPos.getZ()) > this.viewDistance * 16) {
@@ -865,15 +915,24 @@ AutoCloseable {
         }
     }
 
+    public void setupFrustum(MatrixStack matrices, Vec3d pos, Matrix4f projectionMatrix) {
+        Matrix4f matrix4f = matrices.peek().getModel();
+        double d = pos.getX();
+        double e = pos.getY();
+        double f = pos.getZ();
+        this.frustum = new Frustum(matrix4f, projectionMatrix);
+        this.frustum.setPosition(d, e, f);
+    }
+
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     public void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f) {
         int u;
-        boolean bl2;
         Frustum frustum;
         boolean bl;
-        BlockEntityRenderDispatcher.INSTANCE.configure(this.world, this.client.getTextureManager(), this.client.textRenderer, camera, this.client.crosshairTarget);
+        RenderSystem.setShaderGameTime(this.world.getTime(), tickDelta);
+        this.blockEntityRenderDispatcher.configure(this.world, camera, this.client.crosshairTarget);
         this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
         Profiler profiler = this.world.getProfiler();
         profiler.swap("light_updates");
@@ -884,13 +943,12 @@ AutoCloseable {
         double f = vec3d.getZ();
         Matrix4f matrix4f2 = matrices.peek().getModel();
         profiler.swap("culling");
-        boolean bl3 = bl = this.capturedFrustum != null;
+        boolean bl2 = bl = this.capturedFrustum != null;
         if (bl) {
             frustum = this.capturedFrustum;
             frustum.setPosition(this.capturedFrustumPosition.x, this.capturedFrustumPosition.y, this.capturedFrustumPosition.z);
         } else {
-            frustum = new Frustum(matrix4f2, matrix4f);
-            frustum.setPosition(d, e, f);
+            frustum = this.frustum;
         }
         this.client.getProfiler().swap("captureFrustum");
         if (this.shouldCaptureFrustum) {
@@ -899,16 +957,15 @@ AutoCloseable {
         }
         profiler.swap("clear");
         BackgroundRenderer.render(camera, tickDelta, this.client.world, this.client.options.viewDistance, gameRenderer.getSkyDarkness(tickDelta));
+        BackgroundRenderer.setFogBlack();
         RenderSystem.clear(16640, MinecraftClient.IS_SYSTEM_MAC);
         float g = gameRenderer.getViewDistance();
-        boolean bl4 = bl2 = this.client.world.getSkyProperties().useThickFog(MathHelper.floor(d), MathHelper.floor(e)) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
-        if (this.client.options.viewDistance >= 4) {
-            BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, g, bl2);
-            profiler.swap("sky");
-            this.renderSky(matrices, tickDelta);
-        }
+        boolean bl22 = this.client.world.getDimensionEffects().useThickFog(MathHelper.floor(d), MathHelper.floor(e)) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
+        profiler.swap("sky");
+        RenderSystem.setShader(GameRenderer::getPositionShader);
+        this.renderSky(matrices, matrix4f, tickDelta, () -> BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, g, bl22));
         profiler.swap("fog");
-        BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0f, 32.0f), bl2);
+        BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0f, 32.0f), bl22);
         profiler.swap("terrain_setup");
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
         profiler.swap("updatechunks");
@@ -922,10 +979,10 @@ AutoCloseable {
         long q = MathHelper.clamp(p, m, 33333333L);
         this.updateChunks(limitTime + q);
         profiler.swap("terrain");
-        this.renderLayer(RenderLayer.getSolid(), matrices, d, e, f);
-        this.renderLayer(RenderLayer.getCutoutMipped(), matrices, d, e, f);
-        this.renderLayer(RenderLayer.getCutout(), matrices, d, e, f);
-        if (this.world.getSkyProperties().isDarkened()) {
+        this.renderLayer(RenderLayer.getSolid(), matrices, d, e, f, matrix4f);
+        this.renderLayer(RenderLayer.getCutoutMipped(), matrices, d, e, f, matrix4f);
+        this.renderLayer(RenderLayer.getCutout(), matrices, d, e, f, matrix4f);
+        if (this.world.getDimensionEffects().isDarkened()) {
             DiffuseLighting.enableForLevel(matrices.peek().getModel());
         } else {
             DiffuseLighting.disableForLevel(matrices.peek().getModel());
@@ -945,7 +1002,7 @@ AutoCloseable {
             this.entityOutlinesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.client.getFramebuffer().beginWrite(false);
         }
-        boolean bl32 = false;
+        boolean bl3 = false;
         VertexConsumerProvider.Immediate immediate = this.bufferBuilders.getEntityVertexConsumers();
         for (Entity entity : this.world.getEntities()) {
             VertexConsumerProvider vertexConsumerProvider;
@@ -957,7 +1014,7 @@ AutoCloseable {
                 entity.lastRenderZ = entity.getZ();
             }
             if (this.canDrawEntityOutlines() && this.client.hasOutline(entity)) {
-                bl32 = true;
+                bl3 = true;
                 OutlineVertexConsumerProvider outlineVertexConsumerProvider = this.bufferBuilders.getOutlineVertexConsumers();
                 vertexConsumerProvider = outlineVertexConsumerProvider;
                 int k = entity.getTeamColorValue();
@@ -971,6 +1028,7 @@ AutoCloseable {
             }
             this.renderEntity(entity, d, e, f, tickDelta, matrices, vertexConsumerProvider);
         }
+        immediate.drawCurrentLayer();
         this.checkEmpty(matrices);
         immediate.draw(RenderLayer.getEntitySolid(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
         immediate.draw(RenderLayer.getEntityCutout(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
@@ -997,7 +1055,7 @@ AutoCloseable {
                         return vertexConsumer2;
                     };
                 }
-                BlockEntityRenderDispatcher.INSTANCE.render(blockEntity, tickDelta, matrices, vertexConsumerProvider2);
+                this.blockEntityRenderDispatcher.render(blockEntity, tickDelta, matrices, vertexConsumerProvider2);
                 matrices.pop();
             }
         }
@@ -1007,12 +1065,14 @@ AutoCloseable {
                 BlockPos blockPos2 = blockEntity2.getPos();
                 matrices.push();
                 matrices.translate((double)blockPos2.getX() - d, (double)blockPos2.getY() - e, (double)blockPos2.getZ() - f);
-                BlockEntityRenderDispatcher.INSTANCE.render(blockEntity2, tickDelta, matrices, immediate);
+                this.blockEntityRenderDispatcher.render(blockEntity2, tickDelta, matrices, immediate);
                 matrices.pop();
             }
         }
         this.checkEmpty(matrices);
         immediate.draw(RenderLayer.getSolid());
+        immediate.draw(RenderLayer.getEndPortal());
+        immediate.draw(RenderLayer.getEndGateway());
         immediate.draw(TexturedRenderLayers.getEntitySolid());
         immediate.draw(TexturedRenderLayers.getEntityCutout());
         immediate.draw(TexturedRenderLayers.getBeds());
@@ -1020,7 +1080,7 @@ AutoCloseable {
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
         this.bufferBuilders.getOutlineVertexConsumers().draw();
-        if (bl32) {
+        if (bl3) {
             this.entityOutlineShader.render(tickDelta);
             this.client.getFramebuffer().beginWrite(false);
         }
@@ -1051,10 +1111,13 @@ AutoCloseable {
                 this.drawBlockOutline(matrices, vertexConsumer3, camera.getFocusedEntity(), d, e, f, blockPos4, blockState);
             }
         }
-        RenderSystem.pushMatrix();
-        RenderSystem.multMatrix(matrices.peek().getModel());
+        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
+        matrixStack.method_34425(matrices.peek().getModel());
+        RenderSystem.applyModelViewMatrix();
         this.client.debugRenderer.render(matrices, immediate, d, e, f);
-        RenderSystem.popMatrix();
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
         immediate.draw(TexturedRenderLayers.getEntityTranslucentCull());
         immediate.draw(TexturedRenderLayers.getBannerPatterns());
         immediate.draw(TexturedRenderLayers.getShieldPatterns());
@@ -1062,7 +1125,7 @@ AutoCloseable {
         immediate.draw(RenderLayer.getArmorEntityGlint());
         immediate.draw(RenderLayer.getGlint());
         immediate.draw(RenderLayer.getDirectGlint());
-        immediate.draw(RenderLayer.method_30676());
+        immediate.draw(RenderLayer.getGlintTranslucent());
         immediate.draw(RenderLayer.getEntityGlint());
         immediate.draw(RenderLayer.getDirectEntityGlint());
         immediate.draw(RenderLayer.getWaterMask());
@@ -1073,9 +1136,9 @@ AutoCloseable {
             this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
             profiler.swap("translucent");
-            this.renderLayer(RenderLayer.getTranslucent(), matrices, d, e, f);
+            this.renderLayer(RenderLayer.getTranslucent(), matrices, d, e, f, matrix4f);
             profiler.swap("string");
-            this.renderLayer(RenderLayer.getTripwire(), matrices, d, e, f);
+            this.renderLayer(RenderLayer.getTripwire(), matrices, d, e, f, matrix4f);
             this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.particlesFramebuffer.copyDepthFrom(this.client.getFramebuffer());
             RenderPhase.PARTICLES_TARGET.startDrawing();
@@ -1084,26 +1147,31 @@ AutoCloseable {
             RenderPhase.PARTICLES_TARGET.endDrawing();
         } else {
             profiler.swap("translucent");
-            this.renderLayer(RenderLayer.getTranslucent(), matrices, d, e, f);
+            if (this.translucentFramebuffer != null) {
+                this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
+            }
+            this.renderLayer(RenderLayer.getTranslucent(), matrices, d, e, f, matrix4f);
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
             profiler.swap("string");
-            this.renderLayer(RenderLayer.getTripwire(), matrices, d, e, f);
+            this.renderLayer(RenderLayer.getTripwire(), matrices, d, e, f, matrix4f);
             profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
         }
-        RenderSystem.pushMatrix();
-        RenderSystem.multMatrix(matrices.peek().getModel());
+        matrixStack.push();
+        matrixStack.method_34425(matrices.peek().getModel());
+        RenderSystem.applyModelViewMatrix();
         if (this.client.options.getCloudRenderMode() != CloudRenderMode.OFF) {
             if (this.transparencyShader != null) {
                 this.cloudsFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
                 RenderPhase.CLOUDS_TARGET.startDrawing();
                 profiler.swap("clouds");
-                this.renderClouds(matrices, tickDelta, d, e, f);
+                this.renderClouds(matrices, matrix4f, tickDelta, d, e, f);
                 RenderPhase.CLOUDS_TARGET.endDrawing();
             } else {
                 profiler.swap("clouds");
-                this.renderClouds(matrices, tickDelta, d, e, f);
+                RenderSystem.setShader(GameRenderer::getPositionTexColorNormalShader);
+                this.renderClouds(matrices, matrix4f, tickDelta, d, e, f);
             }
         }
         if (this.transparencyShader != null) {
@@ -1122,10 +1190,10 @@ AutoCloseable {
             RenderSystem.depthMask(true);
         }
         this.renderChunkDebugInfo(camera);
-        RenderSystem.shadeModel(7424);
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
-        RenderSystem.popMatrix();
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
         BackgroundRenderer.method_23792();
     }
 
@@ -1139,11 +1207,12 @@ AutoCloseable {
         double d = MathHelper.lerp((double)tickDelta, entity.lastRenderX, entity.getX());
         double e = MathHelper.lerp((double)tickDelta, entity.lastRenderY, entity.getY());
         double f = MathHelper.lerp((double)tickDelta, entity.lastRenderZ, entity.getZ());
-        float g = MathHelper.lerp(tickDelta, entity.prevYaw, entity.yaw);
+        float g = MathHelper.lerp(tickDelta, entity.prevYaw, entity.getYaw());
         this.entityRenderDispatcher.render(entity, d - cameraX, e - cameraY, f - cameraZ, g, tickDelta, matrices, vertexConsumers, this.entityRenderDispatcher.getLight(entity, tickDelta));
     }
 
-    private void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double d, double e, double f) {
+    private void renderLayer(RenderLayer renderLayer, MatrixStack matrices, double d, double e, double f, Matrix4f matrix4f) {
+        RenderSystem.assertThread(RenderSystem::isOnRenderThread);
         renderLayer.startDrawing();
         if (renderLayer == RenderLayer.getTranslucent()) {
             this.client.getProfiler().push("translucent_sort");
@@ -1166,22 +1235,63 @@ AutoCloseable {
         this.client.getProfiler().swap(() -> "render_" + renderLayer);
         boolean bl = renderLayer != RenderLayer.getTranslucent();
         ObjectListIterator objectListIterator = this.visibleChunks.listIterator(bl ? 0 : this.visibleChunks.size());
+        VertexFormat vertexFormat = renderLayer.getVertexFormat();
+        Shader shader = RenderSystem.getShader();
+        BufferRenderer.unbindAll();
+        for (int k = 0; k < 12; ++k) {
+            int l = RenderSystem.getShaderTexture(k);
+            shader.addSampler("Sampler" + k, l);
+        }
+        if (shader.modelViewMat != null) {
+            shader.modelViewMat.set(matrices.peek().getModel());
+        }
+        if (shader.projectionMat != null) {
+            shader.projectionMat.set(matrix4f);
+        }
+        if (shader.colorModulator != null) {
+            shader.colorModulator.set(RenderSystem.getShaderColor());
+        }
+        if (shader.fogStart != null) {
+            shader.fogStart.set(RenderSystem.getShaderFogStart());
+        }
+        if (shader.fogEnd != null) {
+            shader.fogEnd.set(RenderSystem.getShaderFogEnd());
+        }
+        if (shader.fogColor != null) {
+            shader.fogColor.set(RenderSystem.getShaderFogColor());
+        }
+        if (shader.textureMat != null) {
+            shader.textureMat.set(RenderSystem.getTextureMatrix());
+        }
+        if (shader.gameTime != null) {
+            shader.gameTime.set(RenderSystem.getShaderGameTime());
+        }
+        RenderSystem.setupShaderLights(shader);
+        shader.bind();
+        GlUniform glUniform = shader.chunkOffset;
+        boolean bl2 = false;
         while (bl ? objectListIterator.hasNext() : objectListIterator.hasPrevious()) {
             ChunkInfo chunkInfo2 = bl ? (ChunkInfo)objectListIterator.next() : (ChunkInfo)objectListIterator.previous();
             ChunkBuilder.BuiltChunk builtChunk = chunkInfo2.chunk;
             if (builtChunk.getData().isEmpty(renderLayer)) continue;
             VertexBuffer vertexBuffer = builtChunk.getBuffer(renderLayer);
-            matrixStack.push();
             BlockPos blockPos = builtChunk.getOrigin();
-            matrixStack.translate((double)blockPos.getX() - d, (double)blockPos.getY() - e, (double)blockPos.getZ() - f);
-            vertexBuffer.bind();
-            this.vertexFormat.startDrawing(0L);
-            vertexBuffer.draw(matrixStack.peek().getModel(), 7);
-            matrixStack.pop();
+            if (glUniform != null) {
+                glUniform.set((float)((double)blockPos.getX() - d), (float)((double)blockPos.getY() - e), (float)((double)blockPos.getZ() - f));
+                glUniform.upload();
+            }
+            vertexBuffer.drawVertices();
+            bl2 = true;
+        }
+        if (glUniform != null) {
+            glUniform.set(Vec3f.ZERO);
+        }
+        shader.unbind();
+        if (bl2) {
+            vertexFormat.endDrawing();
         }
         VertexBuffer.unbind();
-        RenderSystem.clearCurrentColor();
-        this.vertexFormat.endDrawing();
+        VertexBuffer.unbindVertexArray();
         this.client.getProfiler().pop();
         renderLayer.endDrawing();
     }
@@ -1189,6 +1299,7 @@ AutoCloseable {
     private void renderChunkDebugInfo(Camera camera) {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         if (this.client.debugChunkInfo || this.client.debugChunkOcclusion) {
             double d = camera.getPos().getX();
             double e = camera.getPos().getY();
@@ -1201,18 +1312,21 @@ AutoCloseable {
             for (ChunkInfo chunkInfo : this.visibleChunks) {
                 int i;
                 ChunkBuilder.BuiltChunk builtChunk = chunkInfo.chunk;
-                RenderSystem.pushMatrix();
                 BlockPos blockPos = builtChunk.getOrigin();
-                RenderSystem.translated((double)blockPos.getX() - d, (double)blockPos.getY() - e, (double)blockPos.getZ() - f);
+                MatrixStack matrixStack = RenderSystem.getModelViewStack();
+                matrixStack.push();
+                matrixStack.translate((double)blockPos.getX() - d, (double)blockPos.getY() - e, (double)blockPos.getZ() - f);
+                RenderSystem.applyModelViewMatrix();
                 if (this.client.debugChunkInfo) {
-                    bufferBuilder.begin(1, VertexFormats.POSITION_COLOR);
+                    bufferBuilder.begin(VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR);
                     RenderSystem.lineWidth(10.0f);
                     i = chunkInfo.propagationLevel == 0 ? 0 : MathHelper.hsvToRgb((float)chunkInfo.propagationLevel / 50.0f, 0.9f, 0.9f);
                     int j = i >> 16 & 0xFF;
                     int k = i >> 8 & 0xFF;
                     int l = i & 0xFF;
-                    Direction direction = chunkInfo.direction;
-                    if (direction != null) {
+                    for (int m = 0; m < DIRECTIONS.length; ++m) {
+                        if (!chunkInfo.hasDirection(m)) continue;
+                        Direction direction = DIRECTIONS[m];
                         bufferBuilder.vertex(8.0, 8.0, 8.0).color(j, k, l, 255).next();
                         bufferBuilder.vertex(8 - 16 * direction.getOffsetX(), 8 - 16 * direction.getOffsetY(), 8 - 16 * direction.getOffsetZ()).color(j, k, l, 255).next();
                     }
@@ -1220,22 +1334,22 @@ AutoCloseable {
                     RenderSystem.lineWidth(1.0f);
                 }
                 if (this.client.debugChunkOcclusion && !builtChunk.getData().isEmpty()) {
-                    bufferBuilder.begin(1, VertexFormats.POSITION_COLOR);
+                    bufferBuilder.begin(VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR);
                     RenderSystem.lineWidth(10.0f);
                     i = 0;
-                    for (Direction direction : DIRECTIONS) {
-                        for (Direction direction2 : DIRECTIONS) {
-                            boolean bl = builtChunk.getData().isVisibleThrough(direction, direction2);
+                    for (Direction direction2 : DIRECTIONS) {
+                        for (Direction direction3 : DIRECTIONS) {
+                            boolean bl = builtChunk.getData().isVisibleThrough(direction2, direction3);
                             if (bl) continue;
                             ++i;
-                            bufferBuilder.vertex(8 + 8 * direction.getOffsetX(), 8 + 8 * direction.getOffsetY(), 8 + 8 * direction.getOffsetZ()).color(1, 0, 0, 1).next();
                             bufferBuilder.vertex(8 + 8 * direction2.getOffsetX(), 8 + 8 * direction2.getOffsetY(), 8 + 8 * direction2.getOffsetZ()).color(1, 0, 0, 1).next();
+                            bufferBuilder.vertex(8 + 8 * direction3.getOffsetX(), 8 + 8 * direction3.getOffsetY(), 8 + 8 * direction3.getOffsetZ()).color(1, 0, 0, 1).next();
                         }
                     }
                     tessellator.draw();
                     RenderSystem.lineWidth(1.0f);
                     if (i > 0) {
-                        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+                        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
                         float g = 0.5f;
                         float h = 0.2f;
                         bufferBuilder.vertex(0.5, 15.5, 0.5).color(0.9f, 0.9f, 0.0f, 0.2f).next();
@@ -1265,7 +1379,8 @@ AutoCloseable {
                         tessellator.draw();
                     }
                 }
-                RenderSystem.popMatrix();
+                matrixStack.pop();
+                RenderSystem.applyModelViewMatrix();
             }
             RenderSystem.depthMask(true);
             RenderSystem.disableBlend();
@@ -1278,10 +1393,12 @@ AutoCloseable {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.lineWidth(10.0f);
-            RenderSystem.pushMatrix();
-            RenderSystem.translatef((float)(this.capturedFrustumPosition.x - camera.getPos().x), (float)(this.capturedFrustumPosition.y - camera.getPos().y), (float)(this.capturedFrustumPosition.z - camera.getPos().z));
+            MatrixStack matrixStack2 = RenderSystem.getModelViewStack();
+            matrixStack2.push();
+            matrixStack2.translate((float)(this.capturedFrustumPosition.x - camera.getPos().x), (float)(this.capturedFrustumPosition.y - camera.getPos().y), (float)(this.capturedFrustumPosition.z - camera.getPos().z));
+            RenderSystem.applyModelViewMatrix();
             RenderSystem.depthMask(true);
-            bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+            bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
             this.method_22985(bufferBuilder, 0, 1, 2, 3, 0, 1, 1);
             this.method_22985(bufferBuilder, 4, 5, 6, 7, 1, 0, 0);
             this.method_22985(bufferBuilder, 0, 1, 5, 4, 1, 1, 0);
@@ -1290,8 +1407,9 @@ AutoCloseable {
             this.method_22985(bufferBuilder, 1, 5, 6, 2, 1, 0, 1);
             tessellator.draw();
             RenderSystem.depthMask(false);
-            bufferBuilder.begin(1, VertexFormats.POSITION);
-            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.setShader(GameRenderer::getPositionShader);
+            bufferBuilder.begin(VertexFormat.DrawMode.LINES, VertexFormats.POSITION);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             this.method_22984(bufferBuilder, 0);
             this.method_22984(bufferBuilder, 1);
             this.method_22984(bufferBuilder, 1);
@@ -1317,7 +1435,8 @@ AutoCloseable {
             this.method_22984(bufferBuilder, 3);
             this.method_22984(bufferBuilder, 7);
             tessellator.draw();
-            RenderSystem.popMatrix();
+            matrixStack2.pop();
+            RenderSystem.applyModelViewMatrix();
             RenderSystem.depthMask(true);
             RenderSystem.disableBlend();
             RenderSystem.enableCull();
@@ -1338,6 +1457,14 @@ AutoCloseable {
         vertexConsumer.vertex(this.capturedFrustumOrientation[l].getX(), this.capturedFrustumOrientation[l].getY(), this.capturedFrustumOrientation[l].getZ()).color((float)m, (float)n, (float)o, 0.25f).next();
     }
 
+    public void captureFrustum() {
+        this.shouldCaptureFrustum = true;
+    }
+
+    public void killFrustum() {
+        this.capturedFrustum = null;
+    }
+
     public void tick() {
         ++this.ticks;
         if (this.ticks % 20 != 0) {
@@ -1353,21 +1480,21 @@ AutoCloseable {
         }
     }
 
-    private void removeBlockBreakingInfo(BlockBreakingInfo blockBreakingInfo) {
-        long l = blockBreakingInfo.getPos().asLong();
+    private void removeBlockBreakingInfo(BlockBreakingInfo info) {
+        long l = info.getPos().asLong();
         Set set = (Set)this.blockBreakingProgressions.get(l);
-        set.remove(blockBreakingInfo);
+        set.remove(info);
         if (set.isEmpty()) {
             this.blockBreakingProgressions.remove(l);
         }
     }
 
     private void renderEndSky(MatrixStack matrices) {
-        RenderSystem.disableAlphaTest();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(false);
-        this.textureManager.bindTexture(END_SKY);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShaderTexture(0, END_SKY);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
         for (int i = 0; i < 6; ++i) {
@@ -1388,7 +1515,7 @@ AutoCloseable {
                 matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(-90.0f));
             }
             Matrix4f matrix4f = matrices.peek().getModel();
-            bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR);
+            bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
             bufferBuilder.vertex(matrix4f, -100.0f, -100.0f, -100.0f).texture(0.0f, 0.0f).color(40, 40, 40, 255).next();
             bufferBuilder.vertex(matrix4f, -100.0f, -100.0f, 100.0f).texture(0.0f, 16.0f).color(40, 40, 40, 255).next();
             bufferBuilder.vertex(matrix4f, 100.0f, -100.0f, 100.0f).texture(16.0f, 16.0f).color(40, 40, 40, 255).next();
@@ -1399,173 +1526,156 @@ AutoCloseable {
         RenderSystem.depthMask(true);
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
-        RenderSystem.enableAlphaTest();
     }
 
-    public void renderSky(MatrixStack matrices, float tickDelta) {
+    public void renderSky(MatrixStack matrices, Matrix4f matrix4f, float f, Runnable runnable) {
+        float r;
         float q;
         float p;
-        float o;
-        int m;
-        float k;
-        float i;
-        if (this.client.world.getSkyProperties().getSkyType() == SkyProperties.SkyType.END) {
+        int n;
+        float l;
+        float j;
+        runnable.run();
+        if (this.client.world.getDimensionEffects().getSkyType() == DimensionEffects.SkyType.END) {
             this.renderEndSky(matrices);
             return;
         }
-        if (this.client.world.getSkyProperties().getSkyType() != SkyProperties.SkyType.NORMAL) {
+        if (this.client.world.getDimensionEffects().getSkyType() != DimensionEffects.SkyType.NORMAL) {
             return;
         }
         RenderSystem.disableTexture();
-        Vec3d vec3d = this.world.method_23777(this.client.gameRenderer.getCamera().getBlockPos(), tickDelta);
-        float f = (float)vec3d.x;
-        float g = (float)vec3d.y;
-        float h = (float)vec3d.z;
+        Vec3d vec3d = this.world.getSkyColor(this.client.gameRenderer.getCamera().getPos(), f);
+        float g = (float)vec3d.x;
+        float h = (float)vec3d.y;
+        float i = (float)vec3d.z;
         BackgroundRenderer.setFogBlack();
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
         RenderSystem.depthMask(false);
-        RenderSystem.enableFog();
-        RenderSystem.color3f(f, g, h);
-        this.lightSkyBuffer.bind();
-        this.skyVertexFormat.startDrawing(0L);
-        this.lightSkyBuffer.draw(matrices.peek().getModel(), 7);
-        VertexBuffer.unbind();
-        this.skyVertexFormat.endDrawing();
-        RenderSystem.disableFog();
-        RenderSystem.disableAlphaTest();
+        RenderSystem.setShaderColor(g, h, i, 1.0f);
+        Shader shader = RenderSystem.getShader();
+        this.lightSkyBuffer.setShader(matrices.peek().getModel(), matrix4f, shader);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        float[] fs = this.world.getSkyProperties().getFogColorOverride(this.world.getSkyAngle(tickDelta), tickDelta);
+        float[] fs = this.world.getDimensionEffects().getFogColorOverride(this.world.getSkyAngle(f), f);
         if (fs != null) {
+            RenderSystem.setShader(GameRenderer::getPositionColorShader);
             RenderSystem.disableTexture();
-            RenderSystem.shadeModel(7425);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             matrices.push();
             matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(90.0f));
-            i = MathHelper.sin(this.world.getSkyAngleRadians(tickDelta)) < 0.0f ? 180.0f : 0.0f;
-            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(i));
+            j = MathHelper.sin(this.world.getSkyAngleRadians(f)) < 0.0f ? 180.0f : 0.0f;
+            matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(j));
             matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(90.0f));
-            float j = fs[0];
-            k = fs[1];
-            float l = fs[2];
-            Matrix4f matrix4f = matrices.peek().getModel();
-            bufferBuilder.begin(6, VertexFormats.POSITION_COLOR);
-            bufferBuilder.vertex(matrix4f, 0.0f, 100.0f, 0.0f).color(j, k, l, fs[3]).next();
-            m = 16;
-            for (int n = 0; n <= 16; ++n) {
-                o = (float)n * ((float)Math.PI * 2) / 16.0f;
-                p = MathHelper.sin(o);
-                q = MathHelper.cos(o);
-                bufferBuilder.vertex(matrix4f, p * 120.0f, q * 120.0f, -q * 40.0f * fs[3]).color(fs[0], fs[1], fs[2], 0.0f).next();
+            float k = fs[0];
+            l = fs[1];
+            float m = fs[2];
+            Matrix4f matrix4f2 = matrices.peek().getModel();
+            bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
+            bufferBuilder.vertex(matrix4f2, 0.0f, 100.0f, 0.0f).color(k, l, m, fs[3]).next();
+            n = 16;
+            for (int o = 0; o <= 16; ++o) {
+                p = (float)o * ((float)Math.PI * 2) / 16.0f;
+                q = MathHelper.sin(p);
+                r = MathHelper.cos(p);
+                bufferBuilder.vertex(matrix4f2, q * 120.0f, r * 120.0f, -r * 40.0f * fs[3]).color(fs[0], fs[1], fs[2], 0.0f).next();
             }
             bufferBuilder.end();
             BufferRenderer.draw(bufferBuilder);
             matrices.pop();
-            RenderSystem.shadeModel(7424);
         }
         RenderSystem.enableTexture();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
         matrices.push();
-        i = 1.0f - this.world.getRainGradient(tickDelta);
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, i);
+        j = 1.0f - this.world.getRainGradient(f);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, j);
         matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-90.0f));
-        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(this.world.getSkyAngle(tickDelta) * 360.0f));
-        Matrix4f matrix4f2 = matrices.peek().getModel();
-        k = 30.0f;
-        this.textureManager.bindTexture(SUN);
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(matrix4f2, -k, 100.0f, -k).texture(0.0f, 0.0f).next();
-        bufferBuilder.vertex(matrix4f2, k, 100.0f, -k).texture(1.0f, 0.0f).next();
-        bufferBuilder.vertex(matrix4f2, k, 100.0f, k).texture(1.0f, 1.0f).next();
-        bufferBuilder.vertex(matrix4f2, -k, 100.0f, k).texture(0.0f, 1.0f).next();
+        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(this.world.getSkyAngle(f) * 360.0f));
+        Matrix4f matrix4f3 = matrices.peek().getModel();
+        l = 30.0f;
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, SUN);
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+        bufferBuilder.vertex(matrix4f3, -l, 100.0f, -l).texture(0.0f, 0.0f).next();
+        bufferBuilder.vertex(matrix4f3, l, 100.0f, -l).texture(1.0f, 0.0f).next();
+        bufferBuilder.vertex(matrix4f3, l, 100.0f, l).texture(1.0f, 1.0f).next();
+        bufferBuilder.vertex(matrix4f3, -l, 100.0f, l).texture(0.0f, 1.0f).next();
         bufferBuilder.end();
         BufferRenderer.draw(bufferBuilder);
-        k = 20.0f;
-        this.textureManager.bindTexture(MOON_PHASES);
-        int r = this.world.getMoonPhase();
-        int s = r % 4;
-        m = r / 4 % 2;
-        float t = (float)(s + 0) / 4.0f;
-        o = (float)(m + 0) / 2.0f;
-        p = (float)(s + 1) / 4.0f;
-        q = (float)(m + 1) / 2.0f;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(matrix4f2, -k, -100.0f, k).texture(p, q).next();
-        bufferBuilder.vertex(matrix4f2, k, -100.0f, k).texture(t, q).next();
-        bufferBuilder.vertex(matrix4f2, k, -100.0f, -k).texture(t, o).next();
-        bufferBuilder.vertex(matrix4f2, -k, -100.0f, -k).texture(p, o).next();
+        l = 20.0f;
+        RenderSystem.setShaderTexture(0, MOON_PHASES);
+        int s = this.world.getMoonPhase();
+        int t = s % 4;
+        n = s / 4 % 2;
+        float u = (float)(t + 0) / 4.0f;
+        p = (float)(n + 0) / 2.0f;
+        q = (float)(t + 1) / 4.0f;
+        r = (float)(n + 1) / 2.0f;
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+        bufferBuilder.vertex(matrix4f3, -l, -100.0f, l).texture(q, r).next();
+        bufferBuilder.vertex(matrix4f3, l, -100.0f, l).texture(u, r).next();
+        bufferBuilder.vertex(matrix4f3, l, -100.0f, -l).texture(u, p).next();
+        bufferBuilder.vertex(matrix4f3, -l, -100.0f, -l).texture(q, p).next();
         bufferBuilder.end();
         BufferRenderer.draw(bufferBuilder);
         RenderSystem.disableTexture();
-        float u = this.world.method_23787(tickDelta) * i;
-        if (u > 0.0f) {
-            RenderSystem.color4f(u, u, u, u);
-            this.starsBuffer.bind();
-            this.skyVertexFormat.startDrawing(0L);
-            this.starsBuffer.draw(matrices.peek().getModel(), 7);
-            VertexBuffer.unbind();
-            this.skyVertexFormat.endDrawing();
+        float v = this.world.method_23787(f) * j;
+        if (v > 0.0f) {
+            RenderSystem.setShaderColor(v, v, v, v);
+            BackgroundRenderer.method_23792();
+            this.starsBuffer.setShader(matrices.peek().getModel(), matrix4f, GameRenderer.getPositionShader());
+            runnable.run();
         }
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableBlend();
-        RenderSystem.enableAlphaTest();
-        RenderSystem.enableFog();
         matrices.pop();
         RenderSystem.disableTexture();
-        RenderSystem.color3f(0.0f, 0.0f, 0.0f);
-        double d = this.client.player.getCameraPosVec((float)tickDelta).y - this.world.getLevelProperties().getSkyDarknessHeight();
+        RenderSystem.setShaderColor(0.0f, 0.0f, 0.0f, 1.0f);
+        double d = this.client.player.getCameraPosVec((float)f).y - this.world.getLevelProperties().getSkyDarknessHeight(this.world);
         if (d < 0.0) {
             matrices.push();
             matrices.translate(0.0, 12.0, 0.0);
-            this.darkSkyBuffer.bind();
-            this.skyVertexFormat.startDrawing(0L);
-            this.darkSkyBuffer.draw(matrices.peek().getModel(), 7);
-            VertexBuffer.unbind();
-            this.skyVertexFormat.endDrawing();
+            this.darkSkyBuffer.setShader(matrices.peek().getModel(), matrix4f, shader);
             matrices.pop();
         }
-        if (this.world.getSkyProperties().isAlternateSkyColor()) {
-            RenderSystem.color3f(f * 0.2f + 0.04f, g * 0.2f + 0.04f, h * 0.6f + 0.1f);
+        if (this.world.getDimensionEffects().isAlternateSkyColor()) {
+            RenderSystem.setShaderColor(g * 0.2f + 0.04f, h * 0.2f + 0.04f, i * 0.6f + 0.1f, 1.0f);
         } else {
-            RenderSystem.color3f(f, g, h);
+            RenderSystem.setShaderColor(g, h, i, 1.0f);
         }
         RenderSystem.enableTexture();
         RenderSystem.depthMask(true);
-        RenderSystem.disableFog();
     }
 
-    public void renderClouds(MatrixStack matrices, float tickDelta, double cameraX, double cameraY, double cameraZ) {
-        float f = this.world.getSkyProperties().getCloudsHeight();
-        if (Float.isNaN(f)) {
+    public void renderClouds(MatrixStack matrices, Matrix4f matrix4f, float f, double d, double e, double g) {
+        float h = this.world.getDimensionEffects().getCloudsHeight();
+        if (Float.isNaN(h)) {
             return;
         }
         RenderSystem.disableCull();
         RenderSystem.enableBlend();
-        RenderSystem.enableAlphaTest();
         RenderSystem.enableDepthTest();
-        RenderSystem.defaultAlphaFunc();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.enableFog();
         RenderSystem.depthMask(true);
-        float g = 12.0f;
-        float h = 4.0f;
-        double d = 2.0E-4;
-        double e = ((float)this.ticks + tickDelta) * 0.03f;
-        double i = (cameraX + e) / 12.0;
-        double j = f - (float)cameraY + 0.33f;
-        double k = cameraZ / 12.0 + (double)0.33f;
-        i -= (double)(MathHelper.floor(i / 2048.0) * 2048);
-        k -= (double)(MathHelper.floor(k / 2048.0) * 2048);
-        float l = (float)(i - (double)MathHelper.floor(i));
-        float m = (float)(j / 4.0 - (double)MathHelper.floor(j / 4.0)) * 4.0f;
-        float n = (float)(k - (double)MathHelper.floor(k));
-        Vec3d vec3d = this.world.getCloudsColor(tickDelta);
-        int o = (int)Math.floor(i);
-        int p = (int)Math.floor(j / 4.0);
-        int q = (int)Math.floor(k);
-        if (o != this.lastCloudsBlockX || p != this.lastCloudsBlockY || q != this.lastCloudsBlockZ || this.client.options.getCloudRenderMode() != this.lastCloudsRenderMode || this.lastCloudsColor.squaredDistanceTo(vec3d) > 2.0E-4) {
-            this.lastCloudsBlockX = o;
-            this.lastCloudsBlockY = p;
-            this.lastCloudsBlockZ = q;
+        float i = 12.0f;
+        float j = 4.0f;
+        double k = 2.0E-4;
+        double l = ((float)this.ticks + f) * 0.03f;
+        double m = (d + l) / 12.0;
+        double n = h - (float)e + 0.33f;
+        double o = g / 12.0 + (double)0.33f;
+        m -= (double)(MathHelper.floor(m / 2048.0) * 2048);
+        o -= (double)(MathHelper.floor(o / 2048.0) * 2048);
+        float p = (float)(m - (double)MathHelper.floor(m));
+        float q = (float)(n / 4.0 - (double)MathHelper.floor(n / 4.0)) * 4.0f;
+        float r = (float)(o - (double)MathHelper.floor(o));
+        Vec3d vec3d = this.world.getCloudsColor(f);
+        int s = (int)Math.floor(m);
+        int t = (int)Math.floor(n / 4.0);
+        int u = (int)Math.floor(o);
+        if (s != this.lastCloudsBlockX || t != this.lastCloudsBlockY || u != this.lastCloudsBlockZ || this.client.options.getCloudRenderMode() != this.lastCloudsRenderMode || this.lastCloudsColor.squaredDistanceTo(vec3d) > 2.0E-4) {
+            this.lastCloudsBlockX = s;
+            this.lastCloudsBlockY = t;
+            this.lastCloudsBlockZ = u;
             this.lastCloudsColor = vec3d;
             this.lastCloudsRenderMode = this.client.options.getCloudRenderMode();
             this.cloudsDirty = true;
@@ -1576,36 +1686,33 @@ AutoCloseable {
             if (this.cloudsBuffer != null) {
                 this.cloudsBuffer.close();
             }
-            this.cloudsBuffer = new VertexBuffer(VertexFormats.POSITION_TEXTURE_COLOR_NORMAL);
-            this.renderClouds(bufferBuilder, i, j, k, vec3d);
+            this.cloudsBuffer = new VertexBuffer();
+            this.renderClouds(bufferBuilder, m, n, o, vec3d);
             bufferBuilder.end();
             this.cloudsBuffer.upload(bufferBuilder);
         }
-        this.textureManager.bindTexture(CLOUDS);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorNormalShader);
+        RenderSystem.setShaderTexture(0, CLOUDS);
+        BackgroundRenderer.setFogBlack();
         matrices.push();
         matrices.scale(12.0f, 1.0f, 12.0f);
-        matrices.translate(-l, m, -n);
+        matrices.translate(-p, q, -r);
         if (this.cloudsBuffer != null) {
-            int r;
-            this.cloudsBuffer.bind();
-            VertexFormats.POSITION_TEXTURE_COLOR_NORMAL.startDrawing(0L);
-            for (int s = r = this.lastCloudsRenderMode == CloudRenderMode.FANCY ? 0 : 1; s < 2; ++s) {
-                if (s == 0) {
+            int v;
+            for (int w = v = this.lastCloudsRenderMode == CloudRenderMode.FANCY ? 0 : 1; w < 2; ++w) {
+                if (w == 0) {
                     RenderSystem.colorMask(false, false, false, false);
                 } else {
                     RenderSystem.colorMask(true, true, true, true);
                 }
-                this.cloudsBuffer.draw(matrices.peek().getModel(), 7);
+                Shader shader = RenderSystem.getShader();
+                this.cloudsBuffer.setShader(matrices.peek().getModel(), matrix4f, shader);
             }
-            VertexBuffer.unbind();
-            VertexFormats.POSITION_TEXTURE_COLOR_NORMAL.endDrawing();
         }
         matrices.pop();
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.disableAlphaTest();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
-        RenderSystem.disableFog();
     }
 
     private void renderClouds(BufferBuilder builder, double x, double y, double z, Vec3d color) {
@@ -1628,7 +1735,8 @@ AutoCloseable {
         float v = m * 0.8f;
         float w = n * 0.8f;
         float aa = o * 0.8f;
-        builder.begin(7, VertexFormats.POSITION_TEXTURE_COLOR_NORMAL);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorNormalShader);
+        builder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR_NORMAL);
         float ab = (float)Math.floor(y / 4.0) * 4.0f;
         if (this.lastCloudsRenderMode == CloudRenderMode.FANCY) {
             for (int ac = -3; ac <= 4; ++ac) {
@@ -1733,42 +1841,44 @@ AutoCloseable {
         }
         double e = 1.0 - worldBorder.getDistanceInsideBorder(camera.getPos().x, camera.getPos().z) / d;
         e = Math.pow(e, 4.0);
+        e = MathHelper.clamp(e, 0.0, 1.0);
         double f = camera.getPos().x;
-        double g = camera.getPos().y;
-        double h = camera.getPos().z;
+        double g = camera.getPos().z;
+        double h = this.client.gameRenderer.method_32796();
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
-        this.textureManager.bindTexture(FORCEFIELD);
+        RenderSystem.setShaderTexture(0, FORCEFIELD);
         RenderSystem.depthMask(MinecraftClient.isFabulousGraphicsOrBetter());
-        RenderSystem.pushMatrix();
+        MatrixStack matrixStack = RenderSystem.getModelViewStack();
+        matrixStack.push();
+        RenderSystem.applyModelViewMatrix();
         int i = worldBorder.getStage().getColor();
         float j = (float)(i >> 16 & 0xFF) / 255.0f;
         float k = (float)(i >> 8 & 0xFF) / 255.0f;
         float l = (float)(i & 0xFF) / 255.0f;
-        RenderSystem.color4f(j, k, l, (float)e);
+        RenderSystem.setShaderColor(j, k, l, (float)e);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.polygonOffset(-3.0f, -3.0f);
         RenderSystem.enablePolygonOffset();
-        RenderSystem.defaultAlphaFunc();
-        RenderSystem.enableAlphaTest();
         RenderSystem.disableCull();
         float m = (float)(Util.getMeasuringTimeMs() % 3000L) / 3000.0f;
         float n = 0.0f;
         float o = 0.0f;
-        float p = 128.0f;
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        double q = Math.max((double)MathHelper.floor(h - d), worldBorder.getBoundNorth());
-        double r = Math.min((double)MathHelper.ceil(h + d), worldBorder.getBoundSouth());
+        float p = (float)(h - MathHelper.fractionalPart(camera.getPos().y));
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+        double q = Math.max((double)MathHelper.floor(g - d), worldBorder.getBoundNorth());
+        double r = Math.min((double)MathHelper.ceil(g + d), worldBorder.getBoundSouth());
         if (f > worldBorder.getBoundEast() - d) {
             s = 0.0f;
             t = q;
             while (t < r) {
                 u = Math.min(1.0, r - t);
                 v = (float)u * 0.5f;
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundEast(), 256, t, m + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundEast(), 256, t + u, m + v + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundEast(), 0, t + u, m + v + s, m + 128.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundEast(), 0, t, m + s, m + 128.0f);
+                bufferBuilder.vertex(worldBorder.getBoundEast() - f, -h, t - g).texture(m - s, m + p).next();
+                bufferBuilder.vertex(worldBorder.getBoundEast() - f, -h, t + u - g).texture(m - (v + s), m + p).next();
+                bufferBuilder.vertex(worldBorder.getBoundEast() - f, h, t + u - g).texture(m - (v + s), m + 0.0f).next();
+                bufferBuilder.vertex(worldBorder.getBoundEast() - f, h, t - g).texture(m - s, m + 0.0f).next();
                 t += 1.0;
                 s += 0.5f;
             }
@@ -1779,40 +1889,40 @@ AutoCloseable {
             while (t < r) {
                 u = Math.min(1.0, r - t);
                 v = (float)u * 0.5f;
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundWest(), 256, t, m + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundWest(), 256, t + u, m + v + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundWest(), 0, t + u, m + v + s, m + 128.0f);
-                this.method_22978(bufferBuilder, f, g, h, worldBorder.getBoundWest(), 0, t, m + s, m + 128.0f);
+                bufferBuilder.vertex(worldBorder.getBoundWest() - f, -h, t - g).texture(m + s, m + p).next();
+                bufferBuilder.vertex(worldBorder.getBoundWest() - f, -h, t + u - g).texture(m + v + s, m + p).next();
+                bufferBuilder.vertex(worldBorder.getBoundWest() - f, h, t + u - g).texture(m + v + s, m + 0.0f).next();
+                bufferBuilder.vertex(worldBorder.getBoundWest() - f, h, t - g).texture(m + s, m + 0.0f).next();
                 t += 1.0;
                 s += 0.5f;
             }
         }
         q = Math.max((double)MathHelper.floor(f - d), worldBorder.getBoundWest());
         r = Math.min((double)MathHelper.ceil(f + d), worldBorder.getBoundEast());
-        if (h > worldBorder.getBoundSouth() - d) {
+        if (g > worldBorder.getBoundSouth() - d) {
             s = 0.0f;
             t = q;
             while (t < r) {
                 u = Math.min(1.0, r - t);
                 v = (float)u * 0.5f;
-                this.method_22978(bufferBuilder, f, g, h, t, 256, worldBorder.getBoundSouth(), m + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, t + u, 256, worldBorder.getBoundSouth(), m + v + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, t + u, 0, worldBorder.getBoundSouth(), m + v + s, m + 128.0f);
-                this.method_22978(bufferBuilder, f, g, h, t, 0, worldBorder.getBoundSouth(), m + s, m + 128.0f);
+                bufferBuilder.vertex(t - f, -h, worldBorder.getBoundSouth() - g).texture(m + s, m + p).next();
+                bufferBuilder.vertex(t + u - f, -h, worldBorder.getBoundSouth() - g).texture(m + v + s, m + p).next();
+                bufferBuilder.vertex(t + u - f, h, worldBorder.getBoundSouth() - g).texture(m + v + s, m + 0.0f).next();
+                bufferBuilder.vertex(t - f, h, worldBorder.getBoundSouth() - g).texture(m + s, m + 0.0f).next();
                 t += 1.0;
                 s += 0.5f;
             }
         }
-        if (h < worldBorder.getBoundNorth() + d) {
+        if (g < worldBorder.getBoundNorth() + d) {
             s = 0.0f;
             t = q;
             while (t < r) {
                 u = Math.min(1.0, r - t);
                 v = (float)u * 0.5f;
-                this.method_22978(bufferBuilder, f, g, h, t, 256, worldBorder.getBoundNorth(), m + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, t + u, 256, worldBorder.getBoundNorth(), m + v + s, m + 0.0f);
-                this.method_22978(bufferBuilder, f, g, h, t + u, 0, worldBorder.getBoundNorth(), m + v + s, m + 128.0f);
-                this.method_22978(bufferBuilder, f, g, h, t, 0, worldBorder.getBoundNorth(), m + s, m + 128.0f);
+                bufferBuilder.vertex(t - f, -h, worldBorder.getBoundNorth() - g).texture(m - s, m + p).next();
+                bufferBuilder.vertex(t + u - f, -h, worldBorder.getBoundNorth() - g).texture(m - (v + s), m + p).next();
+                bufferBuilder.vertex(t + u - f, h, worldBorder.getBoundNorth() - g).texture(m - (v + s), m + 0.0f).next();
+                bufferBuilder.vertex(t - f, h, worldBorder.getBoundNorth() - g).texture(m - s, m + 0.0f).next();
                 t += 1.0;
                 s += 0.5f;
             }
@@ -1820,17 +1930,12 @@ AutoCloseable {
         bufferBuilder.end();
         BufferRenderer.draw(bufferBuilder);
         RenderSystem.enableCull();
-        RenderSystem.disableAlphaTest();
         RenderSystem.polygonOffset(0.0f, 0.0f);
         RenderSystem.disablePolygonOffset();
-        RenderSystem.enableAlphaTest();
         RenderSystem.disableBlend();
-        RenderSystem.popMatrix();
+        matrixStack.pop();
+        RenderSystem.applyModelViewMatrix();
         RenderSystem.depthMask(true);
-    }
-
-    private void method_22978(BufferBuilder bufferBuilder, double d, double e, double f, double g, int i, double h, float j, float k) {
-        bufferBuilder.vertex(g - d, (double)i - e, h - f).texture(j, k).next();
     }
 
     private void drawBlockOutline(MatrixStack matrices, VertexConsumer vertexConsumer, Entity entity, double d, double e, double f, BlockPos blockPos, BlockState blockState) {
@@ -1852,11 +1957,19 @@ AutoCloseable {
     }
 
     private static void drawShapeOutline(MatrixStack matrices, VertexConsumer vertexConsumer, VoxelShape voxelShape, double d, double e, double f, float g, float h, float i, float j) {
-        Matrix4f matrix4f = matrices.peek().getModel();
+        MatrixStack.Entry entry = matrices.peek();
         voxelShape.forEachEdge((k, l, m, n, o, p) -> {
-            vertexConsumer.vertex(matrix4f, (float)(k + d), (float)(l + e), (float)(m + f)).color(g, h, i, j).next();
-            vertexConsumer.vertex(matrix4f, (float)(n + d), (float)(o + e), (float)(p + f)).color(g, h, i, j).next();
+            float q = (float)(n - k);
+            float r = (float)(o - l);
+            float s = (float)(p - m);
+            float t = MathHelper.sqrt(q * q + r * r + s * s);
+            vertexConsumer.vertex(entry.getModel(), (float)(k + d), (float)(l + e), (float)(m + f)).color(g, h, i, j).normal(entry.getNormal(), q /= t, r /= t, s /= t).next();
+            vertexConsumer.vertex(entry.getModel(), (float)(n + d), (float)(o + e), (float)(p + f)).color(g, h, i, j).normal(entry.getNormal(), q, r, s).next();
         });
+    }
+
+    public static void method_35773(VertexConsumer vertexConsumer, double d, double e, double f, double g, double h, double i, float j, float k, float l, float m) {
+        WorldRenderer.drawBox(new MatrixStack(), vertexConsumer, d, e, f, g, h, i, j, k, l, m, j, k, l);
     }
 
     public static void drawBox(MatrixStack matrices, VertexConsumer vertexConsumer, Box box, float red, float green, float blue, float alpha) {
@@ -1869,36 +1982,37 @@ AutoCloseable {
 
     public static void drawBox(MatrixStack matrices, VertexConsumer vertexConsumer, double x1, double y1, double z1, double x2, double y2, double z2, float red, float green, float blue, float alpha, float xAxisRed, float yAxisGreen, float zAxisBlue) {
         Matrix4f matrix4f = matrices.peek().getModel();
+        Matrix3f matrix3f = matrices.peek().getNormal();
         float f = (float)x1;
         float g = (float)y1;
         float h = (float)z1;
         float i = (float)x2;
         float j = (float)y2;
         float k = (float)z2;
-        vertexConsumer.vertex(matrix4f, f, g, h).color(red, yAxisGreen, zAxisBlue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, h).color(red, yAxisGreen, zAxisBlue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, g, h).color(xAxisRed, green, zAxisBlue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, h).color(xAxisRed, green, zAxisBlue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, g, h).color(xAxisRed, yAxisGreen, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, g, k).color(xAxisRed, yAxisGreen, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, g, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, g, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).next();
-        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).next();
+        vertexConsumer.vertex(matrix4f, f, g, h).color(red, yAxisGreen, zAxisBlue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, h).color(red, yAxisGreen, zAxisBlue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, g, h).color(xAxisRed, green, zAxisBlue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, h).color(xAxisRed, green, zAxisBlue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, g, h).color(xAxisRed, yAxisGreen, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
+        vertexConsumer.vertex(matrix4f, f, g, k).color(xAxisRed, yAxisGreen, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, h).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).normal(matrix3f, -1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, h).color(red, green, blue, alpha).normal(matrix3f, -1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, h).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, -1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, g, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, -1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, f, g, k).color(red, green, blue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, -1.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, h).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, -1.0f).next();
+        vertexConsumer.vertex(matrix4f, f, j, k).color(red, green, blue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).normal(matrix3f, 1.0f, 0.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, g, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, h).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
+        vertexConsumer.vertex(matrix4f, i, j, k).color(red, green, blue, alpha).normal(matrix3f, 0.0f, 0.0f, 1.0f).next();
     }
 
     public static void drawBox(BufferBuilder buffer, double x1, double y1, double z1, double x2, double y2, double z2, float red, float green, float blue, float alpha) {
@@ -1942,7 +2056,7 @@ AutoCloseable {
         for (int i = pos.getZ() - 1; i <= pos.getZ() + 1; ++i) {
             for (int j = pos.getX() - 1; j <= pos.getX() + 1; ++j) {
                 for (int k = pos.getY() - 1; k <= pos.getY() + 1; ++k) {
-                    this.scheduleChunkRender(j >> 4, k >> 4, i >> 4, important);
+                    this.scheduleChunkRender(ChunkSectionPos.getSectionCoord(j), ChunkSectionPos.getSectionCoord(k), ChunkSectionPos.getSectionCoord(i), important);
                 }
             }
         }
@@ -1952,7 +2066,7 @@ AutoCloseable {
         for (int i = minZ - 1; i <= maxZ + 1; ++i) {
             for (int j = minX - 1; j <= maxX + 1; ++j) {
                 for (int k = minY - 1; k <= maxY + 1; ++k) {
-                    this.scheduleBlockRender(j >> 4, k >> 4, i >> 4);
+                    this.scheduleBlockRender(ChunkSectionPos.getSectionCoord(j), ChunkSectionPos.getSectionCoord(k), ChunkSectionPos.getSectionCoord(i));
                 }
             }
         }
@@ -2020,7 +2134,7 @@ AutoCloseable {
             CrashReportSection crashReportSection = crashReport.addElement("Particle being added");
             crashReportSection.add("ID", Registry.PARTICLE_TYPE.getId(parameters.getType()));
             crashReportSection.add("Parameters", parameters.asString());
-            crashReportSection.add("Position", () -> CrashReportSection.createPositionString(x, y, z));
+            crashReportSection.add("Position", () -> CrashReportSection.createPositionString((HeightLimitView)this.world, x, y, z));
             throw new CrashException(crashReport);
         }
     }
@@ -2202,7 +2316,7 @@ AutoCloseable {
                     BlockSoundGroup blockSoundGroup = blockState.getSoundGroup();
                     this.world.playSound(pos, blockSoundGroup.getBreakSound(), SoundCategory.BLOCKS, (blockSoundGroup.getVolume() + 1.0f) / 2.0f, blockSoundGroup.getPitch() * 0.8f, false);
                 }
-                this.client.particleManager.addBlockBreakParticles(pos, blockState);
+                this.world.addBlockBreakParticles(pos, blockState);
                 break;
             }
             case 2004: {
@@ -2219,12 +2333,42 @@ AutoCloseable {
                 BoneMealItem.createParticles(this.world, pos, data);
                 break;
             }
+            case 1505: {
+                BoneMealItem.createParticles(this.world, pos, data);
+                this.world.playSound(pos, SoundEvents.ITEM_BONE_MEAL_USE, SoundCategory.BLOCKS, 1.0f, 1.0f, false);
+                break;
+            }
+            case 3002: {
+                if (data >= 0 && data < Direction.Axis.VALUES.length) {
+                    ParticleUtil.spawnParticle(Direction.Axis.VALUES[data], this.world, pos, 0.125, ParticleTypes.ELECTRIC_SPARK, UniformIntProvider.create(10, 19));
+                    break;
+                }
+                ParticleUtil.spawnParticle((World)this.world, pos, ParticleTypes.ELECTRIC_SPARK, UniformIntProvider.create(3, 5));
+                break;
+            }
+            case 3003: {
+                ParticleUtil.spawnParticle((World)this.world, pos, ParticleTypes.WAX_ON, UniformIntProvider.create(3, 5));
+                this.world.playSound(pos, SoundEvents.ITEM_HONEYCOMB_WAX_ON, SoundCategory.BLOCKS, 1.0f, 1.0f, false);
+                break;
+            }
+            case 3004: {
+                ParticleUtil.spawnParticle((World)this.world, pos, ParticleTypes.WAX_OFF, UniformIntProvider.create(3, 5));
+                break;
+            }
+            case 3005: {
+                ParticleUtil.spawnParticle((World)this.world, pos, ParticleTypes.SCRAPE, UniformIntProvider.create(3, 5));
+                break;
+            }
             case 2008: {
                 this.world.addParticle(ParticleTypes.EXPLOSION, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 0.0, 0.0, 0.0);
                 break;
             }
             case 1500: {
                 ComposterBlock.playEffects(this.world, pos, data > 0);
+                break;
+            }
+            case 1504: {
+                PointedDripstoneBlock.createParticle(this.world, pos, this.world.getBlockState(pos));
                 break;
             }
             case 1501: {
@@ -2316,7 +2460,12 @@ AutoCloseable {
                 break;
             }
             case 1009: {
-                this.world.playSound(pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.5f, 2.6f + (random.nextFloat() - random.nextFloat()) * 0.8f, false);
+                if (data == 0) {
+                    this.world.playSound(pos, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.5f, 2.6f + (random.nextFloat() - random.nextFloat()) * 0.8f, false);
+                    break;
+                }
+                if (data != 1) break;
+                this.world.playSound(pos, SoundEvents.ENTITY_GENERIC_EXTINGUISH_FIRE, SoundCategory.BLOCKS, 0.7f, 1.6f + (random.nextFloat() - random.nextFloat()) * 0.4f, false);
                 break;
             }
             case 1029: {
@@ -2418,6 +2567,22 @@ AutoCloseable {
             }
             case 3001: {
                 this.world.playSound(pos, SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 64.0f, 0.8f + this.world.random.nextFloat() * 0.3f, false);
+                break;
+            }
+            case 1045: {
+                this.world.playSound(pos, SoundEvents.BLOCK_POINTED_DRIPSTONE_LAND, SoundCategory.BLOCKS, 2.0f, this.world.random.nextFloat() * 0.1f + 0.9f, false);
+                break;
+            }
+            case 1046: {
+                this.world.playSound(pos, SoundEvents.BLOCK_POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON, SoundCategory.BLOCKS, 2.0f, this.world.random.nextFloat() * 0.1f + 0.9f, false);
+                break;
+            }
+            case 1047: {
+                this.world.playSound(pos, SoundEvents.BLOCK_POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON, SoundCategory.BLOCKS, 2.0f, this.world.random.nextFloat() * 0.1f + 0.9f, false);
+                break;
+            }
+            case 1048: {
+                this.world.playSound(pos, SoundEvents.ENTITY_SKELETON_CONVERTED_TO_STRAY, SoundCategory.NEUTRAL, 2.0f, (random.nextFloat() - random.nextFloat()) * 0.2f + 1.0f, false);
             }
         }
     }
@@ -2513,21 +2678,46 @@ AutoCloseable {
     @Environment(value=EnvType.CLIENT)
     public static class ShaderException
     extends RuntimeException {
-        public ShaderException(String string, Throwable throwable) {
-            super(string, throwable);
+        public ShaderException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    class ChunkInfo {
-        private final ChunkBuilder.BuiltChunk chunk;
-        private final Direction direction;
-        private byte cullingState;
-        private final int propagationLevel;
+    static class ChunkInfoList {
+        private final ChunkInfo[] current;
+        private final ChunkInfo[] pending;
 
-        private ChunkInfo(@Nullable ChunkBuilder.BuiltChunk chunk, Direction direction, int propagationLevel) {
+        ChunkInfoList(int i) {
+            this.current = new ChunkInfo[i];
+            this.pending = new ChunkInfo[i];
+        }
+
+        void update() {
+            System.arraycopy(this.pending, 0, this.current, 0, this.current.length);
+        }
+
+        public void setInfo(ChunkBuilder.BuiltChunk chunk, ChunkInfo info) {
+            this.current[chunk.index] = info;
+        }
+
+        public ChunkInfo getInfo(ChunkBuilder.BuiltChunk chunk) {
+            return this.current[chunk.index];
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    static class ChunkInfo {
+        final ChunkBuilder.BuiltChunk chunk;
+        private byte direction;
+        byte cullingState;
+        final int propagationLevel;
+
+        ChunkInfo(ChunkBuilder.BuiltChunk chunk, @Nullable Direction direction, int propagationLevel) {
             this.chunk = chunk;
-            this.direction = direction;
+            if (direction != null) {
+                this.addDirection(direction);
+            }
             this.propagationLevel = propagationLevel;
         }
 
@@ -2537,6 +2727,18 @@ AutoCloseable {
 
         public boolean canCull(Direction from) {
             return (this.cullingState & 1 << from.ordinal()) > 0;
+        }
+
+        public void addDirection(Direction direction) {
+            this.direction = (byte)(this.direction | (this.direction | 1 << direction.ordinal()));
+        }
+
+        public boolean hasDirection(int ordinal) {
+            return (this.direction & 1 << ordinal) > 0;
+        }
+
+        public boolean hasAnyDirection() {
+            return this.direction != 0;
         }
     }
 }

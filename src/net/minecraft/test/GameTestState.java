@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.test.StructureTestUtil;
@@ -27,7 +28,10 @@ import net.minecraft.test.TestListener;
 import net.minecraft.test.TickLimitExceededException;
 import net.minecraft.test.TimedTaskRunner;
 import net.minecraft.util.BlockRotation;
+import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3i;
 import org.jetbrains.annotations.Nullable;
 
 public class GameTestState {
@@ -37,22 +41,24 @@ public class GameTestState {
     private final ServerWorld world;
     private final Collection<TestListener> listeners = Lists.newArrayList();
     private final int ticksLeft;
-    private final Collection<TimedTaskRunner> field_21452 = Lists.newCopyOnWriteArrayList();
-    private Object2LongMap<Runnable> field_21453 = new Object2LongOpenHashMap();
+    private final Collection<TimedTaskRunner> timedTaskRunners = Lists.newCopyOnWriteArrayList();
+    private final Object2LongMap<Runnable> ticksByRunnables = new Object2LongOpenHashMap();
     private long expectedStopTime;
-    private long field_21455;
-    private boolean started = false;
+    private long tick;
+    private boolean started;
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
-    private boolean completed = false;
-    private final BlockRotation field_25301;
+    private boolean completed;
+    private final BlockRotation rotation;
     @Nullable
     private Throwable throwable;
+    @Nullable
+    private StructureBlockBlockEntity structureBlockEntity;
 
-    public GameTestState(TestFunction testFunction, BlockRotation blockRotation, ServerWorld serverWorld) {
+    public GameTestState(TestFunction testFunction, BlockRotation rotation, ServerWorld world) {
         this.testFunction = testFunction;
-        this.world = serverWorld;
+        this.world = world;
         this.ticksLeft = testFunction.getTickLimit();
-        this.field_25301 = testFunction.method_29424().rotate(blockRotation);
+        this.rotation = testFunction.getRotation().rotate(rotation);
     }
 
     void setPos(BlockPos pos) {
@@ -68,17 +74,28 @@ public class GameTestState {
         if (this.isCompleted()) {
             return;
         }
-        this.field_21455 = this.world.getTime() - this.expectedStopTime;
-        if (this.field_21455 < 0L) {
+        this.tickTests();
+        if (this.isCompleted()) {
+            if (this.throwable != null) {
+                this.listeners.forEach(listener -> listener.onFailed(this));
+            } else {
+                this.listeners.forEach(listener -> listener.onPassed(this));
+            }
+        }
+    }
+
+    private void tickTests() {
+        this.tick = this.world.getTime() - this.expectedStopTime;
+        if (this.tick < 0L) {
             return;
         }
-        if (this.field_21455 == 0L) {
+        if (this.tick == 0L) {
             this.start();
         }
-        ObjectIterator objectIterator = this.field_21453.object2LongEntrySet().iterator();
+        ObjectIterator objectIterator = this.ticksByRunnables.object2LongEntrySet().iterator();
         while (objectIterator.hasNext()) {
             Object2LongMap.Entry entry = (Object2LongMap.Entry)objectIterator.next();
-            if (entry.getLongValue() > this.field_21455) continue;
+            if (entry.getLongValue() > this.tick) continue;
             try {
                 ((Runnable)entry.getKey()).run();
             }
@@ -87,17 +104,17 @@ public class GameTestState {
             }
             objectIterator.remove();
         }
-        if (this.field_21455 > (long)this.ticksLeft) {
-            if (this.field_21452.isEmpty()) {
+        if (this.tick > (long)this.ticksLeft) {
+            if (this.timedTaskRunners.isEmpty()) {
                 this.fail(new TickLimitExceededException("Didn't succeed or fail within " + this.testFunction.getTickLimit() + " ticks"));
             } else {
-                this.field_21452.forEach(timedTaskRunner -> timedTaskRunner.runReported(this.field_21455));
+                this.timedTaskRunners.forEach(runner -> runner.runReported(this.tick));
                 if (this.throwable == null) {
                     this.fail(new TickLimitExceededException("No sequences finished"));
                 }
             }
         } else {
-            this.field_21452.forEach(timedTaskRunner -> timedTaskRunner.runSilently(this.field_21455));
+            this.timedTaskRunners.forEach(runner -> runner.runSilently(this.tick));
         }
     }
 
@@ -114,12 +131,39 @@ public class GameTestState {
         }
     }
 
+    public void runAtTick(long tick, Runnable runnable) {
+        this.ticksByRunnables.put((Object)runnable, tick);
+    }
+
     public String getStructurePath() {
         return this.testFunction.getStructurePath();
     }
 
     public BlockPos getPos() {
         return this.pos;
+    }
+
+    @Nullable
+    public Vec3i getSize() {
+        StructureBlockBlockEntity structureBlockBlockEntity = this.getStructureBlockBlockEntity();
+        if (structureBlockBlockEntity == null) {
+            return null;
+        }
+        return structureBlockBlockEntity.getSize();
+    }
+
+    @Nullable
+    public Box getBoundingBox() {
+        StructureBlockBlockEntity structureBlockBlockEntity = this.getStructureBlockBlockEntity();
+        if (structureBlockBlockEntity == null) {
+            return null;
+        }
+        return StructureTestUtil.getStructureBoundingBox(structureBlockBlockEntity);
+    }
+
+    @Nullable
+    private StructureBlockBlockEntity getStructureBlockBlockEntity() {
+        return (StructureBlockBlockEntity)this.world.getBlockEntity(this.pos);
     }
 
     public ServerWorld getWorld() {
@@ -142,6 +186,10 @@ public class GameTestState {
         return this.completed;
     }
 
+    public long getElapsedMilliseconds() {
+        return this.stopwatch.elapsed(TimeUnit.MILLISECONDS);
+    }
+
     private void complete() {
         if (!this.completed) {
             this.completed = true;
@@ -149,10 +197,15 @@ public class GameTestState {
         }
     }
 
+    public void completeIfSuccessful() {
+        if (this.throwable == null) {
+            this.complete();
+        }
+    }
+
     public void fail(Throwable throwable) {
-        this.complete();
         this.throwable = throwable;
-        this.listeners.forEach(testListener -> testListener.onFailed(this));
+        this.complete();
     }
 
     @Nullable
@@ -169,11 +222,29 @@ public class GameTestState {
     }
 
     public void init(BlockPos pos, int i) {
-        StructureBlockBlockEntity structureBlockBlockEntity = StructureTestUtil.method_22250(this.getStructureName(), pos, this.method_29402(), i, this.world, false);
-        this.setPos(structureBlockBlockEntity.getPos());
-        structureBlockBlockEntity.setStructureName(this.getStructurePath());
-        StructureTestUtil.placeStartButton(this.pos, new BlockPos(1, 0, -1), this.method_29402(), this.world);
-        this.listeners.forEach(testListener -> testListener.onStarted(this));
+        this.structureBlockEntity = StructureTestUtil.createStructure(this.getStructureName(), pos, this.getRotation(), i, this.world, false);
+        this.pos = this.structureBlockEntity.getPos();
+        this.structureBlockEntity.setStructureName(this.getStructurePath());
+        StructureTestUtil.placeStartButton(this.pos, new BlockPos(1, 0, -1), this.getRotation(), this.world);
+        this.listeners.forEach(listener -> listener.onStarted(this));
+    }
+
+    public void clearArea() {
+        if (this.structureBlockEntity == null) {
+            throw new IllegalStateException("Expected structure to be initialized, but it was null");
+        }
+        BlockBox blockBox = StructureTestUtil.getStructureBlockBox(this.structureBlockEntity);
+        StructureTestUtil.clearArea(blockBox, this.pos.getY(), this.world);
+    }
+
+    long getTick() {
+        return this.tick;
+    }
+
+    TimedTaskRunner createTimedTaskRunner() {
+        TimedTaskRunner timedTaskRunner = new TimedTaskRunner(this);
+        this.timedTaskRunners.add(timedTaskRunner);
+        return timedTaskRunner;
     }
 
     public boolean isRequired() {
@@ -188,12 +259,28 @@ public class GameTestState {
         return this.testFunction.getStructureName();
     }
 
-    public BlockRotation method_29402() {
-        return this.field_25301;
+    public BlockRotation getRotation() {
+        return this.rotation;
     }
 
-    public TestFunction method_29403() {
+    public TestFunction getTestFunction() {
         return this.testFunction;
+    }
+
+    public int getTicksLeft() {
+        return this.ticksLeft;
+    }
+
+    public boolean isFlaky() {
+        return this.testFunction.isFlaky();
+    }
+
+    public int getMaxAttempts() {
+        return this.testFunction.getMaxAttempts();
+    }
+
+    public int getRequiredSuccesses() {
+        return this.testFunction.getRequiredSuccesses();
     }
 }
 

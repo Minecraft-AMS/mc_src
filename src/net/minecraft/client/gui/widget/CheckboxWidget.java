@@ -13,9 +13,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -23,6 +26,7 @@ import net.minecraft.util.math.MathHelper;
 public class CheckboxWidget
 extends PressableWidget {
     private static final Identifier TEXTURE = new Identifier("textures/gui/checkbox.png");
+    private static final int TEXT_COLOR = 0xE0E0E0;
     private boolean checked;
     private final boolean showMessage;
 
@@ -46,12 +50,24 @@ extends PressableWidget {
     }
 
     @Override
+    public void appendNarrations(NarrationMessageBuilder builder) {
+        builder.put(NarrationPart.TITLE, (Text)this.getNarrationMessage());
+        if (this.active) {
+            if (this.isFocused()) {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.checkbox.usage.focused"));
+            } else {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.checkbox.usage.hovered"));
+            }
+        }
+    }
+
+    @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        minecraftClient.getTextureManager().bindTexture(TEXTURE);
+        RenderSystem.setShaderTexture(0, TEXTURE);
         RenderSystem.enableDepthTest();
         TextRenderer textRenderer = minecraftClient.textRenderer;
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, this.alpha);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);

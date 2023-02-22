@@ -21,6 +21,9 @@ import net.minecraft.util.math.BlockPos;
 
 public class RingBellTask
 extends Task<LivingEntity> {
+    private static final float RUN_CHANCE = 0.95f;
+    public static final int MAX_DISTANCE = 3;
+
     public RingBellTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.MEETING_POINT, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
     }
@@ -37,7 +40,7 @@ extends Task<LivingEntity> {
         BlockPos blockPos = brain.getOptionalMemory(MemoryModuleType.MEETING_POINT).get().getPos();
         if (blockPos.isWithinDistance(entity.getBlockPos(), 3.0) && (blockState = world.getBlockState(blockPos)).isOf(Blocks.BELL)) {
             BellBlock bellBlock = (BellBlock)blockState.getBlock();
-            bellBlock.ring(world, blockPos, null);
+            bellBlock.ring(entity, world, blockPos, null);
         }
     }
 }

@@ -1,16 +1,11 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.passive;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -24,7 +19,9 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.WaterCreatureEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
@@ -55,7 +52,7 @@ extends WaterCreatureEntity {
 
     public SquidEntity(EntityType<? extends SquidEntity> entityType, World world) {
         super((EntityType<? extends WaterCreatureEntity>)entityType, world);
-        this.random.setSeed(this.getEntityId());
+        this.random.setSeed(this.getId());
         this.thrustTimerSpeed = 1.0f / (this.random.nextFloat() + 1.0f) * 0.2f;
     }
 
@@ -89,14 +86,23 @@ extends WaterCreatureEntity {
         return SoundEvents.ENTITY_SQUID_DEATH;
     }
 
+    protected SoundEvent getSquirtSound() {
+        return SoundEvents.ENTITY_SQUID_SQUIRT;
+    }
+
+    @Override
+    public boolean canBeLeashedBy(PlayerEntity player) {
+        return !this.isLeashed();
+    }
+
     @Override
     protected float getSoundVolume() {
         return 0.4f;
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
@@ -137,21 +143,21 @@ extends WaterCreatureEntity {
                 this.setVelocity(this.swimX * this.swimVelocityScale, this.swimY * this.swimVelocityScale, this.swimZ * this.swimVelocityScale);
             }
             Vec3d vec3d = this.getVelocity();
-            float g = MathHelper.sqrt(SquidEntity.squaredHorizontalLength(vec3d));
+            double d = vec3d.horizontalLength();
             this.bodyYaw += (-((float)MathHelper.atan2(vec3d.x, vec3d.z)) * 57.295776f - this.bodyYaw) * 0.1f;
-            this.yaw = this.bodyYaw;
+            this.setYaw(this.bodyYaw);
             this.rollAngle = (float)((double)this.rollAngle + Math.PI * (double)this.turningSpeed * 1.5);
-            this.tiltAngle += (-((float)MathHelper.atan2(g, vec3d.y)) * 57.295776f - this.tiltAngle) * 0.1f;
+            this.tiltAngle += (-((float)MathHelper.atan2(d, vec3d.y)) * 57.295776f - this.tiltAngle) * 0.1f;
         } else {
             this.tentacleAngle = MathHelper.abs(MathHelper.sin(this.thrustTimer)) * (float)Math.PI * 0.25f;
             if (!this.world.isClient) {
-                double d = this.getVelocity().y;
+                double e = this.getVelocity().y;
                 if (this.hasStatusEffect(StatusEffects.LEVITATION)) {
-                    d = 0.05 * (double)(this.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() + 1);
+                    e = 0.05 * (double)(this.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() + 1);
                 } else if (!this.hasNoGravity()) {
-                    d -= 0.08;
+                    e -= 0.08;
                 }
-                this.setVelocity(0.0, d * (double)0.98f, 0.0);
+                this.setVelocity(0.0, e * (double)0.98f, 0.0);
             }
             this.tiltAngle = (float)((double)this.tiltAngle + (double)(-90.0f - this.tiltAngle) * 0.02);
         }
@@ -173,13 +179,17 @@ extends WaterCreatureEntity {
     }
 
     private void squirt() {
-        this.playSound(SoundEvents.ENTITY_SQUID_SQUIRT, this.getSoundVolume(), this.getSoundPitch());
+        this.playSound(this.getSquirtSound(), this.getSoundVolume(), this.getSoundPitch());
         Vec3d vec3d = this.applyBodyRotations(new Vec3d(0.0, -1.0, 0.0)).add(this.getX(), this.getY(), this.getZ());
         for (int i = 0; i < 30; ++i) {
             Vec3d vec3d2 = this.applyBodyRotations(new Vec3d((double)this.random.nextFloat() * 0.6 - 0.3, -1.0, (double)this.random.nextFloat() * 0.6 - 0.3));
             Vec3d vec3d3 = vec3d2.multiply(0.3 + (double)(this.random.nextFloat() * 2.0f));
-            ((ServerWorld)this.world).spawnParticles(ParticleTypes.SQUID_INK, vec3d.x, vec3d.y + 0.5, vec3d.z, 0, vec3d3.x, vec3d3.y, vec3d3.z, 0.1f);
+            ((ServerWorld)this.world).spawnParticles(this.getInkParticle(), vec3d.x, vec3d.y + 0.5, vec3d.z, 0, vec3d3.x, vec3d3.y, vec3d3.z, 0.1f);
         }
+    }
+
+    protected ParticleEffect getInkParticle() {
+        return ParticleTypes.SQUID_INK;
     }
 
     @Override
@@ -192,7 +202,6 @@ extends WaterCreatureEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 19) {
             this.thrustTimer = 0.0f;
@@ -211,11 +220,42 @@ extends WaterCreatureEntity {
         return this.swimX != 0.0f || this.swimY != 0.0f || this.swimZ != 0.0f;
     }
 
+    class SwimGoal
+    extends Goal {
+        private final SquidEntity squid;
+
+        public SwimGoal(SquidEntity squid) {
+            this.squid = squid;
+        }
+
+        @Override
+        public boolean canStart() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            int i = this.squid.getDespawnCounter();
+            if (i > 100) {
+                this.squid.setSwimmingVector(0.0f, 0.0f, 0.0f);
+            } else if (this.squid.getRandom().nextInt(50) == 0 || !this.squid.touchingWater || !this.squid.hasSwimmingVector()) {
+                float f = this.squid.getRandom().nextFloat() * ((float)Math.PI * 2);
+                float g = MathHelper.cos(f) * 0.2f;
+                float h = -0.1f + this.squid.getRandom().nextFloat() * 0.2f;
+                float j = MathHelper.sin(f) * 0.2f;
+                this.squid.setSwimmingVector(g, h, j);
+            }
+        }
+    }
+
     class EscapeAttackerGoal
     extends Goal {
+        private static final float field_30375 = 3.0f;
+        private static final float field_30376 = 5.0f;
+        private static final float field_30377 = 10.0f;
         private int timer;
 
-        private EscapeAttackerGoal() {
+        EscapeAttackerGoal() {
         }
 
         @Override
@@ -261,34 +301,6 @@ extends WaterCreatureEntity {
             }
             if (this.timer % 10 == 5) {
                 SquidEntity.this.world.addParticle(ParticleTypes.BUBBLE, SquidEntity.this.getX(), SquidEntity.this.getY(), SquidEntity.this.getZ(), 0.0, 0.0, 0.0);
-            }
-        }
-    }
-
-    class SwimGoal
-    extends Goal {
-        private final SquidEntity squid;
-
-        public SwimGoal(SquidEntity squid) {
-            this.squid = squid;
-        }
-
-        @Override
-        public boolean canStart() {
-            return true;
-        }
-
-        @Override
-        public void tick() {
-            int i = this.squid.getDespawnCounter();
-            if (i > 100) {
-                this.squid.setSwimmingVector(0.0f, 0.0f, 0.0f);
-            } else if (this.squid.getRandom().nextInt(50) == 0 || !this.squid.touchingWater || !this.squid.hasSwimmingVector()) {
-                float f = this.squid.getRandom().nextFloat() * ((float)Math.PI * 2);
-                float g = MathHelper.cos(f) * 0.2f;
-                float h = -0.1f + this.squid.getRandom().nextFloat() * 0.2f;
-                float j = MathHelper.sin(f) * 0.2f;
-                this.squid.setSwimmingVector(g, h, j);
             }
         }
     }

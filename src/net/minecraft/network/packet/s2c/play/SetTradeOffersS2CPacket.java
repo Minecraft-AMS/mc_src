@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -17,15 +10,12 @@ import net.minecraft.village.TradeOfferList;
 
 public class SetTradeOffersS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int syncId;
-    private TradeOfferList recipes;
-    private int levelProgress;
-    private int experience;
-    private boolean leveled;
-    private boolean refreshable;
-
-    public SetTradeOffersS2CPacket() {
-    }
+    private final int syncId;
+    private final TradeOfferList recipes;
+    private final int levelProgress;
+    private final int experience;
+    private final boolean leveled;
+    private final boolean refreshable;
 
     public SetTradeOffersS2CPacket(int syncId, TradeOfferList recipes, int levelProgress, int experience, boolean leveled, boolean refreshable) {
         this.syncId = syncId;
@@ -36,8 +26,7 @@ implements Packet<ClientPlayPacketListener> {
         this.refreshable = refreshable;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public SetTradeOffersS2CPacket(PacketByteBuf buf) {
         this.syncId = buf.readVarInt();
         this.recipes = TradeOfferList.fromPacket(buf);
         this.levelProgress = buf.readVarInt();
@@ -47,7 +36,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.syncId);
         this.recipes.toPacket(buf);
         buf.writeVarInt(this.levelProgress);
@@ -61,32 +50,26 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onSetTradeOffers(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSyncId() {
         return this.syncId;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public TradeOfferList getOffers() {
         return this.recipes;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getLevelProgress() {
         return this.levelProgress;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getExperience() {
         return this.experience;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isLeveled() {
         return this.leveled;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isRefreshable() {
         return this.refreshable;
     }

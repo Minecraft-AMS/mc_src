@@ -31,6 +31,13 @@ import org.jetbrains.annotations.Nullable;
 
 public class WanderingTraderManager
 implements Spawner {
+    private static final int DEFAULT_SPAWN_TIMER = 1200;
+    public static final int DEFAULT_SPAWN_DELAY = 24000;
+    private static final int MIN_SPAWN_CHANCE = 25;
+    private static final int MAX_SPAWN_CHANCE = 75;
+    private static final int DEFAULT_SPAWN_CHANCE = 25;
+    private static final int field_30635 = 10;
+    private static final int field_30636 = 10;
     private final Random random = new Random();
     private final ServerWorldProperties properties;
     private int spawnTimer;
@@ -74,40 +81,40 @@ implements Spawner {
         if (this.random.nextInt(100) > i) {
             return 0;
         }
-        if (this.method_18018(world)) {
+        if (this.trySpawn(world)) {
             this.spawnChance = 25;
             return 1;
         }
         return 0;
     }
 
-    private boolean method_18018(ServerWorld serverWorld) {
-        ServerPlayerEntity playerEntity = serverWorld.getRandomAlivePlayer();
+    private boolean trySpawn(ServerWorld world) {
+        ServerPlayerEntity playerEntity = world.getRandomAlivePlayer();
         if (playerEntity == null) {
             return true;
         }
         if (this.random.nextInt(10) != 0) {
             return false;
         }
-        BlockPos blockPos2 = playerEntity.getBlockPos();
+        BlockPos blockPos = playerEntity.getBlockPos();
         int i = 48;
-        PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
-        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(PointOfInterestType.MEETING.getCompletionCondition(), blockPos -> true, blockPos2, 48, PointOfInterestStorage.OccupationStatus.ANY);
-        BlockPos blockPos22 = optional.orElse(blockPos2);
-        BlockPos blockPos3 = this.getNearbySpawnPos(serverWorld, blockPos22, 48);
-        if (blockPos3 != null && this.doesNotSuffocateAt(serverWorld, blockPos3)) {
-            if (serverWorld.getBiomeKey(blockPos3).equals(Optional.of(BiomeKeys.THE_VOID))) {
+        PointOfInterestStorage pointOfInterestStorage = world.getPointOfInterestStorage();
+        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(PointOfInterestType.MEETING.getCompletionCondition(), pos -> true, blockPos, 48, PointOfInterestStorage.OccupationStatus.ANY);
+        BlockPos blockPos2 = optional.orElse(blockPos);
+        BlockPos blockPos3 = this.getNearbySpawnPos(world, blockPos2, 48);
+        if (blockPos3 != null && this.doesNotSuffocateAt(world, blockPos3)) {
+            if (world.getBiomeKey(blockPos3).equals(Optional.of(BiomeKeys.THE_VOID))) {
                 return false;
             }
-            WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(serverWorld, null, null, null, blockPos3, SpawnReason.EVENT, false, false);
+            WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(world, null, null, null, blockPos3, SpawnReason.EVENT, false, false);
             if (wanderingTraderEntity != null) {
                 for (int j = 0; j < 2; ++j) {
-                    this.spawnLlama(serverWorld, wanderingTraderEntity, 4);
+                    this.spawnLlama(world, wanderingTraderEntity, 4);
                 }
                 this.properties.setWanderingTraderId(wanderingTraderEntity.getUuid());
                 wanderingTraderEntity.setDespawnDelay(48000);
-                wanderingTraderEntity.setWanderTarget(blockPos22);
-                wanderingTraderEntity.setPositionTarget(blockPos22, 16);
+                wanderingTraderEntity.setWanderTarget(blockPos2);
+                wanderingTraderEntity.setPositionTarget(blockPos2, 16);
                 return true;
             }
         }

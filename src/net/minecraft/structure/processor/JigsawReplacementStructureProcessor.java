@@ -33,12 +33,12 @@ extends StructureProcessor {
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos blockPos, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData structurePlacementData) {
+    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData data) {
         BlockState blockState = structureBlockInfo2.state;
         if (!blockState.isOf(Blocks.JIGSAW)) {
             return structureBlockInfo2;
         }
-        String string = structureBlockInfo2.tag.getString("final_state");
+        String string = structureBlockInfo2.nbt.getString("final_state");
         BlockArgumentParser blockArgumentParser = new BlockArgumentParser(new StringReader(string), false);
         try {
             blockArgumentParser.parse(true);

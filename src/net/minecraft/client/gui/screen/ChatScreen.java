@@ -13,8 +13,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.screen.CommandSuggestor;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -25,14 +26,16 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class ChatScreen
 extends Screen {
+    public static final int field_32237 = 7;
+    private static final Text USAGE_TEXT = new TranslatableText("chat_screen.usage");
     private String chatLastMessage = "";
     private int messageHistorySize = -1;
     protected TextFieldWidget chatField;
-    private String originalChatText = "";
-    private CommandSuggestor commandSuggestor;
+    private final String originalChatText;
+    CommandSuggestor commandSuggestor;
 
     public ChatScreen(String originalChatText) {
-        super(NarratorManager.EMPTY);
+        super(new TranslatableText("chat_screen.title"));
         this.originalChatText = originalChatText;
     }
 
@@ -51,7 +54,7 @@ extends Screen {
         this.chatField.setDrawsBackground(false);
         this.chatField.setText(this.originalChatText);
         this.chatField.setChangedListener(this::onChatFieldUpdate);
-        this.children.add(this.chatField);
+        this.addSelectableChild(this.chatField);
         this.commandSuggestor = new CommandSuggestor(this.client, this, this.chatField, this.textRenderer, false, false, 1, 10, true, -805306368);
         this.commandSuggestor.refresh();
         this.setInitialFocus(this.chatField);
@@ -91,7 +94,7 @@ extends Screen {
             return true;
         }
         if (keyCode == 256) {
-            this.client.openScreen(null);
+            this.client.setScreen(null);
             return true;
         }
         if (keyCode == 257 || keyCode == 335) {
@@ -99,7 +102,7 @@ extends Screen {
             if (!string.isEmpty()) {
                 this.sendMessage(string);
             }
-            this.client.openScreen(null);
+            this.client.setScreen(null);
             return true;
         }
         if (keyCode == 265) {
@@ -169,23 +172,23 @@ extends Screen {
         }
     }
 
-    public void setChatFromHistory(int i) {
-        int j = this.messageHistorySize + i;
-        int k = this.client.inGameHud.getChatHud().getMessageHistory().size();
-        if ((j = MathHelper.clamp(j, 0, k)) == this.messageHistorySize) {
+    public void setChatFromHistory(int offset) {
+        int i = this.messageHistorySize + offset;
+        int j = this.client.inGameHud.getChatHud().getMessageHistory().size();
+        if ((i = MathHelper.clamp(i, 0, j)) == this.messageHistorySize) {
             return;
         }
-        if (j == k) {
-            this.messageHistorySize = k;
+        if (i == j) {
+            this.messageHistorySize = j;
             this.chatField.setText(this.chatLastMessage);
             return;
         }
-        if (this.messageHistorySize == k) {
+        if (this.messageHistorySize == j) {
             this.chatLastMessage = this.chatField.getText();
         }
-        this.chatField.setText(this.client.inGameHud.getChatHud().getMessageHistory().get(j));
+        this.chatField.setText(this.client.inGameHud.getChatHud().getMessageHistory().get(i));
         this.commandSuggestor.setWindowActive(false);
-        this.messageHistorySize = j;
+        this.messageHistorySize = i;
     }
 
     @Override
@@ -209,6 +212,16 @@ extends Screen {
 
     private void setText(String text) {
         this.chatField.setText(text);
+    }
+
+    @Override
+    protected void addScreenNarrations(NarrationMessageBuilder builder) {
+        builder.put(NarrationPart.TITLE, this.getTitle());
+        builder.put(NarrationPart.USAGE, USAGE_TEXT);
+        String string = this.chatField.getText();
+        if (!string.isEmpty()) {
+            builder.nextMessage().put(NarrationPart.TITLE, (Text)new TranslatableText("chat_screen.message", string));
+        }
     }
 }
 

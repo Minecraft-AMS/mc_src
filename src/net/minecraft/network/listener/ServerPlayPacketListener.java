@@ -14,7 +14,6 @@ import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientSettingsC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.ConfirmScreenActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.CraftRequestC2SPacket;
 import net.minecraft.network.packet.c2s.play.CreativeInventoryActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.CustomPayloadC2SPacket;
@@ -22,6 +21,7 @@ import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.network.packet.c2s.play.JigsawGeneratingC2SPacket;
 import net.minecraft.network.packet.c2s.play.KeepAliveC2SPacket;
 import net.minecraft.network.packet.c2s.play.PickFromInventoryC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayPongC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInputC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
@@ -60,8 +60,6 @@ extends PacketListener {
 
     public void onClientSettings(ClientSettingsC2SPacket var1);
 
-    public void onConfirmScreenAction(ConfirmScreenActionC2SPacket var1);
-
     public void onButtonClick(ButtonClickC2SPacket var1);
 
     public void onClickSlot(ClickSlotC2SPacket var1);
@@ -77,6 +75,8 @@ extends PacketListener {
     public void onKeepAlive(KeepAliveC2SPacket var1);
 
     public void onPlayerMove(PlayerMoveC2SPacket var1);
+
+    public void onPong(PlayPongC2SPacket var1);
 
     public void onPlayerAbilities(UpdatePlayerAbilitiesC2SPacket var1);
 

@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -57,7 +53,8 @@ extends PlantBlock {
     @Nullable
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         BlockPos blockPos = ctx.getBlockPos();
-        if (blockPos.getY() < 255 && ctx.getWorld().getBlockState(blockPos.up()).canReplace(ctx)) {
+        World world = ctx.getWorld();
+        if (blockPos.getY() < world.getTopY() - 1 && world.getBlockState(blockPos.up()).canReplace(ctx)) {
             return super.getPlacementState(ctx);
         }
         return null;
@@ -65,7 +62,8 @@ extends PlantBlock {
 
     @Override
     public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack itemStack) {
-        world.setBlockState(pos.up(), (BlockState)this.getDefaultState().with(HALF, DoubleBlockHalf.UPPER), 3);
+        BlockPos blockPos = pos.up();
+        world.setBlockState(blockPos, TallPlantBlock.withWaterloggedState(world, blockPos, (BlockState)this.getDefaultState().with(HALF, DoubleBlockHalf.UPPER)), 3);
     }
 
     @Override
@@ -77,9 +75,17 @@ extends PlantBlock {
         return super.canPlaceAt(state, world, pos);
     }
 
-    public void placeAt(WorldAccess world, BlockPos pos, int flags) {
-        world.setBlockState(pos, (BlockState)this.getDefaultState().with(HALF, DoubleBlockHalf.LOWER), flags);
-        world.setBlockState(pos.up(), (BlockState)this.getDefaultState().with(HALF, DoubleBlockHalf.UPPER), flags);
+    public static void placeAt(WorldAccess world, BlockState state, BlockPos pos, int flags) {
+        BlockPos blockPos = pos.up();
+        world.setBlockState(pos, TallPlantBlock.withWaterloggedState(world, pos, (BlockState)state.with(HALF, DoubleBlockHalf.LOWER)), flags);
+        world.setBlockState(blockPos, TallPlantBlock.withWaterloggedState(world, blockPos, (BlockState)state.with(HALF, DoubleBlockHalf.UPPER)), flags);
+    }
+
+    public static BlockState withWaterloggedState(WorldView world, BlockPos pos, BlockState state) {
+        if (state.contains(Properties.WATERLOGGED)) {
+            return (BlockState)state.with(Properties.WATERLOGGED, world.isWater(pos));
+        }
+        return state;
     }
 
     @Override
@@ -103,8 +109,9 @@ extends PlantBlock {
         BlockPos blockPos;
         BlockState blockState;
         DoubleBlockHalf doubleBlockHalf = state.get(HALF);
-        if (doubleBlockHalf == DoubleBlockHalf.UPPER && (blockState = world.getBlockState(blockPos = pos.down())).getBlock() == state.getBlock() && blockState.get(HALF) == DoubleBlockHalf.LOWER) {
-            world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 35);
+        if (doubleBlockHalf == DoubleBlockHalf.UPPER && (blockState = world.getBlockState(blockPos = pos.down())).isOf(state.getBlock()) && blockState.get(HALF) == DoubleBlockHalf.LOWER) {
+            BlockState blockState2 = blockState.contains(Properties.WATERLOGGED) && blockState.get(Properties.WATERLOGGED) != false ? Blocks.WATER.getDefaultState() : Blocks.AIR.getDefaultState();
+            world.setBlockState(blockPos, blockState2, 35);
             world.syncWorldEvent(player, 2001, blockPos, Block.getRawIdFromState(blockState));
         }
     }
@@ -120,7 +127,6 @@ extends PlantBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public long getRenderingSeed(BlockState state, BlockPos pos) {
         return MathHelper.hashCode(pos.getX(), pos.down(state.get(HALF) == DoubleBlockHalf.LOWER ? 0 : 1).getY(), pos.getZ());
     }

@@ -3,15 +3,11 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.DyeItem;
 import net.minecraft.item.DyeableItem;
@@ -79,7 +75,6 @@ extends SpecialCraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= 2;
     }

@@ -18,6 +18,10 @@ import net.minecraft.sound.SoundEvents;
 @Environment(value=EnvType.CLIENT)
 public class GuardianAttackSoundInstance
 extends MovingSoundInstance {
+    private static final float field_32997 = 0.0f;
+    private static final float field_32998 = 1.0f;
+    private static final float field_32999 = 0.7f;
+    private static final float field_33000 = 0.5f;
     private final GuardianEntity guardian;
 
     public GuardianAttackSoundInstance(GuardianEntity guardian) {
@@ -35,7 +39,7 @@ extends MovingSoundInstance {
 
     @Override
     public void tick() {
-        if (this.guardian.removed || this.guardian.getTarget() != null) {
+        if (this.guardian.isRemoved() || this.guardian.getTarget() != null) {
             this.setDone();
             return;
         }

@@ -17,7 +17,6 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,8 +25,6 @@ public class StructurePlacementData {
     private BlockRotation rotation = BlockRotation.NONE;
     private BlockPos position = BlockPos.ORIGIN;
     private boolean ignoreEntities;
-    @Nullable
-    private ChunkPos chunkPosition;
     @Nullable
     private BlockBox boundingBox;
     private boolean placeFluids = true;
@@ -45,7 +42,6 @@ public class StructurePlacementData {
         structurePlacementData.rotation = this.rotation;
         structurePlacementData.position = this.position;
         structurePlacementData.ignoreEntities = this.ignoreEntities;
-        structurePlacementData.chunkPosition = this.chunkPosition;
         structurePlacementData.boundingBox = this.boundingBox;
         structurePlacementData.placeFluids = this.placeFluids;
         structurePlacementData.random = this.random;
@@ -76,11 +72,6 @@ public class StructurePlacementData {
         return this;
     }
 
-    public StructurePlacementData setChunkPosition(ChunkPos chunkPosition) {
-        this.chunkPosition = chunkPosition;
-        return this;
-    }
-
     public StructurePlacementData setBoundingBox(BlockBox boundingBox) {
         this.boundingBox = boundingBox;
         return this;
@@ -88,6 +79,11 @@ public class StructurePlacementData {
 
     public StructurePlacementData setRandom(@Nullable Random random) {
         this.random = random;
+        return this;
+    }
+
+    public StructurePlacementData setPlaceFluids(boolean placeFluids) {
+        this.placeFluids = placeFluids;
         return this;
     }
 
@@ -139,9 +135,6 @@ public class StructurePlacementData {
 
     @Nullable
     public BlockBox getBoundingBox() {
-        if (this.boundingBox == null && this.chunkPosition != null) {
-            this.calculateBoundingBox();
-        }
         return this.boundingBox;
     }
 
@@ -151,12 +144,6 @@ public class StructurePlacementData {
 
     public List<StructureProcessor> getProcessors() {
         return this.processors;
-    }
-
-    void calculateBoundingBox() {
-        if (this.chunkPosition != null) {
-            this.boundingBox = this.getChunkBlockBox(this.chunkPosition);
-        }
     }
 
     public boolean shouldPlaceFluids() {
@@ -169,16 +156,6 @@ public class StructurePlacementData {
             throw new IllegalStateException("No palettes");
         }
         return list.get(this.getRandom(pos).nextInt(i));
-    }
-
-    @Nullable
-    private BlockBox getChunkBlockBox(@Nullable ChunkPos pos) {
-        if (pos == null) {
-            return this.boundingBox;
-        }
-        int i = pos.x * 16;
-        int j = pos.z * 16;
-        return new BlockBox(i, 0, j, i + 16 - 1, 255, j + 16 - 1);
     }
 
     public StructurePlacementData method_27264(boolean bl) {

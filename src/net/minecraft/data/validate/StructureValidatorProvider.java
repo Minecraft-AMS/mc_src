@@ -18,14 +18,18 @@ import org.apache.logging.log4j.Logger;
 
 public class StructureValidatorProvider
 implements SnbtProvider.Tweaker {
-    private static final Logger field_24617 = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger();
 
     @Override
     public NbtCompound write(String name, NbtCompound nbt) {
         if (name.startsWith("data/minecraft/structures/")) {
-            return StructureValidatorProvider.internalUpdate(name, StructureValidatorProvider.addDataVersion(nbt));
+            return StructureValidatorProvider.update(name, nbt);
         }
         return nbt;
+    }
+
+    public static NbtCompound update(String name, NbtCompound nbt) {
+        return StructureValidatorProvider.internalUpdate(name, StructureValidatorProvider.addDataVersion(nbt));
     }
 
     private static NbtCompound addDataVersion(NbtCompound nbt) {
@@ -38,9 +42,9 @@ implements SnbtProvider.Tweaker {
     private static NbtCompound internalUpdate(String name, NbtCompound nbt) {
         Structure structure = new Structure();
         int i = nbt.getInt("DataVersion");
-        int j = 2532;
-        if (i < 2532) {
-            field_24617.warn("SNBT Too old, do not forget to update: " + i + " < " + 2532 + ": " + name);
+        int j = 2678;
+        if (i < 2678) {
+            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", (Object)i, (Object)2678, (Object)name);
         }
         NbtCompound nbtCompound = NbtHelper.update(Schemas.getFixer(), DataFixTypes.STRUCTURE, nbt, i);
         structure.readNbt(nbtCompound);

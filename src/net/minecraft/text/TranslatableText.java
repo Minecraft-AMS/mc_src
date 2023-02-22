@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
@@ -17,8 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.BaseText;
@@ -134,7 +130,6 @@ implements ParsableText {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public <T> Optional<T> visitSelf(StringVisitable.StyledVisitor<T> visitor, Style style) {
         this.updateTranslations();
         for (StringVisitable stringVisitable : this.translations) {
@@ -188,7 +183,7 @@ implements ParsableText {
 
     @Override
     public String toString() {
-        return "TranslatableComponent{key='" + this.key + '\'' + ", args=" + Arrays.toString(this.args) + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+        return "TranslatableComponent{key='" + this.key + "', args=" + Arrays.toString(this.args) + ", siblings=" + this.siblings + ", style=" + this.getStyle() + "}";
     }
 
     public String getKey() {

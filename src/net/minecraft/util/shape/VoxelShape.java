@@ -5,8 +5,6 @@
  *  com.google.common.collect.Lists
  *  com.google.common.math.DoubleMath
  *  it.unimi.dsi.fastutil.doubles.DoubleList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util.shape;
@@ -16,8 +14,7 @@ import com.google.common.math.DoubleMath;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.Optional;
 import net.minecraft.util.Util;
 import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
@@ -85,13 +82,12 @@ public abstract class VoxelShape {
 
     public VoxelShape simplify() {
         VoxelShape[] voxelShapes = new VoxelShape[]{VoxelShapes.empty()};
-        this.forEachBox((d, e, f, g, h, i) -> {
-            voxelShapes[0] = VoxelShapes.combine(voxelShapes[0], VoxelShapes.cuboid(d, e, f, g, h, i), BooleanBiFunction.OR);
+        this.forEachBox((minX, minY, minZ, maxX, maxY, maxZ) -> {
+            voxelShapes[0] = VoxelShapes.combine(voxelShapes[0], VoxelShapes.cuboid(minX, minY, minZ, maxX, maxY, maxZ), BooleanBiFunction.OR);
         });
         return voxelShapes[0];
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void forEachEdge(VoxelShapes.BoxConsumer boxConsumer) {
         this.voxels.forEachEdge((i, j, k, l, m, n) -> boxConsumer.consume(this.getPointPosition(Direction.Axis.X, i), this.getPointPosition(Direction.Axis.Y, j), this.getPointPosition(Direction.Axis.Z, k), this.getPointPosition(Direction.Axis.X, l), this.getPointPosition(Direction.Axis.Y, m), this.getPointPosition(Direction.Axis.Z, n)), true);
     }
@@ -105,11 +101,22 @@ public abstract class VoxelShape {
 
     public List<Box> getBoundingBoxes() {
         ArrayList list = Lists.newArrayList();
-        this.forEachBox((d, e, f, g, h, i) -> list.add(new Box(d, e, f, g, h, i)));
+        this.forEachBox((x1, y1, z1, x2, y2, z2) -> list.add(new Box(x1, y1, z1, x2, y2, z2)));
         return list;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public double method_35593(Direction.Axis axis, double d, double e) {
+        int j;
+        Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
+        Direction.Axis axis3 = AxisCycleDirection.BACKWARD.cycle(axis);
+        int i = this.getCoordIndex(axis2, d);
+        int k = this.voxels.method_35592(axis, i, j = this.getCoordIndex(axis3, e));
+        if (k >= this.voxels.getSize(axis)) {
+            return Double.POSITIVE_INFINITY;
+        }
+        return this.getPointPosition(axis, k);
+    }
+
     public double getEndingCoord(Direction.Axis axis, double from, double to) {
         int j;
         Direction.Axis axis2 = AxisCycleDirection.FORWARD.cycle(axis);
@@ -123,19 +130,7 @@ public abstract class VoxelShape {
     }
 
     protected int getCoordIndex(Direction.Axis axis, double coord) {
-        return MathHelper.binarySearch(0, this.voxels.getSize(axis) + 1, i -> {
-            if (i < 0) {
-                return false;
-            }
-            if (i > this.voxels.getSize(axis)) {
-                return true;
-            }
-            return coord < this.getPointPosition(axis, i);
-        }) - 1;
-    }
-
-    protected boolean contains(double x, double y, double z) {
-        return this.voxels.inBoundsAndContains(this.getCoordIndex(Direction.Axis.X, x), this.getCoordIndex(Direction.Axis.Y, y), this.getCoordIndex(Direction.Axis.Z, z));
+        return MathHelper.binarySearch(0, this.voxels.getSize(axis) + 1, i -> coord < this.getPointPosition(axis, i)) - 1;
     }
 
     @Nullable
@@ -148,10 +143,26 @@ public abstract class VoxelShape {
             return null;
         }
         Vec3d vec3d2 = start.add(vec3d.multiply(0.001));
-        if (this.contains(vec3d2.x - (double)pos.getX(), vec3d2.y - (double)pos.getY(), vec3d2.z - (double)pos.getZ())) {
+        if (this.voxels.inBoundsAndContains(this.getCoordIndex(Direction.Axis.X, vec3d2.x - (double)pos.getX()), this.getCoordIndex(Direction.Axis.Y, vec3d2.y - (double)pos.getY()), this.getCoordIndex(Direction.Axis.Z, vec3d2.z - (double)pos.getZ()))) {
             return new BlockHitResult(vec3d2, Direction.getFacing(vec3d.x, vec3d.y, vec3d.z).getOpposite(), pos, true);
         }
         return Box.raycast(this.getBoundingBoxes(), start, end, pos);
+    }
+
+    public Optional<Vec3d> getClosestPointTo(Vec3d target) {
+        if (this.isEmpty()) {
+            return Optional.empty();
+        }
+        Vec3d[] vec3ds = new Vec3d[1];
+        this.forEachBox((d, e, f, g, h, i) -> {
+            double j = MathHelper.clamp(target.getX(), d, g);
+            double k = MathHelper.clamp(target.getY(), e, h);
+            double l = MathHelper.clamp(target.getZ(), f, i);
+            if (vec3ds[0] == null || target.squaredDistanceTo(j, k, l) < target.squaredDistanceTo(vec3ds[0])) {
+                vec3ds[0] = new Vec3d(j, k, l);
+            }
+        });
+        return Optional.of(vec3ds[0]);
     }
 
     public VoxelShape getFace(Direction facing) {
@@ -173,11 +184,11 @@ public abstract class VoxelShape {
 
     private VoxelShape getUncachedFace(Direction direction) {
         Direction.Axis axis = direction.getAxis();
-        Direction.AxisDirection axisDirection = direction.getDirection();
         DoubleList doubleList = this.getPointPositions(axis);
         if (doubleList.size() == 2 && DoubleMath.fuzzyEquals((double)doubleList.getDouble(0), (double)0.0, (double)1.0E-7) && DoubleMath.fuzzyEquals((double)doubleList.getDouble(1), (double)1.0, (double)1.0E-7)) {
             return this;
         }
+        Direction.AxisDirection axisDirection = direction.getDirection();
         int i = this.getCoordIndex(axis, axisDirection == Direction.AxisDirection.POSITIVE ? 0.9999999 : 1.0E-7);
         return new SlicedVoxelShape(this, axis, i);
     }

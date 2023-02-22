@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
@@ -11,8 +9,6 @@ package net.minecraft.entity.mob;
 import java.util.EnumSet;
 import java.util.Random;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
@@ -23,7 +19,7 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.ai.control.MoveControl;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.GoToWalkTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
@@ -40,6 +36,7 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.ElderGuardianEntity;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.passive.AxolotlEntity;
 import net.minecraft.entity.passive.SquidEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
@@ -57,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class GuardianEntity
 extends HostileEntity {
+    protected static final int WARMUP_TIME = 80;
     private static final TrackedData<Boolean> SPIKES_RETRACTED = DataTracker.registerData(GuardianEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> BEAM_TARGET_ID = DataTracker.registerData(GuardianEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private float tailAngle;
@@ -89,7 +87,7 @@ extends HostileEntity {
         this.goalSelector.add(9, new LookAroundGoal(this));
         this.wanderGoal.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
         goToWalkTargetGoal.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));
-        this.targetSelector.add(1, new FollowTargetGoal<LivingEntity>(this, LivingEntity.class, 10, true, false, new GuardianTargetPredicate(this)));
+        this.targetSelector.add(1, new ActiveTargetGoal<LivingEntity>(this, LivingEntity.class, 10, true, false, new GuardianTargetPredicate(this)));
     }
 
     public static DefaultAttributeContainer.Builder createGuardianAttributes() {
@@ -122,7 +120,7 @@ extends HostileEntity {
         return this.dataTracker.get(SPIKES_RETRACTED);
     }
 
-    private void setSpikesRetracted(boolean retracted) {
+    void setSpikesRetracted(boolean retracted) {
         this.dataTracker.set(SPIKES_RETRACTED, retracted);
     }
 
@@ -130,7 +128,7 @@ extends HostileEntity {
         return 80;
     }
 
-    private void setBeamTarget(int entityId) {
+    void setBeamTarget(int entityId) {
         this.dataTracker.set(BEAM_TARGET_ID, entityId);
     }
 
@@ -187,8 +185,8 @@ extends HostileEntity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
@@ -256,12 +254,12 @@ extends HostileEntity {
                 this.setAir(300);
             } else if (this.onGround) {
                 this.setVelocity(this.getVelocity().add((this.random.nextFloat() * 2.0f - 1.0f) * 0.4f, 0.5, (this.random.nextFloat() * 2.0f - 1.0f) * 0.4f));
-                this.yaw = this.random.nextFloat() * 360.0f;
+                this.setYaw(this.random.nextFloat() * 360.0f);
                 this.onGround = false;
                 this.velocityDirty = true;
             }
             if (this.hasBeamTarget()) {
-                this.yaw = this.headYaw;
+                this.setYaw(this.headYaw);
             }
         }
         super.tickMovement();
@@ -271,12 +269,10 @@ extends HostileEntity {
         return SoundEvents.ENTITY_GUARDIAN_FLOP;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getTailAngle(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.prevTailAngle, this.tailAngle);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getSpikesExtension(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.prevSpikesExtension, this.spikesExtension);
     }
@@ -349,14 +345,15 @@ extends HostileEntity {
             double f = vec3d.y / d;
             double g = vec3d.z / d;
             float h = (float)(MathHelper.atan2(vec3d.z, vec3d.x) * 57.2957763671875) - 90.0f;
-            this.guardian.bodyYaw = this.guardian.yaw = this.wrapDegrees(this.guardian.yaw, h, 90.0f);
+            this.guardian.setYaw(this.wrapDegrees(this.guardian.getYaw(), h, 90.0f));
+            this.guardian.bodyYaw = this.guardian.getYaw();
             float i = (float)(this.speed * this.guardian.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
             float j = MathHelper.lerp(0.125f, this.guardian.getMovementSpeed(), i);
             this.guardian.setMovementSpeed(j);
-            double k = Math.sin((double)(this.guardian.age + this.guardian.getEntityId()) * 0.5) * 0.05;
-            double l = Math.cos(this.guardian.yaw * ((float)Math.PI / 180));
-            double m = Math.sin(this.guardian.yaw * ((float)Math.PI / 180));
-            double n = Math.sin((double)(this.guardian.age + this.guardian.getEntityId()) * 0.75) * 0.05;
+            double k = Math.sin((double)(this.guardian.age + this.guardian.getId()) * 0.5) * 0.05;
+            double l = Math.cos(this.guardian.getYaw() * ((float)Math.PI / 180));
+            double m = Math.sin(this.guardian.getYaw() * ((float)Math.PI / 180));
+            double n = Math.sin((double)(this.guardian.age + this.guardian.getId()) * 0.75) * 0.05;
             this.guardian.setVelocity(this.guardian.getVelocity().add(k * l, n * (m + l) * 0.25 + (double)j * f * 0.1, k * m));
             LookControl lookControl = this.guardian.getLookControl();
             double o = this.guardian.getX() + e * 2.0;
@@ -424,7 +421,7 @@ extends HostileEntity {
             }
             ++this.beamTicks;
             if (this.beamTicks == 0) {
-                this.guardian.setBeamTarget(this.guardian.getTarget().getEntityId());
+                this.guardian.setBeamTarget(this.guardian.getTarget().getId());
                 if (!this.guardian.isSilent()) {
                     this.guardian.world.sendEntityStatus(this.guardian, (byte)21);
                 }
@@ -454,7 +451,7 @@ extends HostileEntity {
 
         @Override
         public boolean test(@Nullable LivingEntity livingEntity) {
-            return (livingEntity instanceof PlayerEntity || livingEntity instanceof SquidEntity) && livingEntity.squaredDistanceTo(this.owner) > 9.0;
+            return (livingEntity instanceof PlayerEntity || livingEntity instanceof SquidEntity || livingEntity instanceof AxolotlEntity) && livingEntity.squaredDistanceTo(this.owner) > 9.0;
         }
 
         @Override

@@ -39,7 +39,7 @@ public class ClickEvent {
     }
 
     public String toString() {
-        return "ClickEvent{action=" + (Object)((Object)this.action) + ", value='" + this.value + '\'' + '}';
+        return "ClickEvent{action=" + this.action + ", value='" + this.value + "'}";
     }
 
     public int hashCode() {
@@ -48,17 +48,26 @@ public class ClickEvent {
         return i;
     }
 
-    public static enum Action {
-        OPEN_URL("open_url", true),
-        OPEN_FILE("open_file", false),
-        RUN_COMMAND("run_command", true),
-        SUGGEST_COMMAND("suggest_command", true),
-        CHANGE_PAGE("change_page", true),
-        COPY_TO_CLIPBOARD("copy_to_clipboard", true);
-
+    public static final class Action
+    extends Enum<Action> {
+        public static final /* enum */ Action OPEN_URL = new Action("open_url", true);
+        public static final /* enum */ Action OPEN_FILE = new Action("open_file", false);
+        public static final /* enum */ Action RUN_COMMAND = new Action("run_command", true);
+        public static final /* enum */ Action SUGGEST_COMMAND = new Action("suggest_command", true);
+        public static final /* enum */ Action CHANGE_PAGE = new Action("change_page", true);
+        public static final /* enum */ Action COPY_TO_CLIPBOARD = new Action("copy_to_clipboard", true);
         private static final Map<String, Action> BY_NAME;
         private final boolean userDefinable;
         private final String name;
+        private static final /* synthetic */ Action[] field_11747;
+
+        public static Action[] values() {
+            return (Action[])field_11747.clone();
+        }
+
+        public static Action valueOf(String string) {
+            return Enum.valueOf(Action.class, string);
+        }
 
         private Action(String name, boolean userDefinable) {
             this.name = name;
@@ -77,7 +86,12 @@ public class ClickEvent {
             return BY_NAME.get(name);
         }
 
+        private static /* synthetic */ Action[] method_36945() {
+            return new Action[]{OPEN_URL, OPEN_FILE, RUN_COMMAND, SUGGEST_COMMAND, CHANGE_PAGE, COPY_TO_CLIPBOARD};
+        }
+
         static {
+            field_11747 = Action.method_36945();
             BY_NAME = Arrays.stream(Action.values()).collect(Collectors.toMap(Action::getName, a -> a));
         }
     }

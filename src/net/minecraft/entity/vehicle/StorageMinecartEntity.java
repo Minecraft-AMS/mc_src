@@ -16,6 +16,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.StackReference;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.context.LootContext;
@@ -33,6 +34,7 @@ import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class StorageMinecartEntity
@@ -40,7 +42,6 @@ extends AbstractMinecartEntity
 implements Inventory,
 NamedScreenHandlerFactory {
     private DefaultedList<ItemStack> inventory = DefaultedList.ofSize(36, ItemStack.EMPTY);
-    private boolean field_7733 = true;
     @Nullable
     private Identifier lootTableId;
     private long lootSeed;
@@ -107,12 +108,23 @@ NamedScreenHandlerFactory {
     }
 
     @Override
-    public boolean equip(int slot, ItemStack item) {
-        if (slot >= 0 && slot < this.size()) {
-            this.setStack(slot, item);
-            return true;
+    public StackReference getStackReference(final int mappedIndex) {
+        if (mappedIndex >= 0 && mappedIndex < this.size()) {
+            return new StackReference(){
+
+                @Override
+                public ItemStack get() {
+                    return StorageMinecartEntity.this.getStack(mappedIndex);
+                }
+
+                @Override
+                public boolean set(ItemStack stack) {
+                    StorageMinecartEntity.this.setStack(mappedIndex, stack);
+                    return true;
+                }
+            };
         }
-        return false;
+        return super.getStackReference(mappedIndex);
     }
 
     @Override
@@ -121,25 +133,18 @@ NamedScreenHandlerFactory {
 
     @Override
     public boolean canPlayerUse(PlayerEntity player) {
-        if (this.removed) {
+        if (this.isRemoved()) {
             return false;
         }
         return !(player.squaredDistanceTo(this) > 64.0);
     }
 
     @Override
-    @Nullable
-    public Entity moveToWorld(ServerWorld destination) {
-        this.field_7733 = false;
-        return super.moveToWorld(destination);
-    }
-
-    @Override
-    public void remove() {
-        if (!this.world.isClient && this.field_7733) {
+    public void remove(Entity.RemovalReason reason) {
+        if (!this.world.isClient && reason.shouldDestroy()) {
             ItemScatterer.spawn(this.world, this, (Inventory)this);
         }
-        super.remove();
+        super.remove(reason);
     }
 
     @Override
@@ -171,6 +176,7 @@ NamedScreenHandlerFactory {
     public ActionResult interact(PlayerEntity player, Hand hand) {
         player.openHandledScreen(this);
         if (!player.world.isClient) {
+            this.emitGameEvent(GameEvent.CONTAINER_OPEN, player);
             PiglinBrain.onGuardedBlockInteracted(player, true);
             return ActionResult.CONSUME;
         }
@@ -184,6 +190,9 @@ NamedScreenHandlerFactory {
             int i = 15 - ScreenHandler.calculateComparatorOutput(this);
             f += (float)i * 0.001f;
         }
+        if (this.isTouchingWater()) {
+            f *= 0.95f;
+        }
         this.setVelocity(this.getVelocity().multiply(f, 0.0, f));
     }
 
@@ -191,7 +200,7 @@ NamedScreenHandlerFactory {
         if (this.lootTableId != null && this.world.getServer() != null) {
             LootTable lootTable = this.world.getServer().getLootManager().getTable(this.lootTableId);
             if (player instanceof ServerPlayerEntity) {
-                Criteria.PLAYER_GENERATES_CONTAINER_LOOT.test((ServerPlayerEntity)player, this.lootTableId);
+                Criteria.PLAYER_GENERATES_CONTAINER_LOOT.trigger((ServerPlayerEntity)player, this.lootTableId);
             }
             this.lootTableId = null;
             LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).parameter(LootContextParameters.ORIGIN, this.getPos()).random(this.lootSeed);

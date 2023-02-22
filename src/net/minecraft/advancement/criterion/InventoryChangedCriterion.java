@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableSet
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
@@ -9,13 +10,16 @@
  */
 package net.minecraft.advancement.criterion;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.Set;
 import net.minecraft.advancement.criterion.AbstractCriterion;
 import net.minecraft.advancement.criterion.AbstractCriterionConditions;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.predicate.NbtPredicate;
@@ -31,7 +35,7 @@ import net.minecraft.util.JsonHelper;
 
 public class InventoryChangedCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("inventory_changed");
+    static final Identifier ID = new Identifier("inventory_changed");
 
     @Override
     public Identifier getId() {
@@ -66,7 +70,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     private void trigger(ServerPlayerEntity player, PlayerInventory inventory, ItemStack stack, int full, int empty, int occupied) {
-        this.test(player, conditions -> conditions.matches(inventory, stack, full, empty, occupied));
+        this.trigger(player, conditions -> conditions.matches(inventory, stack, full, empty, occupied));
     }
 
     @Override
@@ -96,7 +100,7 @@ extends AbstractCriterion<Conditions> {
         public static Conditions items(ItemConvertible ... items) {
             ItemPredicate[] itemPredicates = new ItemPredicate[items.length];
             for (int i = 0; i < items.length; ++i) {
-                itemPredicates[i] = new ItemPredicate(null, items[i].asItem(), NumberRange.IntRange.ANY, NumberRange.IntRange.ANY, EnchantmentPredicate.ARRAY_OF_ANY, EnchantmentPredicate.ARRAY_OF_ANY, null, NbtPredicate.ANY);
+                itemPredicates[i] = new ItemPredicate(null, (Set<Item>)ImmutableSet.of((Object)items[i].asItem()), NumberRange.IntRange.ANY, NumberRange.IntRange.ANY, EnchantmentPredicate.ARRAY_OF_ANY, EnchantmentPredicate.ARRAY_OF_ANY, null, NbtPredicate.ANY);
             }
             return Conditions.items(itemPredicates);
         }
@@ -146,7 +150,7 @@ extends AbstractCriterion<Conditions> {
                 }
                 ItemStack itemStack = inventory.getStack(k);
                 if (itemStack.isEmpty()) continue;
-                list.removeIf(itemPredicate -> itemPredicate.test(itemStack));
+                list.removeIf(item -> item.test(itemStack));
             }
             return list.isEmpty();
         }

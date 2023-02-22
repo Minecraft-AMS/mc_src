@@ -17,6 +17,7 @@ import net.minecraft.client.gui.screen.option.GameOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.Option;
 import net.minecraft.client.util.NarratorManager;
@@ -42,7 +43,7 @@ extends GameOptionsScreen {
     protected void init() {
         this.buttonList = new ButtonListWidget(this.client, this.width, this.height, 32, this.height - 32, 25);
         this.buttonList.addAll(this.options);
-        this.children.add(this.buttonList);
+        this.addSelectableChild(this.buttonList);
         this.initFooter();
         this.narratorButton = this.buttonList.getButtonFor(Option.NARRATOR);
         if (this.narratorButton != null) {
@@ -51,7 +52,7 @@ extends GameOptionsScreen {
     }
 
     protected void initFooter() {
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> this.client.openScreen(this.parent)));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> this.client.setScreen(this.parent)));
     }
 
     @Override
@@ -61,14 +62,12 @@ extends GameOptionsScreen {
         NarratorOptionsScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 0xFFFFFF);
         super.render(matrices, mouseX, mouseY, delta);
         List<OrderedText> list = NarratorOptionsScreen.getHoveredButtonTooltip(this.buttonList, mouseX, mouseY);
-        if (list != null) {
-            this.renderOrderedTooltip(matrices, list, mouseX, mouseY);
-        }
+        this.renderOrderedTooltip(matrices, list, mouseX, mouseY);
     }
 
     public void updateNarratorButtonText() {
-        if (this.narratorButton != null) {
-            this.narratorButton.setMessage(Option.NARRATOR.getMessage(this.gameOptions));
+        if (this.narratorButton instanceof CyclingButtonWidget) {
+            ((CyclingButtonWidget)this.narratorButton).setValue(this.gameOptions.narrator);
         }
     }
 }

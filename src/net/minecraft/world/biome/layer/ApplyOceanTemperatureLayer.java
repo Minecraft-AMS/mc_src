@@ -9,11 +9,20 @@ import net.minecraft.world.biome.layer.util.IdentityCoordinateTransformer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 import net.minecraft.world.biome.layer.util.LayerSampler;
 
-public enum ApplyOceanTemperatureLayer implements MergingLayer,
-IdentityCoordinateTransformer
-{
-    INSTANCE;
+public final class ApplyOceanTemperatureLayer
+extends Enum<ApplyOceanTemperatureLayer>
+implements MergingLayer,
+IdentityCoordinateTransformer {
+    public static final /* enum */ ApplyOceanTemperatureLayer INSTANCE = new ApplyOceanTemperatureLayer();
+    private static final /* synthetic */ ApplyOceanTemperatureLayer[] field_16122;
 
+    public static ApplyOceanTemperatureLayer[] values() {
+        return (ApplyOceanTemperatureLayer[])field_16122.clone();
+    }
+
+    public static ApplyOceanTemperatureLayer valueOf(String string) {
+        return Enum.valueOf(ApplyOceanTemperatureLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, LayerSampler sampler1, LayerSampler sampler2, int x, int z) {
@@ -50,6 +59,14 @@ IdentityCoordinateTransformer
             }
         }
         return j;
+    }
+
+    private static /* synthetic */ ApplyOceanTemperatureLayer[] method_36777() {
+        return new ApplyOceanTemperatureLayer[]{INSTANCE};
+    }
+
+    static {
+        field_16122 = ApplyOceanTemperatureLayer.method_36777();
     }
 }
 

@@ -16,18 +16,20 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.util.math.BlockPos;
 
 public class DispenserBlockEntity
 extends LootableContainerBlockEntity {
     private static final Random RANDOM = new Random();
+    public static final int field_31340 = 9;
     private DefaultedList<ItemStack> inventory = DefaultedList.ofSize(9, ItemStack.EMPTY);
 
-    protected DispenserBlockEntity(BlockEntityType<?> blockEntityType) {
-        super(blockEntityType);
+    protected DispenserBlockEntity(BlockEntityType<?> blockEntityType, BlockPos blockPos, BlockState blockState) {
+        super(blockEntityType, blockPos, blockState);
     }
 
-    public DispenserBlockEntity() {
-        this(BlockEntityType.DISPENSER);
+    public DispenserBlockEntity(BlockPos pos, BlockState state) {
+        this(BlockEntityType.DISPENSER, pos, state);
     }
 
     @Override
@@ -61,11 +63,11 @@ extends LootableContainerBlockEntity {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
         this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
-        if (!this.deserializeLootTable(tag)) {
-            Inventories.readNbt(tag, this.inventory);
+        if (!this.deserializeLootTable(nbt)) {
+            Inventories.readNbt(nbt, this.inventory);
         }
     }
 

@@ -2,17 +2,22 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  com.google.common.collect.ImmutableSet
+ *  org.apache.commons.lang3.tuple.Pair
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util.profiler;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.profiler.EmptyProfileResult;
 import net.minecraft.util.profiler.ProfileResult;
+import net.minecraft.util.profiler.ProfilerSystem;
 import net.minecraft.util.profiler.ReadableProfiler;
+import net.minecraft.util.profiler.SampleType;
+import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.Nullable;
 
 public class DummyProfiler
 implements ReadableProfiler {
@@ -38,6 +43,10 @@ implements ReadableProfiler {
     }
 
     @Override
+    public void markSampleType(SampleType type) {
+    }
+
+    @Override
     public void pop() {
     }
 
@@ -46,7 +55,6 @@ implements ReadableProfiler {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void swap(Supplier<String> locationGetter) {
     }
 
@@ -61,6 +69,17 @@ implements ReadableProfiler {
     @Override
     public ProfileResult getResult() {
         return EmptyProfileResult.INSTANCE;
+    }
+
+    @Override
+    @Nullable
+    public ProfilerSystem.LocatedInfo getInfo(String name) {
+        return null;
+    }
+
+    @Override
+    public Set<Pair<String, SampleType>> getSampleTargets() {
+        return ImmutableSet.of();
     }
 }
 

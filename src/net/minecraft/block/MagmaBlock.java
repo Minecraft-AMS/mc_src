@@ -25,21 +25,23 @@ import net.minecraft.world.WorldAccess;
 
 public class MagmaBlock
 extends Block {
+    private static final int SCHEDULED_TICK_DELAY = 20;
+
     public MagmaBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
 
     @Override
-    public void onSteppedOn(World world, BlockPos pos, Entity entity) {
+    public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
         if (!entity.isFireImmune() && entity instanceof LivingEntity && !EnchantmentHelper.hasFrostWalker((LivingEntity)entity)) {
             entity.damage(DamageSource.HOT_FLOOR, 1.0f);
         }
-        super.onSteppedOn(world, pos, entity);
+        super.onSteppedOn(world, pos, state, entity);
     }
 
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        BubbleColumnBlock.update(world, pos.up(), true);
+        BubbleColumnBlock.update(world, pos.up(), state);
     }
 
     @Override

@@ -5,8 +5,6 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.apache.logging.log4j.util.Supplier
@@ -30,8 +28,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.NamespaceResourceManager;
 import net.minecraft.resource.ProfiledResourceReload;
 import net.minecraft.resource.ReloadableResourceManager;
@@ -53,9 +49,8 @@ implements ReloadableResourceManager {
     private static final Logger LOGGER = LogManager.getLogger();
     private final Map<String, NamespaceResourceManager> namespaceManagers = Maps.newHashMap();
     private final List<ResourceReloader> reloaders = Lists.newArrayList();
-    private final List<ResourceReloader> initialListeners = Lists.newArrayList();
     private final Set<String> namespaces = Sets.newLinkedHashSet();
-    private final List<ResourcePack> field_25145 = Lists.newArrayList();
+    private final List<ResourcePack> packs = Lists.newArrayList();
     private final ResourceType type;
 
     public ReloadableResourceManagerImpl(ResourceType type) {
@@ -63,7 +58,7 @@ implements ReloadableResourceManager {
     }
 
     public void addPack(ResourcePack pack) {
-        this.field_25145.add(pack);
+        this.packs.add(pack);
         for (String string : pack.getNamespaces(this.type)) {
             this.namespaces.add(string);
             NamespaceResourceManager namespaceResourceManager = this.namespaceManagers.get(string);
@@ -76,7 +71,6 @@ implements ReloadableResourceManager {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Set<String> getAllNamespaces() {
         return this.namespaces;
     }
@@ -91,7 +85,6 @@ implements ReloadableResourceManager {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean containsResource(Identifier id) {
         ResourceManager resourceManager = this.namespaceManagers.get(id.getNamespace());
         if (resourceManager != null) {
@@ -123,8 +116,8 @@ implements ReloadableResourceManager {
     private void clear() {
         this.namespaceManagers.clear();
         this.namespaces.clear();
-        this.field_25145.forEach(ResourcePack::close);
-        this.field_25145.clear();
+        this.packs.forEach(ResourcePack::close);
+        this.packs.clear();
     }
 
     @Override
@@ -135,43 +128,38 @@ implements ReloadableResourceManager {
     @Override
     public void registerReloader(ResourceReloader reloader) {
         this.reloaders.add(reloader);
-        this.initialListeners.add(reloader);
-    }
-
-    protected ResourceReload beginReloadInner(Executor prepareExecutor, Executor applyExecutor, List<ResourceReloader> listeners, CompletableFuture<Unit> initialStage) {
-        ProfiledResourceReload resourceReload = LOGGER.isDebugEnabled() ? new ProfiledResourceReload(this, Lists.newArrayList(listeners), prepareExecutor, applyExecutor, initialStage) : SimpleResourceReload.create(this, Lists.newArrayList(listeners), prepareExecutor, applyExecutor, initialStage);
-        this.initialListeners.clear();
-        return resourceReload;
     }
 
     @Override
     public ResourceReload reload(Executor prepareExecutor, Executor applyExecutor, CompletableFuture<Unit> initialStage, List<ResourcePack> packs) {
-        this.clear();
         LOGGER.info("Reloading ResourceManager: {}", new Supplier[]{() -> packs.stream().map(ResourcePack::getName).collect(Collectors.joining(", "))});
+        this.clear();
         for (ResourcePack resourcePack : packs) {
             try {
                 this.addPack(resourcePack);
             }
             catch (Exception exception) {
                 LOGGER.error("Failed to add resource pack {}", (Object)resourcePack.getName(), (Object)exception);
-                return new FailedResourceReloadMonitor(new PackAdditionFailedException(resourcePack, (Throwable)exception));
+                return new FailedReload(new PackAdditionFailedException(resourcePack, (Throwable)exception));
             }
         }
-        return this.beginReloadInner(prepareExecutor, applyExecutor, this.reloaders, initialStage);
+        if (LOGGER.isDebugEnabled()) {
+            return new ProfiledResourceReload(this, Lists.newArrayList(this.reloaders), prepareExecutor, applyExecutor, initialStage);
+        }
+        return SimpleResourceReload.create(this, Lists.newArrayList(this.reloaders), prepareExecutor, applyExecutor, initialStage);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Stream<ResourcePack> streamResourcePacks() {
-        return this.field_25145.stream();
+        return this.packs.stream();
     }
 
-    static class FailedResourceReloadMonitor
+    static class FailedReload
     implements ResourceReload {
         private final PackAdditionFailedException exception;
         private final CompletableFuture<Unit> future;
 
-        public FailedResourceReloadMonitor(PackAdditionFailedException exception) {
+        public FailedReload(PackAdditionFailedException exception) {
             this.exception = exception;
             this.future = new CompletableFuture();
             this.future.completeExceptionally(exception);
@@ -183,25 +171,16 @@ implements ReloadableResourceManager {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public float getProgress() {
             return 0.0f;
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
-        public boolean isPrepareStageComplete() {
-            return false;
-        }
-
-        @Override
-        @Environment(value=EnvType.CLIENT)
         public boolean isComplete() {
             return true;
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public void throwException() {
             throw this.exception;
         }
@@ -216,7 +195,6 @@ implements ReloadableResourceManager {
             this.pack = pack;
         }
 
-        @Environment(value=EnvType.CLIENT)
         public ResourcePack getPack() {
             return this.pack;
         }

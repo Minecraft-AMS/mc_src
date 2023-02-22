@@ -7,8 +7,6 @@
  *  com.google.common.collect.Sets
  *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
  *  it.unimi.dsi.fastutil.objects.ObjectArraySet
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.attribute;
@@ -24,8 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.nbt.NbtCompound;
@@ -128,7 +124,6 @@ public class EntityAttributeInstance {
         return false;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void clearModifiers() {
         for (EntityAttributeModifier entityAttributeModifier : this.getModifiers()) {
             this.removeModifier(entityAttributeModifier);

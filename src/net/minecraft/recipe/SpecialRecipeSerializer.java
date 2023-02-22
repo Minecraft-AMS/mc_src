@@ -15,20 +15,20 @@ import net.minecraft.util.Identifier;
 
 public class SpecialRecipeSerializer<T extends Recipe<?>>
 implements RecipeSerializer<T> {
-    private final Function<Identifier, T> id;
+    private final Function<Identifier, T> factory;
 
-    public SpecialRecipeSerializer(Function<Identifier, T> function) {
-        this.id = function;
+    public SpecialRecipeSerializer(Function<Identifier, T> factory) {
+        this.factory = factory;
     }
 
     @Override
     public T read(Identifier id, JsonObject json) {
-        return (T)((Recipe)this.id.apply(id));
+        return (T)((Recipe)this.factory.apply(id));
     }
 
     @Override
     public T read(Identifier id, PacketByteBuf buf) {
-        return (T)((Recipe)this.id.apply(id));
+        return (T)((Recipe)this.factory.apply(id));
     }
 
     @Override

@@ -2,29 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import java.util.UUID;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.Durations;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.AttackWithOwnerGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.ai.goal.FollowOwnerGoal;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
-import net.minecraft.entity.ai.goal.FollowTargetIfTamedGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -34,6 +28,7 @@ import net.minecraft.entity.ai.goal.SitGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.TrackOwnerAttackerGoal;
 import net.minecraft.entity.ai.goal.UniversalAngerGoal;
+import net.minecraft.entity.ai.goal.UntamedActiveTargetGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
 import net.minecraft.entity.ai.goal.WolfBegGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -67,11 +62,13 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
+import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class WolfEntity
@@ -80,17 +77,19 @@ implements Angerable {
     private static final TrackedData<Boolean> BEGGING = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> COLLAR_COLOR = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> ANGER_TIME = DataTracker.registerData(WolfEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    public static final Predicate<LivingEntity> FOLLOW_TAMED_PREDICATE = livingEntity -> {
-        EntityType<?> entityType = livingEntity.getType();
+    public static final Predicate<LivingEntity> FOLLOW_TAMED_PREDICATE = entity -> {
+        EntityType<?> entityType = entity.getType();
         return entityType == EntityType.SHEEP || entityType == EntityType.RABBIT || entityType == EntityType.FOX;
     };
+    private static final float WILD_MAX_HEALTH = 8.0f;
+    private static final float TAMED_MAX_HEALTH = 20.0f;
     private float begAnimationProgress;
     private float lastBegAnimationProgress;
     private boolean furWet;
     private boolean canShakeWaterOff;
     private float shakeProgress;
     private float lastShakeProgress;
-    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private UUID targetUuid;
 
     public WolfEntity(EntityType<? extends WolfEntity> entityType, World world) {
@@ -114,10 +113,10 @@ implements Angerable {
         this.targetSelector.add(1, new TrackOwnerAttackerGoal(this));
         this.targetSelector.add(2, new AttackWithOwnerGoal(this));
         this.targetSelector.add(3, new RevengeGoal(this, new Class[0]).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(4, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
-        this.targetSelector.add(5, new FollowTargetIfTamedGoal<AnimalEntity>(this, AnimalEntity.class, false, FOLLOW_TAMED_PREDICATE));
-        this.targetSelector.add(6, new FollowTargetIfTamedGoal<TurtleEntity>(this, TurtleEntity.class, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
-        this.targetSelector.add(7, new FollowTargetGoal<AbstractSkeletonEntity>((MobEntity)this, AbstractSkeletonEntity.class, false));
+        this.targetSelector.add(4, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
+        this.targetSelector.add(5, new UntamedActiveTargetGoal<AnimalEntity>(this, AnimalEntity.class, false, FOLLOW_TAMED_PREDICATE));
+        this.targetSelector.add(6, new UntamedActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
+        this.targetSelector.add(7, new ActiveTargetGoal<AbstractSkeletonEntity>((MobEntity)this, AbstractSkeletonEntity.class, false));
         this.targetSelector.add(8, new UniversalAngerGoal<WolfEntity>(this, true));
     }
 
@@ -151,7 +150,7 @@ implements Angerable {
         if (nbt.contains("CollarColor", 99)) {
             this.setCollarColor(DyeColor.byId(nbt.getInt("CollarColor")));
         }
-        this.angerFromTag((ServerWorld)this.world, nbt);
+        this.readAngerFromNbt(this.world, nbt);
     }
 
     @Override
@@ -209,11 +208,12 @@ implements Angerable {
             this.furWet = true;
             if (this.canShakeWaterOff && !this.world.isClient) {
                 this.world.sendEntityStatus(this, (byte)56);
-                this.method_31167();
+                this.resetShake();
             }
         } else if ((this.furWet || this.canShakeWaterOff) && this.canShakeWaterOff) {
             if (this.shakeProgress == 0.0f) {
                 this.playSound(SoundEvents.ENTITY_WOLF_SHAKE, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
+                this.emitGameEvent(GameEvent.WOLF_SHAKING);
             }
             this.lastShakeProgress = this.shakeProgress;
             this.shakeProgress += 0.05f;
@@ -236,7 +236,7 @@ implements Angerable {
         }
     }
 
-    private void method_31167() {
+    private void resetShake() {
         this.canShakeWaterOff = false;
         this.shakeProgress = 0.0f;
         this.lastShakeProgress = 0.0f;
@@ -251,17 +251,14 @@ implements Angerable {
         super.onDeath(source);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isFurWet() {
         return this.furWet;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getFurWetBrightnessMultiplier(float tickDelta) {
         return Math.min(0.5f + MathHelper.lerp(tickDelta, this.lastShakeProgress, this.shakeProgress) / 2.0f * 0.5f, 1.0f);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getShakeAnimationProgress(float tickDelta, float f) {
         float g = (MathHelper.lerp(tickDelta, this.lastShakeProgress, this.shakeProgress) + f) / 1.8f;
         if (g < 0.0f) {
@@ -272,7 +269,6 @@ implements Angerable {
         return MathHelper.sin(g * (float)Math.PI) * MathHelper.sin(g * (float)Math.PI * 11.0f) * 0.15f * (float)Math.PI;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getBegAnimationProgress(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.lastBegAnimationProgress, this.begAnimationProgress) * 0.15f * (float)Math.PI;
     }
@@ -307,7 +303,7 @@ implements Angerable {
     public boolean tryAttack(Entity target) {
         boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
-            this.dealDamage(this, target);
+            this.applyDamageEffects(this, target);
         }
         return bl;
     }
@@ -333,22 +329,23 @@ implements Angerable {
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
         if (this.world.isClient) {
-            boolean bl = this.isOwner(player) || this.isTamed() || item == Items.BONE && !this.isTamed() && !this.hasAngerTime();
+            boolean bl = this.isOwner(player) || this.isTamed() || itemStack.isOf(Items.BONE) && !this.isTamed() && !this.hasAngerTime();
             return bl ? ActionResult.CONSUME : ActionResult.PASS;
         }
         if (this.isTamed()) {
             if (this.isBreedingItem(itemStack) && this.getHealth() < this.getMaxHealth()) {
-                if (!player.abilities.creativeMode) {
+                if (!player.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
                 this.heal(item.getFoodComponent().getHunger());
+                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             if (item instanceof DyeItem) {
                 DyeColor dyeColor = ((DyeItem)item).getColor();
                 if (dyeColor == this.getCollarColor()) return super.interactMob(player, hand);
                 this.setCollarColor(dyeColor);
-                if (player.abilities.creativeMode) return ActionResult.SUCCESS;
+                if (player.getAbilities().creativeMode) return ActionResult.SUCCESS;
                 itemStack.decrement(1);
                 return ActionResult.SUCCESS;
             }
@@ -360,8 +357,8 @@ implements Angerable {
             this.setTarget(null);
             return ActionResult.SUCCESS;
         }
-        if (item != Items.BONE || this.hasAngerTime()) return super.interactMob(player, hand);
-        if (!player.abilities.creativeMode) {
+        if (!itemStack.isOf(Items.BONE) || this.hasAngerTime()) return super.interactMob(player, hand);
+        if (!player.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
         if (this.random.nextInt(3) == 0) {
@@ -378,20 +375,18 @@ implements Angerable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 8) {
             this.canShakeWaterOff = true;
             this.shakeProgress = 0.0f;
             this.lastShakeProgress = 0.0f;
         } else if (status == 56) {
-            this.method_31167();
+            this.resetShake();
         } else {
             super.handleStatus(status);
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getTailAngle() {
         if (this.hasAngerTime()) {
             return 1.5393804f;
@@ -425,7 +420,7 @@ implements Angerable {
 
     @Override
     public void chooseRandomAngerTime() {
-        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+        this.setAngerTime(ANGER_TIME_RANGE.get(this.random));
     }
 
     @Override
@@ -511,8 +506,7 @@ implements Angerable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d method_29919() {
+    public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.6f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 

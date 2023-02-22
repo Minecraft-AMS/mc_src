@@ -4,16 +4,13 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.function.Supplier;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -25,7 +22,6 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.StemBlock;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.util.BlockMirror;
@@ -39,13 +35,16 @@ import net.minecraft.world.WorldAccess;
 public class AttachedStemBlock
 extends PlantBlock {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
-    private final GourdBlock gourdBlock;
+    protected static final float field_30995 = 2.0f;
     private static final Map<Direction, VoxelShape> FACING_TO_SHAPE = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.SOUTH, (Object)Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 10.0, 16.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(0.0, 0.0, 6.0, 10.0, 10.0, 10.0), (Object)Direction.NORTH, (Object)Block.createCuboidShape(6.0, 0.0, 0.0, 10.0, 10.0, 10.0), (Object)Direction.EAST, (Object)Block.createCuboidShape(6.0, 0.0, 6.0, 16.0, 10.0, 10.0)));
+    private final GourdBlock gourdBlock;
+    private final Supplier<Item> pickBlockItem;
 
-    protected AttachedStemBlock(GourdBlock gourdBlock, AbstractBlock.Settings settings) {
+    protected AttachedStemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH));
         this.gourdBlock = gourdBlock;
+        this.pickBlockItem = pickBlockItem;
     }
 
     @Override
@@ -66,21 +65,9 @@ extends PlantBlock {
         return floor.isOf(Blocks.FARMLAND);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    protected Item getSeeds() {
-        if (this.gourdBlock == Blocks.PUMPKIN) {
-            return Items.PUMPKIN_SEEDS;
-        }
-        if (this.gourdBlock == Blocks.MELON) {
-            return Items.MELON_SEEDS;
-        }
-        return Items.AIR;
-    }
-
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
-        return new ItemStack(this.getSeeds());
+        return new ItemStack(this.pickBlockItem.get());
     }
 
     @Override

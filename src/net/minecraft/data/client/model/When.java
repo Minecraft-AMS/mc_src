@@ -30,6 +30,10 @@ extends Supplier<JsonElement> {
         return new PropertyCondition();
     }
 
+    public static When allOf(When ... conditions) {
+        return new LogicalCondition(LogicalOperator.AND, Arrays.asList(conditions));
+    }
+
     public static When anyOf(When ... conditions) {
         return new LogicalCondition(LogicalOperator.OR, Arrays.asList(conditions));
     }
@@ -64,6 +68,17 @@ extends Supplier<JsonElement> {
             return this;
         }
 
+        public final <T extends Comparable<T>> PropertyCondition method_35871(Property<T> property, T comparable) {
+            this.set(property, "!" + property.name(comparable));
+            return this;
+        }
+
+        @SafeVarargs
+        public final <T extends Comparable<T>> PropertyCondition method_35872(Property<T> property, T comparable, T ... comparables) {
+            this.set(property, "!" + PropertyCondition.name(property, comparable, comparables));
+            return this;
+        }
+
         @Override
         public JsonElement get() {
             JsonObject jsonObject = new JsonObject();
@@ -90,9 +105,9 @@ extends Supplier<JsonElement> {
         private final LogicalOperator operator;
         private final List<When> components;
 
-        private LogicalCondition(LogicalOperator operator, List<When> components) {
-            this.operator = operator;
-            this.components = components;
+        LogicalCondition(LogicalOperator logicalOperator, List<When> list) {
+            this.operator = logicalOperator;
+            this.components = list;
         }
 
         @Override
@@ -115,14 +130,31 @@ extends Supplier<JsonElement> {
         }
     }
 
-    public static enum LogicalOperator {
-        AND("AND"),
-        OR("OR");
+    public static final class LogicalOperator
+    extends Enum<LogicalOperator> {
+        public static final /* enum */ LogicalOperator AND = new LogicalOperator("AND");
+        public static final /* enum */ LogicalOperator OR = new LogicalOperator("OR");
+        final String name;
+        private static final /* synthetic */ LogicalOperator[] field_22853;
 
-        private final String name;
+        public static LogicalOperator[] values() {
+            return (LogicalOperator[])field_22853.clone();
+        }
+
+        public static LogicalOperator valueOf(String string) {
+            return Enum.valueOf(LogicalOperator.class, string);
+        }
 
         private LogicalOperator(String name) {
             this.name = name;
+        }
+
+        private static /* synthetic */ LogicalOperator[] method_36940() {
+            return new LogicalOperator[]{AND, OR};
+        }
+
+        static {
+            field_22853 = LogicalOperator.method_36940();
         }
     }
 }

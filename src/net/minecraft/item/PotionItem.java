@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
@@ -33,10 +30,13 @@ import net.minecraft.util.UseAction;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class PotionItem
 extends Item {
+    private static final int MAX_USE_TIME = 32;
+
     public PotionItem(Item.Settings settings) {
         super(settings);
     }
@@ -65,18 +65,19 @@ extends Item {
         }
         if (playerEntity != null) {
             playerEntity.incrementStat(Stats.USED.getOrCreateStat(this));
-            if (!playerEntity.abilities.creativeMode) {
+            if (!playerEntity.getAbilities().creativeMode) {
                 stack.decrement(1);
             }
         }
-        if (playerEntity == null || !playerEntity.abilities.creativeMode) {
+        if (playerEntity == null || !playerEntity.getAbilities().creativeMode) {
             if (stack.isEmpty()) {
                 return new ItemStack(Items.GLASS_BOTTLE);
             }
             if (playerEntity != null) {
-                playerEntity.inventory.insertStack(new ItemStack(Items.GLASS_BOTTLE));
+                playerEntity.getInventory().insertStack(new ItemStack(Items.GLASS_BOTTLE));
             }
         }
+        world.emitGameEvent((Entity)user, GameEvent.DRINKING_FINISH, user.getCameraBlockPos());
         return stack;
     }
 
@@ -101,7 +102,6 @@ extends Item {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         PotionUtil.buildTooltip(stack, tooltip, 1.0f);
     }

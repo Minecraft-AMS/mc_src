@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -14,8 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
@@ -25,10 +21,10 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.control.AquaticLookControl;
-import net.minecraft.entity.ai.control.MoveControl;
+import net.minecraft.entity.ai.control.AquaticMoveControl;
 import net.minecraft.entity.ai.goal.BreatheAirGoal;
 import net.minecraft.entity.ai.goal.ChaseBoatGoal;
 import net.minecraft.entity.ai.goal.DolphinJumpGoal;
@@ -85,12 +81,14 @@ extends WaterCreatureEntity {
     private static final TrackedData<BlockPos> TREASURE_POS = DataTracker.registerData(DolphinEntity.class, TrackedDataHandlerRegistry.BLOCK_POS);
     private static final TrackedData<Boolean> HAS_FISH = DataTracker.registerData(DolphinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> MOISTNESS = DataTracker.registerData(DolphinEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TargetPredicate CLOSE_PLAYER_PREDICATE = new TargetPredicate().setBaseMaxDistance(10.0).includeTeammates().includeInvulnerable().includeHidden();
-    public static final Predicate<ItemEntity> CAN_TAKE = itemEntity -> !itemEntity.cannotPickup() && itemEntity.isAlive() && itemEntity.isTouchingWater();
+    static final TargetPredicate CLOSE_PLAYER_PREDICATE = TargetPredicate.createNonAttackable().setBaseMaxDistance(10.0).ignoreVisibility();
+    public static final int MAX_AIR = 4800;
+    private static final int MAX_MOISTNESS = 2400;
+    public static final Predicate<ItemEntity> CAN_TAKE = item -> !item.cannotPickup() && item.isAlive() && item.isTouchingWater();
 
     public DolphinEntity(EntityType<? extends DolphinEntity> entityType, World world) {
         super((EntityType<? extends WaterCreatureEntity>)entityType, world);
-        this.moveControl = new DolphinMoveControl(this);
+        this.moveControl = new AquaticMoveControl(this, 85, 10, 0.02f, 0.1f, true);
         this.lookControl = new AquaticLookControl(this, 10);
         this.setCanPickUpLoot(true);
     }
@@ -99,7 +97,7 @@ extends WaterCreatureEntity {
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         this.setAir(this.getMaxAir());
-        this.pitch = 0.0f;
+        this.setPitch(0.0f);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
@@ -195,7 +193,7 @@ extends WaterCreatureEntity {
     public boolean tryAttack(Entity target) {
         boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
-            this.dealDamage(this, target);
+            this.applyDamageEffects(this, target);
             this.playSound(SoundEvents.ENTITY_DOLPHIN_ATTACK, 1.0f, 1.0f);
         }
         return bl;
@@ -244,11 +242,11 @@ extends WaterCreatureEntity {
     protected void loot(ItemEntity item) {
         ItemStack itemStack;
         if (this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() && this.canPickupItem(itemStack = item.getStack())) {
-            this.method_29499(item);
+            this.triggerItemPickedUpByEntityCriteria(item);
             this.equipStack(EquipmentSlot.MAINHAND, itemStack);
             this.handDropChances[EquipmentSlot.MAINHAND.getEntitySlotId()] = 2.0f;
             this.sendPickup(item, itemStack.getCount());
-            item.remove();
+            item.discard();
         }
     }
 
@@ -268,15 +266,15 @@ extends WaterCreatureEntity {
             }
             if (this.onGround) {
                 this.setVelocity(this.getVelocity().add((this.random.nextFloat() * 2.0f - 1.0f) * 0.2f, 0.5, (this.random.nextFloat() * 2.0f - 1.0f) * 0.2f));
-                this.yaw = this.random.nextFloat() * 360.0f;
+                this.setYaw(this.random.nextFloat() * 360.0f);
                 this.onGround = false;
                 this.velocityDirty = true;
             }
         }
         if (this.world.isClient && this.isTouchingWater() && this.getVelocity().lengthSquared() > 0.03) {
             Vec3d vec3d = this.getRotationVec(0.0f);
-            float f = MathHelper.cos(this.yaw * ((float)Math.PI / 180)) * 0.3f;
-            float g = MathHelper.sin(this.yaw * ((float)Math.PI / 180)) * 0.3f;
+            float f = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)) * 0.3f;
+            float g = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180)) * 0.3f;
             float h = 1.2f - this.random.nextFloat() * 0.7f;
             for (int i = 0; i < 2; ++i) {
                 this.world.addParticle(ParticleTypes.DOLPHIN, this.getX() - vec3d.x * (double)h + (double)f, this.getY() - vec3d.y, this.getZ() - vec3d.z * (double)h + (double)g, 0.0, 0.0, 0.0);
@@ -286,7 +284,6 @@ extends WaterCreatureEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 38) {
             this.spawnParticlesAround(ParticleTypes.HAPPY_VILLAGER);
@@ -295,7 +292,6 @@ extends WaterCreatureEntity {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     private void spawnParticlesAround(ParticleEffect parameters) {
         for (int i = 0; i < 7; ++i) {
             double d = this.random.nextGaussian() * 0.01;
@@ -308,12 +304,12 @@ extends WaterCreatureEntity {
     @Override
     protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (!itemStack.isEmpty() && itemStack.getItem().isIn(ItemTags.FISHES)) {
+        if (!itemStack.isEmpty() && itemStack.isIn(ItemTags.FISHES)) {
             if (!this.world.isClient) {
                 this.playSound(SoundEvents.ENTITY_DOLPHIN_EAT, 1.0f, 1.0f);
             }
             this.setHasFish(true);
-            if (!player.abilities.creativeMode) {
+            if (!player.getAbilities().creativeMode) {
                 itemStack.decrement(1);
             }
             return ActionResult.success(this.world.isClient);
@@ -451,12 +447,12 @@ extends WaterCreatureEntity {
             if (this.dolphin.isNearTarget() || this.dolphin.getNavigation().isIdle()) {
                 BlockPos blockPos;
                 Vec3d vec3d = Vec3d.ofCenter(this.dolphin.getTreasurePos());
-                Vec3d vec3d2 = TargetFinder.findTargetTowards(this.dolphin, 16, 1, vec3d, 0.3926991f);
+                Vec3d vec3d2 = NoPenaltyTargeting.find(this.dolphin, 16, 1, vec3d, 0.3926991f);
                 if (vec3d2 == null) {
-                    vec3d2 = TargetFinder.findTargetTowards(this.dolphin, 8, 4, vec3d);
+                    vec3d2 = NoPenaltyTargeting.find(this.dolphin, 8, 4, vec3d, 1.5707963705062866);
                 }
                 if (!(vec3d2 == null || world.getFluidState(blockPos = new BlockPos(vec3d2)).isIn(FluidTags.WATER) && world.getBlockState(blockPos).canPathfindThrough(world, blockPos, NavigationType.WATER))) {
-                    vec3d2 = TargetFinder.findTargetTowards(this.dolphin, 8, 5, vec3d);
+                    vec3d2 = NoPenaltyTargeting.find(this.dolphin, 8, 5, vec3d, 1.5707963705062866);
                 }
                 if (vec3d2 == null) {
                     this.noPathToStructure = true;
@@ -499,7 +495,7 @@ extends WaterCreatureEntity {
 
         @Override
         public void start() {
-            this.closestPlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.DOLPHINS_GRACE, 100));
+            this.closestPlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.DOLPHINS_GRACE, 100), this.dolphin);
         }
 
         @Override
@@ -517,21 +513,21 @@ extends WaterCreatureEntity {
                 this.dolphin.getNavigation().startMovingTo(this.closestPlayer, this.speed);
             }
             if (this.closestPlayer.isSwimming() && this.closestPlayer.world.random.nextInt(6) == 0) {
-                this.closestPlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.DOLPHINS_GRACE, 100));
+                this.closestPlayer.addStatusEffect(new StatusEffectInstance(StatusEffects.DOLPHINS_GRACE, 100), this.dolphin);
             }
         }
     }
 
     class PlayWithItemsGoal
     extends Goal {
-        private int field_6758;
+        private int nextPlayingTime;
 
-        private PlayWithItemsGoal() {
+        PlayWithItemsGoal() {
         }
 
         @Override
         public boolean canStart() {
-            if (this.field_6758 > DolphinEntity.this.age) {
+            if (this.nextPlayingTime > DolphinEntity.this.age) {
                 return false;
             }
             List<ItemEntity> list = DolphinEntity.this.world.getEntitiesByClass(ItemEntity.class, DolphinEntity.this.getBoundingBox().expand(8.0, 8.0, 8.0), CAN_TAKE);
@@ -545,7 +541,7 @@ extends WaterCreatureEntity {
                 DolphinEntity.this.getNavigation().startMovingTo(list.get(0), 1.2f);
                 DolphinEntity.this.playSound(SoundEvents.ENTITY_DOLPHIN_PLAY, 1.0f, 1.0f);
             }
-            this.field_6758 = 0;
+            this.nextPlayingTime = 0;
         }
 
         @Override
@@ -554,7 +550,7 @@ extends WaterCreatureEntity {
             if (!itemStack.isEmpty()) {
                 this.spitOutItem(itemStack);
                 DolphinEntity.this.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-                this.field_6758 = DolphinEntity.this.age + DolphinEntity.this.random.nextInt(100);
+                this.nextPlayingTime = DolphinEntity.this.age + DolphinEntity.this.random.nextInt(100);
             }
         }
 
@@ -581,56 +577,8 @@ extends WaterCreatureEntity {
             float f = 0.3f;
             float g = DolphinEntity.this.random.nextFloat() * ((float)Math.PI * 2);
             float h = 0.02f * DolphinEntity.this.random.nextFloat();
-            itemEntity.setVelocity(0.3f * -MathHelper.sin(DolphinEntity.this.yaw * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.pitch * ((float)Math.PI / 180)) + MathHelper.cos(g) * h, 0.3f * MathHelper.sin(DolphinEntity.this.pitch * ((float)Math.PI / 180)) * 1.5f, 0.3f * MathHelper.cos(DolphinEntity.this.yaw * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.pitch * ((float)Math.PI / 180)) + MathHelper.sin(g) * h);
+            itemEntity.setVelocity(0.3f * -MathHelper.sin(DolphinEntity.this.getYaw() * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) + MathHelper.cos(g) * h, 0.3f * MathHelper.sin(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) * 1.5f, 0.3f * MathHelper.cos(DolphinEntity.this.getYaw() * ((float)Math.PI / 180)) * MathHelper.cos(DolphinEntity.this.getPitch() * ((float)Math.PI / 180)) + MathHelper.sin(g) * h);
             DolphinEntity.this.world.spawnEntity(itemEntity);
-        }
-    }
-
-    static class DolphinMoveControl
-    extends MoveControl {
-        private final DolphinEntity dolphin;
-
-        public DolphinMoveControl(DolphinEntity dolphin) {
-            super(dolphin);
-            this.dolphin = dolphin;
-        }
-
-        @Override
-        public void tick() {
-            double f;
-            double e;
-            if (this.dolphin.isTouchingWater()) {
-                this.dolphin.setVelocity(this.dolphin.getVelocity().add(0.0, 0.005, 0.0));
-            }
-            if (this.state != MoveControl.State.MOVE_TO || this.dolphin.getNavigation().isIdle()) {
-                this.dolphin.setMovementSpeed(0.0f);
-                this.dolphin.setSidewaysSpeed(0.0f);
-                this.dolphin.setUpwardSpeed(0.0f);
-                this.dolphin.setForwardSpeed(0.0f);
-                return;
-            }
-            double d = this.targetX - this.dolphin.getX();
-            double g = d * d + (e = this.targetY - this.dolphin.getY()) * e + (f = this.targetZ - this.dolphin.getZ()) * f;
-            if (g < 2.500000277905201E-7) {
-                this.entity.setForwardSpeed(0.0f);
-                return;
-            }
-            float h = (float)(MathHelper.atan2(f, d) * 57.2957763671875) - 90.0f;
-            this.dolphin.bodyYaw = this.dolphin.yaw = this.wrapDegrees(this.dolphin.yaw, h, 10.0f);
-            this.dolphin.headYaw = this.dolphin.yaw;
-            float i = (float)(this.speed * this.dolphin.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
-            if (this.dolphin.isTouchingWater()) {
-                this.dolphin.setMovementSpeed(i * 0.02f);
-                float j = -((float)(MathHelper.atan2(e, MathHelper.sqrt(d * d + f * f)) * 57.2957763671875));
-                j = MathHelper.clamp(MathHelper.wrapDegrees(j), -85.0f, 85.0f);
-                this.dolphin.pitch = this.wrapDegrees(this.dolphin.pitch, j, 5.0f);
-                float k = MathHelper.cos(this.dolphin.pitch * ((float)Math.PI / 180));
-                float l = MathHelper.sin(this.dolphin.pitch * ((float)Math.PI / 180));
-                this.dolphin.forwardSpeed = k * i;
-                this.dolphin.upwardSpeed = -l * i;
-            } else {
-                this.dolphin.setMovementSpeed(i * 0.1f);
-            }
         }
     }
 }

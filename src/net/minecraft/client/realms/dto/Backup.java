@@ -53,7 +53,7 @@ extends ValueObject {
             }
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse Backup: " + exception.getMessage());
+            LOGGER.error("Could not parse Backup: {}", (Object)exception.getMessage());
         }
         return backup;
     }

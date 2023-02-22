@@ -14,8 +14,10 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
@@ -43,13 +45,13 @@ implements DebugRenderer.Renderer {
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
-        RenderSystem.pushMatrix();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableTexture();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(5, VertexFormats.POSITION_COLOR);
+        bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
         for (int i = 0; i < this.field_4640.size(); ++i) {
             BlockPos blockPos = this.field_4640.get(i);
             Float float_ = this.field_4635.get(i);
@@ -58,7 +60,6 @@ implements DebugRenderer.Renderer {
         }
         tessellator.draw();
         RenderSystem.enableTexture();
-        RenderSystem.popMatrix();
     }
 }
 

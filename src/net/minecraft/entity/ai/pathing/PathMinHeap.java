@@ -28,6 +28,10 @@ public class PathMinHeap {
         this.count = 0;
     }
 
+    public PathNode getStart() {
+        return this.pathNodes[0];
+    }
+
     public PathNode pop() {
         PathNode pathNode = this.pathNodes[0];
         this.pathNodes[0] = this.pathNodes[--this.count];
@@ -39,6 +43,19 @@ public class PathMinHeap {
         return pathNode;
     }
 
+    public void popNode(PathNode node) {
+        this.pathNodes[node.heapIndex] = this.pathNodes[--this.count];
+        this.pathNodes[this.count] = null;
+        if (this.count > node.heapIndex) {
+            if (this.pathNodes[node.heapIndex].heapWeight < node.heapWeight) {
+                this.shiftUp(node.heapIndex);
+            } else {
+                this.shiftDown(node.heapIndex);
+            }
+        }
+        node.heapIndex = -1;
+    }
+
     public void setNodeWeight(PathNode node, float weight) {
         float f = node.heapWeight;
         node.heapWeight = weight;
@@ -47,6 +64,10 @@ public class PathMinHeap {
         } else {
             this.shiftDown(node.heapIndex);
         }
+    }
+
+    public int getCount() {
+        return this.count;
     }
 
     private void shiftUp(int index) {
@@ -100,6 +121,12 @@ public class PathMinHeap {
 
     public boolean isEmpty() {
         return this.count == 0;
+    }
+
+    public PathNode[] getNodes() {
+        PathNode[] pathNodes = new PathNode[this.getCount()];
+        System.arraycopy(this.pathNodes, 0, pathNodes, 0, this.getCount());
+        return pathNodes;
     }
 }
 

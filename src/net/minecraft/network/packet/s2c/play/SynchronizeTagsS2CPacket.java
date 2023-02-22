@@ -1,39 +1,31 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.Map;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.tag.TagManager;
+import net.minecraft.tag.TagGroup;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 
 public class SynchronizeTagsS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private TagManager tagManager;
+    private final Map<RegistryKey<? extends Registry<?>>, TagGroup.Serialized> groups;
 
-    public SynchronizeTagsS2CPacket() {
+    public SynchronizeTagsS2CPacket(Map<RegistryKey<? extends Registry<?>>, TagGroup.Serialized> groups) {
+        this.groups = groups;
     }
 
-    public SynchronizeTagsS2CPacket(TagManager tagManager) {
-        this.tagManager = tagManager;
-    }
-
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        this.tagManager = TagManager.fromPacket(buf);
+    public SynchronizeTagsS2CPacket(PacketByteBuf buf2) {
+        this.groups = buf2.readMap(buf -> RegistryKey.ofRegistry(buf.readIdentifier()), TagGroup.Serialized::fromBuf);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
-        this.tagManager.toPacket(buf);
+    public void write(PacketByteBuf buf2) {
+        buf2.writeMap(this.groups, (buf, registryKey) -> buf.writeIdentifier(registryKey.getValue()), (buf, serializedGroup) -> serializedGroup.writeBuf((PacketByteBuf)((Object)buf)));
     }
 
     @Override
@@ -41,9 +33,8 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onSynchronizeTags(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public TagManager getTagManager() {
-        return this.tagManager;
+    public Map<RegistryKey<? extends Registry<?>>, TagGroup.Serialized> getGroups() {
+        return this.groups;
     }
 }
 

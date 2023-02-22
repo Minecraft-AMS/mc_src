@@ -63,7 +63,7 @@ implements AudioStream {
     @Environment(value=EnvType.CLIENT)
     static class ReusableInputStream
     extends FilterInputStream {
-        private ReusableInputStream(InputStream inputStream) {
+        ReusableInputStream(InputStream inputStream) {
             super(inputStream);
         }
 

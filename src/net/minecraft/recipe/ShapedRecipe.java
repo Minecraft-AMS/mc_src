@@ -10,8 +10,6 @@
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
@@ -26,11 +24,10 @@ import com.google.gson.JsonSyntaxException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Ingredient;
@@ -44,12 +41,12 @@ import net.minecraft.world.World;
 
 public class ShapedRecipe
 implements CraftingRecipe {
-    private final int width;
-    private final int height;
-    private final DefaultedList<Ingredient> input;
-    private final ItemStack output;
+    final int width;
+    final int height;
+    final DefaultedList<Ingredient> input;
+    final ItemStack output;
     private final Identifier id;
-    private final String group;
+    final String group;
 
     public ShapedRecipe(Identifier id, String group, int width, int height, DefaultedList<Ingredient> input, ItemStack output) {
         this.id = id;
@@ -71,7 +68,6 @@ implements CraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public String getGroup() {
         return this.group;
     }
@@ -87,7 +83,6 @@ implements CraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width >= this.width && height >= this.height;
     }
@@ -135,7 +130,7 @@ implements CraftingRecipe {
         return this.height;
     }
 
-    private static DefaultedList<Ingredient> createPatternMatrix(String[] pattern, Map<String, Ingredient> symbols, int width, int height) {
+    static DefaultedList<Ingredient> createPatternMatrix(String[] pattern, Map<String, Ingredient> symbols, int width, int height) {
         DefaultedList<Ingredient> defaultedList = DefaultedList.ofSize(width * height, Ingredient.EMPTY);
         HashSet set = Sets.newHashSet(symbols.keySet());
         set.remove(" ");
@@ -186,6 +181,12 @@ implements CraftingRecipe {
         return strings;
     }
 
+    @Override
+    public boolean isEmpty() {
+        DefaultedList<Ingredient> defaultedList = this.getIngredients();
+        return defaultedList.isEmpty() || defaultedList.stream().filter(ingredient -> !ingredient.isEmpty()).anyMatch(ingredient -> ingredient.getMatchingStacks().length == 0);
+    }
+
     private static int findFirstSymbol(String line) {
         int i;
         for (i = 0; i < line.length() && line.charAt(i) == ' '; ++i) {
@@ -200,7 +201,7 @@ implements CraftingRecipe {
         return i;
     }
 
-    private static String[] getPattern(JsonArray json) {
+    static String[] getPattern(JsonArray json) {
         String[] strings = new String[json.size()];
         if (strings.length > 3) {
             throw new JsonSyntaxException("Invalid pattern: too many rows, 3 is maximum");
@@ -221,7 +222,7 @@ implements CraftingRecipe {
         return strings;
     }
 
-    private static Map<String, Ingredient> readSymbols(JsonObject json) {
+    static Map<String, Ingredient> readSymbols(JsonObject json) {
         HashMap map = Maps.newHashMap();
         for (Map.Entry entry : json.entrySet()) {
             if (((String)entry.getKey()).length() != 1) {
@@ -230,20 +231,31 @@ implements CraftingRecipe {
             if (" ".equals(entry.getKey())) {
                 throw new JsonSyntaxException("Invalid key entry: ' ' is a reserved symbol.");
             }
-            map.put(entry.getKey(), Ingredient.fromJson((JsonElement)entry.getValue()));
+            map.put((String)entry.getKey(), Ingredient.fromJson((JsonElement)entry.getValue()));
         }
         map.put(" ", Ingredient.EMPTY);
         return map;
     }
 
-    public static ItemStack getItemStack(JsonObject json) {
-        String string = JsonHelper.getString(json, "item");
-        Item item = Registry.ITEM.getOrEmpty(new Identifier(string)).orElseThrow(() -> new JsonSyntaxException("Unknown item '" + string + "'"));
+    public static ItemStack outputFromJson(JsonObject json) {
+        Item item = ShapedRecipe.getItem(json);
         if (json.has("data")) {
             throw new JsonParseException("Disallowed data tag found");
         }
         int i = JsonHelper.getInt(json, "count", 1);
+        if (i < 1) {
+            throw new JsonSyntaxException("Invalid output count: " + i);
+        }
         return new ItemStack(item, i);
+    }
+
+    public static Item getItem(JsonObject json) {
+        String string = JsonHelper.getString(json, "item");
+        Item item = Registry.ITEM.getOrEmpty(new Identifier(string)).orElseThrow(() -> new JsonSyntaxException("Unknown item '" + string + "'"));
+        if (item == Items.AIR) {
+            throw new JsonSyntaxException("Invalid item: " + string);
+        }
+        return item;
     }
 
     public static class Serializer
@@ -251,12 +263,12 @@ implements CraftingRecipe {
         @Override
         public ShapedRecipe read(Identifier identifier, JsonObject jsonObject) {
             String string = JsonHelper.getString(jsonObject, "group", "");
-            Map map = ShapedRecipe.readSymbols(JsonHelper.getObject(jsonObject, "key"));
+            Map<String, Ingredient> map = ShapedRecipe.readSymbols(JsonHelper.getObject(jsonObject, "key"));
             String[] strings = ShapedRecipe.removePadding(ShapedRecipe.getPattern(JsonHelper.getArray(jsonObject, "pattern")));
             int i = strings[0].length();
             int j = strings.length;
-            DefaultedList defaultedList = ShapedRecipe.createPatternMatrix(strings, map, i, j);
-            ItemStack itemStack = ShapedRecipe.getItemStack(JsonHelper.getObject(jsonObject, "result"));
+            DefaultedList<Ingredient> defaultedList = ShapedRecipe.createPatternMatrix(strings, map, i, j);
+            ItemStack itemStack = ShapedRecipe.outputFromJson(JsonHelper.getObject(jsonObject, "result"));
             return new ShapedRecipe(identifier, string, i, j, defaultedList, itemStack);
         }
 
@@ -264,7 +276,7 @@ implements CraftingRecipe {
         public ShapedRecipe read(Identifier identifier, PacketByteBuf packetByteBuf) {
             int i = packetByteBuf.readVarInt();
             int j = packetByteBuf.readVarInt();
-            String string = packetByteBuf.readString(Short.MAX_VALUE);
+            String string = packetByteBuf.readString();
             DefaultedList<Ingredient> defaultedList = DefaultedList.ofSize(i * j, Ingredient.EMPTY);
             for (int k = 0; k < defaultedList.size(); ++k) {
                 defaultedList.set(k, Ingredient.fromPacket(packetByteBuf));

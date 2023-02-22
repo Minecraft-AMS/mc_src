@@ -1,17 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
 
-@Environment(value=EnvType.CLIENT)
 public class BlockBreakingInfo
 implements Comparable<BlockBreakingInfo> {
     private final int actorNetworkId;
@@ -22,6 +15,10 @@ implements Comparable<BlockBreakingInfo> {
     public BlockBreakingInfo(int breakingEntityId, BlockPos pos) {
         this.actorNetworkId = breakingEntityId;
         this.pos = pos;
+    }
+
+    public int getActorId() {
+        return this.actorNetworkId;
     }
 
     public BlockPos getPos() {
@@ -47,14 +44,14 @@ implements Comparable<BlockBreakingInfo> {
         return this.lastUpdateTick;
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object == null || this.getClass() != object.getClass()) {
+        if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
-        BlockBreakingInfo blockBreakingInfo = (BlockBreakingInfo)object;
+        BlockBreakingInfo blockBreakingInfo = (BlockBreakingInfo)o;
         return this.actorNetworkId == blockBreakingInfo.actorNetworkId;
     }
 
@@ -71,8 +68,8 @@ implements Comparable<BlockBreakingInfo> {
     }
 
     @Override
-    public /* synthetic */ int compareTo(Object object) {
-        return this.compareTo((BlockBreakingInfo)object);
+    public /* synthetic */ int compareTo(Object other) {
+        return this.compareTo((BlockBreakingInfo)other);
     }
 }
 

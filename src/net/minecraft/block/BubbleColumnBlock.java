@@ -1,15 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
+import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -18,12 +13,14 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidDrainable;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.Entity;
-import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
@@ -41,6 +38,7 @@ public class BubbleColumnBlock
 extends Block
 implements FluidDrainable {
     public static final BooleanProperty DRAG = Properties.DRAG;
+    private static final int SCHEDULED_TICK_DELAY = 5;
 
     public BubbleColumnBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -65,13 +63,8 @@ implements FluidDrainable {
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
-        BubbleColumnBlock.update(world, pos.up(), BubbleColumnBlock.calculateDrag(world, pos.down()));
-    }
-
-    @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        BubbleColumnBlock.update(world, pos.up(), BubbleColumnBlock.calculateDrag(world, pos));
+        BubbleColumnBlock.update(world, pos, state, world.getBlockState(pos.down()));
     }
 
     @Override
@@ -79,27 +72,43 @@ implements FluidDrainable {
         return Fluids.WATER.getStill(false);
     }
 
-    public static void update(WorldAccess world, BlockPos pos, boolean drag) {
-        if (BubbleColumnBlock.isStillWater(world, pos)) {
-            world.setBlockState(pos, (BlockState)Blocks.BUBBLE_COLUMN.getDefaultState().with(DRAG, drag), 2);
+    public static void update(WorldAccess world, BlockPos pos, BlockState state) {
+        BubbleColumnBlock.update(world, pos, world.getBlockState(pos), state);
+    }
+
+    public static void update(WorldAccess world, BlockPos pos, BlockState water, BlockState bubbleSource) {
+        if (!BubbleColumnBlock.isStillWater(water)) {
+            return;
+        }
+        BlockState blockState = BubbleColumnBlock.getBubbleState(bubbleSource);
+        world.setBlockState(pos, blockState, 2);
+        BlockPos.Mutable mutable = pos.mutableCopy().move(Direction.UP);
+        while (BubbleColumnBlock.isStillWater(world.getBlockState(mutable))) {
+            if (!world.setBlockState(mutable, blockState, 2)) {
+                return;
+            }
+            mutable.move(Direction.UP);
         }
     }
 
-    public static boolean isStillWater(WorldAccess world, BlockPos pos) {
-        FluidState fluidState = world.getFluidState(pos);
-        return world.getBlockState(pos).isOf(Blocks.WATER) && fluidState.getLevel() >= 8 && fluidState.isStill();
+    private static boolean isStillWater(BlockState state) {
+        return state.isOf(Blocks.BUBBLE_COLUMN) || state.isOf(Blocks.WATER) && state.getFluidState().getLevel() >= 8 && state.getFluidState().isStill();
     }
 
-    private static boolean calculateDrag(BlockView world, BlockPos pos) {
-        BlockState blockState = world.getBlockState(pos);
-        if (blockState.isOf(Blocks.BUBBLE_COLUMN)) {
-            return blockState.get(DRAG);
+    private static BlockState getBubbleState(BlockState state) {
+        if (state.isOf(Blocks.BUBBLE_COLUMN)) {
+            return state;
         }
-        return !blockState.isOf(Blocks.SOUL_SAND);
+        if (state.isOf(Blocks.SOUL_SAND)) {
+            return (BlockState)Blocks.BUBBLE_COLUMN.getDefaultState().with(DRAG, false);
+        }
+        if (state.isOf(Blocks.MAGMA_BLOCK)) {
+            return (BlockState)Blocks.BUBBLE_COLUMN.getDefaultState().with(DRAG, true);
+        }
+        return Blocks.WATER.getDefaultState();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         double d = pos.getX();
         double e = pos.getY();
@@ -120,15 +129,10 @@ implements FluidDrainable {
 
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        if (!state.canPlaceAt(world, pos)) {
-            return Blocks.WATER.getDefaultState();
-        }
-        if (direction == Direction.DOWN) {
-            world.setBlockState(pos, (BlockState)Blocks.BUBBLE_COLUMN.getDefaultState().with(DRAG, BubbleColumnBlock.calculateDrag(world, neighborPos)), 2);
-        } else if (direction == Direction.UP && !neighborState.isOf(Blocks.BUBBLE_COLUMN) && BubbleColumnBlock.isStillWater(world, neighborPos)) {
+        world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        if (!state.canPlaceAt(world, pos) || direction == Direction.DOWN || direction == Direction.UP && !neighborState.isOf(Blocks.BUBBLE_COLUMN) && BubbleColumnBlock.isStillWater(neighborState)) {
             world.getBlockTickScheduler().schedule(pos, this, 5);
         }
-        world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
     }
 
@@ -154,9 +158,14 @@ implements FluidDrainable {
     }
 
     @Override
-    public Fluid tryDrainFluid(WorldAccess world, BlockPos pos, BlockState state) {
+    public ItemStack tryDrainFluid(WorldAccess world, BlockPos pos, BlockState state) {
         world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-        return Fluids.WATER;
+        return new ItemStack(Items.WATER_BUCKET);
+    }
+
+    @Override
+    public Optional<SoundEvent> getBucketFillSound() {
+        return Fluids.WATER.getBucketFillSound();
     }
 }
 

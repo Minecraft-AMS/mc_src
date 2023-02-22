@@ -3,11 +3,16 @@
  */
 package net.minecraft.entity.ai.control;
 
+import net.minecraft.entity.ai.control.Control;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.MathHelper;
 
-public class BodyControl {
+public class BodyControl
+implements Control {
     private final MobEntity entity;
+    private static final int MAX_HEAD_YAW = 15;
+    private static final int MAX_ACTIVE_TICKS = 10;
+    private static final int ROTATION_INCREMENTS = 10;
     private int activeTicks;
     private float lastHeadYaw;
 
@@ -17,7 +22,7 @@ public class BodyControl {
 
     public void tick() {
         if (this.isMoving()) {
-            this.entity.bodyYaw = this.entity.yaw;
+            this.entity.bodyYaw = this.entity.getYaw();
             this.rotateHead();
             this.lastHeadYaw = this.entity.headYaw;
             this.activeTicks = 0;
@@ -53,7 +58,7 @@ public class BodyControl {
     }
 
     private boolean isIndependent() {
-        return this.entity.getPassengerList().isEmpty() || !(this.entity.getPassengerList().get(0) instanceof MobEntity);
+        return !(this.entity.getFirstPassenger() instanceof MobEntity);
     }
 
     private boolean isMoving() {

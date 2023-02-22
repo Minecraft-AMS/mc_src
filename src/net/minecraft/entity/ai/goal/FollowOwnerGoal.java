@@ -19,6 +19,10 @@ import net.minecraft.world.WorldView;
 
 public class FollowOwnerGoal
 extends Goal {
+    public static final int field_30205 = 12;
+    private static final int HORIZONTAL_RANGE = 2;
+    private static final int HORIZONTAL_VARIATION = 3;
+    private static final int VERTICAL_VARIATION = 1;
     private final TameableEntity tameable;
     private LivingEntity owner;
     private final WorldView world;
@@ -124,7 +128,7 @@ extends Goal {
         if (!this.canTeleportTo(new BlockPos(x, y, z))) {
             return false;
         }
-        this.tameable.refreshPositionAndAngles((double)x + 0.5, y, (double)z + 0.5, this.tameable.yaw, this.tameable.pitch);
+        this.tameable.refreshPositionAndAngles((double)x + 0.5, y, (double)z + 0.5, this.tameable.getYaw(), this.tameable.getPitch());
         this.navigation.stop();
         return true;
     }

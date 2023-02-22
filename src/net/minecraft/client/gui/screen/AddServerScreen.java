@@ -9,20 +9,19 @@
 package net.minecraft.client.gui.screen;
 
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
-import java.net.IDN;
-import java.util.function.Predicate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.ChatUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class AddServerScreen
@@ -34,24 +33,7 @@ extends Screen {
     private final ServerInfo server;
     private TextFieldWidget addressField;
     private TextFieldWidget serverNameField;
-    private ButtonWidget resourcePackOptionButton;
     private final Screen parent;
-    private final Predicate<String> addressTextFilter = string -> {
-        if (ChatUtil.isEmpty(string)) {
-            return true;
-        }
-        String[] strings = string.split(":");
-        if (strings.length == 0) {
-            return true;
-        }
-        try {
-            String string2 = IDN.toASCII(strings[0]);
-            return true;
-        }
-        catch (IllegalArgumentException illegalArgumentException) {
-            return false;
-        }
-    };
 
     public AddServerScreen(Screen parent, BooleanConsumer callback, ServerInfo server) {
         super(new TranslatableText("addServer.title"));
@@ -72,25 +54,17 @@ extends Screen {
         this.serverNameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 66, 200, 20, new TranslatableText("addServer.enterName"));
         this.serverNameField.setTextFieldFocused(true);
         this.serverNameField.setText(this.server.name);
-        this.serverNameField.setChangedListener(this::onClose);
-        this.children.add(this.serverNameField);
+        this.serverNameField.setChangedListener(serverName -> this.updateAddButton());
+        this.addSelectableChild(this.serverNameField);
         this.addressField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 106, 200, 20, new TranslatableText("addServer.enterIp"));
         this.addressField.setMaxLength(128);
         this.addressField.setText(this.server.address);
-        this.addressField.setTextPredicate(this.addressTextFilter);
-        this.addressField.setChangedListener(this::onClose);
-        this.children.add(this.addressField);
-        this.resourcePackOptionButton = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, AddServerScreen.getResourcePackOptionText(this.server.getResourcePackPolicy()), buttonWidget -> {
-            this.server.setResourcePackPolicy(ServerInfo.ResourcePackState.values()[(this.server.getResourcePackPolicy().ordinal() + 1) % ServerInfo.ResourcePackState.values().length]);
-            this.resourcePackOptionButton.setMessage(AddServerScreen.getResourcePackOptionText(this.server.getResourcePackPolicy()));
-        }));
-        this.addButton = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 18, 200, 20, new TranslatableText("addServer.add"), buttonWidget -> this.addAndClose()));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 18, 200, 20, ScreenTexts.CANCEL, buttonWidget -> this.callback.accept(false)));
-        this.updateButtonActiveState();
-    }
-
-    private static Text getResourcePackOptionText(ServerInfo.ResourcePackState resourcePackState) {
-        return new TranslatableText("addServer.resourcePack").append(": ").append(resourcePackState.getName());
+        this.addressField.setChangedListener(address -> this.updateAddButton());
+        this.addSelectableChild(this.addressField);
+        this.addDrawableChild(CyclingButtonWidget.builder(ServerInfo.ResourcePackPolicy::getName).values((ServerInfo.ResourcePackPolicy[])ServerInfo.ResourcePackPolicy.values()).initially(this.server.getResourcePackPolicy()).build(this.width / 2 - 100, this.height / 4 + 72, 200, 20, new TranslatableText("addServer.resourcePack"), (button, resourcePackPolicy) -> this.server.setResourcePackPolicy((ServerInfo.ResourcePackPolicy)((Object)resourcePackPolicy))));
+        this.addButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 18, 200, 20, new TranslatableText("addServer.add"), button -> this.addAndClose()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 18, 200, 20, ScreenTexts.CANCEL, button -> this.callback.accept(false)));
+        this.updateAddButton();
     }
 
     @Override
@@ -100,10 +74,6 @@ extends Screen {
         this.init(client, width, height);
         this.addressField.setText(string);
         this.serverNameField.setText(string2);
-    }
-
-    private void onClose(String text) {
-        this.updateButtonActiveState();
     }
 
     @Override
@@ -119,14 +89,11 @@ extends Screen {
 
     @Override
     public void onClose() {
-        this.updateButtonActiveState();
-        this.client.openScreen(this.parent);
+        this.client.setScreen(this.parent);
     }
 
-    private void updateButtonActiveState() {
-        String string = this.addressField.getText();
-        boolean bl = !string.isEmpty() && string.split(":").length > 0 && string.indexOf(32) == -1;
-        this.addButton.active = bl && !this.serverNameField.getText().isEmpty();
+    private void updateAddButton() {
+        this.addButton.active = ServerAddress.isValid(this.addressField.getText()) && !this.serverNameField.getText().isEmpty();
     }
 
     @Override

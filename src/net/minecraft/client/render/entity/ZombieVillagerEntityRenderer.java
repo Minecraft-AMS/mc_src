@@ -10,13 +10,13 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.BipedEntityRenderer;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
 import net.minecraft.client.render.entity.feature.VillagerClothingFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.ZombieVillagerEntityModel;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.ZombieVillagerEntity;
-import net.minecraft.resource.ReloadableResourceManager;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
@@ -24,10 +24,10 @@ public class ZombieVillagerEntityRenderer
 extends BipedEntityRenderer<ZombieVillagerEntity, ZombieVillagerEntityModel<ZombieVillagerEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/zombie_villager/zombie_villager.png");
 
-    public ZombieVillagerEntityRenderer(EntityRenderDispatcher dispatcher, ReloadableResourceManager reloadableResourceManager) {
-        super(dispatcher, new ZombieVillagerEntityModel(0.0f, false), 0.5f);
-        this.addFeature(new ArmorFeatureRenderer(this, new ZombieVillagerEntityModel(0.5f, true), new ZombieVillagerEntityModel(1.0f, true)));
-        this.addFeature(new VillagerClothingFeatureRenderer<ZombieVillagerEntity, ZombieVillagerEntityModel<ZombieVillagerEntity>>(this, reloadableResourceManager, "zombie_villager"));
+    public ZombieVillagerEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new ZombieVillagerEntityModel(context.getPart(EntityModelLayers.ZOMBIE_VILLAGER)), 0.5f);
+        this.addFeature(new ArmorFeatureRenderer(this, new ZombieVillagerEntityModel(context.getPart(EntityModelLayers.ZOMBIE_VILLAGER_INNER_ARMOR)), new ZombieVillagerEntityModel(context.getPart(EntityModelLayers.ZOMBIE_VILLAGER_OUTER_ARMOR))));
+        this.addFeature(new VillagerClothingFeatureRenderer<ZombieVillagerEntity, ZombieVillagerEntityModel<ZombieVillagerEntity>>(this, context.getResourceManager(), "zombie_villager"));
     }
 
     @Override
@@ -37,7 +37,7 @@ extends BipedEntityRenderer<ZombieVillagerEntity, ZombieVillagerEntityModel<Zomb
 
     @Override
     protected boolean isShaking(ZombieVillagerEntity zombieVillagerEntity) {
-        return zombieVillagerEntity.isConverting();
+        return super.isShaking(zombieVillagerEntity) || zombieVillagerEntity.isConverting();
     }
 
     @Override

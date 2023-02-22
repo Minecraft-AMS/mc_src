@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -18,35 +11,21 @@ import net.minecraft.util.Identifier;
 
 public class CraftFailedResponseS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int syncId;
-    private Identifier recipeId;
-
-    public CraftFailedResponseS2CPacket() {
-    }
+    private final int syncId;
+    private final Identifier recipeId;
 
     public CraftFailedResponseS2CPacket(int syncId, Recipe<?> recipe) {
         this.syncId = syncId;
         this.recipeId = recipe.getId();
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public Identifier getRecipeId() {
-        return this.recipeId;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public int getSyncId() {
-        return this.syncId;
-    }
-
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public CraftFailedResponseS2CPacket(PacketByteBuf buf) {
         this.syncId = buf.readByte();
         this.recipeId = buf.readIdentifier();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeByte(this.syncId);
         buf.writeIdentifier(this.recipeId);
     }
@@ -54,6 +33,14 @@ implements Packet<ClientPlayPacketListener> {
     @Override
     public void apply(ClientPlayPacketListener clientPlayPacketListener) {
         clientPlayPacketListener.onCraftFailedResponse(this);
+    }
+
+    public Identifier getRecipeId() {
+        return this.recipeId;
+    }
+
+    public int getSyncId() {
+        return this.syncId;
     }
 }
 

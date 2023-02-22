@@ -7,8 +7,6 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.UnmodifiableIterator
  *  com.mojang.datafixers.util.Pair
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.vehicle;
@@ -20,8 +18,6 @@ import com.google.common.collect.UnmodifiableIterator;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractRailBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -64,9 +60,10 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.BlockLocating;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.PortalUtil;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractMinecartEntity
@@ -78,8 +75,9 @@ extends Entity {
     private static final TrackedData<Integer> CUSTOM_BLOCK_OFFSET = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> CUSTOM_BLOCK_PRESENT = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final ImmutableMap<EntityPose, ImmutableList<Integer>> DISMOUNT_FREE_Y_SPACES_NEEDED = ImmutableMap.of((Object)((Object)EntityPose.STANDING), (Object)ImmutableList.of((Object)0, (Object)1, (Object)-1), (Object)((Object)EntityPose.CROUCHING), (Object)ImmutableList.of((Object)0, (Object)1, (Object)-1), (Object)((Object)EntityPose.SWIMMING), (Object)ImmutableList.of((Object)0, (Object)1));
+    protected static final float field_30694 = 0.95f;
     private boolean yawFlipped;
-    private static final Map<RailShape, Pair<Vec3i, Vec3i>> ADJACENT_RAIL_POSITIONS_BY_SHAPE = Util.make(Maps.newEnumMap(RailShape.class), enumMap -> {
+    private static final Map<RailShape, Pair<Vec3i, Vec3i>> ADJACENT_RAIL_POSITIONS_BY_SHAPE = Util.make(Maps.newEnumMap(RailShape.class), map -> {
         Vec3i vec3i = Direction.WEST.getVector();
         Vec3i vec3i2 = Direction.EAST.getVector();
         Vec3i vec3i3 = Direction.NORTH.getVector();
@@ -88,16 +86,16 @@ extends Entity {
         Vec3i vec3i6 = vec3i2.down();
         Vec3i vec3i7 = vec3i3.down();
         Vec3i vec3i8 = vec3i4.down();
-        enumMap.put(RailShape.NORTH_SOUTH, Pair.of((Object)vec3i3, (Object)vec3i4));
-        enumMap.put(RailShape.EAST_WEST, Pair.of((Object)vec3i, (Object)vec3i2));
-        enumMap.put(RailShape.ASCENDING_EAST, Pair.of((Object)vec3i5, (Object)vec3i2));
-        enumMap.put(RailShape.ASCENDING_WEST, Pair.of((Object)vec3i, (Object)vec3i6));
-        enumMap.put(RailShape.ASCENDING_NORTH, Pair.of((Object)vec3i3, (Object)vec3i8));
-        enumMap.put(RailShape.ASCENDING_SOUTH, Pair.of((Object)vec3i7, (Object)vec3i4));
-        enumMap.put(RailShape.SOUTH_EAST, Pair.of((Object)vec3i4, (Object)vec3i2));
-        enumMap.put(RailShape.SOUTH_WEST, Pair.of((Object)vec3i4, (Object)vec3i));
-        enumMap.put(RailShape.NORTH_WEST, Pair.of((Object)vec3i3, (Object)vec3i));
-        enumMap.put(RailShape.NORTH_EAST, Pair.of((Object)vec3i3, (Object)vec3i2));
+        map.put(RailShape.NORTH_SOUTH, Pair.of((Object)vec3i3, (Object)vec3i4));
+        map.put(RailShape.EAST_WEST, Pair.of((Object)vec3i, (Object)vec3i2));
+        map.put(RailShape.ASCENDING_EAST, Pair.of((Object)vec3i5, (Object)vec3i2));
+        map.put(RailShape.ASCENDING_WEST, Pair.of((Object)vec3i, (Object)vec3i6));
+        map.put(RailShape.ASCENDING_NORTH, Pair.of((Object)vec3i3, (Object)vec3i8));
+        map.put(RailShape.ASCENDING_SOUTH, Pair.of((Object)vec3i7, (Object)vec3i4));
+        map.put(RailShape.SOUTH_EAST, Pair.of((Object)vec3i4, (Object)vec3i2));
+        map.put(RailShape.SOUTH_WEST, Pair.of((Object)vec3i4, (Object)vec3i));
+        map.put(RailShape.NORTH_WEST, Pair.of((Object)vec3i3, (Object)vec3i));
+        map.put(RailShape.NORTH_EAST, Pair.of((Object)vec3i3, (Object)vec3i2));
     });
     private int clientInterpolationSteps;
     private double clientX;
@@ -105,11 +103,8 @@ extends Entity {
     private double clientZ;
     private double clientYaw;
     private double clientPitch;
-    @Environment(value=EnvType.CLIENT)
     private double clientXVelocity;
-    @Environment(value=EnvType.CLIENT)
     private double clientYVelocity;
-    @Environment(value=EnvType.CLIENT)
     private double clientZVelocity;
 
     protected AbstractMinecartEntity(EntityType<?> entityType, World world) {
@@ -120,7 +115,6 @@ extends Entity {
     protected AbstractMinecartEntity(EntityType<?> type, World world, double x, double y, double z) {
         this(type, world);
         this.setPosition(x, y, z);
-        this.setVelocity(Vec3d.ZERO);
         this.prevX = x;
         this.prevY = y;
         this.prevZ = z;
@@ -149,8 +143,8 @@ extends Entity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
@@ -165,7 +159,7 @@ extends Entity {
 
     @Override
     public boolean collidesWith(Entity other) {
-        return BoatEntity.method_30959(this, other);
+        return BoatEntity.canCollide(this, other);
     }
 
     @Override
@@ -174,8 +168,8 @@ extends Entity {
     }
 
     @Override
-    protected Vec3d method_30633(Direction.Axis axis, PortalUtil.Rectangle rectangle) {
-        return LivingEntity.method_31079(super.method_30633(axis, rectangle));
+    protected Vec3d positionInPortal(Direction.Axis portalAxis, BlockLocating.Rectangle portalRect) {
+        return LivingEntity.positionInPortal(super.positionInPortal(portalAxis, portalRect));
     }
 
     @Override
@@ -190,7 +184,7 @@ extends Entity {
             return super.updatePassengerForDismount(passenger);
         }
         int[][] is = Dismounting.getDismountOffsets(direction);
-        BlockPos blockPos2 = this.getBlockPos();
+        BlockPos blockPos = this.getBlockPos();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         ImmutableList<EntityPose> immutableList = passenger.getPoses();
         for (EntityPose entityPose : immutableList) {
@@ -202,7 +196,7 @@ extends Entity {
                 for (int[] js : is) {
                     Vec3d vec3d;
                     Box box;
-                    mutable.set(blockPos2.getX() + js[0], blockPos2.getY() + i, blockPos2.getZ() + js[1]);
+                    mutable.set(blockPos.getX() + js[0], blockPos.getY() + i, blockPos.getZ() + js[1]);
                     double d = this.world.getDismountHeight(Dismounting.getCollisionShape(this.world, mutable), () -> Dismounting.getCollisionShape(this.world, (BlockPos)mutable.down()));
                     if (!Dismounting.canDismountInBlock(d) || !Dismounting.canPlaceEntityAt(this.world, passenger, (box = new Box(-f, 0.0, -f, f, entityDimensions.height, f)).offset(vec3d = Vec3d.ofCenter(mutable, d)))) continue;
                     passenger.setPose(entityPose);
@@ -211,11 +205,11 @@ extends Entity {
             }
         }
         double e = this.getBoundingBox().maxY;
-        mutable.set((double)blockPos2.getX(), e, (double)blockPos2.getZ());
+        mutable.set((double)blockPos.getX(), e, (double)blockPos.getZ());
         for (EntityPose entityPose2 : immutableList) {
             double g = passenger.getDimensions((EntityPose)entityPose2).height;
             int j = MathHelper.ceil(e - (double)mutable.getY() + g);
-            double h = Dismounting.getCeilingHeight(mutable, j, blockPos -> this.world.getBlockState((BlockPos)blockPos).getCollisionShape(this.world, (BlockPos)blockPos));
+            double h = Dismounting.getCeilingHeight(mutable, j, pos -> this.world.getBlockState((BlockPos)pos).getCollisionShape(this.world, (BlockPos)pos));
             if (!(e + g <= h)) continue;
             passenger.setPose(entityPose2);
             break;
@@ -226,7 +220,7 @@ extends Entity {
     @Override
     public boolean damage(DamageSource source, float amount) {
         boolean bl;
-        if (this.world.isClient || this.removed) {
+        if (this.world.isClient || this.isRemoved()) {
             return true;
         }
         if (this.isInvulnerableTo(source)) {
@@ -236,13 +230,14 @@ extends Entity {
         this.setDamageWobbleTicks(10);
         this.scheduleVelocityUpdate();
         this.setDamageWobbleStrength(this.getDamageWobbleStrength() + amount * 10.0f);
-        boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).abilities.creativeMode;
+        this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
+        boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
         if (bl || this.getDamageWobbleStrength() > 40.0f) {
             this.removeAllPassengers();
             if (!bl || this.hasCustomName()) {
                 this.dropItems(source);
             } else {
-                this.remove();
+                this.discard();
             }
         }
         return true;
@@ -258,7 +253,7 @@ extends Entity {
     }
 
     public void dropItems(DamageSource damageSource) {
-        this.remove();
+        this.remove(Entity.RemovalReason.KILLED);
         if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
             ItemStack itemStack = new ItemStack(Items.MINECART);
             if (this.hasCustomName()) {
@@ -269,7 +264,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void animateDamage() {
         this.setDamageWobbleSide(-this.getDamageWobbleSide());
         this.setDamageWobbleTicks(10);
@@ -278,7 +272,7 @@ extends Entity {
 
     @Override
     public boolean collides() {
-        return !this.removed;
+        return !this.isRemoved();
     }
 
     private static Pair<Vec3i, Vec3i> getAdjacentRailPositionsByShape(RailShape shape) {
@@ -304,29 +298,28 @@ extends Entity {
         if (this.getDamageWobbleStrength() > 0.0f) {
             this.setDamageWobbleStrength(this.getDamageWobbleStrength() - 1.0f);
         }
-        if (this.getY() < -64.0) {
-            this.tickInVoid();
-        }
+        this.attemptTickInVoid();
         this.tickNetherPortal();
         if (this.world.isClient) {
             if (this.clientInterpolationSteps > 0) {
                 double d = this.getX() + (this.clientX - this.getX()) / (double)this.clientInterpolationSteps;
                 double e = this.getY() + (this.clientY - this.getY()) / (double)this.clientInterpolationSteps;
                 double f = this.getZ() + (this.clientZ - this.getZ()) / (double)this.clientInterpolationSteps;
-                double g = MathHelper.wrapDegrees(this.clientYaw - (double)this.yaw);
-                this.yaw = (float)((double)this.yaw + g / (double)this.clientInterpolationSteps);
-                this.pitch = (float)((double)this.pitch + (this.clientPitch - (double)this.pitch) / (double)this.clientInterpolationSteps);
+                double g = MathHelper.wrapDegrees(this.clientYaw - (double)this.getYaw());
+                this.setYaw(this.getYaw() + (float)g / (float)this.clientInterpolationSteps);
+                this.setPitch(this.getPitch() + (float)(this.clientPitch - (double)this.getPitch()) / (float)this.clientInterpolationSteps);
                 --this.clientInterpolationSteps;
                 this.setPosition(d, e, f);
-                this.setRotation(this.yaw, this.pitch);
+                this.setRotation(this.getYaw(), this.getPitch());
             } else {
                 this.refreshPosition();
-                this.setRotation(this.yaw, this.pitch);
+                this.setRotation(this.getYaw(), this.getPitch());
             }
             return;
         }
         if (!this.hasNoGravity()) {
-            this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
+            double d = this.isTouchingWater() ? -0.005 : -0.04;
+            this.setVelocity(this.getVelocity().add(0.0, d, 0.0));
         }
         if (this.world.getBlockState(new BlockPos(i = MathHelper.floor(this.getX()), (j = MathHelper.floor(this.getY())) - 1, k = MathHelper.floor(this.getZ()))).isIn(BlockTags.RAILS)) {
             --j;
@@ -340,21 +333,21 @@ extends Entity {
             this.moveOffRail();
         }
         this.checkBlockCollision();
-        this.pitch = 0.0f;
+        this.setPitch(0.0f);
         double h = this.prevX - this.getX();
         double l = this.prevZ - this.getZ();
         if (h * h + l * l > 0.001) {
-            this.yaw = (float)(MathHelper.atan2(l, h) * 180.0 / Math.PI);
+            this.setYaw((float)(MathHelper.atan2(l, h) * 180.0 / Math.PI));
             if (this.yawFlipped) {
-                this.yaw += 180.0f;
+                this.setYaw(this.getYaw() + 180.0f);
             }
         }
-        if ((m = (double)MathHelper.wrapDegrees(this.yaw - this.prevYaw)) < -170.0 || m >= 170.0) {
-            this.yaw += 180.0f;
+        if ((m = (double)MathHelper.wrapDegrees(this.getYaw() - this.prevYaw)) < -170.0 || m >= 170.0) {
+            this.setYaw(this.getYaw() + 180.0f);
             this.yawFlipped = !this.yawFlipped;
         }
-        this.setRotation(this.yaw, this.pitch);
-        if (this.getMinecartType() == Type.RIDEABLE && AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity()) > 0.01) {
+        this.setRotation(this.getYaw(), this.getPitch());
+        if (this.getMinecartType() == Type.RIDEABLE && this.getVelocity().horizontalLengthSquared() > 0.01) {
             List<Entity> list = this.world.getOtherEntities(this, this.getBoundingBox().expand(0.2f, 0.0, 0.2f), EntityPredicates.canBePushedBy(this));
             if (!list.isEmpty()) {
                 for (int n = 0; n < list.size(); ++n) {
@@ -381,7 +374,7 @@ extends Entity {
     }
 
     protected double getMaxOffRailSpeed() {
-        return 0.4;
+        return (this.isTouchingWater() ? 4.0 : 8.0) / 20.0;
     }
 
     public void onActivatorRail(int x, int y, int z, boolean powered) {
@@ -406,7 +399,6 @@ extends Entity {
         double u;
         double t;
         double s;
-        Entity entity;
         this.fallDistance = 0.0f;
         double d = this.getX();
         double e = this.getY();
@@ -415,32 +407,34 @@ extends Entity {
         e = pos.getY();
         boolean bl = false;
         boolean bl2 = false;
-        AbstractRailBlock abstractRailBlock = (AbstractRailBlock)state.getBlock();
-        if (abstractRailBlock == Blocks.POWERED_RAIL) {
+        if (state.isOf(Blocks.POWERED_RAIL)) {
             bl = state.get(PoweredRailBlock.POWERED);
             bl2 = !bl;
         }
         double g = 0.0078125;
+        if (this.isTouchingWater()) {
+            g *= 0.2;
+        }
         Vec3d vec3d2 = this.getVelocity();
-        RailShape railShape = state.get(abstractRailBlock.getShapeProperty());
+        RailShape railShape = state.get(((AbstractRailBlock)state.getBlock()).getShapeProperty());
         switch (railShape) {
             case ASCENDING_EAST: {
-                this.setVelocity(vec3d2.add(-0.0078125, 0.0, 0.0));
+                this.setVelocity(vec3d2.add(-g, 0.0, 0.0));
                 e += 1.0;
                 break;
             }
             case ASCENDING_WEST: {
-                this.setVelocity(vec3d2.add(0.0078125, 0.0, 0.0));
+                this.setVelocity(vec3d2.add(g, 0.0, 0.0));
                 e += 1.0;
                 break;
             }
             case ASCENDING_NORTH: {
-                this.setVelocity(vec3d2.add(0.0, 0.0, 0.0078125));
+                this.setVelocity(vec3d2.add(0.0, 0.0, g));
                 e += 1.0;
                 break;
             }
             case ASCENDING_SOUTH: {
-                this.setVelocity(vec3d2.add(0.0, 0.0, -0.0078125));
+                this.setVelocity(vec3d2.add(0.0, 0.0, -g));
                 e += 1.0;
             }
         }
@@ -456,21 +450,21 @@ extends Entity {
             h = -h;
             i = -i;
         }
-        double l = Math.min(2.0, Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d2)));
+        double l = Math.min(2.0, vec3d2.horizontalLength());
         vec3d2 = new Vec3d(l * h / j, vec3d2.y, l * i / j);
         this.setVelocity(vec3d2);
-        Entity entity2 = entity = this.getPassengerList().isEmpty() ? null : this.getPassengerList().get(0);
+        Entity entity = this.getFirstPassenger();
         if (entity instanceof PlayerEntity) {
             Vec3d vec3d3 = entity.getVelocity();
-            double m = AbstractMinecartEntity.squaredHorizontalLength(vec3d3);
-            double n = AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity());
+            double m = vec3d3.horizontalLengthSquared();
+            double n = this.getVelocity().horizontalLengthSquared();
             if (m > 1.0E-4 && n < 0.01) {
                 this.setVelocity(this.getVelocity().add(vec3d3.x * 0.1, 0.0, vec3d3.z * 0.1));
                 bl2 = false;
             }
         }
         if (bl2) {
-            double o = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(this.getVelocity()));
+            double o = this.getVelocity().horizontalLength();
             if (o < 0.03) {
                 this.setVelocity(Vec3d.ZERO);
             } else {
@@ -509,7 +503,7 @@ extends Entity {
         if (vec3d4 != null && vec3d != null) {
             double v = (vec3d.y - vec3d4.y) * 0.05;
             vec3d5 = this.getVelocity();
-            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            w = vec3d5.horizontalLength();
             if (w > 0.0) {
                 this.setVelocity(vec3d5.multiply((w + v) / w, 1.0, (w + v) / w));
             }
@@ -519,12 +513,12 @@ extends Entity {
         int y = MathHelper.floor(this.getZ());
         if (x != pos.getX() || y != pos.getZ()) {
             vec3d5 = this.getVelocity();
-            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            w = vec3d5.horizontalLength();
             this.setVelocity(w * (double)(x - pos.getX()), vec3d5.y, w * (double)(y - pos.getZ()));
         }
         if (bl) {
             vec3d5 = this.getVelocity();
-            w = Math.sqrt(AbstractMinecartEntity.squaredHorizontalLength(vec3d5));
+            w = vec3d5.horizontalLength();
             if (w > 0.01) {
                 double z = 0.06;
                 this.setVelocity(vec3d5.add(vec3d5.x / w * 0.06, 0.0, vec3d5.z / w * 0.06));
@@ -558,11 +552,15 @@ extends Entity {
 
     protected void applySlowdown() {
         double d = this.hasPassengers() ? 0.997 : 0.96;
-        this.setVelocity(this.getVelocity().multiply(d, 0.0, d));
+        Vec3d vec3d = this.getVelocity();
+        vec3d = vec3d.multiply(d, 0.0, d);
+        if (this.isTouchingWater()) {
+            vec3d = vec3d.multiply(0.95f);
+        }
+        this.setVelocity(vec3d);
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public Vec3d snapPositionToRailWithOffset(double x, double y, double z, double offset) {
         BlockState blockState;
         int k;
@@ -640,7 +638,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Box getVisibilityBoundingBox() {
         Box box = this.getBoundingBox();
         if (this.hasCustomBlock()) {
@@ -681,7 +678,7 @@ extends Entity {
         double d = entity.getX() - this.getX();
         double f = d * d + (e = entity.getZ() - this.getZ()) * e;
         if (f >= (double)1.0E-4f) {
-            f = MathHelper.sqrt(f);
+            f = Math.sqrt(f);
             d /= f;
             e /= f;
             double g = 1.0 / f;
@@ -692,8 +689,6 @@ extends Entity {
             e *= g;
             d *= (double)0.1f;
             e *= (double)0.1f;
-            d *= (double)(1.0f - this.pushSpeedReduction);
-            e *= (double)(1.0f - this.pushSpeedReduction);
             d *= 0.5;
             e *= 0.5;
             if (entity instanceof AbstractMinecartEntity) {
@@ -701,7 +696,7 @@ extends Entity {
                 double i;
                 double h = entity.getX() - this.getX();
                 Vec3d vec3d = new Vec3d(h, 0.0, i = entity.getZ() - this.getZ()).normalize();
-                double j = Math.abs(vec3d.dotProduct(vec3d2 = new Vec3d(MathHelper.cos(this.yaw * ((float)Math.PI / 180)), 0.0, MathHelper.sin(this.yaw * ((float)Math.PI / 180))).normalize()));
+                double j = Math.abs(vec3d.dotProduct(vec3d2 = new Vec3d(MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)), 0.0, MathHelper.sin(this.getYaw() * ((float)Math.PI / 180))).normalize()));
                 if (j < (double)0.8f) {
                     return;
                 }
@@ -731,7 +726,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
         this.clientX = x;
         this.clientY = y;
@@ -743,7 +737,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void setVelocityClient(double x, double y, double z) {
         this.clientXVelocity = x;
         this.clientYVelocity = y;
@@ -822,15 +815,44 @@ extends Entity {
         return new EntitySpawnS2CPacket(this);
     }
 
-    public static enum Type {
-        RIDEABLE,
-        CHEST,
-        FURNACE,
-        TNT,
-        SPAWNER,
-        HOPPER,
-        COMMAND_BLOCK;
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(switch (this.getMinecartType()) {
+            case Type.FURNACE -> Items.FURNACE_MINECART;
+            case Type.CHEST -> Items.CHEST_MINECART;
+            case Type.TNT -> Items.TNT_MINECART;
+            case Type.HOPPER -> Items.HOPPER_MINECART;
+            case Type.COMMAND_BLOCK -> Items.COMMAND_BLOCK_MINECART;
+            default -> Items.MINECART;
+        });
+    }
 
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type RIDEABLE = new Type();
+        public static final /* enum */ Type CHEST = new Type();
+        public static final /* enum */ Type FURNACE = new Type();
+        public static final /* enum */ Type TNT = new Type();
+        public static final /* enum */ Type SPAWNER = new Type();
+        public static final /* enum */ Type HOPPER = new Type();
+        public static final /* enum */ Type COMMAND_BLOCK = new Type();
+        private static final /* synthetic */ Type[] field_7673;
+
+        public static Type[] values() {
+            return (Type[])field_7673.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36669() {
+            return new Type[]{RIDEABLE, CHEST, FURNACE, TNT, SPAWNER, HOPPER, COMMAND_BLOCK};
+        }
+
+        static {
+            field_7673 = Type.method_36669();
+        }
     }
 }
 

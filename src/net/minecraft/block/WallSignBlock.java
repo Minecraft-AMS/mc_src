@@ -38,6 +38,9 @@ import org.jetbrains.annotations.Nullable;
 public class WallSignBlock
 extends AbstractSignBlock {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
+    protected static final float field_31282 = 2.0f;
+    protected static final float field_31283 = 4.5f;
+    protected static final float field_31284 = 12.5f;
     private static final Map<Direction, VoxelShape> FACING_TO_SHAPE = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(0.0, 4.5, 14.0, 16.0, 12.5, 16.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(0.0, 4.5, 0.0, 16.0, 12.5, 2.0), (Object)Direction.EAST, (Object)Block.createCuboidShape(0.0, 4.5, 0.0, 2.0, 12.5, 16.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(14.0, 4.5, 0.0, 16.0, 12.5, 16.0)));
 
     public WallSignBlock(AbstractBlock.Settings settings, SignType signType) {

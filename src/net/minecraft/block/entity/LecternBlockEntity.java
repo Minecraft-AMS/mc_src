@@ -13,7 +13,6 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.WrittenBookItem;
@@ -29,6 +28,7 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Clearable;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
@@ -38,6 +38,10 @@ public class LecternBlockEntity
 extends BlockEntity
 implements Clearable,
 NamedScreenHandlerFactory {
+    public static final int field_31348 = 0;
+    public static final int field_31349 = 1;
+    public static final int field_31350 = 0;
+    public static final int field_31351 = 1;
     private final Inventory inventory = new Inventory(){
 
         @Override
@@ -131,12 +135,12 @@ NamedScreenHandlerFactory {
             return 1;
         }
     };
-    private ItemStack book = ItemStack.EMPTY;
-    private int currentPage;
+    ItemStack book = ItemStack.EMPTY;
+    int currentPage;
     private int pageCount;
 
-    public LecternBlockEntity() {
-        super(BlockEntityType.LECTERN);
+    public LecternBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.LECTERN, pos, state);
     }
 
     public ItemStack getBook() {
@@ -144,15 +148,14 @@ NamedScreenHandlerFactory {
     }
 
     public boolean hasBook() {
-        Item item = this.book.getItem();
-        return item == Items.WRITABLE_BOOK || item == Items.WRITTEN_BOOK;
+        return this.book.isOf(Items.WRITABLE_BOOK) || this.book.isOf(Items.WRITTEN_BOOK);
     }
 
     public void setBook(ItemStack book) {
         this.setBook(book, null);
     }
 
-    private void onBookRemoved() {
+    void onBookRemoved() {
         this.currentPage = 0;
         this.pageCount = 0;
         LecternBlock.setHasBook(this.getWorld(), this.getPos(), this.getCachedState(), false);
@@ -165,7 +168,7 @@ NamedScreenHandlerFactory {
         this.markDirty();
     }
 
-    private void setCurrentPage(int currentPage) {
+    void setCurrentPage(int currentPage) {
         int i = MathHelper.clamp(currentPage, 0, this.pageCount - 1);
         if (i != this.currentPage) {
             this.currentPage = i;
@@ -184,7 +187,7 @@ NamedScreenHandlerFactory {
     }
 
     private ItemStack resolveBook(ItemStack book, @Nullable PlayerEntity player) {
-        if (this.world instanceof ServerWorld && book.getItem() == Items.WRITTEN_BOOK) {
+        if (this.world instanceof ServerWorld && book.isOf(Items.WRITTEN_BOOK)) {
             WrittenBookItem.resolve(book, this.getCommandSource(player), player);
         }
         return book;
@@ -210,11 +213,11 @@ NamedScreenHandlerFactory {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        this.book = tag.contains("Book", 10) ? this.resolveBook(ItemStack.fromNbt(tag.getCompound("Book")), null) : ItemStack.EMPTY;
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        this.book = nbt.contains("Book", 10) ? this.resolveBook(ItemStack.fromNbt(nbt.getCompound("Book")), null) : ItemStack.EMPTY;
         this.pageCount = WrittenBookItem.getPageCount(this.book);
-        this.currentPage = MathHelper.clamp(tag.getInt("Page"), 0, this.pageCount - 1);
+        this.currentPage = MathHelper.clamp(nbt.getInt("Page"), 0, this.pageCount - 1);
     }
 
     @Override

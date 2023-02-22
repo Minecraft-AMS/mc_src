@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.enchantment;
@@ -12,8 +10,6 @@ package net.minecraft.enchantment;
 import com.google.common.collect.Maps;
 import java.util.EnumMap;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.enchantment.EnchantmentTarget;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityGroup;
@@ -36,7 +32,6 @@ public abstract class Enchantment {
     protected String translationKey;
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static Enchantment byRawId(int id) {
         return (Enchantment)Registry.ENCHANTMENT.get(id);
     }
@@ -143,13 +138,22 @@ public abstract class Enchantment {
         return true;
     }
 
-    public static enum Rarity {
-        COMMON(10),
-        UNCOMMON(5),
-        RARE(2),
-        VERY_RARE(1);
-
+    public static final class Rarity
+    extends Enum<Rarity> {
+        public static final /* enum */ Rarity COMMON = new Rarity(10);
+        public static final /* enum */ Rarity UNCOMMON = new Rarity(5);
+        public static final /* enum */ Rarity RARE = new Rarity(2);
+        public static final /* enum */ Rarity VERY_RARE = new Rarity(1);
         private final int weight;
+        private static final /* synthetic */ Rarity[] field_9092;
+
+        public static Rarity[] values() {
+            return (Rarity[])field_9092.clone();
+        }
+
+        public static Rarity valueOf(String string) {
+            return Enum.valueOf(Rarity.class, string);
+        }
 
         private Rarity(int weight) {
             this.weight = weight;
@@ -157,6 +161,14 @@ public abstract class Enchantment {
 
         public int getWeight() {
             return this.weight;
+        }
+
+        private static /* synthetic */ Rarity[] method_36687() {
+            return new Rarity[]{COMMON, UNCOMMON, RARE, VERY_RARE};
+        }
+
+        static {
+            field_9092 = Rarity.method_36687();
         }
     }
 }

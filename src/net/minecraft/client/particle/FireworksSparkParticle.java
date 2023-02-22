@@ -22,7 +22,7 @@ import net.minecraft.client.particle.SpriteProvider;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.item.FireworkItem;
+import net.minecraft.item.FireworkRocketItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.DefaultParticleType;
@@ -75,8 +75,8 @@ public class FireworksSparkParticle {
     @Environment(value=EnvType.CLIENT)
     public static class Flash
     extends SpriteBillboardParticle {
-        private Flash(ClientWorld world, double x, double y, double z) {
-            super(world, x, y, z);
+        Flash(ClientWorld clientWorld, double d, double e, double f) {
+            super(clientWorld, d, e, f);
             this.maxAge = 4;
         }
 
@@ -108,11 +108,11 @@ public class FireworksSparkParticle {
         private float field_3799;
         private boolean field_3802;
 
-        private Explosion(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, SpriteProvider spriteProvider) {
-            super(world, x, y, z, spriteProvider, -0.004f);
-            this.velocityX = velocityX;
-            this.velocityY = velocityY;
-            this.velocityZ = velocityZ;
+        Explosion(ClientWorld clientWorld, double d, double e, double f, double g, double h, double i, ParticleManager particleManager, SpriteProvider spriteProvider) {
+            super(clientWorld, d, e, f, spriteProvider, 0.1f);
+            this.velocityX = g;
+            this.velocityY = h;
+            this.velocityZ = i;
             this.particleManager = particleManager;
             this.scale *= 0.75f;
             this.maxAge = 48 + this.random.nextInt(12);
@@ -162,15 +162,15 @@ public class FireworksSparkParticle {
         private NbtList explosions;
         private boolean flicker;
 
-        public FireworkParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, @Nullable NbtCompound tag) {
+        public FireworkParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, ParticleManager particleManager, @Nullable NbtCompound nbt) {
             super(world, x, y, z);
             this.velocityX = velocityX;
             this.velocityY = velocityY;
             this.velocityZ = velocityZ;
             this.particleManager = particleManager;
             this.maxAge = 8;
-            if (tag != null) {
-                this.explosions = tag.getList("Explosions", 10);
+            if (nbt != null) {
+                this.explosions = nbt.getList("Explosions", 10);
                 if (this.explosions.isEmpty()) {
                     this.explosions = null;
                 } else {
@@ -197,7 +197,7 @@ public class FireworksSparkParticle {
                 } else {
                     for (int i = 0; i < this.explosions.size(); ++i) {
                         NbtCompound nbtCompound = this.explosions.getCompound(i);
-                        if (FireworkItem.Type.byId(nbtCompound.getByte("Type")) != FireworkItem.Type.LARGE_BALL) continue;
+                        if (FireworkRocketItem.Type.byId(nbtCompound.getByte("Type")) != FireworkRocketItem.Type.LARGE_BALL) continue;
                         bl2 = true;
                         break;
                     }
@@ -208,7 +208,7 @@ public class FireworksSparkParticle {
             if (this.age % 2 == 0 && this.explosions != null && this.age / 2 < this.explosions.size()) {
                 int j = this.age / 2;
                 NbtCompound nbtCompound2 = this.explosions.getCompound(j);
-                FireworkItem.Type type = FireworkItem.Type.byId(nbtCompound2.getByte("Type"));
+                FireworkRocketItem.Type type = FireworkRocketItem.Type.byId(nbtCompound2.getByte("Type"));
                 boolean bl3 = nbtCompound2.getBoolean("Trail");
                 boolean bl4 = nbtCompound2.getBoolean("Flicker");
                 int[] is = nbtCompound2.getIntArray("Colors");
@@ -282,7 +282,7 @@ public class FireworksSparkParticle {
                         double g = (double)j + (this.random.nextDouble() - this.random.nextDouble()) * 0.5;
                         double h = (double)i + (this.random.nextDouble() - this.random.nextDouble()) * 0.5;
                         double l = (double)k + (this.random.nextDouble() - this.random.nextDouble()) * 0.5;
-                        double m = (double)MathHelper.sqrt(g * g + h * h + l * l) / size + this.random.nextGaussian() * 0.05;
+                        double m = Math.sqrt(g * g + h * h + l * l) / size + this.random.nextGaussian() * 0.05;
                         this.addExplosionParticle(d, e, f, g / m, h / m, l / m, colors, fadeColors, trail, flicker);
                         if (i == -amount || i == amount || j == -amount || j == amount) continue;
                         k += amount * 2 - 1;

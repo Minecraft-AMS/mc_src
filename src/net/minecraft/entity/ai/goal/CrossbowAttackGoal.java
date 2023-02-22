@@ -15,18 +15,19 @@ import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.util.math.IntRange;
+import net.minecraft.util.TimeHelper;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 
 public class CrossbowAttackGoal<T extends HostileEntity & CrossbowUser>
 extends Goal {
-    public static final IntRange field_25696 = new IntRange(20, 40);
+    public static final UniformIntProvider COOLDOWN_RANGE = TimeHelper.betweenSeconds(1, 2);
     private final T actor;
     private Stage stage = Stage.UNCHARGED;
     private final double speed;
     private final float squaredRange;
     private int seeingTargetTicker;
     private int chargedTicksLeft;
-    private int field_25697;
+    private int cooldown;
 
     public CrossbowAttackGoal(T actor, double speed, float range) {
         this.actor = actor;
@@ -83,13 +84,13 @@ extends Goal {
         double d = ((Entity)this.actor).squaredDistanceTo(livingEntity);
         boolean bl5 = bl3 = (d > (double)this.squaredRange || this.seeingTargetTicker < 5) && this.chargedTicksLeft == 0;
         if (bl3) {
-            --this.field_25697;
-            if (this.field_25697 <= 0) {
+            --this.cooldown;
+            if (this.cooldown <= 0) {
                 ((MobEntity)this.actor).getNavigation().startMovingTo(livingEntity, this.isUncharged() ? this.speed : this.speed * 0.5);
-                this.field_25697 = field_25696.choose(((LivingEntity)this.actor).getRandom());
+                this.cooldown = COOLDOWN_RANGE.get(((LivingEntity)this.actor).getRandom());
             }
         } else {
-            this.field_25697 = 0;
+            this.cooldown = 0;
             ((MobEntity)this.actor).getNavigation().stop();
         }
         ((MobEntity)this.actor).getLookControl().lookAt(livingEntity, 30.0f, 30.0f);
@@ -128,12 +129,29 @@ extends Goal {
         return this.stage == Stage.UNCHARGED;
     }
 
-    static enum Stage {
-        UNCHARGED,
-        CHARGING,
-        CHARGED,
-        READY_TO_ATTACK;
+    static final class Stage
+    extends Enum<Stage> {
+        public static final /* enum */ Stage UNCHARGED = new Stage();
+        public static final /* enum */ Stage CHARGING = new Stage();
+        public static final /* enum */ Stage CHARGED = new Stage();
+        public static final /* enum */ Stage READY_TO_ATTACK = new Stage();
+        private static final /* synthetic */ Stage[] field_16531;
 
+        public static Stage[] values() {
+            return (Stage[])field_16531.clone();
+        }
+
+        public static Stage valueOf(String string) {
+            return Enum.valueOf(Stage.class, string);
+        }
+
+        private static /* synthetic */ Stage[] method_36622() {
+            return new Stage[]{UNCHARGED, CHARGING, CHARGED, READY_TO_ATTACK};
+        }
+
+        static {
+            field_16531 = Stage.method_36622();
+        }
     }
 }
 

@@ -14,11 +14,12 @@ import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class WeepingVinesFeature
 extends Feature<DefaultFeatureConfig> {
@@ -29,7 +30,10 @@ extends Feature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, DefaultFeatureConfig defaultFeatureConfig) {
+    public boolean generate(FeatureContext<DefaultFeatureConfig> context) {
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        BlockPos blockPos = context.getOrigin();
+        Random random = context.getRandom();
         if (!structureWorldAccess.isAir(blockPos)) {
             return false;
         }
@@ -51,7 +55,7 @@ extends Feature<DefaultFeatureConfig> {
             if (!world.isAir(mutable)) continue;
             int j = 0;
             for (Direction direction : DIRECTIONS) {
-                BlockState blockState = world.getBlockState(mutable2.set(mutable, direction));
+                BlockState blockState = world.getBlockState(mutable2.set((Vec3i)mutable, direction));
                 if (blockState.isOf(Blocks.NETHERRACK) || blockState.isOf(Blocks.NETHER_WART_BLOCK)) {
                     ++j;
                 }

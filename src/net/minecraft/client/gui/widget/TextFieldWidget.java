@@ -23,9 +23,13 @@ import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.MutableText;
@@ -42,6 +46,15 @@ public class TextFieldWidget
 extends ClickableWidget
 implements Drawable,
 Element {
+    public static final int field_32194 = -1;
+    public static final int field_32195 = 1;
+    private static final int field_32197 = 1;
+    private static final int field_32198 = -3092272;
+    private static final String UNDERSCORE = "_";
+    public static final int DEFAULT_EDITABLE_COLOR = 0xE0E0E0;
+    private static final int field_32201 = -1;
+    private static final int field_32202 = -6250336;
+    private static final int field_32203 = -16777216;
     private final TextRenderer textRenderer;
     private String text = "";
     private int maxLength = 32;
@@ -55,7 +68,9 @@ Element {
     private int selectionEnd;
     private int editableColor = 0xE0E0E0;
     private int uneditableColor = 0x707070;
+    @Nullable
     private String suggestion;
+    @Nullable
     private Consumer<String> changedListener;
     private Predicate<String> textPredicate = Objects::nonNull;
     private BiFunction<String, Integer, OrderedText> renderTextProvider = (string, integer) -> OrderedText.styledForwardsVisitedString(string, Style.EMPTY);
@@ -105,8 +120,8 @@ Element {
     }
 
     public String getSelectedText() {
-        int i = this.selectionStart < this.selectionEnd ? this.selectionStart : this.selectionEnd;
-        int j = this.selectionStart < this.selectionEnd ? this.selectionEnd : this.selectionStart;
+        int i = Math.min(this.selectionStart, this.selectionEnd);
+        int j = Math.max(this.selectionStart, this.selectionEnd);
         return this.text.substring(i, j);
     }
 
@@ -114,21 +129,21 @@ Element {
         this.textPredicate = textPredicate;
     }
 
-    public void write(String string) {
-        String string3;
+    public void write(String text) {
         String string2;
+        String string;
         int l;
-        int i = this.selectionStart < this.selectionEnd ? this.selectionStart : this.selectionEnd;
-        int j = this.selectionStart < this.selectionEnd ? this.selectionEnd : this.selectionStart;
+        int i = Math.min(this.selectionStart, this.selectionEnd);
+        int j = Math.max(this.selectionStart, this.selectionEnd);
         int k = this.maxLength - this.text.length() - (i - j);
-        if (k < (l = (string2 = SharedConstants.stripInvalidChars(string)).length())) {
-            string2 = string2.substring(0, k);
+        if (k < (l = (string = SharedConstants.stripInvalidChars(text)).length())) {
+            string = string.substring(0, k);
             l = k;
         }
-        if (!this.textPredicate.test(string3 = new StringBuilder(this.text).replace(i, j, string2).toString())) {
+        if (!this.textPredicate.test(string2 = new StringBuilder(this.text).replace(i, j, string).toString())) {
             return;
         }
-        this.text = string3;
+        this.text = string2;
         this.setSelectionStart(i + l);
         this.setSelectionEnd(this.selectionStart);
         this.onChanged(this.text);
@@ -138,7 +153,6 @@ Element {
         if (this.changedListener != null) {
             this.changedListener.accept(newText);
         }
-        this.nextNarration = Util.getMeasuringTimeMs() + 500L;
     }
 
     private void erase(int offset) {
@@ -358,7 +372,7 @@ Element {
     }
 
     public void setTextFieldFocused(boolean focused) {
-        super.setFocused(focused);
+        this.setFocused(focused);
     }
 
     @Override
@@ -406,7 +420,7 @@ Element {
             if (bl3) {
                 DrawableHelper.fill(matrices, o, m - 1, o + 1, m + 1 + this.textRenderer.fontHeight, -3092272);
             } else {
-                this.textRenderer.drawWithShadow(matrices, "_", (float)o, (float)m, i);
+                this.textRenderer.drawWithShadow(matrices, UNDERSCORE, (float)o, (float)m, i);
             }
         }
         if (k != j) {
@@ -435,16 +449,18 @@ Element {
         }
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        RenderSystem.color4f(0.0f, 0.0f, 255.0f, 255.0f);
+        RenderSystem.setShader(GameRenderer::getPositionShader);
+        RenderSystem.setShaderColor(0.0f, 0.0f, 1.0f, 1.0f);
         RenderSystem.disableTexture();
         RenderSystem.enableColorLogicOp();
         RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-        bufferBuilder.begin(7, VertexFormats.POSITION);
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
         bufferBuilder.vertex(x1, y2, 0.0).next();
         bufferBuilder.vertex(x2, y2, 0.0).next();
         bufferBuilder.vertex(x2, y1, 0.0).next();
         bufferBuilder.vertex(x1, y1, 0.0).next();
         tessellator.draw();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableColorLogicOp();
         RenderSystem.enableTexture();
     }
@@ -513,25 +529,25 @@ Element {
         return this.drawsBackground() ? this.width - 8 : this.width;
     }
 
-    public void setSelectionEnd(int i) {
-        int j = this.text.length();
-        this.selectionEnd = MathHelper.clamp(i, 0, j);
+    public void setSelectionEnd(int index) {
+        int i = this.text.length();
+        this.selectionEnd = MathHelper.clamp(index, 0, i);
         if (this.textRenderer != null) {
-            if (this.firstCharacterIndex > j) {
-                this.firstCharacterIndex = j;
+            if (this.firstCharacterIndex > i) {
+                this.firstCharacterIndex = i;
             }
-            int k = this.getInnerWidth();
-            String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), k);
-            int l = string.length() + this.firstCharacterIndex;
+            int j = this.getInnerWidth();
+            String string = this.textRenderer.trimToWidth(this.text.substring(this.firstCharacterIndex), j);
+            int k = string.length() + this.firstCharacterIndex;
             if (this.selectionEnd == this.firstCharacterIndex) {
-                this.firstCharacterIndex -= this.textRenderer.trimToWidth(this.text, k, true).length();
+                this.firstCharacterIndex -= this.textRenderer.trimToWidth(this.text, j, true).length();
             }
-            if (this.selectionEnd > l) {
-                this.firstCharacterIndex += this.selectionEnd - l;
+            if (this.selectionEnd > k) {
+                this.firstCharacterIndex += this.selectionEnd - k;
             } else if (this.selectionEnd <= this.firstCharacterIndex) {
                 this.firstCharacterIndex -= this.firstCharacterIndex - this.selectionEnd;
             }
-            this.firstCharacterIndex = MathHelper.clamp(this.firstCharacterIndex, 0, j);
+            this.firstCharacterIndex = MathHelper.clamp(this.firstCharacterIndex, 0, i);
         }
     }
 
@@ -560,6 +576,11 @@ Element {
 
     public void setX(int x) {
         this.x = x;
+    }
+
+    @Override
+    public void appendNarrations(NarrationMessageBuilder builder) {
+        builder.put(NarrationPart.TITLE, (Text)new TranslatableText("narration.edit_box", this.getText()));
     }
 }
 

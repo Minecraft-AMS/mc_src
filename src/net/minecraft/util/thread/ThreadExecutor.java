@@ -2,29 +2,33 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Queues
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.util.thread;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Queues;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.minecraft.util.profiler.SampleType;
+import net.minecraft.util.profiler.Sampler;
+import net.minecraft.util.thread.ExecutorSampling;
 import net.minecraft.util.thread.MessageListener;
+import net.minecraft.util.thread.SampleableExecutor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public abstract class ThreadExecutor<R extends Runnable>
-implements MessageListener<R>,
+implements SampleableExecutor,
+MessageListener<R>,
 Executor {
     private final String name;
     private static final Logger LOGGER = LogManager.getLogger();
@@ -33,6 +37,7 @@ Executor {
 
     protected ThreadExecutor(String name) {
         this.name = name;
+        ExecutorSampling.INSTANCE.add(this);
     }
 
     protected abstract R createTask(Runnable var1);
@@ -58,7 +63,6 @@ Executor {
         return this.name;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public <V> CompletableFuture<V> submit(Supplier<V> task) {
         if (this.shouldExecuteAsync()) {
             return CompletableFuture.supplyAsync(task, this);
@@ -104,7 +108,6 @@ Executor {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     protected void cancelTasks() {
         this.tasks.clear();
     }
@@ -114,7 +117,7 @@ Executor {
         }
     }
 
-    protected boolean runTask() {
+    public boolean runTask() {
         Runnable runnable = (Runnable)this.tasks.peek();
         if (runnable == null) {
             return false;
@@ -151,6 +154,11 @@ Executor {
         catch (Exception exception) {
             LOGGER.fatal("Error executing task on {}", (Object)this.getName(), (Object)exception);
         }
+    }
+
+    @Override
+    public List<Sampler> createSamplers() {
+        return ImmutableList.of((Object)Sampler.create(this.name + "-pending-tasks", SampleType.EVENT_LOOPS, this::getTaskCount));
     }
 
     @Override

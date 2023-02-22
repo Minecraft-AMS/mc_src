@@ -4,7 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Iterables
- *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
@@ -12,12 +11,16 @@ package net.minecraft.client.render.entity.model;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
@@ -30,7 +33,13 @@ import net.minecraft.util.Arm;
 @Environment(value=EnvType.CLIENT)
 public class PlayerEntityModel<T extends LivingEntity>
 extends BipedEntityModel<T> {
-    private List<ModelPart> parts = Lists.newArrayList();
+    private static final String EAR = "ear";
+    private static final String CLOAK = "cloak";
+    private static final String LEFT_SLEEVE = "left_sleeve";
+    private static final String RIGHT_SLEEVE = "right_sleeve";
+    private static final String LEFT_PANTS = "left_pants";
+    private static final String RIGHT_PANTS = "right_pants";
+    private final List<ModelPart> parts;
     public final ModelPart leftSleeve;
     public final ModelPart rightSleeve;
     public final ModelPart leftPants;
@@ -40,50 +49,40 @@ extends BipedEntityModel<T> {
     private final ModelPart ear;
     private final boolean thinArms;
 
-    public PlayerEntityModel(float scale, boolean thinArms) {
-        super(RenderLayer::getEntityTranslucent, scale, 0.0f, 64, 64);
+    public PlayerEntityModel(ModelPart root, boolean thinArms) {
+        super(root, RenderLayer::getEntityTranslucent);
         this.thinArms = thinArms;
-        this.ear = new ModelPart(this, 24, 0);
-        this.ear.addCuboid(-3.0f, -6.0f, -1.0f, 6.0f, 6.0f, 1.0f, scale);
-        this.cloak = new ModelPart(this, 0, 0);
-        this.cloak.setTextureSize(64, 32);
-        this.cloak.addCuboid(-5.0f, 0.0f, -1.0f, 10.0f, 16.0f, 1.0f, scale);
-        if (thinArms) {
-            this.leftArm = new ModelPart(this, 32, 48);
-            this.leftArm.addCuboid(-1.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, scale);
-            this.leftArm.setPivot(5.0f, 2.5f, 0.0f);
-            this.rightArm = new ModelPart(this, 40, 16);
-            this.rightArm.addCuboid(-2.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, scale);
-            this.rightArm.setPivot(-5.0f, 2.5f, 0.0f);
-            this.leftSleeve = new ModelPart(this, 48, 48);
-            this.leftSleeve.addCuboid(-1.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, scale + 0.25f);
-            this.leftSleeve.setPivot(5.0f, 2.5f, 0.0f);
-            this.rightSleeve = new ModelPart(this, 40, 32);
-            this.rightSleeve.addCuboid(-2.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, scale + 0.25f);
-            this.rightSleeve.setPivot(-5.0f, 2.5f, 10.0f);
+        this.ear = root.getChild(EAR);
+        this.cloak = root.getChild(CLOAK);
+        this.leftSleeve = root.getChild(LEFT_SLEEVE);
+        this.rightSleeve = root.getChild(RIGHT_SLEEVE);
+        this.leftPants = root.getChild(LEFT_PANTS);
+        this.rightPants = root.getChild(RIGHT_PANTS);
+        this.jacket = root.getChild("jacket");
+        this.parts = (List)root.traverse().filter(part -> !part.isEmpty()).collect(ImmutableList.toImmutableList());
+    }
+
+    public static ModelData getTexturedModelData(Dilation dilation, boolean slim) {
+        ModelData modelData = BipedEntityModel.getModelData(dilation, 0.0f);
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild(EAR, ModelPartBuilder.create().uv(24, 0).cuboid(-3.0f, -6.0f, -1.0f, 6.0f, 6.0f, 1.0f, dilation), ModelTransform.NONE);
+        modelPartData.addChild(CLOAK, ModelPartBuilder.create().uv(0, 0).cuboid(-5.0f, 0.0f, -1.0f, 10.0f, 16.0f, 1.0f, dilation, 1.0f, 0.5f), ModelTransform.pivot(0.0f, 0.0f, 0.0f));
+        float f = 0.25f;
+        if (slim) {
+            modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(32, 48).cuboid(-1.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(5.0f, 2.5f, 0.0f));
+            modelPartData.addChild("right_arm", ModelPartBuilder.create().uv(40, 16).cuboid(-2.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(-5.0f, 2.5f, 0.0f));
+            modelPartData.addChild(LEFT_SLEEVE, ModelPartBuilder.create().uv(48, 48).cuboid(-1.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(5.0f, 2.5f, 0.0f));
+            modelPartData.addChild(RIGHT_SLEEVE, ModelPartBuilder.create().uv(40, 32).cuboid(-2.0f, -2.0f, -2.0f, 3.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(-5.0f, 2.5f, 0.0f));
         } else {
-            this.leftArm = new ModelPart(this, 32, 48);
-            this.leftArm.addCuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-            this.leftArm.setPivot(5.0f, 2.0f, 0.0f);
-            this.leftSleeve = new ModelPart(this, 48, 48);
-            this.leftSleeve.addCuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale + 0.25f);
-            this.leftSleeve.setPivot(5.0f, 2.0f, 0.0f);
-            this.rightSleeve = new ModelPart(this, 40, 32);
-            this.rightSleeve.addCuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale + 0.25f);
-            this.rightSleeve.setPivot(-5.0f, 2.0f, 10.0f);
+            modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(32, 48).cuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(5.0f, 2.0f, 0.0f));
+            modelPartData.addChild(LEFT_SLEEVE, ModelPartBuilder.create().uv(48, 48).cuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(5.0f, 2.0f, 0.0f));
+            modelPartData.addChild(RIGHT_SLEEVE, ModelPartBuilder.create().uv(40, 32).cuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(-5.0f, 2.0f, 0.0f));
         }
-        this.leftLeg = new ModelPart(this, 16, 48);
-        this.leftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.leftLeg.setPivot(1.9f, 12.0f, 0.0f);
-        this.leftPants = new ModelPart(this, 0, 48);
-        this.leftPants.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale + 0.25f);
-        this.leftPants.setPivot(1.9f, 12.0f, 0.0f);
-        this.rightPants = new ModelPart(this, 0, 32);
-        this.rightPants.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale + 0.25f);
-        this.rightPants.setPivot(-1.9f, 12.0f, 0.0f);
-        this.jacket = new ModelPart(this, 16, 32);
-        this.jacket.addCuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, scale + 0.25f);
-        this.jacket.setPivot(0.0f, 0.0f, 0.0f);
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(16, 48).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(1.9f, 12.0f, 0.0f));
+        modelPartData.addChild(LEFT_PANTS, ModelPartBuilder.create().uv(0, 48).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(1.9f, 12.0f, 0.0f));
+        modelPartData.addChild(RIGHT_PANTS, ModelPartBuilder.create().uv(0, 32).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.pivot(-1.9f, 12.0f, 0.0f));
+        modelPartData.addChild("jacket", ModelPartBuilder.create().uv(16, 32).cuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, dilation.add(0.25f)), ModelTransform.NONE);
+        return modelData;
     }
 
     @Override
@@ -154,19 +153,6 @@ extends BipedEntityModel<T> {
 
     public ModelPart getRandomPart(Random random) {
         return this.parts.get(random.nextInt(this.parts.size()));
-    }
-
-    @Override
-    public void accept(ModelPart modelPart) {
-        if (this.parts == null) {
-            this.parts = Lists.newArrayList();
-        }
-        this.parts.add(modelPart);
-    }
-
-    @Override
-    public /* synthetic */ void accept(Object object) {
-        this.accept((ModelPart)object);
     }
 }
 

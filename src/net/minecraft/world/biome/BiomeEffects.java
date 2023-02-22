@@ -6,8 +6,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome;
 
@@ -20,8 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.sound.BiomeAdditionsSound;
 import net.minecraft.sound.BiomeMoodSound;
 import net.minecraft.sound.MusicSound;
@@ -45,7 +41,7 @@ public class BiomeEffects {
     private final Optional<BiomeAdditionsSound> additionsSound;
     private final Optional<MusicSound> music;
 
-    private BiomeEffects(int fogColor, int waterColor, int waterFogColor, int skyColor, Optional<Integer> foliageColor, Optional<Integer> grassColor, GrassColorModifier grassColorModifier, Optional<BiomeParticleConfig> particleConfig, Optional<SoundEvent> loopSound, Optional<BiomeMoodSound> moodSound, Optional<BiomeAdditionsSound> additionsSound, Optional<MusicSound> music) {
+    BiomeEffects(int fogColor, int waterColor, int waterFogColor, int skyColor, Optional<Integer> foliageColor, Optional<Integer> grassColor, GrassColorModifier grassColorModifier, Optional<BiomeParticleConfig> particleConfig, Optional<SoundEvent> loopSound, Optional<BiomeMoodSound> moodSound, Optional<BiomeAdditionsSound> additionsSound, Optional<MusicSound> music) {
         this.fogColor = fogColor;
         this.waterColor = waterColor;
         this.waterFogColor = waterFogColor;
@@ -60,90 +56,74 @@ public class BiomeEffects {
         this.music = music;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getFogColor() {
         return this.fogColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getWaterColor() {
         return this.waterColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getWaterFogColor() {
         return this.waterFogColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSkyColor() {
         return this.skyColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<Integer> getFoliageColor() {
         return this.foliageColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<Integer> getGrassColor() {
         return this.grassColor;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public GrassColorModifier getGrassColorModifier() {
         return this.grassColorModifier;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<BiomeParticleConfig> getParticleConfig() {
         return this.particleConfig;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<SoundEvent> getLoopSound() {
         return this.loopSound;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<BiomeMoodSound> getMoodSound() {
         return this.moodSound;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<BiomeAdditionsSound> getAdditionsSound() {
         return this.additionsSound;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Optional<MusicSound> getMusic() {
         return this.music;
     }
 
-    public static enum GrassColorModifier implements StringIdentifiable
-    {
-        NONE("none"){
+    public static abstract class GrassColorModifier
+    extends Enum<GrassColorModifier>
+    implements StringIdentifiable {
+        public static final /* enum */ GrassColorModifier NONE = new GrassColorModifier("none"){
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             public int getModifiedGrassColor(double x, double z, int color) {
                 return color;
             }
-        }
-        ,
-        DARK_FOREST("dark_forest"){
+        };
+        public static final /* enum */ GrassColorModifier DARK_FOREST = new GrassColorModifier("dark_forest"){
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             public int getModifiedGrassColor(double x, double z, int color) {
                 return (color & 0xFEFEFE) + 2634762 >> 1;
             }
-        }
-        ,
-        SWAMP("swamp"){
+        };
+        public static final /* enum */ GrassColorModifier SWAMP = new GrassColorModifier("swamp"){
 
             @Override
-            @Environment(value=EnvType.CLIENT)
             public int getModifiedGrassColor(double x, double z, int color) {
                 double d = Biome.FOLIAGE_NOISE.sample(x * 0.0225, z * 0.0225, false);
                 if (d < -0.1) {
@@ -152,16 +132,23 @@ public class BiomeEffects {
                 return 6975545;
             }
         };
-
         private final String name;
         public static final Codec<GrassColorModifier> CODEC;
         private static final Map<String, GrassColorModifier> BY_NAME;
+        private static final /* synthetic */ GrassColorModifier[] field_26432;
 
-        @Environment(value=EnvType.CLIENT)
+        public static GrassColorModifier[] values() {
+            return (GrassColorModifier[])field_26432.clone();
+        }
+
+        public static GrassColorModifier valueOf(String string) {
+            return Enum.valueOf(GrassColorModifier.class, string);
+        }
+
         public abstract int getModifiedGrassColor(double var1, double var3, int var5);
 
-        private GrassColorModifier(String name) {
-            this.name = name;
+        GrassColorModifier(String string2) {
+            this.name = string2;
         }
 
         public String getName() {
@@ -177,7 +164,12 @@ public class BiomeEffects {
             return BY_NAME.get(name);
         }
 
+        private static /* synthetic */ GrassColorModifier[] method_36701() {
+            return new GrassColorModifier[]{NONE, DARK_FOREST, SWAMP};
+        }
+
         static {
+            field_26432 = GrassColorModifier.method_36701();
             CODEC = StringIdentifiable.createCodec(GrassColorModifier::values, GrassColorModifier::byName);
             BY_NAME = Arrays.stream(GrassColorModifier.values()).collect(Collectors.toMap(GrassColorModifier::getName, grassColorModifier -> grassColorModifier));
         }

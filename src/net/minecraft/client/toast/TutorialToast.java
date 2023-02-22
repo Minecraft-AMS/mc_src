@@ -22,6 +22,10 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class TutorialToast
 implements Toast {
+    public static final int field_32222 = 154;
+    public static final int field_32223 = 1;
+    public static final int field_32224 = 3;
+    public static final int field_32225 = 28;
     private final Type type;
     private final Text title;
     private final Text description;
@@ -40,8 +44,8 @@ implements Toast {
 
     @Override
     public Toast.Visibility draw(MatrixStack matrices, ToastManager manager, long startTime) {
-        manager.getGame().getTextureManager().bindTexture(TEXTURE);
-        RenderSystem.color3f(1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderTexture(0, TEXTURE);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         manager.drawTexture(matrices, 0, 0, 0, 96, this.getWidth(), this.getHeight());
         this.type.drawIcon(matrices, manager, 6, 6);
         if (this.description == null) {
@@ -52,7 +56,7 @@ implements Toast {
         }
         if (this.hasProgressBar) {
             DrawableHelper.fill(matrices, 3, 28, 157, 29, -1);
-            float f = (float)MathHelper.clampedLerp(this.lastProgress, this.progress, (float)(startTime - this.lastTime) / 100.0f);
+            float f = MathHelper.clampedLerp(this.lastProgress, this.progress, (float)(startTime - this.lastTime) / 100.0f);
             int i = this.progress >= this.lastProgress ? -16755456 : -11206656;
             DrawableHelper.fill(matrices, 3, 28, (int)(3.0f + 154.0f * f), 29, i);
             this.lastProgress = f;
@@ -70,16 +74,26 @@ implements Toast {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Type {
-        MOVEMENT_KEYS(0, 0),
-        MOUSE(1, 0),
-        TREE(2, 0),
-        RECIPE_BOOK(0, 1),
-        WOODEN_PLANKS(1, 1),
-        SOCIAL_INTERACTIONS(2, 1);
-
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type MOVEMENT_KEYS = new Type(0, 0);
+        public static final /* enum */ Type MOUSE = new Type(1, 0);
+        public static final /* enum */ Type TREE = new Type(2, 0);
+        public static final /* enum */ Type RECIPE_BOOK = new Type(0, 1);
+        public static final /* enum */ Type WOODEN_PLANKS = new Type(1, 1);
+        public static final /* enum */ Type SOCIAL_INTERACTIONS = new Type(2, 1);
+        public static final /* enum */ Type RIGHT_CLICK = new Type(3, 1);
         private final int textureSlotX;
         private final int textureSlotY;
+        private static final /* synthetic */ Type[] field_2234;
+
+        public static Type[] values() {
+            return (Type[])field_2234.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
 
         private Type(int textureSlotX, int textureSlotY) {
             this.textureSlotX = textureSlotX;
@@ -90,6 +104,14 @@ implements Toast {
             RenderSystem.enableBlend();
             helper.drawTexture(matrices, x, y, 176 + this.textureSlotX * 20, this.textureSlotY * 20, 20, 20);
             RenderSystem.enableBlend();
+        }
+
+        private static /* synthetic */ Type[] method_36873() {
+            return new Type[]{MOVEMENT_KEYS, MOUSE, TREE, RECIPE_BOOK, WOODEN_PLANKS, SOCIAL_INTERACTIONS, RIGHT_CLICK};
+        }
+
+        static {
+            field_2234 = Type.method_36873();
         }
     }
 }

@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.village;
 
 import java.util.OptionalInt;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.MerchantScreenHandler;
@@ -30,8 +26,7 @@ public interface Merchant {
 
     public TradeOfferList getOffers();
 
-    @Environment(value=EnvType.CLIENT)
-    public void setOffersFromServer(@Nullable TradeOfferList var1);
+    public void setOffersFromServer(TradeOfferList var1);
 
     public void trade(TradeOffer var1);
 
@@ -51,11 +46,11 @@ public interface Merchant {
         return false;
     }
 
-    default public void sendOffers(PlayerEntity player, Text test, int levelProgress) {
+    default public void sendOffers(PlayerEntity player2, Text test, int levelProgress) {
         TradeOfferList tradeOfferList;
-        OptionalInt optionalInt = player.openHandledScreen(new SimpleNamedScreenHandlerFactory((i, playerInventory, playerEntity) -> new MerchantScreenHandler(i, playerInventory, this), test));
+        OptionalInt optionalInt = player2.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, playerInventory, player) -> new MerchantScreenHandler(syncId, playerInventory, this), test));
         if (optionalInt.isPresent() && !(tradeOfferList = this.getOffers()).isEmpty()) {
-            player.sendTradeOffers(optionalInt.getAsInt(), tradeOfferList, levelProgress, this.getExperience(), this.isLeveledMerchant(), this.canRefreshTrades());
+            player2.sendTradeOffers(optionalInt.getAsInt(), tradeOfferList, levelProgress, this.getExperience(), this.isLeveledMerchant(), this.canRefreshTrades());
         }
     }
 }

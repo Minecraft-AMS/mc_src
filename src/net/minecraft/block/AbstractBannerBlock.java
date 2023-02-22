@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
@@ -38,8 +34,8 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new BannerBlockEntity(this.color);
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new BannerBlockEntity(pos, state, this.color);
     }
 
     @Override
@@ -51,11 +47,10 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof BannerBlockEntity) {
-            return ((BannerBlockEntity)blockEntity).getPickStack(state);
+            return ((BannerBlockEntity)blockEntity).getPickStack();
         }
         return super.getPickStack(world, pos, state);
     }

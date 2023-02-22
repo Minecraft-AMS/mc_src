@@ -98,8 +98,8 @@ extends FishEntity {
         }
     }
 
-    public void pullInOtherFish(Stream<SchoolingFishEntity> fish) {
-        fish.limit(this.getMaxGroupSize() - this.groupSize).filter(schoolingFishEntity -> schoolingFishEntity != this).forEach(schoolingFishEntity -> schoolingFishEntity.joinGroupOf(this));
+    public void pullInOtherFish(Stream<? extends SchoolingFishEntity> fish2) {
+        fish2.limit(this.getMaxGroupSize() - this.groupSize).filter(fish -> fish != this).forEach(fish -> fish.joinGroupOf(this));
     }
 
     @Override

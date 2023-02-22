@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile.thrown;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -38,11 +34,6 @@ extends ThrownItemEntity {
         super((EntityType<? extends ThrownItemEntity>)EntityType.ENDER_PEARL, owner, world);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public EnderPearlEntity(World world, double x, double y, double z) {
-        super((EntityType<? extends ThrownItemEntity>)EntityType.ENDER_PEARL, x, y, z, world);
-    }
-
     @Override
     protected Item getDefaultItem() {
         return Items.ENDER_PEARL;
@@ -57,24 +48,24 @@ extends ThrownItemEntity {
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        Entity entity = this.getOwner();
         for (int i = 0; i < 32; ++i) {
             this.world.addParticle(ParticleTypes.PORTAL, this.getX(), this.getY() + this.random.nextDouble() * 2.0, this.getZ(), this.random.nextGaussian(), 0.0, this.random.nextGaussian());
         }
-        if (!this.world.isClient && !this.removed) {
+        if (!this.world.isClient && !this.isRemoved()) {
+            Entity entity = this.getOwner();
             if (entity instanceof ServerPlayerEntity) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
                 if (serverPlayerEntity.networkHandler.getConnection().isOpen() && serverPlayerEntity.world == this.world && !serverPlayerEntity.isSleeping()) {
                     if (this.random.nextFloat() < 0.05f && this.world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING)) {
                         EndermiteEntity endermiteEntity = EntityType.ENDERMITE.create(this.world);
-                        endermiteEntity.setPlayerSpawned(true);
-                        endermiteEntity.refreshPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), entity.yaw, entity.pitch);
+                        endermiteEntity.refreshPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch());
                         this.world.spawnEntity(endermiteEntity);
                     }
                     if (entity.hasVehicle()) {
-                        entity.stopRiding();
+                        serverPlayerEntity.requestTeleportAndDismount(this.getX(), this.getY(), this.getZ());
+                    } else {
+                        entity.requestTeleport(this.getX(), this.getY(), this.getZ());
                     }
-                    entity.requestTeleport(this.getX(), this.getY(), this.getZ());
                     entity.fallDistance = 0.0f;
                     entity.damage(DamageSource.FALL, 5.0f);
                 }
@@ -82,7 +73,7 @@ extends ThrownItemEntity {
                 entity.requestTeleport(this.getX(), this.getY(), this.getZ());
                 entity.fallDistance = 0.0f;
             }
-            this.remove();
+            this.discard();
         }
     }
 
@@ -90,7 +81,7 @@ extends ThrownItemEntity {
     public void tick() {
         Entity entity = this.getOwner();
         if (entity instanceof PlayerEntity && !entity.isAlive()) {
-            this.remove();
+            this.discard();
         } else {
             super.tick();
         }

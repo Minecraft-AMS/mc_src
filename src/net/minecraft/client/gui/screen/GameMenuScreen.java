@@ -20,7 +20,7 @@ import net.minecraft.client.gui.screen.advancement.AdvancementsScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.option.OptionsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.realms.gui.screen.RealmsBridgeScreen;
+import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
@@ -28,6 +28,9 @@ import net.minecraft.util.Util;
 @Environment(value=EnvType.CLIENT)
 public class GameMenuScreen
 extends Screen {
+    private static final String SNAPSHOT_FEEDBACK_URL = "https://aka.ms/snapshotfeedback?ref=game";
+    private static final String JAVA_FEEDBACK_URL = "https://aka.ms/javafeedback?ref=game";
+    private static final String SNAPSHOT_BUGS_URL = "https://aka.ms/snapshotbugs?ref=game";
     private final boolean showMenu;
 
     public GameMenuScreen(boolean showMenu) {
@@ -45,50 +48,48 @@ extends Screen {
     private void initWidgets() {
         int i = -16;
         int j = 98;
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, new TranslatableText("menu.returnToGame"), buttonWidget -> {
-            this.client.openScreen(null);
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, new TranslatableText("menu.returnToGame"), button -> {
+            this.client.setScreen(null);
             this.client.mouse.lockCursor();
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.advancements"), buttonWidget -> this.client.openScreen(new AdvancementsScreen(this.client.player.networkHandler.getAdvancementHandler()))));
-        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.stats"), buttonWidget -> this.client.openScreen(new StatsScreen(this, this.client.player.getStatHandler()))));
-        String string = SharedConstants.getGameVersion().isStable() ? "https://aka.ms/javafeedback?ref=game" : "https://aka.ms/snapshotfeedback?ref=game";
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.sendFeedback"), buttonWidget -> this.client.openScreen(new ConfirmChatLinkScreen(bl -> {
-            if (bl) {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.advancements"), button -> this.client.setScreen(new AdvancementsScreen(this.client.player.networkHandler.getAdvancementHandler()))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.stats"), button -> this.client.setScreen(new StatsScreen(this, this.client.player.getStatHandler()))));
+        String string = SharedConstants.getGameVersion().isStable() ? JAVA_FEEDBACK_URL : SNAPSHOT_FEEDBACK_URL;
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.sendFeedback"), button -> this.client.setScreen(new ConfirmChatLinkScreen(confirmed -> {
+            if (confirmed) {
                 Util.getOperatingSystem().open(string);
             }
-            this.client.openScreen(this);
+            this.client.setScreen(this);
         }, string, true))));
-        this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.reportBugs"), buttonWidget -> this.client.openScreen(new ConfirmChatLinkScreen(bl -> {
-            if (bl) {
-                Util.getOperatingSystem().open("https://aka.ms/snapshotbugs?ref=game");
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.reportBugs"), button -> this.client.setScreen(new ConfirmChatLinkScreen(confirmed -> {
+            if (confirmed) {
+                Util.getOperatingSystem().open(SNAPSHOT_BUGS_URL);
             }
-            this.client.openScreen(this);
-        }, "https://aka.ms/snapshotbugs?ref=game", true))));
-        this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.options"), buttonWidget -> this.client.openScreen(new OptionsScreen(this, this.client.options))));
-        ButtonWidget buttonWidget2 = this.addButton(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.shareToLan"), buttonWidget -> this.client.openScreen(new OpenToLanScreen(this))));
-        buttonWidget2.active = this.client.isIntegratedServerRunning() && !this.client.getServer().isRemote();
-        ButtonWidget buttonWidget22 = this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 120 + -16, 204, 20, new TranslatableText("menu.returnToMenu"), buttonWidget -> {
+            this.client.setScreen(this);
+        }, SNAPSHOT_BUGS_URL, true))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.options"), button -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
+        ButtonWidget buttonWidget = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.shareToLan"), button -> this.client.setScreen(new OpenToLanScreen(this))));
+        buttonWidget.active = this.client.isIntegratedServerRunning() && !this.client.getServer().isRemote();
+        TranslatableText text = this.client.isInSingleplayer() ? new TranslatableText("menu.returnToMenu") : new TranslatableText("menu.disconnect");
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 120 + -16, 204, 20, text, button -> {
             boolean bl = this.client.isInSingleplayer();
             boolean bl2 = this.client.isConnectedToRealms();
-            buttonWidget.active = false;
+            button.active = false;
             this.client.world.disconnect();
             if (bl) {
                 this.client.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel")));
             } else {
                 this.client.disconnect();
             }
+            TitleScreen titleScreen = new TitleScreen();
             if (bl) {
-                this.client.openScreen(new TitleScreen());
+                this.client.setScreen(titleScreen);
             } else if (bl2) {
-                RealmsBridgeScreen realmsBridgeScreen = new RealmsBridgeScreen();
-                realmsBridgeScreen.switchToRealms(new TitleScreen());
+                this.client.setScreen(new RealmsMainScreen(titleScreen));
             } else {
-                this.client.openScreen(new MultiplayerScreen(new TitleScreen()));
+                this.client.setScreen(new MultiplayerScreen(titleScreen));
             }
         }));
-        if (!this.client.isInSingleplayer()) {
-            buttonWidget22.setMessage(new TranslatableText("menu.disconnect"));
-        }
     }
 
     @Override

@@ -26,7 +26,7 @@ import net.minecraft.util.JsonSerializer;
 
 public class MatchToolLootCondition
 implements LootCondition {
-    private final ItemPredicate predicate;
+    final ItemPredicate predicate;
 
     public MatchToolLootCondition(ItemPredicate predicate) {
         this.predicate = predicate;

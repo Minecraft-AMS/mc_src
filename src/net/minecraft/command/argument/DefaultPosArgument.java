@@ -110,6 +110,14 @@ implements PosArgument {
         return new DefaultPosArgument(coordinateArgument, coordinateArgument2, coordinateArgument3);
     }
 
+    public static DefaultPosArgument absolute(double x, double y, double z) {
+        return new DefaultPosArgument(new CoordinateArgument(false, x), new CoordinateArgument(false, y), new CoordinateArgument(false, z));
+    }
+
+    public static DefaultPosArgument absolute(Vec2f vec) {
+        return new DefaultPosArgument(new CoordinateArgument(false, vec.x), new CoordinateArgument(false, vec.y), new CoordinateArgument(true, 0.0));
+    }
+
     public static DefaultPosArgument zero() {
         return new DefaultPosArgument(new CoordinateArgument(true, 0.0), new CoordinateArgument(true, 0.0), new CoordinateArgument(true, 0.0));
     }

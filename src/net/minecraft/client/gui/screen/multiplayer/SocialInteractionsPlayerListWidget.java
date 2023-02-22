@@ -31,7 +31,6 @@ import org.jetbrains.annotations.Nullable;
 public class SocialInteractionsPlayerListWidget
 extends ElementListWidget<SocialInteractionsPlayerListEntry> {
     private final SocialInteractionsScreen parent;
-    private final MinecraftClient minecraftClient;
     private final List<SocialInteractionsPlayerListEntry> players = Lists.newArrayList();
     @Nullable
     private String currentSearch;
@@ -39,14 +38,13 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
     public SocialInteractionsPlayerListWidget(SocialInteractionsScreen parent, MinecraftClient client, int width, int height, int top, int bottom, int itemHeight) {
         super(client, width, height, top, bottom, itemHeight);
         this.parent = parent;
-        this.minecraftClient = client;
-        this.method_31322(false);
-        this.method_31323(false);
+        this.setRenderBackground(false);
+        this.setRenderHorizontalShadows(false);
     }
 
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        double d = this.minecraftClient.getWindow().getScaleFactor();
+        double d = this.client.getWindow().getScaleFactor();
         RenderSystem.enableScissor((int)((double)this.getRowLeft() * d), (int)((double)(this.height - this.bottom) * d), (int)((double)(this.getScrollbarPositionX() + 6) * d), (int)((double)(this.height - (this.height - this.bottom) - this.top - 4) * d));
         super.render(matrices, mouseX, mouseY, delta);
         RenderSystem.disableScissor();
@@ -55,19 +53,19 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
     public void update(Collection<UUID> uuids, double scrollAmount) {
         this.players.clear();
         for (UUID uUID : uuids) {
-            PlayerListEntry playerListEntry = this.minecraftClient.player.networkHandler.getPlayerListEntry(uUID);
+            PlayerListEntry playerListEntry = this.client.player.networkHandler.getPlayerListEntry(uUID);
             if (playerListEntry == null) continue;
-            this.players.add(new SocialInteractionsPlayerListEntry(this.minecraftClient, this.parent, playerListEntry.getProfile().getId(), playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture));
+            this.players.add(new SocialInteractionsPlayerListEntry(this.client, this.parent, playerListEntry.getProfile().getId(), playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture));
         }
         this.filterPlayers();
-        this.players.sort((socialInteractionsPlayerListEntry, socialInteractionsPlayerListEntry2) -> socialInteractionsPlayerListEntry.getName().compareToIgnoreCase(socialInteractionsPlayerListEntry2.getName()));
+        this.players.sort((player1, player2) -> player1.getName().compareToIgnoreCase(player2.getName()));
         this.replaceEntries(this.players);
         this.setScrollAmount(scrollAmount);
     }
 
     private void filterPlayers() {
         if (this.currentSearch != null) {
-            this.players.removeIf(socialInteractionsPlayerListEntry -> !socialInteractionsPlayerListEntry.getName().toLowerCase(Locale.ROOT).contains(this.currentSearch));
+            this.players.removeIf(player -> !player.getName().toLowerCase(Locale.ROOT).contains(this.currentSearch));
             this.replaceEntries(this.players);
         }
     }
@@ -87,8 +85,8 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
             socialInteractionsPlayerListEntry.setOffline(false);
             return;
         }
-        if ((tab == SocialInteractionsScreen.Tab.ALL || this.minecraftClient.getSocialInteractionsManager().method_31391(uUID)) && (Strings.isNullOrEmpty((String)this.currentSearch) || player.getProfile().getName().toLowerCase(Locale.ROOT).contains(this.currentSearch))) {
-            SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry2 = new SocialInteractionsPlayerListEntry(this.minecraftClient, this.parent, player.getProfile().getId(), player.getProfile().getName(), player::getSkinTexture);
+        if ((tab == SocialInteractionsScreen.Tab.ALL || this.client.getSocialInteractionsManager().isPlayerMuted(uUID)) && (Strings.isNullOrEmpty((String)this.currentSearch) || player.getProfile().getName().toLowerCase(Locale.ROOT).contains(this.currentSearch))) {
+            SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry2 = new SocialInteractionsPlayerListEntry(this.client, this.parent, player.getProfile().getId(), player.getProfile().getName(), player::getSkinTexture);
             this.addEntry(socialInteractionsPlayerListEntry2);
             this.players.add(socialInteractionsPlayerListEntry2);
         }

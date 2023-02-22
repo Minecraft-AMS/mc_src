@@ -1,40 +1,29 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class UnloadChunkS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int x;
-    private int z;
-
-    public UnloadChunkS2CPacket() {
-    }
+    private final int x;
+    private final int z;
 
     public UnloadChunkS2CPacket(int x, int z) {
         this.x = x;
         this.z = z;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public UnloadChunkS2CPacket(PacketByteBuf buf) {
         this.x = buf.readInt();
         this.z = buf.readInt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeInt(this.x);
         buf.writeInt(this.z);
     }
@@ -44,12 +33,10 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onUnloadChunk(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getZ() {
         return this.z;
     }

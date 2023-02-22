@@ -9,21 +9,22 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Clearable;
+import net.minecraft.util.math.BlockPos;
 
 public class JukeboxBlockEntity
 extends BlockEntity
 implements Clearable {
     private ItemStack record = ItemStack.EMPTY;
 
-    public JukeboxBlockEntity() {
-        super(BlockEntityType.JUKEBOX);
+    public JukeboxBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.JUKEBOX, pos, state);
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        if (tag.contains("RecordItem", 10)) {
-            this.setRecord(ItemStack.fromNbt(tag.getCompound("RecordItem")));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        if (nbt.contains("RecordItem", 10)) {
+            this.setRecord(ItemStack.fromNbt(nbt.getCompound("RecordItem")));
         }
     }
 

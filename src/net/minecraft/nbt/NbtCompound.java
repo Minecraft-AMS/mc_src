@@ -2,21 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Strings
- *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.nbt;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -25,17 +19,13 @@ import com.mojang.serialization.DynamicOps;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtByte;
 import net.minecraft.nbt.NbtByteArray;
@@ -54,14 +44,10 @@ import net.minecraft.nbt.NbtString;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.NbtTypes;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class NbtCompound
@@ -72,9 +58,9 @@ implements NbtElement {
             return DataResult.success((Object)((NbtCompound)nbtElement));
         }
         return DataResult.error((String)("Not a compound tag: " + nbtElement));
-    }, nbtCompound -> new Dynamic((DynamicOps)NbtOps.INSTANCE, nbtCompound));
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final Pattern PATTERN = Pattern.compile("[A-Za-z0-9._+-]+");
+    }, nbt -> new Dynamic((DynamicOps)NbtOps.INSTANCE, nbt));
+    private static final int field_33190 = 384;
+    private static final int field_33191 = 256;
     public static final NbtType<NbtCompound> TYPE = new NbtType<NbtCompound>(){
 
         @Override
@@ -193,6 +179,10 @@ implements NbtElement {
     }
 
     public void putByteArray(String key, byte[] value) {
+        this.entries.put(key, new NbtByteArray(value));
+    }
+
+    public void putByteArray(String key, List<Byte> value) {
         this.entries.put(key, new NbtByteArray(value));
     }
 
@@ -402,20 +392,7 @@ implements NbtElement {
 
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder("{");
-        Collection<String> collection = this.entries.keySet();
-        if (LOGGER.isDebugEnabled()) {
-            ArrayList list = Lists.newArrayList(this.entries.keySet());
-            Collections.sort(list);
-            collection = list;
-        }
-        for (String string : collection) {
-            if (stringBuilder.length() != 1) {
-                stringBuilder.append(',');
-            }
-            stringBuilder.append(NbtCompound.escapeTagKey(string)).append(':').append(this.entries.get(string));
-        }
-        return stringBuilder.append('}').toString();
+        return this.asString();
     }
 
     public boolean isEmpty() {
@@ -457,15 +434,15 @@ implements NbtElement {
         element.write(output);
     }
 
-    private static byte readByte(DataInput input, NbtTagSizeTracker tracker) throws IOException {
+    static byte readByte(DataInput input, NbtTagSizeTracker tracker) throws IOException {
         return input.readByte();
     }
 
-    private static String readString(DataInput input, NbtTagSizeTracker tracker) throws IOException {
+    static String readString(DataInput input, NbtTagSizeTracker tracker) throws IOException {
         return input.readUTF();
     }
 
-    private static NbtElement read(NbtType<?> reader, String key, DataInput input, int depth, NbtTagSizeTracker tracker) {
+    static NbtElement read(NbtType<?> reader, String key, DataInput input, int depth, NbtTagSizeTracker tracker) {
         try {
             return reader.read(input, depth, tracker);
         }
@@ -495,52 +472,9 @@ implements NbtElement {
         return this;
     }
 
-    protected static String escapeTagKey(String key) {
-        if (PATTERN.matcher(key).matches()) {
-            return key;
-        }
-        return NbtString.escape(key);
-    }
-
-    protected static Text prettyPrintTagKey(String key) {
-        if (PATTERN.matcher(key).matches()) {
-            return new LiteralText(key).formatted(AQUA);
-        }
-        String string = NbtString.escape(key);
-        String string2 = string.substring(0, 1);
-        MutableText text = new LiteralText(string.substring(1, string.length() - 1)).formatted(AQUA);
-        return new LiteralText(string2).append(text).append(string2);
-    }
-
     @Override
-    public Text toText(String indent, int depth) {
-        if (this.entries.isEmpty()) {
-            return new LiteralText("{}");
-        }
-        LiteralText mutableText = new LiteralText("{");
-        Collection<String> collection = this.entries.keySet();
-        if (LOGGER.isDebugEnabled()) {
-            ArrayList list = Lists.newArrayList(this.entries.keySet());
-            Collections.sort(list);
-            collection = list;
-        }
-        if (!indent.isEmpty()) {
-            mutableText.append("\n");
-        }
-        Iterator iterator = collection.iterator();
-        while (iterator.hasNext()) {
-            String string = (String)iterator.next();
-            MutableText mutableText2 = new LiteralText(Strings.repeat((String)indent, (int)(depth + 1))).append(NbtCompound.prettyPrintTagKey(string)).append(String.valueOf(':')).append(" ").append(this.entries.get(string).toText(indent, depth + 1));
-            if (iterator.hasNext()) {
-                mutableText2.append(String.valueOf(',')).append(indent.isEmpty() ? " " : "\n");
-            }
-            mutableText.append(mutableText2);
-        }
-        if (!indent.isEmpty()) {
-            mutableText.append("\n").append(Strings.repeat((String)indent, (int)depth));
-        }
-        mutableText.append("}");
-        return mutableText;
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitCompound(this);
     }
 
     protected Map<String, NbtElement> toMap() {

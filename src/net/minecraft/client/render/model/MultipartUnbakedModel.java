@@ -127,7 +127,7 @@ implements UnbakedModel {
         private List<MultipartModelComponent> deserializeComponents(JsonDeserializationContext context, JsonArray array) {
             ArrayList list = Lists.newArrayList();
             for (JsonElement jsonElement : array) {
-                list.add(context.deserialize(jsonElement, MultipartModelComponent.class));
+                list.add((MultipartModelComponent)context.deserialize(jsonElement, MultipartModelComponent.class));
             }
             return list;
         }

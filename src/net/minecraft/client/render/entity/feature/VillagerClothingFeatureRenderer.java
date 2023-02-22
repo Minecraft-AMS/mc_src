@@ -27,10 +27,8 @@ import net.minecraft.client.render.entity.model.ModelWithHat;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.resource.ReloadableResourceManager;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -43,25 +41,23 @@ import net.minecraft.village.VillagerType;
 
 @Environment(value=EnvType.CLIENT)
 public class VillagerClothingFeatureRenderer<T extends LivingEntity, M extends EntityModel<T>>
-extends FeatureRenderer<T, M>
-implements SynchronousResourceReloader {
-    private static final Int2ObjectMap<Identifier> LEVEL_TO_ID = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(), int2ObjectOpenHashMap -> {
-        int2ObjectOpenHashMap.put(1, (Object)new Identifier("stone"));
-        int2ObjectOpenHashMap.put(2, (Object)new Identifier("iron"));
-        int2ObjectOpenHashMap.put(3, (Object)new Identifier("gold"));
-        int2ObjectOpenHashMap.put(4, (Object)new Identifier("emerald"));
-        int2ObjectOpenHashMap.put(5, (Object)new Identifier("diamond"));
+extends FeatureRenderer<T, M> {
+    private static final Int2ObjectMap<Identifier> LEVEL_TO_ID = (Int2ObjectMap)Util.make(new Int2ObjectOpenHashMap(), levelToId -> {
+        levelToId.put(1, (Object)new Identifier("stone"));
+        levelToId.put(2, (Object)new Identifier("iron"));
+        levelToId.put(3, (Object)new Identifier("gold"));
+        levelToId.put(4, (Object)new Identifier("emerald"));
+        levelToId.put(5, (Object)new Identifier("diamond"));
     });
     private final Object2ObjectMap<VillagerType, VillagerResourceMetadata.HatType> villagerTypeToHat = new Object2ObjectOpenHashMap();
     private final Object2ObjectMap<VillagerProfession, VillagerResourceMetadata.HatType> professionToHat = new Object2ObjectOpenHashMap();
-    private final ReloadableResourceManager resourceManager;
+    private final ResourceManager resourceManager;
     private final String entityType;
 
-    public VillagerClothingFeatureRenderer(FeatureRendererContext<T, M> context, ReloadableResourceManager resourceManager, String entityType) {
+    public VillagerClothingFeatureRenderer(FeatureRendererContext<T, M> context, ResourceManager resourceManager, String entityType) {
         super(context);
         this.resourceManager = resourceManager;
         this.entityType = entityType;
-        resourceManager.registerReloader(this);
     }
 
     @Override
@@ -94,7 +90,7 @@ implements SynchronousResourceReloader {
     }
 
     public <K> VillagerResourceMetadata.HatType getHatType(Object2ObjectMap<K, VillagerResourceMetadata.HatType> hatLookUp, String keyType, DefaultedRegistry<K> registry, K key) {
-        return (VillagerResourceMetadata.HatType)((Object)hatLookUp.computeIfAbsent(key, object2 -> {
+        return (VillagerResourceMetadata.HatType)((Object)hatLookUp.computeIfAbsent(key, k -> {
             try (Resource resource = this.resourceManager.getResource(this.findTexture(keyType, registry.getId(key)));){
                 VillagerResourceMetadata villagerResourceMetadata = resource.getMetadata(VillagerResourceMetadata.READER);
                 if (villagerResourceMetadata == null) return VillagerResourceMetadata.HatType.NONE;
@@ -106,12 +102,6 @@ implements SynchronousResourceReloader {
             }
             return VillagerResourceMetadata.HatType.NONE;
         }));
-    }
-
-    @Override
-    public void reload(ResourceManager manager) {
-        this.professionToHat.clear();
-        this.villagerTypeToHat.clear();
     }
 }
 

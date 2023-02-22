@@ -57,20 +57,20 @@ extends HorizontalConnectingBlock {
 
     public boolean canConnect(BlockState state, boolean neighborIsFullSquare, Direction dir) {
         Block block = state.getBlock();
-        boolean bl = this.isFence(block);
+        boolean bl = this.canConnectToFence(state);
         boolean bl2 = block instanceof FenceGateBlock && FenceGateBlock.canWallConnect(state, dir);
-        return !FenceBlock.cannotConnect(block) && neighborIsFullSquare || bl || bl2;
+        return !FenceBlock.cannotConnect(state) && neighborIsFullSquare || bl || bl2;
     }
 
-    private boolean isFence(Block block) {
-        return block.isIn(BlockTags.FENCES) && block.isIn(BlockTags.WOODEN_FENCES) == this.getDefaultState().isIn(BlockTags.WOODEN_FENCES);
+    private boolean canConnectToFence(BlockState state) {
+        return state.isIn(BlockTags.FENCES) && state.isIn(BlockTags.WOODEN_FENCES) == this.getDefaultState().isIn(BlockTags.WOODEN_FENCES);
     }
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
             ItemStack itemStack = player.getStackInHand(hand);
-            if (itemStack.getItem() == Items.LEAD) {
+            if (itemStack.isOf(Items.LEAD)) {
                 return ActionResult.SUCCESS;
             }
             return ActionResult.PASS;

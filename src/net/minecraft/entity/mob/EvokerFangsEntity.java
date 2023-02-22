@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
 import java.util.List;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -27,11 +23,16 @@ import org.jetbrains.annotations.Nullable;
 
 public class EvokerFangsEntity
 extends Entity {
+    public static final int field_30662 = 20;
+    public static final int field_30663 = 2;
+    public static final int field_30664 = 14;
     private int warmup;
     private boolean startedAttack;
     private int ticksLeft = 22;
     private boolean playingAnimation;
+    @Nullable
     private LivingEntity owner;
+    @Nullable
     private UUID ownerUuid;
 
     public EvokerFangsEntity(EntityType<? extends EvokerFangsEntity> entityType, World world) {
@@ -42,7 +43,7 @@ extends Entity {
         this((EntityType<? extends EvokerFangsEntity>)EntityType.EVOKER_FANGS, world);
         this.warmup = warmup;
         this.setOwner(owner);
-        this.yaw = yaw * 57.295776f;
+        this.setYaw(yaw * 57.295776f);
         this.setPosition(x, y, z);
     }
 
@@ -110,7 +111,7 @@ extends Entity {
                 this.startedAttack = true;
             }
             if (--this.ticksLeft < 0) {
-                this.remove();
+                this.discard();
             }
         }
     }
@@ -131,7 +132,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         super.handleStatus(status);
         if (status == 4) {
@@ -142,7 +142,6 @@ extends Entity {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getAnimationProgress(float tickDelta) {
         if (!this.playingAnimation) {
             return 0.0f;

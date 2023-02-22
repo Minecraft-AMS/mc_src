@@ -24,10 +24,10 @@ import net.minecraft.util.math.Vec3d;
 
 public class LocationCheckLootCondition
 implements LootCondition {
-    private final LocationPredicate predicate;
-    private final BlockPos offset;
+    final LocationPredicate predicate;
+    final BlockPos offset;
 
-    private LocationCheckLootCondition(LocationPredicate predicate, BlockPos offset) {
+    LocationCheckLootCondition(LocationPredicate predicate, BlockPos offset) {
         this.predicate = predicate;
         this.offset = offset;
     }
@@ -47,8 +47,8 @@ implements LootCondition {
         return () -> new LocationCheckLootCondition(predicateBuilder.build(), BlockPos.ORIGIN);
     }
 
-    public static LootCondition.Builder method_30151(LocationPredicate.Builder builder, BlockPos blockPos) {
-        return () -> new LocationCheckLootCondition(builder.build(), blockPos);
+    public static LootCondition.Builder builder(LocationPredicate.Builder predicateBuilder, BlockPos pos) {
+        return () -> new LocationCheckLootCondition(predicateBuilder.build(), pos);
     }
 
     @Override

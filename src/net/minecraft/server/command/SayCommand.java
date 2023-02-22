@@ -22,14 +22,14 @@ import net.minecraft.util.Util;
 
 public class SayCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("say").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("message", MessageArgumentType.message()).executes(commandContext -> {
-            Text text = MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)commandContext, "message");
-            TranslatableText translatableText = new TranslatableText("chat.type.announcement", ((ServerCommandSource)commandContext.getSource()).getDisplayName(), text);
-            Entity entity = ((ServerCommandSource)commandContext.getSource()).getEntity();
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("say").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.argument("message", MessageArgumentType.message()).executes(context -> {
+            Text text = MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)context, "message");
+            TranslatableText text2 = new TranslatableText("chat.type.announcement", ((ServerCommandSource)context.getSource()).getDisplayName(), text);
+            Entity entity = ((ServerCommandSource)context.getSource()).getEntity();
             if (entity != null) {
-                ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().broadcastChatMessage(translatableText, MessageType.CHAT, entity.getUuid());
+                ((ServerCommandSource)context.getSource()).getServer().getPlayerManager().broadcastChatMessage(text2, MessageType.CHAT, entity.getUuid());
             } else {
-                ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().broadcastChatMessage(translatableText, MessageType.SYSTEM, Util.NIL_UUID);
+                ((ServerCommandSource)context.getSource()).getServer().getPlayerManager().broadcastChatMessage(text2, MessageType.SYSTEM, Util.NIL_UUID);
             }
             return 1;
         })));

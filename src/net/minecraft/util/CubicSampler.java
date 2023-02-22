@@ -1,24 +1,20 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.NotNull
  */
 package net.minecraft.util;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.jetbrains.annotations.NotNull;
 
 public class CubicSampler {
+    private static final int field_33222 = 2;
+    private static final int field_33223 = 6;
     private static final double[] DENSITY_CURVE = new double[]{0.0, 1.0, 4.0, 6.0, 4.0, 1.0, 0.0};
 
-    @NotNull
-    @Environment(value=EnvType.CLIENT)
+    private CubicSampler() {
+    }
+
     public static Vec3d sampleColor(Vec3d pos, RgbFetcher rgbFetcher) {
         int i = MathHelper.floor(pos.getX());
         int j = MathHelper.floor(pos.getY());
@@ -47,6 +43,7 @@ public class CubicSampler {
         return vec3d;
     }
 
+    @DontObfuscate
     public static interface RgbFetcher {
         public Vec3d fetch(int var1, int var2, int var3);
     }

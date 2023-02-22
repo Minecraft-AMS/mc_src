@@ -5,12 +5,14 @@
  *  com.google.common.base.MoreObjects
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
+ *  com.mojang.serialization.DynamicOps
  */
 package net.minecraft.state.property;
 
 import com.google.common.base.MoreObjects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -29,15 +31,19 @@ public abstract class Property<T extends Comparable<T>> {
     }
 
     public Value<T> createValue(T value) {
-        return new Value(this, (Comparable)value, null);
+        return new Value<T>(this, value);
     }
 
     public Value<T> createValue(State<?, ?> state) {
-        return new Value(this, (Comparable)state.get(this), null);
+        return new Value(this, state.get(this));
     }
 
     public Stream<Value<T>> stream() {
         return this.getValues().stream().map(this::createValue);
+    }
+
+    public Codec<T> getCodec() {
+        return this.codec;
     }
 
     public Codec<Value<T>> getValueCodec() {
@@ -62,12 +68,12 @@ public abstract class Property<T extends Comparable<T>> {
         return MoreObjects.toStringHelper((Object)this).add("name", (Object)this.name).add("clazz", this.type).add("values", this.getValues()).toString();
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object instanceof Property) {
-            Property property = (Property)object;
+        if (o instanceof Property) {
+            Property property = (Property)o;
             return this.type.equals(property.type) && this.name.equals(property.name);
         }
         return false;
@@ -84,11 +90,16 @@ public abstract class Property<T extends Comparable<T>> {
         return 31 * this.type.hashCode() + this.name.hashCode();
     }
 
+    public <U, S extends State<?, S>> DataResult<S> method_35307(DynamicOps<U> dynamicOps, S state, U object) {
+        DataResult dataResult = this.codec.parse(dynamicOps, object);
+        return dataResult.map(comparable -> (State)state.with(this, comparable)).setPartial(state);
+    }
+
     public static final class Value<T extends Comparable<T>> {
         private final Property<T> property;
         private final T value;
 
-        private Value(Property<T> property, T value) {
+        Value(Property<T> property, T value) {
             if (!property.getValues().contains(value)) {
                 throw new IllegalArgumentException("Value " + value + " does not belong to property " + property);
             }
@@ -108,14 +119,14 @@ public abstract class Property<T extends Comparable<T>> {
             return this.property.getName() + "=" + this.property.name(this.value);
         }
 
-        public boolean equals(Object object) {
-            if (this == object) {
+        public boolean equals(Object o) {
+            if (this == o) {
                 return true;
             }
-            if (!(object instanceof Value)) {
+            if (!(o instanceof Value)) {
                 return false;
             }
-            Value value = (Value)object;
+            Value value = (Value)o;
             return this.property == value.property && this.value.equals(value.value);
         }
 
@@ -123,10 +134,6 @@ public abstract class Property<T extends Comparable<T>> {
             int i = this.property.hashCode();
             i = 31 * i + this.value.hashCode();
             return i;
-        }
-
-        /* synthetic */ Value(Property property, Comparable comparable, 1 arg) {
-            this(property, comparable);
         }
     }
 }

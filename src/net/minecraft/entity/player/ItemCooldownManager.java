@@ -3,16 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.player;
 
 import com.google.common.collect.Maps;
 import java.util.Iterator;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.MathHelper;
 
@@ -52,7 +48,6 @@ public class ItemCooldownManager {
         this.onCooldownUpdate(item, duration);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void remove(Item item) {
         this.entries.remove(item);
         this.onCooldownUpdate(item);
@@ -65,10 +60,10 @@ public class ItemCooldownManager {
     }
 
     class Entry {
-        private final int startTick;
-        private final int endTick;
+        final int startTick;
+        final int endTick;
 
-        private Entry(int startTick, int endTick) {
+        Entry(int startTick, int endTick) {
             this.startTick = startTick;
             this.endTick = endTick;
         }

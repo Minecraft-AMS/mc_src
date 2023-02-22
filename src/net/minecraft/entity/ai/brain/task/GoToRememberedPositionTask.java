@@ -10,7 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.function.Function;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
@@ -75,7 +75,7 @@ extends Task<PathAwareEntity> {
 
     private static void setWalkTarget(PathAwareEntity entity, Vec3d pos, float speed) {
         for (int i = 0; i < 10; ++i) {
-            Vec3d vec3d = TargetFinder.findGroundTargetAwayFrom(entity, 16, 7, pos);
+            Vec3d vec3d = FuzzyTargeting.findFrom(entity, 16, 7, pos);
             if (vec3d == null) continue;
             entity.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, speed, 0));
             return;

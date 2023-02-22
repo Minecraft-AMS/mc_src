@@ -2,18 +2,13 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile.thrown;
 
 import java.util.List;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
+import net.minecraft.block.AbstractCandleBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.CampfireBlock;
 import net.minecraft.entity.AreaEffectCloudEntity;
@@ -24,6 +19,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.passive.AxolotlEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -42,10 +38,11 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=FlyingItemEntity.class)})
 public class PotionEntity
 extends ThrownItemEntity
 implements FlyingItemEntity {
+    public static final double field_30667 = 4.0;
+    private static final double field_30668 = 16.0;
     public static final Predicate<LivingEntity> WATER_HURTS = LivingEntity::hurtByWater;
 
     public PotionEntity(EntityType<? extends PotionEntity> entityType, World world) {
@@ -84,10 +81,10 @@ implements FlyingItemEntity {
         BlockPos blockPos = blockHitResult.getBlockPos();
         BlockPos blockPos2 = blockPos.offset(direction);
         if (bl) {
-            this.extinguishFire(blockPos2, direction);
-            this.extinguishFire(blockPos2.offset(direction.getOpposite()), direction);
+            this.extinguishFire(blockPos2);
+            this.extinguishFire(blockPos2.offset(direction.getOpposite()));
             for (Direction direction2 : Direction.Type.HORIZONTAL) {
-                this.extinguishFire(blockPos2.offset(direction2), direction2);
+                this.extinguishFire(blockPos2.offset(direction2));
             }
         }
     }
@@ -114,7 +111,7 @@ implements FlyingItemEntity {
         }
         int i = potion.hasInstantEffect() ? 2007 : 2002;
         this.world.syncWorldEvent(i, this.getBlockPos(), PotionUtil.getColor(itemStack));
-        this.remove();
+        this.discard();
     }
 
     private void damageEntitiesHurtByWater() {
@@ -127,12 +124,17 @@ implements FlyingItemEntity {
                 livingEntity.damage(DamageSource.magic(livingEntity, this.getOwner()), 1.0f);
             }
         }
+        List<AxolotlEntity> list2 = this.world.getNonSpectatingEntities(AxolotlEntity.class, box);
+        for (AxolotlEntity axolotlEntity : list2) {
+            axolotlEntity.hydrateFromPotion();
+        }
     }
 
     private void applySplashPotion(List<StatusEffectInstance> statusEffects, @Nullable Entity entity) {
         Box box = this.getBoundingBox().expand(4.0, 2.0, 4.0);
         List<LivingEntity> list = this.world.getNonSpectatingEntities(LivingEntity.class, box);
         if (!list.isEmpty()) {
+            Entity entity2 = this.getEffectCause();
             for (LivingEntity livingEntity : list) {
                 double d;
                 if (!livingEntity.isAffectedBySplashPotions() || !((d = this.squaredDistanceTo(livingEntity)) < 16.0)) continue;
@@ -148,7 +150,7 @@ implements FlyingItemEntity {
                     }
                     int i = (int)(e * (double)statusEffectInstance.getDuration() + 0.5);
                     if (i <= 20) continue;
-                    livingEntity.addStatusEffect(new StatusEffectInstance(statusEffect, i, statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()));
+                    livingEntity.addStatusEffect(new StatusEffectInstance(statusEffect, i, statusEffectInstance.getAmplifier(), statusEffectInstance.isAmbient(), statusEffectInstance.shouldShowParticles()), entity2);
                 }
             }
         }
@@ -168,7 +170,7 @@ implements FlyingItemEntity {
         for (StatusEffectInstance statusEffectInstance : PotionUtil.getCustomPotionEffects(stack)) {
             areaEffectCloudEntity.addEffect(new StatusEffectInstance(statusEffectInstance));
         }
-        NbtCompound nbtCompound = stack.getTag();
+        NbtCompound nbtCompound = stack.getNbt();
         if (nbtCompound != null && nbtCompound.contains("CustomPotionColor", 99)) {
             areaEffectCloudEntity.setColor(nbtCompound.getInt("CustomPotionColor"));
         }
@@ -176,16 +178,18 @@ implements FlyingItemEntity {
     }
 
     private boolean isLingering() {
-        return this.getStack().getItem() == Items.LINGERING_POTION;
+        return this.getStack().isOf(Items.LINGERING_POTION);
     }
 
-    private void extinguishFire(BlockPos pos, Direction direction) {
+    private void extinguishFire(BlockPos pos) {
         BlockState blockState = this.world.getBlockState(pos);
         if (blockState.isIn(BlockTags.FIRE)) {
             this.world.removeBlock(pos, false);
+        } else if (AbstractCandleBlock.isLitCandle(blockState)) {
+            AbstractCandleBlock.extinguish(null, blockState, this.world, pos);
         } else if (CampfireBlock.isLitCampfire(blockState)) {
             this.world.syncWorldEvent(null, 1009, pos, 0);
-            CampfireBlock.extinguish(this.world, pos, blockState);
+            CampfireBlock.extinguish(this.getOwner(), this.world, pos, blockState);
             this.world.setBlockState(pos, (BlockState)blockState.with(CampfireBlock.LIT, false));
         }
     }

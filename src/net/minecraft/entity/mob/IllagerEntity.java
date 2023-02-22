@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.mob;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.raid.RaiderEntity;
@@ -30,12 +24,40 @@ extends RaiderEntity {
         return EntityGroup.ILLAGER;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public State getState() {
         return State.CROSSED;
     }
 
-    public class LongDoorInteractGoal
+    public static final class State
+    extends Enum<State> {
+        public static final /* enum */ State CROSSED = new State();
+        public static final /* enum */ State ATTACKING = new State();
+        public static final /* enum */ State SPELLCASTING = new State();
+        public static final /* enum */ State BOW_AND_ARROW = new State();
+        public static final /* enum */ State CROSSBOW_HOLD = new State();
+        public static final /* enum */ State CROSSBOW_CHARGE = new State();
+        public static final /* enum */ State CELEBRATING = new State();
+        public static final /* enum */ State NEUTRAL = new State();
+        private static final /* synthetic */ State[] field_7209;
+
+        public static State[] values() {
+            return (State[])field_7209.clone();
+        }
+
+        public static State valueOf(String string) {
+            return Enum.valueOf(State.class, string);
+        }
+
+        private static /* synthetic */ State[] method_36647() {
+            return new State[]{CROSSED, ATTACKING, SPELLCASTING, BOW_AND_ARROW, CROSSBOW_HOLD, CROSSBOW_CHARGE, CELEBRATING, NEUTRAL};
+        }
+
+        static {
+            field_7209 = State.method_36647();
+        }
+    }
+
+    protected class LongDoorInteractGoal
     extends net.minecraft.entity.ai.goal.LongDoorInteractGoal {
         public LongDoorInteractGoal(RaiderEntity raider) {
             super(raider, false);
@@ -45,19 +67,6 @@ extends RaiderEntity {
         public boolean canStart() {
             return super.canStart() && IllagerEntity.this.hasActiveRaid();
         }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static enum State {
-        CROSSED,
-        ATTACKING,
-        SPELLCASTING,
-        BOW_AND_ARROW,
-        CROSSBOW_HOLD,
-        CROSSBOW_CHARGE,
-        CELEBRATING,
-        NEUTRAL;
-
     }
 }
 

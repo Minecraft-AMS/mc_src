@@ -14,8 +14,10 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.GuardianEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -35,12 +37,12 @@ extends MobEntityRenderer<GuardianEntity, GuardianEntityModel> {
     private static final Identifier EXPLOSION_BEAM_TEXTURE = new Identifier("textures/entity/guardian_beam.png");
     private static final RenderLayer LAYER = RenderLayer.getEntityCutoutNoCull(EXPLOSION_BEAM_TEXTURE);
 
-    public GuardianEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        this(entityRenderDispatcher, 0.5f);
+    public GuardianEntityRenderer(EntityRendererFactory.Context context) {
+        this(context, 0.5f, EntityModelLayers.GUARDIAN);
     }
 
-    protected GuardianEntityRenderer(EntityRenderDispatcher dispatcher, float f) {
-        super(dispatcher, new GuardianEntityModel(), f);
+    protected GuardianEntityRenderer(EntityRendererFactory.Context ctx, float shadowRadius, EntityModelLayer layer) {
+        super(ctx, new GuardianEntityModel(ctx.getPart(layer)), shadowRadius);
     }
 
     @Override
@@ -137,8 +139,8 @@ extends MobEntityRenderer<GuardianEntity, GuardianEntityModel> {
         }
     }
 
-    private static void method_23173(VertexConsumer vertexConsumer, Matrix4f matrix4f, Matrix3f matrix3f, float f, float g, float h, int i, int j, int k, float l, float m) {
-        vertexConsumer.vertex(matrix4f, f, g, h).color(i, j, k, 255).texture(l, m).overlay(OverlayTexture.DEFAULT_UV).light(0xF000F0).normal(matrix3f, 0.0f, 1.0f, 0.0f).next();
+    private static void method_23173(VertexConsumer vertexConsumer, Matrix4f modelMatrix, Matrix3f normalMatrix, float x, float y, float z, int red, int green, int blue, float u, float v) {
+        vertexConsumer.vertex(modelMatrix, x, y, z).color(red, green, blue, 255).texture(u, v).overlay(OverlayTexture.DEFAULT_UV).light(0xF000F0).normal(normalMatrix, 0.0f, 1.0f, 0.0f).next();
     }
 
     @Override

@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  */
@@ -14,12 +12,9 @@ import com.google.common.collect.Lists;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
-@Environment(value=EnvType.CLIENT)
 public class ShaderParseException
 extends IOException {
     private final List<JsonStackTrace> traces = Lists.newArrayList();
@@ -41,7 +36,7 @@ extends IOException {
     }
 
     public void addFaultyFile(String path) {
-        this.traces.get(0).fileName = path;
+        this.traces.get((int)0).fileName = path;
         this.traces.add(0, new JsonStackTrace());
     }
 
@@ -61,17 +56,21 @@ extends IOException {
         return new ShaderParseException(string, cause);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static class JsonStackTrace {
         @Nullable
-        private String fileName;
+        String fileName;
         private final List<String> faultyElements = Lists.newArrayList();
 
-        private JsonStackTrace() {
+        JsonStackTrace() {
         }
 
-        private void add(String element) {
+        void add(String element) {
             this.faultyElements.add(0, element);
+        }
+
+        @Nullable
+        public String getFileName() {
+            return this.fileName;
         }
 
         public String joinStackTrace() {

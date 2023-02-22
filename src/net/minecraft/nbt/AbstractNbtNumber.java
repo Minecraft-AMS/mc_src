@@ -23,5 +23,10 @@ implements NbtElement {
     public abstract float floatValue();
 
     public abstract Number numberValue();
+
+    @Override
+    public String toString() {
+        return this.asString();
+    }
 }
 

@@ -46,33 +46,22 @@ public class RaycastContext {
         return this.fluid.handled(state) ? state.getShape(world, pos) : VoxelShapes.empty();
     }
 
-    public static enum FluidHandling {
-        NONE(fluidState -> false),
-        SOURCE_ONLY(FluidState::isStill),
-        ANY(fluidState -> !fluidState.isEmpty());
-
-        private final Predicate<FluidState> predicate;
-
-        private FluidHandling(Predicate<FluidState> predicate) {
-            this.predicate = predicate;
-        }
-
-        public boolean handled(FluidState state) {
-            return this.predicate.test(state);
-        }
-    }
-
-    public static interface ShapeProvider {
-        public VoxelShape get(BlockState var1, BlockView var2, BlockPos var3, ShapeContext var4);
-    }
-
-    public static enum ShapeType implements ShapeProvider
-    {
-        COLLIDER(AbstractBlock.AbstractBlockState::getCollisionShape),
-        OUTLINE(AbstractBlock.AbstractBlockState::getOutlineShape),
-        VISUAL(AbstractBlock.AbstractBlockState::getVisualShape);
-
+    public static final class ShapeType
+    extends Enum<ShapeType>
+    implements ShapeProvider {
+        public static final /* enum */ ShapeType COLLIDER = new ShapeType(AbstractBlock.AbstractBlockState::getCollisionShape);
+        public static final /* enum */ ShapeType OUTLINE = new ShapeType(AbstractBlock.AbstractBlockState::getOutlineShape);
+        public static final /* enum */ ShapeType VISUAL = new ShapeType(AbstractBlock.AbstractBlockState::getCameraCollisionShape);
         private final ShapeProvider provider;
+        private static final /* synthetic */ ShapeType[] field_17561;
+
+        public static ShapeType[] values() {
+            return (ShapeType[])field_17561.clone();
+        }
+
+        public static ShapeType valueOf(String string) {
+            return Enum.valueOf(ShapeType.class, string);
+        }
 
         private ShapeType(ShapeProvider provider) {
             this.provider = provider;
@@ -82,6 +71,51 @@ public class RaycastContext {
         public VoxelShape get(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext) {
             return this.provider.get(blockState, blockView, blockPos, shapeContext);
         }
+
+        private static /* synthetic */ ShapeType[] method_36690() {
+            return new ShapeType[]{COLLIDER, OUTLINE, VISUAL};
+        }
+
+        static {
+            field_17561 = ShapeType.method_36690();
+        }
+    }
+
+    public static final class FluidHandling
+    extends Enum<FluidHandling> {
+        public static final /* enum */ FluidHandling NONE = new FluidHandling(fluidState -> false);
+        public static final /* enum */ FluidHandling SOURCE_ONLY = new FluidHandling(FluidState::isStill);
+        public static final /* enum */ FluidHandling ANY = new FluidHandling(fluidState -> !fluidState.isEmpty());
+        private final Predicate<FluidState> predicate;
+        private static final /* synthetic */ FluidHandling[] field_1349;
+
+        public static FluidHandling[] values() {
+            return (FluidHandling[])field_1349.clone();
+        }
+
+        public static FluidHandling valueOf(String string) {
+            return Enum.valueOf(FluidHandling.class, string);
+        }
+
+        private FluidHandling(Predicate<FluidState> predicate) {
+            this.predicate = predicate;
+        }
+
+        public boolean handled(FluidState state) {
+            return this.predicate.test(state);
+        }
+
+        private static /* synthetic */ FluidHandling[] method_36691() {
+            return new FluidHandling[]{NONE, SOURCE_ONLY, ANY};
+        }
+
+        static {
+            field_1349 = FluidHandling.method_36691();
+        }
+    }
+
+    public static interface ShapeProvider {
+        public VoxelShape get(BlockState var1, BlockView var2, BlockPos var3, ShapeContext var4);
     }
 }
 

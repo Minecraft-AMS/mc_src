@@ -5,8 +5,6 @@
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
@@ -16,11 +14,9 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.BedBlock;
-import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityData;
@@ -58,6 +54,7 @@ import net.minecraft.village.VillagerType;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,6 +63,10 @@ extends ZombieEntity
 implements VillagerDataContainer {
     private static final TrackedData<Boolean> CONVERTING = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<VillagerData> VILLAGER_DATA = DataTracker.registerData(ZombieVillagerEntity.class, TrackedDataHandlerRegistry.VILLAGER_DATA);
+    private static final int field_30523 = 3600;
+    private static final int field_30520 = 6000;
+    private static final int field_30521 = 14;
+    private static final int field_30522 = 4;
     private int conversionTimer;
     private UUID converter;
     private NbtElement gossipData;
@@ -137,14 +138,15 @@ implements VillagerDataContainer {
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.GOLDEN_APPLE) {
+        if (itemStack.isOf(Items.GOLDEN_APPLE)) {
             if (this.hasStatusEffect(StatusEffects.WEAKNESS)) {
-                if (!player.abilities.creativeMode) {
+                if (!player.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
                 if (!this.world.isClient) {
                     this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
                 }
+                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             return ActionResult.CONSUME;
@@ -176,7 +178,6 @@ implements VillagerDataContainer {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 16) {
             if (!this.isSilent()) {
@@ -189,12 +190,12 @@ implements VillagerDataContainer {
 
     private void finishConversion(ServerWorld world) {
         PlayerEntity playerEntity;
-        VillagerEntity villagerEntity = this.method_29243(EntityType.VILLAGER, false);
+        VillagerEntity villagerEntity = this.convertTo(EntityType.VILLAGER, false);
         for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             ItemStack itemStack = this.getEquippedStack(equipmentSlot);
             if (itemStack.isEmpty()) continue;
             if (EnchantmentHelper.hasBindingCurse(itemStack)) {
-                villagerEntity.equip(equipmentSlot.getEntitySlotId() + 300, itemStack);
+                villagerEntity.getStackReference(equipmentSlot.getEntitySlotId() + 300).set(itemStack);
                 continue;
             }
             double d = this.getDropChance(equipmentSlot);
@@ -228,8 +229,8 @@ implements VillagerDataContainer {
             for (int k = (int)this.getX() - 4; k < (int)this.getX() + 4 && j < 14; ++k) {
                 for (int l = (int)this.getY() - 4; l < (int)this.getY() + 4 && j < 14; ++l) {
                     for (int m = (int)this.getZ() - 4; m < (int)this.getZ() + 4 && j < 14; ++m) {
-                        Block block = this.world.getBlockState(mutable.set(k, l, m)).getBlock();
-                        if (block != Blocks.IRON_BARS && !(block instanceof BedBlock)) continue;
+                        BlockState blockState = this.world.getBlockState(mutable.set(k, l, m));
+                        if (!blockState.isOf(Blocks.IRON_BARS) && !(blockState.getBlock() instanceof BedBlock)) continue;
                         if (this.random.nextFloat() < 0.3f) {
                             ++i;
                         }
@@ -242,7 +243,7 @@ implements VillagerDataContainer {
     }
 
     @Override
-    protected float getSoundPitch() {
+    public float getSoundPitch() {
         if (this.isBaby()) {
             return (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 2.0f;
         }
@@ -289,17 +290,22 @@ implements VillagerDataContainer {
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
-    public void setVillagerData(VillagerData data) {
-        VillagerData villagerData = this.getVillagerData();
-        if (villagerData.getProfession() != data.getProfession()) {
+    @Override
+    public void setVillagerData(VillagerData villagerData) {
+        VillagerData villagerData2 = this.getVillagerData();
+        if (villagerData2.getProfession() != villagerData.getProfession()) {
             this.offerData = null;
         }
-        this.dataTracker.set(VILLAGER_DATA, data);
+        this.dataTracker.set(VILLAGER_DATA, villagerData);
     }
 
     @Override
     public VillagerData getVillagerData() {
         return this.dataTracker.get(VILLAGER_DATA);
+    }
+
+    public int getXp() {
+        return this.xp;
     }
 
     public void setXp(int xp) {

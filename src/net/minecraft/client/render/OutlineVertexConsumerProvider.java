@@ -27,8 +27,8 @@ implements VertexConsumerProvider {
     private int blue = 255;
     private int alpha = 255;
 
-    public OutlineVertexConsumerProvider(VertexConsumerProvider.Immediate immediate) {
-        this.parent = immediate;
+    public OutlineVertexConsumerProvider(VertexConsumerProvider.Immediate parent) {
+        this.parent = parent;
     }
 
     @Override
@@ -42,7 +42,7 @@ implements VertexConsumerProvider {
         if (optional.isPresent()) {
             VertexConsumer vertexConsumer2 = this.plainDrawer.getBuffer(optional.get());
             OutlineVertexConsumer outlineVertexConsumer = new OutlineVertexConsumer(vertexConsumer2, this.red, this.green, this.blue, this.alpha);
-            return VertexConsumers.union(outlineVertexConsumer, vertexConsumer);
+            return VertexConsumers.union((VertexConsumer)outlineVertexConsumer, vertexConsumer);
         }
         return vertexConsumer;
     }
@@ -68,13 +68,17 @@ implements VertexConsumerProvider {
         private float u;
         private float v;
 
-        private OutlineVertexConsumer(VertexConsumer delegate, int red, int green, int blue, int alpha) {
-            this.delegate = delegate;
-            super.fixedColor(red, green, blue, alpha);
+        OutlineVertexConsumer(VertexConsumer vertexConsumer, int i, int j, int k, int l) {
+            this.delegate = vertexConsumer;
+            super.fixedColor(i, j, k, l);
         }
 
         @Override
         public void fixedColor(int red, int green, int blue, int alpha) {
+        }
+
+        @Override
+        public void unfixColor() {
         }
 
         @Override

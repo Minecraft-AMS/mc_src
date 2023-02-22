@@ -17,6 +17,8 @@ import net.minecraft.server.world.ServerWorld;
 
 public class StopPanickingTask
 extends Task<VillagerEntity> {
+    private static final int MAX_DISTANCE = 36;
+
     public StopPanickingTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of());
     }

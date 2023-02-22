@@ -65,8 +65,19 @@ import org.jetbrains.annotations.Nullable;
 
 public class LeavesFix
 extends DataFix {
+    private static final int field_29886 = 128;
+    private static final int field_29887 = 64;
+    private static final int field_29888 = 32;
+    private static final int field_29889 = 16;
+    private static final int field_29890 = 8;
+    private static final int field_29891 = 4;
+    private static final int field_29892 = 2;
+    private static final int field_29893 = 1;
     private static final int[][] field_5687 = new int[][]{{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
-    private static final Object2IntMap<String> LEAVES_MAP = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> {
+    private static final int field_29894 = 7;
+    private static final int field_29895 = 12;
+    private static final int field_29896 = 4096;
+    static final Object2IntMap<String> LEAVES_MAP = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> {
         object2IntOpenHashMap.put((Object)"minecraft:acacia_leaves", 0);
         object2IntOpenHashMap.put((Object)"minecraft:birch_leaves", 1);
         object2IntOpenHashMap.put((Object)"minecraft:dark_oak_leaves", 2);
@@ -74,7 +85,7 @@ extends DataFix {
         object2IntOpenHashMap.put((Object)"minecraft:oak_leaves", 4);
         object2IntOpenHashMap.put((Object)"minecraft:spruce_leaves", 5);
     });
-    private static final Set<String> LOGS_MAP = ImmutableSet.of((Object)"minecraft:acacia_bark", (Object)"minecraft:birch_bark", (Object)"minecraft:dark_oak_bark", (Object)"minecraft:jungle_bark", (Object)"minecraft:oak_bark", (Object)"minecraft:spruce_bark", (Object[])new String[]{"minecraft:acacia_log", "minecraft:birch_log", "minecraft:dark_oak_log", "minecraft:jungle_log", "minecraft:oak_log", "minecraft:spruce_log", "minecraft:stripped_acacia_log", "minecraft:stripped_birch_log", "minecraft:stripped_dark_oak_log", "minecraft:stripped_jungle_log", "minecraft:stripped_oak_log", "minecraft:stripped_spruce_log"});
+    static final Set<String> LOGS_MAP = ImmutableSet.of((Object)"minecraft:acacia_bark", (Object)"minecraft:birch_bark", (Object)"minecraft:dark_oak_bark", (Object)"minecraft:jungle_bark", (Object)"minecraft:oak_bark", (Object)"minecraft:spruce_bark", (Object[])new String[]{"minecraft:acacia_log", "minecraft:birch_log", "minecraft:dark_oak_log", "minecraft:jungle_log", "minecraft:oak_log", "minecraft:spruce_log", "minecraft:stripped_acacia_log", "minecraft:stripped_birch_log", "minecraft:stripped_dark_oak_log", "minecraft:stripped_jungle_log", "minecraft:stripped_oak_log", "minecraft:stripped_spruce_log"});
 
     public LeavesFix(Schema outputSchema, boolean changesType) {
         super(outputSchema, changesType);
@@ -188,6 +199,9 @@ extends DataFix {
 
     public static final class LeavesLogFixer
     extends ListFixer {
+        private static final String field_29897 = "persistent";
+        private static final String field_29898 = "decayable";
+        private static final String field_29899 = "distance";
         @Nullable
         private IntSet leafIndices;
         @Nullable
@@ -208,7 +222,7 @@ extends DataFix {
                 Dynamic dynamic = (Dynamic)this.properties.get(i);
                 String string = dynamic.get("Name").asString("");
                 if (LEAVES_MAP.containsKey((Object)string)) {
-                    boolean bl = Objects.equals(dynamic.get("Properties").get("decayable").asString(""), "false");
+                    boolean bl = Objects.equals(dynamic.get("Properties").get(field_29898).asString(""), "false");
                     this.leafIndices.add(i);
                     this.leafStates.put(this.computeFlags(string, bl, 7), i);
                     this.properties.set(i, this.createLeafProperties(dynamic, string, bl, 7));
@@ -221,8 +235,8 @@ extends DataFix {
 
         private Dynamic<?> createLeafProperties(Dynamic<?> dynamic, String string, boolean bl, int i) {
             Dynamic dynamic2 = dynamic.emptyMap();
-            dynamic2 = dynamic2.set("persistent", dynamic2.createString(bl ? "true" : "false"));
-            dynamic2 = dynamic2.set("distance", dynamic2.createString(Integer.toString(i)));
+            dynamic2 = dynamic2.set(field_29897, dynamic2.createString(bl ? "true" : "false"));
+            dynamic2 = dynamic2.set(field_29899, dynamic2.createString(Integer.toString(i)));
             Dynamic dynamic3 = dynamic.emptyMap();
             dynamic3 = dynamic3.set("Properties", dynamic2);
             dynamic3 = dynamic3.set("Name", dynamic3.createString(string));
@@ -237,19 +251,19 @@ extends DataFix {
             return this.leafIndices.contains(i);
         }
 
-        private int getDistanceToLog(int i) {
+        int getDistanceToLog(int i) {
             if (this.isLog(i)) {
                 return 0;
             }
-            return Integer.parseInt(((Dynamic)this.properties.get(i)).get("Properties").get("distance").asString(""));
+            return Integer.parseInt(((Dynamic)this.properties.get(i)).get("Properties").get(field_29899).asString(""));
         }
 
-        private void computeLeafStates(int i, int j, int k) {
+        void computeLeafStates(int i, int j, int k) {
             int m;
             boolean bl;
             Dynamic dynamic = (Dynamic)this.properties.get(j);
             String string = dynamic.get("Name").asString("");
-            int l = this.computeFlags(string, bl = Objects.equals(dynamic.get("Properties").get("persistent").asString(""), "true"), k);
+            int l = this.computeFlags(string, bl = Objects.equals(dynamic.get("Properties").get(field_29897).asString(""), "true"), k);
             if (!this.leafStates.containsKey(l)) {
                 m = this.properties.size();
                 this.leafIndices.add(m);
@@ -269,6 +283,9 @@ extends DataFix {
     }
 
     public static abstract class ListFixer {
+        protected static final String field_29900 = "BlockStates";
+        protected static final String field_29901 = "Name";
+        protected static final String field_29902 = "Properties";
         private final Type<Pair<String, Dynamic<?>>> field_5695 = DSL.named((String)TypeReferences.BLOCK_STATE.typeName(), (Type)DSL.remainderType());
         protected final OpticFinder<List<Pair<String, Dynamic<?>>>> field_5693 = DSL.fieldFinder((String)"Palette", (Type)DSL.list(this.field_5695));
         protected final List<Dynamic<?>> properties;
@@ -291,7 +308,7 @@ extends DataFix {
             if (this.needsFix()) {
                 this.blockStateMap = null;
             } else {
-                long[] ls = dynamic.get("BlockStates").asLongStream().toArray();
+                long[] ls = dynamic.get(field_29900).asLongStream().toArray();
                 int i = Math.max(4, DataFixUtils.ceillog2((int)this.properties.size()));
                 this.blockStateMap = new WordPackedArray(i, 4096, ls);
             }
@@ -301,7 +318,7 @@ extends DataFix {
             if (this.isFixed()) {
                 return typed;
             }
-            return typed.update(DSL.remainderFinder(), dynamic -> dynamic.set("BlockStates", dynamic.createLongList(Arrays.stream(this.blockStateMap.getAlignedArray())))).set(this.field_5693, this.properties.stream().map(dynamic -> Pair.of((Object)TypeReferences.BLOCK_STATE.typeName(), (Object)dynamic)).collect(Collectors.toList()));
+            return typed.update(DSL.remainderFinder(), dynamic -> dynamic.set(field_29900, dynamic.createLongList(Arrays.stream(this.blockStateMap.getAlignedArray())))).set(this.field_5693, this.properties.stream().map(dynamic -> Pair.of((Object)TypeReferences.BLOCK_STATE.typeName(), (Object)dynamic)).collect(Collectors.toList()));
         }
 
         public boolean isFixed() {

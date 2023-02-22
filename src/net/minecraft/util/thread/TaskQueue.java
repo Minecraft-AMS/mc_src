@@ -23,6 +23,8 @@ public interface TaskQueue<T, F> {
 
     public boolean isEmpty();
 
+    public int getSize();
+
     public static final class Prioritized
     implements TaskQueue<PrioritizedTask, Runnable> {
         private final List<Queue<Runnable>> queues;
@@ -52,6 +54,15 @@ public interface TaskQueue<T, F> {
         @Override
         public boolean isEmpty() {
             return this.queues.stream().allMatch(Collection::isEmpty);
+        }
+
+        @Override
+        public int getSize() {
+            int i = 0;
+            for (Queue<Runnable> queue : this.queues) {
+                i += queue.size();
+            }
+            return i;
         }
 
         @Override
@@ -103,6 +114,11 @@ public interface TaskQueue<T, F> {
         @Override
         public boolean isEmpty() {
             return this.queue.isEmpty();
+        }
+
+        @Override
+        public int getSize() {
+            return this.queue.size();
         }
     }
 }

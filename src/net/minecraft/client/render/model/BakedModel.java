@@ -32,7 +32,7 @@ public interface BakedModel {
 
     public boolean isBuiltin();
 
-    public Sprite getSprite();
+    public Sprite getParticleSprite();
 
     public ModelTransformation getTransformation();
 

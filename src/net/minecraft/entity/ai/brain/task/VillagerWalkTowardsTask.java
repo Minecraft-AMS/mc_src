@@ -9,7 +9,7 @@ package net.minecraft.entity.ai.brain.task;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
@@ -49,14 +49,14 @@ extends Task<VillagerEntity> {
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         Brain<VillagerEntity> brain = villagerEntity.getBrain();
         brain.getOptionalMemory(this.destination).ifPresent(globalPos -> {
-            if (this.method_30952(serverWorld, (GlobalPos)globalPos) || this.shouldGiveUp(serverWorld, villagerEntity)) {
+            if (this.dimensionMismatches(serverWorld, (GlobalPos)globalPos) || this.shouldGiveUp(serverWorld, villagerEntity)) {
                 this.giveUp(villagerEntity, l);
             } else if (this.exceedsMaxRange(villagerEntity, (GlobalPos)globalPos)) {
                 int i;
                 Vec3d vec3d = null;
                 int j = 1000;
                 for (i = 0; i < 1000 && (vec3d == null || this.exceedsMaxRange(villagerEntity, GlobalPos.create(serverWorld.getRegistryKey(), new BlockPos(vec3d)))); ++i) {
-                    vec3d = TargetFinder.findTargetTowards(villagerEntity, 15, 7, Vec3d.ofBottomCenter(globalPos.getPos()));
+                    vec3d = NoPenaltyTargeting.find(villagerEntity, 15, 7, Vec3d.ofBottomCenter(globalPos.getPos()), 1.5707963705062866);
                 }
                 if (i == 1000) {
                     this.giveUp(villagerEntity, l);
@@ -81,8 +81,8 @@ extends Task<VillagerEntity> {
         return pos.getPos().getManhattanDistance(villager.getBlockPos()) > this.maxRange;
     }
 
-    private boolean method_30952(ServerWorld serverWorld, GlobalPos globalPos) {
-        return globalPos.getDimension() != serverWorld.getRegistryKey();
+    private boolean dimensionMismatches(ServerWorld world, GlobalPos pos) {
+        return pos.getDimension() != world.getRegistryKey();
     }
 
     private boolean reachedDestination(ServerWorld world, VillagerEntity villager, GlobalPos pos) {

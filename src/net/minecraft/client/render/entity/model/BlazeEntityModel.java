@@ -2,45 +2,81 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
- *  com.google.common.collect.ImmutableList$Builder
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import java.util.Arrays;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class BlazeEntityModel<T extends Entity>
-extends CompositeEntityModel<T> {
+extends SinglePartEntityModel<T> {
+    private final ModelPart root;
     private final ModelPart[] rods;
-    private final ModelPart head = new ModelPart(this, 0, 0);
-    private final ImmutableList<ModelPart> parts;
+    private final ModelPart head;
 
-    public BlazeEntityModel() {
-        this.head.addCuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f);
+    public BlazeEntityModel(ModelPart root) {
+        this.root = root;
+        this.head = root.getChild("head");
         this.rods = new ModelPart[12];
-        for (int i = 0; i < this.rods.length; ++i) {
-            this.rods[i] = new ModelPart(this, 0, 16);
-            this.rods[i].addCuboid(0.0f, 0.0f, 0.0f, 2.0f, 8.0f, 2.0f);
+        Arrays.setAll(this.rods, index -> root.getChild(BlazeEntityModel.getRodName(index)));
+    }
+
+    private static String getRodName(int index) {
+        return "part" + index;
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        float j;
+        float h;
+        float g;
+        int i;
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -4.0f, -4.0f, 8.0f, 8.0f, 8.0f), ModelTransform.NONE);
+        float f = 0.0f;
+        ModelPartBuilder modelPartBuilder = ModelPartBuilder.create().uv(0, 16).cuboid(0.0f, 0.0f, 0.0f, 2.0f, 8.0f, 2.0f);
+        for (i = 0; i < 4; ++i) {
+            g = MathHelper.cos(f) * 9.0f;
+            h = -2.0f + MathHelper.cos((float)(i * 2) * 0.25f);
+            j = MathHelper.sin(f) * 9.0f;
+            modelPartData.addChild(BlazeEntityModel.getRodName(i), modelPartBuilder, ModelTransform.pivot(g, h, j));
+            f += 1.5707964f;
         }
-        ImmutableList.Builder builder = ImmutableList.builder();
-        builder.add((Object)this.head);
-        builder.addAll(Arrays.asList(this.rods));
-        this.parts = builder.build();
+        f = 0.7853982f;
+        for (i = 4; i < 8; ++i) {
+            g = MathHelper.cos(f) * 7.0f;
+            h = 2.0f + MathHelper.cos((float)(i * 2) * 0.25f);
+            j = MathHelper.sin(f) * 7.0f;
+            modelPartData.addChild(BlazeEntityModel.getRodName(i), modelPartBuilder, ModelTransform.pivot(g, h, j));
+            f += 1.5707964f;
+        }
+        f = 0.47123894f;
+        for (i = 8; i < 12; ++i) {
+            g = MathHelper.cos(f) * 5.0f;
+            h = 11.0f + MathHelper.cos((float)i * 1.5f * 0.5f);
+            j = MathHelper.sin(f) * 5.0f;
+            modelPartData.addChild(BlazeEntityModel.getRodName(i), modelPartBuilder, ModelTransform.pivot(g, h, j));
+            f += 1.5707964f;
+        }
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return this.parts;
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override

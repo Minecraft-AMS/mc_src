@@ -33,13 +33,13 @@ public class LanternBlock
 extends Block
 implements Waterloggable {
     public static final BooleanProperty HANGING = Properties.HANGING;
-    public static final BooleanProperty field_26441 = Properties.WATERLOGGED;
+    public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     protected static final VoxelShape STANDING_SHAPE = VoxelShapes.union(Block.createCuboidShape(5.0, 0.0, 5.0, 11.0, 7.0, 11.0), Block.createCuboidShape(6.0, 7.0, 6.0, 10.0, 9.0, 10.0));
     protected static final VoxelShape HANGING_SHAPE = VoxelShapes.union(Block.createCuboidShape(5.0, 1.0, 5.0, 11.0, 8.0, 11.0), Block.createCuboidShape(6.0, 8.0, 6.0, 10.0, 10.0, 10.0));
 
     public LanternBlock(AbstractBlock.Settings settings) {
         super(settings);
-        this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(HANGING, false)).with(field_26441, false));
+        this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(HANGING, false)).with(WATERLOGGED, false));
     }
 
     @Override
@@ -49,7 +49,7 @@ implements Waterloggable {
         for (Direction direction : ctx.getPlacementDirections()) {
             BlockState blockState;
             if (direction.getAxis() != Direction.Axis.Y || !(blockState = (BlockState)this.getDefaultState().with(HANGING, direction == Direction.UP)).canPlaceAt(ctx.getWorld(), ctx.getBlockPos())) continue;
-            return (BlockState)blockState.with(field_26441, fluidState.getFluid() == Fluids.WATER);
+            return (BlockState)blockState.with(WATERLOGGED, fluidState.getFluid() == Fluids.WATER);
         }
         return null;
     }
@@ -61,7 +61,7 @@ implements Waterloggable {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(HANGING, field_26441);
+        builder.add(HANGING, WATERLOGGED);
     }
 
     @Override
@@ -81,7 +81,7 @@ implements Waterloggable {
 
     @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        if (state.get(field_26441).booleanValue()) {
+        if (state.get(WATERLOGGED).booleanValue()) {
             world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
         }
         if (LanternBlock.attachedDirection(state).getOpposite() == direction && !state.canPlaceAt(world, pos)) {
@@ -92,7 +92,7 @@ implements Waterloggable {
 
     @Override
     public FluidState getFluidState(BlockState state) {
-        if (state.get(field_26441).booleanValue()) {
+        if (state.get(WATERLOGGED).booleanValue()) {
             return Fluids.WATER.getStill(false);
         }
         return super.getFluidState(state);

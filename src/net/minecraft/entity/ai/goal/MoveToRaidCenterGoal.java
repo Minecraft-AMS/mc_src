@@ -11,7 +11,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
@@ -23,6 +23,7 @@ import net.minecraft.village.raid.RaidManager;
 
 public class MoveToRaidCenterGoal<T extends RaiderEntity>
 extends Goal {
+    private static final float WALK_SPEED = 1.0f;
     private final T actor;
 
     public MoveToRaidCenterGoal(T actor) {
@@ -48,7 +49,7 @@ extends Goal {
             if (((RaiderEntity)this.actor).age % 20 == 0) {
                 this.includeFreeRaiders(raid);
             }
-            if (!((PathAwareEntity)this.actor).isNavigating() && (vec3d = TargetFinder.findTargetTowards(this.actor, 15, 4, Vec3d.ofBottomCenter(raid.getCenter()))) != null) {
+            if (!((PathAwareEntity)this.actor).isNavigating() && (vec3d = NoPenaltyTargeting.find(this.actor, 15, 4, Vec3d.ofBottomCenter(raid.getCenter()), 1.5707963705062866)) != null) {
                 ((MobEntity)this.actor).getNavigation().startMovingTo(vec3d.x, vec3d.y, vec3d.z, 1.0);
             }
         }

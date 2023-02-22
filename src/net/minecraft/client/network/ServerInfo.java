@@ -30,7 +30,7 @@ public class ServerInfo {
     public Text version = new LiteralText(SharedConstants.getGameVersion().getName());
     public boolean online;
     public List<Text> playerListSummary = Collections.emptyList();
-    private ResourcePackState resourcePackPolicy = ResourcePackState.PROMPT;
+    private ResourcePackPolicy resourcePackPolicy = ResourcePackPolicy.PROMPT;
     @Nullable
     private String icon;
     private boolean local;
@@ -48,19 +48,19 @@ public class ServerInfo {
         if (this.icon != null) {
             nbtCompound.putString("icon", this.icon);
         }
-        if (this.resourcePackPolicy == ResourcePackState.ENABLED) {
+        if (this.resourcePackPolicy == ResourcePackPolicy.ENABLED) {
             nbtCompound.putBoolean("acceptTextures", true);
-        } else if (this.resourcePackPolicy == ResourcePackState.DISABLED) {
+        } else if (this.resourcePackPolicy == ResourcePackPolicy.DISABLED) {
             nbtCompound.putBoolean("acceptTextures", false);
         }
         return nbtCompound;
     }
 
-    public ResourcePackState getResourcePackPolicy() {
+    public ResourcePackPolicy getResourcePackPolicy() {
         return this.resourcePackPolicy;
     }
 
-    public void setResourcePackPolicy(ResourcePackState policy) {
+    public void setResourcePackPolicy(ResourcePackPolicy policy) {
         this.resourcePackPolicy = policy;
     }
 
@@ -71,12 +71,12 @@ public class ServerInfo {
         }
         if (root.contains("acceptTextures", 1)) {
             if (root.getBoolean("acceptTextures")) {
-                serverInfo.setResourcePackPolicy(ResourcePackState.ENABLED);
+                serverInfo.setResourcePackPolicy(ResourcePackPolicy.ENABLED);
             } else {
-                serverInfo.setResourcePackPolicy(ResourcePackState.DISABLED);
+                serverInfo.setResourcePackPolicy(ResourcePackPolicy.DISABLED);
             }
         } else {
-            serverInfo.setResourcePackPolicy(ResourcePackState.PROMPT);
+            serverInfo.setResourcePackPolicy(ResourcePackPolicy.PROMPT);
         }
         return serverInfo;
     }
@@ -103,19 +103,36 @@ public class ServerInfo {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum ResourcePackState {
-        ENABLED("enabled"),
-        DISABLED("disabled"),
-        PROMPT("prompt");
-
+    public static final class ResourcePackPolicy
+    extends Enum<ResourcePackPolicy> {
+        public static final /* enum */ ResourcePackPolicy ENABLED = new ResourcePackPolicy("enabled");
+        public static final /* enum */ ResourcePackPolicy DISABLED = new ResourcePackPolicy("disabled");
+        public static final /* enum */ ResourcePackPolicy PROMPT = new ResourcePackPolicy("prompt");
         private final Text name;
+        private static final /* synthetic */ ResourcePackPolicy[] RESOURCE_PACK_POLICIES;
 
-        private ResourcePackState(String name) {
+        public static ResourcePackPolicy[] values() {
+            return (ResourcePackPolicy[])RESOURCE_PACK_POLICIES.clone();
+        }
+
+        public static ResourcePackPolicy valueOf(String string) {
+            return Enum.valueOf(ResourcePackPolicy.class, string);
+        }
+
+        private ResourcePackPolicy(String name) {
             this.name = new TranslatableText("addServer.resourcePack." + name);
         }
 
         public Text getName() {
             return this.name;
+        }
+
+        private static /* synthetic */ ResourcePackPolicy[] method_36896() {
+            return new ResourcePackPolicy[]{ENABLED, DISABLED, PROMPT};
+        }
+
+        static {
+            RESOURCE_PACK_POLICIES = ResourcePackPolicy.method_36896();
         }
     }
 }

@@ -140,9 +140,17 @@ public class SelectionManager {
         }
     }
 
+    public void moveCursor(int offset) {
+        this.moveCursor(offset, false);
+    }
+
     public void moveCursor(int offset, boolean shiftDown) {
         this.selectionStart = Util.moveCursor(this.stringGetter.get(), this.selectionStart, offset);
         this.updateSelectionRange(shiftDown);
+    }
+
+    public void moveCursorPastWord(int offset) {
+        this.moveCursorPastWord(offset, false);
     }
 
     public void moveCursorPastWord(int offset, boolean shiftDown) {
@@ -206,6 +214,10 @@ public class SelectionManager {
         return string2;
     }
 
+    public void moveCursorToStart() {
+        this.moveCursorToStart(false);
+    }
+
     private void moveCursorToStart(boolean shiftDown) {
         this.selectionStart = 0;
         this.updateSelectionRange(shiftDown);
@@ -224,6 +236,10 @@ public class SelectionManager {
         return this.selectionStart;
     }
 
+    public void moveCursorTo(int position) {
+        this.moveCursorTo(position, true);
+    }
+
     public void moveCursorTo(int position, boolean shiftDown) {
         this.selectionStart = this.clampCursorPosition(position);
         this.updateSelectionRange(shiftDown);
@@ -231,6 +247,10 @@ public class SelectionManager {
 
     public int getSelectionEnd() {
         return this.selectionEnd;
+    }
+
+    public void setSelectionEnd(int pos) {
+        this.selectionEnd = this.clampCursorPosition(pos);
     }
 
     public void setSelection(int start, int end) {

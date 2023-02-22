@@ -26,11 +26,11 @@ import net.minecraft.util.JsonHelper;
 
 public class LootTableEntry
 extends LeafEntry {
-    private final Identifier id;
+    final Identifier id;
 
-    private LootTableEntry(Identifier id, int weight, int quality, LootCondition[] conditions, LootFunction[] functions) {
-        super(weight, quality, conditions, functions);
-        this.id = id;
+    LootTableEntry(Identifier identifier, int i, int j, LootCondition[] lootConditions, LootFunction[] lootFunctions) {
+        super(i, j, lootConditions, lootFunctions);
+        this.id = identifier;
     }
 
     @Override
@@ -40,7 +40,7 @@ extends LeafEntry {
 
     @Override
     public void generateLoot(Consumer<ItemStack> lootConsumer, LootContext context) {
-        LootTable lootTable = context.getSupplier(this.id);
+        LootTable lootTable = context.getTable(this.id);
         lootTable.generateUnprocessedLoot(context, lootConsumer);
     }
 

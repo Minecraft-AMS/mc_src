@@ -10,6 +10,7 @@ package net.minecraft.server;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import java.io.File;
+import java.util.Objects;
 import net.minecraft.server.OperatorEntry;
 import net.minecraft.server.ServerConfigEntry;
 import net.minecraft.server.ServerConfigList;
@@ -27,15 +28,10 @@ extends ServerConfigList<GameProfile, OperatorEntry> {
 
     @Override
     public String[] getNames() {
-        String[] strings = new String[this.values().size()];
-        int i = 0;
-        for (ServerConfigEntry serverConfigEntry : this.values()) {
-            strings[i++] = ((GameProfile)serverConfigEntry.getKey()).getName();
-        }
-        return strings;
+        return (String[])this.values().stream().map(ServerConfigEntry::getKey).filter(Objects::nonNull).map(GameProfile::getName).toArray(String[]::new);
     }
 
-    public boolean isOp(GameProfile profile) {
+    public boolean canBypassPlayerLimit(GameProfile profile) {
         OperatorEntry operatorEntry = (OperatorEntry)this.get(profile);
         if (operatorEntry != null) {
             return operatorEntry.canBypassPlayerLimit();

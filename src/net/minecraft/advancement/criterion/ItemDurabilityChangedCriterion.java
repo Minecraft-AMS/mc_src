@@ -20,7 +20,7 @@ import net.minecraft.util.Identifier;
 
 public class ItemDurabilityChangedCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("item_durability_changed");
+    static final Identifier ID = new Identifier("item_durability_changed");
 
     @Override
     public Identifier getId() {
@@ -36,7 +36,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack stack, int durability) {
-        this.test(player, conditions -> conditions.matches(stack, durability));
+        this.trigger(player, conditions -> conditions.matches(stack, durability));
     }
 
     @Override
@@ -57,18 +57,22 @@ extends AbstractCriterion<Conditions> {
             this.delta = delta;
         }
 
-        public static Conditions create(EntityPredicate.Extended extended, ItemPredicate itemPredicate, NumberRange.IntRange intRange) {
-            return new Conditions(extended, itemPredicate, intRange, NumberRange.IntRange.ANY);
+        public static Conditions create(ItemPredicate item, NumberRange.IntRange durability) {
+            return Conditions.create(EntityPredicate.Extended.EMPTY, item, durability);
         }
 
-        public boolean matches(ItemStack stack, int damage) {
+        public static Conditions create(EntityPredicate.Extended player, ItemPredicate item, NumberRange.IntRange durability) {
+            return new Conditions(player, item, durability, NumberRange.IntRange.ANY);
+        }
+
+        public boolean matches(ItemStack stack, int durability) {
             if (!this.item.test(stack)) {
                 return false;
             }
-            if (!this.durability.test(stack.getMaxDamage() - damage)) {
+            if (!this.durability.test(stack.getMaxDamage() - durability)) {
                 return false;
             }
-            return this.delta.test(stack.getDamage() - damage);
+            return this.delta.test(stack.getDamage() - durability);
         }
 
         @Override

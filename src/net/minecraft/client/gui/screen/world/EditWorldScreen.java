@@ -36,7 +36,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -92,16 +91,16 @@ extends Screen {
     @Override
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
-        ButtonWidget buttonWidget2 = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 0 + 5, 200, 20, new TranslatableText("selectWorld.edit.resetIcon"), buttonWidget -> {
-            FileUtils.deleteQuietly((File)this.storageSession.getIconFile());
-            buttonWidget.active = false;
+        ButtonWidget buttonWidget = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 0 + 5, 200, 20, new TranslatableText("selectWorld.edit.resetIcon"), button -> {
+            this.storageSession.getIconFile().ifPresent(path -> FileUtils.deleteQuietly((File)path.toFile()));
+            button.active = false;
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 24 + 5, 200, 20, new TranslatableText("selectWorld.edit.openFolder"), buttonWidget -> Util.getOperatingSystem().open(this.storageSession.getDirectory(WorldSavePath.ROOT).toFile())));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 48 + 5, 200, 20, new TranslatableText("selectWorld.edit.backup"), buttonWidget -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 24 + 5, 200, 20, new TranslatableText("selectWorld.edit.openFolder"), button -> Util.getOperatingSystem().open(this.storageSession.getDirectory(WorldSavePath.ROOT).toFile())));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 48 + 5, 200, 20, new TranslatableText("selectWorld.edit.backup"), button -> {
             boolean bl = EditWorldScreen.backupLevel(this.storageSession);
             this.callback.accept(!bl);
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72 + 5, 200, 20, new TranslatableText("selectWorld.edit.backupFolder"), buttonWidget -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72 + 5, 200, 20, new TranslatableText("selectWorld.edit.backupFolder"), button -> {
             LevelStorage levelStorage = this.client.getLevelStorage();
             Path path = levelStorage.getBackupsDirectory();
             try {
@@ -112,22 +111,22 @@ extends Screen {
             }
             Util.getOperatingSystem().open(path.toFile());
         }));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 5, 200, 20, new TranslatableText("selectWorld.edit.optimize"), buttonWidget -> this.client.openScreen(new BackupPromptScreen(this, (bl, bl2) -> {
-            if (bl) {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 5, 200, 20, new TranslatableText("selectWorld.edit.optimize"), button -> this.client.setScreen(new BackupPromptScreen(this, (backup, eraseCache) -> {
+            if (backup) {
                 EditWorldScreen.backupLevel(this.storageSession);
             }
-            this.client.openScreen(OptimizeWorldScreen.create(this.client, this.callback, this.client.getDataFixer(), this.storageSession, bl2));
+            this.client.setScreen(OptimizeWorldScreen.create(this.client, this.callback, this.client.getDataFixer(), this.storageSession, eraseCache));
         }, new TranslatableText("optimizeWorld.confirm.title"), new TranslatableText("optimizeWorld.confirm.description"), true))));
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 5, 200, 20, new TranslatableText("selectWorld.edit.export_worldgen_settings"), buttonWidget -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 5, 200, 20, new TranslatableText("selectWorld.edit.export_worldgen_settings"), button -> {
             DataResult dataResult2;
             DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-            try (MinecraftClient.IntegratedResourceManager integratedResourceManager = this.client.method_29604(impl, MinecraftClient::method_29598, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, this.storageSession);){
+            try (MinecraftClient.IntegratedResourceManager integratedResourceManager = this.client.createIntegratedResourceManager(impl, MinecraftClient::loadDataPackSettings, (Function4<LevelStorage.Session, DynamicRegistryManager.Impl, ResourceManager, DataPackSettings, SaveProperties>)((Function4)MinecraftClient::createSaveProperties), false, this.storageSession);){
                 RegistryReadingOps dynamicOps = RegistryReadingOps.of(JsonOps.INSTANCE, impl);
                 DataResult dataResult = GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)integratedResourceManager.getSaveProperties().getGeneratorOptions());
-                dataResult2 = dataResult.flatMap(jsonElement -> {
+                dataResult2 = dataResult.flatMap(json -> {
                     Path path = this.storageSession.getDirectory(WorldSavePath.ROOT).resolve("worldgen_settings_export.json");
                     try (JsonWriter jsonWriter = GSON.newJsonWriter((Writer)Files.newBufferedWriter(path, StandardCharsets.UTF_8, new OpenOption[0]));){
-                        GSON.toJson(jsonElement, jsonWriter);
+                        GSON.toJson(json, jsonWriter);
                     }
                     catch (JsonIOException | IOException exception) {
                         return DataResult.error((String)("Error writing file: " + exception.getMessage()));
@@ -135,25 +134,26 @@ extends Screen {
                     return DataResult.success((Object)path.toString());
                 });
             }
-            catch (InterruptedException | ExecutionException exception) {
-                dataResult2 = DataResult.error((String)"Could not parse level data!");
+            catch (Exception exception) {
+                LOGGER.warn("Could not parse level data", (Throwable)exception);
+                dataResult2 = DataResult.error((String)("Could not parse level data: " + exception.getMessage()));
             }
             LiteralText text = new LiteralText((String)dataResult2.get().map(Function.identity(), DataResult.PartialResult::message));
             TranslatableText text2 = new TranslatableText(dataResult2.result().isPresent() ? "selectWorld.edit.export_worldgen_settings.success" : "selectWorld.edit.export_worldgen_settings.failure");
-            dataResult2.error().ifPresent(partialResult -> LOGGER.error("Error exporting world settings: {}", partialResult));
+            dataResult2.error().ifPresent(result -> LOGGER.error("Error exporting world settings: {}", result));
             this.client.getToastManager().add(SystemToast.create(this.client, SystemToast.Type.WORLD_GEN_SETTINGS_TRANSFER, text2, text));
         }));
-        this.saveButton = this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 144 + 5, 98, 20, new TranslatableText("selectWorld.edit.save"), buttonWidget -> this.commit()));
-        this.addButton(new ButtonWidget(this.width / 2 + 2, this.height / 4 + 144 + 5, 98, 20, ScreenTexts.CANCEL, buttonWidget -> this.callback.accept(false)));
-        buttonWidget2.active = this.storageSession.getIconFile().isFile();
+        this.saveButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 144 + 5, 98, 20, new TranslatableText("selectWorld.edit.save"), button -> this.commit()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 2, this.height / 4 + 144 + 5, 98, 20, ScreenTexts.CANCEL, button -> this.callback.accept(false)));
+        buttonWidget.active = this.storageSession.getIconFile().filter(path -> Files.isRegularFile(path, new LinkOption[0])).isPresent();
         LevelSummary levelSummary = this.storageSession.getLevelSummary();
-        String string2 = levelSummary == null ? "" : levelSummary.getDisplayName();
+        String string = levelSummary == null ? "" : levelSummary.getDisplayName();
         this.levelNameTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 38, 200, 20, new TranslatableText("selectWorld.enterName"));
-        this.levelNameTextField.setText(string2);
-        this.levelNameTextField.setChangedListener(string -> {
-            this.saveButton.active = !string.trim().isEmpty();
+        this.levelNameTextField.setText(string);
+        this.levelNameTextField.setChangedListener(levelName -> {
+            this.saveButton.active = !levelName.trim().isEmpty();
         });
-        this.children.add(this.levelNameTextField);
+        this.addSelectableChild(this.levelNameTextField);
         this.setInitialFocus(this.levelNameTextField);
     }
 

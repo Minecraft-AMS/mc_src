@@ -39,7 +39,7 @@ implements CriterionConditions {
     }
 
     public String toString() {
-        return "AbstractCriterionInstance{criterion=" + this.id + '}';
+        return "AbstractCriterionInstance{criterion=" + this.id + "}";
     }
 }
 

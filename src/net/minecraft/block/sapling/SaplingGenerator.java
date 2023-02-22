@@ -20,15 +20,14 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class SaplingGenerator {
     @Nullable
-    protected abstract ConfiguredFeature<TreeFeatureConfig, ?> createTreeFeature(Random var1, boolean var2);
+    protected abstract ConfiguredFeature<TreeFeatureConfig, ?> getTreeFeature(Random var1, boolean var2);
 
     public boolean generate(ServerWorld world, ChunkGenerator chunkGenerator, BlockPos pos, BlockState state, Random random) {
-        ConfiguredFeature<TreeFeatureConfig, ?> configuredFeature = this.createTreeFeature(random, this.method_24282(world, pos));
+        ConfiguredFeature<TreeFeatureConfig, ?> configuredFeature = this.getTreeFeature(random, this.areFlowersNearby(world, pos));
         if (configuredFeature == null) {
             return false;
         }
         world.setBlockState(pos, Blocks.AIR.getDefaultState(), 4);
-        ((TreeFeatureConfig)configuredFeature.config).ignoreFluidCheck();
         if (configuredFeature.generate(world, chunkGenerator, random, pos)) {
             return true;
         }
@@ -36,9 +35,9 @@ public abstract class SaplingGenerator {
         return false;
     }
 
-    private boolean method_24282(WorldAccess worldAccess, BlockPos blockPos) {
-        for (BlockPos blockPos2 : BlockPos.Mutable.iterate(blockPos.down().north(2).west(2), blockPos.up().south(2).east(2))) {
-            if (!worldAccess.getBlockState(blockPos2).isIn(BlockTags.FLOWERS)) continue;
+    private boolean areFlowersNearby(WorldAccess world, BlockPos pos) {
+        for (BlockPos blockPos : BlockPos.Mutable.iterate(pos.down().north(2).west(2), pos.up().south(2).east(2))) {
+            if (!world.getBlockState(blockPos).isIn(BlockTags.FLOWERS)) continue;
             return true;
         }
         return false;

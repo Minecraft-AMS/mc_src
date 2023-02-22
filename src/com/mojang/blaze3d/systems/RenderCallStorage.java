@@ -18,8 +18,83 @@ import net.fabricmc.api.Environment;
 @Environment(value=EnvType.CLIENT)
 public class RenderCallStorage {
     private final List<ConcurrentLinkedQueue<RenderCall>> recordingQueues = ImmutableList.of(new ConcurrentLinkedQueue(), new ConcurrentLinkedQueue(), new ConcurrentLinkedQueue(), new ConcurrentLinkedQueue());
-    private volatile int field_20454 = this.field_20455 = this.field_20456 + 1;
-    private volatile int field_20455;
-    private volatile int field_20456;
+    private volatile boolean recording;
+    private volatile int recordingIndex = this.processingIndex = this.lastProcessedIndex + 1;
+    private volatile boolean processing;
+    private volatile int processingIndex;
+    private volatile int lastProcessedIndex;
+
+    public boolean canRecord() {
+        return !this.recording && this.recordingIndex == this.processingIndex;
+    }
+
+    public boolean startRecording() {
+        if (this.recording) {
+            throw new RuntimeException("ALREADY RECORDING !!!");
+        }
+        if (this.canRecord()) {
+            this.recordingIndex = (this.processingIndex + 1) % this.recordingQueues.size();
+            this.recording = true;
+            return true;
+        }
+        return false;
+    }
+
+    public void record(RenderCall call) {
+        if (!this.recording) {
+            throw new RuntimeException("NOT RECORDING !!!");
+        }
+        ConcurrentLinkedQueue<RenderCall> concurrentLinkedQueue = this.getRecordingQueue();
+        concurrentLinkedQueue.add(call);
+    }
+
+    public void stopRecording() {
+        if (!this.recording) {
+            throw new RuntimeException("NOT RECORDING !!!");
+        }
+        this.recording = false;
+    }
+
+    public boolean canProcess() {
+        return !this.processing && this.recordingIndex != this.processingIndex;
+    }
+
+    public boolean startProcessing() {
+        if (this.processing) {
+            throw new RuntimeException("ALREADY PROCESSING !!!");
+        }
+        if (this.canProcess()) {
+            this.processing = true;
+            return true;
+        }
+        return false;
+    }
+
+    public void process() {
+        if (!this.processing) {
+            throw new RuntimeException("NOT PROCESSING !!!");
+        }
+    }
+
+    public void stopProcessing() {
+        if (!this.processing) {
+            throw new RuntimeException("NOT PROCESSING !!!");
+        }
+        this.processing = false;
+        this.lastProcessedIndex = this.processingIndex;
+        this.processingIndex = this.recordingIndex;
+    }
+
+    public ConcurrentLinkedQueue<RenderCall> getLastProcessedQueue() {
+        return this.recordingQueues.get(this.lastProcessedIndex);
+    }
+
+    public ConcurrentLinkedQueue<RenderCall> getRecordingQueue() {
+        return this.recordingQueues.get(this.recordingIndex);
+    }
+
+    public ConcurrentLinkedQueue<RenderCall> getProcessingQueue() {
+        return this.recordingQueues.get(this.processingIndex);
+    }
 }
 

@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.gson.JsonObject
  *  com.mojang.authlib.GameProfile
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.server;
 
@@ -11,6 +12,7 @@ import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import java.util.UUID;
 import net.minecraft.server.ServerConfigEntry;
+import org.jetbrains.annotations.Nullable;
 
 public class OperatorEntry
 extends ServerConfigEntry<GameProfile> {
@@ -38,7 +40,7 @@ extends ServerConfigEntry<GameProfile> {
     }
 
     @Override
-    protected void fromJson(JsonObject json) {
+    protected void write(JsonObject json) {
         if (this.getKey() == null) {
             return;
         }
@@ -48,6 +50,7 @@ extends ServerConfigEntry<GameProfile> {
         json.addProperty("bypassesPlayerLimit", Boolean.valueOf(this.bypassPlayerLimit));
     }
 
+    @Nullable
     private static GameProfile getProfileFromJson(JsonObject json) {
         UUID uUID;
         if (!json.has("uuid") || !json.has("name")) {

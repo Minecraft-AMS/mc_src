@@ -29,6 +29,7 @@ import net.minecraft.util.math.BlockPos;
 
 public class BoneMealTask
 extends Task<VillagerEntity> {
+    private static final int MAX_DURATION = 80;
     private long startTime;
     private long lastEndEntityAge;
     private int duration;
@@ -110,12 +111,12 @@ extends Task<VillagerEntity> {
         int i = simpleInventory.size();
         for (int j = 0; j < i; ++j) {
             ItemStack itemStack2 = simpleInventory.getStack(j);
-            if (itemStack2.getItem() != Items.BONE_MEAL) continue;
+            if (!itemStack2.isOf(Items.BONE_MEAL)) continue;
             itemStack = itemStack2;
             break;
         }
         if (!itemStack.isEmpty() && BoneMealItem.useOnFertilizable(itemStack, serverWorld, blockPos)) {
-            serverWorld.syncWorldEvent(2005, blockPos, 0);
+            serverWorld.syncWorldEvent(1505, blockPos, 0);
             this.pos = this.findBoneMealPos(serverWorld, villagerEntity);
             this.addLookWalkTargets(villagerEntity);
             this.startTime = l + 40L;

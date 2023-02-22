@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,6 +17,7 @@ import net.minecraft.block.TallPlantBlock;
 import net.minecraft.block.enums.DoorHinge;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.block.piston.PistonBehavior;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -45,6 +42,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class DoorBlock
@@ -54,6 +52,7 @@ extends Block {
     public static final EnumProperty<DoorHinge> HINGE = Properties.DOOR_HINGE;
     public static final BooleanProperty POWERED = Properties.POWERED;
     public static final EnumProperty<DoubleBlockHalf> HALF = Properties.DOUBLE_BLOCK_HALF;
+    protected static final float field_31083 = 3.0f;
     protected static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 16.0, 3.0);
     protected static final VoxelShape SOUTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 13.0, 16.0, 16.0, 16.0);
     protected static final VoxelShape EAST_SHAPE = Block.createCuboidShape(13.0, 0.0, 0.0, 16.0, 16.0, 16.0);
@@ -135,8 +134,8 @@ extends Block {
     @Nullable
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         BlockPos blockPos = ctx.getBlockPos();
-        if (blockPos.getY() < 255 && ctx.getWorld().getBlockState(blockPos.up()).canReplace(ctx)) {
-            World world = ctx.getWorld();
+        World world = ctx.getWorld();
+        if (blockPos.getY() < world.getTopY() - 1 && world.getBlockState(blockPos.up()).canReplace(ctx)) {
             boolean bl = world.isReceivingRedstonePower(blockPos) || world.isReceivingRedstonePower(blockPos.up());
             return (BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.getDefaultState().with(FACING, ctx.getPlayerFacing())).with(HINGE, this.getHinge(ctx))).with(POWERED, bl)).with(OPEN, bl)).with(HALF, DoubleBlockHalf.LOWER);
         }
@@ -189,28 +188,31 @@ extends Block {
         state = (BlockState)state.cycle(OPEN);
         world.setBlockState(pos, state, 10);
         world.syncWorldEvent(player, state.get(OPEN) != false ? this.getCloseSoundEventId() : this.getOpenSoundEventId(), pos, 0);
+        world.emitGameEvent((Entity)player, this.isOpen(state) ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
         return ActionResult.success(world.isClient);
     }
 
-    public boolean method_30841(BlockState blockState) {
-        return blockState.get(OPEN);
+    public boolean isOpen(BlockState state) {
+        return state.get(OPEN);
     }
 
-    public void setOpen(World world, BlockState blockState, BlockPos blockPos, boolean bl) {
-        if (!blockState.isOf(this) || blockState.get(OPEN) == bl) {
+    public void setOpen(@Nullable Entity entity, World world, BlockState state, BlockPos pos, boolean open) {
+        if (!state.isOf(this) || state.get(OPEN) == open) {
             return;
         }
-        world.setBlockState(blockPos, (BlockState)blockState.with(OPEN, bl), 10);
-        this.playOpenCloseSound(world, blockPos, bl);
+        world.setBlockState(pos, (BlockState)state.with(OPEN, open), 10);
+        this.playOpenCloseSound(world, pos, open);
+        world.emitGameEvent(entity, open ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
     }
 
     @Override
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
         boolean bl;
         boolean bl2 = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos.offset(state.get(HALF) == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN)) ? true : (bl = false);
-        if (block != this && bl != state.get(POWERED)) {
+        if (!this.getDefaultState().isOf(block) && bl != state.get(POWERED)) {
             if (bl != state.get(OPEN)) {
                 this.playOpenCloseSound(world, pos, bl);
+                world.emitGameEvent(bl ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
             }
             world.setBlockState(pos, (BlockState)((BlockState)state.with(POWERED, bl)).with(OPEN, bl), 2);
         }
@@ -249,7 +251,6 @@ extends Block {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public long getRenderingSeed(BlockState state, BlockPos pos) {
         return MathHelper.hashCode(pos.getX(), pos.down(state.get(HALF) == DoubleBlockHalf.LOWER ? 0 : 1).getY(), pos.getZ());
     }

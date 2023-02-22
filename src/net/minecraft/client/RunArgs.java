@@ -37,14 +37,17 @@ public class RunArgs {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class AutoConnect {
-        @Nullable
-        public final String serverAddress;
-        public final int serverPort;
+    public static class Network {
+        public final Session session;
+        public final PropertyMap userProperties;
+        public final PropertyMap profileProperties;
+        public final Proxy netProxy;
 
-        public AutoConnect(@Nullable String serverAddress, int serverPort) {
-            this.serverAddress = serverAddress;
-            this.serverPort = serverPort;
+        public Network(Session session, PropertyMap userProperties, PropertyMap profileProperties, Proxy proxy) {
+            this.session = session;
+            this.userProperties = userProperties;
+            this.profileProperties = profileProperties;
+            this.netProxy = proxy;
         }
     }
 
@@ -69,21 +72,6 @@ public class RunArgs {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class Network {
-        public final Session session;
-        public final PropertyMap userProperties;
-        public final PropertyMap profileProperties;
-        public final Proxy netProxy;
-
-        public Network(Session session, PropertyMap userProperties, PropertyMap profileProperties, Proxy proxy) {
-            this.session = session;
-            this.userProperties = userProperties;
-            this.profileProperties = profileProperties;
-            this.netProxy = proxy;
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public static class Game {
         public final boolean demo;
         public final String version;
@@ -97,6 +85,18 @@ public class RunArgs {
             this.versionType = versionType;
             this.multiplayerDisabled = multiplayerDisabled;
             this.onlineChatDisabled = onlineChatDisabled;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static class AutoConnect {
+        @Nullable
+        public final String serverAddress;
+        public final int serverPort;
+
+        public AutoConnect(@Nullable String serverAddress, int serverPort) {
+            this.serverAddress = serverAddress;
+            this.serverPort = serverPort;
         }
     }
 }

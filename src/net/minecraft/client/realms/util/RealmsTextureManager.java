@@ -19,6 +19,7 @@ package net.minecraft.client.realms.util;
 import com.google.common.collect.Maps;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.util.UUIDTypeAdapter;
 import java.awt.image.BufferedImage;
@@ -40,7 +41,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.realms.util.RealmsUtil;
 import net.minecraft.client.realms.util.SkinProcessor;
-import net.minecraft.client.texture.TextureUtil;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.util.Identifier;
 import org.apache.commons.codec.binary.Base64;
@@ -51,54 +51,49 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsTextureManager {
-    private static final Map<String, RealmsTexture> textures = Maps.newHashMap();
-    private static final Map<String, Boolean> skinFetchStatus = Maps.newHashMap();
-    private static final Map<String, String> fetchedSkins = Maps.newHashMap();
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final Identifier field_22730 = new Identifier("textures/gui/presets/isles.png");
+    private static final Map<String, RealmsTexture> TEXTURES = Maps.newHashMap();
+    static final Map<String, Boolean> SKIN_FETCH_STATUS = Maps.newHashMap();
+    static final Map<String, String> FETCHED_SKINS = Maps.newHashMap();
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final Identifier ISLES = new Identifier("textures/gui/presets/isles.png");
 
     public static void bindWorldTemplate(String id, @Nullable String image) {
         if (image == null) {
-            MinecraftClient.getInstance().getTextureManager().bindTexture(field_22730);
+            RenderSystem.setShaderTexture(0, ISLES);
             return;
         }
         int i = RealmsTextureManager.getTextureId(id, image);
-        RenderSystem.bindTexture(i);
+        RenderSystem.setShaderTexture(0, i);
     }
 
     public static void withBoundFace(String uuid, Runnable r) {
-        RenderSystem.pushTextureAttributes();
-        try {
-            RealmsTextureManager.bindFace(uuid);
-            r.run();
-        }
-        finally {
-            RenderSystem.popAttributes();
-        }
+        RealmsTextureManager.bindFace(uuid);
+        r.run();
     }
 
     private static void bindDefaultFace(UUID uuid) {
-        MinecraftClient.getInstance().getTextureManager().bindTexture(DefaultSkinHelper.getTexture(uuid));
+        RenderSystem.setShaderTexture(0, DefaultSkinHelper.getTexture(uuid));
     }
 
     private static void bindFace(final String uuid) {
         UUID uUID = UUIDTypeAdapter.fromString((String)uuid);
-        if (textures.containsKey(uuid)) {
-            RenderSystem.bindTexture(textures.get(uuid).textureId);
+        if (TEXTURES.containsKey(uuid)) {
+            int i = RealmsTextureManager.TEXTURES.get((Object)uuid).textureId;
+            RenderSystem.setShaderTexture(0, i);
             return;
         }
-        if (skinFetchStatus.containsKey(uuid)) {
-            if (!skinFetchStatus.get(uuid).booleanValue()) {
+        if (SKIN_FETCH_STATUS.containsKey(uuid)) {
+            if (!SKIN_FETCH_STATUS.get(uuid).booleanValue()) {
                 RealmsTextureManager.bindDefaultFace(uUID);
-            } else if (fetchedSkins.containsKey(uuid)) {
-                int i = RealmsTextureManager.getTextureId(uuid, fetchedSkins.get(uuid));
-                RenderSystem.bindTexture(i);
+            } else if (FETCHED_SKINS.containsKey(uuid)) {
+                int i = RealmsTextureManager.getTextureId(uuid, FETCHED_SKINS.get(uuid));
+                RenderSystem.setShaderTexture(0, i);
             } else {
                 RealmsTextureManager.bindDefaultFace(uUID);
             }
             return;
         }
-        skinFetchStatus.put(uuid, false);
+        SKIN_FETCH_STATUS.put(uuid, false);
         RealmsTextureManager.bindDefaultFace(uUID);
         Thread thread = new Thread("Realms Texture Downloader"){
 
@@ -123,14 +118,14 @@ public class RealmsTextureManager {
                             httpURLConnection.setDoOutput(false);
                             httpURLConnection.connect();
                             if (httpURLConnection.getResponseCode() / 100 != 2) {
-                                skinFetchStatus.remove(uuid);
+                                SKIN_FETCH_STATUS.remove(uuid);
                                 return;
                             }
                             try {
                                 bufferedImage = ImageIO.read(httpURLConnection.getInputStream());
                             }
                             catch (Exception exception) {
-                                skinFetchStatus.remove(uuid);
+                                SKIN_FETCH_STATUS.remove(uuid);
                                 if (httpURLConnection != null) {
                                     httpURLConnection.disconnect();
                                 }
@@ -144,7 +139,7 @@ public class RealmsTextureManager {
                         }
                         catch (Exception exception2) {
                             LOGGER.error("Couldn't download http texture", (Throwable)exception2);
-                            skinFetchStatus.remove(uuid);
+                            SKIN_FETCH_STATUS.remove(uuid);
                         }
                         finally {
                             if (httpURLConnection != null) {
@@ -152,11 +147,11 @@ public class RealmsTextureManager {
                             }
                         }
                         ImageIO.write((RenderedImage)bufferedImage, "png", byteArrayOutputStream);
-                        fetchedSkins.put(uuid, new Base64().encodeToString(byteArrayOutputStream.toByteArray()));
-                        skinFetchStatus.put(uuid, true);
+                        FETCHED_SKINS.put(uuid, new Base64().encodeToString(byteArrayOutputStream.toByteArray()));
+                        SKIN_FETCH_STATUS.put(uuid, true);
                         break block17;
                     }
-                    skinFetchStatus.put(uuid, true);
+                    SKIN_FETCH_STATUS.put(uuid, true);
                 }
             }
         };
@@ -168,17 +163,11 @@ public class RealmsTextureManager {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     private static int getTextureId(String id, String image) {
-        int i;
-        if (textures.containsKey(id)) {
-            RealmsTexture realmsTexture = textures.get(id);
-            if (realmsTexture.image.equals(image)) {
-                return realmsTexture.textureId;
-            }
-            RenderSystem.deleteTexture(realmsTexture.textureId);
-            i = realmsTexture.textureId;
-        } else {
-            i = GlStateManager.genTextures();
+        RealmsTexture realmsTexture = TEXTURES.get(id);
+        if (realmsTexture != null && realmsTexture.image.equals(image)) {
+            return realmsTexture.textureId;
         }
+        int i = realmsTexture != null ? realmsTexture.textureId : GlStateManager._genTexture();
         IntBuffer intBuffer = null;
         int j = 0;
         int k = 0;
@@ -203,16 +192,16 @@ public class RealmsTextureManager {
             iOException.printStackTrace();
         }
         RenderSystem.activeTexture(33984);
-        RenderSystem.bindTexture(i);
-        TextureUtil.uploadImage(intBuffer, j, k);
-        textures.put(id, new RealmsTexture(image, i));
+        RenderSystem.bindTextureForSetup(i);
+        TextureUtil.initTexture(intBuffer, j, k);
+        TEXTURES.put(id, new RealmsTexture(image, i));
         return i;
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class RealmsTexture {
-        private final String image;
-        private final int textureId;
+        final String image;
+        final int textureId;
 
         public RealmsTexture(String image, int textureId) {
             this.image = image;

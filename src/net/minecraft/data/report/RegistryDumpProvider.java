@@ -27,8 +27,8 @@ implements DataProvider {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final DataGenerator generator;
 
-    public RegistryDumpProvider(DataGenerator dataGenerator) {
-        this.generator = dataGenerator;
+    public RegistryDumpProvider(DataGenerator generator) {
+        this.generator = generator;
     }
 
     @Override

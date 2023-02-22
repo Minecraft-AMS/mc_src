@@ -5,16 +5,12 @@
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
@@ -32,9 +28,9 @@ import net.minecraft.world.World;
 public class ShapelessRecipe
 implements CraftingRecipe {
     private final Identifier id;
-    private final String group;
-    private final ItemStack output;
-    private final DefaultedList<Ingredient> input;
+    final String group;
+    final ItemStack output;
+    final DefaultedList<Ingredient> input;
 
     public ShapelessRecipe(Identifier id, String group, ItemStack output, DefaultedList<Ingredient> input) {
         this.id = id;
@@ -54,7 +50,6 @@ implements CraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public String getGroup() {
         return this.group;
     }
@@ -77,7 +72,7 @@ implements CraftingRecipe {
             ItemStack itemStack = craftingInventory.getStack(j);
             if (itemStack.isEmpty()) continue;
             ++i;
-            recipeMatcher.method_20478(itemStack, 1);
+            recipeMatcher.addInput(itemStack, 1);
         }
         return i == this.input.size() && recipeMatcher.match(this, null);
     }
@@ -88,7 +83,6 @@ implements CraftingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return width * height >= this.input.size();
     }
@@ -105,7 +99,7 @@ implements CraftingRecipe {
             if (defaultedList.size() > 9) {
                 throw new JsonParseException("Too many ingredients for shapeless recipe");
             }
-            ItemStack itemStack = ShapedRecipe.getItemStack(JsonHelper.getObject(jsonObject, "result"));
+            ItemStack itemStack = ShapedRecipe.outputFromJson(JsonHelper.getObject(jsonObject, "result"));
             return new ShapelessRecipe(identifier, string, itemStack, defaultedList);
         }
 
@@ -121,7 +115,7 @@ implements CraftingRecipe {
 
         @Override
         public ShapelessRecipe read(Identifier identifier, PacketByteBuf packetByteBuf) {
-            String string = packetByteBuf.readString(Short.MAX_VALUE);
+            String string = packetByteBuf.readString();
             int i = packetByteBuf.readVarInt();
             DefaultedList<Ingredient> defaultedList = DefaultedList.ofSize(i, Ingredient.EMPTY);
             for (int j = 0; j < defaultedList.size(); ++j) {

@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.screen;
 
 import java.util.Optional;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -24,6 +18,7 @@ import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.book.RecipeBookCategory;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.CraftingResultSlot;
@@ -33,6 +28,13 @@ import net.minecraft.world.World;
 
 public class CraftingScreenHandler
 extends AbstractRecipeScreenHandler<CraftingInventory> {
+    public static final int field_30781 = 0;
+    private static final int field_30782 = 1;
+    private static final int field_30783 = 10;
+    private static final int field_30784 = 10;
+    private static final int field_30785 = 37;
+    private static final int field_30786 = 37;
+    private static final int field_30787 = 46;
     private final CraftingInventory input = new CraftingInventory(this, 3, 3);
     private final CraftingResultInventory result = new CraftingResultInventory();
     private final ScreenHandlerContext context;
@@ -64,7 +66,7 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
         }
     }
 
-    protected static void updateResult(int syncId, World world, PlayerEntity player, CraftingInventory craftingInventory, CraftingResultInventory resultInventory) {
+    protected static void updateResult(ScreenHandler handler, World world, PlayerEntity player, CraftingInventory craftingInventory, CraftingResultInventory resultInventory) {
         CraftingRecipe craftingRecipe;
         if (world.isClient) {
             return;
@@ -76,12 +78,13 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
             itemStack = craftingRecipe.craft(craftingInventory);
         }
         resultInventory.setStack(0, itemStack);
-        serverPlayerEntity.networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(syncId, 0, itemStack));
+        handler.setPreviousTrackedSlot(0, itemStack);
+        serverPlayerEntity.networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(handler.syncId, handler.nextRevision(), 0, itemStack));
     }
 
     @Override
     public void onContentChanged(Inventory inventory) {
-        this.context.run((world, blockPos) -> CraftingScreenHandler.updateResult(this.syncId, world, this.player, this.input, this.result));
+        this.context.run((world, pos) -> CraftingScreenHandler.updateResult(this, world, this.player, this.input, this.result));
     }
 
     @Override
@@ -103,7 +106,7 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
     @Override
     public void close(PlayerEntity player) {
         super.close(player);
-        this.context.run((world, blockPos) -> this.dropInventory(player, (World)world, this.input));
+        this.context.run((world, pos) -> this.dropInventory(player, this.input));
     }
 
     @Override
@@ -119,7 +122,7 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
             ItemStack itemStack2 = slot.getStack();
             itemStack = itemStack2.copy();
             if (index == 0) {
-                this.context.run((world, blockPos) -> itemStack2.getItem().onCraft(itemStack2, (World)world, player));
+                this.context.run((world, pos) -> itemStack2.getItem().onCraft(itemStack2, (World)world, player));
                 if (!this.insertItem(itemStack2, 10, 46, true)) {
                     return ItemStack.EMPTY;
                 }
@@ -135,9 +138,9 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
             if (itemStack2.getCount() == itemStack.getCount()) {
                 return ItemStack.EMPTY;
             }
-            ItemStack itemStack3 = slot.onTakeItem(player, itemStack2);
+            slot.onTakeItem(player, itemStack2);
             if (index == 0) {
-                player.dropItem(itemStack3, false);
+                player.dropItem(itemStack2, false);
             }
         }
         return itemStack;
@@ -164,15 +167,18 @@ extends AbstractRecipeScreenHandler<CraftingInventory> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public int getCraftingSlotCount() {
         return 10;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public RecipeBookCategory getCategory() {
         return RecipeBookCategory.CRAFTING;
+    }
+
+    @Override
+    public boolean canInsertIntoSlot(int index) {
+        return index != this.getCraftingResultSlotIndex();
     }
 }
 

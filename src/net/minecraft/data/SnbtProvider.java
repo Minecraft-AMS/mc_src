@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  com.mojang.brigadier.exceptions.CommandSyntaxException
- *  org.apache.commons.io.FileUtils
  *  org.apache.commons.io.IOUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -13,15 +11,11 @@
 package net.minecraft.data;
 
 import com.google.common.collect.Lists;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -35,11 +29,11 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.data.DataCache;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
+import net.minecraft.data.dev.NbtProvider;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.util.Util;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -48,13 +42,13 @@ import org.jetbrains.annotations.Nullable;
 public class SnbtProvider
 implements DataProvider {
     @Nullable
-    private static final Path field_24615 = null;
+    private static final Path DEBUG_OUTPUT_DIRECTORY = null;
     private static final Logger LOGGER = LogManager.getLogger();
     private final DataGenerator root;
     private final List<Tweaker> write = Lists.newArrayList();
 
-    public SnbtProvider(DataGenerator dataGenerator) {
-        this.root = dataGenerator;
+    public SnbtProvider(DataGenerator generator) {
+        this.root = generator;
     }
 
     public SnbtProvider addWriter(Tweaker tweaker) {
@@ -77,7 +71,19 @@ implements DataProvider {
         for (Path path22 : this.root.getInputs()) {
             Files.walk(path22, new FileVisitOption[0]).filter(path -> path.toString().endsWith(".snbt")).forEach(path2 -> list.add(CompletableFuture.supplyAsync(() -> this.toCompressedNbt((Path)path2, this.getFileName(path22, (Path)path2)), Util.getMainWorkerExecutor())));
         }
-        Util.combine(list).join().stream().filter(Objects::nonNull).forEach(compressedData -> this.write(cache, (CompressedData)compressedData, path3));
+        boolean bl = false;
+        for (CompletableFuture completableFuture : list) {
+            try {
+                this.write(cache, (CompressedData)completableFuture.get(), path3);
+            }
+            catch (Exception exception) {
+                LOGGER.error("Failed to process structure", (Throwable)exception);
+                bl = true;
+            }
+        }
+        if (bl) {
+            throw new IllegalStateException("Failed to convert all structures, aborting");
+        }
     }
 
     @Override
@@ -90,40 +96,48 @@ implements DataProvider {
         return string.substring(0, string.length() - ".snbt".length());
     }
 
-    /*
-     * Enabled aggressive block sorting
-     * Enabled unnecessary exception pruning
-     * Enabled aggressive exception aggregation
-     */
-    @Nullable
     private CompressedData toCompressedNbt(Path path, String name) {
-        try (BufferedReader bufferedReader = Files.newBufferedReader(path);){
-            String string = IOUtils.toString((Reader)bufferedReader);
-            NbtCompound nbtCompound = this.write(name, StringNbtReader.parse(string));
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            NbtIo.writeCompressed(nbtCompound, byteArrayOutputStream);
-            byte[] bs = byteArrayOutputStream.toByteArray();
-            String string2 = SHA1.hashBytes(bs).toString();
-            String string3 = field_24615 != null ? nbtCompound.toText("    ", 0).getString() + "\n" : null;
-            CompressedData compressedData = new CompressedData(name, bs, string3, string2);
-            return compressedData;
+        CompressedData compressedData;
+        block8: {
+            BufferedReader bufferedReader = Files.newBufferedReader(path);
+            try {
+                String string = IOUtils.toString((Reader)bufferedReader);
+                NbtCompound nbtCompound = this.write(name, NbtHelper.method_32260(string));
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                NbtIo.writeCompressed(nbtCompound, byteArrayOutputStream);
+                byte[] bs = byteArrayOutputStream.toByteArray();
+                String string2 = SHA1.hashBytes(bs).toString();
+                String string3 = DEBUG_OUTPUT_DIRECTORY != null ? NbtHelper.toPrettyPrintedString(nbtCompound) : null;
+                compressedData = new CompressedData(name, bs, string3, string2);
+                if (bufferedReader == null) break block8;
+            }
+            catch (Throwable throwable) {
+                try {
+                    if (bufferedReader != null) {
+                        try {
+                            bufferedReader.close();
+                        }
+                        catch (Throwable throwable2) {
+                            throwable.addSuppressed(throwable2);
+                        }
+                    }
+                    throw throwable;
+                }
+                catch (Throwable throwable3) {
+                    throw new CompressionException(path, throwable3);
+                }
+            }
+            bufferedReader.close();
         }
-        catch (CommandSyntaxException commandSyntaxException) {
-            LOGGER.error("Couldn't convert {} from SNBT to NBT at {} as it's invalid SNBT", (Object)name, (Object)path, (Object)commandSyntaxException);
-            return null;
-        }
-        catch (IOException iOException) {
-            LOGGER.error("Couldn't convert {} from SNBT to NBT at {}", (Object)name, (Object)path, (Object)iOException);
-        }
-        return null;
+        return compressedData;
     }
 
     private void write(DataCache cache, CompressedData data, Path root) {
         Path path;
-        if (data.field_24616 != null) {
-            path = field_24615.resolve(data.name + ".snbt");
+        if (data.snbtContent != null) {
+            path = DEBUG_OUTPUT_DIRECTORY.resolve(data.name + ".snbt");
             try {
-                FileUtils.write((File)path.toFile(), (CharSequence)data.field_24616, (Charset)StandardCharsets.UTF_8);
+                NbtProvider.writeTo(path, data.snbtContent);
             }
             catch (IOException iOException) {
                 LOGGER.error("Couldn't write structure SNBT {} at {}", (Object)data.name, (Object)path, (Object)iOException);
@@ -150,17 +164,24 @@ implements DataProvider {
     }
 
     static class CompressedData {
-        private final String name;
-        private final byte[] bytes;
+        final String name;
+        final byte[] bytes;
         @Nullable
-        private final String field_24616;
-        private final String sha1;
+        final String snbtContent;
+        final String sha1;
 
-        public CompressedData(String name, byte[] bytes, @Nullable String sha1, String string) {
+        public CompressedData(String name, byte[] bytes, @Nullable String snbtContent, String sha1) {
             this.name = name;
             this.bytes = bytes;
-            this.field_24616 = sha1;
-            this.sha1 = string;
+            this.snbtContent = snbtContent;
+            this.sha1 = sha1;
+        }
+    }
+
+    static class CompressionException
+    extends RuntimeException {
+        public CompressionException(Path path, Throwable cause) {
+            super(path.toAbsolutePath().toString(), cause);
         }
     }
 }

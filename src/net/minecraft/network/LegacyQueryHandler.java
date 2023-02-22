@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 public class LegacyQueryHandler
 extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LogManager.getLogger();
+    public static final int field_29771 = 127;
     private final ServerNetworkIo networkIo;
 
     public LegacyQueryHandler(ServerNetworkIo networkIo) {
@@ -38,22 +39,22 @@ extends ChannelInboundHandlerAdapter {
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    public void channelRead(ChannelHandlerContext channelHandlerContext, Object object) throws Exception {
-        ByteBuf byteBuf = (ByteBuf)object;
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ByteBuf byteBuf = (ByteBuf)msg;
         byteBuf.markReaderIndex();
         boolean bl = true;
         try {
             if (byteBuf.readUnsignedByte() != 254) {
                 return;
             }
-            InetSocketAddress inetSocketAddress = (InetSocketAddress)channelHandlerContext.channel().remoteAddress();
+            InetSocketAddress inetSocketAddress = (InetSocketAddress)ctx.channel().remoteAddress();
             MinecraftServer minecraftServer = this.networkIo.getServer();
             int i = byteBuf.readableBytes();
             switch (i) {
                 case 0: {
                     LOGGER.debug("Ping: (<1.3.x) from {}:{}", (Object)inetSocketAddress.getAddress(), (Object)inetSocketAddress.getPort());
                     String string = String.format("%s\u00a7%d\u00a7%d", minecraftServer.getServerMotd(), minecraftServer.getCurrentPlayerCount(), minecraftServer.getMaxPlayerCount());
-                    this.reply(channelHandlerContext, this.toBuffer(string));
+                    this.reply(ctx, this.toBuffer(string));
                     break;
                 }
                 case 1: {
@@ -62,7 +63,7 @@ extends ChannelInboundHandlerAdapter {
                     }
                     LOGGER.debug("Ping: (1.4-1.5.x) from {}:{}", (Object)inetSocketAddress.getAddress(), (Object)inetSocketAddress.getPort());
                     String string = String.format("\u00a71\u0000%d\u0000%s\u0000%s\u0000%d\u0000%d", 127, minecraftServer.getVersion(), minecraftServer.getServerMotd(), minecraftServer.getCurrentPlayerCount(), minecraftServer.getMaxPlayerCount());
-                    this.reply(channelHandlerContext, this.toBuffer(string));
+                    this.reply(ctx, this.toBuffer(string));
                     break;
                 }
                 default: {
@@ -80,7 +81,7 @@ extends ChannelInboundHandlerAdapter {
                     String string2 = String.format("\u00a71\u0000%d\u0000%s\u0000%s\u0000%d\u0000%d", 127, minecraftServer.getVersion(), minecraftServer.getServerMotd(), minecraftServer.getCurrentPlayerCount(), minecraftServer.getMaxPlayerCount());
                     ByteBuf byteBuf2 = this.toBuffer(string2);
                     try {
-                        this.reply(channelHandlerContext, byteBuf2);
+                        this.reply(ctx, byteBuf2);
                         break;
                     }
                     finally {
@@ -96,8 +97,8 @@ extends ChannelInboundHandlerAdapter {
         finally {
             if (bl) {
                 byteBuf.resetReaderIndex();
-                channelHandlerContext.channel().pipeline().remove("legacy_query");
-                channelHandlerContext.fireChannelRead(object);
+                ctx.channel().pipeline().remove("legacy_query");
+                ctx.fireChannelRead(msg);
             }
         }
     }

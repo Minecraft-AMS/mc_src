@@ -7,7 +7,7 @@
 package net.minecraft.block.entity;
 
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.minecraft.block.Block;
@@ -33,7 +33,6 @@ import net.minecraft.screen.HopperScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.util.Tickable;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.BlockPos;
@@ -45,24 +44,25 @@ import org.jetbrains.annotations.Nullable;
 
 public class HopperBlockEntity
 extends LootableContainerBlockEntity
-implements Hopper,
-Tickable {
+implements Hopper {
+    public static final int field_31341 = 8;
+    public static final int field_31342 = 5;
     private DefaultedList<ItemStack> inventory = DefaultedList.ofSize(5, ItemStack.EMPTY);
     private int transferCooldown = -1;
     private long lastTickTime;
 
-    public HopperBlockEntity() {
-        super(BlockEntityType.HOPPER);
+    public HopperBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.HOPPER, pos, state);
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
         this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
-        if (!this.deserializeLootTable(tag)) {
-            Inventories.readNbt(tag, this.inventory);
+        if (!this.deserializeLootTable(nbt)) {
+            Inventories.readNbt(nbt, this.inventory);
         }
-        this.transferCooldown = tag.getInt("TransferCooldown");
+        this.transferCooldown = nbt.getInt("TransferCooldown");
     }
 
     @Override
@@ -100,34 +100,30 @@ Tickable {
         return new TranslatableText("container.hopper");
     }
 
-    @Override
-    public void tick() {
-        if (this.world == null || this.world.isClient) {
-            return;
-        }
-        --this.transferCooldown;
-        this.lastTickTime = this.world.getTime();
-        if (!this.needsCooldown()) {
-            this.setCooldown(0);
-            this.insertAndExtract(() -> HopperBlockEntity.extract(this));
+    public static void serverTick(World world, BlockPos pos, BlockState state, HopperBlockEntity blockEntity) {
+        --blockEntity.transferCooldown;
+        blockEntity.lastTickTime = world.getTime();
+        if (!blockEntity.needsCooldown()) {
+            blockEntity.setCooldown(0);
+            HopperBlockEntity.insertAndExtract(world, pos, state, blockEntity, () -> HopperBlockEntity.extract(world, blockEntity));
         }
     }
 
-    private boolean insertAndExtract(Supplier<Boolean> extractMethod) {
-        if (this.world == null || this.world.isClient) {
+    private static boolean insertAndExtract(World world, BlockPos pos, BlockState state, HopperBlockEntity blockEntity, BooleanSupplier booleanSupplier) {
+        if (world.isClient) {
             return false;
         }
-        if (!this.needsCooldown() && this.getCachedState().get(HopperBlock.ENABLED).booleanValue()) {
+        if (!blockEntity.needsCooldown() && state.get(HopperBlock.ENABLED).booleanValue()) {
             boolean bl = false;
-            if (!this.isEmpty()) {
-                bl = this.insert();
+            if (!blockEntity.isEmpty()) {
+                bl = HopperBlockEntity.insert(world, pos, state, blockEntity);
             }
-            if (!this.isFull()) {
-                bl |= extractMethod.get().booleanValue();
+            if (!blockEntity.isFull()) {
+                bl |= booleanSupplier.getAsBoolean();
             }
             if (bl) {
-                this.setCooldown(8);
-                this.markDirty();
+                blockEntity.setCooldown(8);
+                HopperBlockEntity.markDirty(world, pos, state);
                 return true;
             }
         }
@@ -142,24 +138,24 @@ Tickable {
         return true;
     }
 
-    private boolean insert() {
-        Inventory inventory = this.getOutputInventory();
-        if (inventory == null) {
+    private static boolean insert(World world, BlockPos pos, BlockState state, Inventory inventory) {
+        Inventory inventory2 = HopperBlockEntity.getOutputInventory(world, pos, state);
+        if (inventory2 == null) {
             return false;
         }
-        Direction direction = this.getCachedState().get(HopperBlock.FACING).getOpposite();
-        if (this.isInventoryFull(inventory, direction)) {
+        Direction direction = state.get(HopperBlock.FACING).getOpposite();
+        if (HopperBlockEntity.isInventoryFull(inventory2, direction)) {
             return false;
         }
-        for (int i = 0; i < this.size(); ++i) {
-            if (this.getStack(i).isEmpty()) continue;
-            ItemStack itemStack = this.getStack(i).copy();
-            ItemStack itemStack2 = HopperBlockEntity.transfer(this, inventory, this.removeStack(i, 1), direction);
+        for (int i = 0; i < inventory.size(); ++i) {
+            if (inventory.getStack(i).isEmpty()) continue;
+            ItemStack itemStack = inventory.getStack(i).copy();
+            ItemStack itemStack2 = HopperBlockEntity.transfer(inventory, inventory2, inventory.removeStack(i, 1), direction);
             if (itemStack2.isEmpty()) {
-                inventory.markDirty();
+                inventory2.markDirty();
                 return true;
             }
-            this.setStack(i, itemStack);
+            inventory.setStack(i, itemStack);
         }
         return false;
     }
@@ -171,9 +167,9 @@ Tickable {
         return IntStream.range(0, inventory.size());
     }
 
-    private boolean isInventoryFull(Inventory direction, Direction direction2) {
-        return HopperBlockEntity.getAvailableSlots(direction, direction2).allMatch(i -> {
-            ItemStack itemStack = direction.getStack(i);
+    private static boolean isInventoryFull(Inventory inventory, Direction direction) {
+        return HopperBlockEntity.getAvailableSlots(inventory, direction).allMatch(i -> {
+            ItemStack itemStack = inventory.getStack(i);
             return itemStack.getCount() >= itemStack.getMaxCount();
         });
     }
@@ -182,8 +178,8 @@ Tickable {
         return HopperBlockEntity.getAvailableSlots(inv, facing).allMatch(i -> inv.getStack(i).isEmpty());
     }
 
-    public static boolean extract(Hopper hopper) {
-        Inventory inventory = HopperBlockEntity.getInputInventory(hopper);
+    public static boolean extract(World world, Hopper hopper) {
+        Inventory inventory = HopperBlockEntity.getInputInventory(world, hopper);
         if (inventory != null) {
             Direction direction = Direction.DOWN;
             if (HopperBlockEntity.isInventoryEmpty(inventory, direction)) {
@@ -191,7 +187,7 @@ Tickable {
             }
             return HopperBlockEntity.getAvailableSlots(inventory, direction).anyMatch(i -> HopperBlockEntity.extract(hopper, inventory, i, direction));
         }
-        for (ItemEntity itemEntity : HopperBlockEntity.getInputItemEntities(hopper)) {
+        for (ItemEntity itemEntity : HopperBlockEntity.getInputItemEntities(world, hopper)) {
             if (!HopperBlockEntity.extract(hopper, itemEntity)) continue;
             return true;
         }
@@ -218,7 +214,7 @@ Tickable {
         ItemStack itemStack2 = HopperBlockEntity.transfer(null, inventory, itemStack, null);
         if (itemStack2.isEmpty()) {
             bl = true;
-            itemEntity.remove();
+            itemEntity.discard();
         } else {
             itemEntity.setStack(itemStack2);
         }
@@ -288,18 +284,18 @@ Tickable {
     }
 
     @Nullable
-    private Inventory getOutputInventory() {
-        Direction direction = this.getCachedState().get(HopperBlock.FACING);
-        return HopperBlockEntity.getInventoryAt(this.getWorld(), this.pos.offset(direction));
+    private static Inventory getOutputInventory(World world, BlockPos pos, BlockState state) {
+        Direction direction = state.get(HopperBlock.FACING);
+        return HopperBlockEntity.getInventoryAt(world, pos.offset(direction));
     }
 
     @Nullable
-    public static Inventory getInputInventory(Hopper hopper) {
-        return HopperBlockEntity.getInventoryAt(hopper.getWorld(), hopper.getHopperX(), hopper.getHopperY() + 1.0, hopper.getHopperZ());
+    private static Inventory getInputInventory(World world, Hopper hopper) {
+        return HopperBlockEntity.getInventoryAt(world, hopper.getHopperX(), hopper.getHopperY() + 1.0, hopper.getHopperZ());
     }
 
-    public static List<ItemEntity> getInputItemEntities(Hopper hopper) {
-        return hopper.getInputAreaShape().getBoundingBoxes().stream().flatMap(box -> hopper.getWorld().getEntitiesByClass(ItemEntity.class, box.offset(hopper.getHopperX() - 0.5, hopper.getHopperY() - 0.5, hopper.getHopperZ() - 0.5), EntityPredicates.VALID_ENTITY).stream()).collect(Collectors.toList());
+    public static List<ItemEntity> getInputItemEntities(World world, Hopper hopper) {
+        return hopper.getInputAreaShape().getBoundingBoxes().stream().flatMap(box -> world.getEntitiesByClass(ItemEntity.class, box.offset(hopper.getHopperX() - 0.5, hopper.getHopperY() - 0.5, hopper.getHopperZ() - 0.5), EntityPredicates.VALID_ENTITY).stream()).collect(Collectors.toList());
     }
 
     @Nullable
@@ -308,7 +304,7 @@ Tickable {
     }
 
     @Nullable
-    public static Inventory getInventoryAt(World world, double x, double y, double z) {
+    private static Inventory getInventoryAt(World world, double x, double y, double z) {
         List<Entity> list;
         BlockEntity blockEntity;
         Inventory inventory = null;
@@ -317,7 +313,7 @@ Tickable {
         Block block = blockState.getBlock();
         if (block instanceof InventoryProvider) {
             inventory = ((InventoryProvider)((Object)block)).getInventory(blockState, world, blockPos);
-        } else if (block.hasBlockEntity() && (blockEntity = world.getBlockEntity(blockPos)) instanceof Inventory && (inventory = (Inventory)((Object)blockEntity)) instanceof ChestBlockEntity && block instanceof ChestBlock) {
+        } else if (blockState.hasBlockEntity() && (blockEntity = world.getBlockEntity(blockPos)) instanceof Inventory && (inventory = (Inventory)((Object)blockEntity)) instanceof ChestBlockEntity && block instanceof ChestBlock) {
             inventory = ChestBlock.getInventory((ChestBlock)block, blockState, world, blockPos, true);
         }
         if (inventory == null && !(list = world.getOtherEntities(null, new Box(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5), EntityPredicates.VALID_INVENTORIES)).isEmpty()) {
@@ -327,7 +323,7 @@ Tickable {
     }
 
     private static boolean canMergeItems(ItemStack first, ItemStack second) {
-        if (first.getItem() != second.getItem()) {
+        if (!first.isOf(second.getItem())) {
             return false;
         }
         if (first.getDamage() != second.getDamage()) {
@@ -336,7 +332,7 @@ Tickable {
         if (first.getCount() > first.getMaxCount()) {
             return false;
         }
-        return ItemStack.areTagsEqual(first, second);
+        return ItemStack.areNbtEqual(first, second);
     }
 
     @Override
@@ -376,12 +372,9 @@ Tickable {
         this.inventory = list;
     }
 
-    public void onEntityCollided(Entity entity) {
-        if (entity instanceof ItemEntity) {
-            BlockPos blockPos = this.getPos();
-            if (VoxelShapes.matchesAnywhere(VoxelShapes.cuboid(entity.getBoundingBox().offset(-blockPos.getX(), -blockPos.getY(), -blockPos.getZ())), this.getInputAreaShape(), BooleanBiFunction.AND)) {
-                this.insertAndExtract(() -> HopperBlockEntity.extract(this, (ItemEntity)entity));
-            }
+    public static void onEntityCollided(World world, BlockPos pos, BlockState state, Entity entity, HopperBlockEntity blockEntity) {
+        if (entity instanceof ItemEntity && VoxelShapes.matchesAnywhere(VoxelShapes.cuboid(entity.getBoundingBox().offset(-pos.getX(), -pos.getY(), -pos.getZ())), blockEntity.getInputAreaShape(), BooleanBiFunction.AND)) {
+            HopperBlockEntity.insertAndExtract(world, pos, state, blockEntity, () -> HopperBlockEntity.extract(blockEntity, (ItemEntity)entity));
         }
     }
 

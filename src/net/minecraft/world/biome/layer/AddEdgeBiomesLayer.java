@@ -13,12 +13,21 @@ import net.minecraft.world.biome.layer.BiomeLayers;
 import net.minecraft.world.biome.layer.type.CrossSamplingLayer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 
-public enum AddEdgeBiomesLayer implements CrossSamplingLayer
-{
-    INSTANCE;
+public final class AddEdgeBiomesLayer
+extends Enum<AddEdgeBiomesLayer>
+implements CrossSamplingLayer {
+    public static final /* enum */ AddEdgeBiomesLayer INSTANCE = new AddEdgeBiomesLayer();
+    private static final IntSet SNOWY_IDS;
+    private static final IntSet FOREST_IDS;
+    private static final /* synthetic */ AddEdgeBiomesLayer[] field_16179;
 
-    private static final IntSet field_26728;
-    private static final IntSet field_26729;
+    public static AddEdgeBiomesLayer[] values() {
+        return (AddEdgeBiomesLayer[])field_16179.clone();
+    }
+
+    public static AddEdgeBiomesLayer valueOf(String string) {
+        return Enum.valueOf(AddEdgeBiomesLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, int n, int e, int s, int w, int center) {
@@ -26,7 +35,7 @@ public enum AddEdgeBiomesLayer implements CrossSamplingLayer
             if (BiomeLayers.isShallowOcean(n) || BiomeLayers.isShallowOcean(e) || BiomeLayers.isShallowOcean(s) || BiomeLayers.isShallowOcean(w)) {
                 return 15;
             }
-        } else if (field_26729.contains(center)) {
+        } else if (FOREST_IDS.contains(center)) {
             if (!(AddEdgeBiomesLayer.isWooded(n) && AddEdgeBiomesLayer.isWooded(e) && AddEdgeBiomesLayer.isWooded(s) && AddEdgeBiomesLayer.isWooded(w))) {
                 return 23;
             }
@@ -37,7 +46,7 @@ public enum AddEdgeBiomesLayer implements CrossSamplingLayer
             if (!BiomeLayers.isOcean(center) && (BiomeLayers.isOcean(n) || BiomeLayers.isOcean(e) || BiomeLayers.isOcean(s) || BiomeLayers.isOcean(w))) {
                 return 25;
             }
-        } else if (field_26728.contains(center)) {
+        } else if (SNOWY_IDS.contains(center)) {
             if (!BiomeLayers.isOcean(center) && (BiomeLayers.isOcean(n) || BiomeLayers.isOcean(e) || BiomeLayers.isOcean(s) || BiomeLayers.isOcean(w))) {
                 return 26;
             }
@@ -52,16 +61,21 @@ public enum AddEdgeBiomesLayer implements CrossSamplingLayer
     }
 
     private static boolean isWooded(int id) {
-        return field_26729.contains(id) || id == 4 || id == 5 || BiomeLayers.isOcean(id);
+        return FOREST_IDS.contains(id) || id == 4 || id == 5 || BiomeLayers.isOcean(id);
     }
 
     private boolean isBadlands(int id) {
         return id == 37 || id == 38 || id == 39 || id == 165 || id == 166 || id == 167;
     }
 
+    private static /* synthetic */ AddEdgeBiomesLayer[] method_36785() {
+        return new AddEdgeBiomesLayer[]{INSTANCE};
+    }
+
     static {
-        field_26728 = new IntOpenHashSet(new int[]{26, 11, 12, 13, 140, 30, 31, 158, 10});
-        field_26729 = new IntOpenHashSet(new int[]{168, 169, 21, 22, 23, 149, 151});
+        field_16179 = AddEdgeBiomesLayer.method_36785();
+        SNOWY_IDS = new IntOpenHashSet(new int[]{26, 11, 12, 13, 140, 30, 31, 158, 10});
+        FOREST_IDS = new IntOpenHashSet(new int[]{168, 169, 21, 22, 23, 149, 151});
     }
 }
 

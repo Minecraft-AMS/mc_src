@@ -2,26 +2,20 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
 import java.util.Collection;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
 import net.minecraft.client.render.entity.feature.SkinOverlayOwner;
 import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LightningEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.CreeperIgniteGoal;
 import net.minecraft.entity.ai.goal.FleeEntityGoal;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -38,6 +32,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.CatEntity;
+import net.minecraft.entity.passive.GoatEntity;
 import net.minecraft.entity.passive.OcelotEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -51,9 +46,10 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.explosion.Explosion;
+import org.jetbrains.annotations.Nullable;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=SkinOverlayOwner.class)})
 public class CreeperEntity
 extends HostileEntity
 implements SkinOverlayOwner {
@@ -80,7 +76,7 @@ implements SkinOverlayOwner {
         this.goalSelector.add(5, new WanderAroundFarGoal(this, 0.8));
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
         this.goalSelector.add(6, new LookAroundGoal(this));
-        this.targetSelector.add(1, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(1, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
         this.targetSelector.add(2, new RevengeGoal(this, new Class[0]));
     }
 
@@ -97,8 +93,8 @@ implements SkinOverlayOwner {
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
-        boolean bl = super.handleFallDamage(fallDistance, damageMultiplier);
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
+        boolean bl = super.handleFallDamage(fallDistance, damageMultiplier, damageSource);
         this.currentFuseTime = (int)((float)this.currentFuseTime + fallDistance * 1.5f);
         if (this.currentFuseTime > this.fuseTime - 5) {
             this.currentFuseTime = this.fuseTime - 5;
@@ -150,6 +146,7 @@ implements SkinOverlayOwner {
             }
             if ((i = this.getFuseSpeed()) > 0 && this.currentFuseTime == 0) {
                 this.playSound(SoundEvents.ENTITY_CREEPER_PRIMED, 1.0f, 0.5f);
+                this.emitGameEvent(GameEvent.PRIME_FUSE);
             }
             this.currentFuseTime += i;
             if (this.currentFuseTime < 0) {
@@ -161,6 +158,14 @@ implements SkinOverlayOwner {
             }
         }
         super.tick();
+    }
+
+    @Override
+    public void setTarget(@Nullable LivingEntity target) {
+        if (target instanceof GoatEntity) {
+            return;
+        }
+        super.setTarget(target);
     }
 
     @Override
@@ -194,7 +199,6 @@ implements SkinOverlayOwner {
         return this.dataTracker.get(CHARGED);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getClientFuseTime(float timeDelta) {
         return MathHelper.lerp(timeDelta, this.lastFuseTime, this.currentFuseTime) / (float)(this.fuseTime - 2);
     }
@@ -214,17 +218,17 @@ implements SkinOverlayOwner {
     }
 
     @Override
-    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.FLINT_AND_STEEL) {
-            this.world.playSound(player, this.getX(), this.getY(), this.getZ(), SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
+    protected ActionResult interactMob(PlayerEntity player2, Hand hand) {
+        ItemStack itemStack = player2.getStackInHand(hand);
+        if (itemStack.isOf(Items.FLINT_AND_STEEL)) {
+            this.world.playSound(player2, this.getX(), this.getY(), this.getZ(), SoundEvents.ITEM_FLINTANDSTEEL_USE, this.getSoundCategory(), 1.0f, this.random.nextFloat() * 0.4f + 0.8f);
             if (!this.world.isClient) {
                 this.ignite();
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+                itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
             }
             return ActionResult.success(this.world.isClient);
         }
-        return super.interactMob(player, hand);
+        return super.interactMob(player2, hand);
     }
 
     private void explode() {
@@ -233,7 +237,7 @@ implements SkinOverlayOwner {
             float f = this.shouldRenderOverlay() ? 2.0f : 1.0f;
             this.dead = true;
             this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, destructionType);
-            this.remove();
+            this.discard();
             this.spawnEffectsCloud();
         }
     }

@@ -2,18 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.MoreObjects
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -24,7 +22,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
@@ -43,6 +40,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ShulkerBulletEntity
 extends ProjectileEntity {
+    private static final double field_30666 = 0.15;
+    @Nullable
     private Entity target;
     @Nullable
     private Direction direction;
@@ -58,13 +57,6 @@ extends ProjectileEntity {
         this.noClip = true;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ShulkerBulletEntity(World world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        this((EntityType<? extends ShulkerBulletEntity>)EntityType.SHULKER_BULLET, world);
-        this.refreshPositionAndAngles(x, y, z, this.yaw, this.pitch);
-        this.setVelocity(velocityX, velocityY, velocityZ);
-    }
-
     public ShulkerBulletEntity(World world, LivingEntity owner, Entity target, Direction.Axis axis) {
         this((EntityType<? extends ShulkerBulletEntity>)EntityType.SHULKER_BULLET, world);
         this.setOwner(owner);
@@ -72,7 +64,7 @@ extends ProjectileEntity {
         double d = (double)blockPos.getX() + 0.5;
         double e = (double)blockPos.getY() + 0.5;
         double f = (double)blockPos.getZ() + 0.5;
-        this.refreshPositionAndAngles(d, e, f, this.yaw, this.pitch);
+        this.refreshPositionAndAngles(d, e, f, this.getYaw(), this.getPitch());
         this.target = target;
         this.direction = Direction.UP;
         this.method_7486(axis);
@@ -115,6 +107,11 @@ extends ProjectileEntity {
 
     @Override
     protected void initDataTracker() {
+    }
+
+    @Nullable
+    private Direction getDirection() {
+        return this.direction;
     }
 
     private void setDirection(@Nullable Direction direction) {
@@ -174,7 +171,7 @@ extends ProjectileEntity {
         double h = e - this.getX();
         double j = f - this.getY();
         double k = g - this.getZ();
-        double l = MathHelper.sqrt(h * h + j * j + k * k);
+        double l = Math.sqrt(h * h + j * j + k * k);
         if (l == 0.0) {
             this.targetX = 0.0;
             this.targetY = 0.0;
@@ -191,7 +188,7 @@ extends ProjectileEntity {
     @Override
     public void checkDespawn() {
         if (this.world.getDifficulty() == Difficulty.PEACEFUL) {
-            this.remove();
+            this.discard();
         }
     }
 
@@ -206,7 +203,7 @@ extends ProjectileEntity {
                     this.targetUuid = null;
                 }
             }
-            if (!(this.target == null || !this.target.isAlive() || this.target instanceof PlayerEntity && ((PlayerEntity)this.target).isSpectator())) {
+            if (!(this.target == null || !this.target.isAlive() || this.target instanceof PlayerEntity && this.target.isSpectator())) {
                 this.targetX = MathHelper.clamp(this.targetX * 1.025, -1.0, 1.0);
                 this.targetY = MathHelper.clamp(this.targetY * 1.025, -1.0, 1.0);
                 this.targetZ = MathHelper.clamp(this.targetZ * 1.025, -1.0, 1.0);
@@ -215,7 +212,7 @@ extends ProjectileEntity {
             } else if (!this.hasNoGravity()) {
                 this.setVelocity(this.getVelocity().add(0.0, -0.04, 0.0));
             }
-            HitResult hitResult = ProjectileUtil.getCollision(this, this::method_26958);
+            HitResult hitResult = ProjectileUtil.getCollision(this, this::canHit);
             if (hitResult.getType() != HitResult.Type.MISS) {
                 this.onCollision(hitResult);
             }
@@ -226,7 +223,7 @@ extends ProjectileEntity {
         ProjectileUtil.method_7484(this, 0.5f);
         if (this.world.isClient) {
             this.world.addParticle(ParticleTypes.END_ROD, this.getX() - vec3d.x, this.getY() - vec3d.y + 0.15, this.getZ() - vec3d.z, 0.0, 0.0, 0.0);
-        } else if (this.target != null && !this.target.removed) {
+        } else if (this.target != null && !this.target.isRemoved()) {
             if (this.stepCount > 0) {
                 --this.stepCount;
                 if (this.stepCount == 0) {
@@ -249,8 +246,8 @@ extends ProjectileEntity {
     }
 
     @Override
-    protected boolean method_26958(Entity entity) {
-        return super.method_26958(entity) && !entity.noClip;
+    protected boolean canHit(Entity entity) {
+        return super.canHit(entity) && !entity.noClip;
     }
 
     @Override
@@ -259,7 +256,6 @@ extends ProjectileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         return distance < 16384.0;
     }
@@ -277,9 +273,9 @@ extends ProjectileEntity {
         LivingEntity livingEntity = entity2 instanceof LivingEntity ? (LivingEntity)entity2 : null;
         boolean bl = entity.damage(DamageSource.mobProjectile(this, livingEntity).setProjectile(), 4.0f);
         if (bl) {
-            this.dealDamage(livingEntity, entity);
+            this.applyDamageEffects(livingEntity, entity);
             if (entity instanceof LivingEntity) {
-                ((LivingEntity)entity).addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 200));
+                ((LivingEntity)entity).addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 200), (Entity)MoreObjects.firstNonNull((Object)entity2, (Object)this));
             }
         }
     }
@@ -294,7 +290,7 @@ extends ProjectileEntity {
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        this.remove();
+        this.discard();
     }
 
     @Override
@@ -307,14 +303,18 @@ extends ProjectileEntity {
         if (!this.world.isClient) {
             this.playSound(SoundEvents.ENTITY_SHULKER_BULLET_HURT, 1.0f, 1.0f);
             ((ServerWorld)this.world).spawnParticles(ParticleTypes.CRIT, this.getX(), this.getY(), this.getZ(), 15, 0.2, 0.2, 0.2, 0.0);
-            this.remove();
+            this.discard();
         }
         return true;
     }
 
     @Override
-    public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this);
+    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
+        super.onSpawnPacket(packet);
+        double d = packet.getVelocityX();
+        double e = packet.getVelocityY();
+        double f = packet.getVelocityZ();
+        this.setVelocity(d, e, f);
     }
 }
 

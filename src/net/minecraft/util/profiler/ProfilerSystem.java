@@ -9,8 +9,8 @@
  *  it.unimi.dsi.fastutil.objects.Object2LongMap
  *  it.unimi.dsi.fastutil.objects.Object2LongMaps
  *  it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  it.unimi.dsi.fastutil.objects.ObjectArraySet
+ *  org.apache.commons.lang3.tuple.Pair
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.apache.logging.log4j.util.Supplier
@@ -25,18 +25,20 @@ import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiler.ProfileLocationInfo;
 import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.ProfileResultImpl;
 import net.minecraft.util.profiler.ReadableProfiler;
+import net.minecraft.util.profiler.SampleType;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.util.Supplier;
@@ -53,11 +55,12 @@ implements ReadableProfiler {
     private final LongSupplier timeGetter;
     private final long startTime;
     private final int startTick;
-    private String location = "";
+    private String fullPath = "";
     private boolean tickStarted;
     @Nullable
     private LocatedInfo currentInfo;
     private final boolean checkTimeout;
+    private final Set<Pair<String, SampleType>> sampleTypes = new ObjectArraySet();
 
     public ProfilerSystem(LongSupplier timeGetter, IntSupplier tickGetter, boolean checkTimeout) {
         this.startTime = timeGetter.getAsLong();
@@ -74,7 +77,7 @@ implements ReadableProfiler {
             return;
         }
         this.tickStarted = true;
-        this.location = "";
+        this.fullPath = "";
         this.path.clear();
         this.push("root");
     }
@@ -87,8 +90,8 @@ implements ReadableProfiler {
         }
         this.pop();
         this.tickStarted = false;
-        if (!this.location.isEmpty()) {
-            LOGGER.error("Profiler tick ended before path was fully popped (remainder: '{}'). Mismatched push/pop?", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.location)});
+        if (!this.fullPath.isEmpty()) {
+            LOGGER.error("Profiler tick ended before path was fully popped (remainder: '{}'). Mismatched push/pop?", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.fullPath)});
         }
     }
 
@@ -98,11 +101,11 @@ implements ReadableProfiler {
             LOGGER.error("Cannot push '{}' to profiler if profiler tick hasn't started - missing startTick()?", (Object)location);
             return;
         }
-        if (!this.location.isEmpty()) {
-            this.location = this.location + '\u001e';
+        if (!this.fullPath.isEmpty()) {
+            this.fullPath = this.fullPath + "\u001e";
         }
-        this.location = this.location + location;
-        this.path.add(this.location);
+        this.fullPath = this.fullPath + location;
+        this.path.add(this.fullPath);
         this.timeList.add(Util.getMeasuringTimeNano());
         this.currentInfo = null;
     }
@@ -110,6 +113,11 @@ implements ReadableProfiler {
     @Override
     public void push(java.util.function.Supplier<String> locationGetter) {
         this.push(locationGetter.get());
+    }
+
+    @Override
+    public void markSampleType(SampleType type) {
+        this.sampleTypes.add((Pair<String, SampleType>)Pair.of((Object)this.fullPath, (Object)((Object)type)));
     }
 
     @Override
@@ -127,12 +135,14 @@ implements ReadableProfiler {
         this.path.remove(this.path.size() - 1);
         long n = l - m;
         LocatedInfo locatedInfo = this.getCurrentInfo();
-        locatedInfo.time = locatedInfo.time + n;
-        locatedInfo.visits = locatedInfo.visits + 1L;
+        locatedInfo.totalTime += n;
+        ++locatedInfo.visits;
+        locatedInfo.maxTime = Math.max(locatedInfo.maxTime, n);
+        locatedInfo.minTime = Math.min(locatedInfo.minTime, n);
         if (this.checkTimeout && n > TIMEOUT_NANOSECONDS) {
-            LOGGER.warn("Something's taking too long! '{}' took aprox {} ms", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.location), () -> (double)n / 1000000.0});
+            LOGGER.warn("Something's taking too long! '{}' took aprox {} ms", new Supplier[]{() -> ProfileResult.getHumanReadableName(this.fullPath), () -> (double)n / 1000000.0});
         }
-        this.location = this.path.isEmpty() ? "" : this.path.get(this.path.size() - 1);
+        this.fullPath = this.path.isEmpty() ? "" : this.path.get(this.path.size() - 1);
         this.currentInfo = null;
     }
 
@@ -143,7 +153,6 @@ implements ReadableProfiler {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void swap(java.util.function.Supplier<String> locationGetter) {
         this.pop();
         this.push(locationGetter);
@@ -151,7 +160,7 @@ implements ReadableProfiler {
 
     private LocatedInfo getCurrentInfo() {
         if (this.currentInfo == null) {
-            this.currentInfo = this.locationInfos.computeIfAbsent(this.location, string -> new LocatedInfo());
+            this.currentInfo = this.locationInfos.computeIfAbsent(this.fullPath, k -> new LocatedInfo());
         }
         return this.currentInfo;
     }
@@ -171,18 +180,33 @@ implements ReadableProfiler {
         return new ProfileResultImpl(this.locationInfos, this.startTime, this.startTick, this.timeGetter.getAsLong(), this.endTickGetter.getAsInt());
     }
 
-    static class LocatedInfo
-    implements ProfileLocationInfo {
-        private long time;
-        private long visits;
-        private Object2LongOpenHashMap<String> counts = new Object2LongOpenHashMap();
+    @Override
+    @Nullable
+    public LocatedInfo getInfo(String name) {
+        return this.locationInfos.get(name);
+    }
 
-        private LocatedInfo() {
-        }
+    @Override
+    public Set<Pair<String, SampleType>> getSampleTargets() {
+        return this.sampleTypes;
+    }
+
+    public static class LocatedInfo
+    implements ProfileLocationInfo {
+        long maxTime = Long.MIN_VALUE;
+        long minTime = Long.MAX_VALUE;
+        long totalTime;
+        long visits;
+        final Object2LongOpenHashMap<String> counts = new Object2LongOpenHashMap();
 
         @Override
         public long getTotalTime() {
-            return this.time;
+            return this.totalTime;
+        }
+
+        @Override
+        public long getMaxTime() {
+            return this.maxTime;
         }
 
         @Override

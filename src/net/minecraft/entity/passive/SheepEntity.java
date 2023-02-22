@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -14,8 +12,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityData;
@@ -41,7 +37,6 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -69,29 +64,31 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class SheepEntity
 extends AnimalEntity
 implements Shearable {
+    private static final int MAX_GRASS_TIMER = 40;
     private static final TrackedData<Byte> COLOR = DataTracker.registerData(SheepEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private static final Map<DyeColor, ItemConvertible> DROPS = Util.make(Maps.newEnumMap(DyeColor.class), enumMap -> {
-        enumMap.put(DyeColor.WHITE, Blocks.WHITE_WOOL);
-        enumMap.put(DyeColor.ORANGE, Blocks.ORANGE_WOOL);
-        enumMap.put(DyeColor.MAGENTA, Blocks.MAGENTA_WOOL);
-        enumMap.put(DyeColor.LIGHT_BLUE, Blocks.LIGHT_BLUE_WOOL);
-        enumMap.put(DyeColor.YELLOW, Blocks.YELLOW_WOOL);
-        enumMap.put(DyeColor.LIME, Blocks.LIME_WOOL);
-        enumMap.put(DyeColor.PINK, Blocks.PINK_WOOL);
-        enumMap.put(DyeColor.GRAY, Blocks.GRAY_WOOL);
-        enumMap.put(DyeColor.LIGHT_GRAY, Blocks.LIGHT_GRAY_WOOL);
-        enumMap.put(DyeColor.CYAN, Blocks.CYAN_WOOL);
-        enumMap.put(DyeColor.PURPLE, Blocks.PURPLE_WOOL);
-        enumMap.put(DyeColor.BLUE, Blocks.BLUE_WOOL);
-        enumMap.put(DyeColor.BROWN, Blocks.BROWN_WOOL);
-        enumMap.put(DyeColor.GREEN, Blocks.GREEN_WOOL);
-        enumMap.put(DyeColor.RED, Blocks.RED_WOOL);
-        enumMap.put(DyeColor.BLACK, Blocks.BLACK_WOOL);
+    private static final Map<DyeColor, ItemConvertible> DROPS = Util.make(Maps.newEnumMap(DyeColor.class), map -> {
+        map.put(DyeColor.WHITE, Blocks.WHITE_WOOL);
+        map.put(DyeColor.ORANGE, Blocks.ORANGE_WOOL);
+        map.put(DyeColor.MAGENTA, Blocks.MAGENTA_WOOL);
+        map.put(DyeColor.LIGHT_BLUE, Blocks.LIGHT_BLUE_WOOL);
+        map.put(DyeColor.YELLOW, Blocks.YELLOW_WOOL);
+        map.put(DyeColor.LIME, Blocks.LIME_WOOL);
+        map.put(DyeColor.PINK, Blocks.PINK_WOOL);
+        map.put(DyeColor.GRAY, Blocks.GRAY_WOOL);
+        map.put(DyeColor.LIGHT_GRAY, Blocks.LIGHT_GRAY_WOOL);
+        map.put(DyeColor.CYAN, Blocks.CYAN_WOOL);
+        map.put(DyeColor.PURPLE, Blocks.PURPLE_WOOL);
+        map.put(DyeColor.BLUE, Blocks.BLUE_WOOL);
+        map.put(DyeColor.BROWN, Blocks.BROWN_WOOL);
+        map.put(DyeColor.GREEN, Blocks.GREEN_WOOL);
+        map.put(DyeColor.RED, Blocks.RED_WOOL);
+        map.put(DyeColor.BLACK, Blocks.BLACK_WOOL);
     });
     private static final Map<DyeColor, float[]> COLORS = Maps.newEnumMap(Arrays.stream(DyeColor.values()).collect(Collectors.toMap(dyeColor -> dyeColor, SheepEntity::getDyedColor)));
     private int eatGrassTimer;
@@ -106,7 +103,6 @@ implements Shearable {
         return new float[]{fs[0] * 0.75f, fs[1] * 0.75f, fs[2] * 0.75f};
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static float[] getRgbColor(DyeColor dyeColor) {
         return COLORS.get(dyeColor);
     }
@@ -121,7 +117,7 @@ implements Shearable {
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new EscapeDangerGoal(this, 1.25));
         this.goalSelector.add(2, new AnimalMateGoal(this, 1.0));
-        this.goalSelector.add(3, new TemptGoal((PathAwareEntity)this, 1.1, Ingredient.ofItems(Items.WHEAT), false));
+        this.goalSelector.add(3, new TemptGoal(this, 1.1, Ingredient.ofItems(Items.WHEAT), false));
         this.goalSelector.add(4, new FollowParentGoal(this, 1.1));
         this.goalSelector.add(5, this.eatGrassGoal);
         this.goalSelector.add(6, new WanderAroundFarGoal(this, 1.0));
@@ -210,7 +206,6 @@ implements Shearable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 10) {
             this.eatGrassTimer = 40;
@@ -219,7 +214,6 @@ implements Shearable {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getNeckAngle(float delta) {
         if (this.eatGrassTimer <= 0) {
             return 0.0f;
@@ -233,7 +227,6 @@ implements Shearable {
         return -((float)(this.eatGrassTimer - 40) - delta) / 4.0f;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getHeadAngle(float delta) {
         if (this.eatGrassTimer > 4 && this.eatGrassTimer <= 36) {
             float f = ((float)(this.eatGrassTimer - 4) - delta) / 32.0f;
@@ -242,21 +235,22 @@ implements Shearable {
         if (this.eatGrassTimer > 0) {
             return 0.62831855f;
         }
-        return this.pitch * ((float)Math.PI / 180);
+        return this.getPitch() * ((float)Math.PI / 180);
     }
 
     @Override
-    public ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.SHEARS) {
+    public ActionResult interactMob(PlayerEntity player2, Hand hand) {
+        ItemStack itemStack = player2.getStackInHand(hand);
+        if (itemStack.isOf(Items.SHEARS)) {
             if (!this.world.isClient && this.isShearable()) {
                 this.sheared(SoundCategory.PLAYERS);
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+                this.emitGameEvent(GameEvent.SHEAR, player2);
+                itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
                 return ActionResult.SUCCESS;
             }
             return ActionResult.CONSUME;
         }
-        return super.interactMob(player, hand);
+        return super.interactMob(player2, hand);
     }
 
     @Override

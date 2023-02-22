@@ -19,6 +19,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.resource.ResourceIndex;
 import net.minecraft.resource.DefaultResourcePack;
 import net.minecraft.resource.ResourceType;
+import net.minecraft.resource.metadata.PackResourceMetadata;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,9 +28,9 @@ public class DefaultClientResourcePack
 extends DefaultResourcePack {
     private final ResourceIndex index;
 
-    public DefaultClientResourcePack(ResourceIndex resourceIndex) {
-        super("minecraft", "realms");
-        this.index = resourceIndex;
+    public DefaultClientResourcePack(PackResourceMetadata metadata, ResourceIndex index) {
+        super(metadata, "minecraft", "realms");
+        this.index = index;
     }
 
     @Override

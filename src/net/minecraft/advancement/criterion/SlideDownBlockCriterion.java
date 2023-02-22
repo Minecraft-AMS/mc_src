@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class SlideDownBlockCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("slide_down_block");
+    static final Identifier ID = new Identifier("slide_down_block");
 
     @Override
     public Identifier getId() {
@@ -54,8 +54,8 @@ extends AbstractCriterion<Conditions> {
         return null;
     }
 
-    public void test(ServerPlayerEntity player, BlockState state) {
-        this.test(player, (T conditions) -> conditions.test(state));
+    public void trigger(ServerPlayerEntity player, BlockState state) {
+        this.trigger(player, (T conditions) -> conditions.test(state));
     }
 
     @Override

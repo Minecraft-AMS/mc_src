@@ -11,21 +11,23 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.Vec3d;
 
 @Environment(value=EnvType.CLIENT)
-public abstract class BlockEntityRenderer<T extends BlockEntity> {
-    protected final BlockEntityRenderDispatcher dispatcher;
+public interface BlockEntityRenderer<T extends BlockEntity> {
+    public void render(T var1, float var2, MatrixStack var3, VertexConsumerProvider var4, int var5, int var6);
 
-    public BlockEntityRenderer(BlockEntityRenderDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
+    default public boolean rendersOutsideBoundingBox(T blockEntity) {
+        return false;
     }
 
-    public abstract void render(T var1, float var2, MatrixStack var3, VertexConsumerProvider var4, int var5, int var6);
+    default public int getRenderDistance() {
+        return 64;
+    }
 
-    public boolean rendersOutsideBoundingBox(T blockEntity) {
-        return false;
+    default public boolean isInRenderDistance(T blockEntity, Vec3d pos) {
+        return Vec3d.ofCenter(((BlockEntity)blockEntity).getPos()).isInRange(pos, this.getRenderDistance());
     }
 }
 

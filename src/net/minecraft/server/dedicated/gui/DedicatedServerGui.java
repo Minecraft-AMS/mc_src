@@ -45,10 +45,12 @@ public class DedicatedServerGui
 extends JComponent {
     private static final Font FONT_MONOSPACE = new Font("Monospaced", 0, 12);
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String TITLE = "Minecraft server";
+    private static final String SHUTTING_DOWN_TITLE = "Minecraft server - shutting down!";
     private final MinecraftDedicatedServer server;
     private Thread consoleUpdateThread;
     private final Collection<Runnable> stopTasks = Lists.newArrayList();
-    private final AtomicBoolean stopped = new AtomicBoolean();
+    final AtomicBoolean stopped = new AtomicBoolean();
 
     public static DedicatedServerGui create(final MinecraftDedicatedServer server) {
         try {
@@ -57,7 +59,7 @@ extends JComponent {
         catch (Exception exception) {
             // empty catch block
         }
-        final JFrame jFrame = new JFrame("Minecraft server");
+        final JFrame jFrame = new JFrame(TITLE);
         final DedicatedServerGui dedicatedServerGui = new DedicatedServerGui(server);
         jFrame.setDefaultCloseOperation(2);
         jFrame.add(dedicatedServerGui);
@@ -67,9 +69,9 @@ extends JComponent {
         jFrame.addWindowListener(new WindowAdapter(){
 
             @Override
-            public void windowClosing(WindowEvent windowEvent) {
+            public void windowClosing(WindowEvent event) {
                 if (!dedicatedServerGui.stopped.getAndSet(true)) {
-                    jFrame.setTitle("Minecraft server - shutting down!");
+                    jFrame.setTitle(DedicatedServerGui.SHUTTING_DOWN_TITLE);
                     server.stop(true);
                     dedicatedServerGui.runStopTasks();
                 }
@@ -121,7 +123,7 @@ extends JComponent {
         jTextArea.setEditable(false);
         jTextArea.setFont(FONT_MONOSPACE);
         JTextField jTextField = new JTextField();
-        jTextField.addActionListener(actionEvent -> {
+        jTextField.addActionListener(event -> {
             String string = jTextField.getText().trim();
             if (!string.isEmpty()) {
                 this.server.enqueueCommand(string, this.server.getCommandSource());
@@ -131,7 +133,7 @@ extends JComponent {
         jTextArea.addFocusListener(new FocusAdapter(){
 
             @Override
-            public void focusGained(FocusEvent focusEvent) {
+            public void focusGained(FocusEvent event) {
             }
         });
         jPanel.add((Component)jScrollPane, "Center");
@@ -158,13 +160,13 @@ extends JComponent {
         }
     }
 
-    private void runStopTasks() {
+    void runStopTasks() {
         this.stopTasks.forEach(Runnable::run);
     }
 
-    public void appendToConsole(JTextArea textArea, JScrollPane scrollPane, String string) {
+    public void appendToConsole(JTextArea textArea, JScrollPane scrollPane, String message) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> this.appendToConsole(textArea, scrollPane, string));
+            SwingUtilities.invokeLater(() -> this.appendToConsole(textArea, scrollPane, message));
             return;
         }
         Document document = textArea.getDocument();
@@ -174,7 +176,7 @@ extends JComponent {
             bl = (double)jScrollBar.getValue() + jScrollBar.getSize().getHeight() + (double)(FONT_MONOSPACE.getSize() * 4) > (double)jScrollBar.getMaximum();
         }
         try {
-            document.insertString(document.getLength(), string, null);
+            document.insertString(document.getLength(), message, null);
         }
         catch (BadLocationException badLocationException) {
             // empty catch block

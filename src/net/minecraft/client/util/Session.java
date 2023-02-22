@@ -62,13 +62,26 @@ public class Session {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public static enum AccountType {
-        LEGACY("legacy"),
-        MOJANG("mojang");
+    public AccountType getAccountType() {
+        return this.accountType;
+    }
 
+    @Environment(value=EnvType.CLIENT)
+    public static final class AccountType
+    extends Enum<AccountType> {
+        public static final /* enum */ AccountType LEGACY = new AccountType("legacy");
+        public static final /* enum */ AccountType MOJANG = new AccountType("mojang");
         private static final Map<String, AccountType> BY_NAME;
         private final String name;
+        private static final /* synthetic */ AccountType[] field_1987;
+
+        public static AccountType[] values() {
+            return (AccountType[])field_1987.clone();
+        }
+
+        public static AccountType valueOf(String string) {
+            return Enum.valueOf(AccountType.class, string);
+        }
 
         private AccountType(String name) {
             this.name = name;
@@ -79,7 +92,12 @@ public class Session {
             return BY_NAME.get(string.toLowerCase(Locale.ROOT));
         }
 
+        private static /* synthetic */ AccountType[] method_36868() {
+            return new AccountType[]{LEGACY, MOJANG};
+        }
+
         static {
+            field_1987 = AccountType.method_36868();
             BY_NAME = Arrays.stream(AccountType.values()).collect(Collectors.toMap(accountType -> accountType.name, Function.identity()));
         }
     }

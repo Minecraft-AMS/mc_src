@@ -10,12 +10,11 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtShort
 extends AbstractNbtNumber {
+    private static final int field_33231 = 80;
     public static final NbtType<NbtShort> TYPE = new NbtType<NbtShort>(){
 
         @Override
@@ -46,13 +45,13 @@ extends AbstractNbtNumber {
     };
     private final short value;
 
-    private NbtShort(short value) {
-        this.value = value;
+    NbtShort(short s) {
+        this.value = s;
     }
 
     public static NbtShort of(short value) {
         if (value >= -128 && value <= 1024) {
-            return Cache.VALUES[value + 128];
+            return Cache.VALUES[value - -128];
         }
         return new NbtShort(value);
     }
@@ -72,11 +71,6 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public String toString() {
-        return this.value + "s";
-    }
-
-    @Override
     public NbtShort copy() {
         return this;
     }
@@ -93,9 +87,8 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("s").formatted(RED);
-        return new LiteralText(String.valueOf(this.value)).append(text).formatted(GOLD);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitShort(this);
     }
 
     @Override
@@ -139,7 +132,12 @@ extends AbstractNbtNumber {
     }
 
     static class Cache {
+        private static final int field_33232 = 1024;
+        private static final int field_33233 = -128;
         static final NbtShort[] VALUES = new NbtShort[1153];
+
+        private Cache() {
+        }
 
         static {
             for (int i = 0; i < VALUES.length; ++i) {

@@ -9,7 +9,13 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.CrossbowPosing;
 import net.minecraft.client.util.math.MatrixStack;
@@ -24,28 +30,18 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class SkeletonEntityModel<T extends MobEntity>
 extends BipedEntityModel<T> {
-    public SkeletonEntityModel() {
-        this(0.0f, false);
+    public SkeletonEntityModel(ModelPart modelPart) {
+        super(modelPart);
     }
 
-    public SkeletonEntityModel(float stretch, boolean isClothing) {
-        super(stretch);
-        if (!isClothing) {
-            this.rightArm = new ModelPart(this, 40, 16);
-            this.rightArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 12.0f, 2.0f, stretch);
-            this.rightArm.setPivot(-5.0f, 2.0f, 0.0f);
-            this.leftArm = new ModelPart(this, 40, 16);
-            this.leftArm.mirror = true;
-            this.leftArm.addCuboid(-1.0f, -2.0f, -1.0f, 2.0f, 12.0f, 2.0f, stretch);
-            this.leftArm.setPivot(5.0f, 2.0f, 0.0f);
-            this.rightLeg = new ModelPart(this, 0, 16);
-            this.rightLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 12.0f, 2.0f, stretch);
-            this.rightLeg.setPivot(-2.0f, 12.0f, 0.0f);
-            this.leftLeg = new ModelPart(this, 0, 16);
-            this.leftLeg.mirror = true;
-            this.leftLeg.addCuboid(-1.0f, 0.0f, -1.0f, 2.0f, 12.0f, 2.0f, stretch);
-            this.leftLeg.setPivot(2.0f, 12.0f, 0.0f);
-        }
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = BipedEntityModel.getModelData(Dilation.NONE, 0.0f);
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("right_arm", ModelPartBuilder.create().uv(40, 16).cuboid(-1.0f, -2.0f, -1.0f, 2.0f, 12.0f, 2.0f), ModelTransform.pivot(-5.0f, 2.0f, 0.0f));
+        modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(40, 16).mirrored().cuboid(-1.0f, -2.0f, -1.0f, 2.0f, 12.0f, 2.0f), ModelTransform.pivot(5.0f, 2.0f, 0.0f));
+        modelPartData.addChild("right_leg", ModelPartBuilder.create().uv(0, 16).cuboid(-1.0f, 0.0f, -1.0f, 2.0f, 12.0f, 2.0f), ModelTransform.pivot(-2.0f, 12.0f, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(0, 16).mirrored().cuboid(-1.0f, 0.0f, -1.0f, 2.0f, 12.0f, 2.0f), ModelTransform.pivot(2.0f, 12.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override
@@ -53,7 +49,7 @@ extends BipedEntityModel<T> {
         this.rightArmPose = BipedEntityModel.ArmPose.EMPTY;
         this.leftArmPose = BipedEntityModel.ArmPose.EMPTY;
         ItemStack itemStack = ((LivingEntity)mobEntity).getStackInHand(Hand.MAIN_HAND);
-        if (itemStack.getItem() == Items.BOW && ((MobEntity)mobEntity).isAttacking()) {
+        if (itemStack.isOf(Items.BOW) && ((MobEntity)mobEntity).isAttacking()) {
             if (((MobEntity)mobEntity).getMainArm() == Arm.RIGHT) {
                 this.rightArmPose = BipedEntityModel.ArmPose.BOW_AND_ARROW;
             } else {
@@ -67,7 +63,7 @@ extends BipedEntityModel<T> {
     public void setAngles(T mobEntity, float f, float g, float h, float i, float j) {
         super.setAngles(mobEntity, f, g, h, i, j);
         ItemStack itemStack = ((LivingEntity)mobEntity).getMainHandStack();
-        if (((MobEntity)mobEntity).isAttacking() && (itemStack.isEmpty() || itemStack.getItem() != Items.BOW)) {
+        if (((MobEntity)mobEntity).isAttacking() && (itemStack.isEmpty() || !itemStack.isOf(Items.BOW))) {
             float k = MathHelper.sin(this.handSwingProgress * (float)Math.PI);
             float l = MathHelper.sin((1.0f - (1.0f - this.handSwingProgress) * (1.0f - this.handSwingProgress)) * (float)Math.PI);
             this.rightArm.roll = 0.0f;
@@ -78,7 +74,7 @@ extends BipedEntityModel<T> {
             this.leftArm.pitch = -1.5707964f;
             this.rightArm.pitch -= k * 1.2f - l * 0.4f;
             this.leftArm.pitch -= k * 1.2f - l * 0.4f;
-            CrossbowPosing.method_29350(this.rightArm, this.leftArm, h);
+            CrossbowPosing.swingArms(this.rightArm, this.leftArm, h);
         }
     }
 

@@ -22,6 +22,7 @@ import net.minecraft.state.StateManager;
 @Environment(value=EnvType.CLIENT)
 public class AndMultipartModelSelector
 implements MultipartModelSelector {
+    public static final String KEY = "AND";
     private final Iterable<? extends MultipartModelSelector> selectors;
 
     public AndMultipartModelSelector(Iterable<? extends MultipartModelSelector> selectors) {

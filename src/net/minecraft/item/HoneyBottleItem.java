@@ -22,6 +22,8 @@ import net.minecraft.world.World;
 
 public class HoneyBottleItem
 extends Item {
+    private static final int MAX_USE_TIME = 40;
+
     public HoneyBottleItem(Item.Settings settings) {
         super(settings);
     }
@@ -40,10 +42,10 @@ extends Item {
         if (stack.isEmpty()) {
             return new ItemStack(Items.GLASS_BOTTLE);
         }
-        if (user instanceof PlayerEntity && !((PlayerEntity)user).abilities.creativeMode) {
+        if (user instanceof PlayerEntity && !((PlayerEntity)user).getAbilities().creativeMode) {
             ItemStack itemStack = new ItemStack(Items.GLASS_BOTTLE);
             PlayerEntity playerEntity = (PlayerEntity)user;
-            if (!playerEntity.inventory.insertStack(itemStack)) {
+            if (!playerEntity.getInventory().insertStack(itemStack)) {
                 playerEntity.dropItem(itemStack, false);
             }
         }

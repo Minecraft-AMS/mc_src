@@ -32,7 +32,7 @@ import org.apache.logging.log4j.Logger;
 public class RealmsServerPlayerList
 extends ValueObject {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final JsonParser jsonParser = new JsonParser();
+    private static final JsonParser JSON_PARSER = new JsonParser();
     public long serverId;
     public List<String> players;
 
@@ -42,10 +42,10 @@ extends ValueObject {
             JsonElement jsonElement;
             realmsServerPlayerList.serverId = JsonUtils.getLongOr("serverId", node, -1L);
             String string = JsonUtils.getStringOr("playerList", node, null);
-            realmsServerPlayerList.players = string != null ? ((jsonElement = jsonParser.parse(string)).isJsonArray() ? RealmsServerPlayerList.parsePlayers(jsonElement.getAsJsonArray()) : Lists.newArrayList()) : Lists.newArrayList();
+            realmsServerPlayerList.players = string != null ? ((jsonElement = JSON_PARSER.parse(string)).isJsonArray() ? RealmsServerPlayerList.parsePlayers(jsonElement.getAsJsonArray()) : Lists.newArrayList()) : Lists.newArrayList();
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse RealmsServerPlayerList: " + exception.getMessage());
+            LOGGER.error("Could not parse RealmsServerPlayerList: {}", (Object)exception.getMessage());
         }
         return realmsServerPlayerList;
     }

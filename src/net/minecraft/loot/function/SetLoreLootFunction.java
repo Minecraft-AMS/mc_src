@@ -4,6 +4,7 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableSet
+ *  com.google.common.collect.Lists
  *  com.google.common.collect.Streams
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonDeserializationContext
@@ -16,6 +17,7 @@ package net.minecraft.loot.function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
@@ -30,6 +32,7 @@ import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.loot.context.LootContextParameter;
 import net.minecraft.loot.function.ConditionalLootFunction;
+import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.loot.function.SetNameLootFunction;
@@ -42,10 +45,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class SetLoreLootFunction
 extends ConditionalLootFunction {
-    private final boolean replace;
-    private final List<Text> lore;
+    final boolean replace;
+    final List<Text> lore;
     @Nullable
-    private final LootContext.EntityTarget entity;
+    final LootContext.EntityTarget entity;
 
     public SetLoreLootFunction(LootCondition[] conditions, boolean replace, List<Text> lore, @Nullable LootContext.EntityTarget entity) {
         super(conditions);
@@ -81,11 +84,11 @@ extends ConditionalLootFunction {
     private NbtList getLoreForMerge(ItemStack stack, boolean otherLoreExists) {
         NbtCompound nbtCompound2;
         NbtCompound nbtCompound;
-        if (stack.hasTag()) {
-            nbtCompound = stack.getTag();
+        if (stack.hasNbt()) {
+            nbtCompound = stack.getNbt();
         } else if (otherLoreExists) {
             nbtCompound = new NbtCompound();
-            stack.setTag(nbtCompound);
+            stack.setNbt(nbtCompound);
         } else {
             return null;
         }
@@ -106,6 +109,47 @@ extends ConditionalLootFunction {
             return nbtList;
         }
         return null;
+    }
+
+    public static Builder method_35544() {
+        return new Builder();
+    }
+
+    public static class Builder
+    extends ConditionalLootFunction.Builder<Builder> {
+        private boolean replace;
+        private LootContext.EntityTarget target;
+        private final List<Text> lore = Lists.newArrayList();
+
+        public Builder replace(boolean replace) {
+            this.replace = replace;
+            return this;
+        }
+
+        public Builder target(LootContext.EntityTarget target) {
+            this.target = target;
+            return this;
+        }
+
+        public Builder lore(Text lore) {
+            this.lore.add(lore);
+            return this;
+        }
+
+        @Override
+        protected Builder getThisBuilder() {
+            return this;
+        }
+
+        @Override
+        public LootFunction build() {
+            return new SetLoreLootFunction(this.getConditions(), this.replace, this.lore, this.target);
+        }
+
+        @Override
+        protected /* synthetic */ ConditionalLootFunction.Builder getThisBuilder() {
+            return this.getThisBuilder();
+        }
     }
 
     public static class Serializer

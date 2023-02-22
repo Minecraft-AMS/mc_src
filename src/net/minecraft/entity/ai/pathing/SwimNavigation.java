@@ -3,11 +3,11 @@
  */
 package net.minecraft.entity.ai.pathing;
 
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.ai.pathing.WaterPathNodeMaker;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.DolphinEntity;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.HitResult;
@@ -28,7 +28,7 @@ extends EntityNavigation {
 
     @Override
     protected PathNodeNavigator createPathNodeNavigator(int range) {
-        this.canJumpOutOfWater = this.entity instanceof DolphinEntity;
+        this.canJumpOutOfWater = this.entity.getType() == EntityType.DOLPHIN;
         this.nodeMaker = new WaterPathNodeMaker(this.canJumpOutOfWater);
         return new PathNodeNavigator(this.nodeMaker, range);
     }
@@ -57,7 +57,7 @@ extends EntityNavigation {
             this.continueFollowingPath();
         } else if (this.currentPath != null && !this.currentPath.isFinished()) {
             vec3d = this.currentPath.getNodePosition(this.entity);
-            if (MathHelper.floor(this.entity.getX()) == MathHelper.floor(vec3d.x) && MathHelper.floor(this.entity.getY()) == MathHelper.floor(vec3d.y) && MathHelper.floor(this.entity.getZ()) == MathHelper.floor(vec3d.z)) {
+            if (this.entity.getBlockX() == MathHelper.floor(vec3d.x) && this.entity.getBlockY() == MathHelper.floor(vec3d.y) && this.entity.getBlockZ() == MathHelper.floor(vec3d.z)) {
                 this.currentPath.next();
             }
         }
@@ -82,7 +82,7 @@ extends EntityNavigation {
             g = (float)((double)g * (vec3d2.length() * 6.0));
         }
         int i = 6;
-        Vec3d vec3d3 = Vec3d.ofBottomCenter(this.currentPath.method_31032());
+        Vec3d vec3d3 = Vec3d.ofBottomCenter(this.currentPath.getCurrentNodePos());
         if (Math.abs(this.entity.getX() - vec3d3.x) < (double)g && Math.abs(this.entity.getZ() - vec3d3.z) < (double)g && Math.abs(this.entity.getY() - vec3d3.y) < (double)(g * 2.0f)) {
             this.currentPath.next();
         }
@@ -105,7 +105,7 @@ extends EntityNavigation {
             this.pathStartPos = currentPos;
         }
         if (this.currentPath != null && !this.currentPath.isFinished()) {
-            BlockPos vec3i = this.currentPath.method_31032();
+            BlockPos vec3i = this.currentPath.getCurrentNodePos();
             if (vec3i.equals(this.lastNodePosition)) {
                 this.currentNodeMs += Util.getMeasuringTimeMs() - this.lastActiveTickMs;
             } else {

@@ -11,8 +11,6 @@
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSerializer
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.advancement;
@@ -32,8 +30,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.AdvancementCriterion;
 import net.minecraft.advancement.criterion.CriterionProgress;
 import net.minecraft.network.PacketByteBuf;
@@ -42,12 +38,20 @@ import org.jetbrains.annotations.Nullable;
 
 public class AdvancementProgress
 implements Comparable<AdvancementProgress> {
-    private final Map<String, CriterionProgress> criteriaProgresses = Maps.newHashMap();
+    final Map<String, CriterionProgress> criteriaProgresses;
     private String[][] requirements = new String[0][];
+
+    private AdvancementProgress(Map<String, CriterionProgress> criteriaProgresses) {
+        this.criteriaProgresses = criteriaProgresses;
+    }
+
+    public AdvancementProgress() {
+        this.criteriaProgresses = Maps.newHashMap();
+    }
 
     public void init(Map<String, AdvancementCriterion> criteria, String[][] requirements) {
         Set<String> set = criteria.keySet();
-        this.criteriaProgresses.entrySet().removeIf(entry -> !set.contains(entry.getKey()));
+        this.criteriaProgresses.entrySet().removeIf(progress -> !set.contains(progress.getKey()));
         for (String string : set) {
             if (this.criteriaProgresses.containsKey(string)) continue;
             this.criteriaProgresses.put(string, new CriterionProgress());
@@ -100,24 +104,16 @@ implements Comparable<AdvancementProgress> {
     }
 
     public String toString() {
-        return "AdvancementProgress{criteria=" + this.criteriaProgresses + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + '}';
+        return "AdvancementProgress{criteria=" + this.criteriaProgresses + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + "}";
     }
 
-    public void toPacket(PacketByteBuf buf) {
-        buf.writeVarInt(this.criteriaProgresses.size());
-        for (Map.Entry<String, CriterionProgress> entry : this.criteriaProgresses.entrySet()) {
-            buf.writeString(entry.getKey());
-            entry.getValue().toPacket(buf);
-        }
+    public void toPacket(PacketByteBuf buf2) {
+        buf2.writeMap(this.criteriaProgresses, PacketByteBuf::writeString, (buf, progresses) -> progresses.toPacket((PacketByteBuf)((Object)buf)));
     }
 
     public static AdvancementProgress fromPacket(PacketByteBuf buf) {
-        AdvancementProgress advancementProgress = new AdvancementProgress();
-        int i = buf.readVarInt();
-        for (int j = 0; j < i; ++j) {
-            advancementProgress.criteriaProgresses.put(buf.readString(Short.MAX_VALUE), CriterionProgress.fromPacket(buf));
-        }
-        return advancementProgress;
+        Map<String, CriterionProgress> map = buf.readMap(PacketByteBuf::readString, CriterionProgress::fromPacket);
+        return new AdvancementProgress(map);
     }
 
     @Nullable
@@ -125,7 +121,6 @@ implements Comparable<AdvancementProgress> {
         return this.criteriaProgresses.get(name);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getProgressBarPercentage() {
         if (this.criteriaProgresses.isEmpty()) {
             return 0.0f;
@@ -136,7 +131,6 @@ implements Comparable<AdvancementProgress> {
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public String getProgressBarFraction() {
         if (this.criteriaProgresses.isEmpty()) {
             return null;
@@ -149,7 +143,6 @@ implements Comparable<AdvancementProgress> {
         return j + "/" + i;
     }
 
-    @Environment(value=EnvType.CLIENT)
     private int countObtainedRequirements() {
         int i = 0;
         for (String[] strings : this.requirements) {
@@ -221,10 +214,10 @@ implements Comparable<AdvancementProgress> {
         public JsonElement serialize(AdvancementProgress advancementProgress, Type type, JsonSerializationContext jsonSerializationContext) {
             JsonObject jsonObject = new JsonObject();
             JsonObject jsonObject2 = new JsonObject();
-            for (Map.Entry entry : advancementProgress.criteriaProgresses.entrySet()) {
-                CriterionProgress criterionProgress = (CriterionProgress)entry.getValue();
+            for (Map.Entry<String, CriterionProgress> entry : advancementProgress.criteriaProgresses.entrySet()) {
+                CriterionProgress criterionProgress = entry.getValue();
                 if (!criterionProgress.isObtained()) continue;
-                jsonObject2.add((String)entry.getKey(), criterionProgress.toJson());
+                jsonObject2.add(entry.getKey(), criterionProgress.toJson());
             }
             if (!jsonObject2.entrySet().isEmpty()) {
                 jsonObject.add("criteria", (JsonElement)jsonObject2);

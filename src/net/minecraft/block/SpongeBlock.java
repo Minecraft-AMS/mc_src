@@ -17,7 +17,6 @@ import net.minecraft.block.FluidDrainable;
 import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
@@ -26,6 +25,9 @@ import net.minecraft.world.World;
 
 public class SpongeBlock
 extends Block {
+    public static final int field_31250 = 6;
+    public static final int field_31251 = 64;
+
     protected SpongeBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
@@ -65,7 +67,7 @@ extends Block {
                 FluidState fluidState = world.getFluidState(blockPos2);
                 Material material = blockState.getMaterial();
                 if (!fluidState.isIn(FluidTags.WATER)) continue;
-                if (blockState.getBlock() instanceof FluidDrainable && ((FluidDrainable)((Object)blockState.getBlock())).tryDrainFluid(world, blockPos2, blockState) != Fluids.EMPTY) {
+                if (blockState.getBlock() instanceof FluidDrainable && !((FluidDrainable)((Object)blockState.getBlock())).tryDrainFluid(world, blockPos2, blockState).isEmpty()) {
                     ++i;
                     if (j >= 6) continue;
                     queue.add(new Pair<BlockPos, Integer>(blockPos2, j + 1));
@@ -79,7 +81,7 @@ extends Block {
                     continue;
                 }
                 if (material != Material.UNDERWATER_PLANT && material != Material.REPLACEABLE_UNDERWATER_PLANT) continue;
-                BlockEntity blockEntity = blockState.getBlock().hasBlockEntity() ? world.getBlockEntity(blockPos2) : null;
+                BlockEntity blockEntity = blockState.hasBlockEntity() ? world.getBlockEntity(blockPos2) : null;
                 SpongeBlock.dropStacks(blockState, world, blockPos2, blockEntity);
                 world.setBlockState(blockPos2, Blocks.AIR.getDefaultState(), 3);
                 ++i;

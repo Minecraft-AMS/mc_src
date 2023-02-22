@@ -2,20 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import java.util.Optional;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Tameable;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -34,7 +31,8 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class TameableEntity
-extends AnimalEntity {
+extends AnimalEntity
+implements Tameable {
     protected static final TrackedData<Byte> TAMEABLE_FLAGS = DataTracker.registerData(TameableEntity.class, TrackedDataHandlerRegistry.BYTE);
     protected static final TrackedData<Optional<UUID>> OWNER_UUID = DataTracker.registerData(TameableEntity.class, TrackedDataHandlerRegistry.OPTIONAL_UUID);
     private boolean sitting;
@@ -88,7 +86,6 @@ extends AnimalEntity {
         return !this.isLeashed();
     }
 
-    @Environment(value=EnvType.CLIENT)
     protected void showEmoteParticle(boolean positive) {
         DefaultParticleType particleEffect = ParticleTypes.HEART;
         if (!positive) {
@@ -103,7 +100,6 @@ extends AnimalEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 7) {
             this.showEmoteParticle(true);
@@ -144,6 +140,7 @@ extends AnimalEntity {
         }
     }
 
+    @Override
     @Nullable
     public UUID getOwnerUuid() {
         return this.dataTracker.get(OWNER_UUID).orElse(null);
@@ -161,6 +158,7 @@ extends AnimalEntity {
         }
     }
 
+    @Override
     @Nullable
     public LivingEntity getOwner() {
         try {
@@ -228,6 +226,12 @@ extends AnimalEntity {
 
     public void setSitting(boolean sitting) {
         this.sitting = sitting;
+    }
+
+    @Override
+    @Nullable
+    public /* synthetic */ Entity getOwner() {
+        return this.getOwner();
     }
 }
 

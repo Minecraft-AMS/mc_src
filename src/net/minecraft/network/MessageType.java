@@ -1,22 +1,24 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-
-public enum MessageType {
-    CHAT(0, false),
-    SYSTEM(1, true),
-    GAME_INFO(2, true);
-
+public final class MessageType
+extends Enum<MessageType> {
+    public static final /* enum */ MessageType CHAT = new MessageType(0, false);
+    public static final /* enum */ MessageType SYSTEM = new MessageType(1, true);
+    public static final /* enum */ MessageType GAME_INFO = new MessageType(2, true);
     private final byte id;
     private final boolean interruptsNarration;
+    private static final /* synthetic */ MessageType[] field_11734;
+
+    public static MessageType[] values() {
+        return (MessageType[])field_11734.clone();
+    }
+
+    public static MessageType valueOf(String string) {
+        return Enum.valueOf(MessageType.class, string);
+    }
 
     private MessageType(byte id, boolean interruptsNarration) {
         this.id = id;
@@ -35,9 +37,16 @@ public enum MessageType {
         return CHAT;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean interruptsNarration() {
         return this.interruptsNarration;
+    }
+
+    private static /* synthetic */ MessageType[] method_36944() {
+        return new MessageType[]{CHAT, SYSTEM, GAME_INFO};
+    }
+
+    static {
+        field_11734 = MessageType.method_36944();
     }
 }
 

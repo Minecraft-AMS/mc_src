@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableSet
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.resource;
 
@@ -18,35 +16,38 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFactory;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.util.Identifier;
 
-public interface ResourceManager {
-    @Environment(value=EnvType.CLIENT)
+public interface ResourceManager
+extends ResourceFactory {
     public Set<String> getAllNamespaces();
 
-    public Resource getResource(Identifier var1) throws IOException;
-
-    @Environment(value=EnvType.CLIENT)
     public boolean containsResource(Identifier var1);
 
     public List<Resource> getAllResources(Identifier var1) throws IOException;
 
     public Collection<Identifier> findResources(String var1, Predicate<String> var2);
 
-    @Environment(value=EnvType.CLIENT)
     public Stream<ResourcePack> streamResourcePacks();
 
-    public static enum Empty implements ResourceManager
-    {
-        INSTANCE;
+    public static final class Empty
+    extends Enum<Empty>
+    implements ResourceManager {
+        public static final /* enum */ Empty INSTANCE = new Empty();
+        private static final /* synthetic */ Empty[] field_25352;
 
+        public static Empty[] values() {
+            return (Empty[])field_25352.clone();
+        }
+
+        public static Empty valueOf(String string) {
+            return Enum.valueOf(Empty.class, string);
+        }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public Set<String> getAllNamespaces() {
             return ImmutableSet.of();
         }
@@ -57,7 +58,6 @@ public interface ResourceManager {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public boolean containsResource(Identifier id) {
             return false;
         }
@@ -73,9 +73,16 @@ public interface ResourceManager {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public Stream<ResourcePack> streamResourcePacks() {
             return Stream.of(new ResourcePack[0]);
+        }
+
+        private static /* synthetic */ Empty[] method_36585() {
+            return new Empty[]{INSTANCE};
+        }
+
+        static {
+            field_25352 = Empty.method_36585();
         }
     }
 }

@@ -15,20 +15,20 @@ import net.minecraft.world.PersistentState;
 
 public class IdCountsState
 extends PersistentState {
+    public static final String field_31830 = "idcounts";
     private final Object2IntMap<String> idCounts = new Object2IntOpenHashMap();
 
     public IdCountsState() {
-        super("idcounts");
         this.idCounts.defaultReturnValue(-1);
     }
 
-    @Override
-    public void fromTag(NbtCompound tag) {
-        this.idCounts.clear();
-        for (String string : tag.getKeys()) {
-            if (!tag.contains(string, 99)) continue;
-            this.idCounts.put((Object)string, tag.getInt(string));
+    public static IdCountsState fromNbt(NbtCompound nbt) {
+        IdCountsState idCountsState = new IdCountsState();
+        for (String string : nbt.getKeys()) {
+            if (!nbt.contains(string, 99)) continue;
+            idCountsState.idCounts.put((Object)string, nbt.getInt(string));
         }
+        return idCountsState;
     }
 
     @Override

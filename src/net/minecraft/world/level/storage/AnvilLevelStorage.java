@@ -28,7 +28,6 @@ import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.MutableRegistry;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.World;
@@ -45,6 +44,7 @@ import org.apache.logging.log4j.Logger;
 
 public class AnvilLevelStorage {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String FILE_EXTENSION = ".mcr";
 
     static boolean convertLevel(LevelStorage.Session storageSession, ProgressListener progressListener) {
         progressListener.progressStagePercentage(0);
@@ -65,10 +65,10 @@ public class AnvilLevelStorage {
         int i = list.size() + list2.size() + list3.size();
         LOGGER.info("Total conversion count is {}", (Object)i);
         DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
-        RegistryOps<NbtElement> registryOps = RegistryOps.of(NbtOps.INSTANCE, ResourceManager.Empty.INSTANCE, impl);
+        RegistryOps<NbtElement> registryOps = RegistryOps.ofLoaded(NbtOps.INSTANCE, ResourceManager.Empty.INSTANCE, (DynamicRegistryManager)impl);
         SaveProperties saveProperties = storageSession.readLevelProperties(registryOps, DataPackSettings.SAFE_MODE);
         long l = saveProperties != null ? saveProperties.getGeneratorOptions().getSeed() : 0L;
-        MutableRegistry<Biome> registry = impl.get(Registry.BIOME_KEY);
+        Registry<Biome> registry = impl.get(Registry.BIOME_KEY);
         BiomeSource biomeSource = saveProperties != null && saveProperties.getGeneratorOptions().isFlatWorld() ? new FixedBiomeSource(registry.getOrThrow(BiomeKeys.PLAINS)) : new VanillaLayeredBiomeSource(l, false, false, registry);
         AnvilLevelStorage.convertRegions(impl, new File(file, "region"), list, biomeSource, 0, i, progressListener);
         AnvilLevelStorage.convertRegions(impl, new File(file2, "region"), list2, new FixedBiomeSource(registry.getOrThrow(BiomeKeys.NETHER_WASTES)), list.size(), i, progressListener);
@@ -101,7 +101,7 @@ public class AnvilLevelStorage {
     private static void convertRegion(DynamicRegistryManager.Impl registryManager, File directory, File file, BiomeSource biomeSource, int i, int j, ProgressListener progressListener) {
         String string = file.getName();
         try (RegionFile regionFile = new RegionFile(file, directory, true);
-             RegionFile regionFile2 = new RegionFile(new File(directory, string.substring(0, string.length() - ".mcr".length()) + ".mca"), directory, true);){
+             RegionFile regionFile2 = new RegionFile(new File(directory, string.substring(0, string.length() - FILE_EXTENSION.length()) + ".mca"), directory, true);){
             for (int k = 0; k < 32; ++k) {
                 int l;
                 for (l = 0; l < 32; ++l) {
@@ -142,8 +142,8 @@ public class AnvilLevelStorage {
     }
 
     private static void addRegionFiles(File worldDirectory, Collection<File> files) {
-        File file2 = new File(worldDirectory, "region");
-        File[] files2 = file2.listFiles((file, string) -> string.endsWith(".mcr"));
+        File file = new File(worldDirectory, "region");
+        File[] files2 = file.listFiles((directory, name) -> name.endsWith(FILE_EXTENSION));
         if (files2 != null) {
             Collections.addAll(files, files2);
         }

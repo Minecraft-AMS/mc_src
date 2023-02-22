@@ -2,15 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  com.google.common.collect.Lists
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.vehicle;
 
+import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -31,6 +30,7 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
@@ -51,9 +51,10 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.world.BlockLocating;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.PortalUtil;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class BoatEntity
@@ -65,6 +66,12 @@ extends Entity {
     private static final TrackedData<Boolean> LEFT_PADDLE_MOVING = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> RIGHT_PADDLE_MOVING = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> BUBBLE_WOBBLE_TICKS = DataTracker.registerData(BoatEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    public static final int field_30697 = 0;
+    public static final int field_30698 = 1;
+    private static final int field_30695 = 60;
+    private static final double field_30696 = (double)0.3926991f;
+    public static final double field_30699 = 0.7853981852531433;
+    public static final int field_30700 = 60;
     private final float[] paddlePhases = new float[2];
     private float velocityDecay;
     private float ticksUnderwater;
@@ -98,7 +105,6 @@ extends Entity {
     public BoatEntity(World world, double x, double y, double z) {
         this((EntityType<? extends BoatEntity>)EntityType.BOAT, world);
         this.setPosition(x, y, z);
-        this.setVelocity(Vec3d.ZERO);
         this.prevX = x;
         this.prevY = y;
         this.prevZ = z;
@@ -110,8 +116,8 @@ extends Entity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.NONE;
     }
 
     @Override
@@ -127,11 +133,11 @@ extends Entity {
 
     @Override
     public boolean collidesWith(Entity other) {
-        return BoatEntity.method_30959(this, other);
+        return BoatEntity.canCollide(this, other);
     }
 
-    public static boolean method_30959(Entity entity, Entity entity2) {
-        return (entity2.isCollidable() || entity2.isPushable()) && !entity.isConnectedThroughVehicle(entity2);
+    public static boolean canCollide(Entity entity, Entity other) {
+        return (other.isCollidable() || other.isPushable()) && !entity.isConnectedThroughVehicle(other);
     }
 
     @Override
@@ -145,8 +151,8 @@ extends Entity {
     }
 
     @Override
-    protected Vec3d method_30633(Direction.Axis axis, PortalUtil.Rectangle rectangle) {
-        return LivingEntity.method_31079(super.method_30633(axis, rectangle));
+    protected Vec3d positionInPortal(Direction.Axis portalAxis, BlockLocating.Rectangle portalRect) {
+        return LivingEntity.positionInPortal(super.positionInPortal(portalAxis, portalRect));
     }
 
     @Override
@@ -160,19 +166,20 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (this.world.isClient || this.removed) {
+        if (this.world.isClient || this.isRemoved()) {
             return true;
         }
         this.setDamageWobbleSide(-this.getDamageWobbleSide());
         this.setDamageWobbleTicks(10);
         this.setDamageWobbleStrength(this.getDamageWobbleStrength() + amount * 10.0f);
         this.scheduleVelocityUpdate();
-        boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).abilities.creativeMode;
+        this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
+        boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
         if (bl || this.getDamageWobbleStrength() > 40.0f) {
             if (!bl && this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                 this.dropItem(this.asItem());
             }
-            this.remove();
+            this.discard();
         }
         return true;
     }
@@ -190,6 +197,7 @@ extends Entity {
         if (this.random.nextInt(20) == 0) {
             this.world.playSound(this.getX(), this.getY(), this.getZ(), this.getSplashSound(), this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat(), false);
         }
+        this.emitGameEvent(GameEvent.SPLASH, this.getPrimaryPassenger());
     }
 
     @Override
@@ -226,7 +234,6 @@ extends Entity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void animateDamage() {
         this.setDamageWobbleSide(-this.getDamageWobbleSide());
         this.setDamageWobbleTicks(10);
@@ -235,11 +242,10 @@ extends Entity {
 
     @Override
     public boolean collides() {
-        return !this.removed;
+        return !this.isRemoved();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
         this.x = x;
         this.y = y;
@@ -271,7 +277,7 @@ extends Entity {
         super.tick();
         this.method_7555();
         if (this.isLogicalSideForUpdatingMovement()) {
-            if (this.getPassengerList().isEmpty() || !(this.getPassengerList().get(0) instanceof PlayerEntity)) {
+            if (!(this.getFirstPassenger() instanceof PlayerEntity)) {
                 this.setPaddleMovings(false, false);
             }
             this.updateVelocity();
@@ -292,6 +298,7 @@ extends Entity {
                     double d = i == 1 ? -vec3d.z : vec3d.z;
                     double e = i == 1 ? vec3d.x : -vec3d.x;
                     this.world.playSound(null, this.getX() + d, this.getY(), this.getZ() + e, soundEvent, this.getSoundCategory(), 1.0f, 0.8f + 0.4f * this.random.nextFloat());
+                    this.world.emitGameEvent(this.getPrimaryPassenger(), GameEvent.SPLASH, new BlockPos(this.getX() + d, this.getY(), this.getZ() + e));
                 }
                 int n = i;
                 this.paddlePhases[n] = (float)((double)this.paddlePhases[n] + (double)0.3926991f);
@@ -337,7 +344,7 @@ extends Entity {
                         this.setVelocity(vec3d.add(0.0, -0.7, 0.0));
                         this.removeAllPassengers();
                     } else {
-                        this.setVelocity(vec3d.x, this.hasPassengerType(PlayerEntity.class) ? 2.7 : 0.6, vec3d.z);
+                        this.setVelocity(vec3d.x, this.hasPassengerType(entity -> entity instanceof PlayerEntity) ? 2.7 : 0.6, vec3d.z);
                     }
                 }
                 this.onBubbleColumnSurface = false;
@@ -371,12 +378,12 @@ extends Entity {
         double d = this.getX() + (this.x - this.getX()) / (double)this.field_7708;
         double e = this.getY() + (this.y - this.getY()) / (double)this.field_7708;
         double f = this.getZ() + (this.z - this.getZ()) / (double)this.field_7708;
-        double g = MathHelper.wrapDegrees(this.boatYaw - (double)this.yaw);
-        this.yaw = (float)((double)this.yaw + g / (double)this.field_7708);
-        this.pitch = (float)((double)this.pitch + (this.boatPitch - (double)this.pitch) / (double)this.field_7708);
+        double g = MathHelper.wrapDegrees(this.boatYaw - (double)this.getYaw());
+        this.setYaw(this.getYaw() + (float)g / (float)this.field_7708);
+        this.setPitch(this.getPitch() + (float)(this.boatPitch - (double)this.getPitch()) / (float)this.field_7708);
         --this.field_7708;
         this.setPosition(d, e, f);
-        this.setRotation(this.yaw, this.pitch);
+        this.setRotation(this.getYaw(), this.getPitch());
     }
 
     public void setPaddleMovings(boolean leftMoving, boolean rightMoving) {
@@ -384,10 +391,9 @@ extends Entity {
         this.dataTracker.set(RIGHT_PADDLE_MOVING, rightMoving);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float interpolatePaddlePhase(int paddle, float tickDelta) {
         if (this.isPaddleMoving(paddle)) {
-            return (float)MathHelper.clampedLerp((double)this.paddlePhases[paddle] - (double)0.3926991f, this.paddlePhases[paddle], tickDelta);
+            return (float)MathHelper.clampedLerp((double)this.paddlePhases[paddle] - (double)0.3926991f, (double)this.paddlePhases[paddle], (double)tickDelta);
         }
         return 0.0f;
     }
@@ -475,7 +481,7 @@ extends Entity {
         int m = MathHelper.floor(box.minZ);
         int n = MathHelper.ceil(box.maxZ);
         boolean bl = false;
-        this.waterLevel = Double.MIN_VALUE;
+        this.waterLevel = -1.7976931348623157E308;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int o = i; o < j; ++o) {
             for (int p = k; p < l; ++p) {
@@ -574,14 +580,14 @@ extends Entity {
         if (this.pressingRight != this.pressingLeft && !this.pressingForward && !this.pressingBack) {
             f += 0.005f;
         }
-        this.yaw += this.yawVelocity;
+        this.setYaw(this.getYaw() + this.yawVelocity);
         if (this.pressingForward) {
             f += 0.04f;
         }
         if (this.pressingBack) {
             f -= 0.005f;
         }
-        this.setVelocity(this.getVelocity().add(MathHelper.sin(-this.yaw * ((float)Math.PI / 180)) * f, 0.0, MathHelper.cos(this.yaw * ((float)Math.PI / 180)) * f));
+        this.setVelocity(this.getVelocity().add(MathHelper.sin(-this.getYaw() * ((float)Math.PI / 180)) * f, 0.0, MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)) * f));
         this.setPaddleMovings(this.pressingRight && !this.pressingLeft || this.pressingForward, this.pressingLeft && !this.pressingRight || this.pressingForward);
     }
 
@@ -591,7 +597,7 @@ extends Entity {
             return;
         }
         float f = 0.0f;
-        float g = (float)((this.removed ? (double)0.01f : this.getMountedHeightOffset()) + passenger.getHeightOffset());
+        float g = (float)((this.isRemoved() ? (double)0.01f : this.getMountedHeightOffset()) + passenger.getHeightOffset());
         if (this.getPassengerList().size() > 1) {
             int i = this.getPassengerList().indexOf(passenger);
             f = i == 0 ? 0.2f : -0.6f;
@@ -599,13 +605,13 @@ extends Entity {
                 f = (float)((double)f + 0.2);
             }
         }
-        Vec3d vec3d = new Vec3d(f, 0.0, 0.0).rotateY(-this.yaw * ((float)Math.PI / 180) - 1.5707964f);
+        Vec3d vec3d = new Vec3d(f, 0.0, 0.0).rotateY(-this.getYaw() * ((float)Math.PI / 180) - 1.5707964f);
         passenger.setPosition(this.getX() + vec3d.x, this.getY() + (double)g, this.getZ() + vec3d.z);
-        passenger.yaw += this.yawVelocity;
+        passenger.setYaw(passenger.getYaw() + this.yawVelocity);
         passenger.setHeadYaw(passenger.getHeadYaw() + this.yawVelocity);
         this.copyEntityData(passenger);
         if (passenger instanceof AnimalEntity && this.getPassengerList().size() > 1) {
-            int j = passenger.getEntityId() % 2 == 0 ? 90 : 270;
+            int j = passenger.getId() % 2 == 0 ? 90 : 270;
             passenger.setBodyYaw(((AnimalEntity)passenger).bodyYaw + (float)j);
             passenger.setHeadYaw(passenger.getHeadYaw() + (float)j);
         }
@@ -614,39 +620,41 @@ extends Entity {
     @Override
     public Vec3d updatePassengerForDismount(LivingEntity passenger) {
         double e;
-        Vec3d vec3d = BoatEntity.getPassengerDismountOffset(this.getWidth() * MathHelper.SQUARE_ROOT_OF_TWO, passenger.getWidth(), this.yaw);
+        Vec3d vec3d = BoatEntity.getPassengerDismountOffset(this.getWidth() * MathHelper.SQUARE_ROOT_OF_TWO, passenger.getWidth(), passenger.getYaw());
         double d = this.getX() + vec3d.x;
         BlockPos blockPos = new BlockPos(d, this.getBoundingBox().maxY, e = this.getZ() + vec3d.z);
         BlockPos blockPos2 = blockPos.down();
         if (!this.world.isWater(blockPos2)) {
-            double f = (double)blockPos.getY() + this.world.getDismountHeight(blockPos);
-            double g = (double)blockPos.getY() + this.world.getDismountHeight(blockPos2);
+            double g;
+            ArrayList list = Lists.newArrayList();
+            double f = this.world.getDismountHeight(blockPos);
+            if (Dismounting.canDismountInBlock(f)) {
+                list.add(new Vec3d(d, (double)blockPos.getY() + f, e));
+            }
+            if (Dismounting.canDismountInBlock(g = this.world.getDismountHeight(blockPos2))) {
+                list.add(new Vec3d(d, (double)blockPos2.getY() + g, e));
+            }
             for (EntityPose entityPose : passenger.getPoses()) {
-                Vec3d vec3d2 = Dismounting.findDismountPos(this.world, d, f, e, passenger, entityPose);
-                if (vec3d2 != null) {
+                for (Vec3d vec3d2 : list) {
+                    if (!Dismounting.canPlaceEntityAt(this.world, vec3d2, passenger, entityPose)) continue;
                     passenger.setPose(entityPose);
                     return vec3d2;
                 }
-                Vec3d vec3d3 = Dismounting.findDismountPos(this.world, d, g, e, passenger, entityPose);
-                if (vec3d3 == null) continue;
-                passenger.setPose(entityPose);
-                return vec3d3;
             }
         }
         return super.updatePassengerForDismount(passenger);
     }
 
     protected void copyEntityData(Entity entity) {
-        entity.setBodyYaw(this.yaw);
-        float f = MathHelper.wrapDegrees(entity.yaw - this.yaw);
+        entity.setBodyYaw(this.getYaw());
+        float f = MathHelper.wrapDegrees(entity.getYaw() - this.getYaw());
         float g = MathHelper.clamp(f, -105.0f, 105.0f);
         entity.prevYaw += g - f;
-        entity.yaw += g - f;
-        entity.setHeadYaw(entity.yaw);
+        entity.setYaw(entity.getYaw() + g - f);
+        entity.setHeadYaw(entity.getYaw());
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void onPassengerLookAround(Entity passenger) {
         this.copyEntityData(passenger);
     }
@@ -689,9 +697,9 @@ extends Entity {
                     this.fallDistance = 0.0f;
                     return;
                 }
-                this.handleFallDamage(this.fallDistance, 1.0f);
-                if (!this.world.isClient && !this.removed) {
-                    this.remove();
+                this.handleFallDamage(this.fallDistance, 1.0f, DamageSource.FALL);
+                if (!this.world.isClient && !this.isRemoved()) {
+                    this.kill();
                     if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
                         int i;
                         for (i = 0; i < 3; ++i) {
@@ -737,7 +745,6 @@ extends Entity {
         return this.dataTracker.get(BUBBLE_WOBBLE_TICKS);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float interpolateBubbleWobble(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.lastBubbleWobble, this.bubbleWobble);
     }
@@ -766,11 +773,9 @@ extends Entity {
     @Override
     @Nullable
     public Entity getPrimaryPassenger() {
-        List<Entity> list = this.getPassengerList();
-        return list.isEmpty() ? null : list.get(0);
+        return this.getFirstPassenger();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setInputs(boolean pressingLeft, boolean pressingRight, boolean pressingForward, boolean pressingBack) {
         this.pressingLeft = pressingLeft;
         this.pressingRight = pressingRight;
@@ -788,16 +793,30 @@ extends Entity {
         return this.location == Location.UNDER_WATER || this.location == Location.UNDER_FLOWING_WATER;
     }
 
-    public static enum Type {
-        OAK(Blocks.OAK_PLANKS, "oak"),
-        SPRUCE(Blocks.SPRUCE_PLANKS, "spruce"),
-        BIRCH(Blocks.BIRCH_PLANKS, "birch"),
-        JUNGLE(Blocks.JUNGLE_PLANKS, "jungle"),
-        ACACIA(Blocks.ACACIA_PLANKS, "acacia"),
-        DARK_OAK(Blocks.DARK_OAK_PLANKS, "dark_oak");
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(this.asItem());
+    }
 
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type OAK = new Type(Blocks.OAK_PLANKS, "oak");
+        public static final /* enum */ Type SPRUCE = new Type(Blocks.SPRUCE_PLANKS, "spruce");
+        public static final /* enum */ Type BIRCH = new Type(Blocks.BIRCH_PLANKS, "birch");
+        public static final /* enum */ Type JUNGLE = new Type(Blocks.JUNGLE_PLANKS, "jungle");
+        public static final /* enum */ Type ACACIA = new Type(Blocks.ACACIA_PLANKS, "acacia");
+        public static final /* enum */ Type DARK_OAK = new Type(Blocks.DARK_OAK_PLANKS, "dark_oak");
         private final String name;
         private final Block baseBlock;
+        private static final /* synthetic */ Type[] field_7724;
+
+        public static Type[] values() {
+            return (Type[])field_7724.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
 
         private Type(Block baseBlock, String name) {
             this.name = name;
@@ -816,31 +835,56 @@ extends Entity {
             return this.name;
         }
 
-        public static Type getType(int i) {
+        public static Type getType(int type) {
             Type[] types = Type.values();
-            if (i < 0 || i >= types.length) {
-                i = 0;
+            if (type < 0 || type >= types.length) {
+                type = 0;
             }
-            return types[i];
+            return types[type];
         }
 
-        public static Type getType(String string) {
+        public static Type getType(String name) {
             Type[] types = Type.values();
             for (int i = 0; i < types.length; ++i) {
-                if (!types[i].getName().equals(string)) continue;
+                if (!types[i].getName().equals(name)) continue;
                 return types[i];
             }
             return types[0];
         }
+
+        private static /* synthetic */ Type[] method_36671() {
+            return new Type[]{OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, DARK_OAK};
+        }
+
+        static {
+            field_7724 = Type.method_36671();
+        }
     }
 
-    public static enum Location {
-        IN_WATER,
-        UNDER_WATER,
-        UNDER_FLOWING_WATER,
-        ON_LAND,
-        IN_AIR;
+    public static final class Location
+    extends Enum<Location> {
+        public static final /* enum */ Location IN_WATER = new Location();
+        public static final /* enum */ Location UNDER_WATER = new Location();
+        public static final /* enum */ Location UNDER_FLOWING_WATER = new Location();
+        public static final /* enum */ Location ON_LAND = new Location();
+        public static final /* enum */ Location IN_AIR = new Location();
+        private static final /* synthetic */ Location[] field_7715;
 
+        public static Location[] values() {
+            return (Location[])field_7715.clone();
+        }
+
+        public static Location valueOf(String string) {
+            return Enum.valueOf(Location.class, string);
+        }
+
+        private static /* synthetic */ Location[] method_36670() {
+            return new Location[]{IN_WATER, UNDER_WATER, UNDER_FLOWING_WATER, ON_LAND, IN_AIR};
+        }
+
+        static {
+            field_7715 = Location.method_36670();
+        }
     }
 }
 

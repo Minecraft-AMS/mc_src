@@ -17,13 +17,12 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtInt;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class NbtIntArray
 extends AbstractNbtList<NbtInt> {
+    private static final int field_33195 = 192;
     public static final NbtType<NbtIntArray> TYPE = new NbtType<NbtIntArray>(){
 
         @Override
@@ -91,14 +90,7 @@ extends AbstractNbtList<NbtInt> {
 
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder("[I;");
-        for (int i = 0; i < this.value.length; ++i) {
-            if (i != 0) {
-                stringBuilder.append(',');
-            }
-            stringBuilder.append(this.value[i]);
-        }
-        return stringBuilder.append(']').toString();
+        return this.asString();
     }
 
     @Override
@@ -126,16 +118,8 @@ extends AbstractNbtList<NbtInt> {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("I").formatted(RED);
-        MutableText mutableText = new LiteralText("[").append(text).append(";");
-        for (int i = 0; i < this.value.length; ++i) {
-            mutableText.append(" ").append(new LiteralText(String.valueOf(this.value[i])).formatted(GOLD));
-            if (i == this.value.length - 1) continue;
-            mutableText.append(",");
-        }
-        mutableText.append("]");
-        return mutableText;
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitIntArray(this);
     }
 
     @Override
@@ -231,8 +215,8 @@ extends AbstractNbtList<NbtInt> {
     }
 
     @Override
-    public /* synthetic */ Object get(int i) {
-        return this.get(i);
+    public /* synthetic */ Object get(int index) {
+        return this.get(index);
     }
 }
 

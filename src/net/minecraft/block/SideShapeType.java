@@ -12,16 +12,16 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 
-public enum SideShapeType {
-    FULL{
+public abstract class SideShapeType
+extends Enum<SideShapeType> {
+    public static final /* enum */ SideShapeType FULL = new SideShapeType(){
 
         @Override
         public boolean matches(BlockState state, BlockView world, BlockPos pos, Direction direction) {
             return Block.isFaceFullSquare(state.getSidesShape(world, pos), direction);
         }
-    }
-    ,
-    CENTER{
+    };
+    public static final /* enum */ SideShapeType CENTER = new SideShapeType(){
         private final int radius = 1;
         private final VoxelShape squareCuboid = Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 10.0, 9.0);
 
@@ -29,9 +29,8 @@ public enum SideShapeType {
         public boolean matches(BlockState state, BlockView world, BlockPos pos, Direction direction) {
             return !VoxelShapes.matchesAnywhere(state.getSidesShape(world, pos).getFace(direction), this.squareCuboid, BooleanBiFunction.ONLY_SECOND);
         }
-    }
-    ,
-    RIGID{
+    };
+    public static final /* enum */ SideShapeType RIGID = new SideShapeType(){
         private final int ringWidth = 2;
         private final VoxelShape hollowSquareCuboid = VoxelShapes.combineAndSimplify(VoxelShapes.fullCube(), Block.createCuboidShape(2.0, 0.0, 2.0, 14.0, 16.0, 14.0), BooleanBiFunction.ONLY_FIRST);
 
@@ -40,8 +39,24 @@ public enum SideShapeType {
             return !VoxelShapes.matchesAnywhere(state.getSidesShape(world, pos).getFace(direction), this.hollowSquareCuboid, BooleanBiFunction.ONLY_SECOND);
         }
     };
+    private static final /* synthetic */ SideShapeType[] field_25825;
 
+    public static SideShapeType[] values() {
+        return (SideShapeType[])field_25825.clone();
+    }
+
+    public static SideShapeType valueOf(String string) {
+        return Enum.valueOf(SideShapeType.class, string);
+    }
 
     public abstract boolean matches(BlockState var1, BlockView var2, BlockPos var3, Direction var4);
+
+    private static /* synthetic */ SideShapeType[] method_36711() {
+        return new SideShapeType[]{FULL, CENTER, RIGID};
+    }
+
+    static {
+        field_25825 = SideShapeType.method_36711();
+    }
 }
 

@@ -51,7 +51,7 @@ implements BakedModel {
         this.ambientOcclusion = bakedModel.useAmbientOcclusion();
         this.depthGui = bakedModel.hasDepth();
         this.sideLit = bakedModel.isSideLit();
-        this.sprite = bakedModel.getSprite();
+        this.sprite = bakedModel.getParticleSprite();
         this.transformations = bakedModel.getTransformation();
         this.itemPropertyOverrides = bakedModel.getOverrides();
     }
@@ -101,7 +101,7 @@ implements BakedModel {
     }
 
     @Override
-    public Sprite getSprite() {
+    public Sprite getParticleSprite() {
         return this.sprite;
     }
 

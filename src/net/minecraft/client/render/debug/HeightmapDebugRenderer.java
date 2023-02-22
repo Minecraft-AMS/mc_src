@@ -13,8 +13,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.debug.DebugRenderer;
@@ -22,6 +24,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
@@ -30,6 +33,8 @@ import net.minecraft.world.chunk.Chunk;
 public class HeightmapDebugRenderer
 implements DebugRenderer.Renderer {
     private final MinecraftClient client;
+    private static final int CHUNK_RANGE = 2;
+    private static final float BOX_HEIGHT = 0.09375f;
 
     public HeightmapDebugRenderer(MinecraftClient client) {
         this.client = client;
@@ -38,25 +43,25 @@ implements DebugRenderer.Renderer {
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         ClientWorld worldAccess = this.client.world;
-        RenderSystem.pushMatrix();
         RenderSystem.disableBlend();
         RenderSystem.disableTexture();
         RenderSystem.enableDepthTest();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BlockPos blockPos = new BlockPos(cameraX, 0.0, cameraZ);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(5, VertexFormats.POSITION_COLOR);
-        for (int i = -32; i <= 32; i += 16) {
-            for (int j = -32; j <= 32; j += 16) {
-                Chunk chunk = worldAccess.getChunk(blockPos.add(i, 0, j));
+        bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
+        for (int i = -2; i <= 2; ++i) {
+            for (int j = -2; j <= 2; ++j) {
+                Chunk chunk = worldAccess.getChunk(blockPos.add(i * 16, 0, j * 16));
                 for (Map.Entry<Heightmap.Type, Heightmap> entry : chunk.getHeightmaps()) {
                     Heightmap.Type type = entry.getKey();
                     ChunkPos chunkPos = chunk.getPos();
-                    Vec3f vec3f = this.method_27037(type);
+                    Vec3f vec3f = this.getColorForHeightmapType(type);
                     for (int k = 0; k < 16; ++k) {
                         for (int l = 0; l < 16; ++l) {
-                            int m = chunkPos.x * 16 + k;
-                            int n = chunkPos.z * 16 + l;
+                            int m = ChunkSectionPos.getOffsetPos(chunkPos.x, k);
+                            int n = ChunkSectionPos.getOffsetPos(chunkPos.z, l);
                             float f = (float)((double)((float)worldAccess.getTopY(type, m, n) + (float)type.ordinal() * 0.09375f) - cameraY);
                             WorldRenderer.drawBox(bufferBuilder, (double)((float)m + 0.25f) - cameraX, f, (double)((float)n + 0.25f) - cameraZ, (double)((float)m + 0.75f) - cameraX, f + 0.09375f, (double)((float)n + 0.75f) - cameraZ, vec3f.getX(), vec3f.getY(), vec3f.getZ(), 1.0f);
                         }
@@ -66,10 +71,9 @@ implements DebugRenderer.Renderer {
         }
         tessellator.draw();
         RenderSystem.enableTexture();
-        RenderSystem.popMatrix();
     }
 
-    private Vec3f method_27037(Heightmap.Type type) {
+    private Vec3f getColorForHeightmapType(Heightmap.Type type) {
         switch (type) {
             case WORLD_SURFACE_WG: {
                 return new Vec3f(1.0f, 1.0f, 0.0f);

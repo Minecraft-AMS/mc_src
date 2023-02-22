@@ -22,13 +22,13 @@ extends IdentifierNormalizingSchema {
         super(i, schema);
     }
 
-    protected static void method_5309(Schema schema, Map<String, Supplier<TypeTemplate>> map, String string) {
-        schema.register(map, string, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
+    protected static void targetItems(Schema schema, Map<String, Supplier<TypeTemplate>> map, String blockEntityId) {
+        schema.register(map, blockEntityId, () -> DSL.optionalFields((String)"Items", (TypeTemplate)DSL.list((TypeTemplate)TypeReferences.ITEM_STACK.in(schema))));
     }
 
     public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema schema) {
         Map map = super.registerBlockEntities(schema);
-        Schema808.method_5309(schema, map, "minecraft:shulker_box");
+        Schema808.targetItems(schema, map, "minecraft:shulker_box");
         return map;
     }
 }

@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BambooBlock;
 import net.minecraft.block.Block;
@@ -36,6 +30,7 @@ import net.minecraft.world.WorldView;
 public class BambooSaplingBlock
 extends Block
 implements Fertilizable {
+    protected static final float field_31005 = 4.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 12.0, 12.0);
 
     public BambooSaplingBlock(AbstractBlock.Settings settings) {
@@ -77,7 +72,6 @@ implements Fertilizable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return new ItemStack(Items.BAMBOO);
     }

@@ -38,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class BlockColors {
+    private static final int NO_COLOR = -1;
     private final IdList<BlockColorProvider> providers = new IdList(32);
     private final Map<Block, Set<Property<?>>> properties = Maps.newHashMap();
 
@@ -69,7 +70,7 @@ public class BlockColors {
                 return -1;
             }
             return BiomeColors.getWaterColor(world, pos);
-        }, Blocks.WATER, Blocks.BUBBLE_COLUMN, Blocks.CAULDRON);
+        }, Blocks.WATER, Blocks.BUBBLE_COLUMN, Blocks.WATER_CAULDRON);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> RedstoneWireBlock.getWireColor(state.get(RedstoneWireBlock.POWER)), Blocks.REDSTONE_WIRE);
         blockColors.registerColorProperty(RedstoneWireBlock.POWER, Blocks.REDSTONE_WIRE);
         blockColors.registerColorProvider((state, world, pos, tintIndex) -> {
@@ -96,18 +97,18 @@ public class BlockColors {
         return blockColors;
     }
 
-    public int getColor(BlockState state, World world, BlockPos pos) {
+    public int getParticleColor(BlockState state, World world, BlockPos pos) {
         BlockColorProvider blockColorProvider = this.providers.get(Registry.BLOCK.getRawId(state.getBlock()));
         if (blockColorProvider != null) {
             return blockColorProvider.getColor(state, null, null, 0);
         }
-        MapColor mapColor = state.getTopMaterialColor(world, pos);
+        MapColor mapColor = state.getMapColor(world, pos);
         return mapColor != null ? mapColor.color : -1;
     }
 
-    public int getColor(BlockState state, @Nullable BlockRenderView world, @Nullable BlockPos pos, int tint) {
+    public int getColor(BlockState state, @Nullable BlockRenderView world, @Nullable BlockPos pos, int tintIndex) {
         BlockColorProvider blockColorProvider = this.providers.get(Registry.BLOCK.getRawId(state.getBlock()));
-        return blockColorProvider == null ? -1 : blockColorProvider.getColor(state, world, pos, tint);
+        return blockColorProvider == null ? -1 : blockColorProvider.getColor(state, world, pos, tintIndex);
     }
 
     public void registerColorProvider(BlockColorProvider provider, Block ... blocks) {

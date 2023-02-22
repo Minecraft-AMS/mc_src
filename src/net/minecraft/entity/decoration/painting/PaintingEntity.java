@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.decoration.painting;
@@ -12,13 +10,12 @@ package net.minecraft.entity.decoration.painting;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Iterator;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;
 import net.minecraft.entity.decoration.painting.PaintingMotive;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
@@ -67,7 +64,6 @@ extends AbstractDecorationEntity {
         this.setFacing(direction);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public PaintingEntity(World world, BlockPos pos, Direction direction, PaintingMotive motive) {
         this(world, pos, direction);
         this.motive = motive;
@@ -113,7 +109,7 @@ extends AbstractDecorationEntity {
         this.playSound(SoundEvents.ENTITY_PAINTING_BREAK, 1.0f, 1.0f);
         if (entity instanceof PlayerEntity) {
             PlayerEntity playerEntity = (PlayerEntity)entity;
-            if (playerEntity.abilities.creativeMode) {
+            if (playerEntity.getAbilities().creativeMode) {
                 return;
             }
         }
@@ -131,7 +127,6 @@ extends AbstractDecorationEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
         BlockPos blockPos = this.attachmentPos.add(x - this.getX(), y - this.getY(), z - this.getZ());
         this.setPosition(blockPos.getX(), blockPos.getY(), blockPos.getZ());
@@ -140,6 +135,11 @@ extends AbstractDecorationEntity {
     @Override
     public Packet<?> createSpawnPacket() {
         return new PaintingSpawnS2CPacket(this);
+    }
+
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(Items.PAINTING);
     }
 }
 

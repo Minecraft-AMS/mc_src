@@ -2,29 +2,30 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsage;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.BlockSoundGroup;
@@ -37,10 +38,13 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockItem
 extends Item {
+    public static final String BLOCK_ENTITY_TAG_KEY = "BlockEntityTag";
+    public static final String BLOCK_STATE_TAG_KEY = "BlockStateTag";
     @Deprecated
     private final Block block;
 
@@ -53,7 +57,8 @@ extends Item {
     public ActionResult useOnBlock(ItemUsageContext context) {
         ActionResult actionResult = this.place(new ItemPlacementContext(context));
         if (!actionResult.isAccepted() && this.isFood()) {
-            return this.use(context.getWorld(), context.getPlayer(), context.getHand()).getResult();
+            ActionResult actionResult2 = this.use(context.getWorld(), context.getPlayer(), context.getHand()).getResult();
+            return actionResult2 == ActionResult.CONSUME ? ActionResult.CONSUME_PARTIAL : actionResult2;
         }
         return actionResult;
     }
@@ -78,18 +83,18 @@ extends Item {
         PlayerEntity playerEntity = itemPlacementContext.getPlayer();
         ItemStack itemStack = itemPlacementContext.getStack();
         BlockState blockState2 = world.getBlockState(blockPos);
-        Block block = blockState2.getBlock();
-        if (block == blockState.getBlock()) {
+        if (blockState2.isOf(blockState.getBlock())) {
             blockState2 = this.placeFromTag(blockPos, world, itemStack, blockState2);
             this.postPlacement(blockPos, world, playerEntity, itemStack, blockState2);
-            block.onPlaced(world, blockPos, blockState2, playerEntity, itemStack);
+            blockState2.getBlock().onPlaced(world, blockPos, blockState2, playerEntity, itemStack);
             if (playerEntity instanceof ServerPlayerEntity) {
                 Criteria.PLACED_BLOCK.trigger((ServerPlayerEntity)playerEntity, blockPos, itemStack);
             }
         }
         BlockSoundGroup blockSoundGroup = blockState2.getSoundGroup();
         world.playSound(playerEntity, blockPos, this.getPlaceSound(blockState2), SoundCategory.BLOCKS, (blockSoundGroup.getVolume() + 1.0f) / 2.0f, blockSoundGroup.getPitch() * 0.8f);
-        if (playerEntity == null || !playerEntity.abilities.creativeMode) {
+        world.emitGameEvent((Entity)playerEntity, GameEvent.BLOCK_PLACE, blockPos);
+        if (playerEntity == null || !playerEntity.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
         return ActionResult.success(world.isClient);
@@ -116,9 +121,9 @@ extends Item {
 
     private BlockState placeFromTag(BlockPos pos, World world, ItemStack stack, BlockState state) {
         BlockState blockState = state;
-        NbtCompound nbtCompound = stack.getTag();
+        NbtCompound nbtCompound = stack.getNbt();
         if (nbtCompound != null) {
-            NbtCompound nbtCompound2 = nbtCompound.getCompound("BlockStateTag");
+            NbtCompound nbtCompound2 = nbtCompound.getCompound(BLOCK_STATE_TAG_KEY);
             StateManager<Block, BlockState> stateManager = blockState.getBlock().getStateManager();
             for (String string : nbtCompound2.getKeys()) {
                 Property<?> property = stateManager.getProperty(string);
@@ -157,7 +162,7 @@ extends Item {
         if (minecraftServer == null) {
             return false;
         }
-        NbtCompound nbtCompound = stack.getSubTag("BlockEntityTag");
+        NbtCompound nbtCompound = stack.getSubNbt(BLOCK_ENTITY_TAG_KEY);
         if (nbtCompound != null && (blockEntity = world.getBlockEntity(pos)) != null) {
             if (!(world.isClient || !blockEntity.copyItemDataRequiresOperator() || player != null && player.isCreativeLevelTwoOp())) {
                 return false;
@@ -169,7 +174,7 @@ extends Item {
             nbtCompound2.putInt("y", pos.getY());
             nbtCompound2.putInt("z", pos.getZ());
             if (!nbtCompound2.equals(nbtCompound3)) {
-                blockEntity.fromTag(world.getBlockState(pos), nbtCompound2);
+                blockEntity.readNbt(nbtCompound2);
                 blockEntity.markDirty();
                 return true;
             }
@@ -185,12 +190,11 @@ extends Item {
     @Override
     public void appendStacks(ItemGroup group, DefaultedList<ItemStack> stacks) {
         if (this.isIn(group)) {
-            this.getBlock().addStacksForDisplay(group, stacks);
+            this.getBlock().appendStacks(group, stacks);
         }
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         super.appendTooltip(stack, world, tooltip, context);
         this.getBlock().appendTooltip(stack, world, tooltip, context);
@@ -202,6 +206,20 @@ extends Item {
 
     public void appendBlocks(Map<Block, Item> map, Item item) {
         map.put(this.getBlock(), item);
+    }
+
+    @Override
+    public boolean canBeNested() {
+        return !(this.block instanceof ShulkerBoxBlock);
+    }
+
+    @Override
+    public void onItemEntityDestroyed(ItemEntity entity) {
+        NbtCompound nbtCompound;
+        if (this.block instanceof ShulkerBoxBlock && (nbtCompound = entity.getStack().getNbt()) != null) {
+            NbtList nbtList = nbtCompound.getCompound(BLOCK_ENTITY_TAG_KEY).getList("Items", 10);
+            ItemUsage.spawnItemContents(entity, nbtList.stream().map(NbtCompound.class::cast).map(ItemStack::fromNbt));
+        }
     }
 }
 

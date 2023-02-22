@@ -48,17 +48,29 @@ import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 public class EntitySelectorReader {
+    public static final char SELECTOR_PREFIX = '@';
+    private static final char ARGUMENTS_OPENING = '[';
+    private static final char ARGUMENTS_CLOSING = ']';
+    public static final char ARGUMENT_DEFINER = '=';
+    private static final char ARGUMENT_SEPARATOR = ',';
+    public static final char INVERT_MODIFIER = '!';
+    public static final char TAG_MODIFIER = '#';
+    private static final char NEAREST_PLAYER = 'p';
+    private static final char ALL_PLAYERS = 'a';
+    private static final char RANDOM_PLAYER = 'r';
+    private static final char SELF = 's';
+    private static final char ALL_ENTITIES = 'e';
     public static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.invalid"));
-    public static final DynamicCommandExceptionType UNKNOWN_SELECTOR_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.entity.selector.unknown", object));
+    public static final DynamicCommandExceptionType UNKNOWN_SELECTOR_EXCEPTION = new DynamicCommandExceptionType(selectorType -> new TranslatableText("argument.entity.selector.unknown", selectorType));
     public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed"));
     public static final SimpleCommandExceptionType MISSING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.missing"));
     public static final SimpleCommandExceptionType UNTERMINATED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.options.unterminated"));
-    public static final DynamicCommandExceptionType VALUELESS_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("argument.entity.options.valueless", object));
-    public static final BiConsumer<Vec3d, List<? extends Entity>> ARBITRARY = (vec3d, list) -> {};
-    public static final BiConsumer<Vec3d, List<? extends Entity>> NEAREST = (vec3d, list) -> list.sort((entity, entity2) -> Doubles.compare((double)entity.squaredDistanceTo((Vec3d)vec3d), (double)entity2.squaredDistanceTo((Vec3d)vec3d)));
-    public static final BiConsumer<Vec3d, List<? extends Entity>> FURTHEST = (vec3d, list) -> list.sort((entity, entity2) -> Doubles.compare((double)entity2.squaredDistanceTo((Vec3d)vec3d), (double)entity.squaredDistanceTo((Vec3d)vec3d)));
-    public static final BiConsumer<Vec3d, List<? extends Entity>> RANDOM = (vec3d, list) -> Collections.shuffle(list);
-    public static final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> DEFAULT_SUGGESTION_PROVIDER = (suggestionsBuilder, consumer) -> suggestionsBuilder.buildFuture();
+    public static final DynamicCommandExceptionType VALUELESS_EXCEPTION = new DynamicCommandExceptionType(option -> new TranslatableText("argument.entity.options.valueless", option));
+    public static final BiConsumer<Vec3d, List<? extends Entity>> ARBITRARY = (pos, entities) -> {};
+    public static final BiConsumer<Vec3d, List<? extends Entity>> NEAREST = (pos, entities) -> entities.sort((entity1, entity2) -> Doubles.compare((double)entity1.squaredDistanceTo((Vec3d)pos), (double)entity2.squaredDistanceTo((Vec3d)pos)));
+    public static final BiConsumer<Vec3d, List<? extends Entity>> FURTHEST = (pos, entities) -> entities.sort((entity1, entity2) -> Doubles.compare((double)entity2.squaredDistanceTo((Vec3d)pos), (double)entity1.squaredDistanceTo((Vec3d)pos)));
+    public static final BiConsumer<Vec3d, List<? extends Entity>> RANDOM = (pos, entities) -> Collections.shuffle(entities);
+    public static final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> DEFAULT_SUGGESTION_PROVIDER = (builder, consumer) -> builder.buildFuture();
     private final StringReader reader;
     private final boolean atAllowed;
     private int limit;
@@ -118,12 +130,12 @@ public class EntitySelectorReader {
         if (this.dx != null || this.dy != null || this.dz != null) {
             box = this.createBox(this.dx == null ? 0.0 : this.dx, this.dy == null ? 0.0 : this.dy, this.dz == null ? 0.0 : this.dz);
         } else if (this.distance.getMax() != null) {
-            float f = ((Float)this.distance.getMax()).floatValue();
-            box = new Box(-f, -f, -f, f + 1.0f, f + 1.0f, f + 1.0f);
+            double d = (Double)this.distance.getMax();
+            box = new Box(-d, -d, -d, d + 1.0, d + 1.0, d + 1.0);
         } else {
             box = null;
         }
-        Function<Vec3d, Vec3d> function = this.x == null && this.y == null && this.z == null ? vec3d -> vec3d : vec3d -> new Vec3d(this.x == null ? vec3d.x : this.x, this.y == null ? vec3d.y : this.y, this.z == null ? vec3d.z : this.z);
+        Function<Vec3d, Vec3d> function = this.x == null && this.y == null && this.z == null ? pos -> pos : pos -> new Vec3d(this.x == null ? pos.x : this.x, this.y == null ? pos.y : this.y, this.z == null ? pos.z : this.z);
         return new EntitySelector(this.limit, this.includesNonPlayers, this.localWorldOnly, this.predicate, this.distance, function, box, this.sorter, this.senderOnly, this.playerName, this.uuid, this.entityType, this.usesAt);
     }
 
@@ -142,10 +154,10 @@ public class EntitySelectorReader {
 
     private void buildPredicate() {
         if (this.pitchRange != FloatRangeArgument.ANY) {
-            this.predicate = this.predicate.and(this.rotationPredicate(this.pitchRange, entity -> entity.pitch));
+            this.predicate = this.predicate.and(this.rotationPredicate(this.pitchRange, Entity::getPitch));
         }
         if (this.yawRange != FloatRangeArgument.ANY) {
-            this.predicate = this.predicate.and(this.rotationPredicate(this.yawRange, entity -> entity.yaw));
+            this.predicate = this.predicate.and(this.rotationPredicate(this.yawRange, Entity::getYaw));
         }
         if (!this.levelRange.isDummy()) {
             this.predicate = this.predicate.and(entity -> {
@@ -203,7 +215,7 @@ public class EntitySelectorReader {
             this.predicate = Entity::isAlive;
         } else {
             this.reader.setCursor(i);
-            throw UNKNOWN_SELECTOR_EXCEPTION.createWithContext((ImmutableStringReader)this.reader, (Object)('@' + String.valueOf(c)));
+            throw UNKNOWN_SELECTOR_EXCEPTION.createWithContext((ImmutableStringReader)this.reader, (Object)("@" + String.valueOf(c)));
         }
         this.suggestionProvider = this::suggestOpen;
         if (this.reader.canRead() && this.reader.peek() == '[') {
@@ -395,6 +407,10 @@ public class EntitySelectorReader {
         this.includesNonPlayers = includesNonPlayers;
     }
 
+    public BiConsumer<Vec3d, List<? extends Entity>> getSorter() {
+        return this.sorter;
+    }
+
     public void setSorter(BiConsumer<Vec3d, List<? extends Entity>> sorter) {
         this.sorter = sorter;
     }
@@ -466,6 +482,11 @@ public class EntitySelectorReader {
         return builder.buildFuture();
     }
 
+    private CompletableFuture<Suggestions> suggestDefinerNext(SuggestionsBuilder builder, Consumer<SuggestionsBuilder> consumer) {
+        builder.suggest(String.valueOf('='));
+        return builder.buildFuture();
+    }
+
     public boolean isSenderOnly() {
         return this.senderOnly;
     }
@@ -532,6 +553,10 @@ public class EntitySelectorReader {
 
     public void setSelectsTeam(boolean selectsTeam) {
         this.selectsTeam = selectsTeam;
+    }
+
+    public boolean excludesTeam() {
+        return this.excludesTeam;
     }
 
     public void setExcludesTeam(boolean excludesTeam) {

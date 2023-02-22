@@ -42,42 +42,48 @@ extends Block {
     public static final BooleanProperty SOUTH = ConnectingBlock.SOUTH;
     public static final BooleanProperty WEST = ConnectingBlock.WEST;
     public static final Map<Direction, BooleanProperty> FACING_PROPERTIES = ConnectingBlock.FACING_PROPERTIES.entrySet().stream().filter(entry -> entry.getKey() != Direction.DOWN).collect(Util.toMap());
+    protected static final float field_31275 = 1.0f;
     private static final VoxelShape UP_SHAPE = Block.createCuboidShape(0.0, 15.0, 0.0, 16.0, 16.0, 16.0);
     private static final VoxelShape EAST_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 1.0, 16.0, 16.0);
     private static final VoxelShape WEST_SHAPE = Block.createCuboidShape(15.0, 0.0, 0.0, 16.0, 16.0, 16.0);
     private static final VoxelShape SOUTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 16.0, 1.0);
     private static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(0.0, 0.0, 15.0, 16.0, 16.0, 16.0);
-    private final Map<BlockState, VoxelShape> field_26659;
+    private final Map<BlockState, VoxelShape> shapesByState;
 
     public VineBlock(AbstractBlock.Settings settings) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(UP, false)).with(NORTH, false)).with(EAST, false)).with(SOUTH, false)).with(WEST, false));
-        this.field_26659 = ImmutableMap.copyOf(this.stateManager.getStates().stream().collect(Collectors.toMap(Function.identity(), VineBlock::method_31018)));
+        this.shapesByState = ImmutableMap.copyOf(this.stateManager.getStates().stream().collect(Collectors.toMap(Function.identity(), VineBlock::getShapeForState)));
     }
 
-    private static VoxelShape method_31018(BlockState blockState) {
+    private static VoxelShape getShapeForState(BlockState state) {
         VoxelShape voxelShape = VoxelShapes.empty();
-        if (blockState.get(UP).booleanValue()) {
+        if (state.get(UP).booleanValue()) {
             voxelShape = UP_SHAPE;
         }
-        if (blockState.get(NORTH).booleanValue()) {
+        if (state.get(NORTH).booleanValue()) {
             voxelShape = VoxelShapes.union(voxelShape, SOUTH_SHAPE);
         }
-        if (blockState.get(SOUTH).booleanValue()) {
+        if (state.get(SOUTH).booleanValue()) {
             voxelShape = VoxelShapes.union(voxelShape, NORTH_SHAPE);
         }
-        if (blockState.get(EAST).booleanValue()) {
+        if (state.get(EAST).booleanValue()) {
             voxelShape = VoxelShapes.union(voxelShape, WEST_SHAPE);
         }
-        if (blockState.get(WEST).booleanValue()) {
+        if (state.get(WEST).booleanValue()) {
             voxelShape = VoxelShapes.union(voxelShape, EAST_SHAPE);
         }
-        return voxelShape;
+        return voxelShape.isEmpty() ? VoxelShapes.fullCube() : voxelShape;
     }
 
     @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-        return this.field_26659.get(state);
+        return this.shapesByState.get(state);
+    }
+
+    @Override
+    public boolean isTranslucent(BlockState state, BlockView world, BlockPos pos) {
+        return true;
     }
 
     @Override
@@ -158,7 +164,7 @@ extends Block {
         BlockState blockState3;
         BlockPos blockPos2;
         BlockState blockState;
-        if (world.random.nextInt(4) != 0) {
+        if (random.nextInt(4) != 0) {
             return;
         }
         Direction direction = Direction.random(random);
@@ -186,7 +192,7 @@ extends Block {
                         world.setBlockState(blockPos3, (BlockState)this.getDefaultState().with(VineBlock.getFacingProperty(direction4), true), 2);
                     } else if (bl2 && world.isAir(blockPos4) && VineBlock.shouldConnectTo(world, pos.offset(direction3), direction4)) {
                         world.setBlockState(blockPos4, (BlockState)this.getDefaultState().with(VineBlock.getFacingProperty(direction4), true), 2);
-                    } else if ((double)world.random.nextFloat() < 0.05 && VineBlock.shouldConnectTo(world, blockPos22.up(), Direction.UP)) {
+                    } else if ((double)random.nextFloat() < 0.05 && VineBlock.shouldConnectTo(world, blockPos22.up(), Direction.UP)) {
                         world.setBlockState(blockPos22, (BlockState)this.getDefaultState().with(UP, true), 2);
                     }
                 }
@@ -195,7 +201,7 @@ extends Block {
             }
             return;
         }
-        if (direction == Direction.UP && pos.getY() < 255) {
+        if (direction == Direction.UP && pos.getY() < world.getTopY() - 1) {
             if (this.shouldHaveSide(world, pos, direction)) {
                 world.setBlockState(pos, (BlockState)state.with(UP, true), 2);
                 return;
@@ -206,7 +212,7 @@ extends Block {
                 }
                 BlockState blockState2 = state;
                 for (Direction direction2 : Direction.Type.HORIZONTAL) {
-                    if (!random.nextBoolean() && VineBlock.shouldConnectTo(world, blockPos.offset(direction2), Direction.UP)) continue;
+                    if (!random.nextBoolean() && VineBlock.shouldConnectTo(world, blockPos.offset(direction2), direction2)) continue;
                     blockState2 = (BlockState)blockState2.with(VineBlock.getFacingProperty(direction2), false);
                 }
                 if (this.hasHorizontalSide(blockState2)) {
@@ -215,7 +221,7 @@ extends Block {
                 return;
             }
         }
-        if (pos.getY() > 0 && ((blockState = world.getBlockState(blockPos2 = pos.down())).isAir() || blockState.isOf(this)) && (blockState3 = blockState.isAir() ? this.getDefaultState() : blockState) != (blockState4 = this.getGrownState(state, blockState3, random)) && this.hasHorizontalSide(blockState4)) {
+        if (pos.getY() > world.getBottomY() && ((blockState = world.getBlockState(blockPos2 = pos.down())).isAir() || blockState.isOf(this)) && (blockState3 = blockState.isAir() ? this.getDefaultState() : blockState) != (blockState4 = this.getGrownState(state, blockState3, random)) && this.hasHorizontalSide(blockState4)) {
             world.setBlockState(blockPos2, blockState4, 2);
         }
     }

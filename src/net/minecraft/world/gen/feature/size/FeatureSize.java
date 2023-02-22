@@ -16,6 +16,7 @@ import net.minecraft.world.gen.feature.size.FeatureSizeType;
 
 public abstract class FeatureSize {
     public static final Codec<FeatureSize> TYPE_CODEC = Registry.FEATURE_SIZE_TYPE.dispatch(FeatureSize::getType, FeatureSizeType::getCodec);
+    protected static final int field_31522 = 16;
     protected final OptionalInt minClippedHeight;
 
     protected static <S extends FeatureSize> RecordCodecBuilder<S, OptionalInt> createCodec() {
@@ -28,7 +29,7 @@ public abstract class FeatureSize {
 
     protected abstract FeatureSizeType<?> getType();
 
-    public abstract int method_27378(int var1, int var2);
+    public abstract int getRadius(int var1, int var2);
 
     public OptionalInt getMinClippedHeight() {
         return this.minClippedHeight;

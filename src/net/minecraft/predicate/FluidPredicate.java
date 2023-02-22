@@ -49,7 +49,7 @@ public class FluidPredicate {
         }
         FluidState fluidState = world.getFluidState(pos);
         Fluid fluid = fluidState.getFluid();
-        if (this.tag != null && !this.tag.contains(fluid)) {
+        if (this.tag != null && !fluid.isIn(this.tag)) {
             return false;
         }
         if (this.fluid != null && fluid != this.fluid) {
@@ -71,10 +71,7 @@ public class FluidPredicate {
         Tag<Fluid> tag = null;
         if (jsonObject.has("tag")) {
             Identifier identifier2 = new Identifier(JsonHelper.getString(jsonObject, "tag"));
-            tag = ServerTagManagerHolder.getTagManager().getFluids().getTag(identifier2);
-            if (tag == null) {
-                throw new JsonSyntaxException("Unknown fluid tag '" + identifier2 + "'");
-            }
+            tag = ServerTagManagerHolder.getTagManager().getTag(Registry.FLUID_KEY, identifier2, id -> new JsonSyntaxException("Unknown fluid tag '" + id + "'"));
         }
         StatePredicate statePredicate = StatePredicate.fromJson(jsonObject.get("state"));
         return new FluidPredicate(tag, fluid, statePredicate);
@@ -89,10 +86,44 @@ public class FluidPredicate {
             jsonObject.addProperty("fluid", Registry.FLUID.getId(this.fluid).toString());
         }
         if (this.tag != null) {
-            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getFluids().getTagId(this.tag).toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getTagId(Registry.FLUID_KEY, this.tag, () -> new IllegalStateException("Unknown fluid tag")).toString());
         }
         jsonObject.add("state", this.state.toJson());
         return jsonObject;
+    }
+
+    public static class Builder {
+        @Nullable
+        private Fluid fluid;
+        @Nullable
+        private Tag<Fluid> tag;
+        private StatePredicate state = StatePredicate.ANY;
+
+        private Builder() {
+        }
+
+        public static Builder create() {
+            return new Builder();
+        }
+
+        public Builder fluid(Fluid fluid) {
+            this.fluid = fluid;
+            return this;
+        }
+
+        public Builder tag(Tag<Fluid> tag) {
+            this.tag = tag;
+            return this;
+        }
+
+        public Builder state(StatePredicate state) {
+            this.state = state;
+            return this;
+        }
+
+        public FluidPredicate build() {
+            return new FluidPredicate(this.tag, this.fluid, this.state);
+        }
     }
 }
 

@@ -48,6 +48,10 @@ public class AdvancementRewards {
         this.function = function;
     }
 
+    public Identifier[] getRecipes() {
+        return this.recipes;
+    }
+
     public void apply(ServerPlayerEntity player) {
         player.addExperience(this.experience);
         LootContext lootContext = new LootContext.Builder(player.getServerWorld()).parameter(LootContextParameters.THIS_ENTITY, player).parameter(LootContextParameters.ORIGIN, player.getPos()).random(player.getRandom()).build(LootContextTypes.ADVANCEMENT_REWARD);
@@ -66,7 +70,7 @@ public class AdvancementRewards {
             }
         }
         if (bl) {
-            player.playerScreenHandler.sendContentUpdates();
+            player.currentScreenHandler.sendContentUpdates();
         }
         if (this.recipes.length > 0) {
             player.unlockRecipes(this.recipes);
@@ -76,7 +80,7 @@ public class AdvancementRewards {
     }
 
     public String toString() {
-        return "AdvancementRewards{experience=" + this.experience + ", loot=" + Arrays.toString(this.loot) + ", recipes=" + Arrays.toString(this.recipes) + ", function=" + this.function + '}';
+        return "AdvancementRewards{experience=" + this.experience + ", loot=" + Arrays.toString(this.loot) + ", recipes=" + Arrays.toString(this.recipes) + ", function=" + this.function + "}";
     }
 
     public JsonElement toJson() {
@@ -140,12 +144,30 @@ public class AdvancementRewards {
             return this;
         }
 
+        public static Builder loot(Identifier loot) {
+            return new Builder().addLoot(loot);
+        }
+
+        public Builder addLoot(Identifier loot) {
+            this.loot.add(loot);
+            return this;
+        }
+
         public static Builder recipe(Identifier recipe) {
             return new Builder().addRecipe(recipe);
         }
 
         public Builder addRecipe(Identifier recipe) {
             this.recipes.add(recipe);
+            return this;
+        }
+
+        public static Builder function(Identifier function) {
+            return new Builder().setFunction(function);
+        }
+
+        public Builder setFunction(Identifier function) {
+            this.function = function;
             return this;
         }
 

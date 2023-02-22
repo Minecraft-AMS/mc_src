@@ -9,11 +9,20 @@ import net.minecraft.world.biome.layer.util.IdentityCoordinateTransformer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 import net.minecraft.world.biome.layer.util.LayerSampler;
 
-public enum ApplyRiverLayer implements MergingLayer,
-IdentityCoordinateTransformer
-{
-    INSTANCE;
+public final class ApplyRiverLayer
+extends Enum<ApplyRiverLayer>
+implements MergingLayer,
+IdentityCoordinateTransformer {
+    public static final /* enum */ ApplyRiverLayer INSTANCE = new ApplyRiverLayer();
+    private static final /* synthetic */ ApplyRiverLayer[] field_16166;
 
+    public static ApplyRiverLayer[] values() {
+        return (ApplyRiverLayer[])field_16166.clone();
+    }
+
+    public static ApplyRiverLayer valueOf(String string) {
+        return Enum.valueOf(ApplyRiverLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, LayerSampler sampler1, LayerSampler sampler2, int x, int z) {
@@ -32,6 +41,14 @@ IdentityCoordinateTransformer
             return j & 0xFF;
         }
         return i;
+    }
+
+    private static /* synthetic */ ApplyRiverLayer[] method_36784() {
+        return new ApplyRiverLayer[]{INSTANCE};
+    }
+
+    static {
+        field_16166 = ApplyRiverLayer.method_36784();
     }
 }
 

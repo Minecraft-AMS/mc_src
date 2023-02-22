@@ -26,7 +26,8 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class ToastManager
 extends DrawableHelper {
-    private final MinecraftClient client;
+    private static final int field_32220 = 5;
+    final MinecraftClient client;
     private final Entry<?>[] visibleEntries = new Entry[5];
     private final Deque<Toast> toastQueue = Queues.newArrayDeque();
 
@@ -76,14 +77,15 @@ extends DrawableHelper {
 
     @Environment(value=EnvType.CLIENT)
     static class Entry<T extends Toast> {
+        private static final long field_32221 = 600L;
         private final T instance;
         private long field_2243 = -1L;
         private long field_2242 = -1L;
         private Toast.Visibility visibility = Toast.Visibility.SHOW;
         final /* synthetic */ ToastManager field_2245;
 
-        private Entry(T toast) {
-            this.field_2245 = instance;
+        Entry(T toast) {
+            this.field_2245 = toastManager;
             this.instance = toast;
         }
 
@@ -109,10 +111,13 @@ extends DrawableHelper {
             if (this.visibility == Toast.Visibility.SHOW && l - this.field_2243 <= 600L) {
                 this.field_2242 = l;
             }
-            RenderSystem.pushMatrix();
-            RenderSystem.translatef((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), y * this.instance.getHeight(), 800 + y);
+            MatrixStack matrixStack = RenderSystem.getModelViewStack();
+            matrixStack.push();
+            matrixStack.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), y * this.instance.getHeight(), 800 + y);
+            RenderSystem.applyModelViewMatrix();
             Toast.Visibility visibility = this.instance.draw(matrices, this.field_2245, l - this.field_2242);
-            RenderSystem.popMatrix();
+            matrixStack.pop();
+            RenderSystem.applyModelViewMatrix();
             if (visibility != this.visibility) {
                 this.field_2243 = l - (long)((int)((1.0f - this.getDisappearProgress(l)) * 600.0f));
                 this.visibility = visibility;

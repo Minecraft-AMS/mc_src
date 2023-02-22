@@ -35,22 +35,25 @@ import net.minecraft.client.MinecraftClient;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsUtil {
-    private static final YggdrasilAuthenticationService authenticationService = new YggdrasilAuthenticationService(MinecraftClient.getInstance().getNetworkProxy());
-    private static final MinecraftSessionService sessionService = authenticationService.createMinecraftSessionService();
+    private static final YggdrasilAuthenticationService AUTHENTICATION_SERVICE = new YggdrasilAuthenticationService(MinecraftClient.getInstance().getNetworkProxy());
+    static final MinecraftSessionService SESSION_SERVICE = AUTHENTICATION_SERVICE.createMinecraftSessionService();
     public static LoadingCache<String, GameProfile> gameProfileCache = CacheBuilder.newBuilder().expireAfterWrite(60L, TimeUnit.MINUTES).build((CacheLoader)new CacheLoader<String, GameProfile>(){
 
         public GameProfile load(String string) throws Exception {
-            GameProfile gameProfile = sessionService.fillProfileProperties(new GameProfile(UUIDTypeAdapter.fromString((String)string), null), false);
+            GameProfile gameProfile = SESSION_SERVICE.fillProfileProperties(new GameProfile(UUIDTypeAdapter.fromString((String)string), null), false);
             if (gameProfile == null) {
                 throw new Exception("Couldn't get profile");
             }
             return gameProfile;
         }
 
-        public /* synthetic */ Object load(Object object) throws Exception {
-            return this.load((String)object);
+        public /* synthetic */ Object load(Object uuid) throws Exception {
+            return this.load((String)uuid);
         }
     });
+    private static final int SECONDS_PER_MINUTE = 60;
+    private static final int SECONDS_PER_HOUR = 3600;
+    private static final int SECONDS_PER_DAY = 86400;
 
     public static String uuidToName(String uuid) throws Exception {
         GameProfile gameProfile = (GameProfile)gameProfileCache.get((Object)uuid);
@@ -60,7 +63,7 @@ public class RealmsUtil {
     public static Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> getTextures(String uuid) {
         try {
             GameProfile gameProfile = (GameProfile)gameProfileCache.get((Object)uuid);
-            return sessionService.getTextures(gameProfile, false);
+            return SESSION_SERVICE.getTextures(gameProfile, false);
         }
         catch (Exception exception) {
             return Maps.newHashMap();
@@ -73,21 +76,21 @@ public class RealmsUtil {
         }
         long l = milliseconds / 1000L;
         if (l < 60L) {
-            return (l == 1L ? "1 second" : l + " seconds") + " ago";
+            return (String)(l == 1L ? "1 second" : l + " seconds") + " ago";
         }
         if (l < 3600L) {
             long m = l / 60L;
-            return (m == 1L ? "1 minute" : m + " minutes") + " ago";
+            return (String)(m == 1L ? "1 minute" : m + " minutes") + " ago";
         }
         if (l < 86400L) {
             long m = l / 3600L;
-            return (m == 1L ? "1 hour" : m + " hours") + " ago";
+            return (String)(m == 1L ? "1 hour" : m + " hours") + " ago";
         }
         long m = l / 86400L;
-        return (m == 1L ? "1 day" : m + " days") + " ago";
+        return (String)(m == 1L ? "1 day" : m + " days") + " ago";
     }
 
-    public static String method_25282(Date date) {
+    public static String convertToAgePresentation(Date date) {
         return RealmsUtil.convertToAgePresentation(System.currentTimeMillis() - date.getTime());
     }
 }

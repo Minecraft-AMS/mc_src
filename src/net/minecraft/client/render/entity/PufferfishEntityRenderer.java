@@ -10,9 +10,10 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.LargePufferfishEntityModel;
 import net.minecraft.client.render.entity.model.MediumPufferfishEntityModel;
 import net.minecraft.client.render.entity.model.SmallPufferfishEntityModel;
@@ -26,12 +27,14 @@ public class PufferfishEntityRenderer
 extends MobEntityRenderer<PufferfishEntity, EntityModel<PufferfishEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/fish/pufferfish.png");
     private int modelSize = 3;
-    private final SmallPufferfishEntityModel<PufferfishEntity> smallModel = new SmallPufferfishEntityModel();
-    private final MediumPufferfishEntityModel<PufferfishEntity> mediumModel = new MediumPufferfishEntityModel();
-    private final LargePufferfishEntityModel<PufferfishEntity> largeModel = new LargePufferfishEntityModel();
+    private final EntityModel<PufferfishEntity> smallModel;
+    private final EntityModel<PufferfishEntity> mediumModel;
+    private final EntityModel<PufferfishEntity> largeModel = this.getModel();
 
-    public PufferfishEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new LargePufferfishEntityModel(), 0.2f);
+    public PufferfishEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new LargePufferfishEntityModel(context.getPart(EntityModelLayers.PUFFERFISH_BIG)), 0.2f);
+        this.mediumModel = new MediumPufferfishEntityModel<PufferfishEntity>(context.getPart(EntityModelLayers.PUFFERFISH_MEDIUM));
+        this.smallModel = new SmallPufferfishEntityModel<PufferfishEntity>(context.getPart(EntityModelLayers.PUFFERFISH_SMALL));
     }
 
     @Override

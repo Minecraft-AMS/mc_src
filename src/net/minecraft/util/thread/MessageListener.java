@@ -28,9 +28,9 @@ extends AutoCloseable {
         return completableFuture;
     }
 
-    default public <Source> CompletableFuture<Source> method_27918(Function<? super MessageListener<Either<Source, Exception>>, ? extends Msg> function) {
+    default public <Source> CompletableFuture<Source> askFallible(Function<? super MessageListener<Either<Source, Exception>>, ? extends Msg> messageProvider) {
         CompletableFuture completableFuture = new CompletableFuture();
-        Msg object = function.apply(MessageListener.create("ask future procesor handle", either -> {
+        Msg object = messageProvider.apply(MessageListener.create("ask future procesor handle", either -> {
             either.ifLeft(completableFuture::complete);
             either.ifRight(completableFuture::completeExceptionally);
         }));

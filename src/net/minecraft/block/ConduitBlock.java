@@ -15,6 +15,8 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ConduitBlockEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
@@ -38,6 +40,7 @@ public class ConduitBlock
 extends BlockWithEntity
 implements Waterloggable {
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
+    private static final int field_31075 = 3;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(5.0, 5.0, 5.0, 11.0, 11.0, 11.0);
 
     public ConduitBlock(AbstractBlock.Settings settings) {
@@ -51,8 +54,14 @@ implements Waterloggable {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new ConduitBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new ConduitBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return ConduitBlock.checkType(type, BlockEntityType.CONDUIT, world.isClient ? ConduitBlockEntity::clientTick : ConduitBlockEntity::serverTick);
     }
 
     @Override

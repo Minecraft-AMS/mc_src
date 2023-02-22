@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Ingredient;
@@ -49,7 +43,6 @@ implements Recipe<Inventory> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return true;
     }
@@ -71,7 +64,6 @@ implements Recipe<Inventory> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public String getGroup() {
         return this.group;
     }

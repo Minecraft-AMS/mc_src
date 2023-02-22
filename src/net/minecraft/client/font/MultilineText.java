@@ -49,16 +49,20 @@ public interface MultilineText {
         }
     };
 
-    public static MultilineText create(TextRenderer renderer, StringVisitable text, int width) {
-        return MultilineText.create(renderer, (List)renderer.wrapLines(text, width).stream().map(orderedText -> new Line((OrderedText)orderedText, renderer.getWidth((OrderedText)orderedText))).collect(ImmutableList.toImmutableList()));
+    public static MultilineText create(TextRenderer renderer, StringVisitable text2, int width) {
+        return MultilineText.create(renderer, (List)renderer.wrapLines(text2, width).stream().map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
     }
 
-    public static MultilineText create(TextRenderer renderer, StringVisitable text, int width, int maxLines) {
-        return MultilineText.create(renderer, (List)renderer.wrapLines(text, width).stream().limit(maxLines).map(orderedText -> new Line((OrderedText)orderedText, renderer.getWidth((OrderedText)orderedText))).collect(ImmutableList.toImmutableList()));
+    public static MultilineText create(TextRenderer renderer, StringVisitable text2, int width, int maxLines) {
+        return MultilineText.create(renderer, (List)renderer.wrapLines(text2, width).stream().limit(maxLines).map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
     }
 
     public static MultilineText create(TextRenderer renderer, Text ... texts) {
-        return MultilineText.create(renderer, (List)Arrays.stream(texts).map(Text::asOrderedText).map(orderedText -> new Line((OrderedText)orderedText, renderer.getWidth((OrderedText)orderedText))).collect(ImmutableList.toImmutableList()));
+        return MultilineText.create(renderer, (List)Arrays.stream(texts).map(Text::asOrderedText).map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
+    }
+
+    public static MultilineText method_35726(TextRenderer renderer, List<Text> texts) {
+        return MultilineText.create(renderer, (List)texts.stream().map(Text::asOrderedText).map(text -> new Line((OrderedText)text, renderer.getWidth((OrderedText)text))).collect(ImmutableList.toImmutableList()));
     }
 
     public static MultilineText create(final TextRenderer renderer, final List<Line> lines) {
@@ -121,10 +125,10 @@ public interface MultilineText {
 
     @Environment(value=EnvType.CLIENT)
     public static class Line {
-        private final OrderedText text;
-        private final int width;
+        final OrderedText text;
+        final int width;
 
-        private Line(OrderedText text, int width) {
+        Line(OrderedText text, int width) {
             this.text = text;
             this.width = width;
         }

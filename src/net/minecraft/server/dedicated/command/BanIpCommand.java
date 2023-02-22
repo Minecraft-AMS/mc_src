@@ -42,7 +42,7 @@ public class BanIpCommand {
     private static final SimpleCommandExceptionType ALREADY_BANNED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.banip.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("ban-ip").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(((RequiredArgumentBuilder)CommandManager.argument("target", StringArgumentType.word()).executes(commandContext -> BanIpCommand.checkIp((ServerCommandSource)commandContext.getSource(), StringArgumentType.getString((CommandContext)commandContext, (String)"target"), null))).then(CommandManager.argument("reason", MessageArgumentType.message()).executes(commandContext -> BanIpCommand.checkIp((ServerCommandSource)commandContext.getSource(), StringArgumentType.getString((CommandContext)commandContext, (String)"target"), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)commandContext, "reason"))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("ban-ip").requires(source -> source.hasPermissionLevel(3))).then(((RequiredArgumentBuilder)CommandManager.argument("target", StringArgumentType.word()).executes(context -> BanIpCommand.checkIp((ServerCommandSource)context.getSource(), StringArgumentType.getString((CommandContext)context, (String)"target"), null))).then(CommandManager.argument("reason", MessageArgumentType.message()).executes(context -> BanIpCommand.checkIp((ServerCommandSource)context.getSource(), StringArgumentType.getString((CommandContext)context, (String)"target"), MessageArgumentType.getMessage((CommandContext<ServerCommandSource>)context, "reason"))))));
     }
 
     private static int checkIp(ServerCommandSource source, String target, @Nullable Text reason) throws CommandSyntaxException {
@@ -50,7 +50,7 @@ public class BanIpCommand {
         if (matcher.matches()) {
             return BanIpCommand.banIp(source, target, reason);
         }
-        ServerPlayerEntity serverPlayerEntity = source.getMinecraftServer().getPlayerManager().getPlayer(target);
+        ServerPlayerEntity serverPlayerEntity = source.getServer().getPlayerManager().getPlayer(target);
         if (serverPlayerEntity != null) {
             return BanIpCommand.banIp(source, serverPlayerEntity.getIp(), reason);
         }
@@ -58,11 +58,11 @@ public class BanIpCommand {
     }
 
     private static int banIp(ServerCommandSource source, String targetIp, @Nullable Text reason) throws CommandSyntaxException {
-        BannedIpList bannedIpList = source.getMinecraftServer().getPlayerManager().getIpBanList();
+        BannedIpList bannedIpList = source.getServer().getPlayerManager().getIpBanList();
         if (bannedIpList.isBanned(targetIp)) {
             throw ALREADY_BANNED_EXCEPTION.create();
         }
-        List<ServerPlayerEntity> list = source.getMinecraftServer().getPlayerManager().getPlayersByIp(targetIp);
+        List<ServerPlayerEntity> list = source.getServer().getPlayerManager().getPlayersByIp(targetIp);
         BannedIpEntry bannedIpEntry = new BannedIpEntry(targetIp, null, source.getName(), null, reason == null ? null : reason.getString());
         bannedIpList.add(bannedIpEntry);
         source.sendFeedback(new TranslatableText("commands.banip.success", targetIp, bannedIpEntry.getReason()), true);

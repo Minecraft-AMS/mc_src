@@ -1,16 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.MessageType;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -19,12 +12,9 @@ import net.minecraft.text.Text;
 
 public class GameMessageS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private Text message;
-    private MessageType location;
-    private UUID sender;
-
-    public GameMessageS2CPacket() {
-    }
+    private final Text message;
+    private final MessageType location;
+    private final UUID sender;
 
     public GameMessageS2CPacket(Text message, MessageType location, UUID sender) {
         this.message = message;
@@ -32,15 +22,14 @@ implements Packet<ClientPlayPacketListener> {
         this.sender = sender;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public GameMessageS2CPacket(PacketByteBuf buf) {
         this.message = buf.readText();
         this.location = MessageType.byId(buf.readByte());
         this.sender = buf.readUuid();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeText(this.message);
         buf.writeByte(this.location.getId());
         buf.writeUuid(this.sender);
@@ -51,20 +40,14 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onGameMessage(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Text getMessage() {
         return this.message;
-    }
-
-    public boolean isNonChat() {
-        return this.location == MessageType.SYSTEM || this.location == MessageType.GAME_INFO;
     }
 
     public MessageType getLocation() {
         return this.location;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public UUID getSender() {
         return this.sender;
     }

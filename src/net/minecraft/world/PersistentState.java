@@ -17,14 +17,7 @@ import org.apache.logging.log4j.Logger;
 
 public abstract class PersistentState {
     private static final Logger LOGGER = LogManager.getLogger();
-    private final String key;
     private boolean dirty;
-
-    public PersistentState(String key) {
-        this.key = key;
-    }
-
-    public abstract void fromTag(NbtCompound var1);
 
     public abstract NbtCompound writeNbt(NbtCompound var1);
 
@@ -38,10 +31,6 @@ public abstract class PersistentState {
 
     public boolean isDirty() {
         return this.dirty;
-    }
-
-    public String getId() {
-        return this.key;
     }
 
     public void save(File file) {

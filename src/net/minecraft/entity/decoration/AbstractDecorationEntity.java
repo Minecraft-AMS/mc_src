@@ -55,7 +55,8 @@ extends Entity {
         Validate.notNull((Object)facing);
         Validate.isTrue((boolean)facing.getAxis().isHorizontal());
         this.facing = facing;
-        this.prevYaw = this.yaw = (float)(this.facing.getHorizontal() * 90);
+        this.setYaw(this.facing.getHorizontal() * 90);
+        this.prevYaw = this.getYaw();
         this.updateAttachmentPosition();
     }
 
@@ -91,13 +92,11 @@ extends Entity {
     @Override
     public void tick() {
         if (!this.world.isClient) {
-            if (this.getY() < -64.0) {
-                this.tickInVoid();
-            }
+            this.attemptTickInVoid();
             if (this.obstructionCheckCounter++ == 100) {
                 this.obstructionCheckCounter = 0;
-                if (!this.removed && !this.canStayAttached()) {
-                    this.remove();
+                if (!this.isRemoved() && !this.canStayAttached()) {
+                    this.discard();
                     this.onBreak(null);
                 }
             }
@@ -153,8 +152,8 @@ extends Entity {
         if (this.isInvulnerableTo(source)) {
             return false;
         }
-        if (!this.removed && !this.world.isClient) {
-            this.remove();
+        if (!this.isRemoved() && !this.world.isClient) {
+            this.kill();
             this.scheduleVelocityUpdate();
             this.onBreak(source.getAttacker());
         }
@@ -163,16 +162,16 @@ extends Entity {
 
     @Override
     public void move(MovementType movementType, Vec3d movement) {
-        if (!this.world.isClient && !this.removed && movement.lengthSquared() > 0.0) {
-            this.remove();
+        if (!this.world.isClient && !this.isRemoved() && movement.lengthSquared() > 0.0) {
+            this.kill();
             this.onBreak(null);
         }
     }
 
     @Override
     public void addVelocity(double deltaX, double deltaY, double deltaZ) {
-        if (!this.world.isClient && !this.removed && deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > 0.0) {
-            this.remove();
+        if (!this.world.isClient && !this.isRemoved() && deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > 0.0) {
+            this.kill();
             this.onBreak(null);
         }
     }
@@ -240,7 +239,7 @@ extends Entity {
                 }
             }
         }
-        float f = MathHelper.wrapDegrees(this.yaw);
+        float f = MathHelper.wrapDegrees(this.getYaw());
         switch (rotation) {
             case CLOCKWISE_180: {
                 return f + 180.0f;

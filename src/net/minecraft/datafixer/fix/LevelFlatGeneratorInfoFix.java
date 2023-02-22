@@ -34,6 +34,9 @@ import org.apache.commons.lang3.math.NumberUtils;
 
 public class LevelFlatGeneratorInfoFix
 extends DataFix {
+    private static final String field_29905 = "generatorOptions";
+    @VisibleForTesting
+    static final String field_29904 = "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;1;village";
     private static final Splitter SPLIT_ON_SEMICOLON = Splitter.on((char)';').limit(5);
     private static final Splitter SPLIT_ON_COMMA = Splitter.on((char)',');
     private static final Splitter SPLIT_ON_LOWER_X = Splitter.on((char)'x').limit(2);
@@ -50,7 +53,7 @@ extends DataFix {
 
     private Dynamic<?> fixGeneratorOptions(Dynamic<?> dynamic2) {
         if (dynamic2.get("generatorName").asString("").equalsIgnoreCase("flat")) {
-            return dynamic2.update("generatorOptions", dynamic -> (Dynamic)DataFixUtils.orElse((Optional)dynamic.asString().map(this::fixFlatGeneratorOptions).map(arg_0 -> ((Dynamic)dynamic).createString(arg_0)).result(), (Object)dynamic));
+            return dynamic2.update(field_29905, dynamic -> (Dynamic)DataFixUtils.orElse((Optional)dynamic.asString().map(this::fixFlatGeneratorOptions).map(arg_0 -> ((Dynamic)dynamic).createString(arg_0)).result(), (Object)dynamic));
         }
         return dynamic2;
     }
@@ -60,7 +63,7 @@ extends DataFix {
         String string2;
         int i;
         if (generatorOptions.isEmpty()) {
-            return "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;1;village";
+            return field_29904;
         }
         Iterator iterator = SPLIT_ON_SEMICOLON.split((CharSequence)generatorOptions).iterator();
         String string3 = (String)iterator.next();
@@ -72,7 +75,7 @@ extends DataFix {
             string2 = string3;
         }
         if (i < 0 || i > 3) {
-            return "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;1;village";
+            return field_29904;
         }
         StringBuilder stringBuilder = new StringBuilder();
         Splitter splitter = i < 3 ? SPLIT_ON_LOWER_X : SPLIT_ON_ASTERISK;
@@ -93,7 +96,7 @@ extends DataFix {
             int l = i == 3 ? EntityBlockStateFix.getNumericalBlockId("minecraft:" + string3) : NumberUtils.toInt((String)string3, (int)0);
             int m = k + 1;
             int n = list2.size() > m ? NumberUtils.toInt((String)((String)list2.get(m)), (int)0) : 0;
-            return (j == 1 ? "" : j + "*") + BlockStateFlattening.lookupState(l << 4 | n).get("Name").asString("");
+            return (String)(j == 1 ? "" : j + "*") + BlockStateFlattening.lookupState(l << 4 | n).get("Name").asString("");
         }).collect(Collectors.joining(",")));
         while (iterator.hasNext()) {
             stringBuilder.append(';').append((String)iterator.next());

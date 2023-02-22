@@ -32,10 +32,12 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public abstract class LeafEntry
 extends LootPoolEntry {
+    public static final int field_31847 = 1;
+    public static final int field_31848 = 0;
     protected final int weight;
     protected final int quality;
     protected final LootFunction[] functions;
-    private final BiFunction<ItemStack, LootContext, ItemStack> compiledFunctions;
+    final BiFunction<ItemStack, LootContext, ItemStack> compiledFunctions;
     private final LootChoice choice = new Choice(){
 
         @Override
@@ -75,6 +77,35 @@ extends LootPoolEntry {
         return new BasicBuilder(factory);
     }
 
+    static class BasicBuilder
+    extends Builder<BasicBuilder> {
+        private final Factory factory;
+
+        public BasicBuilder(Factory factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        protected BasicBuilder getThisBuilder() {
+            return this;
+        }
+
+        @Override
+        public LootPoolEntry build() {
+            return this.factory.build(this.weight, this.quality, this.getConditions(), this.getFunctions());
+        }
+
+        @Override
+        protected /* synthetic */ LootPoolEntry.Builder getThisBuilder() {
+            return this.getThisBuilder();
+        }
+    }
+
+    @FunctionalInterface
+    protected static interface Factory {
+        public LeafEntry build(int var1, int var2, LootCondition[] var3, LootFunction[] var4);
+    }
+
     public static abstract class Serializer<T extends LeafEntry>
     extends LootPoolEntry.Serializer<T> {
         @Override
@@ -104,35 +135,6 @@ extends LootPoolEntry {
         public /* synthetic */ LootPoolEntry fromJson(JsonObject json, JsonDeserializationContext context, LootCondition[] conditions) {
             return this.fromJson(json, context, conditions);
         }
-    }
-
-    static class BasicBuilder
-    extends Builder<BasicBuilder> {
-        private final Factory factory;
-
-        public BasicBuilder(Factory factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        protected BasicBuilder getThisBuilder() {
-            return this;
-        }
-
-        @Override
-        public LootPoolEntry build() {
-            return this.factory.build(this.weight, this.quality, this.getConditions(), this.getFunctions());
-        }
-
-        @Override
-        protected /* synthetic */ LootPoolEntry.Builder getThisBuilder() {
-            return this.getThisBuilder();
-        }
-    }
-
-    @FunctionalInterface
-    public static interface Factory {
-        public LeafEntry build(int var1, int var2, LootCondition[] var3, LootFunction[] var4);
     }
 
     public static abstract class Builder<T extends Builder<T>>
@@ -168,7 +170,7 @@ extends LootPoolEntry {
         }
     }
 
-    public abstract class Choice
+    protected abstract class Choice
     implements LootChoice {
         protected Choice() {
         }

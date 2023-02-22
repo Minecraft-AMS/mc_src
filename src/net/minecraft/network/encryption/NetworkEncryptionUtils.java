@@ -1,9 +1,5 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.encryption;
 
@@ -20,15 +16,19 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 
 public class NetworkEncryptionUtils {
-    @Environment(value=EnvType.CLIENT)
+    private static final String field_29830 = "AES";
+    private static final int field_29831 = 128;
+    private static final String field_29832 = "RSA";
+    private static final int field_29833 = 1024;
+    private static final String field_29834 = "ISO_8859_1";
+    private static final String field_29835 = "SHA-1";
+
     public static SecretKey generateKey() throws NetworkEncryptionException {
         try {
-            KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+            KeyGenerator keyGenerator = KeyGenerator.getInstance(field_29830);
             keyGenerator.init(128);
             return keyGenerator.generateKey();
         }
@@ -39,7 +39,7 @@ public class NetworkEncryptionUtils {
 
     public static KeyPair generateServerKeyPair() throws NetworkEncryptionException {
         try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(field_29832);
             keyPairGenerator.initialize(1024);
             return keyPairGenerator.generateKeyPair();
         }
@@ -50,7 +50,7 @@ public class NetworkEncryptionUtils {
 
     public static byte[] generateServerId(String baseServerId, PublicKey publicKey, SecretKey secretKey) throws NetworkEncryptionException {
         try {
-            return NetworkEncryptionUtils.hash(baseServerId.getBytes("ISO_8859_1"), secretKey.getEncoded(), publicKey.getEncoded());
+            return NetworkEncryptionUtils.hash(baseServerId.getBytes(field_29834), secretKey.getEncoded(), publicKey.getEncoded());
         }
         catch (Exception exception) {
             throw new NetworkEncryptionException(exception);
@@ -58,18 +58,17 @@ public class NetworkEncryptionUtils {
     }
 
     private static byte[] hash(byte[] ... bs) throws Exception {
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
+        MessageDigest messageDigest = MessageDigest.getInstance(field_29835);
         for (byte[] cs : bs) {
             messageDigest.update(cs);
         }
         return messageDigest.digest();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static PublicKey readEncodedPublicKey(byte[] bs) throws NetworkEncryptionException {
         try {
             X509EncodedKeySpec encodedKeySpec = new X509EncodedKeySpec(bs);
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            KeyFactory keyFactory = KeyFactory.getInstance(field_29832);
             return keyFactory.generatePublic(encodedKeySpec);
         }
         catch (Exception exception) {
@@ -80,14 +79,13 @@ public class NetworkEncryptionUtils {
     public static SecretKey decryptSecretKey(PrivateKey privateKey, byte[] encryptedSecretKey) throws NetworkEncryptionException {
         byte[] bs = NetworkEncryptionUtils.decrypt(privateKey, encryptedSecretKey);
         try {
-            return new SecretKeySpec(bs, "AES");
+            return new SecretKeySpec(bs, field_29830);
         }
         catch (Exception exception) {
             throw new NetworkEncryptionException(exception);
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static byte[] encrypt(Key key, byte[] data) throws NetworkEncryptionException {
         return NetworkEncryptionUtils.crypt(1, key, data);
     }

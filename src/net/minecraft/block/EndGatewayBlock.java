@@ -2,18 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.EndGatewayBlockEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.item.ItemStack;
@@ -21,6 +20,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class EndGatewayBlock
 extends BlockWithEntity {
@@ -29,12 +29,17 @@ extends BlockWithEntity {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new EndGatewayBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new EndGatewayBlockEntity(pos, state);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return EndGatewayBlock.checkType(type, BlockEntityType.END_GATEWAY, world.isClient ? EndGatewayBlockEntity::clientTick : EndGatewayBlockEntity::serverTick);
+    }
+
+    @Override
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (!(blockEntity instanceof EndGatewayBlockEntity)) {
@@ -61,7 +66,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
     }

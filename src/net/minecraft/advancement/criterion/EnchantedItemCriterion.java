@@ -20,7 +20,7 @@ import net.minecraft.util.Identifier;
 
 public class EnchantedItemCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("enchanted_item");
+    static final Identifier ID = new Identifier("enchanted_item");
 
     @Override
     public Identifier getId() {
@@ -35,7 +35,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack stack, int levels) {
-        this.test(player, conditions -> conditions.matches(stack, levels));
+        this.trigger(player, conditions -> conditions.matches(stack, levels));
     }
 
     @Override

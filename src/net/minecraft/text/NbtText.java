@@ -2,20 +2,22 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Joiner
  *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
+ *  com.mojang.datafixers.DataFixUtils
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
 
-import com.google.common.base.Joiner;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.datafixers.DataFixUtils;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.command.EntitySelector;
@@ -46,6 +48,7 @@ extends BaseText
 implements ParsableText {
     private static final Logger LOGGER = LogManager.getLogger();
     protected final boolean interpret;
+    protected final Optional<Text> separator;
     protected final String rawPath;
     @Nullable
     protected final NbtPathArgumentType.NbtPath path;
@@ -60,14 +63,15 @@ implements ParsableText {
         }
     }
 
-    public NbtText(String rawPath, boolean interpret) {
-        this(rawPath, NbtText.parsePath(rawPath), interpret);
+    public NbtText(String rawPath, boolean interpret, Optional<Text> separator) {
+        this(rawPath, NbtText.parsePath(rawPath), interpret, separator);
     }
 
-    protected NbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret) {
+    protected NbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, Optional<Text> separator) {
         this.rawPath = rawPath;
         this.path = path;
         this.interpret = interpret;
+        this.separator = separator;
     }
 
     protected abstract Stream<NbtCompound> toNbt(ServerCommandSource var1) throws CommandSyntaxException;
@@ -94,31 +98,32 @@ implements ParsableText {
             }
         }).map(NbtElement::asString);
         if (this.interpret) {
+            Text text2 = (Text)DataFixUtils.orElse(Texts.parse(source, this.separator, sender, depth), (Object)Texts.DEFAULT_SEPARATOR_TEXT);
             return stream.flatMap(text -> {
                 try {
                     MutableText mutableText = Text.Serializer.fromJson(text);
                     return Stream.of(Texts.parse(source, mutableText, sender, depth));
                 }
                 catch (Exception exception) {
-                    LOGGER.warn("Failed to parse component: " + text, (Throwable)exception);
+                    LOGGER.warn("Failed to parse component: {}", text, (Object)exception);
                     return Stream.of(new MutableText[0]);
                 }
-            }).reduce((a, b) -> a.append(", ").append((Text)b)).orElse(new LiteralText(""));
+            }).reduce((accumulator, current) -> accumulator.append(text2).append((Text)current)).orElseGet(() -> new LiteralText(""));
         }
-        return new LiteralText(Joiner.on((String)", ").join(stream.iterator()));
+        return Texts.parse(source, this.separator, sender, depth).map(text -> stream.map(string -> new LiteralText((String)string)).reduce((accumulator, current) -> accumulator.append((Text)text).append((Text)current)).orElseGet(() -> new LiteralText(""))).orElseGet(() -> new LiteralText(stream.collect(Collectors.joining(", "))));
     }
 
     public static class StorageNbtText
     extends NbtText {
         private final Identifier id;
 
-        public StorageNbtText(String rawPath, boolean interpret, Identifier id) {
-            super(rawPath, interpret);
+        public StorageNbtText(String rawPath, boolean interpret, Identifier id, Optional<Text> separator) {
+            super(rawPath, interpret, separator);
             this.id = id;
         }
 
-        public StorageNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, Identifier id) {
-            super(rawPath, path, interpret);
+        public StorageNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, Identifier id, Optional<Text> separator) {
+            super(rawPath, path, interpret, separator);
             this.id = id;
         }
 
@@ -128,12 +133,12 @@ implements ParsableText {
 
         @Override
         public StorageNbtText copy() {
-            return new StorageNbtText(this.rawPath, this.path, this.interpret, this.id);
+            return new StorageNbtText(this.rawPath, this.path, this.interpret, this.id, this.separator);
         }
 
         @Override
         protected Stream<NbtCompound> toNbt(ServerCommandSource source) {
-            NbtCompound nbtCompound = source.getMinecraftServer().getDataCommandStorage().get(this.id);
+            NbtCompound nbtCompound = source.getServer().getDataCommandStorage().get(this.id);
             return Stream.of(nbtCompound);
         }
 
@@ -151,7 +156,7 @@ implements ParsableText {
 
         @Override
         public String toString() {
-            return "StorageNbtComponent{id='" + this.id + '\'' + "path='" + this.rawPath + '\'' + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+            return "StorageNbtComponent{id='" + this.id + "'path='" + this.rawPath + "', siblings=" + this.siblings + ", style=" + this.getStyle() + "}";
         }
 
         @Override
@@ -171,8 +176,8 @@ implements ParsableText {
         @Nullable
         private final PosArgument pos;
 
-        public BlockNbtText(String rawPath, boolean rawJson, String rawPos) {
-            super(rawPath, rawJson);
+        public BlockNbtText(String rawPath, boolean rawJson, String rawPos, Optional<Text> separator) {
+            super(rawPath, rawJson, separator);
             this.rawPos = rawPos;
             this.pos = this.parsePos(this.rawPos);
         }
@@ -187,8 +192,8 @@ implements ParsableText {
             }
         }
 
-        private BlockNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, String rawPos, @Nullable PosArgument pos) {
-            super(rawPath, path, interpret);
+        private BlockNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, String rawPos, @Nullable PosArgument pos, Optional<Text> separator) {
+            super(rawPath, path, interpret, separator);
             this.rawPos = rawPos;
             this.pos = pos;
         }
@@ -200,7 +205,7 @@ implements ParsableText {
 
         @Override
         public BlockNbtText copy() {
-            return new BlockNbtText(this.rawPath, this.path, this.interpret, this.rawPos, this.pos);
+            return new BlockNbtText(this.rawPath, this.path, this.interpret, this.rawPos, this.pos, this.separator);
         }
 
         @Override
@@ -228,7 +233,7 @@ implements ParsableText {
 
         @Override
         public String toString() {
-            return "BlockPosArgument{pos='" + this.rawPos + '\'' + "path='" + this.rawPath + '\'' + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+            return "BlockPosArgument{pos='" + this.rawPos + "'path='" + this.rawPath + "', siblings=" + this.siblings + ", style=" + this.getStyle() + "}";
         }
 
         @Override
@@ -248,8 +253,8 @@ implements ParsableText {
         @Nullable
         private final EntitySelector selector;
 
-        public EntityNbtText(String rawPath, boolean interpret, String rawSelector) {
-            super(rawPath, interpret);
+        public EntityNbtText(String rawPath, boolean interpret, String rawSelector, Optional<Text> separator) {
+            super(rawPath, interpret, separator);
             this.rawSelector = rawSelector;
             this.selector = EntityNbtText.parseSelector(rawSelector);
         }
@@ -265,8 +270,8 @@ implements ParsableText {
             }
         }
 
-        private EntityNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, String rawSelector, @Nullable EntitySelector selector) {
-            super(rawPath, path, interpret);
+        private EntityNbtText(String rawPath, @Nullable NbtPathArgumentType.NbtPath path, boolean interpret, String rawSelector, @Nullable EntitySelector selector, Optional<Text> separator) {
+            super(rawPath, path, interpret, separator);
             this.rawSelector = rawSelector;
             this.selector = selector;
         }
@@ -277,7 +282,7 @@ implements ParsableText {
 
         @Override
         public EntityNbtText copy() {
-            return new EntityNbtText(this.rawPath, this.path, this.interpret, this.rawSelector, this.selector);
+            return new EntityNbtText(this.rawPath, this.path, this.interpret, this.rawSelector, this.selector, this.separator);
         }
 
         @Override
@@ -303,7 +308,7 @@ implements ParsableText {
 
         @Override
         public String toString() {
-            return "EntityNbtComponent{selector='" + this.rawSelector + '\'' + "path='" + this.rawPath + '\'' + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+            return "EntityNbtComponent{selector='" + this.rawSelector + "'path='" + this.rawPath + "', siblings=" + this.siblings + ", style=" + this.getStyle() + "}";
         }
 
         @Override

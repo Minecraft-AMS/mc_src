@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import java.util.EnumSet;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
@@ -39,7 +35,6 @@ extends LlamaEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean isTrader() {
         return true;
     }
@@ -70,6 +65,10 @@ extends LlamaEntity {
         this.targetSelector.add(1, new DefendTraderGoal(this));
     }
 
+    public void setDespawnDelay(int despawnDelay) {
+        this.despawnDelay = despawnDelay;
+    }
+
     @Override
     protected void putPlayerOnBack(PlayerEntity player) {
         Entity entity = this.getHoldingEntity();
@@ -94,7 +93,7 @@ extends LlamaEntity {
         int n = this.despawnDelay = this.heldByTrader() ? ((WanderingTraderEntity)this.getHoldingEntity()).getDespawnDelay() - 1 : this.despawnDelay - 1;
         if (this.despawnDelay <= 0) {
             this.detachLeash(true, false);
-            this.remove();
+            this.discard();
         }
     }
 
@@ -122,7 +121,7 @@ extends LlamaEntity {
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
-    public class DefendTraderGoal
+    protected static class DefendTraderGoal
     extends TrackTargetGoal {
         private final LlamaEntity llama;
         private LivingEntity offender;

@@ -2,41 +2,34 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 public class EntityStatusS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private byte status;
-
-    public EntityStatusS2CPacket() {
-    }
+    private final int id;
+    private final byte status;
 
     public EntityStatusS2CPacket(Entity entity, byte status) {
-        this.id = entity.getEntityId();
+        this.id = entity.getId();
         this.status = status;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public EntityStatusS2CPacket(PacketByteBuf buf) {
         this.id = buf.readInt();
         this.status = buf.readByte();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeInt(this.id);
         buf.writeByte(this.status);
     }
@@ -46,12 +39,11 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onEntityStatus(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
+    @Nullable
     public Entity getEntity(World world) {
         return world.getEntityById(this.id);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public byte getStatus() {
         return this.status;
     }

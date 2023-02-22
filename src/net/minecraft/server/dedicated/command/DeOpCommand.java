@@ -31,11 +31,11 @@ public class DeOpCommand {
     private static final SimpleCommandExceptionType ALREADY_DEOPPED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.deop.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("deop").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((commandContext, suggestionsBuilder) -> CommandSource.suggestMatching(((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager().getOpNames(), suggestionsBuilder)).executes(commandContext -> DeOpCommand.deop((ServerCommandSource)commandContext.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)commandContext, "targets")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("deop").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getPlayerManager().getOpNames(), builder)).executes(context -> DeOpCommand.deop((ServerCommandSource)context.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)context, "targets")))));
     }
 
     private static int deop(ServerCommandSource source, Collection<GameProfile> targets) throws CommandSyntaxException {
-        PlayerManager playerManager = source.getMinecraftServer().getPlayerManager();
+        PlayerManager playerManager = source.getServer().getPlayerManager();
         int i = 0;
         for (GameProfile gameProfile : targets) {
             if (!playerManager.isOperator(gameProfile)) continue;
@@ -46,7 +46,7 @@ public class DeOpCommand {
         if (i == 0) {
             throw ALREADY_DEOPPED_EXCEPTION.create();
         }
-        source.getMinecraftServer().kickNonWhitelistedPlayers(source);
+        source.getServer().kickNonWhitelistedPlayers(source);
         return i;
     }
 }

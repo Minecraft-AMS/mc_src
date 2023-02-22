@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.chunk;
 
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.collection.IdList;
@@ -43,7 +37,6 @@ implements Palette<T> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void fromPacket(PacketByteBuf buf) {
     }
 
@@ -54,6 +47,11 @@ implements Palette<T> {
     @Override
     public int getPacketSize() {
         return PacketByteBuf.getVarIntLength(0);
+    }
+
+    @Override
+    public int getIndexBits() {
+        return this.idList.size();
     }
 
     @Override

@@ -2,12 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap
  *  it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap
  */
 package net.minecraft.entity.ai.brain;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
@@ -19,8 +21,18 @@ public class ScheduleRule {
     private final List<ScheduleRuleEntry> entries = Lists.newArrayList();
     private int prioritizedEntryIndex;
 
+    public ImmutableList<ScheduleRuleEntry> getEntries() {
+        return ImmutableList.copyOf(this.entries);
+    }
+
     public ScheduleRule add(int startTime, float priority) {
         this.entries.add(new ScheduleRuleEntry(startTime, priority));
+        this.sort();
+        return this;
+    }
+
+    public ScheduleRule add(Collection<ScheduleRuleEntry> entries) {
+        this.entries.addAll(entries);
         this.sort();
         return this;
     }
@@ -52,7 +64,7 @@ public class ScheduleRule {
     }
 
     private static /* synthetic */ void method_19228(Int2ObjectSortedMap int2ObjectSortedMap, ScheduleRuleEntry scheduleRuleEntry) {
-        ScheduleRuleEntry cfr_ignored_0 = (ScheduleRuleEntry)int2ObjectSortedMap.put(scheduleRuleEntry.getStartTime(), (Object)scheduleRuleEntry);
+        int2ObjectSortedMap.put(scheduleRuleEntry.getStartTime(), (Object)scheduleRuleEntry);
     }
 }
 

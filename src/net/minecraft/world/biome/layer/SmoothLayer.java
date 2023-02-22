@@ -6,10 +6,19 @@ package net.minecraft.world.biome.layer;
 import net.minecraft.world.biome.layer.type.CrossSamplingLayer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 
-public enum SmoothLayer implements CrossSamplingLayer
-{
-    INSTANCE;
+public final class SmoothLayer
+extends Enum<SmoothLayer>
+implements CrossSamplingLayer {
+    public static final /* enum */ SmoothLayer INSTANCE = new SmoothLayer();
+    private static final /* synthetic */ SmoothLayer[] field_16170;
 
+    public static SmoothLayer[] values() {
+        return (SmoothLayer[])field_16170.clone();
+    }
+
+    public static SmoothLayer valueOf(String string) {
+        return Enum.valueOf(SmoothLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, int n, int e, int s, int w, int center) {
@@ -23,6 +32,14 @@ public enum SmoothLayer implements CrossSamplingLayer
             return center;
         }
         return bl ? w : n;
+    }
+
+    private static /* synthetic */ SmoothLayer[] method_36786() {
+        return new SmoothLayer[]{INSTANCE};
+    }
+
+    static {
+        field_16170 = SmoothLayer.method_36786();
     }
 }
 

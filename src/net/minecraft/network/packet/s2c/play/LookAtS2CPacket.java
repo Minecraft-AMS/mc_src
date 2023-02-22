@@ -2,15 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.command.argument.EntityAnchorArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
@@ -22,27 +17,27 @@ import org.jetbrains.annotations.Nullable;
 
 public class LookAtS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private double targetX;
-    private double targetY;
-    private double targetZ;
-    private int entityId;
-    private EntityAnchorArgumentType.EntityAnchor selfAnchor;
-    private EntityAnchorArgumentType.EntityAnchor targetAnchor;
-    private boolean lookAtEntity;
-
-    public LookAtS2CPacket() {
-    }
+    private final double targetX;
+    private final double targetY;
+    private final double targetZ;
+    private final int entityId;
+    private final EntityAnchorArgumentType.EntityAnchor selfAnchor;
+    private final EntityAnchorArgumentType.EntityAnchor targetAnchor;
+    private final boolean lookAtEntity;
 
     public LookAtS2CPacket(EntityAnchorArgumentType.EntityAnchor selfAnchor, double targetX, double targetY, double targetZ) {
         this.selfAnchor = selfAnchor;
         this.targetX = targetX;
         this.targetY = targetY;
         this.targetZ = targetZ;
+        this.entityId = 0;
+        this.lookAtEntity = false;
+        this.targetAnchor = null;
     }
 
     public LookAtS2CPacket(EntityAnchorArgumentType.EntityAnchor selfAnchor, Entity entity, EntityAnchorArgumentType.EntityAnchor targetAnchor) {
         this.selfAnchor = selfAnchor;
-        this.entityId = entity.getEntityId();
+        this.entityId = entity.getId();
         this.targetAnchor = targetAnchor;
         Vec3d vec3d = targetAnchor.positionAt(entity);
         this.targetX = vec3d.x;
@@ -51,21 +46,23 @@ implements Packet<ClientPlayPacketListener> {
         this.lookAtEntity = true;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public LookAtS2CPacket(PacketByteBuf buf) {
         this.selfAnchor = buf.readEnumConstant(EntityAnchorArgumentType.EntityAnchor.class);
         this.targetX = buf.readDouble();
         this.targetY = buf.readDouble();
         this.targetZ = buf.readDouble();
-        if (buf.readBoolean()) {
-            this.lookAtEntity = true;
+        this.lookAtEntity = buf.readBoolean();
+        if (this.lookAtEntity) {
             this.entityId = buf.readVarInt();
             this.targetAnchor = buf.readEnumConstant(EntityAnchorArgumentType.EntityAnchor.class);
+        } else {
+            this.entityId = 0;
+            this.targetAnchor = null;
         }
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeEnumConstant(this.selfAnchor);
         buf.writeDouble(this.targetX);
         buf.writeDouble(this.targetY);
@@ -82,13 +79,11 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onLookAt(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public EntityAnchorArgumentType.EntityAnchor getSelfAnchor() {
         return this.selfAnchor;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public Vec3d getTargetPosition(World world) {
         if (this.lookAtEntity) {
             Entity entity = world.getEntityById(this.entityId);

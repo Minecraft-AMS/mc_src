@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
  *  com.mojang.serialization.Dynamic
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
@@ -13,8 +11,6 @@ package net.minecraft.entity.mob;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Dynamic;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -65,9 +61,17 @@ extends AnimalEntity
 implements Monster,
 Hoglin {
     private static final TrackedData<Boolean> BABY = DataTracker.registerData(HoglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final float field_30525 = 0.2f;
+    private static final int field_30526 = 40;
+    private static final float field_30527 = 0.3f;
+    private static final int field_30528 = 1;
+    private static final float field_30529 = 0.6f;
+    private static final int field_30530 = 6;
+    private static final float field_30531 = 0.5f;
+    private static final int field_30532 = 300;
     private int movementCooldownTicks;
-    private int timeInOverworld = 0;
-    private boolean cannotBeHunted = false;
+    private int timeInOverworld;
+    private boolean cannotBeHunted;
     protected static final ImmutableList<? extends SensorType<? extends Sensor<? super HoglinEntity>>> SENSOR_TYPES = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ADULT, SensorType.HOGLIN_SPECIFIC_SENSOR);
     protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_MODULE_TYPES = ImmutableList.of(MemoryModuleType.BREED_TARGET, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.LOOK_TARGET, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN, (Object[])new MemoryModuleType[]{MemoryModuleType.AVOID_TARGET, MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS, MemoryModuleType.NEAREST_VISIBLE_ADULT, MemoryModuleType.NEAREST_REPELLENT, MemoryModuleType.PACIFIED});
 
@@ -138,7 +142,7 @@ Hoglin {
         if (this.canConvert()) {
             ++this.timeInOverworld;
             if (this.timeInOverworld > 300) {
-                this.method_30081(SoundEvents.ENTITY_HOGLIN_CONVERTED_TO_ZOMBIFIED);
+                this.playSound(SoundEvents.ENTITY_HOGLIN_CONVERTED_TO_ZOMBIFIED);
                 this.zombify((ServerWorld)this.world);
             }
         } else {
@@ -209,7 +213,6 @@ Hoglin {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 4) {
             this.movementCooldownTicks = 10;
@@ -220,7 +223,6 @@ Hoglin {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public int getMovementCooldownTicks() {
         return this.movementCooldownTicks;
     }
@@ -236,7 +238,7 @@ Hoglin {
     }
 
     private void zombify(ServerWorld word) {
-        ZoglinEntity zoglinEntity = this.method_29243(EntityType.ZOGLIN, true);
+        ZoglinEntity zoglinEntity = this.convertTo(EntityType.ZOGLIN, true);
         if (zoglinEntity != null) {
             zoglinEntity.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 0));
         }
@@ -244,7 +246,7 @@ Hoglin {
 
     @Override
     public boolean isBreedingItem(ItemStack stack) {
-        return stack.getItem() == Items.CRIMSON_FUNGUS;
+        return stack.isOf(Items.CRIMSON_FUNGUS);
     }
 
     public boolean isAdult() {
@@ -322,7 +324,7 @@ Hoglin {
         if (this.world.isClient) {
             return null;
         }
-        return HoglinBrain.method_30083(this).orElse(null);
+        return HoglinBrain.getSoundEvent(this).orElse(null);
     }
 
     @Override
@@ -350,8 +352,8 @@ Hoglin {
         this.playSound(SoundEvents.ENTITY_HOGLIN_STEP, 0.15f, 1.0f);
     }
 
-    protected void method_30081(SoundEvent soundEvent) {
-        this.playSound(soundEvent, this.getSoundVolume(), this.getSoundPitch());
+    protected void playSound(SoundEvent sound) {
+        this.playSound(sound, this.getSoundVolume(), this.getSoundPitch());
     }
 
     @Override

@@ -19,6 +19,7 @@ import net.minecraft.command.argument.Vec3ArgumentType;
 import net.minecraft.text.TranslatableText;
 
 public class CoordinateArgument {
+    private static final char TILDE = '~';
     public static final SimpleCommandExceptionType MISSING_COORDINATE = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.missing.double"));
     public static final SimpleCommandExceptionType MISSING_BLOCK_POSITION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.missing.int"));
     private final boolean relative;

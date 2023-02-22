@@ -35,6 +35,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class TripwireHookBlock
@@ -42,6 +43,10 @@ extends Block {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final BooleanProperty POWERED = Properties.POWERED;
     public static final BooleanProperty ATTACHED = Properties.ATTACHED;
+    protected static final int field_31268 = 1;
+    protected static final int field_31269 = 42;
+    private static final int SCHEDULED_TICK_DELAY = 10;
+    protected static final int field_31270 = 3;
     protected static final VoxelShape SOUTH_SHAPE = Block.createCuboidShape(5.0, 0.0, 10.0, 11.0, 10.0, 16.0);
     protected static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(5.0, 0.0, 0.0, 11.0, 10.0, 6.0);
     protected static final VoxelShape EAST_SHAPE = Block.createCuboidShape(10.0, 0.0, 5.0, 16.0, 10.0, 11.0);
@@ -172,12 +177,16 @@ extends Block {
     private void playSound(World world, BlockPos pos, boolean attached, boolean on, boolean detached, boolean off) {
         if (on && !off) {
             world.playSound(null, pos, SoundEvents.BLOCK_TRIPWIRE_CLICK_ON, SoundCategory.BLOCKS, 0.4f, 0.6f);
+            world.emitGameEvent(GameEvent.BLOCK_PRESS, pos);
         } else if (!on && off) {
             world.playSound(null, pos, SoundEvents.BLOCK_TRIPWIRE_CLICK_OFF, SoundCategory.BLOCKS, 0.4f, 0.5f);
+            world.emitGameEvent(GameEvent.BLOCK_UNPRESS, pos);
         } else if (attached && !detached) {
             world.playSound(null, pos, SoundEvents.BLOCK_TRIPWIRE_ATTACH, SoundCategory.BLOCKS, 0.4f, 0.7f);
+            world.emitGameEvent(GameEvent.BLOCK_ATTACH, pos);
         } else if (!attached && detached) {
             world.playSound(null, pos, SoundEvents.BLOCK_TRIPWIRE_DETACH, SoundCategory.BLOCKS, 0.4f, 1.2f / (world.random.nextFloat() * 0.2f + 0.9f));
+            world.emitGameEvent(GameEvent.BLOCK_DETACH, pos);
         }
     }
 

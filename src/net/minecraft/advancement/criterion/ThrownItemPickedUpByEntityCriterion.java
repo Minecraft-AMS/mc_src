@@ -21,7 +21,7 @@ import net.minecraft.util.Identifier;
 
 public class ThrownItemPickedUpByEntityCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("thrown_item_picked_up_by_entity");
+    static final Identifier ID = new Identifier("thrown_item_picked_up_by_entity");
 
     @Override
     public Identifier getId() {
@@ -37,7 +37,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, ItemStack stack, Entity entity) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, entity);
-        this.test(player, conditions -> conditions.test(player, stack, lootContext));
+        this.trigger(player, conditions -> conditions.test(player, stack, lootContext));
     }
 
     @Override
@@ -50,21 +50,21 @@ extends AbstractCriterion<Conditions> {
         private final ItemPredicate item;
         private final EntityPredicate.Extended entity;
 
-        public Conditions(EntityPredicate.Extended extended, ItemPredicate item, EntityPredicate.Extended entity) {
-            super(ID, extended);
+        public Conditions(EntityPredicate.Extended player, ItemPredicate item, EntityPredicate.Extended entity) {
+            super(ID, player);
             this.item = item;
             this.entity = entity;
         }
 
-        public static Conditions create(EntityPredicate.Extended extended, ItemPredicate.Builder builder, EntityPredicate.Extended extended2) {
-            return new Conditions(extended, builder.build(), extended2);
+        public static Conditions create(EntityPredicate.Extended player, ItemPredicate.Builder item, EntityPredicate.Extended entity) {
+            return new Conditions(player, item.build(), entity);
         }
 
-        public boolean test(ServerPlayerEntity player, ItemStack stack, LootContext lootContext) {
+        public boolean test(ServerPlayerEntity player, ItemStack stack, LootContext entityContext) {
             if (!this.item.test(stack)) {
                 return false;
             }
-            return this.entity.test(lootContext);
+            return this.entity.test(entityContext);
         }
 
         @Override

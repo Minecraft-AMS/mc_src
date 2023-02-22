@@ -41,11 +41,11 @@ extends FeatureSize {
     }
 
     @Override
-    public int method_27378(int i, int j) {
-        if (j < this.limit) {
+    public int getRadius(int height, int y) {
+        if (y < this.limit) {
             return this.lowerSize;
         }
-        if (j >= i - this.upperLimit) {
+        if (y >= height - this.upperLimit) {
             return this.upperSize;
         }
         return this.middleSize;

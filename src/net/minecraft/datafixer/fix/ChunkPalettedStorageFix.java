@@ -58,20 +58,28 @@ import org.jetbrains.annotations.Nullable;
 
 public class ChunkPalettedStorageFix
 extends DataFix {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private static final BitSet BLOCKS_NEEDING_SIDE_UPDATE = new BitSet(256);
-    private static final BitSet BLOCKS_NEEDING_IN_PLACE_UPDATE = new BitSet(256);
-    private static final Dynamic<?> PUMPKIN = BlockStateFlattening.parseState("{Name:'minecraft:pumpkin'}");
-    private static final Dynamic<?> PODZOL = BlockStateFlattening.parseState("{Name:'minecraft:podzol',Properties:{snowy:'true'}}");
-    private static final Dynamic<?> SNOWY_GRASS = BlockStateFlattening.parseState("{Name:'minecraft:grass_block',Properties:{snowy:'true'}}");
-    private static final Dynamic<?> SNOWY_MYCELIUM = BlockStateFlattening.parseState("{Name:'minecraft:mycelium',Properties:{snowy:'true'}}");
-    private static final Dynamic<?> SUNFLOWER_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:sunflower',Properties:{half:'upper'}}");
-    private static final Dynamic<?> LILAC_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:lilac',Properties:{half:'upper'}}");
-    private static final Dynamic<?> GRASS_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:tall_grass',Properties:{half:'upper'}}");
-    private static final Dynamic<?> FERN_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:large_fern',Properties:{half:'upper'}}");
-    private static final Dynamic<?> ROSE_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:rose_bush',Properties:{half:'upper'}}");
-    private static final Dynamic<?> PEONY_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:peony',Properties:{half:'upper'}}");
-    private static final Map<String, Dynamic<?>> FLOWER_POT = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    private static final int field_29871 = 128;
+    private static final int field_29872 = 64;
+    private static final int field_29873 = 32;
+    private static final int field_29874 = 16;
+    private static final int field_29875 = 8;
+    private static final int field_29876 = 4;
+    private static final int field_29877 = 2;
+    private static final int field_29878 = 1;
+    static final Logger LOGGER = LogManager.getLogger();
+    static final BitSet BLOCKS_NEEDING_SIDE_UPDATE = new BitSet(256);
+    static final BitSet BLOCKS_NEEDING_IN_PLACE_UPDATE = new BitSet(256);
+    static final Dynamic<?> PUMPKIN = BlockStateFlattening.parseState("{Name:'minecraft:pumpkin'}");
+    static final Dynamic<?> PODZOL = BlockStateFlattening.parseState("{Name:'minecraft:podzol',Properties:{snowy:'true'}}");
+    static final Dynamic<?> SNOWY_GRASS = BlockStateFlattening.parseState("{Name:'minecraft:grass_block',Properties:{snowy:'true'}}");
+    static final Dynamic<?> SNOWY_MYCELIUM = BlockStateFlattening.parseState("{Name:'minecraft:mycelium',Properties:{snowy:'true'}}");
+    static final Dynamic<?> SUNFLOWER_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:sunflower',Properties:{half:'upper'}}");
+    static final Dynamic<?> LILAC_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:lilac',Properties:{half:'upper'}}");
+    static final Dynamic<?> GRASS_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:tall_grass',Properties:{half:'upper'}}");
+    static final Dynamic<?> FERN_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:large_fern',Properties:{half:'upper'}}");
+    static final Dynamic<?> ROSE_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:rose_bush',Properties:{half:'upper'}}");
+    static final Dynamic<?> PEONY_UPPER = BlockStateFlattening.parseState("{Name:'minecraft:peony',Properties:{half:'upper'}}");
+    static final Map<String, Dynamic<?>> FLOWER_POT = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         hashMap.put("minecraft:air0", BlockStateFlattening.parseState("{Name:'minecraft:flower_pot'}"));
         hashMap.put("minecraft:red_flower0", BlockStateFlattening.parseState("{Name:'minecraft:potted_poppy'}"));
         hashMap.put("minecraft:red_flower1", BlockStateFlattening.parseState("{Name:'minecraft:potted_blue_orchid'}"));
@@ -95,7 +103,7 @@ extends DataFix {
         hashMap.put("minecraft:tallgrass2", BlockStateFlattening.parseState("{Name:'minecraft:potted_fern'}"));
         hashMap.put("minecraft:cactus0", BlockStateFlattening.lookupState(2240));
     });
-    private static final Map<String, Dynamic<?>> SKULL = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    static final Map<String, Dynamic<?>> SKULL = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         ChunkPalettedStorageFix.buildSkull(hashMap, 0, "skeleton", "skull");
         ChunkPalettedStorageFix.buildSkull(hashMap, 1, "wither_skeleton", "skull");
         ChunkPalettedStorageFix.buildSkull(hashMap, 2, "zombie", "head");
@@ -103,7 +111,7 @@ extends DataFix {
         ChunkPalettedStorageFix.buildSkull(hashMap, 4, "creeper", "head");
         ChunkPalettedStorageFix.buildSkull(hashMap, 5, "dragon", "head");
     });
-    private static final Map<String, Dynamic<?>> DOOR = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    static final Map<String, Dynamic<?>> DOOR = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         ChunkPalettedStorageFix.buildDoor(hashMap, "oak_door", 1024);
         ChunkPalettedStorageFix.buildDoor(hashMap, "iron_door", 1136);
         ChunkPalettedStorageFix.buildDoor(hashMap, "spruce_door", 3088);
@@ -112,7 +120,7 @@ extends DataFix {
         ChunkPalettedStorageFix.buildDoor(hashMap, "acacia_door", 3136);
         ChunkPalettedStorageFix.buildDoor(hashMap, "dark_oak_door", 3152);
     });
-    private static final Map<String, Dynamic<?>> NOTE_BLOCK = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    static final Map<String, Dynamic<?>> NOTE_BLOCK = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         for (int i = 0; i < 26; ++i) {
             hashMap.put("true" + i, BlockStateFlattening.parseState("{Name:'minecraft:note_block',Properties:{powered:'true',note:'" + i + "'}}"));
             hashMap.put("false" + i, BlockStateFlattening.parseState("{Name:'minecraft:note_block',Properties:{powered:'false',note:'" + i + "'}}"));
@@ -136,19 +144,20 @@ extends DataFix {
         int2ObjectOpenHashMap.put(14, (Object)"red");
         int2ObjectOpenHashMap.put(15, (Object)"black");
     });
-    private static final Map<String, Dynamic<?>> BED = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    static final Map<String, Dynamic<?>> BED = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         for (Int2ObjectMap.Entry entry : COLORS.int2ObjectEntrySet()) {
             if (Objects.equals(entry.getValue(), "red")) continue;
             ChunkPalettedStorageFix.buildBed(hashMap, entry.getIntKey(), (String)entry.getValue());
         }
     });
-    private static final Map<String, Dynamic<?>> BANNER = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
+    static final Map<String, Dynamic<?>> BANNER = (Map)DataFixUtils.make((Object)Maps.newHashMap(), hashMap -> {
         for (Int2ObjectMap.Entry entry : COLORS.int2ObjectEntrySet()) {
             if (Objects.equals(entry.getValue(), "white")) continue;
             ChunkPalettedStorageFix.buildBanner(hashMap, 15 - entry.getIntKey(), (String)entry.getValue());
         }
     });
-    private static final Dynamic<?> AIR;
+    static final Dynamic<?> AIR;
+    private static final int field_29870 = 4096;
 
     public ChunkPalettedStorageFix(Schema outputSchema, boolean changesType) {
         super(outputSchema, changesType);
@@ -160,7 +169,7 @@ extends DataFix {
         out.put(i + "south", BlockStateFlattening.parseState("{Name:'minecraft:" + mob + "_wall_" + block + "',Properties:{facing:'south'}}"));
         out.put(i + "west", BlockStateFlattening.parseState("{Name:'minecraft:" + mob + "_wall_" + block + "',Properties:{facing:'west'}}"));
         for (int j = 0; j < 16; ++j) {
-            out.put(i + "" + j, BlockStateFlattening.parseState("{Name:'minecraft:" + mob + "_" + block + "',Properties:{rotation:'" + j + "'}}"));
+            out.put("" + i + j, BlockStateFlattening.parseState("{Name:'minecraft:" + mob + "_" + block + "',Properties:{rotation:'" + j + "'}}"));
         }
     }
 
@@ -248,7 +257,7 @@ extends DataFix {
 
     private static void buildBanner(Map<String, Dynamic<?>> out, int i, String string) {
         for (int j = 0; j < 16; ++j) {
-            out.put("" + j + "_" + i, BlockStateFlattening.parseState("{Name:'minecraft:" + string + "_banner',Properties:{rotation:'" + j + "'}}"));
+            out.put(j + "_" + i, BlockStateFlattening.parseState("{Name:'minecraft:" + string + "_banner',Properties:{rotation:'" + j + "'}}"));
         }
         out.put("north_" + i, BlockStateFlattening.parseState("{Name:'minecraft:" + string + "_wall_banner',Properties:{facing:'north'}}"));
         out.put("south_" + i, BlockStateFlattening.parseState("{Name:'minecraft:" + string + "_wall_banner',Properties:{facing:'south'}}"));
@@ -364,103 +373,25 @@ extends DataFix {
         AIR = BlockStateFlattening.lookupState(0);
     }
 
-    public static enum Facing {
-        DOWN(Direction.NEGATIVE, Axis.Y),
-        UP(Direction.POSITIVE, Axis.Y),
-        NORTH(Direction.NEGATIVE, Axis.Z),
-        SOUTH(Direction.POSITIVE, Axis.Z),
-        WEST(Direction.NEGATIVE, Axis.X),
-        EAST(Direction.POSITIVE, Axis.X);
-
-        private final Axis axis;
-        private final Direction direction;
-
-        private Facing(Direction direction, Axis axis) {
-            this.axis = axis;
-            this.direction = direction;
-        }
-
-        public Direction getDirection() {
-            return this.direction;
-        }
-
-        public Axis getAxis() {
-            return this.axis;
-        }
-
-        public static enum Direction {
-            POSITIVE(1),
-            NEGATIVE(-1);
-
-            private final int offset;
-
-            private Direction(int j) {
-                this.offset = j;
-            }
-
-            public int getOffset() {
-                return this.offset;
-            }
-        }
-
-        public static enum Axis {
-            X,
-            Y,
-            Z;
-
-        }
-    }
-
-    static class ChunkNibbleArray {
-        private final byte[] contents;
-
-        public ChunkNibbleArray() {
-            this.contents = new byte[2048];
-        }
-
-        public ChunkNibbleArray(byte[] bs) {
-            this.contents = bs;
-            if (bs.length != 2048) {
-                throw new IllegalArgumentException("ChunkNibbleArrays should be 2048 bytes not: " + bs.length);
-            }
-        }
-
-        public int get(int x, int y, int i) {
-            int j = this.getRawIndex(y << 8 | i << 4 | x);
-            if (this.usesLowNibble(y << 8 | i << 4 | x)) {
-                return this.contents[j] & 0xF;
-            }
-            return this.contents[j] >> 4 & 0xF;
-        }
-
-        private boolean usesLowNibble(int index) {
-            return (index & 1) == 0;
-        }
-
-        private int getRawIndex(int index) {
-            return index >> 1;
-        }
-    }
-
     static final class Level {
         private int sidesToUpgrade;
         private final Section[] sections = new Section[16];
         private final Dynamic<?> level;
-        private final int xPos;
-        private final int yPos;
+        private final int x;
+        private final int z;
         private final Int2ObjectMap<Dynamic<?>> blockEntities = new Int2ObjectLinkedOpenHashMap(16);
 
         public Level(Dynamic<?> dynamic) {
             this.level = dynamic;
-            this.xPos = dynamic.get("xPos").asInt(0) << 4;
-            this.yPos = dynamic.get("zPos").asInt(0) << 4;
+            this.x = dynamic.get("xPos").asInt(0) << 4;
+            this.z = dynamic.get("zPos").asInt(0) << 4;
             dynamic.get("TileEntities").asStreamOpt().result().ifPresent(stream -> stream.forEach(dynamic -> {
                 int k;
-                int i = dynamic.get("x").asInt(0) - this.xPos & 0xF;
+                int i = dynamic.get("x").asInt(0) - this.x & 0xF;
                 int j = dynamic.get("y").asInt(0);
-                int l = j << 8 | (k = dynamic.get("z").asInt(0) - this.yPos & 0xF) << 4 | i;
+                int l = j << 8 | (k = dynamic.get("z").asInt(0) - this.z & 0xF) << 4 | i;
                 if (this.blockEntities.put(l, dynamic) != null) {
-                    LOGGER.warn("In chunk: {}x{} found a duplicate block entity at position: [{}, {}, {}]", (Object)this.xPos, (Object)this.yPos, (Object)i, (Object)j, (Object)k);
+                    LOGGER.warn("In chunk: {}x{} found a duplicate block entity at position: [{}, {}, {}]", (Object)this.x, (Object)this.z, (Object)i, (Object)j, (Object)k);
                 }
             }));
             boolean bl = dynamic.get("convertedFromAlphaFormat").asBoolean(false);
@@ -475,7 +406,7 @@ extends DataFix {
                     int i = section.y << 12;
                     switch ((Integer)entry.getKey()) {
                         case 2: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -488,7 +419,7 @@ extends DataFix {
                             continue block14;
                         }
                         case 3: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -501,7 +432,7 @@ extends DataFix {
                             continue block14;
                         }
                         case 110: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -514,7 +445,7 @@ extends DataFix {
                             continue block14;
                         }
                         case 25: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -523,7 +454,7 @@ extends DataFix {
                                 dynamic2 = this.removeBlockEntity(j |= i);
                                 if (dynamic2 == null) continue;
                                 string = Boolean.toString(dynamic2.get("powered").asBoolean(false)) + (byte)Math.min(Math.max(dynamic2.get("note").asInt(0), 0), 24);
-                                this.setBlock(j, (Dynamic)NOTE_BLOCK.getOrDefault(string, NOTE_BLOCK.get("false0")));
+                                this.setBlock(j, NOTE_BLOCK.getOrDefault(string, NOTE_BLOCK.get("false0")));
                             }
                             continue block14;
                         }
@@ -538,10 +469,8 @@ extends DataFix {
                                 j = (Integer)intListIterator.next();
                                 dynamic2 = this.getBlockEntity(j |= i);
                                 dynamic3 = this.getBlock(j);
-                                if (dynamic2 == null || (k = dynamic2.get("color").asInt(0)) == 14 || k < 0 || k >= 16) continue;
-                                string2 = ChunkPalettedStorageFix.getProperty(dynamic3, "facing") + ChunkPalettedStorageFix.getProperty(dynamic3, "occupied") + ChunkPalettedStorageFix.getProperty(dynamic3, "part") + k;
-                                if (!BED.containsKey(string2)) continue;
-                                this.setBlock(j, (Dynamic)BED.get(string2));
+                                if (dynamic2 == null || (k = dynamic2.get("color").asInt(0)) == 14 || k < 0 || k >= 16 || !BED.containsKey(string2 = ChunkPalettedStorageFix.getProperty(dynamic3, "facing") + ChunkPalettedStorageFix.getProperty(dynamic3, "occupied") + ChunkPalettedStorageFix.getProperty(dynamic3, "part") + k)) continue;
+                                this.setBlock(j, BED.get(string2));
                             }
                             continue block14;
                         }
@@ -557,15 +486,13 @@ extends DataFix {
                                 j = (Integer)intListIterator.next();
                                 dynamic2 = this.getBlockEntity(j |= i);
                                 dynamic3 = this.getBlock(j);
-                                if (dynamic2 == null || (k = dynamic2.get("Base").asInt(0)) == 15 || k < 0 || k >= 16) continue;
-                                string2 = ChunkPalettedStorageFix.getProperty(dynamic3, (Integer)entry.getKey() == 176 ? "rotation" : "facing") + "_" + k;
-                                if (!BANNER.containsKey(string2)) continue;
-                                this.setBlock(j, (Dynamic)BANNER.get(string2));
+                                if (dynamic2 == null || (k = dynamic2.get("Base").asInt(0)) == 15 || k < 0 || k >= 16 || !BANNER.containsKey(string2 = ChunkPalettedStorageFix.getProperty(dynamic3, (Integer)entry.getKey() == 176 ? "rotation" : "facing") + "_" + k)) continue;
+                                this.setBlock(j, BANNER.get(string2));
                             }
                             continue block14;
                         }
                         case 86: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -578,7 +505,7 @@ extends DataFix {
                             continue block14;
                         }
                         case 140: {
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -587,13 +514,13 @@ extends DataFix {
                                 dynamic2 = this.removeBlockEntity(j |= i);
                                 if (dynamic2 == null) continue;
                                 string = dynamic2.get("Item").asString("") + dynamic2.get("Data").asInt(0);
-                                this.setBlock(j, (Dynamic)FLOWER_POT.getOrDefault(string, FLOWER_POT.get("minecraft:air0")));
+                                this.setBlock(j, FLOWER_POT.getOrDefault(string, FLOWER_POT.get("minecraft:air0")));
                             }
                             continue block14;
                         }
                         case 144: {
                             String string2;
-                            String string;
+                            Object string;
                             Dynamic<?> dynamic2;
                             int j;
                             IntListIterator intListIterator = ((IntList)entry.getValue()).iterator();
@@ -603,11 +530,11 @@ extends DataFix {
                                 if (dynamic2 == null) continue;
                                 string = String.valueOf(dynamic2.get("SkullType").asInt(0));
                                 String string3 = ChunkPalettedStorageFix.getProperty(this.getBlock(j), "facing");
-                                string2 = "up".equals(string3) || "down".equals(string3) ? string + String.valueOf(dynamic2.get("Rot").asInt(0)) : string + string3;
+                                string2 = "up".equals(string3) || "down".equals(string3) ? (String)string + String.valueOf(dynamic2.get("Rot").asInt(0)) : (String)string + string3;
                                 dynamic2.remove("SkullType");
                                 dynamic2.remove("facing");
                                 dynamic2.remove("Rot");
-                                this.setBlock(j, (Dynamic)SKULL.getOrDefault(string2, SKULL.get("0north")));
+                                this.setBlock(j, SKULL.getOrDefault(string2, SKULL.get("0north")));
                             }
                             continue block14;
                         }
@@ -634,8 +561,8 @@ extends DataFix {
                                 String string6 = ChunkPalettedStorageFix.getProperty(dynamic3, "open");
                                 String string7 = bl ? "left" : ChunkPalettedStorageFix.getProperty(dynamic4, "hinge");
                                 String string8 = bl ? "false" : ChunkPalettedStorageFix.getProperty(dynamic4, "powered");
-                                this.setBlock(j, (Dynamic)DOOR.get(string4 + string5 + "lower" + string7 + string6 + string8));
-                                this.setBlock(k, (Dynamic)DOOR.get(string4 + string5 + "upper" + string7 + string6 + string8));
+                                this.setBlock(j, DOOR.get(string4 + string5 + "lower" + string7 + string6 + string8));
+                                this.setBlock(k, DOOR.get(string4 + string5 + "upper" + string7 + string6 + string8));
                             }
                             continue block14;
                         }
@@ -753,13 +680,144 @@ extends DataFix {
         }
     }
 
+    public static final class Facing
+    extends Enum<Facing> {
+        public static final /* enum */ Facing DOWN = new Facing(Direction.NEGATIVE, Axis.Y);
+        public static final /* enum */ Facing UP = new Facing(Direction.POSITIVE, Axis.Y);
+        public static final /* enum */ Facing NORTH = new Facing(Direction.NEGATIVE, Axis.Z);
+        public static final /* enum */ Facing SOUTH = new Facing(Direction.POSITIVE, Axis.Z);
+        public static final /* enum */ Facing WEST = new Facing(Direction.NEGATIVE, Axis.X);
+        public static final /* enum */ Facing EAST = new Facing(Direction.POSITIVE, Axis.X);
+        private final Axis axis;
+        private final Direction direction;
+        private static final /* synthetic */ Facing[] field_15865;
+
+        public static Facing[] values() {
+            return (Facing[])field_15865.clone();
+        }
+
+        public static Facing valueOf(String string) {
+            return Enum.valueOf(Facing.class, string);
+        }
+
+        private Facing(Direction direction, Axis axis) {
+            this.axis = axis;
+            this.direction = direction;
+        }
+
+        public Direction getDirection() {
+            return this.direction;
+        }
+
+        public Axis getAxis() {
+            return this.axis;
+        }
+
+        private static /* synthetic */ Facing[] method_36590() {
+            return new Facing[]{DOWN, UP, NORTH, SOUTH, WEST, EAST};
+        }
+
+        static {
+            field_15865 = Facing.method_36590();
+        }
+
+        public static final class Axis
+        extends Enum<Axis> {
+            public static final /* enum */ Axis X = new Axis();
+            public static final /* enum */ Axis Y = new Axis();
+            public static final /* enum */ Axis Z = new Axis();
+            private static final /* synthetic */ Axis[] field_15868;
+
+            public static Axis[] values() {
+                return (Axis[])field_15868.clone();
+            }
+
+            public static Axis valueOf(String string) {
+                return Enum.valueOf(Axis.class, string);
+            }
+
+            private static /* synthetic */ Axis[] method_36591() {
+                return new Axis[]{X, Y, Z};
+            }
+
+            static {
+                field_15868 = Axis.method_36591();
+            }
+        }
+
+        public static final class Direction
+        extends Enum<Direction> {
+            public static final /* enum */ Direction POSITIVE = new Direction(1);
+            public static final /* enum */ Direction NEGATIVE = new Direction(-1);
+            private final int offset;
+            private static final /* synthetic */ Direction[] field_15871;
+
+            public static Direction[] values() {
+                return (Direction[])field_15871.clone();
+            }
+
+            public static Direction valueOf(String string) {
+                return Enum.valueOf(Direction.class, string);
+            }
+
+            private Direction(int j) {
+                this.offset = j;
+            }
+
+            public int getOffset() {
+                return this.offset;
+            }
+
+            private static /* synthetic */ Direction[] method_36592() {
+                return new Direction[]{POSITIVE, NEGATIVE};
+            }
+
+            static {
+                field_15871 = Direction.method_36592();
+            }
+        }
+    }
+
+    static class ChunkNibbleArray {
+        private static final int field_29879 = 2048;
+        private static final int field_29880 = 4;
+        private final byte[] contents;
+
+        public ChunkNibbleArray() {
+            this.contents = new byte[2048];
+        }
+
+        public ChunkNibbleArray(byte[] bs) {
+            this.contents = bs;
+            if (bs.length != 2048) {
+                throw new IllegalArgumentException("ChunkNibbleArrays should be 2048 bytes not: " + bs.length);
+            }
+        }
+
+        public int get(int x, int y, int i) {
+            int j = this.getRawIndex(y << 8 | i << 4 | x);
+            if (this.usesLowNibble(y << 8 | i << 4 | x)) {
+                return this.contents[j] & 0xF;
+            }
+            return this.contents[j] >> 4 & 0xF;
+        }
+
+        private boolean usesLowNibble(int index) {
+            return (index & 1) == 0;
+        }
+
+        private int getRawIndex(int index) {
+            return index >> 1;
+        }
+    }
+
     static class Section {
         private final Int2ObjectBiMap<Dynamic<?>> paletteMap = new Int2ObjectBiMap(32);
         private final List<Dynamic<?>> paletteData;
         private final Dynamic<?> section;
         private final boolean hasBlocks;
-        private final Int2ObjectMap<IntList> inPlaceUpdates = new Int2ObjectLinkedOpenHashMap();
-        private final IntList innerPositions = new IntArrayList();
+        final Int2ObjectMap<IntList> inPlaceUpdates = new Int2ObjectLinkedOpenHashMap();
+        final IntList innerPositions = new IntArrayList();
         public final int y;
         private final Set<Dynamic<?>> seenStates = Sets.newIdentityHashSet();
         private final int[] states = new int[4096];

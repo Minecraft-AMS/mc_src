@@ -15,6 +15,7 @@ import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.Text;
@@ -27,21 +28,24 @@ import net.minecraft.world.LightType;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class EntityRenderer<T extends Entity> {
+    protected static final float field_32921 = 0.025f;
     protected final EntityRenderDispatcher dispatcher;
+    private final TextRenderer textRenderer;
     protected float shadowRadius;
     protected float shadowOpacity = 1.0f;
 
-    protected EntityRenderer(EntityRenderDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
+    protected EntityRenderer(EntityRendererFactory.Context ctx) {
+        this.dispatcher = ctx.getRenderDispatcher();
+        this.textRenderer = ctx.getTextRenderer();
     }
 
     public final int getLight(T entity, float tickDelta) {
         BlockPos blockPos = new BlockPos(((Entity)entity).getClientCameraPosVec(tickDelta));
-        return LightmapTextureManager.pack(this.getBlockLight(entity, blockPos), this.method_27950(entity, blockPos));
+        return LightmapTextureManager.pack(this.getBlockLight(entity, blockPos), this.getSkyLight(entity, blockPos));
     }
 
-    protected int method_27950(T entity, BlockPos blockPos) {
-        return ((Entity)entity).world.getLightLevel(LightType.SKY, blockPos);
+    protected int getSkyLight(T entity, BlockPos pos) {
+        return ((Entity)entity).world.getLightLevel(LightType.SKY, pos);
     }
 
     protected int getBlockLight(T entity, BlockPos pos) {
@@ -82,8 +86,8 @@ public abstract class EntityRenderer<T extends Entity> {
 
     public abstract Identifier getTexture(T var1);
 
-    public TextRenderer getFontRenderer() {
-        return this.dispatcher.getTextRenderer();
+    public TextRenderer getTextRenderer() {
+        return this.textRenderer;
     }
 
     protected void renderLabelIfPresent(T entity, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
@@ -101,17 +105,13 @@ public abstract class EntityRenderer<T extends Entity> {
         Matrix4f matrix4f = matrices.peek().getModel();
         float g = MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25f);
         int j = (int)(g * 255.0f) << 24;
-        TextRenderer textRenderer = this.getFontRenderer();
+        TextRenderer textRenderer = this.getTextRenderer();
         float h = -textRenderer.getWidth(text) / 2;
         textRenderer.draw(text, h, (float)i, 0x20FFFFFF, false, matrix4f, vertexConsumers, bl, j, light);
         if (bl) {
             textRenderer.draw(text, h, (float)i, -1, false, matrix4f, vertexConsumers, false, 0, light);
         }
         matrices.pop();
-    }
-
-    public EntityRenderDispatcher getRenderManager() {
-        return this.dispatcher;
     }
 }
 

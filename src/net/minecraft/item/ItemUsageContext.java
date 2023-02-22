@@ -82,7 +82,7 @@ public class ItemUsageContext {
     }
 
     public float getPlayerYaw() {
-        return this.player == null ? 0.0f : this.player.yaw;
+        return this.player == null ? 0.0f : this.player.getYaw();
     }
 }
 

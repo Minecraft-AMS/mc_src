@@ -2,23 +2,27 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.passive.BatEntity;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class BatEntityModel
-extends CompositeEntityModel<BatEntity> {
+extends SinglePartEntityModel<BatEntity> {
+    private final ModelPart root;
     private final ModelPart head;
     private final ModelPart body;
     private final ModelPart rightWing;
@@ -26,42 +30,33 @@ extends CompositeEntityModel<BatEntity> {
     private final ModelPart rightWingTip;
     private final ModelPart leftWingTip;
 
-    public BatEntityModel() {
-        this.textureWidth = 64;
-        this.textureHeight = 64;
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-3.0f, -3.0f, -3.0f, 6.0f, 6.0f, 6.0f);
-        ModelPart modelPart = new ModelPart(this, 24, 0);
-        modelPart.addCuboid(-4.0f, -6.0f, -2.0f, 3.0f, 4.0f, 1.0f);
-        this.head.addChild(modelPart);
-        ModelPart modelPart2 = new ModelPart(this, 24, 0);
-        modelPart2.mirror = true;
-        modelPart2.addCuboid(1.0f, -6.0f, -2.0f, 3.0f, 4.0f, 1.0f);
-        this.head.addChild(modelPart2);
-        this.body = new ModelPart(this, 0, 16);
-        this.body.addCuboid(-3.0f, 4.0f, -3.0f, 6.0f, 12.0f, 6.0f);
-        this.body.setTextureOffset(0, 34).addCuboid(-5.0f, 16.0f, 0.0f, 10.0f, 6.0f, 1.0f);
-        this.rightWing = new ModelPart(this, 42, 0);
-        this.rightWing.addCuboid(-12.0f, 1.0f, 1.5f, 10.0f, 16.0f, 1.0f);
-        this.rightWingTip = new ModelPart(this, 24, 16);
-        this.rightWingTip.setPivot(-12.0f, 1.0f, 1.5f);
-        this.rightWingTip.addCuboid(-8.0f, 1.0f, 0.0f, 8.0f, 12.0f, 1.0f);
-        this.leftWing = new ModelPart(this, 42, 0);
-        this.leftWing.mirror = true;
-        this.leftWing.addCuboid(2.0f, 1.0f, 1.5f, 10.0f, 16.0f, 1.0f);
-        this.leftWingTip = new ModelPart(this, 24, 16);
-        this.leftWingTip.mirror = true;
-        this.leftWingTip.setPivot(12.0f, 1.0f, 1.5f);
-        this.leftWingTip.addCuboid(0.0f, 1.0f, 0.0f, 8.0f, 12.0f, 1.0f);
-        this.body.addChild(this.rightWing);
-        this.body.addChild(this.leftWing);
-        this.rightWing.addChild(this.rightWingTip);
-        this.leftWing.addChild(this.leftWingTip);
+    public BatEntityModel(ModelPart root) {
+        this.root = root;
+        this.head = root.getChild("head");
+        this.body = root.getChild("body");
+        this.rightWing = this.body.getChild("right_wing");
+        this.rightWingTip = this.rightWing.getChild("right_wing_tip");
+        this.leftWing = this.body.getChild("left_wing");
+        this.leftWingTip = this.leftWing.getChild("left_wing_tip");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        ModelPartData modelPartData2 = modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-3.0f, -3.0f, -3.0f, 6.0f, 6.0f, 6.0f), ModelTransform.NONE);
+        modelPartData2.addChild("right_ear", ModelPartBuilder.create().uv(24, 0).cuboid(-4.0f, -6.0f, -2.0f, 3.0f, 4.0f, 1.0f), ModelTransform.NONE);
+        modelPartData2.addChild("left_ear", ModelPartBuilder.create().uv(24, 0).mirrored().cuboid(1.0f, -6.0f, -2.0f, 3.0f, 4.0f, 1.0f), ModelTransform.NONE);
+        ModelPartData modelPartData3 = modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 16).cuboid(-3.0f, 4.0f, -3.0f, 6.0f, 12.0f, 6.0f).uv(0, 34).cuboid(-5.0f, 16.0f, 0.0f, 10.0f, 6.0f, 1.0f), ModelTransform.NONE);
+        ModelPartData modelPartData4 = modelPartData3.addChild("right_wing", ModelPartBuilder.create().uv(42, 0).cuboid(-12.0f, 1.0f, 1.5f, 10.0f, 16.0f, 1.0f), ModelTransform.NONE);
+        modelPartData4.addChild("right_wing_tip", ModelPartBuilder.create().uv(24, 16).cuboid(-8.0f, 1.0f, 0.0f, 8.0f, 12.0f, 1.0f), ModelTransform.pivot(-12.0f, 1.0f, 1.5f));
+        ModelPartData modelPartData5 = modelPartData3.addChild("left_wing", ModelPartBuilder.create().uv(42, 0).mirrored().cuboid(2.0f, 1.0f, 1.5f, 10.0f, 16.0f, 1.0f), ModelTransform.NONE);
+        modelPartData5.addChild("left_wing_tip", ModelPartBuilder.create().uv(24, 16).mirrored().cuboid(0.0f, 1.0f, 0.0f, 8.0f, 12.0f, 1.0f), ModelTransform.pivot(12.0f, 1.0f, 1.5f));
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.head, (Object)this.body);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override
@@ -89,7 +84,7 @@ extends CompositeEntityModel<BatEntity> {
             this.leftWing.setPivot(0.0f, 0.0f, 0.0f);
             this.body.pitch = 0.7853982f + MathHelper.cos(h * 0.1f) * 0.15f;
             this.body.yaw = 0.0f;
-            this.rightWing.yaw = MathHelper.cos(h * 1.3f) * (float)Math.PI * 0.25f;
+            this.rightWing.yaw = MathHelper.cos(h * 74.48451f * ((float)Math.PI / 180)) * (float)Math.PI * 0.25f;
             this.leftWing.yaw = -this.rightWing.yaw;
             this.rightWingTip.yaw = this.rightWing.yaw * 0.5f;
             this.leftWingTip.yaw = -this.rightWing.yaw * 0.5f;

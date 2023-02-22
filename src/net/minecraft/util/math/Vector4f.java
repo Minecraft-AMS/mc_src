@@ -1,20 +1,13 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.math;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3f;
 
-@Environment(value=EnvType.CLIENT)
 public class Vector4f {
     private float x;
     private float y;
@@ -79,6 +72,13 @@ public class Vector4f {
         return this.w;
     }
 
+    public void multiply(float value) {
+        this.x *= value;
+        this.y *= value;
+        this.z *= value;
+        this.w *= value;
+    }
+
     public void multiplyComponentwise(Vec3f vector) {
         this.x *= vector.getX();
         this.y *= vector.getY();
@@ -90,6 +90,13 @@ public class Vector4f {
         this.y = y;
         this.z = z;
         this.w = w;
+    }
+
+    public void add(float x, float y, float z, float w) {
+        this.x += x;
+        this.y += y;
+        this.z += z;
+        this.w += w;
     }
 
     public float dotProduct(Vector4f other) {
@@ -134,6 +141,14 @@ public class Vector4f {
         this.y /= this.w;
         this.z /= this.w;
         this.w = 1.0f;
+    }
+
+    public void lerp(Vector4f to, float delta) {
+        float f = 1.0f - delta;
+        this.x = this.x * f + to.x * delta;
+        this.y = this.y * f + to.y * delta;
+        this.z = this.z * f + to.z * delta;
+        this.w = this.w * f + to.w * delta;
     }
 
     public String toString() {

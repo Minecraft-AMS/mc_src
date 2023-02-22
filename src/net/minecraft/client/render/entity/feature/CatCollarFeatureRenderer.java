@@ -13,6 +13,8 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.CatEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
+import net.minecraft.client.render.entity.model.EntityModelLoader;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.util.Identifier;
@@ -21,10 +23,11 @@ import net.minecraft.util.Identifier;
 public class CatCollarFeatureRenderer
 extends FeatureRenderer<CatEntity, CatEntityModel<CatEntity>> {
     private static final Identifier SKIN = new Identifier("textures/entity/cat/cat_collar.png");
-    private final CatEntityModel<CatEntity> model = new CatEntityModel(0.01f);
+    private final CatEntityModel<CatEntity> model;
 
-    public CatCollarFeatureRenderer(FeatureRendererContext<CatEntity, CatEntityModel<CatEntity>> featureRendererContext) {
-        super(featureRendererContext);
+    public CatCollarFeatureRenderer(FeatureRendererContext<CatEntity, CatEntityModel<CatEntity>> context, EntityModelLoader loader) {
+        super(context);
+        this.model = new CatEntityModel(loader.getModelPart(EntityModelLayers.CAT_COLLAR));
     }
 
     @Override

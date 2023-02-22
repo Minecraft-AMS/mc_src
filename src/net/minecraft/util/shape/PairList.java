@@ -13,6 +13,8 @@ interface PairList {
 
     public boolean forEachPair(Consumer var1);
 
+    public int size();
+
     public static interface Consumer {
         public boolean merge(int var1, int var2, int var3);
     }

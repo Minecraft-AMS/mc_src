@@ -31,7 +31,7 @@ public class ItemScatterer {
     }
 
     public static void spawn(World world, BlockPos pos, DefaultedList<ItemStack> stacks) {
-        stacks.forEach(itemStack -> ItemScatterer.spawn(world, (double)pos.getX(), (double)pos.getY(), (double)pos.getZ(), itemStack));
+        stacks.forEach(stack -> ItemScatterer.spawn(world, (double)pos.getX(), (double)pos.getY(), (double)pos.getZ(), stack));
     }
 
     public static void spawn(World world, double x, double y, double z, ItemStack stack) {

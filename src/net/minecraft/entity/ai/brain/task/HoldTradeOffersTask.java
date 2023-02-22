@@ -28,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class HoldTradeOffersTask
 extends Task<VillagerEntity> {
+    private static final int RUN_INTERVAL = 900;
+    private static final int OFFER_SHOWING_INTERVAL = 40;
     @Nullable
     private ItemStack customerHeldStack;
     private final List<ItemStack> offers = Lists.newArrayList();
@@ -70,7 +72,7 @@ extends Task<VillagerEntity> {
         if (!this.offers.isEmpty()) {
             this.refreshShownOffer(villagerEntity);
         } else {
-            villagerEntity.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            HoldTradeOffersTask.holdNothing(villagerEntity);
             this.ticksLeft = Math.min(this.ticksLeft, 40);
         }
         --this.ticksLeft;
@@ -80,7 +82,7 @@ extends Task<VillagerEntity> {
     public void finishRunning(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         super.finishRunning(serverWorld, villagerEntity, l);
         villagerEntity.getBrain().forget(MemoryModuleType.INTERACTION_TARGET);
-        villagerEntity.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        HoldTradeOffersTask.holdNothing(villagerEntity);
         this.customerHeldStack = null;
     }
 
@@ -102,7 +104,7 @@ extends Task<VillagerEntity> {
     }
 
     private void holdOffer(VillagerEntity villager) {
-        villager.equipStack(EquipmentSlot.MAINHAND, this.offers.get(0));
+        HoldTradeOffersTask.holdOffer(villager, this.offers.get(0));
     }
 
     private void loadPossibleOffers(VillagerEntity villager) {
@@ -114,6 +116,16 @@ extends Task<VillagerEntity> {
 
     private boolean isPossible(TradeOffer offer) {
         return ItemStack.areItemsEqualIgnoreDamage(this.customerHeldStack, offer.getAdjustedFirstBuyItem()) || ItemStack.areItemsEqualIgnoreDamage(this.customerHeldStack, offer.getSecondBuyItem());
+    }
+
+    private static void holdNothing(VillagerEntity villager) {
+        villager.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        villager.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0.085f);
+    }
+
+    private static void holdOffer(VillagerEntity villager, ItemStack stack) {
+        villager.equipStack(EquipmentSlot.MAINHAND, stack);
+        villager.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0.0f);
     }
 
     private LivingEntity findPotentialCustomer(VillagerEntity villager) {
@@ -130,7 +142,7 @@ extends Task<VillagerEntity> {
             if (this.offerIndex > this.offers.size() - 1) {
                 this.offerIndex = 0;
             }
-            villager.equipStack(EquipmentSlot.MAINHAND, this.offers.get(this.offerIndex));
+            HoldTradeOffersTask.holdOffer(villager, this.offers.get(this.offerIndex));
         }
     }
 

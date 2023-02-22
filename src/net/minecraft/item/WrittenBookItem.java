@@ -2,19 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.item;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LecternBlock;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -41,6 +38,20 @@ import org.jetbrains.annotations.Nullable;
 
 public class WrittenBookItem
 extends Item {
+    public static final int field_30929 = 16;
+    public static final int MAX_TITLE_LENGTH = 32;
+    public static final int field_30931 = 1024;
+    public static final int field_30932 = Short.MAX_VALUE;
+    public static final int field_30933 = 100;
+    public static final int field_30934 = 2;
+    public static final String TITLE_KEY = "title";
+    public static final String FILTERED_TITLE_KEY = "filtered_title";
+    public static final String AUTHOR_KEY = "author";
+    public static final String PAGES_KEY = "pages";
+    public static final String FILTERED_PAGES_KEY = "filtered_pages";
+    public static final String GENERATION_KEY = "generation";
+    public static final String RESOLVED_KEY = "resolved";
+
     public WrittenBookItem(Item.Settings settings) {
         super(settings);
     }
@@ -49,45 +60,44 @@ extends Item {
         if (!WritableBookItem.isValid(nbt)) {
             return false;
         }
-        if (!nbt.contains("title", 8)) {
+        if (!nbt.contains(TITLE_KEY, 8)) {
             return false;
         }
-        String string = nbt.getString("title");
+        String string = nbt.getString(TITLE_KEY);
         if (string.length() > 32) {
             return false;
         }
-        return nbt.contains("author", 8);
+        return nbt.contains(AUTHOR_KEY, 8);
     }
 
     public static int getGeneration(ItemStack stack) {
-        return stack.getTag().getInt("generation");
+        return stack.getNbt().getInt(GENERATION_KEY);
     }
 
     public static int getPageCount(ItemStack stack) {
-        NbtCompound nbtCompound = stack.getTag();
-        return nbtCompound != null ? nbtCompound.getList("pages", 8).size() : 0;
+        NbtCompound nbtCompound = stack.getNbt();
+        return nbtCompound != null ? nbtCompound.getList(PAGES_KEY, 8).size() : 0;
     }
 
     @Override
     public Text getName(ItemStack stack) {
-        NbtCompound nbtCompound;
         String string;
-        if (stack.hasTag() && !ChatUtil.isEmpty(string = (nbtCompound = stack.getTag()).getString("title"))) {
+        NbtCompound nbtCompound = stack.getNbt();
+        if (nbtCompound != null && !ChatUtil.isEmpty(string = nbtCompound.getString(TITLE_KEY))) {
             return new LiteralText(string);
         }
         return super.getName(stack);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-        if (stack.hasTag()) {
-            NbtCompound nbtCompound = stack.getTag();
-            String string = nbtCompound.getString("author");
+        if (stack.hasNbt()) {
+            NbtCompound nbtCompound = stack.getNbt();
+            String string = nbtCompound.getString(AUTHOR_KEY);
             if (!ChatUtil.isEmpty(string)) {
                 tooltip.add(new TranslatableText("book.byAuthor", string).formatted(Formatting.GRAY));
             }
-            tooltip.add(new TranslatableText("book.generation." + nbtCompound.getInt("generation")).formatted(Formatting.GRAY));
+            tooltip.add(new TranslatableText("book.generation." + nbtCompound.getInt(GENERATION_KEY)).formatted(Formatting.GRAY));
         }
     }
 
@@ -97,7 +107,7 @@ extends Item {
         World world = context.getWorld();
         BlockState blockState = world.getBlockState(blockPos = context.getBlockPos());
         if (blockState.isOf(Blocks.LECTERN)) {
-            return LecternBlock.putBookIfAbsent(world, blockPos, blockState, context.getStack()) ? ActionResult.success(world.isClient) : ActionResult.PASS;
+            return LecternBlock.putBookIfAbsent(context.getPlayer(), world, blockPos, blockState, context.getStack()) ? ActionResult.success(world.isClient) : ActionResult.PASS;
         }
         return ActionResult.PASS;
     }
@@ -111,29 +121,37 @@ extends Item {
     }
 
     public static boolean resolve(ItemStack book, @Nullable ServerCommandSource commandSource, @Nullable PlayerEntity player) {
-        NbtCompound nbtCompound = book.getTag();
-        if (nbtCompound == null || nbtCompound.getBoolean("resolved")) {
+        NbtCompound nbtCompound = book.getNbt();
+        if (nbtCompound == null || nbtCompound.getBoolean(RESOLVED_KEY)) {
             return false;
         }
-        nbtCompound.putBoolean("resolved", true);
+        nbtCompound.putBoolean(RESOLVED_KEY, true);
         if (!WrittenBookItem.isValid(nbtCompound)) {
             return false;
         }
-        NbtList nbtList = nbtCompound.getList("pages", 8);
+        NbtList nbtList = nbtCompound.getList(PAGES_KEY, 8);
         for (int i = 0; i < nbtList.size(); ++i) {
-            MutableText text;
-            String string = nbtList.getString(i);
-            try {
-                text = Text.Serializer.fromLenientJson(string);
-                text = Texts.parse(commandSource, text, player, 0);
-            }
-            catch (Exception exception) {
-                text = new LiteralText(string);
-            }
-            nbtList.set(i, NbtString.of(Text.Serializer.toJson(text)));
+            nbtList.set(i, NbtString.of(WrittenBookItem.method_33826(commandSource, player, nbtList.getString(i))));
         }
-        nbtCompound.put("pages", nbtList);
+        if (nbtCompound.contains(FILTERED_PAGES_KEY, 10)) {
+            NbtCompound nbtCompound2 = nbtCompound.getCompound(FILTERED_PAGES_KEY);
+            for (String string : nbtCompound2.getKeys()) {
+                nbtCompound2.putString(string, WrittenBookItem.method_33826(commandSource, player, nbtCompound2.getString(string)));
+            }
+        }
         return true;
+    }
+
+    private static String method_33826(@Nullable ServerCommandSource serverCommandSource, @Nullable PlayerEntity playerEntity, String string) {
+        MutableText text;
+        try {
+            text = Text.Serializer.fromLenientJson(string);
+            text = Texts.parse(serverCommandSource, text, (Entity)playerEntity, 0);
+        }
+        catch (Exception exception) {
+            text = new LiteralText(string);
+        }
+        return Text.Serializer.toJson(text);
     }
 
     @Override

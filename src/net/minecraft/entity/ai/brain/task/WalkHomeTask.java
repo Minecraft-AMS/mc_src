@@ -30,6 +30,10 @@ import net.minecraft.world.poi.PointOfInterestType;
 
 public class WalkHomeTask
 extends Task<LivingEntity> {
+    private static final int POI_EXPIRY = 40;
+    private static final int MAX_TRIES = 5;
+    private static final int RUN_TIME = 20;
+    private static final int MAX_DISTANCE = 4;
     private final float speed;
     private final Long2LongMap positionToExpiry = new Long2LongOpenHashMap();
     private int tries;

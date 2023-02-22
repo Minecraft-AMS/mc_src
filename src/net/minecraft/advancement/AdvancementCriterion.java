@@ -57,26 +57,17 @@ public class AdvancementCriterion {
     public static Map<String, AdvancementCriterion> criteriaFromJson(JsonObject obj, AdvancementEntityPredicateDeserializer predicateDeserializer) {
         HashMap map = Maps.newHashMap();
         for (Map.Entry entry : obj.entrySet()) {
-            map.put(entry.getKey(), AdvancementCriterion.fromJson(JsonHelper.asObject((JsonElement)entry.getValue(), "criterion"), predicateDeserializer));
+            map.put((String)entry.getKey(), AdvancementCriterion.fromJson(JsonHelper.asObject((JsonElement)entry.getValue(), "criterion"), predicateDeserializer));
         }
         return map;
     }
 
     public static Map<String, AdvancementCriterion> criteriaFromPacket(PacketByteBuf buf) {
-        HashMap map = Maps.newHashMap();
-        int i = buf.readVarInt();
-        for (int j = 0; j < i; ++j) {
-            map.put(buf.readString(Short.MAX_VALUE), AdvancementCriterion.fromPacket(buf));
-        }
-        return map;
+        return buf.readMap(PacketByteBuf::readString, AdvancementCriterion::fromPacket);
     }
 
-    public static void criteriaToPacket(Map<String, AdvancementCriterion> criteria, PacketByteBuf buf) {
-        buf.writeVarInt(criteria.size());
-        for (Map.Entry<String, AdvancementCriterion> entry : criteria.entrySet()) {
-            buf.writeString(entry.getKey());
-            entry.getValue().toPacket(buf);
-        }
+    public static void criteriaToPacket(Map<String, AdvancementCriterion> criteria, PacketByteBuf buf2) {
+        buf2.writeMap(criteria, PacketByteBuf::writeString, (buf, criterion) -> criterion.toPacket((PacketByteBuf)((Object)buf)));
     }
 
     @Nullable

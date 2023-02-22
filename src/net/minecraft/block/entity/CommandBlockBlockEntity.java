@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block.entity;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -52,7 +48,6 @@ extends BlockEntity {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public Vec3d getPos() {
             return Vec3d.ofCenter(CommandBlockBlockEntity.this.pos);
         }
@@ -63,8 +58,8 @@ extends BlockEntity {
         }
     };
 
-    public CommandBlockBlockEntity() {
-        super(BlockEntityType.COMMAND_BLOCK);
+    public CommandBlockBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.COMMAND_BLOCK, pos, state);
     }
 
     @Override
@@ -78,12 +73,12 @@ extends BlockEntity {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        this.commandExecutor.readNbt(tag);
-        this.powered = tag.getBoolean("powered");
-        this.conditionMet = tag.getBoolean("conditionMet");
-        this.setAuto(tag.getBoolean("auto"));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        this.commandExecutor.readNbt(nbt);
+        this.powered = nbt.getBoolean("powered");
+        this.conditionMet = nbt.getBoolean("conditionMet");
+        this.setAuto(nbt.getBoolean("auto"));
     }
 
     @Override
@@ -122,18 +117,18 @@ extends BlockEntity {
         boolean bl = this.auto;
         this.auto = auto;
         if (!bl && auto && !this.powered && this.world != null && this.getCommandBlockType() != Type.SEQUENCE) {
-            this.method_23360();
+            this.scheduleAutoTick();
         }
     }
 
-    public void method_23359() {
+    public void updateCommandBlock() {
         Type type = this.getCommandBlockType();
         if (type == Type.AUTO && (this.powered || this.auto) && this.world != null) {
-            this.method_23360();
+            this.scheduleAutoTick();
         }
     }
 
-    private void method_23360() {
+    private void scheduleAutoTick() {
         Block block = this.getCachedState().getBlock();
         if (block instanceof CommandBlock) {
             this.updateConditionMet();
@@ -185,17 +180,28 @@ extends BlockEntity {
         return false;
     }
 
-    @Override
-    public void cancelRemoval() {
-        this.resetBlock();
-        super.cancelRemoval();
-    }
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type SEQUENCE = new Type();
+        public static final /* enum */ Type AUTO = new Type();
+        public static final /* enum */ Type REDSTONE = new Type();
+        private static final /* synthetic */ Type[] field_11925;
 
-    public static enum Type {
-        SEQUENCE,
-        AUTO,
-        REDSTONE;
+        public static Type[] values() {
+            return (Type[])field_11925.clone();
+        }
 
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36715() {
+            return new Type[]{SEQUENCE, AUTO, REDSTONE};
+        }
+
+        static {
+            field_11925 = Type.method_36715();
+        }
     }
 }
 

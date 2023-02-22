@@ -18,11 +18,12 @@ import net.minecraft.server.world.ServerWorld;
 
 public class StartRidingTask<E extends LivingEntity>
 extends Task<E> {
-    private final float field_23132;
+    private static final int COMPLETION_RANGE = 1;
+    private final float speed;
 
-    public StartRidingTask(float f) {
+    public StartRidingTask(float speed) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.RIDE_TARGET, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
-        this.field_23132 = f;
+        this.speed = speed;
     }
 
     @Override
@@ -35,7 +36,7 @@ extends Task<E> {
         if (this.isRideTargetClose(entity)) {
             ((Entity)entity).startRiding(this.getRideTarget(entity));
         } else {
-            LookTargetUtil.walkTowards(entity, this.getRideTarget(entity), this.field_23132, 1);
+            LookTargetUtil.walkTowards(entity, this.getRideTarget(entity), this.speed, 1);
         }
     }
 

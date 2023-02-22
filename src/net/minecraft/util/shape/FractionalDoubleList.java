@@ -13,6 +13,9 @@ extends AbstractDoubleList {
     private final int sectionCount;
 
     FractionalDoubleList(int sectionCount) {
+        if (sectionCount <= 0) {
+            throw new IllegalArgumentException("Need at least 1 part");
+        }
         this.sectionCount = sectionCount;
     }
 

@@ -14,6 +14,7 @@ import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.RandomFeatureConfig;
 import net.minecraft.world.gen.feature.RandomFeatureEntry;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class RandomFeature
 extends Feature<RandomFeatureConfig> {
@@ -22,7 +23,12 @@ extends Feature<RandomFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, RandomFeatureConfig randomFeatureConfig) {
+    public boolean generate(FeatureContext<RandomFeatureConfig> context) {
+        RandomFeatureConfig randomFeatureConfig = context.getConfig();
+        Random random = context.getRandom();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        ChunkGenerator chunkGenerator = context.getGenerator();
+        BlockPos blockPos = context.getOrigin();
         for (RandomFeatureEntry randomFeatureEntry : randomFeatureConfig.features) {
             if (!(random.nextFloat() < randomFeatureEntry.chance)) continue;
             return randomFeatureEntry.generate(structureWorldAccess, chunkGenerator, random, blockPos);

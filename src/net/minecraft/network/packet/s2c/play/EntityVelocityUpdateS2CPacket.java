@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -19,16 +12,13 @@ import net.minecraft.util.math.Vec3d;
 
 public class EntityVelocityUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int id;
-    private int velocityX;
-    private int velocityY;
-    private int velocityZ;
-
-    public EntityVelocityUpdateS2CPacket() {
-    }
+    private final int id;
+    private final int velocityX;
+    private final int velocityY;
+    private final int velocityZ;
 
     public EntityVelocityUpdateS2CPacket(Entity entity) {
-        this(entity.getEntityId(), entity.getVelocity());
+        this(entity.getId(), entity.getVelocity());
     }
 
     public EntityVelocityUpdateS2CPacket(int id, Vec3d velocity) {
@@ -42,8 +32,7 @@ implements Packet<ClientPlayPacketListener> {
         this.velocityZ = (int)(g * 8000.0);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public EntityVelocityUpdateS2CPacket(PacketByteBuf buf) {
         this.id = buf.readVarInt();
         this.velocityX = buf.readShort();
         this.velocityY = buf.readShort();
@@ -51,7 +40,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.id);
         buf.writeShort(this.velocityX);
         buf.writeShort(this.velocityY);
@@ -63,22 +52,18 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onVelocityUpdate(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getId() {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityX() {
         return this.velocityX;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityY() {
         return this.velocityY;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getVelocityZ() {
         return this.velocityZ;
     }

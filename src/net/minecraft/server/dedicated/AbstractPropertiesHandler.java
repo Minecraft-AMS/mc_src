@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHandler<T>> {
     private static final Logger LOGGER = LogManager.getLogger();
-    private final Properties properties;
+    protected final Properties properties;
 
     public AbstractPropertiesHandler(Properties properties) {
         this.properties = properties;
@@ -42,7 +42,7 @@ public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHand
             properties.load(inputStream);
         }
         catch (IOException iOException) {
-            LOGGER.error("Failed to load properties from file: " + path);
+            LOGGER.error("Failed to load properties from file: {}", (Object)path);
         }
         return properties;
     }
@@ -52,7 +52,7 @@ public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHand
             this.properties.store(outputStream, "Minecraft server properties");
         }
         catch (IOException iOException) {
-            LOGGER.error("Failed to store properties to file: " + path);
+            LOGGER.error("Failed to store properties to file: {}", (Object)path);
         }
     }
 
@@ -104,12 +104,12 @@ public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHand
         String string = this.getStringValue(key);
         Object object = MoreObjects.firstNonNull(string != null ? parser.apply(string) : null, fallback);
         this.properties.put(key, stringifier.apply(object));
-        return new PropertyAccessor(key, object, stringifier);
+        return new PropertyAccessor<Object>(key, object, stringifier);
     }
 
     protected <V> V get(String key, Function<String, V> parser, UnaryOperator<V> parsedTransformer, Function<V, String> stringifier, V fallback) {
-        return (V)this.get(key, string -> {
-            Object object = parser.apply((String)string);
+        return (V)this.get(key, value -> {
+            Object object = parser.apply((String)value);
             return object != null ? parsedTransformer.apply(object) : null;
         }, stringifier, fallback);
     }
@@ -174,7 +174,7 @@ public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHand
         private final V value;
         private final Function<V, String> stringifier;
 
-        private PropertyAccessor(String key, V value, Function<V, String> stringifier) {
+        PropertyAccessor(String key, V value, Function<V, String> stringifier) {
             this.key = key;
             this.value = value;
             this.stringifier = stringifier;
@@ -185,10 +185,10 @@ public abstract class AbstractPropertiesHandler<T extends AbstractPropertiesHand
             return this.value;
         }
 
-        public T set(DynamicRegistryManager dynamicRegistryManager, V object) {
+        public T set(DynamicRegistryManager registryManager, V value) {
             Properties properties = AbstractPropertiesHandler.this.copyProperties();
-            properties.put(this.key, this.stringifier.apply(object));
-            return AbstractPropertiesHandler.this.create(dynamicRegistryManager, properties);
+            properties.put(this.key, this.stringifier.apply(value));
+            return AbstractPropertiesHandler.this.create(registryManager, properties);
         }
     }
 }

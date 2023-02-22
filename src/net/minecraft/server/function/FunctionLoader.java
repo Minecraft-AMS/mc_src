@@ -50,10 +50,11 @@ import org.apache.logging.log4j.Logger;
 public class FunctionLoader
 implements ResourceReloader {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String EXTENSION = ".mcfunction";
     private static final int PATH_PREFIX_LENGTH = "functions/".length();
-    private static final int PATH_SUFFIX_LENGTH = ".mcfunction".length();
+    private static final int EXTENSION_LENGTH = ".mcfunction".length();
     private volatile Map<Identifier, CommandFunction> functions = ImmutableMap.of();
-    private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader(this::get, "tags/functions", "function");
+    private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader(this::get, "tags/functions");
     private volatile TagGroup<CommandFunction> tags = TagGroup.createEmpty();
     private final int level;
     private final CommandDispatcher<ServerCommandSource> commandDispatcher;
@@ -70,7 +71,7 @@ implements ResourceReloader {
         return this.tags;
     }
 
-    public Tag<CommandFunction> getOrCreateTag(Identifier id) {
+    public Tag<CommandFunction> getTagOrEmpty(Identifier id) {
         return this.tags.getTagOrEmpty(id);
     }
 
@@ -81,50 +82,64 @@ implements ResourceReloader {
 
     @Override
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
-        CompletableFuture<Map<Identifier, Tag.Builder>> completableFuture = this.tagLoader.prepareReload(manager, prepareExecutor);
-        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> manager.findResources("functions", string -> string.endsWith(".mcfunction")), prepareExecutor).thenCompose(collection -> {
+        CompletableFuture<Map> completableFuture = CompletableFuture.supplyAsync(() -> this.tagLoader.loadTags(manager), prepareExecutor);
+        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> manager.findResources("functions", path -> path.endsWith(EXTENSION)), prepareExecutor).thenCompose(ids -> {
             HashMap map = Maps.newHashMap();
             ServerCommandSource serverCommandSource = new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.level, "", LiteralText.EMPTY, null, null);
-            for (Identifier identifier : collection) {
+            for (Identifier identifier : ids) {
                 String string = identifier.getPath();
-                Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(PATH_PREFIX_LENGTH, string.length() - PATH_SUFFIX_LENGTH));
+                Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(PATH_PREFIX_LENGTH, string.length() - EXTENSION_LENGTH));
                 map.put(identifier2, CompletableFuture.supplyAsync(() -> {
                     List<String> list = FunctionLoader.readLines(manager, identifier);
                     return CommandFunction.create(identifier2, this.commandDispatcher, serverCommandSource, list);
                 }, prepareExecutor));
             }
             CompletableFuture[] completableFutures = map.values().toArray(new CompletableFuture[0]);
-            return CompletableFuture.allOf(completableFutures).handle((void_, throwable) -> map);
+            return CompletableFuture.allOf(completableFutures).handle((unused, ex) -> map);
         });
-        return ((CompletableFuture)((CompletableFuture)completableFuture.thenCombine(completableFuture2, Pair::of)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(pair -> {
-            Map map = (Map)pair.getSecond();
+        return ((CompletableFuture)((CompletableFuture)completableFuture.thenCombine(completableFuture2, Pair::of)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(intermediate -> {
+            Map map = (Map)intermediate.getSecond();
             ImmutableMap.Builder builder = ImmutableMap.builder();
-            map.forEach((identifier, completableFuture) -> ((CompletableFuture)completableFuture.handle((commandFunction, throwable) -> {
-                if (throwable != null) {
-                    LOGGER.error("Failed to load function {}", identifier, throwable);
+            map.forEach((id, functionFuture) -> ((CompletableFuture)functionFuture.handle((function, ex) -> {
+                if (ex != null) {
+                    LOGGER.error("Failed to load function {}", id, ex);
                 } else {
-                    builder.put(identifier, commandFunction);
+                    builder.put(id, function);
                 }
                 return null;
             })).join());
             this.functions = builder.build();
-            this.tags = this.tagLoader.buildGroup((Map)pair.getFirst());
+            this.tags = this.tagLoader.buildGroup((Map)intermediate.getFirst());
         }, applyExecutor);
     }
 
-    /*
-     * Enabled aggressive block sorting
-     * Enabled unnecessary exception pruning
-     * Enabled aggressive exception aggregation
-     */
     private static List<String> readLines(ResourceManager resourceManager, Identifier id) {
-        try (Resource resource = resourceManager.getResource(id);){
-            List list = IOUtils.readLines((InputStream)resource.getInputStream(), (Charset)StandardCharsets.UTF_8);
-            return list;
+        List list;
+        block8: {
+            Resource resource = resourceManager.getResource(id);
+            try {
+                list = IOUtils.readLines((InputStream)resource.getInputStream(), (Charset)StandardCharsets.UTF_8);
+                if (resource == null) break block8;
+            }
+            catch (Throwable throwable) {
+                try {
+                    if (resource != null) {
+                        try {
+                            resource.close();
+                        }
+                        catch (Throwable throwable2) {
+                            throwable.addSuppressed(throwable2);
+                        }
+                    }
+                    throw throwable;
+                }
+                catch (IOException iOException) {
+                    throw new CompletionException(iOException);
+                }
+            }
+            resource.close();
         }
-        catch (IOException iOException) {
-            throw new CompletionException(iOException);
-        }
+        return list;
     }
 }
 

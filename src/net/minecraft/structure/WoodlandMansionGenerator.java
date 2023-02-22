@@ -20,6 +20,7 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.mob.IllagerEntity;
 import net.minecraft.loot.LootTables;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.SimpleStructurePiece;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructureManager;
@@ -43,171 +44,38 @@ public class WoodlandMansionGenerator {
         layoutGenerator.generate(pos, rotation, pieces, mansionParameters);
     }
 
-    static class ThirdFloorRoomPool
-    extends SecondFloorRoomPool {
-        private ThirdFloorRoomPool() {
-        }
-    }
-
-    static class SecondFloorRoomPool
-    extends RoomPool {
-        private SecondFloorRoomPool() {
-        }
-
-        @Override
-        public String getSmallRoom(Random random) {
-            return "1x1_b" + (random.nextInt(4) + 1);
-        }
-
-        @Override
-        public String getSmallSecretRoom(Random random) {
-            return "1x1_as" + (random.nextInt(4) + 1);
-        }
-
-        @Override
-        public String getMediumFunctionalRoom(Random random, boolean staircase) {
-            if (staircase) {
-                return "1x2_c_stairs";
-            }
-            return "1x2_c" + (random.nextInt(4) + 1);
-        }
-
-        @Override
-        public String getMediumGenericRoom(Random random, boolean staircase) {
-            if (staircase) {
-                return "1x2_d_stairs";
-            }
-            return "1x2_d" + (random.nextInt(5) + 1);
-        }
-
-        @Override
-        public String getMediumSecretRoom(Random random) {
-            return "1x2_se" + (random.nextInt(1) + 1);
-        }
-
-        @Override
-        public String getBigRoom(Random random) {
-            return "2x2_b" + (random.nextInt(5) + 1);
-        }
-
-        @Override
-        public String getBigSecretRoom(Random random) {
-            return "2x2_s1";
-        }
-    }
-
-    static class FirstFloorRoomPool
-    extends RoomPool {
-        private FirstFloorRoomPool() {
-        }
-
-        @Override
-        public String getSmallRoom(Random random) {
-            return "1x1_a" + (random.nextInt(5) + 1);
-        }
-
-        @Override
-        public String getSmallSecretRoom(Random random) {
-            return "1x1_as" + (random.nextInt(4) + 1);
-        }
-
-        @Override
-        public String getMediumFunctionalRoom(Random random, boolean staircase) {
-            return "1x2_a" + (random.nextInt(9) + 1);
-        }
-
-        @Override
-        public String getMediumGenericRoom(Random random, boolean staircase) {
-            return "1x2_b" + (random.nextInt(5) + 1);
-        }
-
-        @Override
-        public String getMediumSecretRoom(Random random) {
-            return "1x2_s" + (random.nextInt(2) + 1);
-        }
-
-        @Override
-        public String getBigRoom(Random random) {
-            return "2x2_a" + (random.nextInt(4) + 1);
-        }
-
-        @Override
-        public String getBigSecretRoom(Random random) {
-            return "2x2_s1";
-        }
-    }
-
-    static abstract class RoomPool {
-        private RoomPool() {
-        }
-
-        public abstract String getSmallRoom(Random var1);
-
-        public abstract String getSmallSecretRoom(Random var1);
-
-        public abstract String getMediumFunctionalRoom(Random var1, boolean var2);
-
-        public abstract String getMediumGenericRoom(Random var1, boolean var2);
-
-        public abstract String getMediumSecretRoom(Random var1);
-
-        public abstract String getBigRoom(Random var1);
-
-        public abstract String getBigSecretRoom(Random var1);
-    }
-
-    static class FlagMatrix {
-        private final int[][] array;
-        private final int n;
-        private final int m;
-        private final int fallback;
-
-        public FlagMatrix(int n, int m, int fallback) {
-            this.n = n;
-            this.m = m;
-            this.fallback = fallback;
-            this.array = new int[n][m];
-        }
-
-        public void set(int i, int j, int value) {
-            if (i >= 0 && i < this.n && j >= 0 && j < this.m) {
-                this.array[i][j] = value;
-            }
-        }
-
-        public void fill(int i0, int j0, int i1, int j1, int value) {
-            for (int i = j0; i <= j1; ++i) {
-                for (int j = i0; j <= i1; ++j) {
-                    this.set(j, i, value);
-                }
-            }
-        }
-
-        public int get(int i, int j) {
-            if (i >= 0 && i < this.n && j >= 0 && j < this.m) {
-                return this.array[i][j];
-            }
-            return this.fallback;
-        }
-
-        public void update(int i, int j, int expected, int newValue) {
-            if (this.get(i, j) == expected) {
-                this.set(i, j, newValue);
-            }
-        }
-
-        public boolean anyMatchAround(int i, int j, int value) {
-            return this.get(i - 1, j) == value || this.get(i + 1, j) == value || this.get(i, j + 1) == value || this.get(i, j - 1) == value;
-        }
+    public static void method_35471(String[] strings) {
+        Random random = new Random();
+        long l = random.nextLong();
+        System.out.println("Seed: " + l);
+        random.setSeed(l);
+        MansionParameters mansionParameters = new MansionParameters(random);
+        mansionParameters.method_35472();
     }
 
     static class MansionParameters {
+        private static final int field_31665 = 11;
+        private static final int field_31666 = 0;
+        private static final int field_31667 = 1;
+        private static final int field_31668 = 2;
+        private static final int field_31669 = 3;
+        private static final int field_31670 = 4;
+        private static final int field_31671 = 5;
+        private static final int field_31672 = 65536;
+        private static final int field_31673 = 131072;
+        private static final int field_31674 = 262144;
+        private static final int field_31675 = 0x100000;
+        private static final int field_31676 = 0x200000;
+        private static final int field_31677 = 0x400000;
+        private static final int field_31678 = 0x800000;
+        private static final int field_31679 = 983040;
+        private static final int field_31680 = 65535;
         private final Random random;
-        private final FlagMatrix field_15440;
-        private final FlagMatrix field_15439;
-        private final FlagMatrix[] field_15443;
-        private final int field_15442;
-        private final int field_15441;
+        final FlagMatrix field_15440;
+        final FlagMatrix field_15439;
+        final FlagMatrix[] field_15443;
+        final int field_15442;
+        final int field_15441;
 
         public MansionParameters(Random random) {
             this.random = random;
@@ -445,6 +313,40 @@ public class WoodlandMansionGenerator {
                 ++i;
             }
         }
+
+        public void method_35472() {
+            for (int i = 0; i < 2; ++i) {
+                FlagMatrix flagMatrix = i == 0 ? this.field_15440 : this.field_15439;
+                for (int j = 0; j < flagMatrix.m; ++j) {
+                    for (int k = 0; k < flagMatrix.n; ++k) {
+                        int l = flagMatrix.get(k, j);
+                        if (l == 1) {
+                            System.out.print("+");
+                            continue;
+                        }
+                        if (l == 4) {
+                            System.out.print("x");
+                            continue;
+                        }
+                        if (l == 2) {
+                            System.out.print("X");
+                            continue;
+                        }
+                        if (l == 3) {
+                            System.out.print("O");
+                            continue;
+                        }
+                        if (l == 5) {
+                            System.out.print("#");
+                            continue;
+                        }
+                        System.out.print(" ");
+                    }
+                    System.out.println("");
+                }
+                System.out.println("");
+            }
+        }
     }
 
     static class LayoutGenerator {
@@ -458,7 +360,7 @@ public class WoodlandMansionGenerator {
             this.random = random;
         }
 
-        public void generate(BlockPos pos, BlockRotation rotation, List<Piece> pieces, MansionParameters mansionParameters) {
+        public void generate(BlockPos pos, BlockRotation rotation, List<Piece> pieces, MansionParameters parameters) {
             int l;
             GenerationPiece generationPiece = new GenerationPiece();
             generationPiece.position = pos;
@@ -472,12 +374,12 @@ public class WoodlandMansionGenerator {
             if (!pieces.isEmpty()) {
                 // empty if block
             }
-            FlagMatrix flagMatrix = mansionParameters.field_15440;
-            FlagMatrix flagMatrix2 = mansionParameters.field_15439;
-            this.field_15446 = mansionParameters.field_15442 + 1;
-            this.field_15445 = mansionParameters.field_15441 + 1;
-            int i = mansionParameters.field_15442 + 1;
-            int j = mansionParameters.field_15441;
+            FlagMatrix flagMatrix = parameters.field_15440;
+            FlagMatrix flagMatrix2 = parameters.field_15439;
+            this.field_15446 = parameters.field_15442 + 1;
+            this.field_15445 = parameters.field_15441 + 1;
+            int i = parameters.field_15442 + 1;
+            int j = parameters.field_15441;
             this.addRoof(pieces, generationPiece, flagMatrix, Direction.SOUTH, this.field_15446, this.field_15445, i, j);
             this.addRoof(pieces, generationPiece2, flagMatrix, Direction.SOUTH, this.field_15446, this.field_15445, i, j);
             GenerationPiece generationPiece3 = new GenerationPiece();
@@ -503,7 +405,7 @@ public class WoodlandMansionGenerator {
             RoomPool[] roomPools = new RoomPool[]{new FirstFloorRoomPool(), new SecondFloorRoomPool(), new ThirdFloorRoomPool()};
             for (l = 0; l < 3; ++l) {
                 BlockPos blockPos = pos.up(8 * l + (l == 2 ? 3 : 0));
-                FlagMatrix flagMatrix3 = mansionParameters.field_15443[l];
+                FlagMatrix flagMatrix3 = parameters.field_15443[l];
                 FlagMatrix flagMatrix4 = l == 2 ? flagMatrix2 : flagMatrix;
                 String string = l == 0 ? "carpet_south_1" : "carpet_south_2";
                 String string2 = l == 0 ? "carpet_west_1" : "carpet_west_2";
@@ -555,14 +457,14 @@ public class WoodlandMansionGenerator {
                         }
                         BlockPos blockPos3 = blockPos.offset(rotation.rotate(Direction.SOUTH), 8 + (o - this.field_15445) * 8);
                         blockPos3 = blockPos3.offset(rotation.rotate(Direction.EAST), -1 + (p - this.field_15446) * 8);
-                        if (MansionParameters.method_15047(flagMatrix4, p - 1, o) && !mansionParameters.method_15039(flagMatrix4, p - 1, o, l, s)) {
+                        if (MansionParameters.method_15047(flagMatrix4, p - 1, o) && !parameters.method_15039(flagMatrix4, p - 1, o, l, s)) {
                             pieces.add(new Piece(this.manager, direction2 == Direction.WEST ? string4 : string3, blockPos3, rotation));
                         }
                         if (flagMatrix4.get(p + 1, o) == 1 && !bl2) {
                             blockPos4 = blockPos3.offset(rotation.rotate(Direction.EAST), 8);
                             pieces.add(new Piece(this.manager, direction2 == Direction.EAST ? string4 : string3, blockPos4, rotation));
                         }
-                        if (MansionParameters.method_15047(flagMatrix4, p, o + 1) && !mansionParameters.method_15039(flagMatrix4, p, o + 1, l, s)) {
+                        if (MansionParameters.method_15047(flagMatrix4, p, o + 1) && !parameters.method_15039(flagMatrix4, p, o + 1, l, s)) {
                             blockPos4 = blockPos3.offset(rotation.rotate(Direction.SOUTH), 7);
                             blockPos4 = blockPos4.offset(rotation.rotate(Direction.EAST), 7);
                             pieces.add(new Piece(this.manager, direction2 == Direction.SOUTH ? string4 : string3, blockPos4, rotation.rotate(BlockRotation.CLOCKWISE_90)));
@@ -577,14 +479,14 @@ public class WoodlandMansionGenerator {
                             continue;
                         }
                         if (r == 131072 && direction2 != null) {
-                            direction3 = mansionParameters.method_15040(flagMatrix4, p, o, l, s);
+                            direction3 = parameters.method_15040(flagMatrix4, p, o, l, s);
                             boolean bl32 = (q & 0x400000) == 0x400000;
                             this.addMediumRoom(pieces, blockPos3, rotation, direction3, direction2, roomPools[l], bl32);
                             continue;
                         }
                         if (r == 262144 && direction2 != null && direction2 != Direction.UP) {
                             direction3 = direction2.rotateYClockwise();
-                            if (!mansionParameters.method_15039(flagMatrix4, p + direction3.getOffsetX(), o + direction3.getOffsetZ(), l, s)) {
+                            if (!parameters.method_15039(flagMatrix4, p + direction3.getOffsetX(), o + direction3.getOffsetZ(), l, s)) {
                                 direction3 = direction3.getOpposite();
                             }
                             this.addBigRoom(pieces, blockPos3, rotation, direction3, direction2, roomPools[l]);
@@ -597,27 +499,27 @@ public class WoodlandMansionGenerator {
             }
         }
 
-        private void addRoof(List<Piece> list, GenerationPiece generationPiece, FlagMatrix flagMatrix, Direction direction, int i, int j, int k, int l) {
+        private void addRoof(List<Piece> pieces, GenerationPiece generationPiece, FlagMatrix flagMatrix, Direction direction, int i, int j, int k, int l) {
             int m = i;
             int n = j;
             Direction direction2 = direction;
             do {
                 if (!MansionParameters.method_15047(flagMatrix, m + direction.getOffsetX(), n + direction.getOffsetZ())) {
-                    this.method_15058(list, generationPiece);
+                    this.method_15058(pieces, generationPiece);
                     direction = direction.rotateYClockwise();
                     if (m == k && n == l && direction2 == direction) continue;
-                    this.method_15052(list, generationPiece);
+                    this.method_15052(pieces, generationPiece);
                     continue;
                 }
                 if (MansionParameters.method_15047(flagMatrix, m + direction.getOffsetX(), n + direction.getOffsetZ()) && MansionParameters.method_15047(flagMatrix, m + direction.getOffsetX() + direction.rotateYCounterclockwise().getOffsetX(), n + direction.getOffsetZ() + direction.rotateYCounterclockwise().getOffsetZ())) {
-                    this.method_15060(list, generationPiece);
+                    this.method_15060(pieces, generationPiece);
                     m += direction.getOffsetX();
                     n += direction.getOffsetZ();
                     direction = direction.rotateYCounterclockwise();
                     continue;
                 }
                 if ((m += direction.getOffsetX()) == k && (n += direction.getOffsetZ()) == l && direction2 == direction) continue;
-                this.method_15052(list, generationPiece);
+                this.method_15052(pieces, generationPiece);
             } while (m != k || n != l || direction2 != direction);
         }
 
@@ -753,9 +655,9 @@ public class WoodlandMansionGenerator {
             }
         }
 
-        private void addEntrance(List<Piece> list, GenerationPiece generationPiece) {
+        private void addEntrance(List<Piece> pieces, GenerationPiece generationPiece) {
             Direction direction = generationPiece.rotation.rotate(Direction.WEST);
-            list.add(new Piece(this.manager, "entrance", generationPiece.position.offset(direction, 9), generationPiece.rotation));
+            pieces.add(new Piece(this.manager, "entrance", generationPiece.position.offset(direction, 9), generationPiece.rotation));
             generationPiece.position = generationPiece.position.offset(generationPiece.rotation.rotate(Direction.SOUTH), 16);
         }
 
@@ -778,85 +680,85 @@ public class WoodlandMansionGenerator {
             generationPiece.rotation = generationPiece.rotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
         }
 
-        private void addSmallRoom(List<Piece> list, BlockPos blockPos, BlockRotation blockRotation, Direction direction, RoomPool roomPool) {
-            BlockRotation blockRotation2 = BlockRotation.NONE;
+        private void addSmallRoom(List<Piece> pieces, BlockPos pos, BlockRotation rotation, Direction direction, RoomPool roomPool) {
+            BlockRotation blockRotation = BlockRotation.NONE;
             String string = roomPool.getSmallRoom(this.random);
             if (direction != Direction.EAST) {
                 if (direction == Direction.NORTH) {
-                    blockRotation2 = blockRotation2.rotate(BlockRotation.COUNTERCLOCKWISE_90);
+                    blockRotation = blockRotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
                 } else if (direction == Direction.WEST) {
-                    blockRotation2 = blockRotation2.rotate(BlockRotation.CLOCKWISE_180);
+                    blockRotation = blockRotation.rotate(BlockRotation.CLOCKWISE_180);
                 } else if (direction == Direction.SOUTH) {
-                    blockRotation2 = blockRotation2.rotate(BlockRotation.CLOCKWISE_90);
+                    blockRotation = blockRotation.rotate(BlockRotation.CLOCKWISE_90);
                 } else {
                     string = roomPool.getSmallSecretRoom(this.random);
                 }
             }
-            BlockPos blockPos2 = Structure.applyTransformedOffset(new BlockPos(1, 0, 0), BlockMirror.NONE, blockRotation2, 7, 7);
-            blockRotation2 = blockRotation2.rotate(blockRotation);
-            blockPos2 = blockPos2.rotate(blockRotation);
-            BlockPos blockPos3 = blockPos.add(blockPos2.getX(), 0, blockPos2.getZ());
-            list.add(new Piece(this.manager, string, blockPos3, blockRotation2));
+            BlockPos blockPos = Structure.applyTransformedOffset(new BlockPos(1, 0, 0), BlockMirror.NONE, blockRotation, 7, 7);
+            blockRotation = blockRotation.rotate(rotation);
+            blockPos = blockPos.rotate(rotation);
+            BlockPos blockPos2 = pos.add(blockPos.getX(), 0, blockPos.getZ());
+            pieces.add(new Piece(this.manager, string, blockPos2, blockRotation));
         }
 
-        private void addMediumRoom(List<Piece> list, BlockPos blockPos, BlockRotation blockRotation, Direction direction, Direction direction2, RoomPool roomPool, boolean staircase) {
+        private void addMediumRoom(List<Piece> pieces, BlockPos pos, BlockRotation rotation, Direction direction, Direction direction2, RoomPool roomPool, boolean staircase) {
             if (direction2 == Direction.EAST && direction == Direction.SOUTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation));
             } else if (direction2 == Direction.EAST && direction == Direction.NORTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 6);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation, BlockMirror.LEFT_RIGHT));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 6);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation, BlockMirror.LEFT_RIGHT));
             } else if (direction2 == Direction.WEST && direction == Direction.NORTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 7);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 6);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_180)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 7);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 6);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_180)));
             } else if (direction2 == Direction.WEST && direction == Direction.SOUTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 7);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation, BlockMirror.FRONT_BACK));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 7);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation, BlockMirror.FRONT_BACK));
             } else if (direction2 == Direction.SOUTH && direction == Direction.EAST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_90), BlockMirror.LEFT_RIGHT));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_90), BlockMirror.LEFT_RIGHT));
             } else if (direction2 == Direction.SOUTH && direction == Direction.WEST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 7);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_90)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 7);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_90)));
             } else if (direction2 == Direction.NORTH && direction == Direction.WEST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 7);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 6);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_90), BlockMirror.FRONT_BACK));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 7);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 6);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_90), BlockMirror.FRONT_BACK));
             } else if (direction2 == Direction.NORTH && direction == Direction.EAST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 6);
-                list.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.COUNTERCLOCKWISE_90)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 6);
+                pieces.add(new Piece(this.manager, roomPool.getMediumFunctionalRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.COUNTERCLOCKWISE_90)));
             } else if (direction2 == Direction.SOUTH && direction == Direction.NORTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.NORTH), 8);
-                list.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos2, blockRotation));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                blockPos = blockPos.offset(rotation.rotate(Direction.NORTH), 8);
+                pieces.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos, rotation));
             } else if (direction2 == Direction.NORTH && direction == Direction.SOUTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 7);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 14);
-                list.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_180)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 7);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 14);
+                pieces.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_180)));
             } else if (direction2 == Direction.WEST && direction == Direction.EAST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 15);
-                list.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_90)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 15);
+                pieces.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_90)));
             } else if (direction2 == Direction.EAST && direction == Direction.WEST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.WEST), 7);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), 6);
-                list.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos2, blockRotation.rotate(BlockRotation.COUNTERCLOCKWISE_90)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.WEST), 7);
+                blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), 6);
+                pieces.add(new Piece(this.manager, roomPool.getMediumGenericRoom(this.random, staircase), blockPos, rotation.rotate(BlockRotation.COUNTERCLOCKWISE_90)));
             } else if (direction2 == Direction.UP && direction == Direction.EAST) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 15);
-                list.add(new Piece(this.manager, roomPool.getMediumSecretRoom(this.random), blockPos2, blockRotation.rotate(BlockRotation.CLOCKWISE_90)));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 15);
+                pieces.add(new Piece(this.manager, roomPool.getMediumSecretRoom(this.random), blockPos, rotation.rotate(BlockRotation.CLOCKWISE_90)));
             } else if (direction2 == Direction.UP && direction == Direction.SOUTH) {
-                BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), 1);
-                blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.NORTH), 0);
-                list.add(new Piece(this.manager, roomPool.getMediumSecretRoom(this.random), blockPos2, blockRotation));
+                BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), 1);
+                blockPos = blockPos.offset(rotation.rotate(Direction.NORTH), 0);
+                pieces.add(new Piece(this.manager, roomPool.getMediumSecretRoom(this.random), blockPos, rotation));
             }
         }
 
-        private void addBigRoom(List<Piece> list, BlockPos blockPos, BlockRotation blockRotation, Direction direction, Direction direction2, RoomPool roomPool) {
+        private void addBigRoom(List<Piece> pieces, BlockPos pos, BlockRotation rotation, Direction direction, Direction direction2, RoomPool roomPool) {
             int i = 0;
             int j = 0;
-            BlockRotation blockRotation2 = blockRotation;
+            BlockRotation blockRotation = rotation;
             BlockMirror blockMirror = BlockMirror.NONE;
             if (direction2 == Direction.EAST && direction == Direction.SOUTH) {
                 i = -7;
@@ -867,32 +769,32 @@ public class WoodlandMansionGenerator {
             } else if (direction2 == Direction.NORTH && direction == Direction.EAST) {
                 i = 1;
                 j = 14;
-                blockRotation2 = blockRotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
+                blockRotation = rotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
             } else if (direction2 == Direction.NORTH && direction == Direction.WEST) {
                 i = 7;
                 j = 14;
-                blockRotation2 = blockRotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
+                blockRotation = rotation.rotate(BlockRotation.COUNTERCLOCKWISE_90);
                 blockMirror = BlockMirror.LEFT_RIGHT;
             } else if (direction2 == Direction.SOUTH && direction == Direction.WEST) {
                 i = 7;
                 j = -8;
-                blockRotation2 = blockRotation.rotate(BlockRotation.CLOCKWISE_90);
+                blockRotation = rotation.rotate(BlockRotation.CLOCKWISE_90);
             } else if (direction2 == Direction.SOUTH && direction == Direction.EAST) {
                 i = 1;
                 j = -8;
-                blockRotation2 = blockRotation.rotate(BlockRotation.CLOCKWISE_90);
+                blockRotation = rotation.rotate(BlockRotation.CLOCKWISE_90);
                 blockMirror = BlockMirror.LEFT_RIGHT;
             } else if (direction2 == Direction.WEST && direction == Direction.NORTH) {
                 i = 15;
                 j = 6;
-                blockRotation2 = blockRotation.rotate(BlockRotation.CLOCKWISE_180);
+                blockRotation = rotation.rotate(BlockRotation.CLOCKWISE_180);
             } else if (direction2 == Direction.WEST && direction == Direction.SOUTH) {
                 i = 15;
                 blockMirror = BlockMirror.FRONT_BACK;
             }
-            BlockPos blockPos2 = blockPos.offset(blockRotation.rotate(Direction.EAST), i);
-            blockPos2 = blockPos2.offset(blockRotation.rotate(Direction.SOUTH), j);
-            list.add(new Piece(this.manager, roomPool.getBigRoom(this.random), blockPos2, blockRotation2, blockMirror));
+            BlockPos blockPos = pos.offset(rotation.rotate(Direction.EAST), i);
+            blockPos = blockPos.offset(rotation.rotate(Direction.SOUTH), j);
+            pieces.add(new Piece(this.manager, roomPool.getBigRoom(this.random), blockPos, blockRotation, blockMirror));
         }
 
         private void addBigSecretRoom(List<Piece> list, BlockPos blockPos, BlockRotation blockRotation, RoomPool roomPool) {
@@ -901,54 +803,205 @@ public class WoodlandMansionGenerator {
         }
     }
 
+    static class ThirdFloorRoomPool
+    extends SecondFloorRoomPool {
+        ThirdFloorRoomPool() {
+        }
+    }
+
+    static class SecondFloorRoomPool
+    extends RoomPool {
+        SecondFloorRoomPool() {
+        }
+
+        @Override
+        public String getSmallRoom(Random random) {
+            return "1x1_b" + (random.nextInt(4) + 1);
+        }
+
+        @Override
+        public String getSmallSecretRoom(Random random) {
+            return "1x1_as" + (random.nextInt(4) + 1);
+        }
+
+        @Override
+        public String getMediumFunctionalRoom(Random random, boolean staircase) {
+            if (staircase) {
+                return "1x2_c_stairs";
+            }
+            return "1x2_c" + (random.nextInt(4) + 1);
+        }
+
+        @Override
+        public String getMediumGenericRoom(Random random, boolean staircase) {
+            if (staircase) {
+                return "1x2_d_stairs";
+            }
+            return "1x2_d" + (random.nextInt(5) + 1);
+        }
+
+        @Override
+        public String getMediumSecretRoom(Random random) {
+            return "1x2_se" + (random.nextInt(1) + 1);
+        }
+
+        @Override
+        public String getBigRoom(Random random) {
+            return "2x2_b" + (random.nextInt(5) + 1);
+        }
+
+        @Override
+        public String getBigSecretRoom(Random random) {
+            return "2x2_s1";
+        }
+    }
+
+    static class FirstFloorRoomPool
+    extends RoomPool {
+        FirstFloorRoomPool() {
+        }
+
+        @Override
+        public String getSmallRoom(Random random) {
+            return "1x1_a" + (random.nextInt(5) + 1);
+        }
+
+        @Override
+        public String getSmallSecretRoom(Random random) {
+            return "1x1_as" + (random.nextInt(4) + 1);
+        }
+
+        @Override
+        public String getMediumFunctionalRoom(Random random, boolean staircase) {
+            return "1x2_a" + (random.nextInt(9) + 1);
+        }
+
+        @Override
+        public String getMediumGenericRoom(Random random, boolean staircase) {
+            return "1x2_b" + (random.nextInt(5) + 1);
+        }
+
+        @Override
+        public String getMediumSecretRoom(Random random) {
+            return "1x2_s" + (random.nextInt(2) + 1);
+        }
+
+        @Override
+        public String getBigRoom(Random random) {
+            return "2x2_a" + (random.nextInt(4) + 1);
+        }
+
+        @Override
+        public String getBigSecretRoom(Random random) {
+            return "2x2_s1";
+        }
+    }
+
+    static abstract class RoomPool {
+        RoomPool() {
+        }
+
+        public abstract String getSmallRoom(Random var1);
+
+        public abstract String getSmallSecretRoom(Random var1);
+
+        public abstract String getMediumFunctionalRoom(Random var1, boolean var2);
+
+        public abstract String getMediumGenericRoom(Random var1, boolean var2);
+
+        public abstract String getMediumSecretRoom(Random var1);
+
+        public abstract String getBigRoom(Random var1);
+
+        public abstract String getBigSecretRoom(Random var1);
+    }
+
+    static class FlagMatrix {
+        private final int[][] array;
+        final int n;
+        final int m;
+        private final int fallback;
+
+        public FlagMatrix(int n, int m, int fallback) {
+            this.n = n;
+            this.m = m;
+            this.fallback = fallback;
+            this.array = new int[n][m];
+        }
+
+        public void set(int i, int j, int value) {
+            if (i >= 0 && i < this.n && j >= 0 && j < this.m) {
+                this.array[i][j] = value;
+            }
+        }
+
+        public void fill(int i0, int j0, int i1, int j1, int value) {
+            for (int i = j0; i <= j1; ++i) {
+                for (int j = i0; j <= i1; ++j) {
+                    this.set(j, i, value);
+                }
+            }
+        }
+
+        public int get(int i, int j) {
+            if (i >= 0 && i < this.n && j >= 0 && j < this.m) {
+                return this.array[i][j];
+            }
+            return this.fallback;
+        }
+
+        public void update(int i, int j, int expected, int newValue) {
+            if (this.get(i, j) == expected) {
+                this.set(i, j, newValue);
+            }
+        }
+
+        public boolean anyMatchAround(int i, int j, int value) {
+            return this.get(i - 1, j) == value || this.get(i + 1, j) == value || this.get(i, j + 1) == value || this.get(i, j - 1) == value;
+        }
+    }
+
     static class GenerationPiece {
         public BlockRotation rotation;
         public BlockPos position;
         public String template;
 
-        private GenerationPiece() {
+        GenerationPiece() {
         }
     }
 
     public static class Piece
     extends SimpleStructurePiece {
-        private final String template;
-        private final BlockRotation rotation;
-        private final BlockMirror mirror;
-
-        public Piece(StructureManager structureManager, String string, BlockPos blockPos, BlockRotation blockRotation) {
-            this(structureManager, string, blockPos, blockRotation, BlockMirror.NONE);
+        public Piece(StructureManager structureManager, String template, BlockPos pos, BlockRotation rotation) {
+            this(structureManager, template, pos, rotation, BlockMirror.NONE);
         }
 
-        public Piece(StructureManager structureManager, String string, BlockPos blockPos, BlockRotation blockRotation, BlockMirror blockMirror) {
-            super(StructurePieceType.WOODLAND_MANSION, 0);
-            this.template = string;
-            this.pos = blockPos;
-            this.rotation = blockRotation;
-            this.mirror = blockMirror;
-            this.setupPlacement(structureManager);
+        public Piece(StructureManager structureManager, String template, BlockPos pos, BlockRotation rotation, BlockMirror mirror) {
+            super(StructurePieceType.WOODLAND_MANSION, 0, structureManager, Piece.getId(template), template, Piece.createPlacementData(mirror, rotation), pos);
         }
 
-        public Piece(StructureManager structureManager, NbtCompound nbtCompound) {
-            super(StructurePieceType.WOODLAND_MANSION, nbtCompound);
-            this.template = nbtCompound.getString("Template");
-            this.rotation = BlockRotation.valueOf(nbtCompound.getString("Rot"));
-            this.mirror = BlockMirror.valueOf(nbtCompound.getString("Mi"));
-            this.setupPlacement(structureManager);
-        }
-
-        private void setupPlacement(StructureManager structureManager) {
-            Structure structure = structureManager.getStructureOrBlank(new Identifier("woodland_mansion/" + this.template));
-            StructurePlacementData structurePlacementData = new StructurePlacementData().setIgnoreEntities(true).setRotation(this.rotation).setMirror(this.mirror).addProcessor(BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
-            this.setStructureData(structure, this.pos, structurePlacementData);
+        public Piece(ServerWorld world, NbtCompound nbt) {
+            super(StructurePieceType.WOODLAND_MANSION, nbt, world, (Identifier identifier) -> Piece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mi")), BlockRotation.valueOf(nbt.getString("Rot"))));
         }
 
         @Override
-        protected void toNbt(NbtCompound tag) {
-            super.toNbt(tag);
-            tag.putString("Template", this.template);
-            tag.putString("Rot", this.placementData.getRotation().name());
-            tag.putString("Mi", this.placementData.getMirror().name());
+        protected Identifier getId() {
+            return Piece.getId(this.identifier);
+        }
+
+        private static Identifier getId(String identifier) {
+            return new Identifier("woodland_mansion/" + identifier);
+        }
+
+        private static StructurePlacementData createPlacementData(BlockMirror mirror, BlockRotation rotation) {
+            return new StructurePlacementData().setIgnoreEntities(true).setRotation(rotation).setMirror(mirror).addProcessor(BlockIgnoreStructureProcessor.IGNORE_STRUCTURE_BLOCKS);
+        }
+
+        @Override
+        protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+            super.writeNbt(world, nbt);
+            nbt.putString("Rot", this.placementData.getRotation().name());
+            nbt.putString("Mi", this.placementData.getMirror().name());
         }
 
         @Override

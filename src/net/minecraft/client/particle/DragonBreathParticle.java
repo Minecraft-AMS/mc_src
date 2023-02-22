@@ -21,14 +21,23 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class DragonBreathParticle
 extends SpriteBillboardParticle {
+    private static final int field_32654 = 11993298;
+    private static final int field_32655 = 14614777;
+    private static final float field_32648 = 0.7176471f;
+    private static final float field_32649 = 0.0f;
+    private static final float field_32650 = 0.8235294f;
+    private static final float field_32651 = 0.8745098f;
+    private static final float field_32652 = 0.0f;
+    private static final float field_32653 = 0.9764706f;
     private boolean reachedGround;
     private final SpriteProvider spriteProvider;
 
-    private DragonBreathParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ, SpriteProvider spriteProvider) {
-        super(world, x, y, z);
-        this.velocityX = velocityX;
-        this.velocityY = velocityY;
-        this.velocityZ = velocityZ;
+    DragonBreathParticle(ClientWorld clientWorld, double d, double e, double f, double g, double h, double i, SpriteProvider spriteProvider) {
+        super(clientWorld, d, e, f);
+        this.field_28786 = 0.96f;
+        this.velocityX = g;
+        this.velocityY = h;
+        this.velocityZ = i;
         this.colorRed = MathHelper.nextFloat(this.random, 0.7176471f, 0.8745098f);
         this.colorGreen = MathHelper.nextFloat(this.random, 0.0f, 0.0f);
         this.colorBlue = MathHelper.nextFloat(this.random, 0.8235294f, 0.9764706f);
@@ -62,10 +71,10 @@ extends SpriteBillboardParticle {
             this.velocityX *= 1.1;
             this.velocityZ *= 1.1;
         }
-        this.velocityX *= (double)0.96f;
-        this.velocityZ *= (double)0.96f;
+        this.velocityX *= (double)this.field_28786;
+        this.velocityZ *= (double)this.field_28786;
         if (this.reachedGround) {
-            this.velocityY *= (double)0.96f;
+            this.velocityY *= (double)this.field_28786;
         }
     }
 

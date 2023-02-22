@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -17,22 +10,18 @@ import net.minecraft.util.Hand;
 
 public class OpenWrittenBookS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private Hand hand;
-
-    public OpenWrittenBookS2CPacket() {
-    }
+    private final Hand hand;
 
     public OpenWrittenBookS2CPacket(Hand hand) {
         this.hand = hand;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public OpenWrittenBookS2CPacket(PacketByteBuf buf) {
         this.hand = buf.readEnumConstant(Hand.class);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeEnumConstant(this.hand);
     }
 
@@ -41,7 +30,6 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onOpenWrittenBook(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Hand getHand() {
         return this.hand;
     }

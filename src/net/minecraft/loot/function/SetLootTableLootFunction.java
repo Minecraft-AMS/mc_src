@@ -25,13 +25,13 @@ import net.minecraft.util.JsonHelper;
 
 public class SetLootTableLootFunction
 extends ConditionalLootFunction {
-    private final Identifier id;
-    private final long seed;
+    final Identifier id;
+    final long seed;
 
-    private SetLootTableLootFunction(LootCondition[] conditions, Identifier id, long seed) {
-        super(conditions);
-        this.id = id;
-        this.seed = seed;
+    SetLootTableLootFunction(LootCondition[] lootConditions, Identifier identifier, long l) {
+        super(lootConditions);
+        this.id = identifier;
+        this.seed = l;
     }
 
     @Override
@@ -49,7 +49,7 @@ extends ConditionalLootFunction {
         if (this.seed != 0L) {
             nbtCompound.putLong("LootTableSeed", this.seed);
         }
-        stack.getOrCreateTag().put("BlockEntityTag", nbtCompound);
+        stack.getOrCreateNbt().put("BlockEntityTag", nbtCompound);
         return stack;
     }
 
@@ -66,6 +66,14 @@ extends ConditionalLootFunction {
         } else {
             lootTable.validate(reporter.withTable("->{" + this.id + "}", this.id));
         }
+    }
+
+    public static ConditionalLootFunction.Builder<?> builder(Identifier id) {
+        return SetLootTableLootFunction.builder((LootCondition[] conditions) -> new SetLootTableLootFunction((LootCondition[])conditions, id, 0L));
+    }
+
+    public static ConditionalLootFunction.Builder<?> builder(Identifier id, long seed) {
+        return SetLootTableLootFunction.builder((LootCondition[] conditions) -> new SetLootTableLootFunction((LootCondition[])conditions, id, seed));
     }
 
     public static class Serializer

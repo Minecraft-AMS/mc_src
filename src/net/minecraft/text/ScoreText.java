@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public class ScoreText
 extends BaseText
 implements ParsableText {
+    private static final String SENDER_PLACEHOLDER = "*";
     private final String name;
     @Nullable
     private final EntitySelector selector;
@@ -58,6 +59,11 @@ implements ParsableText {
         return this.name;
     }
 
+    @Nullable
+    public EntitySelector getSelector() {
+        return this.selector;
+    }
+
     public String getObjective() {
         return this.objective;
     }
@@ -76,7 +82,7 @@ implements ParsableText {
     private String getScore(String playerName, ServerCommandSource source) {
         ScoreboardObjective scoreboardObjective;
         ServerScoreboard scoreboard;
-        MinecraftServer minecraftServer = source.getMinecraftServer();
+        MinecraftServer minecraftServer = source.getServer();
         if (minecraftServer != null && (scoreboard = minecraftServer.getScoreboard()).playerHasObjective(playerName, scoreboardObjective = scoreboard.getNullableObjective(this.objective))) {
             ScoreboardPlayerScore scoreboardPlayerScore = scoreboard.getPlayerScore(playerName, scoreboardObjective);
             return Integer.toString(scoreboardPlayerScore.getScore());
@@ -95,7 +101,7 @@ implements ParsableText {
             return new LiteralText("");
         }
         String string = this.getPlayerName(source);
-        String string2 = sender != null && string.equals("*") ? sender.getEntityName() : string;
+        String string2 = sender != null && string.equals(SENDER_PLACEHOLDER) ? sender.getEntityName() : string;
         return new LiteralText(this.getScore(string2, source));
     }
 
@@ -113,7 +119,7 @@ implements ParsableText {
 
     @Override
     public String toString() {
-        return "ScoreComponent{name='" + this.name + '\'' + "objective='" + this.objective + '\'' + ", siblings=" + this.siblings + ", style=" + this.getStyle() + '}';
+        return "ScoreComponent{name='" + this.name + "'objective='" + this.objective + "', siblings=" + this.siblings + ", style=" + this.getStyle() + "}";
     }
 
     @Override

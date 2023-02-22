@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.math;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3f;
 
@@ -37,7 +31,6 @@ public final class Quaternion {
         this.w = Quaternion.cos(rotationAngle / 2.0f);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Quaternion(float x, float y, float z, boolean degrees) {
         if (degrees) {
             x *= (float)Math.PI / 180;
@@ -61,6 +54,68 @@ public final class Quaternion {
         this.y = other.y;
         this.z = other.z;
         this.w = other.w;
+    }
+
+    public static Quaternion fromEulerYxz(float x, float y, float z) {
+        Quaternion quaternion = IDENTITY.copy();
+        quaternion.hamiltonProduct(new Quaternion(0.0f, (float)Math.sin(x / 2.0f), 0.0f, (float)Math.cos(x / 2.0f)));
+        quaternion.hamiltonProduct(new Quaternion((float)Math.sin(y / 2.0f), 0.0f, 0.0f, (float)Math.cos(y / 2.0f)));
+        quaternion.hamiltonProduct(new Quaternion(0.0f, 0.0f, (float)Math.sin(z / 2.0f), (float)Math.cos(z / 2.0f)));
+        return quaternion;
+    }
+
+    public static Quaternion fromEulerXyzDegrees(Vec3f vec3f) {
+        return Quaternion.fromEulerXyz((float)Math.toRadians(vec3f.getX()), (float)Math.toRadians(vec3f.getY()), (float)Math.toRadians(vec3f.getZ()));
+    }
+
+    public static Quaternion fromEulerXyz(Vec3f vec3f) {
+        return Quaternion.fromEulerXyz(vec3f.getX(), vec3f.getY(), vec3f.getZ());
+    }
+
+    public static Quaternion fromEulerXyz(float x, float y, float z) {
+        Quaternion quaternion = IDENTITY.copy();
+        quaternion.hamiltonProduct(new Quaternion((float)Math.sin(x / 2.0f), 0.0f, 0.0f, (float)Math.cos(x / 2.0f)));
+        quaternion.hamiltonProduct(new Quaternion(0.0f, (float)Math.sin(y / 2.0f), 0.0f, (float)Math.cos(y / 2.0f)));
+        quaternion.hamiltonProduct(new Quaternion(0.0f, 0.0f, (float)Math.sin(z / 2.0f), (float)Math.cos(z / 2.0f)));
+        return quaternion;
+    }
+
+    public Vec3f toEulerYxz() {
+        float f = this.getW() * this.getW();
+        float g = this.getX() * this.getX();
+        float h = this.getY() * this.getY();
+        float i = this.getZ() * this.getZ();
+        float j = f + g + h + i;
+        float k = 2.0f * this.getW() * this.getX() - 2.0f * this.getY() * this.getZ();
+        float l = (float)Math.asin(k / j);
+        if (Math.abs(k) > 0.999f * j) {
+            return new Vec3f(2.0f * (float)Math.atan2(this.getX(), this.getW()), l, 0.0f);
+        }
+        return new Vec3f((float)Math.atan2(2.0f * this.getY() * this.getZ() + 2.0f * this.getX() * this.getW(), f - g - h + i), l, (float)Math.atan2(2.0f * this.getX() * this.getY() + 2.0f * this.getW() * this.getZ(), f + g - h - i));
+    }
+
+    public Vec3f toEulerYxzDegrees() {
+        Vec3f vec3f = this.toEulerYxz();
+        return new Vec3f((float)Math.toDegrees(vec3f.getX()), (float)Math.toDegrees(vec3f.getY()), (float)Math.toDegrees(vec3f.getZ()));
+    }
+
+    public Vec3f toEulerXyz() {
+        float f = this.getW() * this.getW();
+        float g = this.getX() * this.getX();
+        float h = this.getY() * this.getY();
+        float i = this.getZ() * this.getZ();
+        float j = f + g + h + i;
+        float k = 2.0f * this.getW() * this.getX() - 2.0f * this.getY() * this.getZ();
+        float l = (float)Math.asin(k / j);
+        if (Math.abs(k) > 0.999f * j) {
+            return new Vec3f(l, 2.0f * (float)Math.atan2(this.getY(), this.getW()), 0.0f);
+        }
+        return new Vec3f(l, (float)Math.atan2(2.0f * this.getX() * this.getZ() + 2.0f * this.getY() * this.getW(), f - g - h + i), (float)Math.atan2(2.0f * this.getX() * this.getY() + 2.0f * this.getW() * this.getZ(), f - g + h - i));
+    }
+
+    public Vec3f toEulerXyzDegrees() {
+        Vec3f vec3f = this.toEulerXyz();
+        return new Vec3f((float)Math.toDegrees(vec3f.getX()), (float)Math.toDegrees(vec3f.getY()), (float)Math.toDegrees(vec3f.getZ()));
     }
 
     public boolean equals(Object o) {
@@ -131,7 +186,6 @@ public final class Quaternion {
         this.w = i * m - f * j - g * k - h * l;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void scale(float scale) {
         this.x *= scale;
         this.y *= scale;
@@ -145,7 +199,6 @@ public final class Quaternion {
         this.z = -this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void set(float x, float y, float z, float w) {
         this.x = x;
         this.y = y;
@@ -161,7 +214,6 @@ public final class Quaternion {
         return (float)Math.sin(value);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void normalize() {
         float f = this.getX() * this.getX() + this.getY() * this.getY() + this.getZ() * this.getZ() + this.getW() * this.getW();
         if (f > 1.0E-6f) {
@@ -178,7 +230,10 @@ public final class Quaternion {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public void method_35822(Quaternion quaternion, float f) {
+        throw new UnsupportedOperationException();
+    }
+
     public Quaternion copy() {
         return new Quaternion(this);
     }

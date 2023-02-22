@@ -4,50 +4,46 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
  */
 package net.minecraft.client.render;
 
 import com.mojang.blaze3d.platform.GlStateManager;
-import java.util.function.IntConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexFormatElement {
-    private static final Logger LOGGER = LogManager.getLogger();
-    private final Format dataType;
+    private final DataType dataType;
     private final Type type;
     private final int textureIndex;
     private final int length;
     private final int byteLength;
 
-    public VertexFormatElement(int textureIndex, Format dataType, Type type, int length) {
-        if (this.isValidType(textureIndex, type)) {
-            this.type = type;
-        } else {
-            LOGGER.warn("Multiple vertex elements of the same type other than UVs are not supported. Forcing type to UV.");
-            this.type = Type.UV;
+    public VertexFormatElement(int textureIndex, DataType dataType, Type type, int length) {
+        if (!this.isValidType(textureIndex, type)) {
+            throw new IllegalStateException("Multiple vertex elements of the same type other than UVs are not supported");
         }
+        this.type = type;
         this.dataType = dataType;
         this.textureIndex = textureIndex;
         this.length = length;
-        this.byteLength = dataType.getSize() * this.length;
+        this.byteLength = dataType.getByteLength() * this.length;
     }
 
     private boolean isValidType(int index, Type type) {
         return index == 0 || type == Type.UV;
     }
 
-    public final Format getDataType() {
+    public final DataType getDataType() {
         return this.dataType;
     }
 
     public final Type getType() {
         return this.type;
+    }
+
+    public final int getLength() {
+        return this.length;
     }
 
     public final int getTextureIndex() {
@@ -60,6 +56,10 @@ public class VertexFormatElement {
 
     public final int getByteLength() {
         return this.byteLength;
+    }
+
+    public final boolean isPosition() {
+        return this.type == Type.POSITION;
     }
 
     public boolean equals(Object o) {
@@ -90,105 +90,141 @@ public class VertexFormatElement {
         return i;
     }
 
-    public void startDrawing(long pointer, int stride) {
-        this.type.startDrawing(this.length, this.dataType.getGlId(), stride, pointer, this.textureIndex);
+    public void startDrawing(int elementIndex, long pointer, int stride) {
+        this.type.startDrawing(this.length, this.dataType.getId(), stride, pointer, this.textureIndex, elementIndex);
     }
 
-    public void endDrawing() {
-        this.type.endDrawing(this.textureIndex);
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static enum Format {
-        FLOAT(4, "Float", 5126),
-        UBYTE(1, "Unsigned Byte", 5121),
-        BYTE(1, "Byte", 5120),
-        USHORT(2, "Unsigned Short", 5123),
-        SHORT(2, "Short", 5122),
-        UINT(4, "Unsigned Int", 5125),
-        INT(4, "Int", 5124);
-
-        private final int size;
-        private final String name;
-        private final int glId;
-
-        private Format(int size, String name, int glId) {
-            this.size = size;
-            this.name = name;
-            this.glId = glId;
-        }
-
-        public int getSize() {
-            return this.size;
-        }
-
-        public String getName() {
-            return this.name;
-        }
-
-        public int getGlId() {
-            return this.glId;
-        }
+    public void endDrawing(int elementIndex) {
+        this.type.endDrawing(this.textureIndex, elementIndex);
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Type {
-        POSITION("Position", (i, j, k, l, m) -> {
-            GlStateManager.vertexPointer(i, j, k, l);
-            GlStateManager.enableClientState(32884);
-        }, i -> GlStateManager.disableClientState(32884)),
-        NORMAL("Normal", (i, j, k, l, m) -> {
-            GlStateManager.normalPointer(j, k, l);
-            GlStateManager.enableClientState(32885);
-        }, i -> GlStateManager.disableClientState(32885)),
-        COLOR("Vertex Color", (i, j, k, l, m) -> {
-            GlStateManager.colorPointer(i, j, k, l);
-            GlStateManager.enableClientState(32886);
-        }, i -> {
-            GlStateManager.disableClientState(32886);
-            GlStateManager.clearCurrentColor();
-        }),
-        UV("UV", (i, j, k, l, m) -> {
-            GlStateManager.clientActiveTexture(33984 + m);
-            GlStateManager.texCoordPointer(i, j, k, l);
-            GlStateManager.enableClientState(32888);
-            GlStateManager.clientActiveTexture(33984);
-        }, i -> {
-            GlStateManager.clientActiveTexture(33984 + i);
-            GlStateManager.disableClientState(32888);
-            GlStateManager.clientActiveTexture(33984);
-        }),
-        PADDING("Padding", (i, j, k, l, m) -> {}, i -> {}),
-        GENERIC("Generic", (i, j, k, l, m) -> {
-            GlStateManager.enableVertexAttribArray(m);
-            GlStateManager.vertexAttribPointer(m, i, j, false, k, l);
-        }, GlStateManager::method_22607);
-
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type POSITION = new Type("Position", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._enableVertexAttribArray(elementIndex);
+            GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
+        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type NORMAL = new Type("Normal", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._enableVertexAttribArray(elementIndex);
+            GlStateManager._vertexAttribPointer(elementIndex, size, type, true, stride, pointer);
+        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type COLOR = new Type("Vertex Color", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._enableVertexAttribArray(elementIndex);
+            GlStateManager._vertexAttribPointer(elementIndex, size, type, true, stride, pointer);
+        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type UV = new Type("UV", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._enableVertexAttribArray(elementIndex);
+            if (type == 5126) {
+                GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
+            } else {
+                GlStateManager._vertexAttribIPointer(elementIndex, size, type, stride, pointer);
+            }
+        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type PADDING = new Type("Padding", (size, type, stride, pointer, textureIndex, elementIndex) -> {}, (textureIndex, elementIndex) -> {});
+        public static final /* enum */ Type GENERIC = new Type("Generic", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._enableVertexAttribArray(elementIndex);
+            GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
+        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
         private final String name;
         private final Starter starter;
-        private final IntConsumer finisher;
+        private final Finisher finisher;
+        private static final /* synthetic */ Type[] field_1631;
 
-        private Type(String name, Starter starter, IntConsumer intConsumer) {
+        public static Type[] values() {
+            return (Type[])field_1631.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private Type(String name, Starter starter, Finisher finisher) {
             this.name = name;
             this.starter = starter;
-            this.finisher = intConsumer;
+            this.finisher = finisher;
         }
 
-        private void startDrawing(int count, int glId, int stride, long pointer, int elementIndex) {
-            this.starter.setupBufferState(count, glId, stride, pointer, elementIndex);
+        void startDrawing(int size, int type, int stride, long pointer, int textureIndex, int elementIndex) {
+            this.starter.setupBufferState(size, type, stride, pointer, textureIndex, elementIndex);
         }
 
-        public void endDrawing(int elementIndex) {
-            this.finisher.accept(elementIndex);
+        public void endDrawing(int textureIndex, int elementIndex) {
+            this.finisher.clearBufferState(textureIndex, elementIndex);
         }
 
         public String getName() {
             return this.name;
         }
 
+        private static /* synthetic */ Type[] method_36819() {
+            return new Type[]{POSITION, NORMAL, COLOR, UV, PADDING, GENERIC};
+        }
+
+        static {
+            field_1631 = Type.method_36819();
+        }
+
+        @FunctionalInterface
         @Environment(value=EnvType.CLIENT)
         static interface Starter {
-            public void setupBufferState(int var1, int var2, int var3, long var4, int var6);
+            public void setupBufferState(int var1, int var2, int var3, long var4, int var6, int var7);
+        }
+
+        @FunctionalInterface
+        @Environment(value=EnvType.CLIENT)
+        static interface Finisher {
+            public void clearBufferState(int var1, int var2);
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static final class DataType
+    extends Enum<DataType> {
+        public static final /* enum */ DataType FLOAT = new DataType(4, "Float", 5126);
+        public static final /* enum */ DataType UBYTE = new DataType(1, "Unsigned Byte", 5121);
+        public static final /* enum */ DataType BYTE = new DataType(1, "Byte", 5120);
+        public static final /* enum */ DataType USHORT = new DataType(2, "Unsigned Short", 5123);
+        public static final /* enum */ DataType SHORT = new DataType(2, "Short", 5122);
+        public static final /* enum */ DataType UINT = new DataType(4, "Unsigned Int", 5125);
+        public static final /* enum */ DataType INT = new DataType(4, "Int", 5124);
+        private final int byteLength;
+        private final String name;
+        private final int id;
+        private static final /* synthetic */ DataType[] field_1620;
+
+        public static DataType[] values() {
+            return (DataType[])field_1620.clone();
+        }
+
+        public static DataType valueOf(String string) {
+            return Enum.valueOf(DataType.class, string);
+        }
+
+        private DataType(int byteCount, String name, int id) {
+            this.byteLength = byteCount;
+            this.name = name;
+            this.id = id;
+        }
+
+        public int getByteLength() {
+            return this.byteLength;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public int getId() {
+            return this.id;
+        }
+
+        private static /* synthetic */ DataType[] method_36818() {
+            return new DataType[]{FLOAT, UBYTE, BYTE, USHORT, SHORT, UINT, INT};
+        }
+
+        static {
+            field_1620 = DataType.method_36818();
         }
     }
 }

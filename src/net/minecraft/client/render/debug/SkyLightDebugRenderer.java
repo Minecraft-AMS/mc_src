@@ -26,6 +26,7 @@ import net.minecraft.world.LightType;
 public class SkyLightDebugRenderer
 implements DebugRenderer.Renderer {
     private final MinecraftClient client;
+    private static final int RANGE = 10;
 
     public SkyLightDebugRenderer(MinecraftClient client) {
         this.client = client;
@@ -34,7 +35,6 @@ implements DebugRenderer.Renderer {
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
         ClientWorld world = this.client.world;
-        RenderSystem.pushMatrix();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableTexture();
@@ -46,13 +46,12 @@ implements DebugRenderer.Renderer {
             int j = MathHelper.hsvToRgb(f, 0.9f, 0.9f);
             long l = ChunkSectionPos.fromBlockPos(blockPos2.asLong());
             if (longSet.add(l)) {
-                DebugRenderer.drawString(world.getChunkManager().getLightingProvider().displaySectionLevel(LightType.SKY, ChunkSectionPos.from(l)), ChunkSectionPos.unpackX(l) * 16 + 8, ChunkSectionPos.unpackY(l) * 16 + 8, ChunkSectionPos.unpackZ(l) * 16 + 8, 0xFF0000, 0.3f);
+                DebugRenderer.drawString(world.getChunkManager().getLightingProvider().displaySectionLevel(LightType.SKY, ChunkSectionPos.from(l)), ChunkSectionPos.getOffsetPos(ChunkSectionPos.unpackX(l), 8), ChunkSectionPos.getOffsetPos(ChunkSectionPos.unpackY(l), 8), ChunkSectionPos.getOffsetPos(ChunkSectionPos.unpackZ(l), 8), 0xFF0000, 0.3f);
             }
             if (i == 15) continue;
             DebugRenderer.drawString(String.valueOf(i), (double)blockPos2.getX() + 0.5, (double)blockPos2.getY() + 0.25, (double)blockPos2.getZ() + 0.5, j);
         }
         RenderSystem.enableTexture();
-        RenderSystem.popMatrix();
     }
 }
 

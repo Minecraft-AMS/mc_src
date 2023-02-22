@@ -51,7 +51,11 @@ implements ArgumentType<PosArgument> {
         return new Vec2ArgumentType(true);
     }
 
-    public static Vec2f getVec2(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+    public static Vec2ArgumentType vec2(boolean centerIntegers) {
+        return new Vec2ArgumentType(centerIntegers);
+    }
+
+    public static Vec2f getVec2(CommandContext<ServerCommandSource> context, String name) {
         Vec3d vec3d = ((PosArgument)context.getArgument(name, PosArgument.class)).toAbsolutePos((ServerCommandSource)context.getSource());
         return new Vec2f((float)vec3d.x, (float)vec3d.z);
     }
@@ -84,8 +88,8 @@ implements ArgumentType<PosArgument> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

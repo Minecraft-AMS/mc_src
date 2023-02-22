@@ -1,18 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
  */
 package net.minecraft.entity;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
@@ -34,7 +24,6 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=FlyingItemEntity.class)})
 public class EyeOfEnderEntity
 extends Entity
 implements FlyingItemEntity {
@@ -51,12 +40,11 @@ implements FlyingItemEntity {
 
     public EyeOfEnderEntity(World world, double x, double y, double z) {
         this((EntityType<? extends EyeOfEnderEntity>)EntityType.EYE_OF_ENDER, world);
-        this.lifespan = 0;
         this.setPosition(x, y, z);
     }
 
     public void setItem(ItemStack stack2) {
-        if (stack2.getItem() != Items.ENDER_EYE || stack2.hasTag()) {
+        if (!stack2.isOf(Items.ENDER_EYE) || stack2.hasNbt()) {
             this.getDataTracker().set(ITEM, Util.make(stack2.copy(), stack -> stack.setCount(1)));
         }
     }
@@ -77,7 +65,6 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         double d = this.getBoundingBox().getAverageSideLength() * 4.0;
         if (Double.isNaN(d)) {
@@ -92,10 +79,10 @@ implements FlyingItemEntity {
         int i = pos.getY();
         double e = pos.getZ();
         double f = d - this.getX();
-        float h = MathHelper.sqrt(f * f + (g = e - this.getZ()) * g);
-        if (h > 12.0f) {
-            this.targetX = this.getX() + f / (double)h * 12.0;
-            this.targetZ = this.getZ() + g / (double)h * 12.0;
+        double h = Math.sqrt(f * f + (g = e - this.getZ()) * g);
+        if (h > 12.0) {
+            this.targetX = this.getX() + f / h * 12.0;
+            this.targetZ = this.getZ() + g / h * 12.0;
             this.targetY = this.getY() + 8.0;
         } else {
             this.targetX = d;
@@ -107,15 +94,14 @@ implements FlyingItemEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void setVelocityClient(double x, double y, double z) {
         this.setVelocity(x, y, z);
         if (this.prevPitch == 0.0f && this.prevYaw == 0.0f) {
-            float f = MathHelper.sqrt(x * x + z * z);
-            this.yaw = (float)(MathHelper.atan2(x, z) * 57.2957763671875);
-            this.pitch = (float)(MathHelper.atan2(y, f) * 57.2957763671875);
-            this.prevYaw = this.yaw;
-            this.prevPitch = this.pitch;
+            double d = Math.sqrt(x * x + z * z);
+            this.setYaw((float)(MathHelper.atan2(x, z) * 57.2957763671875));
+            this.setPitch((float)(MathHelper.atan2(y, d) * 57.2957763671875));
+            this.prevYaw = this.getYaw();
+            this.prevPitch = this.getPitch();
         }
     }
 
@@ -126,15 +112,15 @@ implements FlyingItemEntity {
         double d = this.getX() + vec3d.x;
         double e = this.getY() + vec3d.y;
         double f = this.getZ() + vec3d.z;
-        float g = MathHelper.sqrt(EyeOfEnderEntity.squaredHorizontalLength(vec3d));
-        this.pitch = ProjectileEntity.updateRotation(this.prevPitch, (float)(MathHelper.atan2(vec3d.y, g) * 57.2957763671875));
-        this.yaw = ProjectileEntity.updateRotation(this.prevYaw, (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875));
+        double g = vec3d.horizontalLength();
+        this.setPitch(ProjectileEntity.updateRotation(this.prevPitch, (float)(MathHelper.atan2(vec3d.y, g) * 57.2957763671875)));
+        this.setYaw(ProjectileEntity.updateRotation(this.prevYaw, (float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875)));
         if (!this.world.isClient) {
             double h = this.targetX - d;
             double i = this.targetZ - f;
             float j = (float)Math.sqrt(h * h + i * i);
             float k = (float)MathHelper.atan2(i, h);
-            double l = MathHelper.lerp(0.0025, (double)g, (double)j);
+            double l = MathHelper.lerp(0.0025, g, (double)j);
             double m = vec3d.y;
             if (j < 1.0f) {
                 l *= 0.8;
@@ -157,7 +143,7 @@ implements FlyingItemEntity {
             ++this.lifespan;
             if (this.lifespan > 80 && !this.world.isClient) {
                 this.playSound(SoundEvents.ENTITY_ENDER_EYE_DEATH, 1.0f, 1.0f);
-                this.remove();
+                this.discard();
                 if (this.dropsItem) {
                     this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), this.getStack()));
                 } else {

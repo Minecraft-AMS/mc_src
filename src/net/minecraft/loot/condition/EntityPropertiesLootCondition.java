@@ -28,10 +28,10 @@ import net.minecraft.util.math.Vec3d;
 
 public class EntityPropertiesLootCondition
 implements LootCondition {
-    private final EntityPredicate predicate;
-    private final LootContext.EntityTarget entity;
+    final EntityPredicate predicate;
+    final LootContext.EntityTarget entity;
 
-    private EntityPropertiesLootCondition(EntityPredicate predicate, LootContext.EntityTarget entity) {
+    EntityPropertiesLootCondition(EntityPredicate predicate, LootContext.EntityTarget entity) {
         this.predicate = predicate;
         this.entity = entity;
     }

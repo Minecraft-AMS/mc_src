@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.resource;
@@ -13,8 +11,6 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.metadata.ResourceMetadataReader;
 import net.minecraft.util.Identifier;
@@ -22,7 +18,10 @@ import org.jetbrains.annotations.Nullable;
 
 public interface ResourcePack
 extends AutoCloseable {
-    @Environment(value=EnvType.CLIENT)
+    public static final String METADATA_PATH_SUFFIX = ".mcmeta";
+    public static final String PACK_METADATA_NAME = "pack.mcmeta";
+
+    @Nullable
     public InputStream openRoot(String var1) throws IOException;
 
     public InputStream open(ResourceType var1, Identifier var2) throws IOException;

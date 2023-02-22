@@ -27,6 +27,7 @@ import net.minecraft.block.entity.LockableContainerBlockEntity;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventories;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SidedInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
@@ -40,12 +41,14 @@ import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.RecipeUnlocker;
 import net.minecraft.screen.PropertyDelegate;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Tickable;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -56,16 +59,25 @@ public abstract class AbstractFurnaceBlockEntity
 extends LockableContainerBlockEntity
 implements SidedInventory,
 RecipeUnlocker,
-RecipeInputProvider,
-Tickable {
+RecipeInputProvider {
+    protected static final int field_31286 = 0;
+    protected static final int field_31287 = 1;
+    protected static final int field_31288 = 2;
+    public static final int field_31289 = 0;
     private static final int[] TOP_SLOTS = new int[]{0};
     private static final int[] BOTTOM_SLOTS = new int[]{2, 1};
     private static final int[] SIDE_SLOTS = new int[]{1};
+    public static final int field_31290 = 1;
+    public static final int field_31291 = 2;
+    public static final int field_31292 = 3;
+    public static final int field_31293 = 4;
+    public static final int field_31294 = 200;
+    public static final int field_31295 = 2;
     protected DefaultedList<ItemStack> inventory = DefaultedList.ofSize(3, ItemStack.EMPTY);
-    private int burnTime;
-    private int fuelTime;
-    private int cookTime;
-    private int cookTimeTotal;
+    int burnTime;
+    int fuelTime;
+    int cookTime;
+    int cookTimeTotal;
     protected final PropertyDelegate propertyDelegate = new PropertyDelegate(){
 
         @Override
@@ -115,10 +127,10 @@ Tickable {
         }
     };
     private final Object2IntOpenHashMap<Identifier> recipesUsed = new Object2IntOpenHashMap();
-    protected final RecipeType<? extends AbstractCookingRecipe> recipeType;
+    private final RecipeType<? extends AbstractCookingRecipe> recipeType;
 
-    protected AbstractFurnaceBlockEntity(BlockEntityType<?> blockEntityType, RecipeType<? extends AbstractCookingRecipe> recipeType) {
-        super(blockEntityType);
+    protected AbstractFurnaceBlockEntity(BlockEntityType<?> blockEntityType, BlockPos pos, BlockState state, RecipeType<? extends AbstractCookingRecipe> recipeType) {
+        super(blockEntityType, pos, state);
         this.recipeType = recipeType;
     }
 
@@ -184,6 +196,8 @@ Tickable {
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.FLETCHING_TABLE, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.SMITHING_TABLE, 300);
         AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.COMPOSTER, 300);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.AZALEA, 100);
+        AbstractFurnaceBlockEntity.addFuel((Map<Item, Integer>)map, Blocks.FLOWERING_AZALEA, 100);
         return map;
     }
 
@@ -214,15 +228,15 @@ Tickable {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
         this.inventory = DefaultedList.ofSize(this.size(), ItemStack.EMPTY);
-        Inventories.readNbt(tag, this.inventory);
-        this.burnTime = tag.getShort("BurnTime");
-        this.cookTime = tag.getShort("CookTime");
-        this.cookTimeTotal = tag.getShort("CookTimeTotal");
+        Inventories.readNbt(nbt, this.inventory);
+        this.burnTime = nbt.getShort("BurnTime");
+        this.cookTime = nbt.getShort("CookTime");
+        this.cookTimeTotal = nbt.getShort("CookTimeTotal");
         this.fuelTime = this.getFuelTime(this.inventory.get(1));
-        NbtCompound nbtCompound = tag.getCompound("RecipesUsed");
+        NbtCompound nbtCompound = nbt.getCompound("RecipesUsed");
         for (String string : nbtCompound.getKeys()) {
             this.recipesUsed.put((Object)new Identifier(string), nbtCompound.getInt(string));
         }
@@ -241,95 +255,94 @@ Tickable {
         return nbt;
     }
 
-    @Override
-    public void tick() {
-        boolean bl = this.isBurning();
+    public static void tick(World world, BlockPos pos, BlockState state, AbstractFurnaceBlockEntity blockEntity) {
+        boolean bl = blockEntity.isBurning();
         boolean bl2 = false;
-        if (this.isBurning()) {
-            --this.burnTime;
+        if (blockEntity.isBurning()) {
+            --blockEntity.burnTime;
         }
-        if (!this.world.isClient) {
-            ItemStack itemStack = this.inventory.get(1);
-            if (this.isBurning() || !itemStack.isEmpty() && !this.inventory.get(0).isEmpty()) {
-                Recipe recipe = this.world.getRecipeManager().getFirstMatch(this.recipeType, this, this.world).orElse(null);
-                if (!this.isBurning() && this.canAcceptRecipeOutput(recipe)) {
-                    this.fuelTime = this.burnTime = this.getFuelTime(itemStack);
-                    if (this.isBurning()) {
-                        bl2 = true;
-                        if (!itemStack.isEmpty()) {
-                            Item item = itemStack.getItem();
-                            itemStack.decrement(1);
-                            if (itemStack.isEmpty()) {
-                                Item item2 = item.getRecipeRemainder();
-                                this.inventory.set(1, item2 == null ? ItemStack.EMPTY : new ItemStack(item2));
-                            }
+        ItemStack itemStack = blockEntity.inventory.get(1);
+        if (blockEntity.isBurning() || !itemStack.isEmpty() && !blockEntity.inventory.get(0).isEmpty()) {
+            Recipe recipe = world.getRecipeManager().getFirstMatch(blockEntity.recipeType, blockEntity, world).orElse(null);
+            int i = blockEntity.getMaxCountPerStack();
+            if (!blockEntity.isBurning() && AbstractFurnaceBlockEntity.canAcceptRecipeOutput(recipe, blockEntity.inventory, i)) {
+                blockEntity.fuelTime = blockEntity.burnTime = blockEntity.getFuelTime(itemStack);
+                if (blockEntity.isBurning()) {
+                    bl2 = true;
+                    if (!itemStack.isEmpty()) {
+                        Item item = itemStack.getItem();
+                        itemStack.decrement(1);
+                        if (itemStack.isEmpty()) {
+                            Item item2 = item.getRecipeRemainder();
+                            blockEntity.inventory.set(1, item2 == null ? ItemStack.EMPTY : new ItemStack(item2));
                         }
                     }
                 }
-                if (this.isBurning() && this.canAcceptRecipeOutput(recipe)) {
-                    ++this.cookTime;
-                    if (this.cookTime == this.cookTimeTotal) {
-                        this.cookTime = 0;
-                        this.cookTimeTotal = this.getCookTime();
-                        this.craftRecipe(recipe);
-                        bl2 = true;
+            }
+            if (blockEntity.isBurning() && AbstractFurnaceBlockEntity.canAcceptRecipeOutput(recipe, blockEntity.inventory, i)) {
+                ++blockEntity.cookTime;
+                if (blockEntity.cookTime == blockEntity.cookTimeTotal) {
+                    blockEntity.cookTime = 0;
+                    blockEntity.cookTimeTotal = AbstractFurnaceBlockEntity.getCookTime(world, blockEntity.recipeType, blockEntity);
+                    if (AbstractFurnaceBlockEntity.craftRecipe(recipe, blockEntity.inventory, i)) {
+                        blockEntity.setLastRecipe(recipe);
                     }
-                } else {
-                    this.cookTime = 0;
+                    bl2 = true;
                 }
-            } else if (!this.isBurning() && this.cookTime > 0) {
-                this.cookTime = MathHelper.clamp(this.cookTime - 2, 0, this.cookTimeTotal);
+            } else {
+                blockEntity.cookTime = 0;
             }
-            if (bl != this.isBurning()) {
-                bl2 = true;
-                this.world.setBlockState(this.pos, (BlockState)this.world.getBlockState(this.pos).with(AbstractFurnaceBlock.LIT, this.isBurning()), 3);
-            }
+        } else if (!blockEntity.isBurning() && blockEntity.cookTime > 0) {
+            blockEntity.cookTime = MathHelper.clamp(blockEntity.cookTime - 2, 0, blockEntity.cookTimeTotal);
+        }
+        if (bl != blockEntity.isBurning()) {
+            bl2 = true;
+            state = (BlockState)state.with(AbstractFurnaceBlock.LIT, blockEntity.isBurning());
+            world.setBlockState(pos, state, 3);
         }
         if (bl2) {
-            this.markDirty();
+            AbstractFurnaceBlockEntity.markDirty(world, pos, state);
         }
     }
 
-    protected boolean canAcceptRecipeOutput(@Nullable Recipe<?> recipe) {
-        if (this.inventory.get(0).isEmpty() || recipe == null) {
+    private static boolean canAcceptRecipeOutput(@Nullable Recipe<?> recipe, DefaultedList<ItemStack> slots, int count) {
+        if (slots.get(0).isEmpty() || recipe == null) {
             return false;
         }
         ItemStack itemStack = recipe.getOutput();
         if (itemStack.isEmpty()) {
             return false;
         }
-        ItemStack itemStack2 = this.inventory.get(2);
+        ItemStack itemStack2 = slots.get(2);
         if (itemStack2.isEmpty()) {
             return true;
         }
         if (!itemStack2.isItemEqualIgnoreDamage(itemStack)) {
             return false;
         }
-        if (itemStack2.getCount() < this.getMaxCountPerStack() && itemStack2.getCount() < itemStack2.getMaxCount()) {
+        if (itemStack2.getCount() < count && itemStack2.getCount() < itemStack2.getMaxCount()) {
             return true;
         }
         return itemStack2.getCount() < itemStack.getMaxCount();
     }
 
-    private void craftRecipe(@Nullable Recipe<?> recipe) {
-        if (recipe == null || !this.canAcceptRecipeOutput(recipe)) {
-            return;
+    private static boolean craftRecipe(@Nullable Recipe<?> recipe, DefaultedList<ItemStack> slots, int count) {
+        if (recipe == null || !AbstractFurnaceBlockEntity.canAcceptRecipeOutput(recipe, slots, count)) {
+            return false;
         }
-        ItemStack itemStack = this.inventory.get(0);
+        ItemStack itemStack = slots.get(0);
         ItemStack itemStack2 = recipe.getOutput();
-        ItemStack itemStack3 = this.inventory.get(2);
+        ItemStack itemStack3 = slots.get(2);
         if (itemStack3.isEmpty()) {
-            this.inventory.set(2, itemStack2.copy());
-        } else if (itemStack3.getItem() == itemStack2.getItem()) {
+            slots.set(2, itemStack2.copy());
+        } else if (itemStack3.isOf(itemStack2.getItem())) {
             itemStack3.increment(1);
         }
-        if (!this.world.isClient) {
-            this.setLastRecipe(recipe);
-        }
-        if (itemStack.getItem() == Blocks.WET_SPONGE.asItem() && !this.inventory.get(1).isEmpty() && this.inventory.get(1).getItem() == Items.BUCKET) {
-            this.inventory.set(1, new ItemStack(Items.WATER_BUCKET));
+        if (itemStack.isOf(Blocks.WET_SPONGE.asItem()) && !slots.get(1).isEmpty() && slots.get(1).isOf(Items.BUCKET)) {
+            slots.set(1, new ItemStack(Items.WATER_BUCKET));
         }
         itemStack.decrement(1);
+        return true;
     }
 
     protected int getFuelTime(ItemStack fuel) {
@@ -340,8 +353,8 @@ Tickable {
         return AbstractFurnaceBlockEntity.createFuelTimeMap().getOrDefault(item, 0);
     }
 
-    protected int getCookTime() {
-        return this.world.getRecipeManager().getFirstMatch(this.recipeType, this, this.world).map(AbstractCookingRecipe::getCookTime).orElse(200);
+    private static int getCookTime(World world, RecipeType<? extends AbstractCookingRecipe> recipeType, Inventory inventory) {
+        return world.getRecipeManager().getFirstMatch(recipeType, inventory, world).map(AbstractCookingRecipe::getCookTime).orElse(200);
     }
 
     public static boolean canUseAsFuel(ItemStack stack) {
@@ -366,8 +379,10 @@ Tickable {
 
     @Override
     public boolean canExtract(int slot, ItemStack stack, Direction dir) {
-        Item item;
-        return dir != Direction.DOWN || slot != 1 || (item = stack.getItem()) == Items.WATER_BUCKET || item == Items.BUCKET;
+        if (dir == Direction.DOWN && slot == 1) {
+            return stack.isOf(Items.WATER_BUCKET) || stack.isOf(Items.BUCKET);
+        }
+        return true;
     }
 
     @Override
@@ -402,13 +417,13 @@ Tickable {
     @Override
     public void setStack(int slot, ItemStack stack) {
         ItemStack itemStack = this.inventory.get(slot);
-        boolean bl = !stack.isEmpty() && stack.isItemEqualIgnoreDamage(itemStack) && ItemStack.areTagsEqual(stack, itemStack);
+        boolean bl = !stack.isEmpty() && stack.isItemEqualIgnoreDamage(itemStack) && ItemStack.areNbtEqual(stack, itemStack);
         this.inventory.set(slot, stack);
         if (stack.getCount() > this.getMaxCountPerStack()) {
             stack.setCount(this.getMaxCountPerStack());
         }
         if (slot == 0 && !bl) {
-            this.cookTimeTotal = this.getCookTime();
+            this.cookTimeTotal = AbstractFurnaceBlockEntity.getCookTime(this.world, this.recipeType, this);
             this.cookTime = 0;
             this.markDirty();
         }
@@ -429,7 +444,7 @@ Tickable {
         }
         if (slot == 1) {
             ItemStack itemStack = this.inventory.get(1);
-            return AbstractFurnaceBlockEntity.canUseAsFuel(stack) || stack.getItem() == Items.BUCKET && itemStack.getItem() != Items.BUCKET;
+            return AbstractFurnaceBlockEntity.canUseAsFuel(stack) || stack.isOf(Items.BUCKET) && !itemStack.isOf(Items.BUCKET);
         }
         return true;
     }
@@ -457,34 +472,30 @@ Tickable {
     public void unlockLastRecipe(PlayerEntity player) {
     }
 
-    public void dropExperience(PlayerEntity player) {
-        List<Recipe<?>> list = this.method_27354(player.world, player.getPos());
+    public void dropExperienceForRecipesUsed(ServerPlayerEntity player) {
+        List<Recipe<?>> list = this.getRecipesUsedAndDropExperience(player.getServerWorld(), player.getPos());
         player.unlockRecipes(list);
         this.recipesUsed.clear();
     }
 
-    public List<Recipe<?>> method_27354(World world, Vec3d vec3d) {
+    public List<Recipe<?>> getRecipesUsedAndDropExperience(ServerWorld world, Vec3d pos) {
         ArrayList list = Lists.newArrayList();
         for (Object2IntMap.Entry entry : this.recipesUsed.object2IntEntrySet()) {
             world.getRecipeManager().get((Identifier)entry.getKey()).ifPresent(recipe -> {
                 list.add(recipe);
-                AbstractFurnaceBlockEntity.dropExperience(world, vec3d, entry.getIntValue(), ((AbstractCookingRecipe)recipe).getExperience());
+                AbstractFurnaceBlockEntity.dropExperience(world, pos, entry.getIntValue(), ((AbstractCookingRecipe)recipe).getExperience());
             });
         }
         return list;
     }
 
-    private static void dropExperience(World world, Vec3d vec3d, int i, float f) {
-        int j = MathHelper.floor((float)i * f);
-        float g = MathHelper.fractionalPart((float)i * f);
-        if (g != 0.0f && Math.random() < (double)g) {
-            ++j;
+    private static void dropExperience(ServerWorld world, Vec3d pos, int multiplier, float experience) {
+        int i = MathHelper.floor((float)multiplier * experience);
+        float f = MathHelper.fractionalPart((float)multiplier * experience);
+        if (f != 0.0f && Math.random() < (double)f) {
+            ++i;
         }
-        while (j > 0) {
-            int k = ExperienceOrbEntity.roundToOrbSize(j);
-            j -= k;
-            world.spawnEntity(new ExperienceOrbEntity(world, vec3d.x, vec3d.y, vec3d.z, k));
-        }
+        ExperienceOrbEntity.spawn(world, pos, i);
     }
 
     @Override

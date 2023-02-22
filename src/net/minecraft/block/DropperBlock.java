@@ -4,6 +4,7 @@
 package net.minecraft.block;
 
 import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.DispenserBlock;
 import net.minecraft.block.dispenser.DispenserBehavior;
 import net.minecraft.block.dispenser.ItemDispenserBehavior;
@@ -17,7 +18,6 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPointerImpl;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockView;
 
 public class DropperBlock
 extends DispenserBlock {
@@ -33,8 +33,8 @@ extends DispenserBlock {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new DropperBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new DropperBlockEntity(pos, state);
     }
 
     @Override

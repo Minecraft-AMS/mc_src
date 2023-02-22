@@ -50,6 +50,7 @@ public abstract class FlowableFluid
 extends Fluid {
     public static final BooleanProperty FALLING = Properties.FALLING;
     public static final IntProperty LEVEL = Properties.LEVEL_1_8;
+    private static final int field_31726 = 200;
     private static final ThreadLocal<Object2ByteLinkedOpenHashMap<Block.NeighborGroup>> field_15901 = ThreadLocal.withInitial(() -> {
         Object2ByteLinkedOpenHashMap<Block.NeighborGroup> object2ByteLinkedOpenHashMap = new Object2ByteLinkedOpenHashMap<Block.NeighborGroup>(200){
 
@@ -72,7 +73,7 @@ extends Fluid {
         double e = 0.0;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (Direction direction : Direction.Type.HORIZONTAL) {
-            mutable.set(pos, direction);
+            mutable.set((Vec3i)pos, direction);
             FluidState fluidState = world.getFluidState(mutable);
             if (!this.method_15748(fluidState)) continue;
             float f = fluidState.getHeight();
@@ -93,7 +94,7 @@ extends Fluid {
         Vec3d vec3d = new Vec3d(d, 0.0, e);
         if (state.get(FALLING).booleanValue()) {
             for (Direction direction2 : Direction.Type.HORIZONTAL) {
-                mutable.set(pos, direction2);
+                mutable.set((Vec3i)pos, direction2);
                 if (!this.method_15749(world, mutable, direction2) && !this.method_15749(world, (BlockPos)mutable.up(), direction2)) continue;
                 vec3d = vec3d.normalize().add(0.0, -6.0, 0.0);
                 break;
@@ -345,7 +346,7 @@ extends Fluid {
         if (block instanceof FluidFillable) {
             return ((FluidFillable)((Object)block)).canFillWithFluid(world, pos, state, fluid);
         }
-        if (block instanceof DoorBlock || block.isIn(BlockTags.SIGNS) || block == Blocks.LADDER || block == Blocks.SUGAR_CANE || block == Blocks.BUBBLE_COLUMN) {
+        if (block instanceof DoorBlock || state.isIn(BlockTags.SIGNS) || state.isOf(Blocks.LADDER) || state.isOf(Blocks.SUGAR_CANE) || state.isOf(Blocks.BUBBLE_COLUMN)) {
             return false;
         }
         Material material = state.getMaterial();
@@ -407,6 +408,9 @@ extends Fluid {
     public float getHeight(FluidState state) {
         return (float)state.getLevel() / 9.0f;
     }
+
+    @Override
+    public abstract int getLevel(FluidState var1);
 
     @Override
     public VoxelShape getShape(FluidState state, BlockView world, BlockPos pos) {

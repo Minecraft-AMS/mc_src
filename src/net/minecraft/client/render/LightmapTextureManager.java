@@ -23,11 +23,14 @@ import net.minecraft.world.World;
 @Environment(value=EnvType.CLIENT)
 public class LightmapTextureManager
 implements AutoCloseable {
+    public static final int MAX_LIGHT_COORDINATE = 0xF000F0;
+    public static final int MAX_SKY_LIGHT_COORDINATE = 0xF00000;
+    public static final int MAX_BLOCK_LIGHT_COORDINATE = 240;
     private final NativeImageBackedTexture texture;
     private final NativeImage image;
     private final Identifier textureIdentifier;
     private boolean dirty;
-    private float field_21528;
+    private float flickerIntensity;
     private final GameRenderer renderer;
     private final MinecraftClient client;
 
@@ -39,7 +42,7 @@ implements AutoCloseable {
         this.image = this.texture.getImage();
         for (int i = 0; i < 16; ++i) {
             for (int j = 0; j < 16; ++j) {
-                this.image.setPixelColor(j, i, -1);
+                this.image.setColor(j, i, -1);
             }
         }
         this.texture.upload();
@@ -51,33 +54,21 @@ implements AutoCloseable {
     }
 
     public void tick() {
-        this.field_21528 = (float)((double)this.field_21528 + (Math.random() - Math.random()) * Math.random() * Math.random() * 0.1);
-        this.field_21528 = (float)((double)this.field_21528 * 0.9);
+        this.flickerIntensity = (float)((double)this.flickerIntensity + (Math.random() - Math.random()) * Math.random() * Math.random() * 0.1);
+        this.flickerIntensity = (float)((double)this.flickerIntensity * 0.9);
         this.dirty = true;
     }
 
     public void disable() {
-        RenderSystem.activeTexture(33986);
-        RenderSystem.disableTexture();
-        RenderSystem.activeTexture(33984);
+        RenderSystem.setShaderTexture(2, 0);
     }
 
     public void enable() {
-        RenderSystem.activeTexture(33986);
-        RenderSystem.matrixMode(5890);
-        RenderSystem.loadIdentity();
-        float f = 0.00390625f;
-        RenderSystem.scalef(0.00390625f, 0.00390625f, 0.00390625f);
-        RenderSystem.translatef(8.0f, 8.0f, 8.0f);
-        RenderSystem.matrixMode(5888);
+        RenderSystem.setShaderTexture(2, this.textureIdentifier);
         this.client.getTextureManager().bindTexture(this.textureIdentifier);
         RenderSystem.texParameter(3553, 10241, 9729);
         RenderSystem.texParameter(3553, 10240, 9729);
-        RenderSystem.texParameter(3553, 10242, 10496);
-        RenderSystem.texParameter(3553, 10243, 10496);
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.enableTexture();
-        RenderSystem.activeTexture(33984);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     public void update(float delta) {
@@ -96,7 +87,7 @@ implements AutoCloseable {
         float i = this.client.player.hasStatusEffect(StatusEffects.NIGHT_VISION) ? GameRenderer.getNightVisionStrength(this.client.player, delta) : (h > 0.0f && this.client.player.hasStatusEffect(StatusEffects.CONDUIT_POWER) ? h : 0.0f);
         Vec3f vec3f = new Vec3f(f, f, 1.0f);
         vec3f.lerp(new Vec3f(1.0f, 1.0f, 1.0f), 0.35f);
-        float j = this.field_21528 + 1.5f;
+        float j = this.flickerIntensity + 1.5f;
         Vec3f vec3f2 = new Vec3f();
         for (int k = 0; k < 16; ++k) {
             for (int l = 0; l < 16; ++l) {
@@ -109,7 +100,7 @@ implements AutoCloseable {
                 float p = n * ((n * 0.6f + 0.4f) * 0.6f + 0.4f);
                 float q = n * (n * n * 0.6f + 0.4f);
                 vec3f2.set(o, p, q);
-                if (clientWorld.getSkyProperties().shouldBrightenLighting()) {
+                if (clientWorld.getDimensionEffects().shouldBrightenLighting()) {
                     vec3f2.lerp(new Vec3f(0.99f, 1.12f, 1.0f), 0.25f);
                 } else {
                     Vec3f vec3f3 = vec3f.copy();
@@ -130,10 +121,10 @@ implements AutoCloseable {
                     vec3f4.scale(r);
                     vec3f2.lerp(vec3f4, i);
                 }
-                s = (float)this.client.options.gamma;
+                float s2 = (float)this.client.options.gamma;
                 Vec3f vec3f5 = vec3f2.copy();
-                vec3f5.modify(this::method_23795);
-                vec3f2.lerp(vec3f5, s);
+                vec3f5.modify(this::easeOutQuart);
+                vec3f2.lerp(vec3f5, s2);
                 vec3f2.lerp(new Vec3f(0.75f, 0.75f, 0.75f), 0.04f);
                 vec3f2.clamp(0.0f, 1.0f);
                 vec3f2.scale(255.0f);
@@ -141,20 +132,20 @@ implements AutoCloseable {
                 int u = (int)vec3f2.getX();
                 int v = (int)vec3f2.getY();
                 int w = (int)vec3f2.getZ();
-                this.image.setPixelColor(l, k, 0xFF000000 | w << 16 | v << 8 | u);
+                this.image.setColor(l, k, 0xFF000000 | w << 16 | v << 8 | u);
             }
         }
         this.texture.upload();
         this.client.getProfiler().pop();
     }
 
-    private float method_23795(float f) {
-        float g = 1.0f - f;
-        return 1.0f - g * g * g * g;
+    private float easeOutQuart(float x) {
+        float f = 1.0f - x;
+        return 1.0f - f * f * f * f;
     }
 
-    private float getBrightness(World world, int i) {
-        return world.getDimension().method_28516(i);
+    private float getBrightness(World world, int lightLevel) {
+        return world.getDimension().getBrightness(lightLevel);
     }
 
     public static int pack(int block, int sky) {

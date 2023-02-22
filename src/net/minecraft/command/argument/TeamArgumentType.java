@@ -31,7 +31,7 @@ import net.minecraft.text.TranslatableText;
 public class TeamArgumentType
 implements ArgumentType<String> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "123");
-    private static final DynamicCommandExceptionType UNKNOWN_TEAM_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("team.notFound", object));
+    private static final DynamicCommandExceptionType UNKNOWN_TEAM_EXCEPTION = new DynamicCommandExceptionType(name -> new TranslatableText("team.notFound", name));
 
     public static TeamArgumentType team() {
         return new TeamArgumentType();
@@ -39,7 +39,7 @@ implements ArgumentType<String> {
 
     public static Team getTeam(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         String string = (String)context.getArgument(name, String.class);
-        ServerScoreboard scoreboard = ((ServerCommandSource)context.getSource()).getMinecraftServer().getScoreboard();
+        ServerScoreboard scoreboard = ((ServerCommandSource)context.getSource()).getServer().getScoreboard();
         Team team = scoreboard.getTeam(string);
         if (team == null) {
             throw UNKNOWN_TEAM_EXCEPTION.create((Object)string);
@@ -62,8 +62,8 @@ implements ArgumentType<String> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

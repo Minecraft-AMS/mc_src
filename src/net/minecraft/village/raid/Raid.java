@@ -54,7 +54,6 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -66,11 +65,32 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class Raid {
+    private static final int field_30676 = 2;
+    private static final int field_30677 = 0;
+    private static final int field_30678 = 1;
+    private static final int field_30679 = 2;
+    private static final int field_30680 = 32;
+    private static final int field_30681 = 48000;
+    private static final int field_30682 = 3;
+    private static final String OMINOUS_BANNER_TRANSLATION_KEY = "block.minecraft.ominous_banner";
+    private static final String RAIDERS_REMAINING_TRANSLATION_KEY = "event.minecraft.raid.raiders_remaining";
+    public static final int field_30669 = 16;
+    private static final int field_30685 = 40;
+    private static final int DEFAULT_PRE_RAID_TICKS = 300;
+    public static final int MAX_DESPAWN_COUNTER = 2400;
+    public static final int field_30671 = 600;
+    private static final int field_30687 = 30;
+    public static final int field_30672 = 24000;
+    public static final int field_30673 = 5;
+    private static final int field_30688 = 2;
     private static final Text EVENT_TEXT = new TranslatableText("event.minecraft.raid");
     private static final Text VICTORY_SUFFIX_TEXT = new TranslatableText("event.minecraft.raid.victory");
     private static final Text DEFEAT_SUFFIX_TEXT = new TranslatableText("event.minecraft.raid.defeat");
     private static final Text VICTORY_TITLE = EVENT_TEXT.shallowCopy().append(" - ").append(VICTORY_SUFFIX_TEXT);
     private static final Text DEFEAT_TITLE = EVENT_TEXT.shallowCopy().append(" - ").append(DEFEAT_SUFFIX_TEXT);
+    private static final int MAX_ACTIVE_TICKS = 48000;
+    public static final int field_30674 = 9216;
+    public static final int field_30675 = 12544;
     private final Map<Integer, RaiderEntity> waveToCaptain = Maps.newHashMap();
     private final Map<Integer, Set<RaiderEntity>> waveToRaiders = Maps.newHashMap();
     private final Set<UUID> heroesOfTheVillage = Sets.newHashSet();
@@ -150,6 +170,18 @@ public class Raid {
         return this.status == Status.LOSS;
     }
 
+    public float getTotalHealth() {
+        return this.totalHealth;
+    }
+
+    public Set<RaiderEntity> getAllRaiders() {
+        HashSet set = Sets.newHashSet();
+        for (Set<RaiderEntity> set2 : this.waveToRaiders.values()) {
+            set.addAll(set2);
+        }
+        return set;
+    }
+
     public World getWorld() {
         return this.world;
     }
@@ -188,6 +220,10 @@ public class Raid {
 
     public int getBadOmenLevel() {
         return this.badOmenLevel;
+    }
+
+    public void setBadOmenLevel(int level) {
+        this.badOmenLevel = level;
     }
 
     public void start(PlayerEntity player) {
@@ -243,7 +279,7 @@ public class Raid {
                     boolean bl3;
                     bl2 = this.preCalculatedRavagerSpawnLocation.isPresent();
                     boolean bl4 = bl3 = !bl2 && this.preRaidTicks % 5 == 0;
-                    if (bl2 && !this.world.getChunkManager().shouldTickChunk(new ChunkPos(this.preCalculatedRavagerSpawnLocation.get()))) {
+                    if (bl2 && !this.world.method_37118(this.preCalculatedRavagerSpawnLocation.get())) {
                         bl3 = true;
                     }
                     if (bl3) {
@@ -271,7 +307,7 @@ public class Raid {
                 this.removeObsoleteRaiders();
                 if (i > 0) {
                     if (i <= 2) {
-                        this.bar.setName(EVENT_TEXT.shallowCopy().append(" - ").append(new TranslatableText("event.minecraft.raid.raiders_remaining", i)));
+                        this.bar.setName(EVENT_TEXT.shallowCopy().append(" - ").append(new TranslatableText(RAIDERS_REMAINING_TRANSLATION_KEY, i)));
                     } else {
                         this.bar.setName(EVENT_TEXT);
                     }
@@ -379,7 +415,7 @@ public class Raid {
             Set<RaiderEntity> set2 = iterator.next();
             for (RaiderEntity raiderEntity : set2) {
                 BlockPos blockPos = raiderEntity.getBlockPos();
-                if (raiderEntity.removed || raiderEntity.world.getRegistryKey() != this.world.getRegistryKey() || this.center.getSquaredDistance(blockPos) >= 12544.0) {
+                if (raiderEntity.isRemoved() || raiderEntity.world.getRegistryKey() != this.world.getRegistryKey() || this.center.getSquaredDistance(blockPos) >= 12544.0) {
                     set.add(raiderEntity);
                     continue;
                 }
@@ -406,11 +442,11 @@ public class Raid {
         for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
             Vec3d vec3d = serverPlayerEntity.getPos();
             Vec3d vec3d2 = Vec3d.ofCenter(pos);
-            float g = MathHelper.sqrt((vec3d2.x - vec3d.x) * (vec3d2.x - vec3d.x) + (vec3d2.z - vec3d.z) * (vec3d2.z - vec3d.z));
-            double d = vec3d.x + (double)(13.0f / g) * (vec3d2.x - vec3d.x);
-            double e = vec3d.z + (double)(13.0f / g) * (vec3d2.z - vec3d.z);
-            if (!(g <= 64.0f) && !collection.contains(serverPlayerEntity)) continue;
-            serverPlayerEntity.networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, d, serverPlayerEntity.getY(), e, 64.0f, 1.0f));
+            double d = Math.sqrt((vec3d2.x - vec3d.x) * (vec3d2.x - vec3d.x) + (vec3d2.z - vec3d.z) * (vec3d2.z - vec3d.z));
+            double e = vec3d.x + 13.0 / d * (vec3d2.x - vec3d.x);
+            double g = vec3d.z + 13.0 / d * (vec3d2.z - vec3d.z);
+            if (!(d <= 64.0) && !collection.contains(serverPlayerEntity)) continue;
+            serverPlayerEntity.networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, e, serverPlayerEntity.getY(), g, 64.0f, 1.0f));
         }
     }
 
@@ -424,7 +460,7 @@ public class Raid {
             int j = this.getCount(member, i, bl2) + this.getBonusCount(member, this.random, i, localDifficulty, bl2);
             int k = 0;
             for (int l = 0; l < j; ++l) {
-                RaiderEntity raiderEntity = (RaiderEntity)member.type.create(this.world);
+                RaiderEntity raiderEntity = member.type.create(this.world);
                 if (!bl && raiderEntity.canLead()) {
                     raiderEntity.setPatrolLeader(true);
                     this.setWaveCaptain(i, raiderEntity);
@@ -509,11 +545,11 @@ public class Raid {
 
     public static ItemStack getOminousBanner() {
         ItemStack itemStack = new ItemStack(Items.WHITE_BANNER);
-        NbtCompound nbtCompound = itemStack.getOrCreateSubTag("BlockEntityTag");
-        NbtList nbtList = new BannerPattern.Patterns().add(BannerPattern.RHOMBUS_MIDDLE, DyeColor.CYAN).add(BannerPattern.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_CENTER, DyeColor.GRAY).add(BannerPattern.BORDER, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_MIDDLE, DyeColor.BLACK).add(BannerPattern.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).add(BannerPattern.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY).add(BannerPattern.BORDER, DyeColor.BLACK).toTag();
+        NbtCompound nbtCompound = itemStack.getOrCreateSubNbt("BlockEntityTag");
+        NbtList nbtList = new BannerPattern.Patterns().add(BannerPattern.RHOMBUS_MIDDLE, DyeColor.CYAN).add(BannerPattern.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_CENTER, DyeColor.GRAY).add(BannerPattern.BORDER, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_MIDDLE, DyeColor.BLACK).add(BannerPattern.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).add(BannerPattern.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY).add(BannerPattern.BORDER, DyeColor.BLACK).toNbt();
         nbtCompound.put("Patterns", nbtList);
         itemStack.addHideFlag(ItemStack.TooltipSection.ADDITIONAL);
-        itemStack.setCustomName(new TranslatableText("block.minecraft.ominous_banner").formatted(Formatting.GOLD));
+        itemStack.setCustomName(new TranslatableText(OMINOUS_BANNER_TRANSLATION_KEY).formatted(Formatting.GOLD));
         return itemStack;
     }
 
@@ -532,7 +568,9 @@ public class Raid {
             int l = this.center.getZ() + MathHelper.floor(MathHelper.sin(f) * 32.0f * (float)i) + this.world.random.nextInt(5);
             int m = this.world.getTopY(Heightmap.Type.WORLD_SURFACE, k, l);
             mutable.set(k, m, l);
-            if (this.world.isNearOccupiedPointOfInterest(mutable) && proximity < 2 || !this.world.isRegionLoaded(mutable.getX() - 10, mutable.getY() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getY() + 10, mutable.getZ() + 10) || !this.world.getChunkManager().shouldTickChunk(new ChunkPos(mutable)) || !SpawnHelper.canSpawn(SpawnRestriction.Location.ON_GROUND, this.world, mutable, EntityType.RAVAGER) && (!this.world.getBlockState((BlockPos)mutable.down()).isOf(Blocks.SNOW) || !this.world.getBlockState(mutable).isAir())) continue;
+            if (this.world.isNearOccupiedPointOfInterest(mutable) && proximity < 2) continue;
+            int n = 10;
+            if (!this.world.isRegionLoaded(mutable.getX() - 10, mutable.getZ() - 10, mutable.getX() + 10, mutable.getZ() + 10) || !this.world.method_37118(mutable) || !SpawnHelper.canSpawn(SpawnRestriction.Location.ON_GROUND, this.world, mutable, EntityType.RAVAGER) && (!this.world.getBlockState((BlockPos)mutable.down()).isOf(Blocks.SNOW) || !this.world.getBlockState(mutable).isAir())) continue;
             return mutable;
         }
         return null;
@@ -542,9 +580,9 @@ public class Raid {
         return this.addToWave(wave, entity, true);
     }
 
-    public boolean addToWave(int wave, RaiderEntity entity, boolean countHealth) {
-        this.waveToRaiders.computeIfAbsent(wave, integer -> Sets.newHashSet());
-        Set<RaiderEntity> set = this.waveToRaiders.get(wave);
+    public boolean addToWave(int wave2, RaiderEntity entity, boolean countHealth) {
+        this.waveToRaiders.computeIfAbsent(wave2, wave -> Sets.newHashSet());
+        Set<RaiderEntity> set = this.waveToRaiders.get(wave2);
         RaiderEntity raiderEntity = null;
         for (RaiderEntity raiderEntity2 : set) {
             if (!raiderEntity2.getUuid().equals(entity.getUuid())) continue;
@@ -690,38 +728,26 @@ public class Raid {
         this.heroesOfTheVillage.add(entity.getUuid());
     }
 
-    static enum Member {
-        VINDICATOR(EntityType.VINDICATOR, new int[]{0, 0, 2, 0, 1, 4, 2, 5}),
-        EVOKER(EntityType.EVOKER, new int[]{0, 0, 0, 0, 0, 1, 1, 2}),
-        PILLAGER(EntityType.PILLAGER, new int[]{0, 4, 3, 3, 4, 4, 4, 2}),
-        WITCH(EntityType.WITCH, new int[]{0, 0, 0, 0, 3, 0, 0, 1}),
-        RAVAGER(EntityType.RAVAGER, new int[]{0, 0, 0, 1, 0, 1, 0, 2});
-
-        private static final Member[] VALUES;
-        private final EntityType<? extends RaiderEntity> type;
-        private final int[] countInWave;
-
-        private Member(EntityType<? extends RaiderEntity> type, int[] countInWave) {
-            this.type = type;
-            this.countInWave = countInWave;
-        }
-
-        static {
-            VALUES = Member.values();
-        }
-    }
-
-    static enum Status {
-        ONGOING,
-        VICTORY,
-        LOSS,
-        STOPPED;
-
+    static final class Status
+    extends Enum<Status> {
+        public static final /* enum */ Status ONGOING = new Status();
+        public static final /* enum */ Status VICTORY = new Status();
+        public static final /* enum */ Status LOSS = new Status();
+        public static final /* enum */ Status STOPPED = new Status();
         private static final Status[] VALUES;
+        private static final /* synthetic */ Status[] field_19031;
 
-        private static Status fromName(String string) {
+        public static Status[] values() {
+            return (Status[])field_19031.clone();
+        }
+
+        public static Status valueOf(String string) {
+            return Enum.valueOf(Status.class, string);
+        }
+
+        static Status fromName(String name) {
             for (Status status : VALUES) {
-                if (!string.equalsIgnoreCase(status.name())) continue;
+                if (!name.equalsIgnoreCase(status.name())) continue;
                 return status;
             }
             return ONGOING;
@@ -731,8 +757,48 @@ public class Raid {
             return this.name().toLowerCase(Locale.ROOT);
         }
 
+        private static /* synthetic */ Status[] method_36666() {
+            return new Status[]{ONGOING, VICTORY, LOSS, STOPPED};
+        }
+
         static {
+            field_19031 = Status.method_36666();
             VALUES = Status.values();
+        }
+    }
+
+    static final class Member
+    extends Enum<Member> {
+        public static final /* enum */ Member VINDICATOR = new Member(EntityType.VINDICATOR, new int[]{0, 0, 2, 0, 1, 4, 2, 5});
+        public static final /* enum */ Member EVOKER = new Member(EntityType.EVOKER, new int[]{0, 0, 0, 0, 0, 1, 1, 2});
+        public static final /* enum */ Member PILLAGER = new Member(EntityType.PILLAGER, new int[]{0, 4, 3, 3, 4, 4, 4, 2});
+        public static final /* enum */ Member WITCH = new Member(EntityType.WITCH, new int[]{0, 0, 0, 0, 3, 0, 0, 1});
+        public static final /* enum */ Member RAVAGER = new Member(EntityType.RAVAGER, new int[]{0, 0, 0, 1, 0, 1, 0, 2});
+        static final Member[] VALUES;
+        final EntityType<? extends RaiderEntity> type;
+        final int[] countInWave;
+        private static final /* synthetic */ Member[] field_16632;
+
+        public static Member[] values() {
+            return (Member[])field_16632.clone();
+        }
+
+        public static Member valueOf(String string) {
+            return Enum.valueOf(Member.class, string);
+        }
+
+        private Member(EntityType<? extends RaiderEntity> type, int[] countInWave) {
+            this.type = type;
+            this.countInWave = countInWave;
+        }
+
+        private static /* synthetic */ Member[] method_36667() {
+            return new Member[]{VINDICATOR, EVOKER, PILLAGER, WITCH, RAVAGER};
+        }
+
+        static {
+            field_16632 = Member.method_36667();
+            VALUES = Member.values();
         }
     }
 }

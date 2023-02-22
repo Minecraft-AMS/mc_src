@@ -27,8 +27,11 @@ import net.minecraft.util.Identifier;
 public class BossBarHud
 extends DrawableHelper {
     private static final Identifier BARS_TEXTURE = new Identifier("textures/gui/bars.png");
+    private static final int WIDTH = 182;
+    private static final int field_32178 = 5;
+    private static final int field_32179 = 80;
     private final MinecraftClient client;
-    private final Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
+    final Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
 
     public BossBarHud(MinecraftClient client) {
         this.client = client;
@@ -43,8 +46,8 @@ extends DrawableHelper {
         for (ClientBossBar clientBossBar : this.bossBars.values()) {
             int k = i / 2 - 91;
             int l = j;
-            RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-            this.client.getTextureManager().bindTexture(BARS_TEXTURE);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.setShaderTexture(0, BARS_TEXTURE);
             this.renderBossBar(matrices, k, l, clientBossBar);
             Text text = clientBossBar.getName();
             int m = this.client.textRenderer.getWidth(text);
@@ -71,13 +74,43 @@ extends DrawableHelper {
     }
 
     public void handlePacket(BossBarS2CPacket packet) {
-        if (packet.getType() == BossBarS2CPacket.Type.ADD) {
-            this.bossBars.put(packet.getUuid(), new ClientBossBar(packet));
-        } else if (packet.getType() == BossBarS2CPacket.Type.REMOVE) {
-            this.bossBars.remove(packet.getUuid());
-        } else {
-            this.bossBars.get(packet.getUuid()).handlePacket(packet);
-        }
+        packet.accept(new BossBarS2CPacket.Consumer(){
+
+            @Override
+            public void add(UUID uuid, Text name, float percent, BossBar.Color color, BossBar.Style style, boolean darkenSky, boolean dragonMusic, boolean thickenFog) {
+                BossBarHud.this.bossBars.put(uuid, new ClientBossBar(uuid, name, percent, color, style, darkenSky, dragonMusic, thickenFog));
+            }
+
+            @Override
+            public void remove(UUID uuid) {
+                BossBarHud.this.bossBars.remove(uuid);
+            }
+
+            @Override
+            public void updateProgress(UUID uuid, float percent) {
+                BossBarHud.this.bossBars.get(uuid).setPercent(percent);
+            }
+
+            @Override
+            public void updateName(UUID uuid, Text name) {
+                BossBarHud.this.bossBars.get(uuid).setName(name);
+            }
+
+            @Override
+            public void updateStyle(UUID id, BossBar.Color color, BossBar.Style style) {
+                ClientBossBar clientBossBar = BossBarHud.this.bossBars.get(id);
+                clientBossBar.setColor(color);
+                clientBossBar.setStyle(style);
+            }
+
+            @Override
+            public void updateProperties(UUID uuid, boolean darkenSky, boolean dragonMusic, boolean thickenFog) {
+                ClientBossBar clientBossBar = BossBarHud.this.bossBars.get(uuid);
+                clientBossBar.setDarkenSky(darkenSky);
+                clientBossBar.setDragonMusic(dragonMusic);
+                clientBossBar.setThickenFog(thickenFog);
+            }
+        });
     }
 
     public void clear() {

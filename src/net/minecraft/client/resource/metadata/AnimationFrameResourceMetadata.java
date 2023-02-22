@@ -12,6 +12,7 @@ import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
 public class AnimationFrameResourceMetadata {
+    public static final int UNDEFINED_TIME = -1;
     private final int index;
     private final int time;
 
@@ -24,12 +25,8 @@ public class AnimationFrameResourceMetadata {
         this.time = time;
     }
 
-    public boolean usesDefaultFrameTime() {
-        return this.time == -1;
-    }
-
-    public int getTime() {
-        return this.time;
+    public int getTime(int defaultTime) {
+        return this.time == -1 ? defaultTime : this.time;
     }
 
     public int getIndex() {

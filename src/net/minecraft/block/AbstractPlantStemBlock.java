@@ -25,6 +25,7 @@ public abstract class AbstractPlantStemBlock
 extends AbstractPlantPartBlock
 implements Fertilizable {
     public static final IntProperty AGE = Properties.AGE_25;
+    public static final int MAX_AGE = 25;
     private final double growthChance;
 
     protected AbstractPlantStemBlock(AbstractBlock.Settings settings, Direction growthDirection, VoxelShape outlineShape, boolean tickWater, double growthChance) {
@@ -47,8 +48,16 @@ implements Fertilizable {
     public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         BlockPos blockPos;
         if (state.get(AGE) < 25 && random.nextDouble() < this.growthChance && this.chooseStemState(world.getBlockState(blockPos = pos.offset(this.growthDirection)))) {
-            world.setBlockState(blockPos, (BlockState)state.cycle(AGE));
+            world.setBlockState(blockPos, this.age(state, world.random));
         }
+    }
+
+    protected BlockState age(BlockState state, Random random) {
+        return (BlockState)state.cycle(AGE);
+    }
+
+    protected BlockState copyState(BlockState from, BlockState to) {
+        return to;
     }
 
     @Override
@@ -57,7 +66,7 @@ implements Fertilizable {
             world.getBlockTickScheduler().schedule(pos, this, 1);
         }
         if (direction == this.growthDirection && (neighborState.isOf(this) || neighborState.isOf(this.getPlant()))) {
-            return this.getPlant().getDefaultState();
+            return this.copyState(state, this.getPlant().getDefaultState());
         }
         if (this.tickWater) {
             world.getFluidTickScheduler().schedule(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
@@ -84,7 +93,7 @@ implements Fertilizable {
     public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
         BlockPos blockPos = pos.offset(this.growthDirection);
         int i = Math.min(state.get(AGE) + 1, 25);
-        int j = this.method_26376(random);
+        int j = this.getGrowthLength(random);
         for (int k = 0; k < j && this.chooseStemState(world.getBlockState(blockPos)); ++k) {
             world.setBlockState(blockPos, (BlockState)state.with(AGE, i));
             blockPos = blockPos.offset(this.growthDirection);
@@ -92,7 +101,7 @@ implements Fertilizable {
         }
     }
 
-    protected abstract int method_26376(Random var1);
+    protected abstract int getGrowthLength(Random var1);
 
     protected abstract boolean chooseStemState(BlockState var1);
 

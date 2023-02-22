@@ -38,7 +38,7 @@ public class TexturedModel {
     public static final Factory END_FOR_TOP_CUBE_COLUMN = TexturedModel.makeFactory(Texture::sideAndEndForTop, Models.CUBE_COLUMN);
     public static final Factory END_FOR_TOP_CUBE_COLUMN_HORIZONTAL = TexturedModel.makeFactory(Texture::sideAndEndForTop, Models.CUBE_COLUMN_HORIZONTAL);
     public static final Factory SIDE_TOP_BOTTOM_WALL = TexturedModel.makeFactory(Texture::wallSideTopBottom, Models.CUBE_BOTTOM_TOP);
-    public static final Factory field_23959 = TexturedModel.makeFactory(Texture::method_27168, Models.CUBE_COLUMN);
+    public static final Factory SIDE_END_WALL = TexturedModel.makeFactory(Texture::wallSideEnd, Models.CUBE_COLUMN);
     private final Texture texture;
     private final Model model;
 
@@ -88,8 +88,8 @@ public class TexturedModel {
             return this.get(block).upload(block, suffix, writer);
         }
 
-        default public Factory withTexture(Consumer<Texture> textureConsumer) {
-            return block -> this.get(block).texture(textureConsumer);
+        default public Factory andThen(Consumer<Texture> consumer) {
+            return block -> this.get(block).texture(consumer);
         }
     }
 }

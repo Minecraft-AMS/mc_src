@@ -47,6 +47,10 @@ extends ValueObject {
         this.total = -1;
     }
 
+    public boolean isLastPage() {
+        return this.page * this.size >= this.total && this.page > 0 && this.total > 0 && this.size > 0;
+    }
+
     public static WorldTemplatePaginatedList parse(String json) {
         WorldTemplatePaginatedList worldTemplatePaginatedList = new WorldTemplatePaginatedList();
         worldTemplatePaginatedList.templates = Lists.newArrayList();
@@ -64,7 +68,7 @@ extends ValueObject {
             worldTemplatePaginatedList.total = JsonUtils.getIntOr("total", jsonObject, 0);
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse WorldTemplatePaginatedList: " + exception.getMessage());
+            LOGGER.error("Could not parse WorldTemplatePaginatedList: {}", (Object)exception.getMessage());
         }
         return worldTemplatePaginatedList;
     }

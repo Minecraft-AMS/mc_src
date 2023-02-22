@@ -2,6 +2,8 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.Maps
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.minecraft.MinecraftProfileTexture
@@ -12,6 +14,7 @@
  */
 package net.minecraft.client.render.block.entity;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
@@ -28,11 +31,13 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
+import net.minecraft.client.render.block.entity.SkullBlockEntityModel;
 import net.minecraft.client.render.entity.model.DragonHeadEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
+import net.minecraft.client.render.entity.model.EntityModelLoader;
 import net.minecraft.client.render.entity.model.SkullEntityModel;
-import net.minecraft.client.render.entity.model.SkullOverlayEntityModel;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
@@ -43,29 +48,30 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class SkullBlockEntityRenderer
-extends BlockEntityRenderer<SkullBlockEntity> {
-    private static final Map<SkullBlock.SkullType, SkullEntityModel> MODELS = Util.make(Maps.newHashMap(), hashMap -> {
-        SkullEntityModel skullEntityModel = new SkullEntityModel(0, 0, 64, 32);
-        SkullOverlayEntityModel skullEntityModel2 = new SkullOverlayEntityModel();
-        DragonHeadEntityModel dragonHeadEntityModel = new DragonHeadEntityModel(0.0f);
-        hashMap.put(SkullBlock.Type.SKELETON, skullEntityModel);
-        hashMap.put(SkullBlock.Type.WITHER_SKELETON, skullEntityModel);
-        hashMap.put(SkullBlock.Type.PLAYER, skullEntityModel2);
-        hashMap.put(SkullBlock.Type.ZOMBIE, skullEntityModel2);
-        hashMap.put(SkullBlock.Type.CREEPER, skullEntityModel);
-        hashMap.put(SkullBlock.Type.DRAGON, dragonHeadEntityModel);
-    });
-    private static final Map<SkullBlock.SkullType, Identifier> TEXTURES = Util.make(Maps.newHashMap(), hashMap -> {
-        hashMap.put(SkullBlock.Type.SKELETON, new Identifier("textures/entity/skeleton/skeleton.png"));
-        hashMap.put(SkullBlock.Type.WITHER_SKELETON, new Identifier("textures/entity/skeleton/wither_skeleton.png"));
-        hashMap.put(SkullBlock.Type.ZOMBIE, new Identifier("textures/entity/zombie/zombie.png"));
-        hashMap.put(SkullBlock.Type.CREEPER, new Identifier("textures/entity/creeper/creeper.png"));
-        hashMap.put(SkullBlock.Type.DRAGON, new Identifier("textures/entity/enderdragon/dragon.png"));
-        hashMap.put(SkullBlock.Type.PLAYER, DefaultSkinHelper.getTexture());
+implements BlockEntityRenderer<SkullBlockEntity> {
+    private final Map<SkullBlock.SkullType, SkullBlockEntityModel> MODELS;
+    private static final Map<SkullBlock.SkullType, Identifier> TEXTURES = Util.make(Maps.newHashMap(), map -> {
+        map.put(SkullBlock.Type.SKELETON, new Identifier("textures/entity/skeleton/skeleton.png"));
+        map.put(SkullBlock.Type.WITHER_SKELETON, new Identifier("textures/entity/skeleton/wither_skeleton.png"));
+        map.put(SkullBlock.Type.ZOMBIE, new Identifier("textures/entity/zombie/zombie.png"));
+        map.put(SkullBlock.Type.CREEPER, new Identifier("textures/entity/creeper/creeper.png"));
+        map.put(SkullBlock.Type.DRAGON, new Identifier("textures/entity/enderdragon/dragon.png"));
+        map.put(SkullBlock.Type.PLAYER, DefaultSkinHelper.getTexture());
     });
 
-    public SkullBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
-        super(blockEntityRenderDispatcher);
+    public static Map<SkullBlock.SkullType, SkullBlockEntityModel> getModels(EntityModelLoader modelLoader) {
+        ImmutableMap.Builder builder = ImmutableMap.builder();
+        builder.put((Object)SkullBlock.Type.SKELETON, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.SKELETON_SKULL)));
+        builder.put((Object)SkullBlock.Type.WITHER_SKELETON, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.WITHER_SKELETON_SKULL)));
+        builder.put((Object)SkullBlock.Type.PLAYER, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.PLAYER_HEAD)));
+        builder.put((Object)SkullBlock.Type.ZOMBIE, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.ZOMBIE_HEAD)));
+        builder.put((Object)SkullBlock.Type.CREEPER, (Object)new SkullEntityModel(modelLoader.getModelPart(EntityModelLayers.CREEPER_HEAD)));
+        builder.put((Object)SkullBlock.Type.DRAGON, (Object)new DragonHeadEntityModel(modelLoader.getModelPart(EntityModelLayers.DRAGON_SKULL)));
+        return builder.build();
+    }
+
+    public SkullBlockEntityRenderer(BlockEntityRendererFactory.Context ctx) {
+        this.MODELS = SkullBlockEntityRenderer.getModels(ctx.getLayerRenderDispatcher());
     }
 
     @Override
@@ -75,36 +81,38 @@ extends BlockEntityRenderer<SkullBlockEntity> {
         boolean bl = blockState.getBlock() instanceof WallSkullBlock;
         Direction direction = bl ? blockState.get(WallSkullBlock.FACING) : null;
         float h = 22.5f * (float)(bl ? (2 + direction.getHorizontal()) * 4 : blockState.get(SkullBlock.ROTATION));
-        SkullBlockEntityRenderer.render(direction, h, ((AbstractSkullBlock)blockState.getBlock()).getSkullType(), skullBlockEntity.getOwner(), g, matrixStack, vertexConsumerProvider, i);
+        SkullBlock.SkullType skullType = ((AbstractSkullBlock)blockState.getBlock()).getSkullType();
+        SkullBlockEntityModel skullBlockEntityModel = this.MODELS.get(skullType);
+        RenderLayer renderLayer = SkullBlockEntityRenderer.getRenderLayer(skullType, skullBlockEntity.getOwner());
+        SkullBlockEntityRenderer.renderSkull(direction, h, g, matrixStack, vertexConsumerProvider, i, skullBlockEntityModel, renderLayer);
     }
 
-    public static void render(@Nullable Direction direction, float f, SkullBlock.SkullType skullType, @Nullable GameProfile gameProfile, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i) {
-        SkullEntityModel skullEntityModel = MODELS.get(skullType);
-        matrixStack.push();
+    public static void renderSkull(@Nullable Direction direction, float yaw, float animationProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, SkullBlockEntityModel model, RenderLayer renderLayer) {
+        matrices.push();
         if (direction == null) {
-            matrixStack.translate(0.5, 0.0, 0.5);
+            matrices.translate(0.5, 0.0, 0.5);
         } else {
-            float h = 0.25f;
-            matrixStack.translate(0.5f - (float)direction.getOffsetX() * 0.25f, 0.25, 0.5f - (float)direction.getOffsetZ() * 0.25f);
+            float f = 0.25f;
+            matrices.translate(0.5f - (float)direction.getOffsetX() * 0.25f, 0.25, 0.5f - (float)direction.getOffsetZ() * 0.25f);
         }
-        matrixStack.scale(-1.0f, -1.0f, 1.0f);
-        VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(SkullBlockEntityRenderer.method_3578(skullType, gameProfile));
-        skullEntityModel.method_2821(g, f, 0.0f);
-        skullEntityModel.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
-        matrixStack.pop();
+        matrices.scale(-1.0f, -1.0f, 1.0f);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(renderLayer);
+        model.setHeadRotation(animationProgress, yaw, 0.0f);
+        model.render(matrices, vertexConsumer, light, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
+        matrices.pop();
     }
 
-    private static RenderLayer method_3578(SkullBlock.SkullType skullType, @Nullable GameProfile gameProfile) {
-        Identifier identifier = TEXTURES.get(skullType);
-        if (skullType != SkullBlock.Type.PLAYER || gameProfile == null) {
+    public static RenderLayer getRenderLayer(SkullBlock.SkullType type, @Nullable GameProfile profile) {
+        Identifier identifier = TEXTURES.get(type);
+        if (type != SkullBlock.Type.PLAYER || profile == null) {
             return RenderLayer.getEntityCutoutNoCullZOffset(identifier);
         }
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraftClient.getSkinProvider().getTextures(gameProfile);
+        Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraftClient.getSkinProvider().getTextures(profile);
         if (map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
             return RenderLayer.getEntityTranslucent(minecraftClient.getSkinProvider().loadSkin(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN));
         }
-        return RenderLayer.getEntityCutoutNoCull(DefaultSkinHelper.getTexture(PlayerEntity.getUuidFromProfile(gameProfile)));
+        return RenderLayer.getEntityCutoutNoCull(DefaultSkinHelper.getTexture(PlayerEntity.getUuidFromProfile(profile)));
     }
 }
 

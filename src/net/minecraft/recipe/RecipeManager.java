@@ -11,8 +11,6 @@
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
@@ -36,8 +34,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.Recipe;
@@ -83,24 +79,28 @@ extends JsonDataLoader {
         LOGGER.info("Loaded {} recipes", (Object)map2.size());
     }
 
-    public <C extends Inventory, T extends Recipe<C>> Optional<T> getFirstMatch(RecipeType<T> type, C inventory, World world) {
-        return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.get(recipe, world, inventory))).findFirst();
+    public boolean isErrored() {
+        return this.errored;
     }
 
-    public <C extends Inventory, T extends Recipe<C>> List<T> listAllOfType(RecipeType<T> recipeType) {
-        return this.getAllOfType(recipeType).values().stream().map(recipe -> recipe).collect(Collectors.toList());
+    public <C extends Inventory, T extends Recipe<C>> Optional<T> getFirstMatch(RecipeType<T> type, C inventory, World world) {
+        return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.match(recipe, world, inventory))).findFirst();
+    }
+
+    public <C extends Inventory, T extends Recipe<C>> List<T> listAllOfType(RecipeType<T> type) {
+        return this.getAllOfType(type).values().stream().map(recipe -> recipe).collect(Collectors.toList());
     }
 
     public <C extends Inventory, T extends Recipe<C>> List<T> getAllMatches(RecipeType<T> type, C inventory, World world) {
-        return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.get(recipe, world, inventory))).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
+        return this.getAllOfType(type).values().stream().flatMap(recipe -> Util.stream(type.match(recipe, world, inventory))).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
     }
 
     private <C extends Inventory, T extends Recipe<C>> Map<Identifier, Recipe<C>> getAllOfType(RecipeType<T> type) {
         return this.recipes.getOrDefault(type, Collections.emptyMap());
     }
 
-    public <C extends Inventory, T extends Recipe<C>> DefaultedList<ItemStack> getRemainingStacks(RecipeType<T> recipeType, C inventory, World world) {
-        Optional<T> optional = this.getFirstMatch(recipeType, inventory, world);
+    public <C extends Inventory, T extends Recipe<C>> DefaultedList<ItemStack> getRemainingStacks(RecipeType<T> type, C inventory, World world) {
+        Optional<T> optional = this.getFirstMatch(type, inventory, world);
         if (optional.isPresent()) {
             return ((Recipe)optional.get()).getRemainder(inventory);
         }
@@ -128,12 +128,11 @@ extends JsonDataLoader {
         return Registry.RECIPE_SERIALIZER.getOrEmpty(new Identifier(string)).orElseThrow(() -> new JsonSyntaxException("Invalid or unsupported recipe type '" + string + "'")).read(id, json);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setRecipes(Iterable<Recipe<?>> recipes) {
         this.errored = false;
         HashMap map = Maps.newHashMap();
         recipes.forEach(recipe -> {
-            Map map2 = map.computeIfAbsent(recipe.getType(), recipeType -> Maps.newHashMap());
+            Map map2 = map.computeIfAbsent(recipe.getType(), t -> Maps.newHashMap());
             Recipe recipe2 = map2.put(recipe.getId(), recipe);
             if (recipe2 != null) {
                 throw new IllegalStateException("Duplicate recipe ignored with ID " + recipe.getId());

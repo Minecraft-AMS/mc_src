@@ -19,7 +19,7 @@ import net.minecraft.util.Identifier;
 
 public class TameAnimalCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("tame_animal");
+    static final Identifier ID = new Identifier("tame_animal");
 
     @Override
     public Identifier getId() {
@@ -34,7 +34,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, AnimalEntity entity) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, entity);
-        this.test(player, conditions -> conditions.matches(lootContext));
+        this.trigger(player, (T conditions) -> conditions.matches(lootContext));
     }
 
     @Override

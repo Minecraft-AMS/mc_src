@@ -37,11 +37,20 @@ public interface Toast {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Visibility {
-        SHOW(SoundEvents.UI_TOAST_IN),
-        HIDE(SoundEvents.UI_TOAST_OUT);
-
+    public static final class Visibility
+    extends Enum<Visibility> {
+        public static final /* enum */ Visibility SHOW = new Visibility(SoundEvents.UI_TOAST_IN);
+        public static final /* enum */ Visibility HIDE = new Visibility(SoundEvents.UI_TOAST_OUT);
         private final SoundEvent sound;
+        private static final /* synthetic */ Visibility[] field_2212;
+
+        public static Visibility[] values() {
+            return (Visibility[])field_2212.clone();
+        }
+
+        public static Visibility valueOf(String string) {
+            return Enum.valueOf(Visibility.class, string);
+        }
 
         private Visibility(SoundEvent sound) {
             this.sound = sound;
@@ -49,6 +58,14 @@ public interface Toast {
 
         public void playSound(SoundManager soundManager) {
             soundManager.play(PositionedSoundInstance.master(this.sound, 1.0f, 1.0f));
+        }
+
+        private static /* synthetic */ Visibility[] method_36872() {
+            return new Visibility[]{SHOW, HIDE};
+        }
+
+        static {
+            field_2212 = Visibility.method_36872();
         }
     }
 }

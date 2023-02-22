@@ -101,7 +101,7 @@ extends ValueObject {
                 string2 = RealmsUtil.uuidToName(string);
             }
             catch (Exception exception) {
-                LOGGER.error("Could not get name for " + string, (Throwable)exception);
+                LOGGER.error("Could not get name for {}", (Object)string, (Object)exception);
                 continue;
             }
             list.add(string2);
@@ -138,13 +138,13 @@ extends ValueObject {
             realmsServer.minigameImage = JsonUtils.getStringOr("minigameImage", node, null);
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse McoServer: " + exception.getMessage());
+            LOGGER.error("Could not parse McoServer: {}", (Object)exception.getMessage());
         }
         return realmsServer;
     }
 
     private static void sortInvited(RealmsServer server) {
-        server.players.sort((playerInfo, playerInfo2) -> ComparisonChain.start().compareFalseFirst(playerInfo2.isAccepted(), playerInfo.isAccepted()).compare((Comparable)((Object)playerInfo.getName().toLowerCase(Locale.ROOT)), (Comparable)((Object)playerInfo2.getName().toLowerCase(Locale.ROOT))).result());
+        server.players.sort((a, b) -> ComparisonChain.start().compareFalseFirst(b.isAccepted(), a.isAccepted()).compare((Comparable)((Object)a.getName().toLowerCase(Locale.ROOT)), (Comparable)((Object)b.getName().toLowerCase(Locale.ROOT))).result());
     }
 
     private static List<PlayerInfo> parseInvited(JsonArray jsonArray) {
@@ -198,7 +198,7 @@ extends ValueObject {
             return RealmsServer.parse(new JsonParser().parse(json).getAsJsonObject());
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse McoServer: " + exception.getMessage());
+            LOGGER.error("Could not parse McoServer: {}", (Object)exception.getMessage());
             return new RealmsServer();
         }
     }
@@ -276,8 +276,8 @@ extends ValueObject {
         return this.name + " (" + this.slots.get(slotId).getSlotName(slotId) + ")";
     }
 
-    public ServerInfo method_31403(String string) {
-        return new ServerInfo(this.name, string, false);
+    public ServerInfo createServerInfo(String address) {
+        return new ServerInfo(this.name, address, false);
     }
 
     public /* synthetic */ Object clone() throws CloneNotSupportedException {
@@ -285,21 +285,55 @@ extends ValueObject {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum WorldType {
-        NORMAL,
-        MINIGAME,
-        ADVENTUREMAP,
-        EXPERIENCE,
-        INSPIRATION;
+    public static final class State
+    extends Enum<State> {
+        public static final /* enum */ State CLOSED = new State();
+        public static final /* enum */ State OPEN = new State();
+        public static final /* enum */ State UNINITIALIZED = new State();
+        private static final /* synthetic */ State[] field_19436;
 
+        public static State[] values() {
+            return (State[])field_19436.clone();
+        }
+
+        public static State valueOf(String name) {
+            return Enum.valueOf(State.class, name);
+        }
+
+        private static /* synthetic */ State[] method_36848() {
+            return new State[]{CLOSED, OPEN, UNINITIALIZED};
+        }
+
+        static {
+            field_19436 = State.method_36848();
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum State {
-        CLOSED,
-        OPEN,
-        UNINITIALIZED;
+    public static final class WorldType
+    extends Enum<WorldType> {
+        public static final /* enum */ WorldType NORMAL = new WorldType();
+        public static final /* enum */ WorldType MINIGAME = new WorldType();
+        public static final /* enum */ WorldType ADVENTUREMAP = new WorldType();
+        public static final /* enum */ WorldType EXPERIENCE = new WorldType();
+        public static final /* enum */ WorldType INSPIRATION = new WorldType();
+        private static final /* synthetic */ WorldType[] field_19442;
 
+        public static WorldType[] values() {
+            return (WorldType[])field_19442.clone();
+        }
+
+        public static WorldType valueOf(String name) {
+            return Enum.valueOf(WorldType.class, name);
+        }
+
+        private static /* synthetic */ WorldType[] method_36849() {
+            return new WorldType[]{NORMAL, MINIGAME, ADVENTUREMAP, EXPERIENCE, INSPIRATION};
+        }
+
+        static {
+            field_19442 = WorldType.method_36849();
+        }
     }
 
     @Environment(value=EnvType.CLIENT)

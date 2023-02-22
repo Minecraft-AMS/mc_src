@@ -14,14 +14,23 @@ import net.fabricmc.api.Environment;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
-public enum GraphicsMode {
-    FAST(0, "options.graphics.fast"),
-    FANCY(1, "options.graphics.fancy"),
-    FABULOUS(2, "options.graphics.fabulous");
-
+public final class GraphicsMode
+extends Enum<GraphicsMode> {
+    public static final /* enum */ GraphicsMode FAST = new GraphicsMode(0, "options.graphics.fast");
+    public static final /* enum */ GraphicsMode FANCY = new GraphicsMode(1, "options.graphics.fancy");
+    public static final /* enum */ GraphicsMode FABULOUS = new GraphicsMode(2, "options.graphics.fabulous");
     private static final GraphicsMode[] VALUES;
     private final int id;
     private final String translationKey;
+    private static final /* synthetic */ GraphicsMode[] field_25433;
+
+    public static GraphicsMode[] values() {
+        return (GraphicsMode[])field_25433.clone();
+    }
+
+    public static GraphicsMode valueOf(String string) {
+        return Enum.valueOf(GraphicsMode.class, string);
+    }
 
     private GraphicsMode(int id, String translationKey) {
         this.id = id;
@@ -34,10 +43,6 @@ public enum GraphicsMode {
 
     public String getTranslationKey() {
         return this.translationKey;
-    }
-
-    public GraphicsMode next() {
-        return GraphicsMode.byId(this.getId() + 1);
     }
 
     public String toString() {
@@ -59,7 +64,12 @@ public enum GraphicsMode {
         return VALUES[MathHelper.floorMod(id, VALUES.length)];
     }
 
+    private static /* synthetic */ GraphicsMode[] method_36861() {
+        return new GraphicsMode[]{FAST, FANCY, FABULOUS};
+    }
+
     static {
+        field_25433 = GraphicsMode.method_36861();
         VALUES = (GraphicsMode[])Arrays.stream(GraphicsMode.values()).sorted(Comparator.comparingInt(GraphicsMode::getId)).toArray(GraphicsMode[]::new);
     }
 }

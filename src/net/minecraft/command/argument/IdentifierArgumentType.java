@@ -21,6 +21,8 @@ import net.minecraft.advancement.Advancement;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.condition.LootConditionManager;
+import net.minecraft.loot.function.LootFunction;
+import net.minecraft.loot.function.LootFunctionManager;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -31,10 +33,11 @@ import net.minecraft.util.registry.Registry;
 public class IdentifierArgumentType
 implements ArgumentType<Identifier> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012");
-    private static final DynamicCommandExceptionType UNKNOWN_ADVANCEMENT_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("advancement.advancementNotFound", object));
-    private static final DynamicCommandExceptionType UNKNOWN_RECIPE_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("recipe.notFound", object));
-    private static final DynamicCommandExceptionType field_21506 = new DynamicCommandExceptionType(object -> new TranslatableText("predicate.unknown", object));
-    private static final DynamicCommandExceptionType field_24267 = new DynamicCommandExceptionType(object -> new TranslatableText("attribute.unknown", object));
+    private static final DynamicCommandExceptionType UNKNOWN_ADVANCEMENT_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("advancement.advancementNotFound", id));
+    private static final DynamicCommandExceptionType UNKNOWN_RECIPE_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("recipe.notFound", id));
+    private static final DynamicCommandExceptionType UNKNOWN_PREDICATE_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("predicate.unknown", id));
+    private static final DynamicCommandExceptionType UNKNOWN_ATTRIBUTE_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("attribute.unknown", id));
+    private static final DynamicCommandExceptionType UNKNOWN_ITEM_MODIFIER_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("item_modifier.unknown", id));
 
     public static IdentifierArgumentType identifier() {
         return new IdentifierArgumentType();
@@ -42,7 +45,7 @@ implements ArgumentType<Identifier> {
 
     public static Advancement getAdvancementArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
         Identifier identifier = (Identifier)context.getArgument(argumentName, Identifier.class);
-        Advancement advancement = ((ServerCommandSource)context.getSource()).getMinecraftServer().getAdvancementLoader().get(identifier);
+        Advancement advancement = ((ServerCommandSource)context.getSource()).getServer().getAdvancementLoader().get(identifier);
         if (advancement == null) {
             throw UNKNOWN_ADVANCEMENT_EXCEPTION.create((Object)identifier);
         }
@@ -50,24 +53,34 @@ implements ArgumentType<Identifier> {
     }
 
     public static Recipe<?> getRecipeArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
-        RecipeManager recipeManager = ((ServerCommandSource)context.getSource()).getMinecraftServer().getRecipeManager();
+        RecipeManager recipeManager = ((ServerCommandSource)context.getSource()).getServer().getRecipeManager();
         Identifier identifier = (Identifier)context.getArgument(argumentName, Identifier.class);
         return recipeManager.get(identifier).orElseThrow(() -> UNKNOWN_RECIPE_EXCEPTION.create((Object)identifier));
     }
 
-    public static LootCondition method_23727(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        Identifier identifier = (Identifier)commandContext.getArgument(string, Identifier.class);
-        LootConditionManager lootConditionManager = ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPredicateManager();
+    public static LootCondition getPredicateArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
+        Identifier identifier = (Identifier)context.getArgument(argumentName, Identifier.class);
+        LootConditionManager lootConditionManager = ((ServerCommandSource)context.getSource()).getServer().getPredicateManager();
         LootCondition lootCondition = lootConditionManager.get(identifier);
         if (lootCondition == null) {
-            throw field_21506.create((Object)identifier);
+            throw UNKNOWN_PREDICATE_EXCEPTION.create((Object)identifier);
         }
         return lootCondition;
     }
 
-    public static EntityAttribute method_27575(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        Identifier identifier = (Identifier)commandContext.getArgument(string, Identifier.class);
-        return Registry.ATTRIBUTE.getOrEmpty(identifier).orElseThrow(() -> field_24267.create((Object)identifier));
+    public static LootFunction getItemModifierArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
+        Identifier identifier = (Identifier)context.getArgument(argumentName, Identifier.class);
+        LootFunctionManager lootFunctionManager = ((ServerCommandSource)context.getSource()).getServer().getItemModifierManager();
+        LootFunction lootFunction = lootFunctionManager.get(identifier);
+        if (lootFunction == null) {
+            throw UNKNOWN_ITEM_MODIFIER_EXCEPTION.create((Object)identifier);
+        }
+        return lootFunction;
+    }
+
+    public static EntityAttribute getAttributeArgument(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
+        Identifier identifier = (Identifier)context.getArgument(argumentName, Identifier.class);
+        return Registry.ATTRIBUTE.getOrEmpty(identifier).orElseThrow(() -> UNKNOWN_ATTRIBUTE_EXCEPTION.create((Object)identifier));
     }
 
     public static Identifier getIdentifier(CommandContext<ServerCommandSource> context, String name) {
@@ -82,8 +95,8 @@ implements ArgumentType<Identifier> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnterBlockCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("enter_block");
+    static final Identifier ID = new Identifier("enter_block");
 
     @Override
     public Identifier getId() {
@@ -55,7 +55,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, BlockState state) {
-        this.test(player, conditions -> conditions.matches(state));
+        this.trigger(player, (T conditions) -> conditions.matches(state));
     }
 
     @Override

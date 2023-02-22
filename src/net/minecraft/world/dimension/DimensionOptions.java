@@ -22,10 +22,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.registry.SimpleRegistry;
@@ -37,11 +38,11 @@ import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
 import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
 
 public final class DimensionOptions {
-    public static final Codec<DimensionOptions> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)DimensionType.REGISTRY_CODEC.fieldOf("type").forGetter(DimensionOptions::getDimensionTypeSupplier), (App)ChunkGenerator.CODEC.fieldOf("generator").forGetter(DimensionOptions::getChunkGenerator)).apply((Applicative)instance, instance.stable(DimensionOptions::new)));
+    public static final Codec<DimensionOptions> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)DimensionType.REGISTRY_CODEC.fieldOf("type").flatXmap(Codecs.createPresentValueChecker(), Codecs.createPresentValueChecker()).forGetter(DimensionOptions::getDimensionTypeSupplier), (App)ChunkGenerator.CODEC.fieldOf("generator").forGetter(DimensionOptions::getChunkGenerator)).apply((Applicative)instance, instance.stable(DimensionOptions::new)));
     public static final RegistryKey<DimensionOptions> OVERWORLD = RegistryKey.of(Registry.DIMENSION_KEY, new Identifier("overworld"));
     public static final RegistryKey<DimensionOptions> NETHER = RegistryKey.of(Registry.DIMENSION_KEY, new Identifier("the_nether"));
     public static final RegistryKey<DimensionOptions> END = RegistryKey.of(Registry.DIMENSION_KEY, new Identifier("the_end"));
-    private static final LinkedHashSet<RegistryKey<DimensionOptions>> BASE_DIMENSIONS = Sets.newLinkedHashSet((Iterable)ImmutableList.of(OVERWORLD, NETHER, END));
+    private static final Set<RegistryKey<DimensionOptions>> BASE_DIMENSIONS = Sets.newLinkedHashSet((Iterable)ImmutableList.of(OVERWORLD, NETHER, END));
     private final Supplier<DimensionType> dimensionTypeSupplier;
     private final ChunkGenerator chunkGenerator;
 
@@ -64,7 +65,7 @@ public final class DimensionOptions {
 
     public static SimpleRegistry<DimensionOptions> method_29569(SimpleRegistry<DimensionOptions> simpleRegistry) {
         SimpleRegistry<DimensionOptions> simpleRegistry2 = new SimpleRegistry<DimensionOptions>(Registry.DIMENSION_KEY, Lifecycle.experimental());
-        for (RegistryKey registryKey : BASE_DIMENSIONS) {
+        for (RegistryKey<DimensionOptions> registryKey : BASE_DIMENSIONS) {
             DimensionOptions dimensionOptions = simpleRegistry.get(registryKey);
             if (dimensionOptions == null) continue;
             simpleRegistry2.add(registryKey, dimensionOptions, simpleRegistry.getEntryLifecycle(dimensionOptions));
@@ -72,7 +73,7 @@ public final class DimensionOptions {
         for (Map.Entry entry : simpleRegistry.getEntries()) {
             RegistryKey registryKey2 = (RegistryKey)entry.getKey();
             if (BASE_DIMENSIONS.contains(registryKey2)) continue;
-            simpleRegistry2.add(registryKey2, entry.getValue(), simpleRegistry.getEntryLifecycle((DimensionOptions)entry.getValue()));
+            simpleRegistry2.add(registryKey2, (DimensionOptions)entry.getValue(), simpleRegistry.getEntryLifecycle((DimensionOptions)entry.getValue()));
         }
         return simpleRegistry2;
     }

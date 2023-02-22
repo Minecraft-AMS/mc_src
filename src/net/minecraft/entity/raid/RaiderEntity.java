@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.raid;
@@ -15,8 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
@@ -24,7 +20,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MoveToRaidCenterGoal;
@@ -59,7 +55,7 @@ import org.jetbrains.annotations.Nullable;
 public abstract class RaiderEntity
 extends PatrolEntity {
     protected static final TrackedData<Boolean> CELEBRATING = DataTracker.registerData(RaiderEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final Predicate<ItemEntity> OBTAINABLE_OMINOUS_BANNER_PREDICATE = itemEntity -> !itemEntity.cannotPickup() && itemEntity.isAlive() && ItemStack.areEqual(itemEntity.getStack(), Raid.getOminousBanner());
+    static final Predicate<ItemEntity> OBTAINABLE_OMINOUS_BANNER_PREDICATE = itemEntity -> !itemEntity.cannotPickup() && itemEntity.isAlive() && ItemStack.areEqual(itemEntity.getStack(), Raid.getOminousBanner());
     @Nullable
     protected Raid raid;
     private int wave;
@@ -194,7 +190,6 @@ extends PatrolEntity {
         return this.wave;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isCelebrating() {
         return this.dataTracker.get(CELEBRATING);
     }
@@ -243,10 +238,10 @@ extends PatrolEntity {
             if (!itemStack2.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1f, 0.0f) < d) {
                 this.dropStack(itemStack2);
             }
-            this.method_29499(item);
+            this.triggerItemPickedUpByEntityCriteria(item);
             this.equipStack(equipmentSlot, itemStack);
             this.sendPickup(item, itemStack.getCount());
-            item.remove();
+            item.discard();
             this.getRaid().setWaveCaptain(this.getWave(), this);
             this.setPatrolLeader(true);
         } else {
@@ -291,6 +286,40 @@ extends PatrolEntity {
     }
 
     public abstract SoundEvent getCelebratingSound();
+
+    public static class PickupBannerAsLeaderGoal<T extends RaiderEntity>
+    extends Goal {
+        private final T actor;
+        final /* synthetic */ RaiderEntity field_16604;
+
+        public PickupBannerAsLeaderGoal(T actor) {
+            this.field_16604 = raiderEntity;
+            this.actor = actor;
+            this.setControls(EnumSet.of(Goal.Control.MOVE));
+        }
+
+        @Override
+        public boolean canStart() {
+            List<ItemEntity> list;
+            Raid raid = ((RaiderEntity)this.actor).getRaid();
+            if (!((RaiderEntity)this.actor).hasActiveRaid() || ((RaiderEntity)this.actor).getRaid().isFinished() || !((PatrolEntity)this.actor).canLead() || ItemStack.areEqual(((MobEntity)this.actor).getEquippedStack(EquipmentSlot.HEAD), Raid.getOminousBanner())) {
+                return false;
+            }
+            RaiderEntity raiderEntity = raid.getCaptain(((RaiderEntity)this.actor).getWave());
+            if (!(raiderEntity != null && raiderEntity.isAlive() || (list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0, 8.0, 16.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty())) {
+                return ((MobEntity)this.actor).getNavigation().startMovingTo(list.get(0), 1.15f);
+            }
+            return false;
+        }
+
+        @Override
+        public void tick() {
+            List<ItemEntity> list;
+            if (((MobEntity)this.actor).getNavigation().getTargetPos().isWithinDistance(((Entity)this.actor).getPos(), 1.414) && !(list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(4.0, 4.0, 4.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty()) {
+                ((RaiderEntity)this.actor).loot(list.get(0));
+            }
+        }
+    }
 
     static class AttackHomeGoal
     extends Goal {
@@ -356,9 +385,9 @@ extends PatrolEntity {
         public void tick() {
             if (this.raider.getNavigation().isIdle()) {
                 Vec3d vec3d = Vec3d.ofBottomCenter(this.home);
-                Vec3d vec3d2 = TargetFinder.findTargetTowards(this.raider, 16, 7, vec3d, 0.3141592741012573);
+                Vec3d vec3d2 = NoPenaltyTargeting.find(this.raider, 16, 7, vec3d, 0.3141592741012573);
                 if (vec3d2 == null) {
-                    vec3d2 = TargetFinder.findTargetTowards(this.raider, 8, 7, vec3d);
+                    vec3d2 = NoPenaltyTargeting.find(this.raider, 8, 7, vec3d, 1.5707963705062866);
                 }
                 if (vec3d2 == null) {
                     this.finished = true;
@@ -383,11 +412,50 @@ extends PatrolEntity {
         }
     }
 
-    public class PatrolApproachGoal
+    public class CelebrateGoal
+    extends Goal {
+        private final RaiderEntity raider;
+
+        CelebrateGoal(RaiderEntity raider) {
+            this.raider = raider;
+            this.setControls(EnumSet.of(Goal.Control.MOVE));
+        }
+
+        @Override
+        public boolean canStart() {
+            Raid raid = this.raider.getRaid();
+            return this.raider.isAlive() && this.raider.getTarget() == null && raid != null && raid.hasLost();
+        }
+
+        @Override
+        public void start() {
+            this.raider.setCelebrating(true);
+            super.start();
+        }
+
+        @Override
+        public void stop() {
+            this.raider.setCelebrating(false);
+            super.stop();
+        }
+
+        @Override
+        public void tick() {
+            if (!this.raider.isSilent() && this.raider.random.nextInt(100) == 0) {
+                RaiderEntity.this.playSound(RaiderEntity.this.getCelebratingSound(), RaiderEntity.this.getSoundVolume(), RaiderEntity.this.getSoundPitch());
+            }
+            if (!this.raider.hasVehicle() && this.raider.random.nextInt(50) == 0) {
+                this.raider.getJumpControl().setActive();
+            }
+            super.tick();
+        }
+    }
+
+    protected class PatrolApproachGoal
     extends Goal {
         private final RaiderEntity raider;
         private final float squaredDistance;
-        public final TargetPredicate closeRaiderPredicate = new TargetPredicate().setBaseMaxDistance(8.0).ignoreEntityTargetRules().includeInvulnerable().includeTeammates().includeHidden().ignoreDistanceScalingFactor();
+        public final TargetPredicate closeRaiderPredicate = TargetPredicate.createNonAttackable().setBaseMaxDistance(8.0).ignoreVisibility().ignoreDistanceScalingFactor();
 
         public PatrolApproachGoal(IllagerEntity illager, float distance) {
             this.raider = illager;
@@ -440,79 +508,6 @@ extends PatrolEntity {
                 this.raider.setAttacking(true);
             }
             super.tick();
-        }
-    }
-
-    public class CelebrateGoal
-    extends Goal {
-        private final RaiderEntity raider;
-
-        CelebrateGoal(RaiderEntity raider) {
-            this.raider = raider;
-            this.setControls(EnumSet.of(Goal.Control.MOVE));
-        }
-
-        @Override
-        public boolean canStart() {
-            Raid raid = this.raider.getRaid();
-            return this.raider.isAlive() && this.raider.getTarget() == null && raid != null && raid.hasLost();
-        }
-
-        @Override
-        public void start() {
-            this.raider.setCelebrating(true);
-            super.start();
-        }
-
-        @Override
-        public void stop() {
-            this.raider.setCelebrating(false);
-            super.stop();
-        }
-
-        @Override
-        public void tick() {
-            if (!this.raider.isSilent() && this.raider.random.nextInt(100) == 0) {
-                RaiderEntity.this.playSound(RaiderEntity.this.getCelebratingSound(), RaiderEntity.this.getSoundVolume(), RaiderEntity.this.getSoundPitch());
-            }
-            if (!this.raider.hasVehicle() && this.raider.random.nextInt(50) == 0) {
-                this.raider.getJumpControl().setActive();
-            }
-            super.tick();
-        }
-    }
-
-    public static class PickupBannerAsLeaderGoal<T extends RaiderEntity>
-    extends Goal {
-        private final T actor;
-        final /* synthetic */ RaiderEntity field_16604;
-
-        public PickupBannerAsLeaderGoal(T actor) {
-            this.field_16604 = raiderEntity;
-            this.actor = actor;
-            this.setControls(EnumSet.of(Goal.Control.MOVE));
-        }
-
-        @Override
-        public boolean canStart() {
-            List<ItemEntity> list;
-            Raid raid = ((RaiderEntity)this.actor).getRaid();
-            if (!((RaiderEntity)this.actor).hasActiveRaid() || ((RaiderEntity)this.actor).getRaid().isFinished() || !((PatrolEntity)this.actor).canLead() || ItemStack.areEqual(((MobEntity)this.actor).getEquippedStack(EquipmentSlot.HEAD), Raid.getOminousBanner())) {
-                return false;
-            }
-            RaiderEntity raiderEntity = raid.getCaptain(((RaiderEntity)this.actor).getWave());
-            if (!(raiderEntity != null && raiderEntity.isAlive() || (list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(16.0, 8.0, 16.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty())) {
-                return ((MobEntity)this.actor).getNavigation().startMovingTo(list.get(0), 1.15f);
-            }
-            return false;
-        }
-
-        @Override
-        public void tick() {
-            List<ItemEntity> list;
-            if (((MobEntity)this.actor).getNavigation().getTargetPos().isWithinDistance(((Entity)this.actor).getPos(), 1.414) && !(list = ((RaiderEntity)this.actor).world.getEntitiesByClass(ItemEntity.class, ((Entity)this.actor).getBoundingBox().expand(4.0, 4.0, 4.0), OBTAINABLE_OMINOUS_BANNER_PREDICATE)).isEmpty()) {
-                ((RaiderEntity)this.actor).loot(list.get(0));
-            }
         }
     }
 }

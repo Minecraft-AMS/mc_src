@@ -25,7 +25,7 @@ import net.minecraft.util.Identifier;
 
 public class FishingRodHookedCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("fishing_rod_hooked");
+    static final Identifier ID = new Identifier("fishing_rod_hooked");
 
     @Override
     public Identifier getId() {
@@ -42,7 +42,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, ItemStack rod, FishingBobberEntity bobber, Collection<ItemStack> fishingLoots) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, bobber.getHookedEntity() != null ? bobber.getHookedEntity() : bobber);
-        this.test(player, conditions -> conditions.test(rod, lootContext, fishingLoots));
+        this.trigger(player, conditions -> conditions.matches(rod, lootContext, fishingLoots));
     }
 
     @Override
@@ -67,7 +67,7 @@ extends AbstractCriterion<Conditions> {
             return new Conditions(EntityPredicate.Extended.EMPTY, rod, EntityPredicate.Extended.ofLegacy(bobber), item);
         }
 
-        public boolean test(ItemStack rod, LootContext hookedEntityContext, Collection<ItemStack> fishingLoots) {
+        public boolean matches(ItemStack rod, LootContext hookedEntityContext, Collection<ItemStack> fishingLoots) {
             if (!this.rod.test(rod)) {
                 return false;
             }

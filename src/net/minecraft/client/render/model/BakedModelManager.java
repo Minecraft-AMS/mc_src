@@ -101,8 +101,8 @@ implements AutoCloseable {
         return true;
     }
 
-    public SpriteAtlasTexture method_24153(Identifier identifier) {
-        return this.atlasManager.getAtlas(identifier);
+    public SpriteAtlasTexture getAtlas(Identifier id) {
+        return this.atlasManager.getAtlas(id);
     }
 
     @Override

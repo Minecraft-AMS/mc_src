@@ -7,12 +7,10 @@
 package net.minecraft.entity.boss.dragon.phase;
 
 import java.util.Random;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.phase.AbstractPhase;
 import net.minecraft.entity.boss.dragon.phase.PhaseType;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.gen.feature.EndPortalFeature;
@@ -50,7 +48,7 @@ extends AbstractPhase {
             this.target = Vec3d.ofBottomCenter(this.dragon.world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, EndPortalFeature.ORIGIN));
         }
         if (this.target.squaredDistanceTo(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ()) < 1.0) {
-            this.dragon.getPhaseManager().create(PhaseType.SITTING_FLAMING).method_6857();
+            this.dragon.getPhaseManager().create(PhaseType.SITTING_FLAMING).reset();
             this.dragon.getPhaseManager().setPhase(PhaseType.SITTING_SCANNING);
         }
     }
@@ -61,8 +59,8 @@ extends AbstractPhase {
     }
 
     @Override
-    public float method_6847() {
-        float f = MathHelper.sqrt(Entity.squaredHorizontalLength(this.dragon.getVelocity())) + 1.0f;
+    public float getYawAcceleration() {
+        float f = (float)this.dragon.getVelocity().horizontalLength() + 1.0f;
         float g = Math.min(f, 40.0f);
         return g / f;
     }

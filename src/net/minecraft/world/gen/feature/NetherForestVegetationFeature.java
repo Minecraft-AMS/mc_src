@@ -8,15 +8,13 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import java.util.Random;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.BlockPileFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class NetherForestVegetationFeature
 extends Feature<BlockPileFeatureConfig> {
@@ -25,25 +23,25 @@ extends Feature<BlockPileFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, BlockPileFeatureConfig blockPileFeatureConfig) {
-        return NetherForestVegetationFeature.generate(structureWorldAccess, random, blockPos, blockPileFeatureConfig, 8, 4);
+    public boolean generate(FeatureContext<BlockPileFeatureConfig> context) {
+        return NetherForestVegetationFeature.generate(context.getWorld(), context.getRandom(), context.getOrigin(), context.getConfig(), 8, 4);
     }
 
     public static boolean generate(WorldAccess world, Random random, BlockPos pos, BlockPileFeatureConfig config, int i, int j) {
-        Block block = world.getBlockState(pos.down()).getBlock();
-        if (!block.isIn(BlockTags.NYLIUM)) {
+        BlockState blockState = world.getBlockState(pos.down());
+        if (!blockState.isIn(BlockTags.NYLIUM)) {
             return false;
         }
         int k = pos.getY();
-        if (k < 1 || k + 1 >= 256) {
+        if (k < world.getBottomY() + 1 || k + 1 >= world.getTopY()) {
             return false;
         }
         int l = 0;
         for (int m = 0; m < i * i; ++m) {
             BlockPos blockPos = pos.add(random.nextInt(i) - random.nextInt(i), random.nextInt(j) - random.nextInt(j), random.nextInt(i) - random.nextInt(i));
-            BlockState blockState = config.stateProvider.getBlockState(random, blockPos);
-            if (!world.isAir(blockPos) || blockPos.getY() <= 0 || !blockState.canPlaceAt(world, blockPos)) continue;
-            world.setBlockState(blockPos, blockState, 2);
+            BlockState blockState2 = config.stateProvider.getBlockState(random, blockPos);
+            if (!world.isAir(blockPos) || blockPos.getY() <= world.getBottomY() || !blockState2.canPlaceAt(world, blockPos)) continue;
+            world.setBlockState(blockPos, blockState2, 2);
             ++l;
         }
         return l > 0;

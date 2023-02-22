@@ -20,7 +20,7 @@ import net.minecraft.util.math.Vec3d;
 
 public class LevitationCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("levitation");
+    static final Identifier ID = new Identifier("levitation");
 
     @Override
     public Identifier getId() {
@@ -35,7 +35,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, Vec3d startPos, int duration) {
-        this.test(player, conditions -> conditions.matches(player, startPos, duration));
+        this.trigger(player, conditions -> conditions.matches(player, startPos, duration));
     }
 
     @Override

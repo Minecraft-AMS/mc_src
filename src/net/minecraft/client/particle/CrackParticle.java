@@ -26,7 +26,7 @@ extends SpriteBillboardParticle {
     private final float sampleU;
     private final float sampleV;
 
-    private CrackParticle(ClientWorld world, double x, double y, double z, double d, double e, double f, ItemStack stack) {
+    CrackParticle(ClientWorld world, double x, double y, double z, double d, double e, double f, ItemStack stack) {
         this(world, x, y, z, stack);
         this.velocityX *= (double)0.1f;
         this.velocityY *= (double)0.1f;
@@ -43,7 +43,7 @@ extends SpriteBillboardParticle {
 
     protected CrackParticle(ClientWorld world, double x, double y, double z, ItemStack stack) {
         super(world, x, y, z, 0.0, 0.0, 0.0);
-        this.setSprite(MinecraftClient.getInstance().getItemRenderer().getHeldItemModel(stack, world, null).getSprite());
+        this.setSprite(MinecraftClient.getInstance().getItemRenderer().getHeldItemModel(stack, world, null, 0).getParticleSprite());
         this.gravityStrength = 1.0f;
         this.scale /= 2.0f;
         this.sampleU = this.random.nextFloat() * 3.0f;

@@ -105,9 +105,9 @@ extends SinglePreparationResourceReloader<WarningPatternLoader> {
     }
 
     @Nullable
-    public String method_30920() {
+    public String getWarningsAsString() {
         StringBuilder stringBuilder = new StringBuilder();
-        this.warnings.forEach((string, string2) -> stringBuilder.append((String)string).append(": ").append((String)string2));
+        this.warnings.forEach((key, value) -> stringBuilder.append((String)key).append(": ").append((String)value));
         return stringBuilder.length() == 0 ? null : stringBuilder.toString();
     }
 
@@ -135,7 +135,7 @@ extends SinglePreparationResourceReloader<WarningPatternLoader> {
     }
 
     private static void compilePatterns(JsonArray array, List<Pattern> patterns) {
-        array.forEach(jsonElement -> patterns.add(Pattern.compile(jsonElement.getAsString(), 2)));
+        array.forEach(json -> patterns.add(Pattern.compile(json.getAsString(), 2)));
     }
 
     @Nullable
@@ -159,12 +159,12 @@ extends SinglePreparationResourceReloader<WarningPatternLoader> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static final class WarningPatternLoader {
+    protected static final class WarningPatternLoader {
         private final List<Pattern> rendererPatterns;
         private final List<Pattern> versionPatterns;
         private final List<Pattern> vendorPatterns;
 
-        private WarningPatternLoader(List<Pattern> rendererPatterns, List<Pattern> versionPatterns, List<Pattern> vendorPatterns) {
+        WarningPatternLoader(List<Pattern> rendererPatterns, List<Pattern> versionPatterns, List<Pattern> vendorPatterns) {
             this.rendererPatterns = rendererPatterns;
             this.versionPatterns = versionPatterns;
             this.vendorPatterns = vendorPatterns;
@@ -181,7 +181,7 @@ extends SinglePreparationResourceReloader<WarningPatternLoader> {
             return String.join((CharSequence)", ", list);
         }
 
-        private ImmutableMap<String, String> buildWarnings() {
+        ImmutableMap<String, String> buildWarnings() {
             String string3;
             String string2;
             ImmutableMap.Builder builder = new ImmutableMap.Builder();

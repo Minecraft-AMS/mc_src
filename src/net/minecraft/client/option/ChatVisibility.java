@@ -1,26 +1,29 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.option;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.MathHelper;
 
-public enum ChatVisibility {
-    FULL(0, "options.chat.visibility.full"),
-    SYSTEM(1, "options.chat.visibility.system"),
-    HIDDEN(2, "options.chat.visibility.hidden");
-
+public final class ChatVisibility
+extends Enum<ChatVisibility> {
+    public static final /* enum */ ChatVisibility FULL = new ChatVisibility(0, "options.chat.visibility.full");
+    public static final /* enum */ ChatVisibility SYSTEM = new ChatVisibility(1, "options.chat.visibility.system");
+    public static final /* enum */ ChatVisibility HIDDEN = new ChatVisibility(2, "options.chat.visibility.hidden");
     private static final ChatVisibility[] VALUES;
     private final int id;
     private final String translationKey;
+    private static final /* synthetic */ ChatVisibility[] field_7537;
+
+    public static ChatVisibility[] values() {
+        return (ChatVisibility[])field_7537.clone();
+    }
+
+    public static ChatVisibility valueOf(String string) {
+        return Enum.valueOf(ChatVisibility.class, string);
+    }
 
     private ChatVisibility(int id, String translationKey) {
         this.id = id;
@@ -31,17 +34,20 @@ public enum ChatVisibility {
         return this.id;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public String getTranslationKey() {
         return this.translationKey;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static ChatVisibility byId(int id) {
         return VALUES[MathHelper.floorMod(id, VALUES.length)];
     }
 
+    private static /* synthetic */ ChatVisibility[] method_36660() {
+        return new ChatVisibility[]{FULL, SYSTEM, HIDDEN};
+    }
+
     static {
+        field_7537 = ChatVisibility.method_36660();
         VALUES = (ChatVisibility[])Arrays.stream(ChatVisibility.values()).sorted(Comparator.comparingInt(ChatVisibility::getId)).toArray(ChatVisibility[]::new);
     }
 }

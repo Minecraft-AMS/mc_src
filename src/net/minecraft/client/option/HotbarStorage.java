@@ -26,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class HotbarStorage {
     private static final Logger LOGGER = LogManager.getLogger();
+    public static final int field_32135 = 9;
     private final File file;
     private final DataFixer dataFixer;
     private final HotbarStorageEntry[] entries = new HotbarStorageEntry[9];

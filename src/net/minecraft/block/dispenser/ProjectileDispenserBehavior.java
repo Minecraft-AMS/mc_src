@@ -29,7 +29,7 @@ extends ItemDispenserBehavior {
 
     @Override
     protected void playSound(BlockPointer pointer) {
-        pointer.getWorld().syncWorldEvent(1002, pointer.getBlockPos(), 0);
+        pointer.getWorld().syncWorldEvent(1002, pointer.getPos(), 0);
     }
 
     protected abstract ProjectileEntity createProjectile(World var1, Position var2, ItemStack var3);

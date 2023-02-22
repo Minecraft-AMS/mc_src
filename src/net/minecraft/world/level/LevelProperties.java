@@ -8,8 +8,6 @@
  *  com.mojang.serialization.Dynamic
  *  com.mojang.serialization.DynamicOps
  *  com.mojang.serialization.Lifecycle
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -22,12 +20,9 @@ import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Lifecycle;
-import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.nbt.NbtCompound;
@@ -47,6 +42,7 @@ import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.gen.GeneratorOptions;
@@ -63,6 +59,7 @@ public class LevelProperties
 implements ServerWorldProperties,
 SaveProperties {
     private static final Logger LOGGER = LogManager.getLogger();
+    protected static final String WORLD_GEN_SETTINGS_KEY = "WorldGenSettings";
     private LevelInfo levelInfo;
     private final GeneratorOptions generatorOptions;
     private final Lifecycle lifecycle;
@@ -98,7 +95,7 @@ SaveProperties {
     private boolean modded;
     private final Timer<MinecraftServer> scheduledEvents;
 
-    private LevelProperties(@Nullable DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, boolean modded, int spawnX, int spawnY, int spawnZ, float spawnAngle, long time, long timeOfDay, int version, int clearWeatherTime, int rainTime, boolean raining, int thunderTime, boolean thundering, boolean initialized, boolean difficultyLocked, WorldBorder.Properties worldBorder, int wanderingTraderSpawnDelay, int wanderingTraderSpawnChance, @Nullable UUID wanderingTraderId, LinkedHashSet<String> serverBrands, Timer<MinecraftServer> scheduledEvents, @Nullable NbtCompound customBossEvents, NbtCompound dragonFight, LevelInfo levelInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle) {
+    private LevelProperties(@Nullable DataFixer dataFixer, int dataVersion, @Nullable NbtCompound playerData, boolean modded, int spawnX, int spawnY, int spawnZ, float spawnAngle, long time, long timeOfDay, int version, int clearWeatherTime, int rainTime, boolean raining, int thunderTime, boolean thundering, boolean initialized, boolean difficultyLocked, WorldBorder.Properties worldBorder, int wanderingTraderSpawnDelay, int wanderingTraderSpawnChance, @Nullable UUID wanderingTraderId, Set<String> serverBrands, Timer<MinecraftServer> scheduledEvents, @Nullable NbtCompound customBossEvents, NbtCompound dragonFight, LevelInfo levelInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle) {
         this.dataFixer = dataFixer;
         this.modded = modded;
         this.spawnX = spawnX;
@@ -151,54 +148,54 @@ SaveProperties {
         return nbtCompound;
     }
 
-    private void updateProperties(DynamicRegistryManager registryManager, NbtCompound levelTag, @Nullable NbtCompound playerTag) {
+    private void updateProperties(DynamicRegistryManager registryManager, NbtCompound levelNbt, @Nullable NbtCompound playerNbt) {
         NbtList nbtList = new NbtList();
         this.serverBrands.stream().map(NbtString::of).forEach(nbtList::add);
-        levelTag.put("ServerBrands", nbtList);
-        levelTag.putBoolean("WasModded", this.modded);
+        levelNbt.put("ServerBrands", nbtList);
+        levelNbt.putBoolean("WasModded", this.modded);
         NbtCompound nbtCompound = new NbtCompound();
         nbtCompound.putString("Name", SharedConstants.getGameVersion().getName());
         nbtCompound.putInt("Id", SharedConstants.getGameVersion().getWorldVersion());
         nbtCompound.putBoolean("Snapshot", !SharedConstants.getGameVersion().isStable());
-        levelTag.put("Version", nbtCompound);
-        levelTag.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
+        levelNbt.put("Version", nbtCompound);
+        levelNbt.putInt("DataVersion", SharedConstants.getGameVersion().getWorldVersion());
         RegistryReadingOps<NbtElement> registryReadingOps = RegistryReadingOps.of(NbtOps.INSTANCE, registryManager);
-        GeneratorOptions.CODEC.encodeStart(registryReadingOps, (Object)this.generatorOptions).resultOrPartial(Util.method_29188("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(nbtElement -> levelTag.put("WorldGenSettings", (NbtElement)nbtElement));
-        levelTag.putInt("GameType", this.levelInfo.getGameMode().getId());
-        levelTag.putInt("SpawnX", this.spawnX);
-        levelTag.putInt("SpawnY", this.spawnY);
-        levelTag.putInt("SpawnZ", this.spawnZ);
-        levelTag.putFloat("SpawnAngle", this.spawnAngle);
-        levelTag.putLong("Time", this.time);
-        levelTag.putLong("DayTime", this.timeOfDay);
-        levelTag.putLong("LastPlayed", Util.getEpochTimeMs());
-        levelTag.putString("LevelName", this.levelInfo.getLevelName());
-        levelTag.putInt("version", 19133);
-        levelTag.putInt("clearWeatherTime", this.clearWeatherTime);
-        levelTag.putInt("rainTime", this.rainTime);
-        levelTag.putBoolean("raining", this.raining);
-        levelTag.putInt("thunderTime", this.thunderTime);
-        levelTag.putBoolean("thundering", this.thundering);
-        levelTag.putBoolean("hardcore", this.levelInfo.isHardcore());
-        levelTag.putBoolean("allowCommands", this.levelInfo.areCommandsAllowed());
-        levelTag.putBoolean("initialized", this.initialized);
-        this.worldBorder.toTag(levelTag);
-        levelTag.putByte("Difficulty", (byte)this.levelInfo.getDifficulty().getId());
-        levelTag.putBoolean("DifficultyLocked", this.difficultyLocked);
-        levelTag.put("GameRules", this.levelInfo.getGameRules().toNbt());
-        levelTag.put("DragonFight", this.dragonFight);
-        if (playerTag != null) {
-            levelTag.put("Player", playerTag);
+        GeneratorOptions.CODEC.encodeStart(registryReadingOps, (Object)this.generatorOptions).resultOrPartial(Util.addPrefix("WorldGenSettings: ", arg_0 -> ((Logger)LOGGER).error(arg_0))).ifPresent(nbtElement -> levelNbt.put(WORLD_GEN_SETTINGS_KEY, (NbtElement)nbtElement));
+        levelNbt.putInt("GameType", this.levelInfo.getGameMode().getId());
+        levelNbt.putInt("SpawnX", this.spawnX);
+        levelNbt.putInt("SpawnY", this.spawnY);
+        levelNbt.putInt("SpawnZ", this.spawnZ);
+        levelNbt.putFloat("SpawnAngle", this.spawnAngle);
+        levelNbt.putLong("Time", this.time);
+        levelNbt.putLong("DayTime", this.timeOfDay);
+        levelNbt.putLong("LastPlayed", Util.getEpochTimeMs());
+        levelNbt.putString("LevelName", this.levelInfo.getLevelName());
+        levelNbt.putInt("version", 19133);
+        levelNbt.putInt("clearWeatherTime", this.clearWeatherTime);
+        levelNbt.putInt("rainTime", this.rainTime);
+        levelNbt.putBoolean("raining", this.raining);
+        levelNbt.putInt("thunderTime", this.thunderTime);
+        levelNbt.putBoolean("thundering", this.thundering);
+        levelNbt.putBoolean("hardcore", this.levelInfo.isHardcore());
+        levelNbt.putBoolean("allowCommands", this.levelInfo.areCommandsAllowed());
+        levelNbt.putBoolean("initialized", this.initialized);
+        this.worldBorder.writeNbt(levelNbt);
+        levelNbt.putByte("Difficulty", (byte)this.levelInfo.getDifficulty().getId());
+        levelNbt.putBoolean("DifficultyLocked", this.difficultyLocked);
+        levelNbt.put("GameRules", this.levelInfo.getGameRules().toNbt());
+        levelNbt.put("DragonFight", this.dragonFight);
+        if (playerNbt != null) {
+            levelNbt.put("Player", playerNbt);
         }
-        DataPackSettings.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.levelInfo.getDataPackSettings()).result().ifPresent(nbtElement -> levelTag.put("DataPacks", (NbtElement)nbtElement));
+        DataPackSettings.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.levelInfo.getDataPackSettings()).result().ifPresent(nbtElement -> levelNbt.put("DataPacks", (NbtElement)nbtElement));
         if (this.customBossEvents != null) {
-            levelTag.put("CustomBossEvents", this.customBossEvents);
+            levelNbt.put("CustomBossEvents", this.customBossEvents);
         }
-        levelTag.put("ScheduledEvents", this.scheduledEvents.toNbt());
-        levelTag.putInt("WanderingTraderSpawnDelay", this.wanderingTraderSpawnDelay);
-        levelTag.putInt("WanderingTraderSpawnChance", this.wanderingTraderSpawnChance);
+        levelNbt.put("ScheduledEvents", this.scheduledEvents.toNbt());
+        levelNbt.putInt("WanderingTraderSpawnDelay", this.wanderingTraderSpawnDelay);
+        levelNbt.putInt("WanderingTraderSpawnChance", this.wanderingTraderSpawnChance);
         if (this.wanderingTraderId != null) {
-            levelTag.putUuid("WanderingTraderId", this.wanderingTraderId);
+            levelNbt.putUuid("WanderingTraderId", this.wanderingTraderId);
         }
     }
 
@@ -420,8 +417,8 @@ SaveProperties {
     }
 
     @Override
-    public void populateCrashReport(CrashReportSection reportSection) {
-        ServerWorldProperties.super.populateCrashReport(reportSection);
+    public void populateCrashReport(CrashReportSection reportSection, HeightLimitView world) {
+        ServerWorldProperties.super.populateCrashReport(reportSection, world);
         SaveProperties.super.populateCrashReport(reportSection);
     }
 
@@ -431,7 +428,6 @@ SaveProperties {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Lifecycle getLifecycle() {
         return this.lifecycle;
     }
@@ -488,6 +484,12 @@ SaveProperties {
     }
 
     @Override
+    @Nullable
+    public UUID getWanderingTraderId() {
+        return this.wanderingTraderId;
+    }
+
+    @Override
     public void setWanderingTraderId(UUID uuid) {
         this.wanderingTraderId = uuid;
     }
@@ -514,7 +516,6 @@ SaveProperties {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public LevelInfo getLevelInfo() {
         return this.levelInfo.withCopiedGameRules();
     }

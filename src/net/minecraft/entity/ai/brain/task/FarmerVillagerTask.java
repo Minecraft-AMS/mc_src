@@ -37,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class FarmerVillagerTask
 extends Task<VillagerEntity> {
+    private static final int MAX_RUN_TIME = 200;
+    public static final float WALK_SPEED = 0.5f;
     @Nullable
     private BlockPos currentTarget;
     private long nextResponseTime;
@@ -116,16 +118,16 @@ extends Task<VillagerEntity> {
                     ItemStack itemStack = simpleInventory.getStack(i);
                     boolean bl = false;
                     if (!itemStack.isEmpty()) {
-                        if (itemStack.getItem() == Items.WHEAT_SEEDS) {
+                        if (itemStack.isOf(Items.WHEAT_SEEDS)) {
                             serverWorld.setBlockState(this.currentTarget, Blocks.WHEAT.getDefaultState(), 3);
                             bl = true;
-                        } else if (itemStack.getItem() == Items.POTATO) {
+                        } else if (itemStack.isOf(Items.POTATO)) {
                             serverWorld.setBlockState(this.currentTarget, Blocks.POTATOES.getDefaultState(), 3);
                             bl = true;
-                        } else if (itemStack.getItem() == Items.CARROT) {
+                        } else if (itemStack.isOf(Items.CARROT)) {
                             serverWorld.setBlockState(this.currentTarget, Blocks.CARROTS.getDefaultState(), 3);
                             bl = true;
-                        } else if (itemStack.getItem() == Items.BEETROOT_SEEDS) {
+                        } else if (itemStack.isOf(Items.BEETROOT_SEEDS)) {
                             serverWorld.setBlockState(this.currentTarget, Blocks.BEETROOTS.getDefaultState(), 3);
                             bl = true;
                         }

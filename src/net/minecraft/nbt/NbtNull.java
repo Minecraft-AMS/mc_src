@@ -9,11 +9,11 @@ import java.io.IOException;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtNull
 implements NbtElement {
+    private static final int field_33193 = 64;
     public static final NbtType<NbtNull> TYPE = new NbtType<NbtNull>(){
 
         @Override
@@ -62,7 +62,7 @@ implements NbtElement {
 
     @Override
     public String toString() {
-        return "END";
+        return this.asString();
     }
 
     @Override
@@ -71,8 +71,8 @@ implements NbtElement {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        return LiteralText.EMPTY;
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitNull(this);
     }
 
     @Override

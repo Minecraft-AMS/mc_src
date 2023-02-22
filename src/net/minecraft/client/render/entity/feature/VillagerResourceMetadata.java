@@ -17,6 +17,7 @@ import net.minecraft.client.render.entity.feature.VillagerResourceMetadataReader
 @Environment(value=EnvType.CLIENT)
 public class VillagerResourceMetadata {
     public static final VillagerResourceMetadataReader READER = new VillagerResourceMetadataReader();
+    public static final String KEY = "villager";
     private final HatType hatType;
 
     public VillagerResourceMetadata(HatType hatType) {
@@ -28,13 +29,22 @@ public class VillagerResourceMetadata {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum HatType {
-        NONE("none"),
-        PARTIAL("partial"),
-        FULL("full");
-
-        private static final Map<String, HatType> byName;
+    public static final class HatType
+    extends Enum<HatType> {
+        public static final /* enum */ HatType NONE = new HatType("none");
+        public static final /* enum */ HatType PARTIAL = new HatType("partial");
+        public static final /* enum */ HatType FULL = new HatType("full");
+        private static final Map<String, HatType> BY_NAME;
         private final String name;
+        private static final /* synthetic */ HatType[] field_17165;
+
+        public static HatType[] values() {
+            return (HatType[])field_17165.clone();
+        }
+
+        public static HatType valueOf(String string) {
+            return Enum.valueOf(HatType.class, string);
+        }
 
         private HatType(String name) {
             this.name = name;
@@ -45,11 +55,16 @@ public class VillagerResourceMetadata {
         }
 
         public static HatType from(String name) {
-            return byName.getOrDefault(name, NONE);
+            return BY_NAME.getOrDefault(name, NONE);
+        }
+
+        private static /* synthetic */ HatType[] method_36924() {
+            return new HatType[]{NONE, PARTIAL, FULL};
         }
 
         static {
-            byName = Arrays.stream(HatType.values()).collect(Collectors.toMap(HatType::getName, hatType -> hatType));
+            field_17165 = HatType.method_36924();
+            BY_NAME = Arrays.stream(HatType.values()).collect(Collectors.toMap(HatType::getName, hatType -> hatType));
         }
     }
 }

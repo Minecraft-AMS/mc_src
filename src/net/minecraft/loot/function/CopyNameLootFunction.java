@@ -27,10 +27,10 @@ import net.minecraft.util.Nameable;
 
 public class CopyNameLootFunction
 extends ConditionalLootFunction {
-    private final Source source;
+    final Source source;
 
-    private CopyNameLootFunction(LootCondition[] conditions, Source source) {
-        super(conditions);
+    CopyNameLootFunction(LootCondition[] lootConditions, Source source) {
+        super(lootConditions);
         this.source = source;
     }
 
@@ -58,34 +58,23 @@ extends ConditionalLootFunction {
         return CopyNameLootFunction.builder((LootCondition[] conditions) -> new CopyNameLootFunction((LootCondition[])conditions, source));
     }
 
-    public static class Serializer
-    extends ConditionalLootFunction.Serializer<CopyNameLootFunction> {
-        @Override
-        public void toJson(JsonObject jsonObject, CopyNameLootFunction copyNameLootFunction, JsonSerializationContext jsonSerializationContext) {
-            super.toJson(jsonObject, copyNameLootFunction, jsonSerializationContext);
-            jsonObject.addProperty("source", ((CopyNameLootFunction)copyNameLootFunction).source.name);
-        }
-
-        @Override
-        public CopyNameLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
-            Source source = Source.get(JsonHelper.getString(jsonObject, "source"));
-            return new CopyNameLootFunction(lootConditions, source);
-        }
-
-        @Override
-        public /* synthetic */ ConditionalLootFunction fromJson(JsonObject json, JsonDeserializationContext context, LootCondition[] conditions) {
-            return this.fromJson(json, context, conditions);
-        }
-    }
-
-    public static enum Source {
-        THIS("this", LootContextParameters.THIS_ENTITY),
-        KILLER("killer", LootContextParameters.KILLER_ENTITY),
-        KILLER_PLAYER("killer_player", LootContextParameters.LAST_DAMAGE_PLAYER),
-        BLOCK_ENTITY("block_entity", LootContextParameters.BLOCK_ENTITY);
-
+    public static final class Source
+    extends Enum<Source> {
+        public static final /* enum */ Source THIS = new Source("this", LootContextParameters.THIS_ENTITY);
+        public static final /* enum */ Source KILLER = new Source("killer", LootContextParameters.KILLER_ENTITY);
+        public static final /* enum */ Source KILLER_PLAYER = new Source("killer_player", LootContextParameters.LAST_DAMAGE_PLAYER);
+        public static final /* enum */ Source BLOCK_ENTITY = new Source("block_entity", LootContextParameters.BLOCK_ENTITY);
         public final String name;
         public final LootContextParameter<?> parameter;
+        private static final /* synthetic */ Source[] field_1021;
+
+        public static Source[] values() {
+            return (Source[])field_1021.clone();
+        }
+
+        public static Source valueOf(String string) {
+            return Enum.valueOf(Source.class, string);
+        }
 
         private Source(String name, LootContextParameter<?> parameter) {
             this.name = name;
@@ -98,6 +87,34 @@ extends ConditionalLootFunction {
                 return source;
             }
             throw new IllegalArgumentException("Invalid name source " + name);
+        }
+
+        private static /* synthetic */ Source[] method_36794() {
+            return new Source[]{THIS, KILLER, KILLER_PLAYER, BLOCK_ENTITY};
+        }
+
+        static {
+            field_1021 = Source.method_36794();
+        }
+    }
+
+    public static class Serializer
+    extends ConditionalLootFunction.Serializer<CopyNameLootFunction> {
+        @Override
+        public void toJson(JsonObject jsonObject, CopyNameLootFunction copyNameLootFunction, JsonSerializationContext jsonSerializationContext) {
+            super.toJson(jsonObject, copyNameLootFunction, jsonSerializationContext);
+            jsonObject.addProperty("source", copyNameLootFunction.source.name);
+        }
+
+        @Override
+        public CopyNameLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
+            Source source = Source.get(JsonHelper.getString(jsonObject, "source"));
+            return new CopyNameLootFunction(lootConditions, source);
+        }
+
+        @Override
+        public /* synthetic */ ConditionalLootFunction fromJson(JsonObject json, JsonDeserializationContext context, LootCondition[] conditions) {
+            return this.fromJson(json, context, conditions);
         }
     }
 }

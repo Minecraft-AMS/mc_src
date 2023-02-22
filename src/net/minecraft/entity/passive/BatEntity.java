@@ -36,13 +36,21 @@ import org.jetbrains.annotations.Nullable;
 
 public class BatEntity
 extends AmbientEntity {
+    public static final float field_30268 = 74.48451f;
+    public static final int field_28637 = MathHelper.ceil(2.4166098f);
     private static final TrackedData<Byte> BAT_FLAGS = DataTracker.registerData(BatEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private static final TargetPredicate CLOSE_PLAYER_PREDICATE = new TargetPredicate().setBaseMaxDistance(4.0).includeTeammates();
+    private static final int ROOSTING_FLAG = 1;
+    private static final TargetPredicate CLOSE_PLAYER_PREDICATE = TargetPredicate.createNonAttackable().setBaseMaxDistance(4.0);
     private BlockPos hangingPosition;
 
     public BatEntity(EntityType<? extends BatEntity> entityType, World world) {
         super((EntityType<? extends AmbientEntity>)entityType, world);
         this.setRoosting(true);
+    }
+
+    @Override
+    public boolean hasWings() {
+        return !this.isRoosting() && this.age % field_28637 == 0;
     }
 
     @Override
@@ -57,7 +65,7 @@ extends AmbientEntity {
     }
 
     @Override
-    protected float getSoundPitch() {
+    public float getSoundPitch() {
         return super.getSoundPitch() * 0.95f;
     }
 
@@ -145,7 +153,7 @@ extends AmbientEntity {
                 }
             }
         } else {
-            if (!(this.hangingPosition == null || this.world.isAir(this.hangingPosition) && this.hangingPosition.getY() >= 1)) {
+            if (!(this.hangingPosition == null || this.world.isAir(this.hangingPosition) && this.hangingPosition.getY() > this.world.getBottomY())) {
                 this.hangingPosition = null;
             }
             if (this.hangingPosition == null || this.random.nextInt(30) == 0 || this.hangingPosition.isWithinDistance(this.getPos(), 2.0)) {
@@ -158,9 +166,9 @@ extends AmbientEntity {
             Vec3d vec3d2 = vec3d.add((Math.signum(d) * 0.5 - vec3d.x) * (double)0.1f, (Math.signum(e) * (double)0.7f - vec3d.y) * (double)0.1f, (Math.signum(f) * 0.5 - vec3d.z) * (double)0.1f);
             this.setVelocity(vec3d2);
             float g = (float)(MathHelper.atan2(vec3d2.z, vec3d2.x) * 57.2957763671875) - 90.0f;
-            float h = MathHelper.wrapDegrees(g - this.yaw);
+            float h = MathHelper.wrapDegrees(g - this.getYaw());
             this.forwardSpeed = 0.5f;
-            this.yaw += h;
+            this.setYaw(this.getYaw() + h);
             if (this.random.nextInt(100) == 0 && this.world.getBlockState(blockPos2).isSolidBlock(this.world, blockPos2)) {
                 this.setRoosting(true);
             }
@@ -168,12 +176,12 @@ extends AmbientEntity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
         return false;
     }
 

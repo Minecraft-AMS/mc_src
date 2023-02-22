@@ -37,24 +37,28 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class Format4ResourcePack
 implements ResourcePack {
-    private static final Map<String, Pair<ChestType, Identifier>> NEW_TO_OLD_CHEST_TEXTURES = Util.make(Maps.newHashMap(), hashMap -> {
-        hashMap.put("textures/entity/chest/normal_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/normal_double.png")));
-        hashMap.put("textures/entity/chest/normal_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/normal_double.png")));
-        hashMap.put("textures/entity/chest/normal.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/normal.png")));
-        hashMap.put("textures/entity/chest/trapped_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/trapped_double.png")));
-        hashMap.put("textures/entity/chest/trapped_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/trapped_double.png")));
-        hashMap.put("textures/entity/chest/trapped.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/trapped.png")));
-        hashMap.put("textures/entity/chest/christmas_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/christmas_double.png")));
-        hashMap.put("textures/entity/chest/christmas_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/christmas_double.png")));
-        hashMap.put("textures/entity/chest/christmas.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/christmas.png")));
-        hashMap.put("textures/entity/chest/ender.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/ender.png")));
+    private static final Map<String, Pair<ChestType, Identifier>> NEW_TO_OLD_CHEST_TEXTURES = Util.make(Maps.newHashMap(), map -> {
+        map.put("textures/entity/chest/normal_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/normal_double.png")));
+        map.put("textures/entity/chest/normal_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/normal_double.png")));
+        map.put("textures/entity/chest/normal.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/normal.png")));
+        map.put("textures/entity/chest/trapped_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/trapped_double.png")));
+        map.put("textures/entity/chest/trapped_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/trapped_double.png")));
+        map.put("textures/entity/chest/trapped.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/trapped.png")));
+        map.put("textures/entity/chest/christmas_left.png", new Pair((Object)ChestType.LEFT, (Object)new Identifier("textures/entity/chest/christmas_double.png")));
+        map.put("textures/entity/chest/christmas_right.png", new Pair((Object)ChestType.RIGHT, (Object)new Identifier("textures/entity/chest/christmas_double.png")));
+        map.put("textures/entity/chest/christmas.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/christmas.png")));
+        map.put("textures/entity/chest/ender.png", new Pair((Object)ChestType.SINGLE, (Object)new Identifier("textures/entity/chest/ender.png")));
     });
     private static final List<String> BANNER_PATTERN_TYPES = Lists.newArrayList((Object[])new String[]{"base", "border", "bricks", "circle", "creeper", "cross", "curly_border", "diagonal_left", "diagonal_right", "diagonal_up_left", "diagonal_up_right", "flower", "globe", "gradient", "gradient_up", "half_horizontal", "half_horizontal_bottom", "half_vertical", "half_vertical_right", "mojang", "rhombus", "skull", "small_stripes", "square_bottom_left", "square_bottom_right", "square_top_left", "square_top_right", "straight_cross", "stripe_bottom", "stripe_center", "stripe_downleft", "stripe_downright", "stripe_left", "stripe_middle", "stripe_right", "stripe_top", "triangle_bottom", "triangle_top", "triangles_bottom", "triangles_top"});
-    private static final Set<String> SHIELD_PATTERN_TEXTURES = BANNER_PATTERN_TYPES.stream().map(string -> "textures/entity/shield/" + string + ".png").collect(Collectors.toSet());
-    private static final Set<String> BANNER_PATTERN_TEXTURES = BANNER_PATTERN_TYPES.stream().map(string -> "textures/entity/banner/" + string + ".png").collect(Collectors.toSet());
+    private static final Set<String> SHIELD_PATTERN_TEXTURES = BANNER_PATTERN_TYPES.stream().map(patternName -> "textures/entity/shield/" + patternName + ".png").collect(Collectors.toSet());
+    private static final Set<String> BANNER_PATTERN_TEXTURES = BANNER_PATTERN_TYPES.stream().map(patternName -> "textures/entity/banner/" + patternName + ".png").collect(Collectors.toSet());
     public static final Identifier OLD_SHIELD_BASE_TEXTURE = new Identifier("textures/entity/shield_base.png");
     public static final Identifier OLD_BANNER_BASE_TEXTURE = new Identifier("textures/entity/banner_base.png");
+    public static final int field_32966 = 64;
+    public static final int field_32967 = 64;
+    public static final int field_32968 = 64;
     public static final Identifier IRON_GOLEM_TEXTURE = new Identifier("textures/entity/iron_golem.png");
+    public static final String IRON_GOLEM_TEXTURE_PATH = "textures/entity/iron_golem/iron_golem.png";
     private final ResourcePack parent;
 
     public Format4ResourcePack(ResourcePack parent) {
@@ -75,7 +79,7 @@ implements ResourcePack {
         if ("textures/misc/enchanted_item_glint.png".equals(string)) {
             return false;
         }
-        if ("textures/entity/iron_golem/iron_golem.png".equals(string)) {
+        if (IRON_GOLEM_TEXTURE_PATH.equals(string)) {
             return this.parent.contains(type, IRON_GOLEM_TEXTURE);
         }
         if ("textures/entity/conduit/wind.png".equals(string) || "textures/entity/conduit/wind_vertical.png".equals(string)) {
@@ -100,7 +104,7 @@ implements ResourcePack {
             return this.parent.open(type, id);
         }
         String string = id.getPath();
-        if ("textures/entity/iron_golem/iron_golem.png".equals(string)) {
+        if (IRON_GOLEM_TEXTURE_PATH.equals(string)) {
             return this.parent.open(type, IRON_GOLEM_TEXTURE);
         }
         if (SHIELD_PATTERN_TEXTURES.contains(string)) {
@@ -119,15 +123,15 @@ implements ResourcePack {
                     int i = nativeImage.getWidth() / 256;
                     for (int j = 88 * i; j < 200 * i; ++j) {
                         for (int k = 56 * i; k < 112 * i; ++k) {
-                            nativeImage.setPixelColor(k, j, 0);
+                            nativeImage.setColor(k, j, 0);
                         }
                     }
-                    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage.getBytes());
-                    return byteArrayInputStream;
+                    ByteArrayInputStream j = new ByteArrayInputStream(nativeImage.getBytes());
+                    return j;
                 }
             }
             if ("textures/entity/conduit/closed_eye.png".equals(string) || "textures/entity/conduit/open_eye.png".equals(string)) {
-                return Format4ResourcePack.method_24199(this.parent.open(type, id));
+                return Format4ResourcePack.cropConduitTexture(this.parent.open(type, id));
             }
             Pair<ChestType, Identifier> pair = NEW_TO_OLD_CHEST_TEXTURES.get(string);
             if (pair != null) {
@@ -151,143 +155,184 @@ implements ResourcePack {
      * Loose catch block
      */
     @Nullable
-    public static InputStream openCroppedStream(InputStream inputStream, InputStream inputStream2, int i, int j, int k, int l, int m) throws IOException {
-        try (NativeImage nativeImage = NativeImage.read(inputStream);){
-            Throwable throwable = null;
-            try (NativeImage nativeImage2 = NativeImage.read(inputStream2);){
-                int n = nativeImage.getWidth();
-                int o = nativeImage.getHeight();
-                if (n == nativeImage2.getWidth()) {
-                    if (o == nativeImage2.getHeight()) {
-                        try (NativeImage nativeImage3 = new NativeImage(n, o, true);){
-                            int p = n / i;
-                            for (int q = k * p; q < m * p; ++q) {
-                                for (int r = j * p; r < l * p; ++r) {
-                                    int s = NativeImage.getRed(nativeImage2.getPixelColor(r, q));
-                                    int t = nativeImage.getPixelColor(r, q);
-                                    nativeImage3.setPixelColor(r, q, NativeImage.getAbgrColor(s, NativeImage.getBlue(t), NativeImage.getGreen(t), NativeImage.getRed(t)));
-                                }
-                            }
-                            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage3.getBytes());
-                            return byteArrayInputStream;
+    public static InputStream openCroppedStream(InputStream base, InputStream overlay, int width, int left, int top, int right, int bottom) throws IOException {
+        try (NativeImage nativeImage = NativeImage.read(base);
+             NativeImage nativeImage2 = NativeImage.read(overlay);){
+            block20: {
+                int i = nativeImage.getWidth();
+                int j = nativeImage.getHeight();
+                if (i != nativeImage2.getWidth()) break block20;
+                if (j != nativeImage2.getHeight()) break;
+                NativeImage nativeImage3 = new NativeImage(i, j, true);
+                try {
+                    int k = i / width;
+                    for (int l = top * k; l < bottom * k; ++l) {
+                        for (int m = left * k; m < right * k; ++m) {
+                            int n = NativeImage.getRed(nativeImage2.getColor(m, l));
+                            int o = nativeImage.getColor(m, l);
+                            nativeImage3.setColor(m, l, NativeImage.packColor(n, NativeImage.getBlue(o), NativeImage.getGreen(o), NativeImage.getRed(o)));
                         }
                     }
+                    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage3.getBytes());
+                    nativeImage3.close();
+                    return byteArrayInputStream;
                 }
-                {
+                catch (Throwable throwable) {
+                    try {
+                        nativeImage3.close();
+                    }
                     catch (Throwable throwable2) {
-                        throwable = throwable2;
-                        throw throwable2;
+                        throwable.addSuppressed(throwable2);
                     }
-                    catch (Throwable throwable3) {
-                        throw throwable3;
-                    }
+                    throw throwable;
+                }
+            }
+            {
+                catch (Throwable throwable) {
+                    throw throwable;
                 }
             }
         }
     }
 
-    /*
-     * Exception decompiling
-     */
-    public static InputStream method_24199(InputStream inputStream) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+    public static InputStream cropConduitTexture(InputStream stream) throws IOException {
+        try (NativeImage nativeImage = NativeImage.read(stream);){
+            int i = nativeImage.getWidth();
+            int j = nativeImage.getHeight();
+            NativeImage nativeImage2 = new NativeImage(2 * i, 2 * j, true);
+            try {
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 0, 0, 0, i, j, 1, false, false);
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage2.getBytes());
+                nativeImage2.close();
+                return byteArrayInputStream;
+            }
+            catch (Throwable throwable) {
+                try {
+                    nativeImage2.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+        }
     }
 
-    /*
-     * Exception decompiling
-     */
-    public static InputStream cropLeftChestTexture(InputStream inputStream) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+    public static InputStream cropLeftChestTexture(InputStream stream) throws IOException {
+        try (NativeImage nativeImage = NativeImage.read(stream);){
+            int i = nativeImage.getWidth();
+            int j = nativeImage.getHeight();
+            NativeImage nativeImage2 = new NativeImage(i / 2, j, true);
+            try {
+                int k = j / 64;
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 29, 0, 29, 0, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 59, 0, 14, 0, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 29, 14, 43, 14, 15, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 44, 14, 29, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 58, 14, 14, 14, 15, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 29, 19, 29, 19, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 59, 19, 14, 19, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 29, 33, 43, 33, 15, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 44, 33, 29, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 58, 33, 14, 33, 15, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 2, 0, 2, 0, 1, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 4, 0, 1, 0, 1, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 2, 1, 3, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 3, 1, 2, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 4, 1, 1, 1, 1, 4, k, true, true);
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage2.getBytes());
+                nativeImage2.close();
+                return byteArrayInputStream;
+            }
+            catch (Throwable throwable) {
+                try {
+                    nativeImage2.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+        }
     }
 
-    /*
-     * Exception decompiling
-     */
-    public static InputStream cropRightChestTexture(InputStream inputStream) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+    public static InputStream cropRightChestTexture(InputStream stream) throws IOException {
+        try (NativeImage nativeImage = NativeImage.read(stream);){
+            int i = nativeImage.getWidth();
+            int j = nativeImage.getHeight();
+            NativeImage nativeImage2 = new NativeImage(i / 2, j, true);
+            try {
+                int k = j / 64;
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 0, 29, 0, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 44, 0, 14, 0, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 14, 0, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 14, 43, 14, 15, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 73, 14, 14, 14, 15, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 19, 29, 19, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 44, 19, 14, 19, 15, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 33, 0, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 33, 43, 33, 15, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 73, 33, 14, 33, 15, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 1, 0, 2, 0, 1, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 3, 0, 1, 0, 1, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 1, 0, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 1, 1, 3, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 5, 1, 1, 1, 1, 4, k, true, true);
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage2.getBytes());
+                nativeImage2.close();
+                return byteArrayInputStream;
+            }
+            catch (Throwable throwable) {
+                try {
+                    nativeImage2.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+        }
     }
 
-    /*
-     * Exception decompiling
-     */
-    public static InputStream cropSingleChestTexture(InputStream inputStream) throws IOException {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+    public static InputStream cropSingleChestTexture(InputStream stream) throws IOException {
+        try (NativeImage nativeImage = NativeImage.read(stream);){
+            int i = nativeImage.getWidth();
+            int j = nativeImage.getHeight();
+            NativeImage nativeImage2 = new NativeImage(i, j, true);
+            try {
+                int k = j / 64;
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 0, 28, 0, 14, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 28, 0, 14, 0, 14, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 14, 0, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 14, 42, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 28, 14, 28, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 42, 14, 14, 14, 14, 5, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 19, 28, 19, 14, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 28, 19, 14, 19, 14, 14, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 33, 0, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 14, 33, 42, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 28, 33, 28, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 42, 33, 14, 33, 14, 10, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 1, 0, 3, 0, 2, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 3, 0, 1, 0, 2, 1, k, false, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 0, 1, 0, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 1, 1, 4, 1, 2, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 3, 1, 3, 1, 1, 4, k, true, true);
+                Format4ResourcePack.loadBytes(nativeImage, nativeImage2, 4, 1, 1, 1, 2, 4, k, true, true);
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(nativeImage2.getBytes());
+                nativeImage2.close();
+                return byteArrayInputStream;
+            }
+            catch (Throwable throwable) {
+                try {
+                    nativeImage2.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+        }
     }
 
     @Override
@@ -316,16 +361,16 @@ implements ResourcePack {
         this.parent.close();
     }
 
-    private static void loadBytes(NativeImage source, NativeImage target, int i, int j, int k, int l, int m, int n, int o, boolean bl, boolean bl2) {
-        n *= o;
-        m *= o;
-        k *= o;
-        l *= o;
-        i *= o;
-        j *= o;
-        for (int p = 0; p < n; ++p) {
-            for (int q = 0; q < m; ++q) {
-                target.setPixelColor(k + q, l + p, source.getPixelColor(i + (bl ? m - 1 - q : q), j + (bl2 ? n - 1 - p : p)));
+    private static void loadBytes(NativeImage source, NativeImage target, int sourceLeft, int sourceTop, int left, int top, int right, int bottom, int multiplier, boolean mirrorX, boolean mirrorY) {
+        bottom *= multiplier;
+        right *= multiplier;
+        left *= multiplier;
+        top *= multiplier;
+        sourceLeft *= multiplier;
+        sourceTop *= multiplier;
+        for (int i = 0; i < bottom; ++i) {
+            for (int j = 0; j < right; ++j) {
+                target.setColor(left + j, top + i, source.getColor(sourceLeft + (mirrorX ? right - 1 - j : j), sourceTop + (mirrorY ? bottom - 1 - i : i)));
             }
         }
     }

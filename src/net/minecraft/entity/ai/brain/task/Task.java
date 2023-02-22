@@ -10,6 +10,7 @@ import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.server.world.ServerWorld;
 
 public abstract class Task<E extends LivingEntity> {
+    private static final int DEFAULT_RUN_TIME = 60;
     protected final Map<MemoryModuleType<?>, MemoryModuleState> requiredMemoryStates;
     private Status status = Status.STOPPED;
     private long endTime;
@@ -93,10 +94,27 @@ public abstract class Task<E extends LivingEntity> {
         return true;
     }
 
-    public static enum Status {
-        STOPPED,
-        RUNNING;
+    public static final class Status
+    extends Enum<Status> {
+        public static final /* enum */ Status STOPPED = new Status();
+        public static final /* enum */ Status RUNNING = new Status();
+        private static final /* synthetic */ Status[] field_18339;
 
+        public static Status[] values() {
+            return (Status[])field_18339.clone();
+        }
+
+        public static Status valueOf(String string) {
+            return Enum.valueOf(Status.class, string);
+        }
+
+        private static /* synthetic */ Status[] method_36615() {
+            return new Status[]{STOPPED, RUNNING};
+        }
+
+        static {
+            field_18339 = Status.method_36615();
+        }
     }
 }
 

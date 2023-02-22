@@ -1,27 +1,16 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ServerPlayPacketListener;
 
 public class CloseHandledScreenC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private int syncId;
+    private final int syncId;
 
-    public CloseHandledScreenC2SPacket() {
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public CloseHandledScreenC2SPacket(int syncId) {
         this.syncId = syncId;
     }
@@ -31,14 +20,17 @@ implements Packet<ServerPlayPacketListener> {
         serverPlayPacketListener.onCloseHandledScreen(this);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public CloseHandledScreenC2SPacket(PacketByteBuf buf) {
         this.syncId = buf.readByte();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeByte(this.syncId);
+    }
+
+    public int getSyncId() {
+        return this.syncId;
     }
 }
 

@@ -10,9 +10,10 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.WitchHeldItemFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.WitchEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.WitchEntity;
@@ -23,8 +24,8 @@ public class WitchEntityRenderer
 extends MobEntityRenderer<WitchEntity, WitchEntityModel<WitchEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/witch.png");
 
-    public WitchEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new WitchEntityModel(0.0f), 0.5f);
+    public WitchEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new WitchEntityModel(context.getPart(EntityModelLayers.WITCH)), 0.5f);
         this.addFeature(new WitchHeldItemFeatureRenderer<WitchEntity>(this));
     }
 

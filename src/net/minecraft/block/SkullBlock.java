@@ -22,6 +22,8 @@ import net.minecraft.world.BlockView;
 
 public class SkullBlock
 extends AbstractSkullBlock {
+    public static final int field_31244 = 15;
+    private static final int field_31245 = 16;
     public static final IntProperty ROTATION = Properties.ROTATION;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 8.0, 12.0);
 
@@ -60,18 +62,35 @@ extends AbstractSkullBlock {
         builder.add(ROTATION);
     }
 
-    public static enum Type implements SkullType
-    {
-        SKELETON,
-        WITHER_SKELETON,
-        PLAYER,
-        ZOMBIE,
-        CREEPER,
-        DRAGON;
-
+    public static interface SkullType {
     }
 
-    public static interface SkullType {
+    public static final class Type
+    extends Enum<Type>
+    implements SkullType {
+        public static final /* enum */ Type SKELETON = new Type();
+        public static final /* enum */ Type WITHER_SKELETON = new Type();
+        public static final /* enum */ Type PLAYER = new Type();
+        public static final /* enum */ Type ZOMBIE = new Type();
+        public static final /* enum */ Type CREEPER = new Type();
+        public static final /* enum */ Type DRAGON = new Type();
+        private static final /* synthetic */ Type[] field_11509;
+
+        public static Type[] values() {
+            return (Type[])field_11509.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36710() {
+            return new Type[]{SKELETON, WITHER_SKELETON, PLAYER, ZOMBIE, CREEPER, DRAGON};
+        }
+
+        static {
+            field_11509 = Type.method_36710();
+        }
     }
 }
 

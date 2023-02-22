@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -28,6 +22,7 @@ import net.minecraft.world.World;
 
 public class BeetrootsBlock
 extends CropBlock {
+    public static final int field_31013 = 3;
     public static final IntProperty AGE = Properties.AGE_3;
     private static final VoxelShape[] AGE_TO_SHAPE = new VoxelShape[]{Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 2.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 4.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 6.0, 16.0), Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0)};
 
@@ -46,7 +41,6 @@ extends CropBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     protected ItemConvertible getSeedsItem() {
         return Items.BEETROOT_SEEDS;
     }

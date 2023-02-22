@@ -4,17 +4,12 @@
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.shorts.ShortIterator
  *  it.unimi.dsi.fastutil.shorts.ShortSet
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
 import it.unimi.dsi.fastutil.shorts.ShortIterator;
 import it.unimi.dsi.fastutil.shorts.ShortSet;
-import java.io.IOException;
 import java.util.function.BiConsumer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.network.Packet;
@@ -26,40 +21,35 @@ import net.minecraft.world.chunk.ChunkSection;
 
 public class ChunkDeltaUpdateS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private ChunkSectionPos sectionPos;
-    private short[] positions;
-    private BlockState[] blockStates;
-    private boolean field_26749;
-
-    public ChunkDeltaUpdateS2CPacket() {
-    }
+    private static final int field_33341 = 12;
+    private final ChunkSectionPos sectionPos;
+    private final short[] positions;
+    private final BlockState[] blockStates;
+    private final boolean noLightingUpdates;
 
     public ChunkDeltaUpdateS2CPacket(ChunkSectionPos sectionPos, ShortSet positions, ChunkSection section, boolean noLightingUpdates) {
         this.sectionPos = sectionPos;
-        this.field_26749 = noLightingUpdates;
-        this.allocateBuffers(positions.size());
-        int i = 0;
+        this.noLightingUpdates = noLightingUpdates;
+        int i = positions.size();
+        this.positions = new short[i];
+        this.blockStates = new BlockState[i];
+        int j = 0;
         ShortIterator shortIterator = positions.iterator();
         while (shortIterator.hasNext()) {
             short s;
-            this.positions[i] = s = ((Short)shortIterator.next()).shortValue();
-            this.blockStates[i] = section.getBlockState(ChunkSectionPos.unpackLocalX(s), ChunkSectionPos.unpackLocalY(s), ChunkSectionPos.unpackLocalZ(s));
-            ++i;
+            this.positions[j] = s = ((Short)shortIterator.next()).shortValue();
+            this.blockStates[j] = section.getBlockState(ChunkSectionPos.unpackLocalX(s), ChunkSectionPos.unpackLocalY(s), ChunkSectionPos.unpackLocalZ(s));
+            ++j;
         }
     }
 
-    private void allocateBuffers(int positionCount) {
-        this.positions = new short[positionCount];
-        this.blockStates = new BlockState[positionCount];
-    }
-
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public ChunkDeltaUpdateS2CPacket(PacketByteBuf buf) {
         this.sectionPos = ChunkSectionPos.from(buf.readLong());
-        this.field_26749 = buf.readBoolean();
+        this.noLightingUpdates = buf.readBoolean();
         int i = buf.readVarInt();
-        this.allocateBuffers(i);
-        for (int j = 0; j < this.positions.length; ++j) {
+        this.positions = new short[i];
+        this.blockStates = new BlockState[i];
+        for (int j = 0; j < i; ++j) {
             long l = buf.readVarLong();
             this.positions[j] = (short)(l & 0xFFFL);
             this.blockStates[j] = Block.STATE_IDS.get((int)(l >>> 12));
@@ -67,9 +57,9 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeLong(this.sectionPos.asLong());
-        buf.writeBoolean(this.field_26749);
+        buf.writeBoolean(this.noLightingUpdates);
         buf.writeVarInt(this.positions.length);
         for (int i = 0; i < this.positions.length; ++i) {
             buf.writeVarLong(Block.getRawIdFromState(this.blockStates[i]) << 12 | this.positions[i]);
@@ -90,9 +80,8 @@ implements Packet<ClientPlayPacketListener> {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public boolean method_31179() {
-        return this.field_26749;
+    public boolean shouldSkipLightingUpdates() {
+        return this.noLightingUpdates;
     }
 }
 

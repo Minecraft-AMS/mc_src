@@ -18,9 +18,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public abstract class CoralFeature
 extends Feature<DefaultFeatureConfig> {
@@ -29,7 +29,10 @@ extends Feature<DefaultFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, DefaultFeatureConfig defaultFeatureConfig) {
+    public boolean generate(FeatureContext<DefaultFeatureConfig> context) {
+        Random random = context.getRandom();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        BlockPos blockPos = context.getOrigin();
         BlockState blockState = ((Block)BlockTags.CORAL_BLOCKS.getRandom(random)).getDefaultState();
         return this.generateCoral(structureWorldAccess, random, blockPos, blockState);
     }
@@ -51,7 +54,10 @@ extends Feature<DefaultFeatureConfig> {
         for (Direction direction : Direction.Type.HORIZONTAL) {
             BlockPos blockPos2;
             if (!(random.nextFloat() < 0.2f) || !world.getBlockState(blockPos2 = pos.offset(direction)).isOf(Blocks.WATER)) continue;
-            BlockState blockState2 = (BlockState)((Block)BlockTags.WALL_CORALS.getRandom(random)).getDefaultState().with(DeadCoralWallFanBlock.FACING, direction);
+            BlockState blockState2 = ((Block)BlockTags.WALL_CORALS.getRandom(random)).getDefaultState();
+            if (blockState2.contains(DeadCoralWallFanBlock.FACING)) {
+                blockState2 = (BlockState)blockState2.with(DeadCoralWallFanBlock.FACING, direction);
+            }
             world.setBlockState(blockPos2, blockState2, 2);
         }
         return true;

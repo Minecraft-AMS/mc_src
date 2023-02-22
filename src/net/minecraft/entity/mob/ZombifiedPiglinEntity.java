@@ -13,8 +13,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.Durations;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.UniversalAngerGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
@@ -31,12 +30,14 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.IntRange;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
@@ -49,13 +50,14 @@ extends ZombieEntity
 implements Angerable {
     private static final UUID ATTACKING_SPEED_BOOST_ID = UUID.fromString("49455A49-7EC5-45BA-B886-3B90B23A1718");
     private static final EntityAttributeModifier ATTACKING_SPEED_BOOST = new EntityAttributeModifier(ATTACKING_SPEED_BOOST_ID, "Attacking speed boost", 0.05, EntityAttributeModifier.Operation.ADDITION);
-    private static final IntRange field_25382 = Durations.betweenSeconds(0, 1);
+    private static final UniformIntProvider ANGRY_SOUND_DELAY_RANGE = TimeHelper.betweenSeconds(0, 1);
     private int angrySoundDelay;
-    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
     private UUID targetUuid;
-    private static final IntRange field_25609 = Durations.betweenSeconds(4, 6);
-    private int field_25608;
+    private static final int field_30524 = 10;
+    private static final UniformIntProvider ANGER_PASSING_COOLDOWN_RANGE = TimeHelper.betweenSeconds(4, 6);
+    private int angerPassingCooldown;
 
     public ZombifiedPiglinEntity(EntityType<? extends ZombifiedPiglinEntity> entityType, World world) {
         super((EntityType<? extends ZombieEntity>)entityType, world);
@@ -77,7 +79,7 @@ implements Angerable {
         this.goalSelector.add(2, new ZombieAttackGoal(this, 1.0, false));
         this.goalSelector.add(7, new WanderAroundFarGoal(this, 1.0));
         this.targetSelector.add(1, new RevengeGoal(this, new Class[0]).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
         this.targetSelector.add(3, new UniversalAngerGoal<ZombifiedPiglinEntity>(this, true));
     }
 
@@ -97,13 +99,13 @@ implements Angerable {
             if (!this.isBaby() && !entityAttributeInstance.hasModifier(ATTACKING_SPEED_BOOST)) {
                 entityAttributeInstance.addTemporaryModifier(ATTACKING_SPEED_BOOST);
             }
-            this.method_30080();
+            this.tickAngrySound();
         } else if (entityAttributeInstance.hasModifier(ATTACKING_SPEED_BOOST)) {
             entityAttributeInstance.removeModifier(ATTACKING_SPEED_BOOST);
         }
         this.tickAngerLogic((ServerWorld)this.world, true);
         if (this.getTarget() != null) {
-            this.method_29941();
+            this.tickAngerPassing();
         }
         if (this.hasAngerTime()) {
             this.playerHitTimer = this.age;
@@ -111,41 +113,41 @@ implements Angerable {
         super.mobTick();
     }
 
-    private void method_30080() {
+    private void tickAngrySound() {
         if (this.angrySoundDelay > 0) {
             --this.angrySoundDelay;
             if (this.angrySoundDelay == 0) {
-                this.method_29533();
+                this.playAngrySound();
             }
         }
     }
 
-    private void method_29941() {
-        if (this.field_25608 > 0) {
-            --this.field_25608;
+    private void tickAngerPassing() {
+        if (this.angerPassingCooldown > 0) {
+            --this.angerPassingCooldown;
             return;
         }
         if (this.getVisibilityCache().canSee(this.getTarget())) {
-            this.method_29942();
+            this.angerNearbyZombifiedPiglins();
         }
-        this.field_25608 = field_25609.choose(this.random);
+        this.angerPassingCooldown = ANGER_PASSING_COOLDOWN_RANGE.get(this.random);
     }
 
-    private void method_29942() {
+    private void angerNearbyZombifiedPiglins() {
         double d = this.getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE);
-        Box box = Box.method_29968(this.getPos()).expand(d, 10.0, d);
-        this.world.getEntitiesIncludingUngeneratedChunks(ZombifiedPiglinEntity.class, box).stream().filter(zombifiedPiglinEntity -> zombifiedPiglinEntity != this).filter(zombifiedPiglinEntity -> zombifiedPiglinEntity.getTarget() == null).filter(zombifiedPiglinEntity -> !zombifiedPiglinEntity.isTeammate(this.getTarget())).forEach(zombifiedPiglinEntity -> zombifiedPiglinEntity.setTarget(this.getTarget()));
+        Box box = Box.from(this.getPos()).expand(d, 10.0, d);
+        this.world.getEntitiesByClass(ZombifiedPiglinEntity.class, box, EntityPredicates.EXCEPT_SPECTATOR).stream().filter(zombifiedPiglin -> zombifiedPiglin != this).filter(zombifiedPiglin -> zombifiedPiglin.getTarget() == null).filter(zombifiedPiglin -> !zombifiedPiglin.isTeammate(this.getTarget())).forEach(zombifiedPiglin -> zombifiedPiglin.setTarget(this.getTarget()));
     }
 
-    private void method_29533() {
+    private void playAngrySound() {
         this.playSound(SoundEvents.ENTITY_ZOMBIFIED_PIGLIN_ANGRY, this.getSoundVolume() * 2.0f, this.getSoundPitch() * 1.8f);
     }
 
     @Override
     public void setTarget(@Nullable LivingEntity target) {
         if (this.getTarget() == null && target != null) {
-            this.angrySoundDelay = field_25382.choose(this.random);
-            this.field_25608 = field_25609.choose(this.random);
+            this.angrySoundDelay = ANGRY_SOUND_DELAY_RANGE.get(this.random);
+            this.angerPassingCooldown = ANGER_PASSING_COOLDOWN_RANGE.get(this.random);
         }
         if (target instanceof PlayerEntity) {
             this.setAttacking((PlayerEntity)target);
@@ -155,11 +157,11 @@ implements Angerable {
 
     @Override
     public void chooseRandomAngerTime() {
-        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+        this.setAngerTime(ANGER_TIME_RANGE.get(this.random));
     }
 
     public static boolean canSpawn(EntityType<ZombifiedPiglinEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
-        return world.getDifficulty() != Difficulty.PEACEFUL && world.getBlockState(pos.down()).getBlock() != Blocks.NETHER_WART_BLOCK;
+        return world.getDifficulty() != Difficulty.PEACEFUL && !world.getBlockState(pos.down()).isOf(Blocks.NETHER_WART_BLOCK);
     }
 
     @Override
@@ -176,7 +178,7 @@ implements Angerable {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.angerFromTag((ServerWorld)this.world, nbt);
+        this.readAngerFromNbt(this.world, nbt);
     }
 
     @Override
@@ -187,14 +189,6 @@ implements Angerable {
     @Override
     public int getAngerTime() {
         return this.angerTime;
-    }
-
-    @Override
-    public boolean damage(DamageSource source, float amount) {
-        if (this.isInvulnerableTo(source)) {
-            return false;
-        }
-        return super.damage(source, amount);
     }
 
     @Override
@@ -235,6 +229,11 @@ implements Angerable {
     @Override
     public boolean isAngryAt(PlayerEntity player) {
         return this.shouldAngerAt(player);
+    }
+
+    @Override
+    public boolean canGather(ItemStack stack) {
+        return this.canPickupItem(stack);
     }
 }
 

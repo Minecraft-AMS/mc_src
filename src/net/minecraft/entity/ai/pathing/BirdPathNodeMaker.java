@@ -2,15 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Sets
+ *  com.google.common.collect.ImmutableSet
+ *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
+ *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.pathing;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.EnumSet;
-import java.util.HashSet;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
@@ -18,7 +20,6 @@ import net.minecraft.entity.ai.pathing.PathNode;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.ai.pathing.TargetPathNode;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
@@ -27,15 +28,19 @@ import org.jetbrains.annotations.Nullable;
 
 public class BirdPathNodeMaker
 extends LandPathNodeMaker {
+    private final Long2ObjectMap<PathNodeType> pathNodes = new Long2ObjectOpenHashMap();
+
     @Override
     public void init(ChunkCache cachedWorld, MobEntity entity) {
         super.init(cachedWorld, entity);
+        this.pathNodes.clear();
         this.waterPathNodeTypeWeight = entity.getPathfindingPenalty(PathNodeType.WATER);
     }
 
     @Override
     public void clear() {
         this.entity.setPathfindingPenalty(PathNodeType.WATER, this.waterPathNodeTypeWeight);
+        this.pathNodes.clear();
         super.clear();
     }
 
@@ -45,24 +50,20 @@ extends LandPathNodeMaker {
         PathNodeType pathNodeType;
         int i;
         if (this.canSwim() && this.entity.isTouchingWater()) {
-            i = MathHelper.floor(this.entity.getY());
+            i = this.entity.getBlockY();
             BlockPos.Mutable mutable = new BlockPos.Mutable(this.entity.getX(), (double)i, this.entity.getZ());
-            Block block = this.cachedWorld.getBlockState(mutable).getBlock();
-            while (block == Blocks.WATER) {
+            BlockState blockState = this.cachedWorld.getBlockState(mutable);
+            while (blockState.isOf(Blocks.WATER)) {
                 mutable.set(this.entity.getX(), (double)(++i), this.entity.getZ());
-                block = this.cachedWorld.getBlockState(mutable).getBlock();
+                blockState = this.cachedWorld.getBlockState(mutable);
             }
         } else {
             i = MathHelper.floor(this.entity.getY() + 0.5);
         }
-        if (this.entity.getPathfindingPenalty(pathNodeType = this.getNodeType(this.entity, (blockPos = this.entity.getBlockPos()).getX(), i, blockPos.getZ())) < 0.0f) {
-            HashSet set = Sets.newHashSet();
-            set.add(new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().minZ));
-            set.add(new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().maxZ));
-            set.add(new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().minZ));
-            set.add(new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().maxZ));
+        if (this.entity.getPathfindingPenalty(pathNodeType = this.getNodeType((blockPos = this.entity.getBlockPos()).getX(), i, blockPos.getZ())) < 0.0f) {
+            ImmutableSet set = ImmutableSet.of((Object)new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().minZ), (Object)new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().maxZ), (Object)new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().minZ), (Object)new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().maxZ));
             for (BlockPos blockPos2 : set) {
-                PathNodeType pathNodeType2 = this.getNodeType(this.entity, blockPos2);
+                PathNodeType pathNodeType2 = this.getNodeType(blockPos.getX(), i, blockPos.getZ());
                 if (!(this.entity.getPathfindingPenalty(pathNodeType2) >= 0.0f)) continue;
                 return super.getNode(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
             }
@@ -164,10 +165,10 @@ extends LandPathNodeMaker {
         if (this.unvisited(pathNode20 = this.getNode(node.x + 1, node.y + 1, node.z + 1)) && this.isPassable(pathNode16) && this.isPassable(pathNode) && this.isPassable(pathNode3) && this.isPassable(pathNode5) && this.isPassable(pathNode7) && this.isPassable(pathNode9)) {
             successors[i++] = pathNode20;
         }
-        if (this.unvisited(pathNode21 = this.getNode(node.x - 1, node.y + 1, node.z - 1)) && this.isPassable(pathNode17) && this.isPassable(pathNode4) && this.isPassable(pathNode2) & this.isPassable(pathNode5) && this.isPassable(pathNode10) && this.isPassable(pathNode8)) {
+        if (this.unvisited(pathNode21 = this.getNode(node.x - 1, node.y + 1, node.z - 1)) && this.isPassable(pathNode17) && this.isPassable(pathNode4) && this.isPassable(pathNode2) && this.isPassable(pathNode5) && this.isPassable(pathNode10) && this.isPassable(pathNode8)) {
             successors[i++] = pathNode21;
         }
-        if (this.unvisited(pathNode22 = this.getNode(node.x - 1, node.y + 1, node.z + 1)) && this.isPassable(pathNode18) && this.isPassable(pathNode) && this.isPassable(pathNode2) & this.isPassable(pathNode5) && this.isPassable(pathNode7) && this.isPassable(pathNode8)) {
+        if (this.unvisited(pathNode22 = this.getNode(node.x - 1, node.y + 1, node.z + 1)) && this.isPassable(pathNode18) && this.isPassable(pathNode) && this.isPassable(pathNode2) && this.isPassable(pathNode5) && this.isPassable(pathNode7) && this.isPassable(pathNode8)) {
             successors[i++] = pathNode22;
         }
         if (this.unvisited(pathNode23 = this.getNode(node.x + 1, node.y - 1, node.z - 1)) && this.isPassable(pathNode15) && this.isPassable(pathNode4) && this.isPassable(pathNode3) && this.isPassable(pathNode6) && this.isPassable(pathNode14) && this.isPassable(pathNode13)) {
@@ -197,7 +198,7 @@ extends LandPathNodeMaker {
     @Nullable
     protected PathNode getNode(int x, int y, int z) {
         PathNode pathNode = null;
-        PathNodeType pathNodeType = this.getNodeType(this.entity, x, y, z);
+        PathNodeType pathNodeType = this.getNodeType(x, y, z);
         float f = this.entity.getPathfindingPenalty(pathNodeType);
         if (f >= 0.0f) {
             pathNode = super.getNode(x, y, z);
@@ -207,10 +208,11 @@ extends LandPathNodeMaker {
                 pathNode.penalty += 1.0f;
             }
         }
-        if (pathNodeType == PathNodeType.OPEN || pathNodeType == PathNodeType.WALKABLE) {
-            return pathNode;
-        }
         return pathNode;
+    }
+
+    private PathNodeType getNodeType(int x, int y, int z) {
+        return (PathNodeType)((Object)this.pathNodes.computeIfAbsent(BlockPos.asLong(x, y, z), l -> this.getNodeType(this.cachedWorld, x, y, z, this.entity, this.entityBlockXSize, this.entityBlockYSize, this.entityBlockZSize, this.canOpenDoors(), this.canEnterOpenDoors())));
     }
 
     @Override
@@ -218,7 +220,7 @@ extends LandPathNodeMaker {
         EnumSet<PathNodeType> enumSet = EnumSet.noneOf(PathNodeType.class);
         PathNodeType pathNodeType = PathNodeType.BLOCKED;
         BlockPos blockPos = mob.getBlockPos();
-        pathNodeType = this.findNearbyNodeTypes(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
+        pathNodeType = super.findNearbyNodeTypes(world, x, y, z, sizeX, sizeY, sizeZ, canOpenDoors, canEnterOpenDoors, enumSet, pathNodeType, blockPos);
         if (enumSet.contains((Object)PathNodeType.FENCE)) {
             return PathNodeType.FENCE;
         }
@@ -240,10 +242,9 @@ extends LandPathNodeMaker {
     public PathNodeType getDefaultNodeType(BlockView world, int x, int y, int z) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         PathNodeType pathNodeType = BirdPathNodeMaker.getCommonNodeType(world, mutable.set(x, y, z));
-        if (pathNodeType == PathNodeType.OPEN && y >= 1) {
-            BlockState blockState = world.getBlockState(mutable.set(x, y - 1, z));
+        if (pathNodeType == PathNodeType.OPEN && y >= world.getBottomY() + 1) {
             PathNodeType pathNodeType2 = BirdPathNodeMaker.getCommonNodeType(world, mutable.set(x, y - 1, z));
-            if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || blockState.isOf(Blocks.MAGMA_BLOCK) || pathNodeType2 == PathNodeType.LAVA || blockState.isIn(BlockTags.CAMPFIRES)) {
+            if (pathNodeType2 == PathNodeType.DAMAGE_FIRE || pathNodeType2 == PathNodeType.LAVA) {
                 pathNodeType = PathNodeType.DAMAGE_FIRE;
             } else if (pathNodeType2 == PathNodeType.DAMAGE_CACTUS) {
                 pathNodeType = PathNodeType.DAMAGE_CACTUS;
@@ -261,14 +262,6 @@ extends LandPathNodeMaker {
             pathNodeType = BirdPathNodeMaker.getNodeTypeFromNeighbors(world, mutable.set(x, y, z), pathNodeType);
         }
         return pathNodeType;
-    }
-
-    private PathNodeType getNodeType(MobEntity entity, BlockPos pos) {
-        return this.getNodeType(entity, pos.getX(), pos.getY(), pos.getZ());
-    }
-
-    private PathNodeType getNodeType(MobEntity entity, int x, int y, int z) {
-        return this.getNodeType(this.cachedWorld, x, y, z, entity, this.entityBlockXSize, this.entityBlockYSize, this.entityBlockZSize, this.canOpenDoors(), this.canEnterOpenDoors());
     }
 }
 

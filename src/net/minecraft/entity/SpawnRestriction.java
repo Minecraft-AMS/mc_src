@@ -27,6 +27,7 @@ import net.minecraft.entity.mob.PiglinEntity;
 import net.minecraft.entity.mob.SilverfishEntity;
 import net.minecraft.entity.mob.SlimeEntity;
 import net.minecraft.entity.mob.StrayEntity;
+import net.minecraft.entity.mob.WaterCreatureEntity;
 import net.minecraft.entity.mob.ZombifiedPiglinEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.BatEntity;
@@ -72,6 +73,7 @@ public class SpawnRestriction {
     }
 
     static {
+        SpawnRestriction.register(EntityType.AXOLOTL, Location.IN_WATER, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, WaterCreatureEntity::canSpawnUnderground);
         SpawnRestriction.register(EntityType.COD, Location.IN_WATER, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, FishEntity::canSpawn);
         SpawnRestriction.register(EntityType.DOLPHIN, Location.IN_WATER, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, DolphinEntity::canSpawn);
         SpawnRestriction.register(EntityType.DROWNED, Location.IN_WATER, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, DrownedEntity::canSpawn);
@@ -92,6 +94,8 @@ public class SpawnRestriction {
         SpawnRestriction.register(EntityType.ENDER_DRAGON, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, MobEntity::canMobSpawn);
         SpawnRestriction.register(EntityType.GHAST, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, GhastEntity::canSpawn);
         SpawnRestriction.register(EntityType.GIANT, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, HostileEntity::canSpawnInDark);
+        SpawnRestriction.register(EntityType.GLOW_SQUID, Location.IN_WATER, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, WaterCreatureEntity::canSpawnUnderground);
+        SpawnRestriction.register(EntityType.GOAT, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, AnimalEntity::isValidNaturalSpawn);
         SpawnRestriction.register(EntityType.HORSE, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, AnimalEntity::isValidNaturalSpawn);
         SpawnRestriction.register(EntityType.HUSK, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, HuskEntity::canSpawn);
         SpawnRestriction.register(EntityType.IRON_GOLEM, Location.ON_GROUND, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, MobEntity::canMobSpawn);
@@ -141,23 +145,40 @@ public class SpawnRestriction {
         SpawnRestriction.register(EntityType.WANDERING_TRADER, Location.NO_RESTRICTIONS, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, MobEntity::canMobSpawn);
     }
 
-    public static enum Location {
-        ON_GROUND,
-        IN_WATER,
-        NO_RESTRICTIONS,
-        IN_LAVA;
-
-    }
-
     static class Entry {
-        private final Heightmap.Type heightmapType;
-        private final Location location;
-        private final SpawnPredicate<?> predicate;
+        final Heightmap.Type heightmapType;
+        final Location location;
+        final SpawnPredicate<?> predicate;
 
         public Entry(Heightmap.Type heightmapType, Location location, SpawnPredicate<?> predicate) {
             this.heightmapType = heightmapType;
             this.location = location;
             this.predicate = predicate;
+        }
+    }
+
+    public static final class Location
+    extends Enum<Location> {
+        public static final /* enum */ Location ON_GROUND = new Location();
+        public static final /* enum */ Location IN_WATER = new Location();
+        public static final /* enum */ Location NO_RESTRICTIONS = new Location();
+        public static final /* enum */ Location IN_LAVA = new Location();
+        private static final /* synthetic */ Location[] field_6319;
+
+        public static Location[] values() {
+            return (Location[])field_6319.clone();
+        }
+
+        public static Location valueOf(String string) {
+            return Enum.valueOf(Location.class, string);
+        }
+
+        private static /* synthetic */ Location[] method_36613() {
+            return new Location[]{ON_GROUND, IN_WATER, NO_RESTRICTIONS, IN_LAVA};
+        }
+
+        static {
+            field_6319 = Location.method_36613();
         }
     }
 

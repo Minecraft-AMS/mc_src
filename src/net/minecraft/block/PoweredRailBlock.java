@@ -25,7 +25,7 @@ extends AbstractRailBlock {
 
     protected PoweredRailBlock(AbstractBlock.Settings settings) {
         super(true, settings);
-        this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(SHAPE, RailShape.NORTH_SOUTH)).with(POWERED, false));
+        this.setDefaultState((BlockState)((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(SHAPE, RailShape.NORTH_SOUTH)).with(POWERED, false)).with(WATERLOGGED, false));
     }
 
     protected boolean isPoweredByOtherRails(World world, BlockPos pos, BlockState state, boolean bl, int distance) {
@@ -303,7 +303,7 @@ extends AbstractRailBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(SHAPE, POWERED);
+        builder.add(SHAPE, POWERED, WATERLOGGED);
     }
 }
 

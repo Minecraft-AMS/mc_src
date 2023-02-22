@@ -8,8 +8,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.particle;
 
@@ -19,38 +17,32 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Locale;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.particle.AbstractDustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3f;
 
 public class DustParticleEffect
-implements ParticleEffect {
-    public static final DustParticleEffect DEFAULT = new DustParticleEffect(1.0f, 0.0f, 0.0f, 1.0f);
-    public static final Codec<DustParticleEffect> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("r").forGetter(dustParticleEffect -> Float.valueOf(dustParticleEffect.red)), (App)Codec.FLOAT.fieldOf("g").forGetter(dustParticleEffect -> Float.valueOf(dustParticleEffect.green)), (App)Codec.FLOAT.fieldOf("b").forGetter(dustParticleEffect -> Float.valueOf(dustParticleEffect.blue)), (App)Codec.FLOAT.fieldOf("scale").forGetter(dustParticleEffect -> Float.valueOf(dustParticleEffect.scale))).apply((Applicative)instance, DustParticleEffect::new));
+extends AbstractDustParticleEffect {
+    public static final Vec3f RED = new Vec3f(Vec3d.unpackRgb(0xFF0000));
+    public static final DustParticleEffect DEFAULT = new DustParticleEffect(RED, 1.0f);
+    public static final Codec<DustParticleEffect> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Vec3f.CODEC.fieldOf("color").forGetter(dustParticleEffect -> dustParticleEffect.color), (App)Codec.FLOAT.fieldOf("scale").forGetter(dustParticleEffect -> Float.valueOf(dustParticleEffect.scale))).apply((Applicative)instance, DustParticleEffect::new));
     public static final ParticleEffect.Factory<DustParticleEffect> PARAMETERS_FACTORY = new ParticleEffect.Factory<DustParticleEffect>(){
 
         @Override
         public DustParticleEffect read(ParticleType<DustParticleEffect> particleType, StringReader stringReader) throws CommandSyntaxException {
+            Vec3f vec3f = AbstractDustParticleEffect.readColor(stringReader);
             stringReader.expect(' ');
-            float f = (float)stringReader.readDouble();
-            stringReader.expect(' ');
-            float g = (float)stringReader.readDouble();
-            stringReader.expect(' ');
-            float h = (float)stringReader.readDouble();
-            stringReader.expect(' ');
-            float i = (float)stringReader.readDouble();
-            return new DustParticleEffect(f, g, h, i);
+            float f = stringReader.readFloat();
+            return new DustParticleEffect(vec3f, f);
         }
 
         @Override
         public DustParticleEffect read(ParticleType<DustParticleEffect> particleType, PacketByteBuf packetByteBuf) {
-            return new DustParticleEffect(packetByteBuf.readFloat(), packetByteBuf.readFloat(), packetByteBuf.readFloat(), packetByteBuf.readFloat());
+            return new DustParticleEffect(AbstractDustParticleEffect.readColor(packetByteBuf), packetByteBuf.readFloat());
         }
 
         @Override
@@ -63,53 +55,13 @@ implements ParticleEffect {
             return this.read(type, reader);
         }
     };
-    private final float red;
-    private final float green;
-    private final float blue;
-    private final float scale;
 
-    public DustParticleEffect(float red, float green, float blue, float scale) {
-        this.red = red;
-        this.green = green;
-        this.blue = blue;
-        this.scale = MathHelper.clamp(scale, 0.01f, 4.0f);
-    }
-
-    @Override
-    public void write(PacketByteBuf buf) {
-        buf.writeFloat(this.red);
-        buf.writeFloat(this.green);
-        buf.writeFloat(this.blue);
-        buf.writeFloat(this.scale);
-    }
-
-    @Override
-    public String asString() {
-        return String.format(Locale.ROOT, "%s %.2f %.2f %.2f %.2f", Registry.PARTICLE_TYPE.getId(this.getType()), Float.valueOf(this.red), Float.valueOf(this.green), Float.valueOf(this.blue), Float.valueOf(this.scale));
+    public DustParticleEffect(Vec3f vec3f, float f) {
+        super(vec3f, f);
     }
 
     public ParticleType<DustParticleEffect> getType() {
         return ParticleTypes.DUST;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public float getRed() {
-        return this.red;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public float getGreen() {
-        return this.green;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public float getBlue() {
-        return this.blue;
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public float getScale() {
-        return this.scale;
     }
 }
 

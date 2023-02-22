@@ -17,7 +17,10 @@ import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.InputUtil;
@@ -29,15 +32,22 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.GameMode;
 
 @Environment(value=EnvType.CLIENT)
 public class GameModeSelectionScreen
 extends Screen {
-    private static final Identifier TEXTURE = new Identifier("textures/gui/container/gamemode_switcher.png");
-    private static final int UI_WIDTH = GameMode.values().length * 30 - 5;
+    static final Identifier TEXTURE = new Identifier("textures/gui/container/gamemode_switcher.png");
+    private static final int field_32310 = 128;
+    private static final int field_32311 = 128;
+    private static final int field_32312 = 26;
+    private static final int field_32313 = 5;
+    private static final int field_32314 = 31;
+    private static final int field_32315 = 5;
+    private static final int UI_WIDTH = GameModeSelection.values().length * 31 - 5;
     private static final Text SELECT_NEXT_TEXT = new TranslatableText("debug.gamemodes.select_next", new TranslatableText("debug.gamemodes.press_f4").formatted(Formatting.AQUA));
-    private final Optional<GameMode> currentGameMode;
-    private Optional<GameMode> gameMode = Optional.empty();
+    private final Optional<GameModeSelection> currentGameMode;
+    private Optional<GameModeSelection> gameMode = Optional.empty();
     private int lastMouseX;
     private int lastMouseY;
     private boolean mouseUsedForSelection;
@@ -45,25 +55,25 @@ extends Screen {
 
     public GameModeSelectionScreen() {
         super(NarratorManager.EMPTY);
-        this.currentGameMode = GameMode.of(this.getPreviousGameMode());
+        this.currentGameMode = GameModeSelection.of(this.getPreviousGameMode());
     }
 
-    private net.minecraft.world.GameMode getPreviousGameMode() {
-        net.minecraft.world.GameMode gameMode = MinecraftClient.getInstance().interactionManager.getCurrentGameMode();
-        net.minecraft.world.GameMode gameMode2 = MinecraftClient.getInstance().interactionManager.getPreviousGameMode();
-        if (gameMode2 == net.minecraft.world.GameMode.NOT_SET) {
-            gameMode2 = gameMode == net.minecraft.world.GameMode.CREATIVE ? net.minecraft.world.GameMode.SURVIVAL : net.minecraft.world.GameMode.CREATIVE;
+    private GameMode getPreviousGameMode() {
+        ClientPlayerInteractionManager clientPlayerInteractionManager = MinecraftClient.getInstance().interactionManager;
+        GameMode gameMode = clientPlayerInteractionManager.getPreviousGameMode();
+        if (gameMode != null) {
+            return gameMode;
         }
-        return gameMode2;
+        return clientPlayerInteractionManager.getCurrentGameMode() == GameMode.CREATIVE ? GameMode.SURVIVAL : GameMode.CREATIVE;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.gameMode = this.currentGameMode.isPresent() ? this.currentGameMode : GameMode.of(this.client.interactionManager.getCurrentGameMode());
-        for (int i = 0; i < GameMode.VALUES.length; ++i) {
-            GameMode gameMode = GameMode.VALUES[i];
-            this.gameModeButtons.add(new ButtonWidget(gameMode, this.width / 2 - UI_WIDTH / 2 + i * 30, this.height / 2 - 30));
+        this.gameMode = this.currentGameMode.isPresent() ? this.currentGameMode : GameModeSelection.of(this.client.interactionManager.getCurrentGameMode());
+        for (int i = 0; i < GameModeSelection.VALUES.length; ++i) {
+            GameModeSelection gameModeSelection = GameModeSelection.VALUES[i];
+            this.gameModeButtons.add(new ButtonWidget(gameModeSelection, this.width / 2 - UI_WIDTH / 2 + i * 31, this.height / 2 - 31));
         }
     }
 
@@ -72,15 +82,16 @@ extends Screen {
         if (this.checkForClose()) {
             return;
         }
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
         matrices.push();
         RenderSystem.enableBlend();
-        this.client.getTextureManager().bindTexture(TEXTURE);
+        RenderSystem.setShaderTexture(0, TEXTURE);
         int i = this.width / 2 - 62;
-        int j = this.height / 2 - 30 - 27;
+        int j = this.height / 2 - 31 - 27;
         GameModeSelectionScreen.drawTexture(matrices, i, j, 0.0f, 0.0f, 125, 75, 128, 128);
         matrices.pop();
         super.render(matrices, mouseX, mouseY, delta);
-        this.gameMode.ifPresent(gameMode -> GameModeSelectionScreen.drawCenteredText(matrices, this.textRenderer, ((GameMode)gameMode).getText(), this.width / 2, this.height / 2 - 30 - 20, -1));
+        this.gameMode.ifPresent(gameMode -> GameModeSelectionScreen.drawCenteredText(matrices, this.textRenderer, gameMode.getText(), this.width / 2, this.height / 2 - 31 - 20, -1));
         GameModeSelectionScreen.drawCenteredText(matrices, this.textRenderer, SELECT_NEXT_TEXT, this.width / 2, this.height / 2 + 5, 0xFFFFFF);
         if (!this.mouseUsedForSelection) {
             this.lastMouseX = mouseX;
@@ -100,21 +111,21 @@ extends Screen {
         GameModeSelectionScreen.apply(this.client, this.gameMode);
     }
 
-    private static void apply(MinecraftClient client, Optional<GameMode> gameMode) {
+    private static void apply(MinecraftClient client, Optional<GameModeSelection> gameMode) {
         if (client.interactionManager == null || client.player == null || !gameMode.isPresent()) {
             return;
         }
-        Optional optional = GameMode.of(client.interactionManager.getCurrentGameMode());
-        GameMode gameMode2 = gameMode.get();
-        if (optional.isPresent() && client.player.hasPermissionLevel(2) && gameMode2 != optional.get()) {
-            client.player.sendChatMessage(gameMode2.getCommand());
+        Optional<GameModeSelection> optional = GameModeSelection.of(client.interactionManager.getCurrentGameMode());
+        GameModeSelection gameModeSelection = gameMode.get();
+        if (optional.isPresent() && client.player.hasPermissionLevel(2) && gameModeSelection != optional.get()) {
+            client.player.sendChatMessage(gameModeSelection.getCommand());
         }
     }
 
     private boolean checkForClose() {
         if (!InputUtil.isKeyPressed(this.client.getWindow().getHandle(), 292)) {
             this.apply();
-            this.client.openScreen(null);
+            this.client.setScreen(null);
             return true;
         }
         return false;
@@ -136,84 +147,47 @@ extends Screen {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public class ButtonWidget
-    extends ClickableWidget {
-        private final GameMode gameMode;
-        private boolean selected;
-
-        public ButtonWidget(GameMode gameMode, int x, int y) {
-            super(x, y, 25, 25, gameMode.getText());
-            this.gameMode = gameMode;
-        }
-
-        @Override
-        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            MinecraftClient minecraftClient = MinecraftClient.getInstance();
-            this.drawBackground(matrices, minecraftClient.getTextureManager());
-            this.gameMode.renderIcon(GameModeSelectionScreen.this.itemRenderer, this.x + 5, this.y + 5);
-            if (this.selected) {
-                this.drawSelectionBox(matrices, minecraftClient.getTextureManager());
-            }
-        }
-
-        @Override
-        public boolean isHovered() {
-            return super.isHovered() || this.selected;
-        }
-
-        public void setSelected(boolean selected) {
-            this.selected = selected;
-            this.narrate();
-        }
-
-        private void drawBackground(MatrixStack matrices, TextureManager textureManager) {
-            textureManager.bindTexture(TEXTURE);
-            matrices.push();
-            matrices.translate(this.x, this.y, 0.0);
-            ButtonWidget.drawTexture(matrices, 0, 0, 0.0f, 75.0f, 25, 25, 128, 128);
-            matrices.pop();
-        }
-
-        private void drawSelectionBox(MatrixStack matrices, TextureManager textureManager) {
-            textureManager.bindTexture(TEXTURE);
-            matrices.push();
-            matrices.translate(this.x, this.y, 0.0);
-            ButtonWidget.drawTexture(matrices, 0, 0, 25.0f, 75.0f, 25, 25, 128, 128);
-            matrices.pop();
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static enum GameMode {
-        CREATIVE(new TranslatableText("gameMode.creative"), "/gamemode creative", new ItemStack(Blocks.GRASS_BLOCK)),
-        SURVIVAL(new TranslatableText("gameMode.survival"), "/gamemode survival", new ItemStack(Items.IRON_SWORD)),
-        ADVENTURE(new TranslatableText("gameMode.adventure"), "/gamemode adventure", new ItemStack(Items.MAP)),
-        SPECTATOR(new TranslatableText("gameMode.spectator"), "/gamemode spectator", new ItemStack(Items.ENDER_EYE));
-
-        protected static final GameMode[] VALUES;
+    static final class GameModeSelection
+    extends Enum<GameModeSelection> {
+        public static final /* enum */ GameModeSelection CREATIVE = new GameModeSelection(new TranslatableText("gameMode.creative"), "/gamemode creative", new ItemStack(Blocks.GRASS_BLOCK));
+        public static final /* enum */ GameModeSelection SURVIVAL = new GameModeSelection(new TranslatableText("gameMode.survival"), "/gamemode survival", new ItemStack(Items.IRON_SWORD));
+        public static final /* enum */ GameModeSelection ADVENTURE = new GameModeSelection(new TranslatableText("gameMode.adventure"), "/gamemode adventure", new ItemStack(Items.MAP));
+        public static final /* enum */ GameModeSelection SPECTATOR = new GameModeSelection(new TranslatableText("gameMode.spectator"), "/gamemode spectator", new ItemStack(Items.ENDER_EYE));
+        protected static final GameModeSelection[] VALUES;
+        private static final int field_32317 = 16;
+        protected static final int field_32316 = 5;
         final Text text;
         final String command;
         final ItemStack icon;
+        private static final /* synthetic */ GameModeSelection[] field_24584;
 
-        private GameMode(Text text, String command, ItemStack icon) {
+        public static GameModeSelection[] values() {
+            return (GameModeSelection[])field_24584.clone();
+        }
+
+        public static GameModeSelection valueOf(String string) {
+            return Enum.valueOf(GameModeSelection.class, string);
+        }
+
+        private GameModeSelection(Text text, String command, ItemStack icon) {
             this.text = text;
             this.command = command;
             this.icon = icon;
         }
 
-        private void renderIcon(ItemRenderer itemRenderer, int x, int y) {
+        void renderIcon(ItemRenderer itemRenderer, int x, int y) {
             itemRenderer.renderInGuiWithOverrides(this.icon, x, y);
         }
 
-        private Text getText() {
+        Text getText() {
             return this.text;
         }
 
-        private String getCommand() {
+        String getCommand() {
             return this.command;
         }
 
-        private Optional<GameMode> next() {
+        Optional<GameModeSelection> next() {
             switch (this) {
                 case CREATIVE: {
                     return Optional.of(SURVIVAL);
@@ -228,7 +202,7 @@ extends Screen {
             return Optional.of(CREATIVE);
         }
 
-        private static Optional<GameMode> of(net.minecraft.world.GameMode gameMode) {
+        static Optional<GameModeSelection> of(GameMode gameMode) {
             switch (gameMode) {
                 case SPECTATOR: {
                     return Optional.of(SPECTATOR);
@@ -246,8 +220,67 @@ extends Screen {
             return Optional.empty();
         }
 
+        private static /* synthetic */ GameModeSelection[] method_36886() {
+            return new GameModeSelection[]{CREATIVE, SURVIVAL, ADVENTURE, SPECTATOR};
+        }
+
         static {
-            VALUES = GameMode.values();
+            field_24584 = GameModeSelection.method_36886();
+            VALUES = GameModeSelection.values();
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public class ButtonWidget
+    extends ClickableWidget {
+        final GameModeSelection gameMode;
+        private boolean selected;
+
+        public ButtonWidget(GameModeSelection gameMode, int x, int y) {
+            super(x, y, 26, 26, gameMode.getText());
+            this.gameMode = gameMode;
+        }
+
+        @Override
+        public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+            MinecraftClient minecraftClient = MinecraftClient.getInstance();
+            this.drawBackground(matrices, minecraftClient.getTextureManager());
+            this.gameMode.renderIcon(GameModeSelectionScreen.this.itemRenderer, this.x + 5, this.y + 5);
+            if (this.selected) {
+                this.drawSelectionBox(matrices, minecraftClient.getTextureManager());
+            }
+        }
+
+        @Override
+        public void appendNarrations(NarrationMessageBuilder builder) {
+            this.appendDefaultNarrations(builder);
+        }
+
+        @Override
+        public boolean isHovered() {
+            return super.isHovered() || this.selected;
+        }
+
+        public void setSelected(boolean selected) {
+            this.selected = selected;
+        }
+
+        private void drawBackground(MatrixStack matrices, TextureManager textureManager) {
+            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShaderTexture(0, TEXTURE);
+            matrices.push();
+            matrices.translate(this.x, this.y, 0.0);
+            ButtonWidget.drawTexture(matrices, 0, 0, 0.0f, 75.0f, 26, 26, 128, 128);
+            matrices.pop();
+        }
+
+        private void drawSelectionBox(MatrixStack matrices, TextureManager textureManager) {
+            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShaderTexture(0, TEXTURE);
+            matrices.push();
+            matrices.translate(this.x, this.y, 0.0);
+            ButtonWidget.drawTexture(matrices, 0, 0, 26.0f, 75.0f, 26, 26, 128, 128);
+            matrices.pop();
         }
     }
 }

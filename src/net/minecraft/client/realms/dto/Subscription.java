@@ -38,7 +38,7 @@ extends ValueObject {
             subscription.type = Subscription.typeFrom(JsonUtils.getStringOr("subscriptionType", jsonObject, SubscriptionType.NORMAL.name()));
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse Subscription: " + exception.getMessage());
+            LOGGER.error("Could not parse Subscription: {}", (Object)exception.getMessage());
         }
         return subscription;
     }
@@ -53,10 +53,27 @@ extends ValueObject {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum SubscriptionType {
-        NORMAL,
-        RECURRING;
+    public static final class SubscriptionType
+    extends Enum<SubscriptionType> {
+        public static final /* enum */ SubscriptionType NORMAL = new SubscriptionType();
+        public static final /* enum */ SubscriptionType RECURRING = new SubscriptionType();
+        private static final /* synthetic */ SubscriptionType[] field_19445;
 
+        public static SubscriptionType[] values() {
+            return (SubscriptionType[])field_19445.clone();
+        }
+
+        public static SubscriptionType valueOf(String name) {
+            return Enum.valueOf(SubscriptionType.class, name);
+        }
+
+        private static /* synthetic */ SubscriptionType[] method_36850() {
+            return new SubscriptionType[]{NORMAL, RECURRING};
+        }
+
+        static {
+            field_19445 = SubscriptionType.method_36850();
+        }
     }
 }
 

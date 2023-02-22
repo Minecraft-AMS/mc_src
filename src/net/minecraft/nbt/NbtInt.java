@@ -10,11 +10,11 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 
 public class NbtInt
 extends AbstractNbtNumber {
+    private static final int field_33196 = 96;
     public static final NbtType<NbtInt> TYPE = new NbtType<NbtInt>(){
 
         @Override
@@ -45,13 +45,13 @@ extends AbstractNbtNumber {
     };
     private final int value;
 
-    private NbtInt(int value) {
-        this.value = value;
+    NbtInt(int i) {
+        this.value = i;
     }
 
     public static NbtInt of(int value) {
         if (value >= -128 && value <= 1024) {
-            return Cache.VALUES[value + 128];
+            return Cache.VALUES[value - -128];
         }
         return new NbtInt(value);
     }
@@ -71,11 +71,6 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public String toString() {
-        return String.valueOf(this.value);
-    }
-
-    @Override
     public NbtInt copy() {
         return this;
     }
@@ -92,8 +87,8 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        return new LiteralText(String.valueOf(this.value)).formatted(GOLD);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitInt(this);
     }
 
     @Override
@@ -137,7 +132,12 @@ extends AbstractNbtNumber {
     }
 
     static class Cache {
+        private static final int field_33197 = 1024;
+        private static final int field_33198 = -128;
         static final NbtInt[] VALUES = new NbtInt[1153];
+
+        private Cache() {
+        }
 
         static {
             for (int i = 0; i < VALUES.length; ++i) {

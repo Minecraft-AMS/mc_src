@@ -7,12 +7,16 @@
 package net.minecraft.world;
 
 import it.unimi.dsi.fastutil.shorts.ShortList;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.ChunkSerializer;
+import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.TickPriority;
 import net.minecraft.world.TickScheduler;
 import net.minecraft.world.chunk.Chunk;
@@ -22,19 +26,22 @@ public class ChunkTickScheduler<T>
 implements TickScheduler<T> {
     protected final Predicate<T> shouldExclude;
     private final ChunkPos pos;
-    private final ShortList[] scheduledPositions = new ShortList[16];
+    private final ShortList[] scheduledPositions;
+    private HeightLimitView world;
 
-    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos) {
-        this(shouldExclude, pos, new NbtList());
+    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos, HeightLimitView world) {
+        this(shouldExclude, pos, new NbtList(), world);
     }
 
-    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos, NbtList tag) {
+    public ChunkTickScheduler(Predicate<T> shouldExclude, ChunkPos pos, NbtList nbtList, HeightLimitView world) {
         this.shouldExclude = shouldExclude;
         this.pos = pos;
-        for (int i = 0; i < tag.size(); ++i) {
-            NbtList nbtList = tag.getList(i);
-            for (int j = 0; j < nbtList.size(); ++j) {
-                Chunk.getList(this.scheduledPositions, i).add(nbtList.getShort(j));
+        this.world = world;
+        this.scheduledPositions = new ShortList[world.countVerticalSections()];
+        for (int i = 0; i < nbtList.size(); ++i) {
+            NbtList nbtList2 = nbtList.getList(i);
+            for (int j = 0; j < nbtList2.size(); ++j) {
+                Chunk.getList(this.scheduledPositions, i).add(nbtList2.getShort(j));
             }
         }
     }
@@ -47,7 +54,7 @@ implements TickScheduler<T> {
         for (int i = 0; i < this.scheduledPositions.length; ++i) {
             if (this.scheduledPositions[i] == null) continue;
             for (Short short_ : this.scheduledPositions[i]) {
-                BlockPos blockPos = ProtoChunk.joinBlockPos(short_, i, this.pos);
+                BlockPos blockPos = ProtoChunk.joinBlockPos(short_, this.world.sectionIndexToCoord(i), this.pos);
                 scheduler.schedule(blockPos, dataMapper.apply(blockPos), 0);
             }
             this.scheduledPositions[i].clear();
@@ -61,12 +68,21 @@ implements TickScheduler<T> {
 
     @Override
     public void schedule(BlockPos pos, T object, int delay, TickPriority priority) {
-        Chunk.getList(this.scheduledPositions, pos.getY() >> 4).add(ProtoChunk.getPackedSectionRelative(pos));
+        int i = this.world.getSectionIndex(pos.getY());
+        if (i < 0 || i >= this.world.countVerticalSections()) {
+            return;
+        }
+        Chunk.getList(this.scheduledPositions, i).add(ProtoChunk.getPackedSectionRelative(pos));
     }
 
     @Override
     public boolean isTicking(BlockPos pos, T object) {
         return false;
+    }
+
+    @Override
+    public int getTicks() {
+        return Stream.of(this.scheduledPositions).filter(Objects::nonNull).mapToInt(List::size).sum();
     }
 }
 

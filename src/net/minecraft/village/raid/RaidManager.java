@@ -35,13 +35,13 @@ import org.jetbrains.annotations.Nullable;
 
 public class RaidManager
 extends PersistentState {
+    private static final String RAIDS = "raids";
     private final Map<Integer, Raid> raids = Maps.newHashMap();
     private final ServerWorld world;
     private int nextAvailableId;
     private int currentTime;
 
     public RaidManager(ServerWorld world) {
-        super(RaidManager.nameFor(world.getDimension()));
         this.world = world;
         this.nextAvailableId = 1;
         this.markDirty();
@@ -137,16 +137,17 @@ extends PersistentState {
         return raid != null ? raid : new Raid(this.nextId(), world, pos);
     }
 
-    @Override
-    public void fromTag(NbtCompound tag) {
-        this.nextAvailableId = tag.getInt("NextAvailableID");
-        this.currentTime = tag.getInt("Tick");
-        NbtList nbtList = tag.getList("Raids", 10);
+    public static RaidManager fromNbt(ServerWorld world, NbtCompound nbt) {
+        RaidManager raidManager = new RaidManager(world);
+        raidManager.nextAvailableId = nbt.getInt("NextAvailableID");
+        raidManager.currentTime = nbt.getInt("Tick");
+        NbtList nbtList = nbt.getList("Raids", 10);
         for (int i = 0; i < nbtList.size(); ++i) {
             NbtCompound nbtCompound = nbtList.getCompound(i);
-            Raid raid = new Raid(this.world, nbtCompound);
-            this.raids.put(raid.getRaidId(), raid);
+            Raid raid = new Raid(world, nbtCompound);
+            raidManager.raids.put(raid.getRaidId(), raid);
         }
+        return raidManager;
     }
 
     @Override
@@ -164,7 +165,7 @@ extends PersistentState {
     }
 
     public static String nameFor(DimensionType dimensionType) {
-        return "raids" + dimensionType.getSuffix();
+        return RAIDS + dimensionType.getSuffix();
     }
 
     private int nextId() {

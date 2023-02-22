@@ -18,7 +18,7 @@ import net.minecraft.util.JsonHelper;
 
 public class PlayerGeneratesContainerLootCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("player_generates_container_loot");
+    static final Identifier ID = new Identifier("player_generates_container_loot");
 
     @Override
     public Identifier getId() {
@@ -31,8 +31,8 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, identifier);
     }
 
-    public void test(ServerPlayerEntity player, Identifier id) {
-        this.test(player, (T conditions) -> conditions.test(id));
+    public void trigger(ServerPlayerEntity player, Identifier id) {
+        this.trigger(player, (T conditions) -> conditions.test(id));
     }
 
     @Override

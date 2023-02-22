@@ -8,7 +8,6 @@
 package net.minecraft.client.gui.widget;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -16,35 +15,36 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundManager;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class ClickableWidget
 extends DrawableHelper
 implements Drawable,
-Element {
+Element,
+Selectable {
     public static final Identifier WIDGETS_TEXTURE = new Identifier("textures/gui/widgets.png");
     protected int width;
     protected int height;
     public int x;
     public int y;
     private Text message;
-    private boolean wasHovered;
     protected boolean hovered;
     public boolean active = true;
     public boolean visible = true;
     protected float alpha = 1.0f;
-    protected long nextNarration = Long.MAX_VALUE;
     private boolean focused;
 
     public ClickableWidget(int x, int y, int width, int height, Text message) {
@@ -74,42 +74,24 @@ Element {
         if (!this.visible) {
             return;
         }
-        boolean bl = this.hovered = mouseX >= this.x && mouseY >= this.y && mouseX < this.x + this.width && mouseY < this.y + this.height;
-        if (this.wasHovered != this.isHovered()) {
-            if (this.isHovered()) {
-                if (this.focused) {
-                    this.queueNarration(200);
-                } else {
-                    this.queueNarration(750);
-                }
-            } else {
-                this.nextNarration = Long.MAX_VALUE;
-            }
-        }
-        if (this.visible) {
-            this.renderButton(matrices, mouseX, mouseY, delta);
-        }
-        this.narrate();
-        this.wasHovered = this.isHovered();
-    }
-
-    protected void narrate() {
-        String string;
-        if (this.active && this.isHovered() && Util.getMeasuringTimeMs() > this.nextNarration && !(string = this.getNarrationMessage().getString()).isEmpty()) {
-            NarratorManager.INSTANCE.narrate(string);
-            this.nextNarration = Long.MAX_VALUE;
-        }
+        this.hovered = mouseX >= this.x && mouseY >= this.y && mouseX < this.x + this.width && mouseY < this.y + this.height;
+        this.renderButton(matrices, mouseX, mouseY, delta);
     }
 
     protected MutableText getNarrationMessage() {
-        return new TranslatableText("gui.narrate.button", this.getMessage());
+        return ClickableWidget.getNarrationMessage(this.getMessage());
+    }
+
+    public static MutableText getNarrationMessage(Text message) {
+        return new TranslatableText("gui.narrate.button", message);
     }
 
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         TextRenderer textRenderer = minecraftClient.textRenderer;
-        minecraftClient.getTextureManager().bindTexture(WIDGETS_TEXTURE);
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, this.alpha);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, this.alpha);
         int i = this.getYImage(this.isHovered());
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -195,7 +177,7 @@ Element {
         return this.active && this.visible && mouseX >= (double)this.x && mouseY >= (double)this.y && mouseX < (double)(this.x + this.width) && mouseY < (double)(this.y + this.height);
     }
 
-    public void renderToolTip(MatrixStack matrices, int mouseX, int mouseY) {
+    public void renderTooltip(MatrixStack matrices, int mouseX, int mouseY) {
     }
 
     public void playDownSound(SoundManager soundManager) {
@@ -214,15 +196,8 @@ Element {
         this.alpha = value;
     }
 
-    public void setMessage(Text text) {
-        if (!Objects.equals(text.getString(), this.message.getString())) {
-            this.queueNarration(250);
-        }
-        this.message = text;
-    }
-
-    public void queueNarration(int delay) {
-        this.nextNarration = Util.getMeasuringTimeMs() + (long)delay;
+    public void setMessage(Text message) {
+        this.message = message;
     }
 
     public Text getMessage() {
@@ -233,8 +208,35 @@ Element {
         return this.focused;
     }
 
+    @Override
+    public boolean isNarratable() {
+        return this.visible && this.active;
+    }
+
     protected void setFocused(boolean focused) {
         this.focused = focused;
+    }
+
+    @Override
+    public Selectable.SelectionType getType() {
+        if (this.focused) {
+            return Selectable.SelectionType.FOCUSED;
+        }
+        if (this.hovered) {
+            return Selectable.SelectionType.HOVERED;
+        }
+        return Selectable.SelectionType.NONE;
+    }
+
+    protected void appendDefaultNarrations(NarrationMessageBuilder builder) {
+        builder.put(NarrationPart.TITLE, (Text)this.getNarrationMessage());
+        if (this.active) {
+            if (this.isFocused()) {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.button.usage.focused"));
+            } else {
+                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.button.usage.hovered"));
+            }
+        }
     }
 }
 

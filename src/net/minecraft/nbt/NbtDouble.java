@@ -10,13 +10,12 @@ import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.util.math.MathHelper;
 
 public class NbtDouble
 extends AbstractNbtNumber {
+    private static final int field_33192 = 128;
     public static final NbtDouble ZERO = new NbtDouble(0.0);
     public static final NbtType<NbtDouble> TYPE = new NbtType<NbtDouble>(){
 
@@ -74,11 +73,6 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public String toString() {
-        return this.value + "d";
-    }
-
-    @Override
     public NbtDouble copy() {
         return this;
     }
@@ -96,9 +90,8 @@ extends AbstractNbtNumber {
     }
 
     @Override
-    public Text toText(String indent, int depth) {
-        MutableText text = new LiteralText("d").formatted(RED);
-        return new LiteralText(String.valueOf(this.value)).append(text).formatted(GOLD);
+    public void accept(NbtElementVisitor visitor) {
+        visitor.visitDouble(this);
     }
 
     @Override

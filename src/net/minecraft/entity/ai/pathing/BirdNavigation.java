@@ -57,7 +57,7 @@ extends EntityNavigation {
             this.continueFollowingPath();
         } else if (this.currentPath != null && !this.currentPath.isFinished()) {
             vec3d = this.currentPath.getNodePosition(this.entity);
-            if (MathHelper.floor(this.entity.getX()) == MathHelper.floor(vec3d.x) && MathHelper.floor(this.entity.getY()) == MathHelper.floor(vec3d.y) && MathHelper.floor(this.entity.getZ()) == MathHelper.floor(vec3d.z)) {
+            if (this.entity.getBlockX() == MathHelper.floor(vec3d.x) && this.entity.getBlockY() == MathHelper.floor(vec3d.y) && this.entity.getBlockZ() == MathHelper.floor(vec3d.z)) {
                 this.currentPath.next();
             }
         }
@@ -130,8 +130,16 @@ extends EntityNavigation {
         this.nodeMaker.setCanOpenDoors(canPathThroughDoors);
     }
 
+    public boolean canEnterOpenDoors() {
+        return this.nodeMaker.canEnterOpenDoors();
+    }
+
     public void setCanEnterOpenDoors(boolean canEnterOpenDoors) {
         this.nodeMaker.setCanEnterOpenDoors(canEnterOpenDoors);
+    }
+
+    public boolean method_35129() {
+        return this.nodeMaker.canEnterOpenDoors();
     }
 
     @Override

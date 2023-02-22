@@ -28,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 
 public class KnowledgeBookItem
 extends Item {
+    private static final String RECIPES_KEY = "Recipes";
     private static final Logger LOGGER = LogManager.getLogger();
 
     public KnowledgeBookItem(Item.Settings settings) {
@@ -37,16 +38,16 @@ extends Item {
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack itemStack = user.getStackInHand(hand);
-        NbtCompound nbtCompound = itemStack.getTag();
-        if (!user.abilities.creativeMode) {
+        NbtCompound nbtCompound = itemStack.getNbt();
+        if (!user.getAbilities().creativeMode) {
             user.setStackInHand(hand, ItemStack.EMPTY);
         }
-        if (nbtCompound == null || !nbtCompound.contains("Recipes", 9)) {
+        if (nbtCompound == null || !nbtCompound.contains(RECIPES_KEY, 9)) {
             LOGGER.error("Tag not valid: {}", (Object)nbtCompound);
             return TypedActionResult.fail(itemStack);
         }
         if (!world.isClient) {
-            NbtList nbtList = nbtCompound.getList("Recipes", 8);
+            NbtList nbtList = nbtCompound.getList(RECIPES_KEY, 8);
             ArrayList list = Lists.newArrayList();
             RecipeManager recipeManager = world.getServer().getRecipeManager();
             for (int i = 0; i < nbtList.size(); ++i) {

@@ -5,8 +5,6 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Sets
  *  com.mojang.serialization.Codec
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.biome.source;
@@ -19,8 +17,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeSource;
@@ -46,7 +42,6 @@ extends BiomeSource {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public BiomeSource withSeed(long seed) {
         return this;
     }

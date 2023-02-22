@@ -3,7 +3,6 @@
  */
 package net.minecraft.entity.ai.goal;
 
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.goal.DiveJumpingGoal;
 import net.minecraft.entity.passive.DolphinEntity;
 import net.minecraft.fluid.FluidState;
@@ -54,7 +53,7 @@ extends DiveJumpingGoal {
     @Override
     public boolean shouldContinue() {
         double d = this.dolphin.getVelocity().y;
-        return !(d * d < (double)0.03f && this.dolphin.pitch != 0.0f && Math.abs(this.dolphin.pitch) < 10.0f && this.dolphin.isTouchingWater() || this.dolphin.isOnGround());
+        return !(d * d < (double)0.03f && this.dolphin.getPitch() != 0.0f && Math.abs(this.dolphin.getPitch()) < 10.0f && this.dolphin.isTouchingWater() || this.dolphin.isOnGround());
     }
 
     @Override
@@ -71,7 +70,7 @@ extends DiveJumpingGoal {
 
     @Override
     public void stop() {
-        this.dolphin.pitch = 0.0f;
+        this.dolphin.setPitch(0.0f);
     }
 
     @Override
@@ -85,12 +84,12 @@ extends DiveJumpingGoal {
             this.dolphin.playSound(SoundEvents.ENTITY_DOLPHIN_JUMP, 1.0f, 1.0f);
         }
         Vec3d vec3d = this.dolphin.getVelocity();
-        if (vec3d.y * vec3d.y < (double)0.03f && this.dolphin.pitch != 0.0f) {
-            this.dolphin.pitch = MathHelper.lerpAngle(this.dolphin.pitch, 0.0f, 0.2f);
-        } else {
-            double d = Math.sqrt(Entity.squaredHorizontalLength(vec3d));
-            double e = Math.signum(-vec3d.y) * Math.acos(d / vec3d.length()) * 57.2957763671875;
-            this.dolphin.pitch = (float)e;
+        if (vec3d.y * vec3d.y < (double)0.03f && this.dolphin.getPitch() != 0.0f) {
+            this.dolphin.setPitch(MathHelper.lerpAngle(this.dolphin.getPitch(), 0.0f, 0.2f));
+        } else if (vec3d.length() > (double)1.0E-5f) {
+            double d = vec3d.horizontalLength();
+            double e = Math.atan2(-vec3d.y, d) * 57.2957763671875;
+            this.dolphin.setPitch((float)e);
         }
     }
 }

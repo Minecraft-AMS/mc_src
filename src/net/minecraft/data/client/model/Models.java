@@ -16,6 +16,7 @@ public class Models {
     public static final Model CUBE_MIRRORED_ALL = Models.block("cube_mirrored_all", "_mirrored", TextureKey.ALL);
     public static final Model CUBE_COLUMN = Models.block("cube_column", TextureKey.END, TextureKey.SIDE);
     public static final Model CUBE_COLUMN_HORIZONTAL = Models.block("cube_column_horizontal", "_horizontal", TextureKey.END, TextureKey.SIDE);
+    public static final Model CUBE_COLUMN_MIRRORED = Models.block("cube_column_mirrored", "_mirrored", TextureKey.END, TextureKey.SIDE);
     public static final Model CUBE_TOP = Models.block("cube_top", TextureKey.TOP, TextureKey.SIDE);
     public static final Model CUBE_BOTTOM_TOP = Models.block("cube_bottom_top", TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
     public static final Model ORIENTABLE = Models.block("orientable", TextureKey.TOP, TextureKey.FRONT, TextureKey.SIDE);
@@ -54,6 +55,7 @@ public class Models {
     public static final Model TEMPLATE_ORIENTABLE_TRAPDOOR_TOP = Models.block("template_orientable_trapdoor_top", "_top", TextureKey.TEXTURE);
     public static final Model TEMPLATE_ORIENTABLE_TRAPDOOR_BOTTOM = Models.block("template_orientable_trapdoor_bottom", "_bottom", TextureKey.TEXTURE);
     public static final Model TEMPLATE_ORIENTABLE_TRAPDOOR_OPEN = Models.block("template_orientable_trapdoor_open", "_open", TextureKey.TEXTURE);
+    public static final Model POINTED_DRIPSTONE = Models.block("pointed_dripstone", TextureKey.CROSS);
     public static final Model CROSS = Models.block("cross", TextureKey.CROSS);
     public static final Model TINTED_CROSS = Models.block("tinted_cross", TextureKey.CROSS);
     public static final Model FLOWER_POT_CROSS = Models.block("flower_pot_cross", TextureKey.PLANT);
@@ -98,6 +100,11 @@ public class Models {
     public static final Model TEMPLATE_THREE_TURTLE_EGGS = Models.block("template_three_turtle_eggs", TextureKey.ALL);
     public static final Model TEMPLATE_FOUR_TURTLE_EGGS = Models.block("template_four_turtle_eggs", TextureKey.ALL);
     public static final Model TEMPLATE_SINGLE_FACE = Models.block("template_single_face", TextureKey.TEXTURE);
+    public static final Model TEMPLATE_CAULDRON_LEVEL1 = Models.block("template_cauldron_level1", TextureKey.CONTENT, TextureKey.INSIDE, TextureKey.PARTICLE, TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
+    public static final Model TEMPLATE_CAULDRON_LEVEL2 = Models.block("template_cauldron_level2", TextureKey.CONTENT, TextureKey.INSIDE, TextureKey.PARTICLE, TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
+    public static final Model TEMPLATE_CAULDRON_FULL = Models.block("template_cauldron_full", TextureKey.CONTENT, TextureKey.INSIDE, TextureKey.PARTICLE, TextureKey.TOP, TextureKey.BOTTOM, TextureKey.SIDE);
+    public static final Model TEMPLATE_AZALEA = Models.block("template_azalea", TextureKey.TOP, TextureKey.SIDE);
+    public static final Model TEMPLATE_POTTED_AZALEA_BUSH = Models.block("template_potted_azalea_bush", TextureKey.TOP, TextureKey.SIDE);
     public static final Model GENERATED = Models.item("generated", TextureKey.LAYER0);
     public static final Model HANDHELD = Models.item("handheld", TextureKey.LAYER0);
     public static final Model HANDHELD_ROD = Models.item("handheld_rod", TextureKey.LAYER0);
@@ -105,6 +112,11 @@ public class Models {
     public static final Model TEMPLATE_BED = Models.item("template_bed", TextureKey.PARTICLE);
     public static final Model TEMPLATE_BANNER = Models.item("template_banner", new TextureKey[0]);
     public static final Model TEMPLATE_SKULL = Models.item("template_skull", new TextureKey[0]);
+    public static final Model TEMPLATE_CANDLE = Models.block("template_candle", TextureKey.ALL, TextureKey.PARTICLE);
+    public static final Model TEMPLATE_TWO_CANDLES = Models.block("template_two_candles", TextureKey.ALL, TextureKey.PARTICLE);
+    public static final Model TEMPLATE_THREE_CANDLES = Models.block("template_three_candles", TextureKey.ALL, TextureKey.PARTICLE);
+    public static final Model TEMPLATE_FOUR_CANDLES = Models.block("template_four_candles", TextureKey.ALL, TextureKey.PARTICLE);
+    public static final Model TEMPLATE_CAKE_WITH_CANDLE = Models.block("template_cake_with_candle", TextureKey.CANDLE, TextureKey.BOTTOM, TextureKey.SIDE, TextureKey.TOP, TextureKey.PARTICLE);
 
     private static Model make(TextureKey ... requiredTextures) {
         return new Model(Optional.empty(), Optional.empty(), requiredTextures);

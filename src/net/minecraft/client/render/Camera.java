@@ -7,12 +7,18 @@
  */
 package net.minecraft.client.render;
 
+import java.util.Arrays;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.CameraSubmersionType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
+import net.minecraft.tag.FluidTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -38,16 +44,15 @@ public class Camera {
     private float yaw;
     private final Quaternion rotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
     private boolean thirdPerson;
-    private boolean inverseView;
     private float cameraY;
     private float lastCameraY;
+    public static final float field_32133 = 0.083333336f;
 
     public void update(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta) {
         this.ready = true;
         this.area = area;
         this.focusedEntity = focusedEntity;
         this.thirdPerson = thirdPerson;
-        this.inverseView = inverseView;
         this.setRotation(focusedEntity.getYaw(tickDelta), focusedEntity.getPitch(tickDelta));
         this.setPos(MathHelper.lerp((double)tickDelta, focusedEntity.prevX, focusedEntity.getX()), MathHelper.lerp((double)tickDelta, focusedEntity.prevY, focusedEntity.getY()) + (double)MathHelper.lerp(tickDelta, this.lastCameraY, this.cameraY), MathHelper.lerp((double)tickDelta, focusedEntity.prevZ, focusedEntity.getZ()));
         if (thirdPerson) {
@@ -146,15 +151,40 @@ public class Camera {
         return this.thirdPerson;
     }
 
-    public FluidState getSubmergedFluidState() {
+    public Projection getProjection() {
+        MinecraftClient minecraftClient = MinecraftClient.getInstance();
+        double d = (double)minecraftClient.getWindow().getFramebufferWidth() / (double)minecraftClient.getWindow().getFramebufferHeight();
+        double e = Math.tan(minecraftClient.options.fov * 0.01745329238474369 / 2.0) * (double)0.05f;
+        double f = e * d;
+        Vec3d vec3d = new Vec3d(this.horizontalPlane).multiply(0.05f);
+        Vec3d vec3d2 = new Vec3d(this.diagonalPlane).multiply(f);
+        Vec3d vec3d3 = new Vec3d(this.verticalPlane).multiply(e);
+        return new Projection(vec3d, vec3d2, vec3d3);
+    }
+
+    public CameraSubmersionType getSubmersionType() {
         if (!this.ready) {
-            return Fluids.EMPTY.getDefaultState();
+            return CameraSubmersionType.NONE;
         }
         FluidState fluidState = this.area.getFluidState(this.blockPos);
-        if (!fluidState.isEmpty() && this.pos.y >= (double)((float)this.blockPos.getY() + fluidState.getHeight(this.area, this.blockPos))) {
-            return Fluids.EMPTY.getDefaultState();
+        if (fluidState.isIn(FluidTags.WATER) && this.pos.y < (double)((float)this.blockPos.getY() + fluidState.getHeight(this.area, this.blockPos))) {
+            return CameraSubmersionType.WATER;
         }
-        return fluidState;
+        Projection projection = this.getProjection();
+        List<Vec3d> list = Arrays.asList(projection.center, projection.getBottomRight(), projection.getTopRight(), projection.getBottomLeft(), projection.getTopLeft());
+        for (Vec3d vec3d : list) {
+            Vec3d vec3d2 = this.pos.add(vec3d);
+            BlockPos blockPos = new BlockPos(vec3d2);
+            FluidState fluidState2 = this.area.getFluidState(blockPos);
+            if (fluidState2.isIn(FluidTags.LAVA)) {
+                if (!(vec3d2.y <= (double)(fluidState2.getHeight(this.area, blockPos) + (float)blockPos.getY()))) continue;
+                return CameraSubmersionType.LAVA;
+            }
+            BlockState blockState = this.area.getBlockState(blockPos);
+            if (!blockState.isOf(Blocks.POWDER_SNOW)) continue;
+            return CameraSubmersionType.POWDER_SNOW;
+        }
+        return CameraSubmersionType.NONE;
     }
 
     public final Vec3f getHorizontalPlane() {
@@ -165,10 +195,47 @@ public class Camera {
         return this.verticalPlane;
     }
 
+    public final Vec3f getDiagonalPlane() {
+        return this.diagonalPlane;
+    }
+
     public void reset() {
         this.area = null;
         this.focusedEntity = null;
         this.ready = false;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static class Projection {
+        final Vec3d center;
+        private final Vec3d x;
+        private final Vec3d y;
+
+        Projection(Vec3d center, Vec3d x, Vec3d y) {
+            this.center = center;
+            this.x = x;
+            this.y = y;
+        }
+
+        public Vec3d getBottomRight() {
+            return this.center.add(this.y).add(this.x);
+        }
+
+        public Vec3d getTopRight() {
+            return this.center.add(this.y).subtract(this.x);
+        }
+
+        public Vec3d getBottomLeft() {
+            return this.center.subtract(this.y).add(this.x);
+        }
+
+        public Vec3d getTopLeft() {
+            return this.center.subtract(this.y).subtract(this.x);
+        }
+
+        public Vec3d getPosition(float factorX, float factorY) {
+            return this.center.add(this.y.multiply(factorY)).subtract(this.x.multiply(factorX));
+        }
     }
 }
 

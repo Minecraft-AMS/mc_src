@@ -12,7 +12,12 @@ import com.google.common.collect.ImmutableList;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.client.render.entity.model.CrossbowPosing;
@@ -31,53 +36,49 @@ public class BipedEntityModel<T extends LivingEntity>
 extends AnimalModel<T>
 implements ModelWithArms,
 ModelWithHead {
-    public ModelPart head;
-    public ModelPart hat;
-    public ModelPart body;
-    public ModelPart rightArm;
-    public ModelPart leftArm;
-    public ModelPart rightLeg;
-    public ModelPart leftLeg;
+    public static final float field_32505 = 0.25f;
+    public static final float field_32506 = 0.5f;
+    private static final float SPYGLASS_ARM_YAW_OFFSET = 0.2617994f;
+    private static final float SPYGLASS_ARM_PITCH_OFFSET = 1.9198622f;
+    private static final float SPYGLASS_SNEAKING_ARM_PITCH_OFFSET = 0.2617994f;
+    public final ModelPart head;
+    public final ModelPart hat;
+    public final ModelPart body;
+    public final ModelPart rightArm;
+    public final ModelPart leftArm;
+    public final ModelPart rightLeg;
+    public final ModelPart leftLeg;
     public ArmPose leftArmPose = ArmPose.EMPTY;
     public ArmPose rightArmPose = ArmPose.EMPTY;
     public boolean sneaking;
     public float leaningPitch;
 
-    public BipedEntityModel(float scale) {
-        this(RenderLayer::getEntityCutoutNoCull, scale, 0.0f, 64, 32);
+    public BipedEntityModel(ModelPart root) {
+        this(root, RenderLayer::getEntityCutoutNoCull);
     }
 
-    protected BipedEntityModel(float scale, float pivotY, int textureWidth, int textureHeight) {
-        this(RenderLayer::getEntityCutoutNoCull, scale, pivotY, textureWidth, textureHeight);
+    public BipedEntityModel(ModelPart root, Function<Identifier, RenderLayer> renderLayerFactory) {
+        super(renderLayerFactory, true, 16.0f, 0.0f, 2.0f, 2.0f, 24.0f);
+        this.head = root.getChild("head");
+        this.hat = root.getChild("hat");
+        this.body = root.getChild("body");
+        this.rightArm = root.getChild("right_arm");
+        this.leftArm = root.getChild("left_arm");
+        this.rightLeg = root.getChild("right_leg");
+        this.leftLeg = root.getChild("left_leg");
     }
 
-    public BipedEntityModel(Function<Identifier, RenderLayer> texturedLayerFactory, float scale, float pivotY, int textureWidth, int textureHeight) {
-        super(texturedLayerFactory, true, 16.0f, 0.0f, 2.0f, 2.0f, 24.0f);
-        this.textureWidth = textureWidth;
-        this.textureHeight = textureHeight;
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, scale);
-        this.head.setPivot(0.0f, 0.0f + pivotY, 0.0f);
-        this.hat = new ModelPart(this, 32, 0);
-        this.hat.addCuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, scale + 0.5f);
-        this.hat.setPivot(0.0f, 0.0f + pivotY, 0.0f);
-        this.body = new ModelPart(this, 16, 16);
-        this.body.addCuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, scale);
-        this.body.setPivot(0.0f, 0.0f + pivotY, 0.0f);
-        this.rightArm = new ModelPart(this, 40, 16);
-        this.rightArm.addCuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.rightArm.setPivot(-5.0f, 2.0f + pivotY, 0.0f);
-        this.leftArm = new ModelPart(this, 40, 16);
-        this.leftArm.mirror = true;
-        this.leftArm.addCuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.leftArm.setPivot(5.0f, 2.0f + pivotY, 0.0f);
-        this.rightLeg = new ModelPart(this, 0, 16);
-        this.rightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.rightLeg.setPivot(-1.9f, 12.0f + pivotY, 0.0f);
-        this.leftLeg = new ModelPart(this, 0, 16);
-        this.leftLeg.mirror = true;
-        this.leftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.leftLeg.setPivot(1.9f, 12.0f + pivotY, 0.0f);
+    public static ModelData getModelData(Dilation dilation, float pivotOffsetY) {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, dilation), ModelTransform.pivot(0.0f, 0.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("hat", ModelPartBuilder.create().uv(32, 0).cuboid(-4.0f, -8.0f, -4.0f, 8.0f, 8.0f, 8.0f, dilation.add(0.5f)), ModelTransform.pivot(0.0f, 0.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(16, 16).cuboid(-4.0f, 0.0f, -2.0f, 8.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(0.0f, 0.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("right_arm", ModelPartBuilder.create().uv(40, 16).cuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(-5.0f, 2.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(40, 16).mirrored().cuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(5.0f, 2.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("right_leg", ModelPartBuilder.create().uv(0, 16).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(-1.9f, 12.0f + pivotOffsetY, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(0, 16).mirrored().cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, dilation), ModelTransform.pivot(1.9f, 12.0f + pivotOffsetY, 0.0f));
+        return modelData;
     }
 
     @Override
@@ -98,7 +99,7 @@ ModelWithHead {
 
     @Override
     public void setAngles(T livingEntity, float f, float g, float h, float i, float j) {
-        boolean bl4;
+        boolean bl3;
         boolean bl = ((LivingEntity)livingEntity).getRoll() > 4;
         boolean bl2 = ((LivingEntity)livingEntity).isInSwimmingPose();
         this.head.yaw = i * ((float)Math.PI / 180);
@@ -139,16 +140,25 @@ ModelWithHead {
         }
         this.rightArm.yaw = 0.0f;
         this.leftArm.yaw = 0.0f;
-        boolean bl3 = ((LivingEntity)livingEntity).getMainArm() == Arm.RIGHT;
-        boolean bl5 = bl4 = bl3 ? this.leftArmPose.method_30156() : this.rightArmPose.method_30156();
-        if (bl3 != bl4) {
-            this.method_30155(livingEntity);
-            this.method_30154(livingEntity);
+        boolean bl4 = bl3 = ((LivingEntity)livingEntity).getMainArm() == Arm.RIGHT;
+        if (((LivingEntity)livingEntity).isUsingItem()) {
+            boolean bl5 = bl4 = ((LivingEntity)livingEntity).getActiveHand() == Hand.MAIN_HAND;
+            if (bl4 == bl3) {
+                this.positionRightArm(livingEntity);
+            } else {
+                this.positionLeftArm(livingEntity);
+            }
         } else {
-            this.method_30154(livingEntity);
-            this.method_30155(livingEntity);
+            boolean bl6 = bl4 = bl3 ? this.leftArmPose.isTwoHanded() : this.rightArmPose.isTwoHanded();
+            if (bl3 != bl4) {
+                this.positionLeftArm(livingEntity);
+                this.positionRightArm(livingEntity);
+            } else {
+                this.positionRightArm(livingEntity);
+                this.positionLeftArm(livingEntity);
+            }
         }
-        this.method_29353(livingEntity, h);
+        this.animateArms(livingEntity, h);
         if (this.sneaking) {
             this.body.pitch = 0.5f;
             this.rightArm.pitch += 0.4f;
@@ -172,7 +182,12 @@ ModelWithHead {
             this.leftArm.pivotY = 2.0f;
             this.rightArm.pivotY = 2.0f;
         }
-        CrossbowPosing.method_29350(this.rightArm, this.leftArm, h);
+        if (this.rightArmPose != ArmPose.SPYGLASS) {
+            CrossbowPosing.swingArm(this.rightArm, h, 1.0f);
+        }
+        if (this.leftArmPose != ArmPose.SPYGLASS) {
+            CrossbowPosing.swingArm(this.leftArm, h, -1.0f);
+        }
         if (this.leaningPitch > 0.0f) {
             float o;
             float n;
@@ -180,29 +195,31 @@ ModelWithHead {
             Arm arm = this.getPreferredArm(livingEntity);
             float m = arm == Arm.RIGHT && this.handSwingProgress > 0.0f ? 0.0f : this.leaningPitch;
             float f2 = n = arm == Arm.LEFT && this.handSwingProgress > 0.0f ? 0.0f : this.leaningPitch;
-            if (l < 14.0f) {
-                this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 0.0f);
-                this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 0.0f);
-                this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
-                this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
-                this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, (float)Math.PI + 1.8707964f * this.method_2807(l) / this.method_2807(14.0f));
-                this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, (float)Math.PI - 1.8707964f * this.method_2807(l) / this.method_2807(14.0f));
-            } else if (l >= 14.0f && l < 22.0f) {
-                o = (l - 14.0f) / 8.0f;
-                this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 1.5707964f * o);
-                this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 1.5707964f * o);
-                this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
-                this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
-                this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, 5.012389f - 1.8707964f * o);
-                this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, 1.2707963f + 1.8707964f * o);
-            } else if (l >= 22.0f && l < 26.0f) {
-                o = (l - 22.0f) / 4.0f;
-                this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 1.5707964f - 1.5707964f * o);
-                this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 1.5707964f - 1.5707964f * o);
-                this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
-                this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
-                this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, (float)Math.PI);
-                this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, (float)Math.PI);
+            if (!((LivingEntity)livingEntity).isUsingItem()) {
+                if (l < 14.0f) {
+                    this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 0.0f);
+                    this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 0.0f);
+                    this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
+                    this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
+                    this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, (float)Math.PI + 1.8707964f * this.method_2807(l) / this.method_2807(14.0f));
+                    this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, (float)Math.PI - 1.8707964f * this.method_2807(l) / this.method_2807(14.0f));
+                } else if (l >= 14.0f && l < 22.0f) {
+                    o = (l - 14.0f) / 8.0f;
+                    this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 1.5707964f * o);
+                    this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 1.5707964f * o);
+                    this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
+                    this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
+                    this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, 5.012389f - 1.8707964f * o);
+                    this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, 1.2707963f + 1.8707964f * o);
+                } else if (l >= 22.0f && l < 26.0f) {
+                    o = (l - 22.0f) / 4.0f;
+                    this.leftArm.pitch = this.lerpAngle(n, this.leftArm.pitch, 1.5707964f - 1.5707964f * o);
+                    this.rightArm.pitch = MathHelper.lerp(m, this.rightArm.pitch, 1.5707964f - 1.5707964f * o);
+                    this.leftArm.yaw = this.lerpAngle(n, this.leftArm.yaw, (float)Math.PI);
+                    this.rightArm.yaw = MathHelper.lerp(m, this.rightArm.yaw, (float)Math.PI);
+                    this.leftArm.roll = this.lerpAngle(n, this.leftArm.roll, (float)Math.PI);
+                    this.rightArm.roll = MathHelper.lerp(m, this.rightArm.roll, (float)Math.PI);
+                }
             }
             o = 0.3f;
             float p = 0.33333334f;
@@ -212,7 +229,7 @@ ModelWithHead {
         this.hat.copyTransform(this.head);
     }
 
-    private void method_30154(T livingEntity) {
+    private void positionRightArm(T entity) {
         switch (this.rightArmPose) {
             case EMPTY: {
                 this.rightArm.yaw = 0.0f;
@@ -241,16 +258,21 @@ ModelWithHead {
                 break;
             }
             case CROSSBOW_CHARGE: {
-                CrossbowPosing.charge(this.rightArm, this.leftArm, livingEntity, true);
+                CrossbowPosing.charge(this.rightArm, this.leftArm, entity, true);
                 break;
             }
             case CROSSBOW_HOLD: {
                 CrossbowPosing.hold(this.rightArm, this.leftArm, this.head, true);
+                break;
+            }
+            case SPYGLASS: {
+                this.rightArm.pitch = MathHelper.clamp(this.head.pitch - 1.9198622f - (((Entity)entity).isInSneakingPose() ? 0.2617994f : 0.0f), -2.4f, 3.3f);
+                this.rightArm.yaw = this.head.yaw - 0.2617994f;
             }
         }
     }
 
-    private void method_30155(T livingEntity) {
+    private void positionLeftArm(T entity) {
         switch (this.leftArmPose) {
             case EMPTY: {
                 this.leftArm.yaw = 0.0f;
@@ -279,23 +301,28 @@ ModelWithHead {
                 break;
             }
             case CROSSBOW_CHARGE: {
-                CrossbowPosing.charge(this.rightArm, this.leftArm, livingEntity, false);
+                CrossbowPosing.charge(this.rightArm, this.leftArm, entity, false);
                 break;
             }
             case CROSSBOW_HOLD: {
                 CrossbowPosing.hold(this.rightArm, this.leftArm, this.head, false);
+                break;
+            }
+            case SPYGLASS: {
+                this.leftArm.pitch = MathHelper.clamp(this.head.pitch - 1.9198622f - (((Entity)entity).isInSneakingPose() ? 0.2617994f : 0.0f), -2.4f, 3.3f);
+                this.leftArm.yaw = this.head.yaw + 0.2617994f;
             }
         }
     }
 
-    protected void method_29353(T livingEntity, float f) {
+    protected void animateArms(T entity, float animationProgress) {
         if (this.handSwingProgress <= 0.0f) {
             return;
         }
-        Arm arm = this.getPreferredArm(livingEntity);
+        Arm arm = this.getPreferredArm(entity);
         ModelPart modelPart = this.getArm(arm);
-        float g = this.handSwingProgress;
-        this.body.yaw = MathHelper.sin(MathHelper.sqrt(g) * ((float)Math.PI * 2)) * 0.2f;
+        float f = this.handSwingProgress;
+        this.body.yaw = MathHelper.sin(MathHelper.sqrt(f) * ((float)Math.PI * 2)) * 0.2f;
         if (arm == Arm.LEFT) {
             this.body.yaw *= -1.0f;
         }
@@ -306,13 +333,13 @@ ModelWithHead {
         this.rightArm.yaw += this.body.yaw;
         this.leftArm.yaw += this.body.yaw;
         this.leftArm.pitch += this.body.yaw;
-        g = 1.0f - this.handSwingProgress;
-        g *= g;
-        g *= g;
-        g = 1.0f - g;
-        float h = MathHelper.sin(g * (float)Math.PI);
-        float i = MathHelper.sin(this.handSwingProgress * (float)Math.PI) * -(this.head.pitch - 0.7f) * 0.75f;
-        modelPart.pitch = (float)((double)modelPart.pitch - ((double)h * 1.2 + (double)i));
+        f = 1.0f - this.handSwingProgress;
+        f *= f;
+        f *= f;
+        f = 1.0f - f;
+        float g = MathHelper.sin(f * (float)Math.PI);
+        float h = MathHelper.sin(this.handSwingProgress * (float)Math.PI) * -(this.head.pitch - 0.7f) * 0.75f;
+        modelPart.pitch = (float)((double)modelPart.pitch - ((double)g * 1.2 + (double)h));
         modelPart.yaw += this.body.yaw * 2.0f;
         modelPart.roll += MathHelper.sin(this.handSwingProgress * (float)Math.PI) * -0.4f;
     }
@@ -373,29 +400,47 @@ ModelWithHead {
         return this.head;
     }
 
-    protected Arm getPreferredArm(T entity) {
+    private Arm getPreferredArm(T entity) {
         Arm arm = ((LivingEntity)entity).getMainArm();
         return ((LivingEntity)entity).preferredHand == Hand.MAIN_HAND ? arm : arm.getOpposite();
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum ArmPose {
-        EMPTY(false),
-        ITEM(false),
-        BLOCK(false),
-        BOW_AND_ARROW(true),
-        THROW_SPEAR(false),
-        CROSSBOW_CHARGE(true),
-        CROSSBOW_HOLD(true);
+    public static final class ArmPose
+    extends Enum<ArmPose> {
+        public static final /* enum */ ArmPose EMPTY = new ArmPose(false);
+        public static final /* enum */ ArmPose ITEM = new ArmPose(false);
+        public static final /* enum */ ArmPose BLOCK = new ArmPose(false);
+        public static final /* enum */ ArmPose BOW_AND_ARROW = new ArmPose(true);
+        public static final /* enum */ ArmPose THROW_SPEAR = new ArmPose(false);
+        public static final /* enum */ ArmPose CROSSBOW_CHARGE = new ArmPose(true);
+        public static final /* enum */ ArmPose CROSSBOW_HOLD = new ArmPose(true);
+        public static final /* enum */ ArmPose SPYGLASS = new ArmPose(false);
+        private final boolean twoHanded;
+        private static final /* synthetic */ ArmPose[] field_3404;
 
-        private final boolean field_25722;
-
-        private ArmPose(boolean bl) {
-            this.field_25722 = bl;
+        public static ArmPose[] values() {
+            return (ArmPose[])field_3404.clone();
         }
 
-        public boolean method_30156() {
-            return this.field_25722;
+        public static ArmPose valueOf(String string) {
+            return Enum.valueOf(ArmPose.class, string);
+        }
+
+        private ArmPose(boolean twoHanded) {
+            this.twoHanded = twoHanded;
+        }
+
+        public boolean isTwoHanded() {
+            return this.twoHanded;
+        }
+
+        private static /* synthetic */ ArmPose[] method_36892() {
+            return new ArmPose[]{EMPTY, ITEM, BLOCK, BOW_AND_ARROW, THROW_SPEAR, CROSSBOW_CHARGE, CROSSBOW_HOLD, SPYGLASS};
+        }
+
+        static {
+            field_3404 = ArmPose.method_36892();
         }
     }
 }

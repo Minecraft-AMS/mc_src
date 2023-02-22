@@ -23,7 +23,7 @@ import net.minecraft.util.math.BlockPos;
 
 public class ItemUsedOnBlockCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("item_used_on_block");
+    static final Identifier ID = new Identifier("item_used_on_block");
 
     @Override
     public Identifier getId() {
@@ -37,9 +37,9 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, locationPredicate, itemPredicate);
     }
 
-    public void test(ServerPlayerEntity player, BlockPos pos, ItemStack stack) {
+    public void trigger(ServerPlayerEntity player, BlockPos pos, ItemStack stack) {
         BlockState blockState = player.getServerWorld().getBlockState(pos);
-        this.test(player, conditions -> conditions.test(blockState, player.getServerWorld(), pos, stack));
+        this.trigger(player, conditions -> conditions.test(blockState, player.getServerWorld(), pos, stack));
     }
 
     @Override
@@ -52,14 +52,14 @@ extends AbstractCriterion<Conditions> {
         private final LocationPredicate location;
         private final ItemPredicate item;
 
-        public Conditions(EntityPredicate.Extended extended, LocationPredicate location, ItemPredicate item) {
-            super(ID, extended);
+        public Conditions(EntityPredicate.Extended player, LocationPredicate location, ItemPredicate item) {
+            super(ID, player);
             this.location = location;
             this.item = item;
         }
 
-        public static Conditions create(LocationPredicate.Builder builder, ItemPredicate.Builder builder2) {
-            return new Conditions(EntityPredicate.Extended.EMPTY, builder.build(), builder2.build());
+        public static Conditions create(LocationPredicate.Builder location, ItemPredicate.Builder item) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, location.build(), item.build());
         }
 
         public boolean test(BlockState state, ServerWorld world, BlockPos pos, ItemStack stack) {

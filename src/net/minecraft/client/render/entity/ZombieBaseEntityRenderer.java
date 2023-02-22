@@ -10,7 +10,7 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.BipedEntityRenderer;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
 import net.minecraft.client.render.entity.model.ZombieEntityModel;
 import net.minecraft.entity.LivingEntity;
@@ -22,9 +22,9 @@ public abstract class ZombieBaseEntityRenderer<T extends ZombieEntity, M extends
 extends BipedEntityRenderer<T, M> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/zombie/zombie.png");
 
-    protected ZombieBaseEntityRenderer(EntityRenderDispatcher dispatcher, M zombieEntityModel, M zombieEntityModel2, M zombieEntityModel3) {
-        super(dispatcher, zombieEntityModel, 0.5f);
-        this.addFeature(new ArmorFeatureRenderer(this, zombieEntityModel2, zombieEntityModel3));
+    protected ZombieBaseEntityRenderer(EntityRendererFactory.Context ctx, M bodyModel, M legsArmorModel, M bodyArmorModel) {
+        super(ctx, bodyModel, 0.5f);
+        this.addFeature(new ArmorFeatureRenderer(this, legsArmorModel, bodyArmorModel));
     }
 
     @Override
@@ -34,7 +34,7 @@ extends BipedEntityRenderer<T, M> {
 
     @Override
     protected boolean isShaking(T zombieEntity) {
-        return ((ZombieEntity)zombieEntity).isConvertingInWater();
+        return super.isShaking(zombieEntity) || ((ZombieEntity)zombieEntity).isConvertingInWater();
     }
 
     @Override

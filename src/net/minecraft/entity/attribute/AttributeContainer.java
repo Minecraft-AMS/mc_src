@@ -5,8 +5,6 @@
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Multimap
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -21,8 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
@@ -108,7 +104,6 @@ public class AttributeContainer {
         });
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void setFrom(AttributeContainer other) {
         other.custom.values().forEach(entityAttributeInstance -> {
             EntityAttributeInstance entityAttributeInstance2 = this.getCustomInstance(entityAttributeInstance.getAttribute());

@@ -85,20 +85,20 @@ import org.jetbrains.annotations.Nullable;
 
 public class ArgumentTypes {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Map<Class<?>, Entry<?>> classMap = Maps.newHashMap();
-    private static final Map<Identifier, Entry<?>> idMap = Maps.newHashMap();
+    private static final Map<Class<?>, Entry<?>> CLASS_MAP = Maps.newHashMap();
+    private static final Map<Identifier, Entry<?>> ID_MAP = Maps.newHashMap();
 
     public static <T extends ArgumentType<?>> void register(String id, Class<T> class_, ArgumentSerializer<T> argumentSerializer) {
         Identifier identifier = new Identifier(id);
-        if (classMap.containsKey(class_)) {
+        if (CLASS_MAP.containsKey(class_)) {
             throw new IllegalArgumentException("Class " + class_.getName() + " already has a serializer!");
         }
-        if (idMap.containsKey(identifier)) {
+        if (ID_MAP.containsKey(identifier)) {
             throw new IllegalArgumentException("'" + identifier + "' is already a registered serializer!");
         }
-        Entry entry = new Entry(class_, argumentSerializer, identifier);
-        classMap.put(class_, entry);
-        idMap.put(identifier, entry);
+        Entry<T> entry = new Entry<T>(class_, argumentSerializer, identifier);
+        CLASS_MAP.put(class_, entry);
+        ID_MAP.put(identifier, entry);
     }
 
     public static void register() {
@@ -135,7 +135,7 @@ public class ArgumentTypes {
         ArgumentTypes.register("function", CommandFunctionArgumentType.class, new ConstantArgumentSerializer<CommandFunctionArgumentType>(CommandFunctionArgumentType::commandFunction));
         ArgumentTypes.register("entity_anchor", EntityAnchorArgumentType.class, new ConstantArgumentSerializer<EntityAnchorArgumentType>(EntityAnchorArgumentType::entityAnchor));
         ArgumentTypes.register("int_range", NumberRangeArgumentType.IntRangeArgumentType.class, new ConstantArgumentSerializer<NumberRangeArgumentType.IntRangeArgumentType>(NumberRangeArgumentType::intRange));
-        ArgumentTypes.register("float_range", NumberRangeArgumentType.FloatRangeArgumentType.class, new ConstantArgumentSerializer<NumberRangeArgumentType.FloatRangeArgumentType>(NumberRangeArgumentType::method_30918));
+        ArgumentTypes.register("float_range", NumberRangeArgumentType.FloatRangeArgumentType.class, new ConstantArgumentSerializer<NumberRangeArgumentType.FloatRangeArgumentType>(NumberRangeArgumentType::floatRange));
         ArgumentTypes.register("item_enchantment", EnchantmentArgumentType.class, new ConstantArgumentSerializer<EnchantmentArgumentType>(EnchantmentArgumentType::enchantment));
         ArgumentTypes.register("entity_summon", EntitySummonArgumentType.class, new ConstantArgumentSerializer<EntitySummonArgumentType>(EntitySummonArgumentType::entitySummon));
         ArgumentTypes.register("dimension", DimensionArgumentType.class, new ConstantArgumentSerializer<DimensionArgumentType>(DimensionArgumentType::dimension));
@@ -149,12 +149,12 @@ public class ArgumentTypes {
 
     @Nullable
     private static Entry<?> byId(Identifier id) {
-        return idMap.get(id);
+        return ID_MAP.get(id);
     }
 
     @Nullable
     private static Entry<?> byClass(ArgumentType<?> argumentType) {
-        return classMap.get(argumentType.getClass());
+        return CLASS_MAP.get(argumentType.getClass());
     }
 
     public static <T extends ArgumentType<?>> void toPacket(PacketByteBuf packetByteBuf, T argumentType) {
@@ -258,10 +258,10 @@ public class ArgumentTypes {
         public final ArgumentSerializer<T> serializer;
         public final Identifier id;
 
-        private Entry(Class<T> argumentClass, ArgumentSerializer<T> serializer, Identifier id) {
-            this.argClass = argumentClass;
-            this.serializer = serializer;
-            this.id = id;
+        Entry(Class<T> class_, ArgumentSerializer<T> argumentSerializer, Identifier identifier) {
+            this.argClass = class_;
+            this.serializer = argumentSerializer;
+            this.id = identifier;
         }
     }
 }

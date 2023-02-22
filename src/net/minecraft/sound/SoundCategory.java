@@ -3,25 +3,28 @@
  */
 package net.minecraft.sound;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-public enum SoundCategory {
-    MASTER("master"),
-    MUSIC("music"),
-    RECORDS("record"),
-    WEATHER("weather"),
-    BLOCKS("block"),
-    HOSTILE("hostile"),
-    NEUTRAL("neutral"),
-    PLAYERS("player"),
-    AMBIENT("ambient"),
-    VOICE("voice");
-
-    private static final Map<String, SoundCategory> BY_NAME;
+public final class SoundCategory
+extends Enum<SoundCategory> {
+    public static final /* enum */ SoundCategory MASTER = new SoundCategory("master");
+    public static final /* enum */ SoundCategory MUSIC = new SoundCategory("music");
+    public static final /* enum */ SoundCategory RECORDS = new SoundCategory("record");
+    public static final /* enum */ SoundCategory WEATHER = new SoundCategory("weather");
+    public static final /* enum */ SoundCategory BLOCKS = new SoundCategory("block");
+    public static final /* enum */ SoundCategory HOSTILE = new SoundCategory("hostile");
+    public static final /* enum */ SoundCategory NEUTRAL = new SoundCategory("neutral");
+    public static final /* enum */ SoundCategory PLAYERS = new SoundCategory("player");
+    public static final /* enum */ SoundCategory AMBIENT = new SoundCategory("ambient");
+    public static final /* enum */ SoundCategory VOICE = new SoundCategory("voice");
     private final String name;
+    private static final /* synthetic */ SoundCategory[] field_15255;
+
+    public static SoundCategory[] values() {
+        return (SoundCategory[])field_15255.clone();
+    }
+
+    public static SoundCategory valueOf(String string) {
+        return Enum.valueOf(SoundCategory.class, string);
+    }
 
     private SoundCategory(String name) {
         this.name = name;
@@ -31,8 +34,12 @@ public enum SoundCategory {
         return this.name;
     }
 
+    private static /* synthetic */ SoundCategory[] method_36586() {
+        return new SoundCategory[]{MASTER, MUSIC, RECORDS, WEATHER, BLOCKS, HOSTILE, NEUTRAL, PLAYERS, AMBIENT, VOICE};
+    }
+
     static {
-        BY_NAME = Arrays.stream(SoundCategory.values()).collect(Collectors.toMap(SoundCategory::getName, Function.identity()));
+        field_15255 = SoundCategory.method_36586();
     }
 }
 

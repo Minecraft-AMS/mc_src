@@ -9,13 +9,12 @@ package net.minecraft.world.gen.treedecorator;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
+import java.util.function.BiConsumer;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.VineBlock;
 import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.ModifiableTestableWorld;
-import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.treedecorator.TreeDecorator;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
@@ -31,29 +30,29 @@ extends TreeDecorator {
     }
 
     @Override
-    public void generate(StructureWorldAccess world, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions, Set<BlockPos> placedStates, BlockBox box) {
+    public void generate(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions) {
         leavesPositions.forEach(pos -> {
             BlockPos blockPos;
             if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.west())) {
-                this.placeVines(world, blockPos, VineBlock.EAST, placedStates, box);
+                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.EAST, replacer);
             }
             if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.east())) {
-                this.placeVines(world, blockPos, VineBlock.WEST, placedStates, box);
+                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.WEST, replacer);
             }
             if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.north())) {
-                this.placeVines(world, blockPos, VineBlock.SOUTH, placedStates, box);
+                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.SOUTH, replacer);
             }
             if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.south())) {
-                this.placeVines(world, blockPos, VineBlock.NORTH, placedStates, box);
+                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.NORTH, replacer);
             }
         });
     }
 
-    private void placeVines(ModifiableTestableWorld world, BlockPos pos, BooleanProperty side, Set<BlockPos> placedStates, BlockBox box) {
-        this.placeVine(world, pos, side, placedStates, box);
+    private static void placeVines(TestableWorld world, BlockPos pos, BooleanProperty facing, BiConsumer<BlockPos, BlockState> replacer) {
+        LeavesVineTreeDecorator.placeVine(replacer, pos, facing);
         pos = pos.down();
         for (int i = 4; Feature.isAir(world, pos) && i > 0; --i) {
-            this.placeVine(world, pos, side, placedStates, box);
+            LeavesVineTreeDecorator.placeVine(replacer, pos, facing);
             pos = pos.down();
         }
     }

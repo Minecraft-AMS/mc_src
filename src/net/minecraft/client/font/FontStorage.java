@@ -74,13 +74,13 @@ implements AutoCloseable {
             intSet.addAll((IntCollection)font.getProvidedGlyphs());
         }
         HashSet set = Sets.newHashSet();
-        intSet.forEach(i2 -> {
+        intSet.forEach(codePoint -> {
             for (Font font : fonts) {
-                Glyph glyph = i2 == 32 ? SPACE : font.getGlyph(i2);
+                Glyph glyph = codePoint == 32 ? SPACE : font.getGlyph(codePoint);
                 if (glyph == null) continue;
                 set.add(font);
                 if (glyph == BlankGlyph.INSTANCE) break;
-                ((IntList)this.charactersByWidth.computeIfAbsent(MathHelper.ceil(glyph.getAdvance(false)), i -> new IntArrayList())).add(i2);
+                ((IntList)this.charactersByWidth.computeIfAbsent(MathHelper.ceil(glyph.getAdvance(false)), i -> new IntArrayList())).add(codePoint);
                 break;
             }
         });
@@ -107,13 +107,13 @@ implements AutoCloseable {
         this.glyphAtlases.clear();
     }
 
-    public Glyph getGlyph(int i2) {
-        return (Glyph)this.glyphCache.computeIfAbsent(i2, i -> i == 32 ? SPACE : this.getRenderableGlyph(i));
+    public Glyph getGlyph(int codePoint2) {
+        return (Glyph)this.glyphCache.computeIfAbsent(codePoint2, codePoint -> codePoint == 32 ? SPACE : this.getRenderableGlyph(codePoint));
     }
 
-    private RenderableGlyph getRenderableGlyph(int i) {
+    private RenderableGlyph getRenderableGlyph(int codePoint) {
         for (Font font : this.fonts) {
-            RenderableGlyph renderableGlyph = font.getGlyph(i);
+            RenderableGlyph renderableGlyph = font.getGlyph(codePoint);
             if (renderableGlyph == null) continue;
             return renderableGlyph;
         }

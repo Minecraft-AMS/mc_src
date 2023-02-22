@@ -19,10 +19,10 @@ import net.minecraft.util.registry.Registry;
 
 public class ItemTagsProvider
 extends AbstractTagProvider<Item> {
-    private final Function<Tag.Identified<Block>, Tag.Builder> field_23783 = blockTagsProvider::method_27169;
+    private final Function<Tag.Identified<Block>, Tag.Builder> blockTags = blockTagsProvider::getTagBuilder;
 
-    public ItemTagsProvider(DataGenerator dataGenerator, BlockTagsProvider blockTagsProvider) {
-        super(dataGenerator, Registry.ITEM);
+    public ItemTagsProvider(DataGenerator root, BlockTagsProvider blockTagsProvider) {
+        super(root, Registry.ITEM);
     }
 
     @Override
@@ -64,8 +64,17 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.FENCES, ItemTags.FENCES);
         this.copy(BlockTags.TALL_FLOWERS, ItemTags.TALL_FLOWERS);
         this.copy(BlockTags.FLOWERS, ItemTags.FLOWERS);
-        this.copy(BlockTags.GOLD_ORES, ItemTags.GOLD_ORES);
         this.copy(BlockTags.SOUL_FIRE_BASE_BLOCKS, ItemTags.SOUL_FIRE_BASE_BLOCKS);
+        this.copy(BlockTags.CANDLES, ItemTags.CANDLES);
+        this.copy(BlockTags.OCCLUDES_VIBRATION_SIGNALS, ItemTags.OCCLUDES_VIBRATION_SIGNALS);
+        this.copy(BlockTags.GOLD_ORES, ItemTags.GOLD_ORES);
+        this.copy(BlockTags.IRON_ORES, ItemTags.IRON_ORES);
+        this.copy(BlockTags.DIAMOND_ORES, ItemTags.DIAMOND_ORES);
+        this.copy(BlockTags.REDSTONE_ORES, ItemTags.REDSTONE_ORES);
+        this.copy(BlockTags.LAPIS_ORES, ItemTags.LAPIS_ORES);
+        this.copy(BlockTags.COAL_ORES, ItemTags.COAL_ORES);
+        this.copy(BlockTags.EMERALD_ORES, ItemTags.EMERALD_ORES);
+        this.copy(BlockTags.COPPER_ORES, ItemTags.COPPER_ORES);
         this.getOrCreateTagBuilder(ItemTags.BANNERS).add((Item[])new Item[]{Items.WHITE_BANNER, Items.ORANGE_BANNER, Items.MAGENTA_BANNER, Items.LIGHT_BLUE_BANNER, Items.YELLOW_BANNER, Items.LIME_BANNER, Items.PINK_BANNER, Items.GRAY_BANNER, Items.LIGHT_GRAY_BANNER, Items.CYAN_BANNER, Items.PURPLE_BANNER, Items.BLUE_BANNER, Items.BROWN_BANNER, Items.GREEN_BANNER, Items.RED_BANNER, Items.BLACK_BANNER});
         this.getOrCreateTagBuilder(ItemTags.BOATS).add((Item[])new Item[]{Items.OAK_BOAT, Items.SPRUCE_BOAT, Items.BIRCH_BOAT, Items.JUNGLE_BOAT, Items.ACACIA_BOAT, Items.DARK_OAK_BOAT});
         this.getOrCreateTagBuilder(ItemTags.FISHES).add((Item[])new Item[]{Items.COD, Items.COOKED_COD, Items.SALMON, Items.COOKED_SALMON, Items.PUFFERFISH, Items.TROPICAL_FISH});
@@ -77,15 +86,21 @@ extends AbstractTagProvider<Item> {
         this.getOrCreateTagBuilder(ItemTags.LECTERN_BOOKS).add((Item[])new Item[]{Items.WRITTEN_BOOK, Items.WRITABLE_BOOK});
         this.getOrCreateTagBuilder(ItemTags.BEACON_PAYMENT_ITEMS).add((Item[])new Item[]{Items.NETHERITE_INGOT, Items.EMERALD, Items.DIAMOND, Items.GOLD_INGOT, Items.IRON_INGOT});
         this.getOrCreateTagBuilder(ItemTags.PIGLIN_REPELLENTS).add(Items.SOUL_TORCH).add(Items.SOUL_LANTERN).add(Items.SOUL_CAMPFIRE);
-        this.getOrCreateTagBuilder(ItemTags.PIGLIN_LOVED).addTag(ItemTags.GOLD_ORES).add((Item[])new Item[]{Items.GOLD_BLOCK, Items.GILDED_BLACKSTONE, Items.LIGHT_WEIGHTED_PRESSURE_PLATE, Items.GOLD_INGOT, Items.BELL, Items.CLOCK, Items.GOLDEN_CARROT, Items.GLISTERING_MELON_SLICE, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_HELMET, Items.GOLDEN_CHESTPLATE, Items.GOLDEN_LEGGINGS, Items.GOLDEN_BOOTS, Items.GOLDEN_HORSE_ARMOR, Items.GOLDEN_SWORD, Items.GOLDEN_PICKAXE, Items.GOLDEN_SHOVEL, Items.GOLDEN_AXE, Items.GOLDEN_HOE});
+        this.getOrCreateTagBuilder(ItemTags.PIGLIN_LOVED).addTag(ItemTags.GOLD_ORES).add((Item[])new Item[]{Items.GOLD_BLOCK, Items.GILDED_BLACKSTONE, Items.LIGHT_WEIGHTED_PRESSURE_PLATE, Items.GOLD_INGOT, Items.BELL, Items.CLOCK, Items.GOLDEN_CARROT, Items.GLISTERING_MELON_SLICE, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_HELMET, Items.GOLDEN_CHESTPLATE, Items.GOLDEN_LEGGINGS, Items.GOLDEN_BOOTS, Items.GOLDEN_HORSE_ARMOR, Items.GOLDEN_SWORD, Items.GOLDEN_PICKAXE, Items.GOLDEN_SHOVEL, Items.GOLDEN_AXE, Items.GOLDEN_HOE, Items.RAW_GOLD, Items.RAW_GOLD_BLOCK});
+        this.getOrCreateTagBuilder(ItemTags.IGNORED_BY_PIGLIN_BABIES).add(Items.LEATHER);
+        this.getOrCreateTagBuilder(ItemTags.PIGLIN_FOOD).add((Item[])new Item[]{Items.PORKCHOP, Items.COOKED_PORKCHOP});
+        this.getOrCreateTagBuilder(ItemTags.FOX_FOOD).add((Item[])new Item[]{Items.SWEET_BERRIES, Items.GLOW_BERRIES});
         this.getOrCreateTagBuilder(ItemTags.NON_FLAMMABLE_WOOD).add((Item[])new Item[]{Items.WARPED_STEM, Items.STRIPPED_WARPED_STEM, Items.WARPED_HYPHAE, Items.STRIPPED_WARPED_HYPHAE, Items.CRIMSON_STEM, Items.STRIPPED_CRIMSON_STEM, Items.CRIMSON_HYPHAE, Items.STRIPPED_CRIMSON_HYPHAE, Items.CRIMSON_PLANKS, Items.WARPED_PLANKS, Items.CRIMSON_SLAB, Items.WARPED_SLAB, Items.CRIMSON_PRESSURE_PLATE, Items.WARPED_PRESSURE_PLATE, Items.CRIMSON_FENCE, Items.WARPED_FENCE, Items.CRIMSON_TRAPDOOR, Items.WARPED_TRAPDOOR, Items.CRIMSON_FENCE_GATE, Items.WARPED_FENCE_GATE, Items.CRIMSON_STAIRS, Items.WARPED_STAIRS, Items.CRIMSON_BUTTON, Items.WARPED_BUTTON, Items.CRIMSON_DOOR, Items.WARPED_DOOR, Items.CRIMSON_SIGN, Items.WARPED_SIGN});
-        this.getOrCreateTagBuilder(ItemTags.STONE_TOOL_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE});
-        this.getOrCreateTagBuilder(ItemTags.STONE_CRAFTING_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE});
+        this.getOrCreateTagBuilder(ItemTags.STONE_TOOL_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE, Items.COBBLED_DEEPSLATE});
+        this.getOrCreateTagBuilder(ItemTags.STONE_CRAFTING_MATERIALS).add((Item[])new Item[]{Items.COBBLESTONE, Items.BLACKSTONE, Items.COBBLED_DEEPSLATE});
+        this.getOrCreateTagBuilder(ItemTags.FREEZE_IMMUNE_WEARABLES).add((Item[])new Item[]{Items.LEATHER_BOOTS, Items.LEATHER_LEGGINGS, Items.LEATHER_CHESTPLATE, Items.LEATHER_HELMET, Items.LEATHER_HORSE_ARMOR});
+        this.getOrCreateTagBuilder(ItemTags.AXOLOTL_TEMPT_ITEMS).add(Items.TROPICAL_FISH_BUCKET);
+        this.getOrCreateTagBuilder(ItemTags.CLUSTER_MAX_HARVESTABLES).add((Item[])new Item[]{Items.DIAMOND_PICKAXE, Items.GOLDEN_PICKAXE, Items.IRON_PICKAXE, Items.NETHERITE_PICKAXE, Items.STONE_PICKAXE, Items.WOODEN_PICKAXE});
     }
 
     protected void copy(Tag.Identified<Block> blockTag, Tag.Identified<Item> itemTag) {
-        Tag.Builder builder = this.method_27169(itemTag);
-        Tag.Builder builder2 = this.field_23783.apply(blockTag);
+        Tag.Builder builder = this.getTagBuilder(itemTag);
+        Tag.Builder builder2 = this.blockTags.apply(blockTag);
         builder2.streamEntries().forEach(builder::add);
     }
 

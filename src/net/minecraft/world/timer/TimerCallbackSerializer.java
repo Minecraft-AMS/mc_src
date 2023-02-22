@@ -56,14 +56,14 @@ public class TimerCallbackSerializer<C> {
         Identifier identifier = Identifier.tryParse(nbt.getString("Type"));
         TimerCallback.Serializer<C, ?> serializer = this.serializersByType.get(identifier);
         if (serializer == null) {
-            LOGGER.error("Failed to deserialize timer callback: " + nbt);
+            LOGGER.error("Failed to deserialize timer callback: {}", (Object)nbt);
             return null;
         }
         try {
             return serializer.deserialize(nbt);
         }
         catch (Exception exception) {
-            LOGGER.error("Failed to deserialize timer callback: " + nbt, (Throwable)exception);
+            LOGGER.error("Failed to deserialize timer callback: {}", (Object)nbt, (Object)exception);
             return null;
         }
     }

@@ -25,11 +25,12 @@ public class FungusBlock
 extends PlantBlock
 implements Fertilizable {
     protected static final VoxelShape SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 9.0, 12.0);
-    private final Supplier<ConfiguredFeature<HugeFungusFeatureConfig, ?>> field_22135;
+    private static final double GROW_CHANCE = 0.4;
+    private final Supplier<ConfiguredFeature<HugeFungusFeatureConfig, ?>> feature;
 
     protected FungusBlock(AbstractBlock.Settings settings, Supplier<ConfiguredFeature<HugeFungusFeatureConfig, ?>> feature) {
         super(settings);
-        this.field_22135 = feature;
+        this.feature = feature;
     }
 
     @Override
@@ -44,9 +45,9 @@ implements Fertilizable {
 
     @Override
     public boolean isFertilizable(BlockView world, BlockPos pos, BlockState state, boolean isClient) {
-        Block block = ((HugeFungusFeatureConfig)this.field_22135.get().config).validBaseBlock.getBlock();
-        Block block2 = world.getBlockState(pos.down()).getBlock();
-        return block2 == block;
+        Block block = ((HugeFungusFeatureConfig)this.feature.get().config).validBaseBlock.getBlock();
+        BlockState blockState = world.getBlockState(pos.down());
+        return blockState.isOf(block);
     }
 
     @Override
@@ -56,7 +57,7 @@ implements Fertilizable {
 
     @Override
     public void grow(ServerWorld world, Random random, BlockPos pos, BlockState state) {
-        this.field_22135.get().generate(world, world.getChunkManager().getChunkGenerator(), random, pos);
+        this.feature.get().generate(world, world.getChunkManager().getChunkGenerator(), random, pos);
     }
 }
 

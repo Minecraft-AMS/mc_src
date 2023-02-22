@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 public abstract class JsonDataLoader
 extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String FILE_SUFFIX = ".json";
     private static final int FILE_SUFFIX_LENGTH = ".json".length();
     private final Gson gson;
     private final String dataType;
@@ -48,78 +49,29 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, Profiler profiler) {
         HashMap map = Maps.newHashMap();
         int i = this.dataType.length() + 1;
-        for (Identifier identifier : resourceManager.findResources(this.dataType, string -> string.endsWith(".json"))) {
-            String string2 = identifier.getPath();
-            Identifier identifier2 = new Identifier(identifier.getNamespace(), string2.substring(i, string2.length() - FILE_SUFFIX_LENGTH));
+        for (Identifier identifier : resourceManager.findResources(this.dataType, path -> path.endsWith(FILE_SUFFIX))) {
+            String string = identifier.getPath();
+            Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
             try {
                 Resource resource = resourceManager.getResource(identifier);
-                Throwable throwable = null;
                 try {
                     InputStream inputStream = resource.getInputStream();
-                    Throwable throwable2 = null;
-                    try {
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-                        Throwable throwable3 = null;
-                        try {
-                            JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
-                            if (jsonElement != null) {
-                                JsonElement jsonElement2 = map.put(identifier2, jsonElement);
-                                if (jsonElement2 == null) continue;
-                                throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
-                            }
-                            LOGGER.error("Couldn't load data file {} from {} as it's null or empty", (Object)identifier2, (Object)identifier);
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));){
+                        JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
+                        if (jsonElement != null) {
+                            JsonElement jsonElement2 = map.put(identifier2, jsonElement);
+                            if (jsonElement2 == null) continue;
+                            throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
                         }
-                        catch (Throwable throwable4) {
-                            throwable3 = throwable4;
-                            throw throwable4;
-                        }
-                        finally {
-                            if (reader == null) continue;
-                            if (throwable3 != null) {
-                                try {
-                                    ((Reader)reader).close();
-                                }
-                                catch (Throwable throwable5) {
-                                    throwable3.addSuppressed(throwable5);
-                                }
-                                continue;
-                            }
-                            ((Reader)reader).close();
-                        }
-                    }
-                    catch (Throwable throwable6) {
-                        throwable2 = throwable6;
-                        throw throwable6;
+                        LOGGER.error("Couldn't load data file {} from {} as it's null or empty", (Object)identifier2, (Object)identifier);
                     }
                     finally {
                         if (inputStream == null) continue;
-                        if (throwable2 != null) {
-                            try {
-                                inputStream.close();
-                            }
-                            catch (Throwable throwable7) {
-                                throwable2.addSuppressed(throwable7);
-                            }
-                            continue;
-                        }
                         inputStream.close();
                     }
                 }
-                catch (Throwable throwable8) {
-                    throwable = throwable8;
-                    throw throwable8;
-                }
                 finally {
                     if (resource == null) continue;
-                    if (throwable != null) {
-                        try {
-                            resource.close();
-                        }
-                        catch (Throwable throwable9) {
-                            throwable.addSuppressed(throwable9);
-                        }
-                        continue;
-                    }
                     resource.close();
                 }
             }

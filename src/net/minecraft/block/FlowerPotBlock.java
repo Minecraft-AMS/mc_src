@@ -3,21 +3,18 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import com.google.common.collect.Maps;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
@@ -33,10 +30,12 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 
 public class FlowerPotBlock
 extends Block {
     private static final Map<Block, Block> CONTENT_TO_POTTED = Maps.newHashMap();
+    public static final float field_31095 = 3.0f;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(5.0, 0.0, 5.0, 11.0, 6.0, 11.0);
     private final Block content;
 
@@ -61,14 +60,13 @@ extends Block {
         boolean bl2;
         ItemStack itemStack = player.getStackInHand(hand);
         Item item = itemStack.getItem();
-        Block block = item instanceof BlockItem ? CONTENT_TO_POTTED.getOrDefault(((BlockItem)item).getBlock(), Blocks.AIR) : Blocks.AIR;
-        boolean bl = block == Blocks.AIR;
-        boolean bl3 = bl2 = this.content == Blocks.AIR;
-        if (bl != bl2) {
+        BlockState blockState = (item instanceof BlockItem ? CONTENT_TO_POTTED.getOrDefault(((BlockItem)item).getBlock(), Blocks.AIR) : Blocks.AIR).getDefaultState();
+        boolean bl = blockState.isOf(Blocks.AIR);
+        if (bl != (bl2 = this.isEmpty())) {
             if (bl2) {
-                world.setBlockState(pos, block.getDefaultState(), 3);
+                world.setBlockState(pos, blockState, 3);
                 player.incrementStat(Stats.POT_FLOWER);
-                if (!player.abilities.creativeMode) {
+                if (!player.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
             } else {
@@ -80,18 +78,22 @@ extends Block {
                 }
                 world.setBlockState(pos, Blocks.FLOWER_POT.getDefaultState(), 3);
             }
+            world.emitGameEvent((Entity)player, GameEvent.BLOCK_CHANGE, pos);
             return ActionResult.success(world.isClient);
         }
         return ActionResult.CONSUME;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
-        if (this.content == Blocks.AIR) {
+        if (this.isEmpty()) {
             return super.getPickStack(world, pos, state);
         }
         return new ItemStack(this.content);
+    }
+
+    private boolean isEmpty() {
+        return this.content == Blocks.AIR;
     }
 
     @Override

@@ -15,6 +15,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FacingBlock;
+import net.minecraft.block.OperatorBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.entity.LivingEntity;
@@ -34,7 +35,6 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.CommandBlockExecutor;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -42,20 +42,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class CommandBlock
-extends BlockWithEntity {
+extends BlockWithEntity
+implements OperatorBlock {
     private static final Logger LOGGER = LogManager.getLogger();
     public static final DirectionProperty FACING = FacingBlock.FACING;
     public static final BooleanProperty CONDITIONAL = Properties.CONDITIONAL;
+    private final boolean auto;
 
-    public CommandBlock(AbstractBlock.Settings settings) {
+    public CommandBlock(AbstractBlock.Settings settings, boolean auto) {
         super(settings);
         this.setDefaultState((BlockState)((BlockState)((BlockState)this.stateManager.getDefaultState()).with(FACING, Direction.NORTH)).with(CONDITIONAL, false));
+        this.auto = auto;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        CommandBlockBlockEntity commandBlockBlockEntity = new CommandBlockBlockEntity();
-        commandBlockBlockEntity.setAuto(this == Blocks.CHAIN_COMMAND_BLOCK);
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        CommandBlockBlockEntity commandBlockBlockEntity = new CommandBlockBlockEntity(pos, state);
+        commandBlockBlockEntity.setAuto(this.auto);
         return commandBlockBlockEntity;
     }
 
@@ -156,9 +159,9 @@ extends BlockWithEntity {
             commandBlockExecutor.setCustomName(itemStack.getName());
         }
         if (!world.isClient) {
-            if (itemStack.getSubTag("BlockEntityTag") == null) {
+            if (itemStack.getSubNbt("BlockEntityTag") == null) {
                 commandBlockExecutor.setTrackingOutput(world.getGameRules().getBoolean(GameRules.SEND_COMMAND_FEEDBACK));
-                commandBlockBlockEntity.setAuto(this == Blocks.CHAIN_COMMAND_BLOCK);
+                commandBlockBlockEntity.setAuto(this.auto);
             }
             if (commandBlockBlockEntity.getCommandBlockType() == CommandBlockBlockEntity.Type.SEQUENCE) {
                 boolean bl = world.isReceivingRedstonePower(pos);

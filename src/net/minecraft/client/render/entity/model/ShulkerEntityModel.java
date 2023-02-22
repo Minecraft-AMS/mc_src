@@ -11,7 +11,12 @@ package net.minecraft.client.render.entity.model;
 import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.entity.mob.ShulkerEntity;
@@ -20,20 +25,26 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class ShulkerEntityModel<T extends ShulkerEntity>
 extends CompositeEntityModel<T> {
+    private static final String LID = "lid";
+    private static final String BASE = "base";
     private final ModelPart base;
-    private final ModelPart lid = new ModelPart(64, 64, 0, 0);
+    private final ModelPart lid;
     private final ModelPart head;
 
-    public ShulkerEntityModel() {
+    public ShulkerEntityModel(ModelPart root) {
         super(RenderLayer::getEntityCutoutNoCullZOffset);
-        this.base = new ModelPart(64, 64, 0, 28);
-        this.head = new ModelPart(64, 64, 0, 52);
-        this.lid.addCuboid(-8.0f, -16.0f, -8.0f, 16.0f, 12.0f, 16.0f);
-        this.lid.setPivot(0.0f, 24.0f, 0.0f);
-        this.base.addCuboid(-8.0f, -8.0f, -8.0f, 16.0f, 8.0f, 16.0f);
-        this.base.setPivot(0.0f, 24.0f, 0.0f);
-        this.head.addCuboid(-3.0f, 0.0f, -3.0f, 6.0f, 6.0f, 6.0f);
-        this.head.setPivot(0.0f, 12.0f, 0.0f);
+        this.lid = root.getChild(LID);
+        this.base = root.getChild(BASE);
+        this.head = root.getChild("head");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild(LID, ModelPartBuilder.create().uv(0, 0).cuboid(-8.0f, -16.0f, -8.0f, 16.0f, 12.0f, 16.0f), ModelTransform.pivot(0.0f, 24.0f, 0.0f));
+        modelPartData.addChild(BASE, ModelPartBuilder.create().uv(0, 28).cuboid(-8.0f, -8.0f, -8.0f, 16.0f, 8.0f, 16.0f), ModelTransform.pivot(0.0f, 24.0f, 0.0f));
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 52).cuboid(-3.0f, 0.0f, -3.0f, 6.0f, 6.0f, 6.0f), ModelTransform.pivot(0.0f, 12.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
@@ -56,11 +67,7 @@ extends CompositeEntityModel<T> {
         return ImmutableList.of((Object)this.base, (Object)this.lid);
     }
 
-    public ModelPart getBottomShell() {
-        return this.base;
-    }
-
-    public ModelPart getTopShell() {
+    public ModelPart getLid() {
         return this.lid;
     }
 

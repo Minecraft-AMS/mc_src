@@ -9,7 +9,13 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.QuadrupedEntityModel;
 import net.minecraft.entity.passive.SheepEntity;
 
@@ -18,14 +24,16 @@ public class SheepEntityModel<T extends SheepEntity>
 extends QuadrupedEntityModel<T> {
     private float headPitchModifier;
 
-    public SheepEntityModel() {
-        super(12, 0.0f, false, 8.0f, 4.0f, 2.0f, 2.0f, 24);
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addCuboid(-3.0f, -4.0f, -6.0f, 6.0f, 6.0f, 8.0f, 0.0f);
-        this.head.setPivot(0.0f, 6.0f, -8.0f);
-        this.body = new ModelPart(this, 28, 8);
-        this.body.addCuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f, 0.0f);
-        this.body.setPivot(0.0f, 5.0f, 2.0f);
+    public SheepEntityModel(ModelPart root) {
+        super(root, false, 8.0f, 4.0f, 2.0f, 2.0f, 24);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = QuadrupedEntityModel.getModelData(12, Dilation.NONE);
+        ModelPartData modelPartData = modelData.getRoot();
+        modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-3.0f, -4.0f, -6.0f, 6.0f, 6.0f, 8.0f), ModelTransform.pivot(0.0f, 6.0f, -8.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(28, 8).cuboid(-4.0f, -10.0f, -7.0f, 8.0f, 16.0f, 6.0f), ModelTransform.of(0.0f, 5.0f, 2.0f, 1.5707964f, 0.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 32);
     }
 
     @Override

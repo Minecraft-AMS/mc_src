@@ -16,9 +16,10 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.function.Function;
+import net.minecraft.util.dynamic.Codecs;
 
 public class StructureConfig {
-    public static final Codec<StructureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(config -> config.spacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(config -> config.separation), (App)Codec.intRange((int)0, (int)Integer.MAX_VALUE).fieldOf("salt").forGetter(config -> config.salt)).apply((Applicative)instance, StructureConfig::new)).comapFlatMap(config -> {
+    public static final Codec<StructureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(config -> config.spacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(config -> config.separation), (App)Codecs.NONNEGATIVE_INT.fieldOf("salt").forGetter(config -> config.salt)).apply((Applicative)instance, StructureConfig::new)).comapFlatMap(config -> {
         if (config.spacing <= config.separation) {
             return DataResult.error((String)"Spacing has to be smaller than separation");
         }

@@ -28,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class SystemToast
 implements Toast {
+    private static final long field_32218 = 5000L;
+    private static final int field_32219 = 200;
     private final Type type;
     private Text title;
     private List<OrderedText> lines;
@@ -69,8 +71,8 @@ implements Toast {
             this.startTime = startTime;
             this.justUpdated = false;
         }
-        manager.getGame().getTextureManager().bindTexture(TEXTURE);
-        RenderSystem.color3f(1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderTexture(0, TEXTURE);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = this.getWidth();
         int j = 12;
         if (i == 160 && this.lines.size() <= 1) {
@@ -147,15 +149,32 @@ implements Toast {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum Type {
-        TUTORIAL_HINT,
-        NARRATOR_TOGGLE,
-        WORLD_BACKUP,
-        WORLD_GEN_SETTINGS_TRANSFER,
-        PACK_LOAD_FAILURE,
-        WORLD_ACCESS_FAILURE,
-        PACK_COPY_FAILURE;
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type TUTORIAL_HINT = new Type();
+        public static final /* enum */ Type NARRATOR_TOGGLE = new Type();
+        public static final /* enum */ Type WORLD_BACKUP = new Type();
+        public static final /* enum */ Type WORLD_GEN_SETTINGS_TRANSFER = new Type();
+        public static final /* enum */ Type PACK_LOAD_FAILURE = new Type();
+        public static final /* enum */ Type WORLD_ACCESS_FAILURE = new Type();
+        public static final /* enum */ Type PACK_COPY_FAILURE = new Type();
+        private static final /* synthetic */ Type[] field_2221;
 
+        public static Type[] values() {
+            return (Type[])field_2221.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
+
+        private static /* synthetic */ Type[] method_36871() {
+            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE};
+        }
+
+        static {
+            field_2221 = Type.method_36871();
+        }
     }
 }
 

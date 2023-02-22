@@ -46,21 +46,20 @@ extends AbstractFireballEntity {
             if (!bl) {
                 entity.setFireTicks(i);
             } else if (entity2 instanceof LivingEntity) {
-                this.dealDamage((LivingEntity)entity2, entity);
+                this.applyDamageEffects((LivingEntity)entity2, entity);
             }
         }
     }
 
     @Override
     protected void onBlockHit(BlockHitResult blockHitResult) {
-        BlockHitResult blockHitResult2;
         BlockPos blockPos;
         super.onBlockHit(blockHitResult);
         if (this.world.isClient) {
             return;
         }
         Entity entity = this.getOwner();
-        if ((entity == null || !(entity instanceof MobEntity) || this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) && this.world.isAir(blockPos = (blockHitResult2 = blockHitResult).getBlockPos().offset(blockHitResult2.getSide()))) {
+        if ((!(entity instanceof MobEntity) || this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) && this.world.isAir(blockPos = blockHitResult.getBlockPos().offset(blockHitResult.getSide()))) {
             this.world.setBlockState(blockPos, AbstractFireBlock.getState(this.world, blockPos));
         }
     }
@@ -69,7 +68,7 @@ extends AbstractFireballEntity {
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
         if (!this.world.isClient) {
-            this.remove();
+            this.discard();
         }
     }
 

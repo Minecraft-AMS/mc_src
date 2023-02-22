@@ -3,8 +3,8 @@
  */
 package net.minecraft.structure;
 
-import java.util.Random;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.util.math.BlockBox;
@@ -20,13 +20,12 @@ extends StructurePiece {
     protected final int depth;
     protected int hPos = -1;
 
-    protected StructurePieceWithDimensions(StructurePieceType type, Random random, int x, int y, int z, int width, int height, int depth) {
-        super(type, 0);
+    protected StructurePieceWithDimensions(StructurePieceType type, int x, int y, int z, int width, int height, int depth, Direction orientation) {
+        super(type, 0, StructurePiece.createBox(x, y, z, orientation, width, height, depth));
         this.width = width;
         this.height = height;
         this.depth = depth;
-        this.setOrientation(Direction.Type.HORIZONTAL.random(random));
-        this.boundingBox = this.getFacing().getAxis() == Direction.Axis.Z ? new BlockBox(x, y, z, x + width - 1, y + height - 1, z + depth - 1) : new BlockBox(x, y, z, x + depth - 1, y + height - 1, z + width - 1);
+        this.setOrientation(orientation);
     }
 
     protected StructurePieceWithDimensions(StructurePieceType structurePieceType, NbtCompound nbtCompound) {
@@ -38,33 +37,33 @@ extends StructurePiece {
     }
 
     @Override
-    protected void toNbt(NbtCompound tag) {
-        tag.putInt("Width", this.width);
-        tag.putInt("Height", this.height);
-        tag.putInt("Depth", this.depth);
-        tag.putInt("HPos", this.hPos);
+    protected void writeNbt(ServerWorld world, NbtCompound nbt) {
+        nbt.putInt("Width", this.width);
+        nbt.putInt("Height", this.height);
+        nbt.putInt("Depth", this.depth);
+        nbt.putInt("HPos", this.hPos);
     }
 
-    protected boolean method_14839(WorldAccess world, BlockBox boundingBox, int i) {
+    protected boolean adjustToAverageHeight(WorldAccess world, BlockBox boundingBox, int deltaY) {
         if (this.hPos >= 0) {
             return true;
         }
+        int i = 0;
         int j = 0;
-        int k = 0;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int l = this.boundingBox.minZ; l <= this.boundingBox.maxZ; ++l) {
-            for (int m = this.boundingBox.minX; m <= this.boundingBox.maxX; ++m) {
-                mutable.set(m, 64, l);
+        for (int k = this.boundingBox.getMinZ(); k <= this.boundingBox.getMaxZ(); ++k) {
+            for (int l = this.boundingBox.getMinX(); l <= this.boundingBox.getMaxX(); ++l) {
+                mutable.set(l, 64, k);
                 if (!boundingBox.contains(mutable)) continue;
-                j += world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, mutable).getY();
-                ++k;
+                i += world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, mutable).getY();
+                ++j;
             }
         }
-        if (k == 0) {
+        if (j == 0) {
             return false;
         }
-        this.hPos = j / k;
-        this.boundingBox.move(0, this.hPos - this.boundingBox.minY + i, 0);
+        this.hPos = i / j;
+        this.boundingBox.move(0, this.hPos - this.boundingBox.getMinY() + deltaY, 0);
         return true;
     }
 }

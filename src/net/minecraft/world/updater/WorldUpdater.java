@@ -12,8 +12,6 @@
  *  it.unimi.dsi.fastutil.objects.Object2FloatMap
  *  it.unimi.dsi.fastutil.objects.Object2FloatMaps
  *  it.unimi.dsi.fastutil.objects.Object2FloatOpenCustomHashMap
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  */
@@ -36,8 +34,6 @@ import java.util.ListIterator;
 import java.util.concurrent.ThreadFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.Text;
@@ -194,9 +190,9 @@ public class WorldUpdater {
     }
 
     private List<ChunkPos> getChunkPositions(RegistryKey<World> world) {
-        File file2 = this.session.getWorldDirectory(world);
-        File file22 = new File(file2, "region");
-        File[] files = file22.listFiles((file, string) -> string.endsWith(".mca"));
+        File file = this.session.getWorldDirectory(world);
+        File file2 = new File(file, "region");
+        File[] files = file2.listFiles((directory, name) -> name.endsWith(".mca"));
         if (files == null) {
             return ImmutableList.of();
         }
@@ -206,7 +202,7 @@ public class WorldUpdater {
             if (!matcher.matches()) continue;
             int i = Integer.parseInt(matcher.group(1)) << 5;
             int j = Integer.parseInt(matcher.group(2)) << 5;
-            try (RegionFile regionFile = new RegionFile(file3, file22, true);){
+            try (RegionFile regionFile = new RegionFile(file3, file2, true);){
                 for (int k = 0; k < 32; ++k) {
                     for (int l = 0; l < 32; ++l) {
                         ChunkPos chunkPos = new ChunkPos(k + i, l + j);
@@ -226,17 +222,14 @@ public class WorldUpdater {
         return this.done;
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ImmutableSet<RegistryKey<World>> method_28304() {
+    public ImmutableSet<RegistryKey<World>> getWorlds() {
         return this.worlds;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getProgress(RegistryKey<World> world) {
         return this.dimensionProgress.getFloat(world);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getProgress() {
         return this.progress;
     }

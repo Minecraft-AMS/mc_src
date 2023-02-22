@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.tuple.Pair
  */
 package net.minecraft.entity.passive;
@@ -11,8 +9,6 @@ package net.minecraft.entity.passive;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -48,12 +44,14 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class MooshroomEntity
 extends CowEntity
 implements Shearable {
     private static final TrackedData<String> TYPE = DataTracker.registerData(MooshroomEntity.class, TrackedDataHandlerRegistry.STRING);
+    private static final int MUTATION_CHANCE = 1024;
     private StatusEffect stewEffect;
     private int stewEffectDuration;
     private UUID lightningId;
@@ -91,9 +89,9 @@ implements Shearable {
     }
 
     @Override
-    public ActionResult interactMob(PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.getItem() == Items.BOWL && !this.isBaby()) {
+    public ActionResult interactMob(PlayerEntity player2, Hand hand) {
+        ItemStack itemStack = player2.getStackInHand(hand);
+        if (itemStack.isOf(Items.BOWL) && !this.isBaby()) {
             ItemStack itemStack2;
             boolean bl = false;
             if (this.stewEffect != null) {
@@ -105,20 +103,21 @@ implements Shearable {
             } else {
                 itemStack2 = new ItemStack(Items.MUSHROOM_STEW);
             }
-            ItemStack itemStack3 = ItemUsage.method_30270(itemStack, player, itemStack2, false);
-            player.setStackInHand(hand, itemStack3);
+            ItemStack itemStack3 = ItemUsage.exchangeStack(itemStack, player2, itemStack2, false);
+            player2.setStackInHand(hand, itemStack3);
             SoundEvent soundEvent = bl ? SoundEvents.ENTITY_MOOSHROOM_SUSPICIOUS_MILK : SoundEvents.ENTITY_MOOSHROOM_MILK;
             this.playSound(soundEvent, 1.0f, 1.0f);
             return ActionResult.success(this.world.isClient);
         }
-        if (itemStack.getItem() == Items.SHEARS && this.isShearable()) {
+        if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
             this.sheared(SoundCategory.PLAYERS);
+            this.emitGameEvent(GameEvent.SHEAR, player2);
             if (!this.world.isClient) {
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
+                itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
             }
             return ActionResult.success(this.world.isClient);
         }
-        if (this.getMooshroomType() == Type.BROWN && itemStack.getItem().isIn(ItemTags.SMALL_FLOWERS)) {
+        if (this.getMooshroomType() == Type.BROWN && itemStack.isIn(ItemTags.SMALL_FLOWERS)) {
             if (this.stewEffect != null) {
                 for (int i = 0; i < 2; ++i) {
                     this.world.addParticle(ParticleTypes.SMOKE, this.getX() + this.random.nextDouble() / 2.0, this.getBodyY(0.5), this.getZ() + this.random.nextDouble() / 2.0, 0.0, this.random.nextDouble() / 5.0, 0.0);
@@ -129,7 +128,7 @@ implements Shearable {
                     return ActionResult.PASS;
                 }
                 Pair<StatusEffect, Integer> pair = optional.get();
-                if (!player.abilities.creativeMode) {
+                if (!player2.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
                 for (int j = 0; j < 4; ++j) {
@@ -141,7 +140,7 @@ implements Shearable {
             }
             return ActionResult.success(this.world.isClient);
         }
-        return super.interactMob(player, hand);
+        return super.interactMob(player2, hand);
     }
 
     @Override
@@ -149,9 +148,9 @@ implements Shearable {
         this.world.playSoundFromEntity(null, this, SoundEvents.ENTITY_MOOSHROOM_SHEAR, shearedSoundCategory, 1.0f, 1.0f);
         if (!this.world.isClient()) {
             ((ServerWorld)this.world).spawnParticles(ParticleTypes.EXPLOSION, this.getX(), this.getBodyY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
-            this.remove();
+            this.discard();
             CowEntity cowEntity = EntityType.COW.create(this.world);
-            cowEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, this.pitch);
+            cowEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), this.getPitch());
             cowEntity.setHealth(this.getHealth());
             cowEntity.bodyYaw = this.bodyYaw;
             if (this.hasCustomName()) {
@@ -211,7 +210,7 @@ implements Shearable {
     }
 
     public Type getMooshroomType() {
-        return Type.fromName(this.dataTracker.get(MooshroomEntity.TYPE));
+        return Type.fromName(this.dataTracker.get(TYPE));
     }
 
     @Override
@@ -238,29 +237,45 @@ implements Shearable {
         return this.createChild(world, entity);
     }
 
-    public static enum Type {
-        RED("red", Blocks.RED_MUSHROOM.getDefaultState()),
-        BROWN("brown", Blocks.BROWN_MUSHROOM.getDefaultState());
+    public static final class Type
+    extends Enum<Type> {
+        public static final /* enum */ Type RED = new Type("red", Blocks.RED_MUSHROOM.getDefaultState());
+        public static final /* enum */ Type BROWN = new Type("brown", Blocks.BROWN_MUSHROOM.getDefaultState());
+        final String name;
+        final BlockState mushroom;
+        private static final /* synthetic */ Type[] field_18113;
 
-        private final String name;
-        private final BlockState mushroom;
+        public static Type[] values() {
+            return (Type[])field_18113.clone();
+        }
+
+        public static Type valueOf(String string) {
+            return Enum.valueOf(Type.class, string);
+        }
 
         private Type(String name, BlockState mushroom) {
             this.name = name;
             this.mushroom = mushroom;
         }
 
-        @Environment(value=EnvType.CLIENT)
         public BlockState getMushroomState() {
             return this.mushroom;
         }
 
-        private static Type fromName(String name) {
+        static Type fromName(String name) {
             for (Type type : Type.values()) {
                 if (!type.name.equals(name)) continue;
                 return type;
             }
             return RED;
+        }
+
+        private static /* synthetic */ Type[] method_36639() {
+            return new Type[]{RED, BROWN};
+        }
+
+        static {
+            field_18113 = Type.method_36639();
         }
     }
 }

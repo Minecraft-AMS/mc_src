@@ -31,14 +31,14 @@ public class OpCommand {
     private static final SimpleCommandExceptionType ALREADY_OPPED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.op.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("op").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((commandContext, suggestionsBuilder) -> {
-            PlayerManager playerManager = ((ServerCommandSource)commandContext.getSource()).getMinecraftServer().getPlayerManager();
-            return CommandSource.suggestMatching(playerManager.getPlayerList().stream().filter(serverPlayerEntity -> !playerManager.isOperator(serverPlayerEntity.getGameProfile())).map(serverPlayerEntity -> serverPlayerEntity.getGameProfile().getName()), suggestionsBuilder);
-        }).executes(commandContext -> OpCommand.op((ServerCommandSource)commandContext.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)commandContext, "targets")))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("op").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((context, builder) -> {
+            PlayerManager playerManager = ((ServerCommandSource)context.getSource()).getServer().getPlayerManager();
+            return CommandSource.suggestMatching(playerManager.getPlayerList().stream().filter(player -> !playerManager.isOperator(player.getGameProfile())).map(player -> player.getGameProfile().getName()), builder);
+        }).executes(context -> OpCommand.op((ServerCommandSource)context.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)context, "targets")))));
     }
 
     private static int op(ServerCommandSource source, Collection<GameProfile> targets) throws CommandSyntaxException {
-        PlayerManager playerManager = source.getMinecraftServer().getPlayerManager();
+        PlayerManager playerManager = source.getServer().getPlayerManager();
         int i = 0;
         for (GameProfile gameProfile : targets) {
             if (playerManager.isOperator(gameProfile)) continue;

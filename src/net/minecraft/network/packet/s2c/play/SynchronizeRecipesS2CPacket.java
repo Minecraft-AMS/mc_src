@@ -3,17 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
 import com.google.common.collect.Lists;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -23,13 +18,19 @@ import net.minecraft.util.registry.Registry;
 
 public class SynchronizeRecipesS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private List<Recipe<?>> recipes;
-
-    public SynchronizeRecipesS2CPacket() {
-    }
+    private final List<Recipe<?>> recipes;
 
     public SynchronizeRecipesS2CPacket(Collection<Recipe<?>> recipes) {
         this.recipes = Lists.newArrayList(recipes);
+    }
+
+    public SynchronizeRecipesS2CPacket(PacketByteBuf buf) {
+        this.recipes = buf.readList(SynchronizeRecipesS2CPacket::readRecipe);
+    }
+
+    @Override
+    public void write(PacketByteBuf buf) {
+        buf.writeCollection(this.recipes, SynchronizeRecipesS2CPacket::writeRecipe);
     }
 
     @Override
@@ -37,24 +38,6 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onSynchronizeRecipes(this);
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
-        this.recipes = Lists.newArrayList();
-        int i = buf.readVarInt();
-        for (int j = 0; j < i; ++j) {
-            this.recipes.add(SynchronizeRecipesS2CPacket.readRecipe(buf));
-        }
-    }
-
-    @Override
-    public void write(PacketByteBuf buf) throws IOException {
-        buf.writeVarInt(this.recipes.size());
-        for (Recipe<?> recipe : this.recipes) {
-            SynchronizeRecipesS2CPacket.writeRecipe(recipe, buf);
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public List<Recipe<?>> getRecipes() {
         return this.recipes;
     }
@@ -65,7 +48,7 @@ implements Packet<ClientPlayPacketListener> {
         return Registry.RECIPE_SERIALIZER.getOrEmpty(identifier).orElseThrow(() -> new IllegalArgumentException("Unknown recipe serializer " + identifier)).read(identifier2, buf);
     }
 
-    public static <T extends Recipe<?>> void writeRecipe(T recipe, PacketByteBuf buf) {
+    public static <T extends Recipe<?>> void writeRecipe(PacketByteBuf buf, T recipe) {
         buf.writeIdentifier(Registry.RECIPE_SERIALIZER.getId(recipe.getSerializer()));
         buf.writeIdentifier(recipe.getId());
         recipe.getSerializer().write(buf, recipe);

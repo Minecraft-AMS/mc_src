@@ -4,13 +4,17 @@
 package net.minecraft.util;
 
 public class CuboidBlockIterator {
-    private int startX;
-    private int startY;
-    private int startZ;
-    private int sizeX;
-    private int sizeY;
-    private int sizeZ;
-    private int totalSize;
+    public static final int field_33084 = 0;
+    public static final int field_33085 = 1;
+    public static final int field_33086 = 2;
+    public static final int field_33087 = 3;
+    private final int startX;
+    private final int startY;
+    private final int startZ;
+    private final int sizeX;
+    private final int sizeY;
+    private final int sizeZ;
+    private final int totalSize;
     private int blocksIterated;
     private int x;
     private int y;

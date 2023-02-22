@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableMap
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
@@ -14,8 +12,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -42,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 public class WallTorchBlock
 extends TorchBlock {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
+    protected static final float field_31285 = 2.5f;
     private static final Map<Direction, VoxelShape> BOUNDING_SHAPES = Maps.newEnumMap((Map)ImmutableMap.of((Object)Direction.NORTH, (Object)Block.createCuboidShape(5.5, 3.0, 11.0, 10.5, 13.0, 16.0), (Object)Direction.SOUTH, (Object)Block.createCuboidShape(5.5, 3.0, 0.0, 10.5, 13.0, 5.0), (Object)Direction.WEST, (Object)Block.createCuboidShape(11.0, 3.0, 5.5, 16.0, 13.0, 10.5), (Object)Direction.EAST, (Object)Block.createCuboidShape(0.0, 3.0, 5.5, 5.0, 13.0, 10.5)));
 
     protected WallTorchBlock(AbstractBlock.Settings settings, ParticleEffect particleEffect) {
@@ -95,7 +92,6 @@ extends TorchBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         Direction direction = state.get(FACING);
         double d = (double)pos.getX() + 0.5;

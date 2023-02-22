@@ -39,7 +39,7 @@ extends ValueObject {
             pendingInvite.date = JsonUtils.getDateOr("date", json);
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse PendingInvite: " + exception.getMessage());
+            LOGGER.error("Could not parse PendingInvite: {}", (Object)exception.getMessage());
         }
         return pendingInvite;
     }

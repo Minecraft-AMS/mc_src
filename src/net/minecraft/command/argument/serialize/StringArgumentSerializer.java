@@ -54,8 +54,8 @@ implements ArgumentSerializer<StringArgumentType> {
     }
 
     @Override
-    public /* synthetic */ ArgumentType fromPacket(PacketByteBuf packetByteBuf) {
-        return this.fromPacket(packetByteBuf);
+    public /* synthetic */ ArgumentType fromPacket(PacketByteBuf buf) {
+        return this.fromPacket(buf);
     }
 }
 

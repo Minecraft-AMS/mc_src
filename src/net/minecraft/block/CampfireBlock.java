@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -21,6 +17,8 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.block.Waterloggable;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.CampfireBlockEntity;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -56,9 +54,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
-import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class CampfireBlock
@@ -70,6 +68,7 @@ implements Waterloggable {
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     public static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
     private static final VoxelShape SMOKEY_SHAPE = Block.createCuboidShape(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
+    private static final int field_31049 = 5;
     private final boolean emitsParticles;
     private final int fireDamage;
 
@@ -87,7 +86,7 @@ implements Waterloggable {
         Optional<CampfireCookingRecipe> optional;
         BlockEntity blockEntity = world.getBlockEntity(pos);
         if (blockEntity instanceof CampfireBlockEntity && (optional = (campfireBlockEntity = (CampfireBlockEntity)blockEntity).getRecipeFor(itemStack = player.getStackInHand(hand))).isPresent()) {
-            if (!world.isClient && campfireBlockEntity.addItem(player.abilities.creativeMode ? itemStack.copy() : itemStack, optional.get().getCookTime())) {
+            if (!world.isClient && campfireBlockEntity.addItem(player.getAbilities().creativeMode ? itemStack.copy() : itemStack, optional.get().getCookTime())) {
                 player.incrementStat(Stats.INTERACT_WITH_CAMPFIRE);
                 return ActionResult.SUCCESS;
             }
@@ -151,7 +150,6 @@ implements Waterloggable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (!state.get(LIT).booleanValue()) {
             return;
@@ -166,7 +164,7 @@ implements Waterloggable {
         }
     }
 
-    public static void extinguish(WorldAccess world, BlockPos pos, BlockState state) {
+    public static void extinguish(@Nullable Entity entity, WorldAccess world, BlockPos pos, BlockState state) {
         BlockEntity blockEntity;
         if (world.isClient()) {
             for (int i = 0; i < 20; ++i) {
@@ -176,6 +174,7 @@ implements Waterloggable {
         if ((blockEntity = world.getBlockEntity(pos)) instanceof CampfireBlockEntity) {
             ((CampfireBlockEntity)blockEntity).spawnItemsBeingCooked();
         }
+        world.emitGameEvent(entity, GameEvent.BLOCK_CHANGE, pos);
     }
 
     @Override
@@ -186,7 +185,7 @@ implements Waterloggable {
                 if (!world.isClient()) {
                     world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_EXTINGUISH_FIRE, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 }
-                CampfireBlock.extinguish(world, pos, state);
+                CampfireBlock.extinguish(null, world, pos, state);
             }
             world.setBlockState(pos, (BlockState)((BlockState)state.with(WATERLOGGED, true)).with(LIT, false), 3);
             world.getFluidTickScheduler().schedule(pos, fluidState.getFluid(), fluidState.getFluid().getTickRate(world));
@@ -197,14 +196,9 @@ implements Waterloggable {
 
     @Override
     public void onProjectileHit(World world, BlockState state, BlockHitResult hit, ProjectileEntity projectile) {
-        if (!world.isClient && projectile.isOnFire()) {
-            boolean bl;
-            Entity entity = projectile.getOwner();
-            boolean bl2 = bl = entity == null || entity instanceof PlayerEntity || world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING);
-            if (bl && !state.get(LIT).booleanValue() && !state.get(WATERLOGGED).booleanValue()) {
-                BlockPos blockPos = hit.getBlockPos();
-                world.setBlockState(blockPos, (BlockState)state.with(Properties.LIT, true), 11);
-            }
+        BlockPos blockPos = hit.getBlockPos();
+        if (!world.isClient && projectile.isOnFire() && projectile.canModifyAt(world, blockPos) && !state.get(LIT).booleanValue() && !state.get(WATERLOGGED).booleanValue()) {
+            world.setBlockState(blockPos, (BlockState)state.with(Properties.LIT, true), 11);
         }
     }
 
@@ -213,7 +207,7 @@ implements Waterloggable {
         DefaultParticleType defaultParticleType = isSignal ? ParticleTypes.CAMPFIRE_SIGNAL_SMOKE : ParticleTypes.CAMPFIRE_COSY_SMOKE;
         world.addImportantParticle(defaultParticleType, true, (double)pos.getX() + 0.5 + random.nextDouble() / 3.0 * (double)(random.nextBoolean() ? 1 : -1), (double)pos.getY() + random.nextDouble() + random.nextDouble(), (double)pos.getZ() + 0.5 + random.nextDouble() / 3.0 * (double)(random.nextBoolean() ? 1 : -1), 0.0, 0.07, 0.0);
         if (lotsOfSmoke) {
-            world.addParticle(ParticleTypes.SMOKE, (double)pos.getX() + 0.25 + random.nextDouble() / 2.0 * (double)(random.nextBoolean() ? 1 : -1), (double)pos.getY() + 0.4, (double)pos.getZ() + 0.25 + random.nextDouble() / 2.0 * (double)(random.nextBoolean() ? 1 : -1), 0.0, 0.005, 0.0);
+            world.addParticle(ParticleTypes.SMOKE, (double)pos.getX() + 0.5 + random.nextDouble() / 4.0 * (double)(random.nextBoolean() ? 1 : -1), (double)pos.getY() + 0.4, (double)pos.getZ() + 0.5 + random.nextDouble() / 4.0 * (double)(random.nextBoolean() ? 1 : -1), 0.0, 0.005, 0.0);
         }
     }
 
@@ -260,8 +254,24 @@ implements Waterloggable {
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new CampfireBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new CampfireBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        if (world.isClient) {
+            if (state.get(LIT).booleanValue()) {
+                return CampfireBlock.checkType(type, BlockEntityType.CAMPFIRE, CampfireBlockEntity::clientTick);
+            }
+        } else {
+            if (state.get(LIT).booleanValue()) {
+                return CampfireBlock.checkType(type, BlockEntityType.CAMPFIRE, CampfireBlockEntity::litServerTick);
+            }
+            return CampfireBlock.checkType(type, BlockEntityType.CAMPFIRE, CampfireBlockEntity::unlitServerTick);
+        }
+        return null;
     }
 
     @Override
@@ -269,8 +279,8 @@ implements Waterloggable {
         return false;
     }
 
-    public static boolean method_30035(BlockState blockState) {
-        return blockState.method_27851(BlockTags.CAMPFIRES, abstractBlockState -> abstractBlockState.contains(Properties.WATERLOGGED) && abstractBlockState.contains(Properties.LIT)) && blockState.get(Properties.WATERLOGGED) == false && blockState.get(Properties.LIT) == false;
+    public static boolean canBeLit(BlockState state2) {
+        return state2.isIn(BlockTags.CAMPFIRES, state -> state.contains(WATERLOGGED) && state.contains(LIT)) && state2.get(WATERLOGGED) == false && state2.get(LIT) == false;
     }
 }
 

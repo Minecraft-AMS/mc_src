@@ -4,15 +4,11 @@
  * Could not load the following classes:
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
@@ -59,7 +55,6 @@ implements Recipe<Inventory> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public String getGroup() {
         return this.group;
     }
@@ -77,7 +72,6 @@ implements Recipe<Inventory> {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean fits(int width, int height) {
         return true;
     }
@@ -107,7 +101,7 @@ implements Recipe<Inventory> {
 
         @Override
         public T read(Identifier identifier, PacketByteBuf packetByteBuf) {
-            String string = packetByteBuf.readString(Short.MAX_VALUE);
+            String string = packetByteBuf.readString();
             Ingredient ingredient = Ingredient.fromPacket(packetByteBuf);
             ItemStack itemStack = packetByteBuf.readItemStack();
             return this.recipeFactory.create(identifier, string, ingredient, itemStack);

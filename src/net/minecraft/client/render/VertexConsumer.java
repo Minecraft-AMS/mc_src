@@ -54,6 +54,10 @@ public interface VertexConsumer {
         this.next();
     }
 
+    public void fixedColor(int var1, int var2, int var3, int var4);
+
+    public void unfixColor();
+
     default public VertexConsumer color(float red, float green, float blue, float alpha) {
         return this.color((int)(red * 255.0f), (int)(green * 255.0f), (int)(blue * 255.0f), (int)(alpha * 255.0f));
     }
@@ -71,13 +75,15 @@ public interface VertexConsumer {
     }
 
     default public void quad(MatrixStack.Entry matrixEntry, BakedQuad quad, float[] brightnesses, float red, float green, float blue, int[] lights, int overlay, boolean useQuadColorData) {
-        int[] is = quad.getVertexData();
+        float[] fs = new float[]{brightnesses[0], brightnesses[1], brightnesses[2], brightnesses[3]};
+        int[] is = new int[]{lights[0], lights[1], lights[2], lights[3]};
+        int[] js = quad.getVertexData();
         Vec3i vec3i = quad.getFace().getVector();
         Vec3f vec3f = new Vec3f(vec3i.getX(), vec3i.getY(), vec3i.getZ());
         Matrix4f matrix4f = matrixEntry.getModel();
         vec3f.transform(matrixEntry.getNormal());
         int i = 8;
-        int j = is.length / 8;
+        int j = js.length / 8;
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             ByteBuffer byteBuffer = memoryStack.malloc(VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL.getVertexSize());
             IntBuffer intBuffer = byteBuffer.asIntBuffer();
@@ -88,7 +94,7 @@ public interface VertexConsumer {
                 float n;
                 float m;
                 intBuffer.clear();
-                intBuffer.put(is, k * 8, 8);
+                intBuffer.put(js, k * 8, 8);
                 float f = byteBuffer.getFloat(0);
                 float g = byteBuffer.getFloat(4);
                 float h = byteBuffer.getFloat(8);
@@ -96,15 +102,15 @@ public interface VertexConsumer {
                     float l = (float)(byteBuffer.get(12) & 0xFF) / 255.0f;
                     m = (float)(byteBuffer.get(13) & 0xFF) / 255.0f;
                     n = (float)(byteBuffer.get(14) & 0xFF) / 255.0f;
-                    o = l * brightnesses[k] * red;
-                    p = m * brightnesses[k] * green;
-                    q = n * brightnesses[k] * blue;
+                    o = l * fs[k] * red;
+                    p = m * fs[k] * green;
+                    q = n * fs[k] * blue;
                 } else {
-                    o = brightnesses[k] * red;
-                    p = brightnesses[k] * green;
-                    q = brightnesses[k] * blue;
+                    o = fs[k] * red;
+                    p = fs[k] * green;
+                    q = fs[k] * blue;
                 }
-                int r = lights[k];
+                int r = is[k];
                 m = byteBuffer.getFloat(16);
                 n = byteBuffer.getFloat(20);
                 Vector4f vector4f = new Vector4f(f, g, h, 1.0f);

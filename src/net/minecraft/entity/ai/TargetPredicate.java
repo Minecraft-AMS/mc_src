@@ -9,40 +9,46 @@ package net.minecraft.entity.ai;
 import java.util.function.Predicate;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.world.Difficulty;
 import org.jetbrains.annotations.Nullable;
 
 public class TargetPredicate {
-    public static final TargetPredicate DEFAULT = new TargetPredicate();
+    public static final TargetPredicate DEFAULT = TargetPredicate.createAttackable();
+    private static final double MIN_DISTANCE = 2.0;
+    private final boolean attackable;
     private double baseMaxDistance = -1.0;
-    private boolean includeInvulnerable;
-    private boolean includeTeammates;
-    private boolean includeHidden;
-    private boolean ignoreEntityTargetRules;
+    private boolean respectsVisibility = true;
     private boolean useDistanceScalingFactor = true;
     private Predicate<LivingEntity> predicate;
+
+    private TargetPredicate(boolean attackable) {
+        this.attackable = attackable;
+    }
+
+    public static TargetPredicate createAttackable() {
+        return new TargetPredicate(true);
+    }
+
+    public static TargetPredicate createNonAttackable() {
+        return new TargetPredicate(false);
+    }
+
+    public TargetPredicate copy() {
+        TargetPredicate targetPredicate = this.attackable ? TargetPredicate.createAttackable() : TargetPredicate.createNonAttackable();
+        targetPredicate.baseMaxDistance = this.baseMaxDistance;
+        targetPredicate.respectsVisibility = this.respectsVisibility;
+        targetPredicate.useDistanceScalingFactor = this.useDistanceScalingFactor;
+        targetPredicate.predicate = this.predicate;
+        return targetPredicate;
+    }
 
     public TargetPredicate setBaseMaxDistance(double baseMaxDistance) {
         this.baseMaxDistance = baseMaxDistance;
         return this;
     }
 
-    public TargetPredicate includeInvulnerable() {
-        this.includeInvulnerable = true;
-        return this;
-    }
-
-    public TargetPredicate includeTeammates() {
-        this.includeTeammates = true;
-        return this;
-    }
-
-    public TargetPredicate includeHidden() {
-        this.includeHidden = true;
-        return this;
-    }
-
-    public TargetPredicate ignoreEntityTargetRules() {
-        this.ignoreEntityTargetRules = true;
+    public TargetPredicate ignoreVisibility() {
+        this.respectsVisibility = false;
         return this;
     }
 
@@ -60,28 +66,18 @@ public class TargetPredicate {
         if (baseEntity == targetEntity) {
             return false;
         }
-        if (targetEntity.isSpectator()) {
-            return false;
-        }
-        if (!targetEntity.isAlive()) {
-            return false;
-        }
-        if (!this.includeInvulnerable && targetEntity.isInvulnerable()) {
+        if (!targetEntity.isPartOfGame()) {
             return false;
         }
         if (this.predicate != null && !this.predicate.test(targetEntity)) {
             return false;
         }
-        if (baseEntity != null) {
-            if (!this.ignoreEntityTargetRules) {
-                if (!baseEntity.canTarget(targetEntity)) {
-                    return false;
-                }
-                if (!baseEntity.canTarget(targetEntity.getType())) {
-                    return false;
-                }
+        if (baseEntity == null) {
+            if (this.attackable && (!targetEntity.canTakeDamage() || targetEntity.world.getDifficulty() == Difficulty.PEACEFUL)) {
+                return false;
             }
-            if (!this.includeTeammates && baseEntity.isTeammate(targetEntity)) {
+        } else {
+            if (this.attackable && (!baseEntity.canTarget(targetEntity) || !baseEntity.canTarget(targetEntity.getType()) || baseEntity.isTeammate(targetEntity))) {
                 return false;
             }
             if (this.baseMaxDistance > 0.0) {
@@ -92,7 +88,7 @@ public class TargetPredicate {
                     return false;
                 }
             }
-            if (!this.includeHidden && baseEntity instanceof MobEntity && !((MobEntity)baseEntity).getVisibilityCache().canSee(targetEntity)) {
+            if (this.respectsVisibility && baseEntity instanceof MobEntity && !((MobEntity)baseEntity).getVisibilityCache().canSee(targetEntity)) {
                 return false;
             }
         }

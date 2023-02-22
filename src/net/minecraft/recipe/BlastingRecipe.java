@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.recipe;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.AbstractCookingRecipe;
@@ -24,7 +18,6 @@ extends AbstractCookingRecipe {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack createIcon() {
         return new ItemStack(Blocks.BLAST_FURNACE);
     }

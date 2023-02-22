@@ -22,7 +22,7 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 
 public class StructurePools {
-    public static final RegistryKey<StructurePool> EMPTY = RegistryKey.of(Registry.TEMPLATE_POOL_WORLDGEN, new Identifier("empty"));
+    public static final RegistryKey<StructurePool> EMPTY = RegistryKey.of(Registry.STRUCTURE_POOL_KEY, new Identifier("empty"));
     private static final StructurePool INVALID = StructurePools.register(new StructurePool(EMPTY.getValue(), EMPTY.getValue(), (List<Pair<Function<StructurePool.Projection, ? extends StructurePoolElement>, Integer>>)ImmutableList.of(), StructurePool.Projection.RIGID));
 
     public static StructurePool register(StructurePool templatePool) {

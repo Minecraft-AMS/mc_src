@@ -20,13 +20,22 @@ import net.minecraft.world.biome.layer.util.NorthWestCoordinateTransformer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public enum AddHillsLayer implements MergingLayer,
-NorthWestCoordinateTransformer
-{
-    INSTANCE;
-
+public final class AddHillsLayer
+extends Enum<AddHillsLayer>
+implements MergingLayer,
+NorthWestCoordinateTransformer {
+    public static final /* enum */ AddHillsLayer INSTANCE = new AddHillsLayer();
     private static final Logger LOGGER;
-    private static final Int2IntMap field_26727;
+    private static final Int2IntMap MUTATED_BIOMES;
+    private static final /* synthetic */ AddHillsLayer[] field_16141;
+
+    public static AddHillsLayer[] values() {
+        return (AddHillsLayer[])field_16141.clone();
+    }
+
+    public static AddHillsLayer valueOf(String string) {
+        return Enum.valueOf(AddHillsLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, LayerSampler sampler1, LayerSampler sampler2, int x, int z) {
@@ -37,7 +46,7 @@ NorthWestCoordinateTransformer
         }
         int k = (j - 2) % 29;
         if (!BiomeLayers.isShallowOcean(i) && j >= 2 && k == 1) {
-            return field_26727.getOrDefault(i, i);
+            return MUTATED_BIOMES.getOrDefault(i, i);
         }
         if (context.nextInt(3) == 0 || k == 0) {
             int l = i;
@@ -81,7 +90,7 @@ NorthWestCoordinateTransformer
                 int n = l = context.nextInt(2) == 0 ? 1 : 4;
             }
             if (k == 0 && l != i) {
-                l = field_26727.getOrDefault(l, i);
+                l = MUTATED_BIOMES.getOrDefault(l, i);
             }
             if (l != i) {
                 int m = 0;
@@ -105,30 +114,35 @@ NorthWestCoordinateTransformer
         return i;
     }
 
+    private static /* synthetic */ AddHillsLayer[] method_36780() {
+        return new AddHillsLayer[]{INSTANCE};
+    }
+
     static {
+        field_16141 = AddHillsLayer.method_36780();
         LOGGER = LogManager.getLogger();
-        field_26727 = (Int2IntMap)Util.make(new Int2IntOpenHashMap(), int2IntOpenHashMap -> {
-            int2IntOpenHashMap.put(1, 129);
-            int2IntOpenHashMap.put(2, 130);
-            int2IntOpenHashMap.put(3, 131);
-            int2IntOpenHashMap.put(4, 132);
-            int2IntOpenHashMap.put(5, 133);
-            int2IntOpenHashMap.put(6, 134);
-            int2IntOpenHashMap.put(12, 140);
-            int2IntOpenHashMap.put(21, 149);
-            int2IntOpenHashMap.put(23, 151);
-            int2IntOpenHashMap.put(27, 155);
-            int2IntOpenHashMap.put(28, 156);
-            int2IntOpenHashMap.put(29, 157);
-            int2IntOpenHashMap.put(30, 158);
-            int2IntOpenHashMap.put(32, 160);
-            int2IntOpenHashMap.put(33, 161);
-            int2IntOpenHashMap.put(34, 162);
-            int2IntOpenHashMap.put(35, 163);
-            int2IntOpenHashMap.put(36, 164);
-            int2IntOpenHashMap.put(37, 165);
-            int2IntOpenHashMap.put(38, 166);
-            int2IntOpenHashMap.put(39, 167);
+        MUTATED_BIOMES = (Int2IntMap)Util.make(new Int2IntOpenHashMap(), map -> {
+            map.put(1, 129);
+            map.put(2, 130);
+            map.put(3, 131);
+            map.put(4, 132);
+            map.put(5, 133);
+            map.put(6, 134);
+            map.put(12, 140);
+            map.put(21, 149);
+            map.put(23, 151);
+            map.put(27, 155);
+            map.put(28, 156);
+            map.put(29, 157);
+            map.put(30, 158);
+            map.put(32, 160);
+            map.put(33, 161);
+            map.put(34, 162);
+            map.put(35, 163);
+            map.put(36, 164);
+            map.put(37, 165);
+            map.put(38, 166);
+            map.put(39, 167);
         });
     }
 }

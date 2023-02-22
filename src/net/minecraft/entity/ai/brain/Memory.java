@@ -14,6 +14,7 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import net.minecraft.util.annotation.Debug;
 
 public class Memory<T> {
     private final T value;
@@ -25,17 +26,21 @@ public class Memory<T> {
     }
 
     public void tick() {
-        if (this.method_24914()) {
+        if (this.isTimed()) {
             --this.expiry;
         }
     }
 
-    public static <T> Memory<T> method_28355(T object) {
-        return new Memory<T>(object, Long.MAX_VALUE);
+    public static <T> Memory<T> permanent(T value) {
+        return new Memory<T>(value, Long.MAX_VALUE);
     }
 
     public static <T> Memory<T> timed(T value, long expiry) {
         return new Memory<T>(value, expiry);
+    }
+
+    public long getExpiry() {
+        return this.expiry;
     }
 
     public T getValue() {
@@ -47,15 +52,16 @@ public class Memory<T> {
     }
 
     public String toString() {
-        return this.value.toString() + (this.method_24914() ? " (ttl: " + this.expiry + ")" : "");
+        return this.value + (String)(this.isTimed() ? " (ttl: " + this.expiry + ")" : "");
     }
 
-    public boolean method_24914() {
+    @Debug
+    public boolean isTimed() {
         return this.expiry != Long.MAX_VALUE;
     }
 
     public static <T> Codec<Memory<T>> createCodec(Codec<T> codec) {
-        return RecordCodecBuilder.create(instance -> instance.group((App)codec.fieldOf("value").forGetter(memory -> memory.value), (App)Codec.LONG.optionalFieldOf("ttl").forGetter(memory -> memory.method_24914() ? Optional.of(memory.expiry) : Optional.empty())).apply((Applicative)instance, (object, optional) -> new Memory<Object>(object, optional.orElse(Long.MAX_VALUE))));
+        return RecordCodecBuilder.create(instance -> instance.group((App)codec.fieldOf("value").forGetter(memory -> memory.value), (App)Codec.LONG.optionalFieldOf("ttl").forGetter(memory -> memory.isTimed() ? Optional.of(memory.expiry) : Optional.empty())).apply((Applicative)instance, (object, optional) -> new Memory<Object>(object, optional.orElse(Long.MAX_VALUE))));
     }
 }
 

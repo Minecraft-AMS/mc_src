@@ -3,13 +3,16 @@
  */
 package net.minecraft.entity.ai.control;
 
+import java.util.Optional;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.control.Control;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
-public class LookControl {
+public class LookControl
+implements Control {
     protected final MobEntity entity;
     protected float yawSpeed;
     protected float pitchSpeed;
@@ -24,6 +27,10 @@ public class LookControl {
 
     public void lookAt(Vec3d direction) {
         this.lookAt(direction.x, direction.y, direction.z);
+    }
+
+    public void lookAt(Entity entity) {
+        this.lookAt(entity.getX(), LookControl.getLookingHeightFor(entity), entity.getZ());
     }
 
     public void lookAt(Entity entity, float yawSpeed, float pitchSpeed) {
@@ -45,15 +52,21 @@ public class LookControl {
 
     public void tick() {
         if (this.shouldStayHorizontal()) {
-            this.entity.pitch = 0.0f;
+            this.entity.setPitch(0.0f);
         }
         if (this.active) {
             this.active = false;
-            this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.getTargetYaw(), this.yawSpeed);
-            this.entity.pitch = this.changeAngle(this.entity.pitch, this.getTargetPitch(), this.pitchSpeed);
+            this.getTargetYaw().ifPresent(float_ -> {
+                this.entity.headYaw = this.changeAngle(this.entity.headYaw, float_.floatValue(), this.yawSpeed);
+            });
+            this.getTargetPitch().ifPresent(float_ -> this.entity.setPitch(this.changeAngle(this.entity.getPitch(), float_.floatValue(), this.pitchSpeed)));
         } else {
             this.entity.headYaw = this.changeAngle(this.entity.headYaw, this.entity.bodyYaw, 10.0f);
         }
+        this.method_36980();
+    }
+
+    protected void method_36980() {
         if (!this.entity.getNavigation().isIdle()) {
             this.entity.headYaw = MathHelper.stepAngleTowards(this.entity.headYaw, this.entity.bodyYaw, this.entity.getBodyYawSpeed());
         }
@@ -79,18 +92,18 @@ public class LookControl {
         return this.lookZ;
     }
 
-    protected float getTargetPitch() {
+    protected Optional<Float> getTargetPitch() {
         double d = this.lookX - this.entity.getX();
         double e = this.lookY - this.entity.getEyeY();
         double f = this.lookZ - this.entity.getZ();
-        double g = MathHelper.sqrt(d * d + f * f);
-        return (float)(-(MathHelper.atan2(e, g) * 57.2957763671875));
+        double g = Math.sqrt(d * d + f * f);
+        return Math.abs(e) > (double)1.0E-5f || Math.abs(g) > (double)1.0E-5f ? Optional.of(Float.valueOf((float)(-(MathHelper.atan2(e, g) * 57.2957763671875)))) : Optional.empty();
     }
 
-    protected float getTargetYaw() {
+    protected Optional<Float> getTargetYaw() {
         double d = this.lookX - this.entity.getX();
         double e = this.lookZ - this.entity.getZ();
-        return (float)(MathHelper.atan2(e, d) * 57.2957763671875) - 90.0f;
+        return Math.abs(e) > (double)1.0E-5f || Math.abs(d) > (double)1.0E-5f ? Optional.of(Float.valueOf((float)(MathHelper.atan2(e, d) * 57.2957763671875) - 90.0f)) : Optional.empty();
     }
 
     protected float changeAngle(float from, float to, float max) {

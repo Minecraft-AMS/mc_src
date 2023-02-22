@@ -30,7 +30,6 @@ import net.minecraft.client.resource.VideoWarningManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.OrderedText;
-import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
@@ -65,11 +64,11 @@ extends GameOptionsScreen {
         this.list.addSingleOptionEntry(new FullscreenOption(this.client.getWindow()));
         this.list.addSingleOptionEntry(Option.BIOME_BLEND_RADIUS);
         this.list.addAll(OPTIONS);
-        this.children.add(this.list);
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> {
+        this.addSelectableChild(this.list);
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> {
             this.client.options.write();
             this.client.getWindow().applyVideoMode();
-            this.client.openScreen(this.parent);
+            this.client.setScreen(this.parent);
         }));
     }
 
@@ -92,7 +91,7 @@ extends GameOptionsScreen {
             if (this.warningManager.shouldWarn()) {
                 String string3;
                 String string2;
-                ArrayList list = Lists.newArrayList((Object[])new StringVisitable[]{GRAPHICS_WARNING_MESSAGE_TEXT, NEWLINE_TEXT});
+                ArrayList list = Lists.newArrayList((Object[])new Text[]{GRAPHICS_WARNING_MESSAGE_TEXT, NEWLINE_TEXT});
                 String string = this.warningManager.getRendererWarning();
                 if (string != null) {
                     list.add(NEWLINE_TEXT);
@@ -106,14 +105,14 @@ extends GameOptionsScreen {
                     list.add(NEWLINE_TEXT);
                     list.add(new TranslatableText("options.graphics.warning.version", string3).formatted(Formatting.GRAY));
                 }
-                this.client.openScreen(new DialogScreen(GRAPHICS_WARNING_TITLE_TEXT, list, (ImmutableList<DialogScreen.ChoiceButton>)ImmutableList.of((Object)new DialogScreen.ChoiceButton(GRAPHICS_WARNING_ACCEPT_TEXT, button -> {
+                this.client.setScreen(new DialogScreen(GRAPHICS_WARNING_TITLE_TEXT, list, (ImmutableList<DialogScreen.ChoiceButton>)ImmutableList.of((Object)new DialogScreen.ChoiceButton(GRAPHICS_WARNING_ACCEPT_TEXT, button -> {
                     this.gameOptions.graphicsMode = GraphicsMode.FABULOUS;
                     MinecraftClient.getInstance().worldRenderer.reload();
                     this.warningManager.acceptAfterWarnings();
-                    this.client.openScreen(this);
+                    this.client.setScreen(this);
                 }), (Object)new DialogScreen.ChoiceButton(GRAPHICS_WARNING_CANCEL_TEXT, button -> {
                     this.warningManager.cancelAfterWarnings();
-                    this.client.openScreen(this);
+                    this.client.setScreen(this);
                 }))));
             }
             return true;

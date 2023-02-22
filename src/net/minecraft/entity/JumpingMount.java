@@ -1,17 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import net.minecraft.entity.Mount;
 
-public interface JumpingMount {
-    @Environment(value=EnvType.CLIENT)
+public interface JumpingMount
+extends Mount {
     public void setJumpStrength(int var1);
 
     public boolean canJump();

@@ -21,7 +21,7 @@ import net.minecraft.util.Identifier;
 
 public class PlayerInteractedWithEntityCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("player_interacted_with_entity");
+    static final Identifier ID = new Identifier("player_interacted_with_entity");
 
     @Override
     public Identifier getId() {
@@ -35,9 +35,9 @@ extends AbstractCriterion<Conditions> {
         return new Conditions(extended, itemPredicate, extended2);
     }
 
-    public void test(ServerPlayerEntity player, ItemStack stack, Entity entity) {
+    public void trigger(ServerPlayerEntity player, ItemStack stack, Entity entity) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, entity);
-        this.test(player, conditions -> conditions.test(stack, lootContext));
+        this.trigger(player, conditions -> conditions.test(stack, lootContext));
     }
 
     @Override

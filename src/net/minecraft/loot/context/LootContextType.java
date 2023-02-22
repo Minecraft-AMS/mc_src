@@ -22,9 +22,13 @@ public class LootContextType {
     private final Set<LootContextParameter<?>> required;
     private final Set<LootContextParameter<?>> allowed;
 
-    private LootContextType(Set<LootContextParameter<?>> required, Set<LootContextParameter<?>> allowed) {
+    LootContextType(Set<LootContextParameter<?>> required, Set<LootContextParameter<?>> allowed) {
         this.required = ImmutableSet.copyOf(required);
         this.allowed = ImmutableSet.copyOf((Collection)Sets.union(required, allowed));
+    }
+
+    public boolean isAllowed(LootContextParameter<?> parameter) {
+        return this.allowed.contains(parameter);
     }
 
     public Set<LootContextParameter<?>> getRequired() {
@@ -43,8 +47,12 @@ public class LootContextType {
         Set<LootContextParameter<?>> set = parameterConsumer.getRequiredParameters();
         Sets.SetView set2 = Sets.difference(set, this.allowed);
         if (!set2.isEmpty()) {
-            reporter.report("Parameters " + set2 + " are not provided in this context");
+            reporter.report("Parameters " + (Set)set2 + " are not provided in this context");
         }
+    }
+
+    public static Builder create() {
+        return new Builder();
     }
 
     public static class Builder {

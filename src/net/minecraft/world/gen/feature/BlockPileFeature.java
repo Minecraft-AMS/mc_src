@@ -14,9 +14,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.BlockPileFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class BlockPileFeature
 extends Feature<BlockPileFeatureConfig> {
@@ -25,8 +25,12 @@ extends Feature<BlockPileFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, BlockPileFeatureConfig blockPileFeatureConfig) {
-        if (blockPos.getY() < 5) {
+    public boolean generate(FeatureContext<BlockPileFeatureConfig> context) {
+        BlockPos blockPos = context.getOrigin();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        Random random = context.getRandom();
+        BlockPileFeatureConfig blockPileFeatureConfig = context.getConfig();
+        if (blockPos.getY() < structureWorldAccess.getBottomY() + 5) {
             return false;
         }
         int i = 2 + random.nextInt(2);
@@ -47,7 +51,7 @@ extends Feature<BlockPileFeatureConfig> {
     private boolean canPlace(WorldAccess world, BlockPos pos, Random random) {
         BlockPos blockPos = pos.down();
         BlockState blockState = world.getBlockState(blockPos);
-        if (blockState.isOf(Blocks.GRASS_PATH)) {
+        if (blockState.isOf(Blocks.DIRT_PATH)) {
             return random.nextBoolean();
         }
         return blockState.isSideSolidFullSquare(world, blockPos, Direction.UP);

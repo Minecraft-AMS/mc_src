@@ -38,7 +38,7 @@ extends ValueObject {
             worldDownload.resourcePackHash = JsonUtils.getStringOr("resourcePackHash", jsonObject, "");
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse WorldDownload: " + exception.getMessage());
+            LOGGER.error("Could not parse WorldDownload: {}", (Object)exception.getMessage());
         }
         return worldDownload;
     }

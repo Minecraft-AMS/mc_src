@@ -2,8 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -13,8 +11,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -24,10 +20,9 @@ import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.Durations;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.EscapeDangerGoal;
 import net.minecraft.entity.ai.goal.FollowParentGoal;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -52,9 +47,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -68,10 +64,11 @@ public class PolarBearEntity
 extends AnimalEntity
 implements Angerable {
     private static final TrackedData<Boolean> WARNING = DataTracker.registerData(PolarBearEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final float field_30352 = 6.0f;
     private float lastWarningAnimationProgress;
     private float warningAnimationProgress;
     private int warningSoundCooldown;
-    private static final IntRange ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
+    private static final UniformIntProvider ANGER_TIME_RANGE = TimeHelper.betweenSeconds(20, 39);
     private int angerTime;
     private UUID targetUuid;
 
@@ -100,9 +97,9 @@ implements Angerable {
         this.goalSelector.add(6, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(7, new LookAroundGoal(this));
         this.targetSelector.add(1, new PolarBearRevengeGoal());
-        this.targetSelector.add(2, new FollowPlayersGoal());
-        this.targetSelector.add(3, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
-        this.targetSelector.add(4, new FollowTargetGoal<FoxEntity>(this, FoxEntity.class, 10, true, true, null));
+        this.targetSelector.add(2, new ProtectBabiesGoal());
+        this.targetSelector.add(3, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
+        this.targetSelector.add(4, new ActiveTargetGoal<FoxEntity>(this, FoxEntity.class, 10, true, true, null));
         this.targetSelector.add(5, new UniversalAngerGoal<PolarBearEntity>(this, false));
     }
 
@@ -121,7 +118,7 @@ implements Angerable {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.angerFromTag((ServerWorld)this.world, nbt);
+        this.readAngerFromNbt(this.world, nbt);
     }
 
     @Override
@@ -132,7 +129,7 @@ implements Angerable {
 
     @Override
     public void chooseRandomAngerTime() {
-        this.setAngerTime(ANGER_TIME_RANGE.choose(this.random));
+        this.setAngerTime(ANGER_TIME_RANGE.get(this.random));
     }
 
     @Override
@@ -223,7 +220,7 @@ implements Angerable {
     public boolean tryAttack(Entity target) {
         boolean bl = target.damage(DamageSource.mob(this), (int)this.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE));
         if (bl) {
-            this.dealDamage(this, target);
+            this.applyDamageEffects(this, target);
         }
         return bl;
     }
@@ -236,7 +233,6 @@ implements Angerable {
         this.dataTracker.set(WARNING, warning);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getWarningAnimationProgress(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.lastWarningAnimationProgress, this.warningAnimationProgress) / 6.0f;
     }
@@ -254,21 +250,6 @@ implements Angerable {
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
-    class PolarBearEscapeDangerGoal
-    extends EscapeDangerGoal {
-        public PolarBearEscapeDangerGoal() {
-            super(PolarBearEntity.this, 2.0);
-        }
-
-        @Override
-        public boolean canStart() {
-            if (!PolarBearEntity.this.isBaby() && !PolarBearEntity.this.isOnFire()) {
-                return false;
-            }
-            return super.canStart();
-        }
-    }
-
     class AttackGoal
     extends MeleeAttackGoal {
         public AttackGoal() {
@@ -278,21 +259,21 @@ implements Angerable {
         @Override
         protected void attack(LivingEntity target, double squaredDistance) {
             double d = this.getSquaredMaxAttackDistance(target);
-            if (squaredDistance <= d && this.method_28347()) {
-                this.method_28346();
+            if (squaredDistance <= d && this.isCooledDown()) {
+                this.resetCooldown();
                 this.mob.tryAttack(target);
                 PolarBearEntity.this.setWarning(false);
             } else if (squaredDistance <= d * 2.0) {
-                if (this.method_28347()) {
+                if (this.isCooledDown()) {
                     PolarBearEntity.this.setWarning(false);
-                    this.method_28346();
+                    this.resetCooldown();
                 }
-                if (this.method_28348() <= 10) {
+                if (this.getCooldown() <= 10) {
                     PolarBearEntity.this.setWarning(true);
                     PolarBearEntity.this.playWarningSound();
                 }
             } else {
-                this.method_28346();
+                this.resetCooldown();
                 PolarBearEntity.this.setWarning(false);
             }
         }
@@ -309,30 +290,18 @@ implements Angerable {
         }
     }
 
-    class FollowPlayersGoal
-    extends FollowTargetGoal<PlayerEntity> {
-        public FollowPlayersGoal() {
-            super(PolarBearEntity.this, PlayerEntity.class, 20, true, true, null);
+    class PolarBearEscapeDangerGoal
+    extends EscapeDangerGoal {
+        public PolarBearEscapeDangerGoal() {
+            super(PolarBearEntity.this, 2.0);
         }
 
         @Override
         public boolean canStart() {
-            if (PolarBearEntity.this.isBaby()) {
+            if (!PolarBearEntity.this.isBaby() && !PolarBearEntity.this.isOnFire()) {
                 return false;
             }
-            if (super.canStart()) {
-                List<PolarBearEntity> list = PolarBearEntity.this.world.getNonSpectatingEntities(PolarBearEntity.class, PolarBearEntity.this.getBoundingBox().expand(8.0, 4.0, 8.0));
-                for (PolarBearEntity polarBearEntity : list) {
-                    if (!polarBearEntity.isBaby()) continue;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        protected double getFollowRange() {
-            return super.getFollowRange() * 0.5;
+            return super.canStart();
         }
     }
 
@@ -356,6 +325,33 @@ implements Angerable {
             if (mob instanceof PolarBearEntity && !mob.isBaby()) {
                 super.setMobEntityTarget(mob, target);
             }
+        }
+    }
+
+    class ProtectBabiesGoal
+    extends ActiveTargetGoal<PlayerEntity> {
+        public ProtectBabiesGoal() {
+            super(PolarBearEntity.this, PlayerEntity.class, 20, true, true, null);
+        }
+
+        @Override
+        public boolean canStart() {
+            if (PolarBearEntity.this.isBaby()) {
+                return false;
+            }
+            if (super.canStart()) {
+                List<PolarBearEntity> list = PolarBearEntity.this.world.getNonSpectatingEntities(PolarBearEntity.class, PolarBearEntity.this.getBoundingBox().expand(8.0, 4.0, 8.0));
+                for (PolarBearEntity polarBearEntity : list) {
+                    if (!polarBearEntity.isBaby()) continue;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        protected double getFollowRange() {
+            return super.getFollowRange() * 0.5;
         }
     }
 }

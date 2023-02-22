@@ -43,13 +43,16 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.OptionSpecBuilder;
 import net.minecraft.Bootstrap;
+import net.minecraft.SharedConstants;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.resource.DataPackSettings;
 import net.minecraft.resource.FileResourcePackProvider;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackSource;
+import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.ServerResourceManager;
 import net.minecraft.resource.VanillaDataPackProvider;
 import net.minecraft.server.MinecraftServer;
@@ -76,6 +79,7 @@ import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import net.minecraft.world.level.storage.LevelStorage;
+import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.updater.WorldUpdater;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -83,7 +87,9 @@ import org.apache.logging.log4j.Logger;
 public class Main {
     private static final Logger LOGGER = LogManager.getLogger();
 
+    @DontObfuscate
     public static void main(String[] args) {
+        SharedConstants.createGameVersion();
         OptionParser optionParser = new OptionParser();
         OptionSpecBuilder optionSpec = optionParser.accepts("nogui");
         OptionSpecBuilder optionSpec2 = optionParser.accepts("initSettings", "Initializes 'server.properties' and 'eula.txt', then quits");
@@ -112,7 +118,7 @@ public class Main {
             Util.startTimerHack();
             DynamicRegistryManager.Impl impl = DynamicRegistryManager.create();
             Path path = Paths.get("server.properties", new String[0]);
-            ServerPropertiesLoader serverPropertiesLoader = new ServerPropertiesLoader(impl, path);
+            ServerPropertiesLoader serverPropertiesLoader = new ServerPropertiesLoader(path);
             serverPropertiesLoader.store();
             Path path2 = Paths.get("eula.txt", new String[0]);
             EulaReader eulaReader = new EulaReader(path2);
@@ -129,18 +135,23 @@ public class Main {
             MinecraftSessionService minecraftSessionService = yggdrasilAuthenticationService.createMinecraftSessionService();
             GameProfileRepository gameProfileRepository = yggdrasilAuthenticationService.createProfileRepository();
             UserCache userCache = new UserCache(gameProfileRepository, new File(file, MinecraftServer.USER_CACHE_FILE.getName()));
-            String string = (String)Optional.ofNullable(optionSet.valueOf((OptionSpec)optionSpec11)).orElse(serverPropertiesLoader.getPropertiesHandler().levelName);
+            String string = Optional.ofNullable((String)optionSet.valueOf((OptionSpec)optionSpec11)).orElse(serverPropertiesLoader.getPropertiesHandler().levelName);
             LevelStorage levelStorage = LevelStorage.create(file.toPath());
             LevelStorage.Session session = levelStorage.createSession(string);
             MinecraftServer.convertLevel(session);
+            LevelSummary levelSummary = session.getLevelSummary();
+            if (levelSummary != null && levelSummary.isPreWorldHeightChangeVersion()) {
+                LOGGER.info("Loading of worlds with extended height is disabled.");
+                return;
+            }
             DataPackSettings dataPackSettings = session.getDataPackSettings();
             boolean bl = optionSet.has((OptionSpec)optionSpec7);
             if (bl) {
                 LOGGER.warn("Safe mode active, only vanilla datapack will be loaded");
             }
-            ResourcePackManager resourcePackManager = new ResourcePackManager(new VanillaDataPackProvider(), new FileResourcePackProvider(session.getDirectory(WorldSavePath.DATAPACKS).toFile(), ResourcePackSource.PACK_SOURCE_WORLD));
+            ResourcePackManager resourcePackManager = new ResourcePackManager(ResourceType.SERVER_DATA, new VanillaDataPackProvider(), new FileResourcePackProvider(session.getDirectory(WorldSavePath.DATAPACKS).toFile(), ResourcePackSource.PACK_SOURCE_WORLD));
             DataPackSettings dataPackSettings2 = MinecraftServer.loadDataPacks(resourcePackManager, dataPackSettings == null ? DataPackSettings.SAFE_MODE : dataPackSettings, bl);
-            CompletableFuture<ServerResourceManager> completableFuture = ServerResourceManager.reload(resourcePackManager.createResourcePacks(), CommandManager.RegistrationEnvironment.DEDICATED, serverPropertiesLoader.getPropertiesHandler().functionPermissionLevel, Util.getMainWorkerExecutor(), Runnable::run);
+            CompletableFuture<ServerResourceManager> completableFuture = ServerResourceManager.reload(resourcePackManager.createResourcePacks(), impl, CommandManager.RegistrationEnvironment.DEDICATED, serverPropertiesLoader.getPropertiesHandler().functionPermissionLevel, Util.getMainWorkerExecutor(), Runnable::run);
             try {
                 serverResourceManager = completableFuture.get();
             }
@@ -150,18 +161,19 @@ public class Main {
                 return;
             }
             serverResourceManager.loadRegistryTags();
-            RegistryOps<NbtElement> registryOps = RegistryOps.of(NbtOps.INSTANCE, serverResourceManager.getResourceManager(), impl);
+            RegistryOps<NbtElement> registryOps = RegistryOps.ofLoaded(NbtOps.INSTANCE, serverResourceManager.getResourceManager(), (DynamicRegistryManager)impl);
+            serverPropertiesLoader.getPropertiesHandler().method_37371(impl);
             SaveProperties saveProperties = session.readLevelProperties(registryOps, dataPackSettings2);
             if (saveProperties == null) {
                 GeneratorOptions generatorOptions;
                 LevelInfo levelInfo;
                 if (optionSet.has((OptionSpec)optionSpec3)) {
                     levelInfo = MinecraftServer.DEMO_LEVEL_INFO;
-                    generatorOptions = GeneratorOptions.method_31112(impl);
+                    generatorOptions = GeneratorOptions.createDemo(impl);
                 } else {
                     ServerPropertiesHandler serverPropertiesHandler = serverPropertiesLoader.getPropertiesHandler();
                     levelInfo = new LevelInfo(serverPropertiesHandler.levelName, serverPropertiesHandler.gameMode, serverPropertiesHandler.hardcore, serverPropertiesHandler.difficulty, false, new GameRules(), dataPackSettings2);
-                    generatorOptions = optionSet.has((OptionSpec)optionSpec4) ? serverPropertiesHandler.generatorOptions.withBonusChest() : serverPropertiesHandler.generatorOptions;
+                    generatorOptions = optionSet.has((OptionSpec)optionSpec4) ? serverPropertiesHandler.method_37371(impl).withBonusChest() : serverPropertiesHandler.method_37371(impl);
                 }
                 saveProperties = new LevelProperties(levelInfo, generatorOptions, Lifecycle.stable());
             }
@@ -212,10 +224,10 @@ public class Main {
         }
     }
 
-    private static /* synthetic */ MinecraftDedicatedServer method_29734(DynamicRegistryManager.Impl registryTracker, LevelStorage.Session session, ResourcePackManager resourcePackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, ServerPropertiesLoader propertiesLoader, MinecraftSessionService sessionService, GameProfileRepository profileRepository, UserCache userCache, OptionSet optionSet, OptionSpec serverName, OptionSpec serverPort, OptionSpec demo, OptionSpec serverId, OptionSpec noGui, OptionSpec nonOptions, Thread serverThread) {
+    private static /* synthetic */ MinecraftDedicatedServer method_29734(DynamicRegistryManager.Impl registryTracker, LevelStorage.Session session, ResourcePackManager resourcePackManager, ServerResourceManager serverResourceManager, SaveProperties saveProperties, ServerPropertiesLoader propertiesLoader, MinecraftSessionService sessionService, GameProfileRepository profileRepository, UserCache userCache, OptionSet optionSet, OptionSpec singleplayer, OptionSpec serverPort, OptionSpec demo, OptionSpec serverId, OptionSpec noGui, OptionSpec nonOptions, Thread serverThread) {
         boolean bl;
         MinecraftDedicatedServer minecraftDedicatedServer = new MinecraftDedicatedServer(serverThread, registryTracker, session, resourcePackManager, serverResourceManager, saveProperties, propertiesLoader, Schemas.getFixer(), sessionService, profileRepository, userCache, WorldGenerationProgressLogger::new);
-        minecraftDedicatedServer.setServerName((String)optionSet.valueOf(serverName));
+        minecraftDedicatedServer.setSinglePlayerName((String)optionSet.valueOf(singleplayer));
         minecraftDedicatedServer.setServerPort((Integer)optionSet.valueOf(serverPort));
         minecraftDedicatedServer.setDemo(optionSet.has(demo));
         minecraftDedicatedServer.setServerId((String)optionSet.valueOf(serverId));

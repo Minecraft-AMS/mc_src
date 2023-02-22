@@ -6,8 +6,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome;
 
@@ -16,8 +14,6 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 
@@ -31,12 +27,10 @@ public class BiomeParticleConfig {
         this.probability = probability;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ParticleEffect getParticle() {
         return this.particle;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldAddParticle(Random random) {
         return random.nextFloat() <= this.probability;
     }

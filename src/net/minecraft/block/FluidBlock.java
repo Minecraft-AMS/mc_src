@@ -2,18 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -23,12 +22,11 @@ import net.minecraft.block.FluidDrainable;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.fluid.FlowableFluid;
-import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.context.LootContext;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -48,6 +46,7 @@ implements FluidDrainable {
     protected final FlowableFluid fluid;
     private final List<FluidState> statesByLevel;
     public static final VoxelShape COLLISION_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 8.0, 16.0);
+    public static final ImmutableList<Direction> field_34006 = ImmutableList.of((Object)Direction.DOWN, (Object)Direction.SOUTH, (Object)Direction.NORTH, (Object)Direction.EAST, (Object)Direction.WEST);
 
     protected FluidBlock(FlowableFluid fluid, AbstractBlock.Settings settings) {
         super(settings);
@@ -96,7 +95,6 @@ implements FluidDrainable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean isSideInvisible(BlockState state, BlockState stateFrom, Direction direction) {
         return stateFrom.getFluidState().getFluid().matchesType(this.fluid);
     }
@@ -141,9 +139,8 @@ implements FluidDrainable {
     private boolean receiveNeighborFluids(World world, BlockPos pos, BlockState state) {
         if (this.fluid.isIn(FluidTags.LAVA)) {
             boolean bl = world.getBlockState(pos.down()).isOf(Blocks.SOUL_SOIL);
-            for (Direction direction : Direction.values()) {
-                if (direction == Direction.DOWN) continue;
-                BlockPos blockPos = pos.offset(direction);
+            for (Direction direction : field_34006) {
+                BlockPos blockPos = pos.offset(direction.getOpposite());
                 if (world.getFluidState(blockPos).isIn(FluidTags.WATER)) {
                     Block block = world.getFluidState(pos).isStill() ? Blocks.OBSIDIAN : Blocks.COBBLESTONE;
                     world.setBlockState(pos, block.getDefaultState());
@@ -169,12 +166,17 @@ implements FluidDrainable {
     }
 
     @Override
-    public Fluid tryDrainFluid(WorldAccess world, BlockPos pos, BlockState state) {
+    public ItemStack tryDrainFluid(WorldAccess world, BlockPos pos, BlockState state) {
         if (state.get(LEVEL) == 0) {
             world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-            return this.fluid;
+            return new ItemStack(this.fluid.getBucketItem());
         }
-        return Fluids.EMPTY;
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public Optional<SoundEvent> getBucketFillSound() {
+        return this.fluid.getBucketFillSound();
     }
 }
 

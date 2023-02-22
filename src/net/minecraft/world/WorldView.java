@@ -2,19 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
 import java.util.stream.Stream;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockRenderView;
@@ -23,6 +20,7 @@ import net.minecraft.world.CollisionView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.dimension.DimensionType;
@@ -49,7 +47,7 @@ BiomeAccess.Storage {
         return this.getBiomeAccess().getBiome(pos);
     }
 
-    default public Stream<BlockState> method_29556(Box box) {
+    default public Stream<BlockState> getStatesInBoxIfLoaded(Box box) {
         int n;
         int i = MathHelper.floor(box.minX);
         int j = MathHelper.floor(box.maxX);
@@ -57,20 +55,19 @@ BiomeAccess.Storage {
         int l = MathHelper.floor(box.maxY);
         int m = MathHelper.floor(box.minZ);
         if (this.isRegionLoaded(i, k, m, j, l, n = MathHelper.floor(box.maxZ))) {
-            return this.method_29546(box);
+            return this.getStatesInBox(box);
         }
         return Stream.empty();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     default public int getColor(BlockPos pos, ColorResolver colorResolver) {
         return colorResolver.getColor(this.getBiome(pos), pos.getX(), pos.getZ());
     }
 
     @Override
     default public Biome getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
-        Chunk chunk = this.getChunk(biomeX >> 2, biomeZ >> 2, ChunkStatus.BIOMES, false);
+        Chunk chunk = this.getChunk(BiomeCoords.toChunk(biomeX), BiomeCoords.toChunk(biomeZ), ChunkStatus.BIOMES, false);
         if (chunk != null && chunk.getBiomeArray() != null) {
             return chunk.getBiomeArray().getBiomeForNoiseGen(biomeX, biomeY, biomeZ);
         }
@@ -85,6 +82,16 @@ BiomeAccess.Storage {
     public int getSeaLevel();
 
     public DimensionType getDimension();
+
+    @Override
+    default public int getBottomY() {
+        return this.getDimension().getMinimumY();
+    }
+
+    @Override
+    default public int getHeight() {
+        return this.getDimension().getHeight();
+    }
 
     default public BlockPos getTopPosition(Heightmap.Type heightmap, BlockPos pos) {
         return new BlockPos(pos.getX(), this.getTopY(heightmap, pos.getX(), pos.getZ()), pos.getZ());
@@ -115,7 +122,7 @@ BiomeAccess.Storage {
 
     @Deprecated
     default public float getBrightness(BlockPos pos) {
-        return this.getDimension().method_28516(this.getLightLevel(pos));
+        return this.getDimension().getBrightness(this.getLightLevel(pos));
     }
 
     default public int getStrongRedstonePower(BlockPos pos, Direction direction) {
@@ -123,7 +130,7 @@ BiomeAccess.Storage {
     }
 
     default public Chunk getChunk(BlockPos pos) {
-        return this.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        return this.getChunk(ChunkSectionPos.getSectionCoord(pos.getX()), ChunkSectionPos.getSectionCoord(pos.getZ()));
     }
 
     default public Chunk getChunk(int chunkX, int chunkZ) {
@@ -176,8 +183,13 @@ BiomeAccess.Storage {
     }
 
     @Deprecated
+    default public boolean isPosLoaded(int x, int z) {
+        return this.isChunkLoaded(ChunkSectionPos.getSectionCoord(x), ChunkSectionPos.getSectionCoord(z));
+    }
+
+    @Deprecated
     default public boolean isChunkLoaded(BlockPos pos) {
-        return this.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4);
+        return this.isPosLoaded(pos.getX(), pos.getZ());
     }
 
     @Deprecated
@@ -187,15 +199,21 @@ BiomeAccess.Storage {
 
     @Deprecated
     default public boolean isRegionLoaded(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        if (maxY < 0 || minY >= 256) {
+        if (maxY < this.getBottomY() || minY >= this.getTopY()) {
             return false;
         }
-        minZ >>= 4;
-        maxX >>= 4;
-        maxZ >>= 4;
-        for (int i = minX >>= 4; i <= maxX; ++i) {
-            for (int j = minZ; j <= maxZ; ++j) {
-                if (this.isChunkLoaded(i, j)) continue;
+        return this.isRegionLoaded(minX, minZ, maxX, maxZ);
+    }
+
+    @Deprecated
+    default public boolean isRegionLoaded(int minX, int minZ, int maxX, int maxZ) {
+        int i = ChunkSectionPos.getSectionCoord(minX);
+        int j = ChunkSectionPos.getSectionCoord(maxX);
+        int k = ChunkSectionPos.getSectionCoord(minZ);
+        int l = ChunkSectionPos.getSectionCoord(maxZ);
+        for (int m = i; m <= j; ++m) {
+            for (int n = k; n <= l; ++n) {
+                if (this.isChunkLoaded(m, n)) continue;
                 return false;
             }
         }

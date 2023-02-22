@@ -11,7 +11,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.MovingSoundInstance;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -20,15 +19,18 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public abstract class AbstractBeeSoundInstance
 extends MovingSoundInstance {
+    private static final float field_32991 = 0.0f;
+    private static final float field_32992 = 1.2f;
+    private static final float field_32993 = 0.0f;
     protected final BeeEntity bee;
     private boolean replaced;
 
-    public AbstractBeeSoundInstance(BeeEntity beeEntity, SoundEvent soundEvent, SoundCategory soundCategory) {
-        super(soundEvent, soundCategory);
-        this.bee = beeEntity;
-        this.x = (float)beeEntity.getX();
-        this.y = (float)beeEntity.getY();
-        this.z = (float)beeEntity.getZ();
+    public AbstractBeeSoundInstance(BeeEntity entity, SoundEvent sound, SoundCategory soundCategory) {
+        super(sound, soundCategory);
+        this.bee = entity;
+        this.x = (float)entity.getX();
+        this.y = (float)entity.getY();
+        this.z = (float)entity.getZ();
         this.repeat = true;
         this.repeatDelay = 0;
         this.volume = 0.0f;
@@ -41,15 +43,15 @@ extends MovingSoundInstance {
             MinecraftClient.getInstance().getSoundManager().playNextTick(this.getReplacement());
             this.replaced = true;
         }
-        if (this.bee.removed || this.replaced) {
+        if (this.bee.isRemoved() || this.replaced) {
             this.setDone();
             return;
         }
         this.x = (float)this.bee.getX();
         this.y = (float)this.bee.getY();
         this.z = (float)this.bee.getZ();
-        float f = MathHelper.sqrt(Entity.squaredHorizontalLength(this.bee.getVelocity()));
-        if ((double)f >= 0.01) {
+        float f = (float)this.bee.getVelocity().horizontalLength();
+        if (f >= 0.01f) {
             this.pitch = MathHelper.lerp(MathHelper.clamp(f, this.getMinPitch(), this.getMaxPitch()), this.getMinPitch(), this.getMaxPitch());
             this.volume = MathHelper.lerp(MathHelper.clamp(f, 0.0f, 0.5f), 0.0f, 1.2f);
         } else {

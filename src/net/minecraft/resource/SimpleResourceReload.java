@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.resource;
 
@@ -18,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReload;
 import net.minecraft.resource.ResourceReloader;
@@ -29,10 +25,13 @@ import net.minecraft.util.profiler.DummyProfiler;
 
 public class SimpleResourceReload<S>
 implements ResourceReload {
+    private static final int FIRST_PREPARE_APPLY_WEIGHT = 2;
+    private static final int SECOND_PREPARE_APPLY_WEIGHT = 2;
+    private static final int RELOADER_WEIGHT = 1;
     protected final ResourceManager manager;
     protected final CompletableFuture<Unit> prepareStageFuture = new CompletableFuture();
     protected final CompletableFuture<List<S>> applyStageFuture;
-    private final Set<ResourceReloader> waitingReloaders;
+    final Set<ResourceReloader> waitingReloaders;
     private final int reloaderCount;
     private int toApplyCount;
     private int appliedCount;
@@ -40,7 +39,7 @@ implements ResourceReload {
     private final AtomicInteger preparedCount = new AtomicInteger();
 
     public static SimpleResourceReload<Void> create(ResourceManager manager, List<ResourceReloader> reloaders, Executor prepareExecutor, Executor applyExecutor, CompletableFuture<Unit> initialStage) {
-        return new SimpleResourceReload<Void>(prepareExecutor, applyExecutor, manager, reloaders, (synchronizer, resourceManager, resourceReloader, executor2, executor3) -> resourceReloader.reload(synchronizer, resourceManager, DummyProfiler.INSTANCE, DummyProfiler.INSTANCE, prepareExecutor, executor3), initialStage);
+        return new SimpleResourceReload<Void>(prepareExecutor, applyExecutor, manager, reloaders, (synchronizer, resourceManager, reloader, prepare, apply) -> reloader.reload(synchronizer, resourceManager, DummyProfiler.INSTANCE, DummyProfiler.INSTANCE, prepareExecutor, apply), initialStage);
     }
 
     protected SimpleResourceReload(Executor prepareExecutor, final Executor applyExecutor, ResourceManager manager, List<ResourceReloader> reloaders, Factory<S> factory, CompletableFuture<Unit> initialStage) {
@@ -65,16 +64,16 @@ implements ResourceReload {
                     });
                     return SimpleResourceReload.this.prepareStageFuture.thenCombine((CompletionStage)completableFuture2, (unit, object2) -> preparedObject);
                 }
-            }, manager, resourceReloader, runnable -> {
+            }, manager, resourceReloader, preparation -> {
                 this.toPrepareCount.incrementAndGet();
                 prepareExecutor.execute(() -> {
-                    runnable.run();
+                    preparation.run();
                     this.preparedCount.incrementAndGet();
                 });
-            }, runnable -> {
+            }, application -> {
                 ++this.toApplyCount;
                 applyExecutor.execute(() -> {
-                    runnable.run();
+                    application.run();
                     ++this.appliedCount;
                 });
             });
@@ -86,11 +85,10 @@ implements ResourceReload {
 
     @Override
     public CompletableFuture<Unit> whenComplete() {
-        return this.applyStageFuture.thenApply(list -> Unit.INSTANCE);
+        return this.applyStageFuture.thenApply(results -> Unit.INSTANCE);
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public float getProgress() {
         int i = this.reloaderCount - this.waitingReloaders.size();
         float f = this.preparedCount.get() * 2 + this.appliedCount * 2 + i * 1;
@@ -99,26 +97,18 @@ implements ResourceReload {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public boolean isPrepareStageComplete() {
-        return this.prepareStageFuture.isDone();
-    }
-
-    @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean isComplete() {
         return this.applyStageFuture.isDone();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void throwException() {
         if (this.applyStageFuture.isCompletedExceptionally()) {
             this.applyStageFuture.join();
         }
     }
 
-    public static interface Factory<S> {
+    protected static interface Factory<S> {
         public CompletableFuture<S> create(ResourceReloader.Synchronizer var1, ResourceManager var2, ResourceReloader var3, Executor var4, Executor var5);
     }
 }

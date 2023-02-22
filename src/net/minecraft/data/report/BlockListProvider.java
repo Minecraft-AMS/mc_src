@@ -33,8 +33,8 @@ implements DataProvider {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final DataGenerator generator;
 
-    public BlockListProvider(DataGenerator dataGenerator) {
-        this.generator = dataGenerator;
+    public BlockListProvider(DataGenerator generator) {
+        this.generator = generator;
     }
 
     @Override

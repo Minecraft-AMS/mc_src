@@ -9,6 +9,7 @@ import net.minecraft.block.DispenserBlock;
 import net.minecraft.block.dispenser.DispenserBehavior;
 import net.minecraft.block.dispenser.ItemDispenserBehavior;
 import net.minecraft.block.enums.RailShape;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -20,6 +21,7 @@ import net.minecraft.util.math.BlockPointer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class MinecartItem
 extends Item {
@@ -35,7 +37,7 @@ extends Item {
             double d = pointer.getX() + (double)direction.getOffsetX() * 1.125;
             double e = Math.floor(pointer.getY()) + (double)direction.getOffsetY();
             double f = pointer.getZ() + (double)direction.getOffsetZ() * 1.125;
-            BlockPos blockPos = pointer.getBlockPos().offset(direction);
+            BlockPos blockPos = pointer.getPos().offset(direction);
             BlockState blockState = world.getBlockState(blockPos);
             RailShape railShape2 = railShape = blockState.getBlock() instanceof AbstractRailBlock ? blockState.get(((AbstractRailBlock)blockState.getBlock()).getShapeProperty()) : RailShape.NORTH_SOUTH;
             if (blockState.isIn(BlockTags.RAILS)) {
@@ -59,10 +61,10 @@ extends Item {
 
         @Override
         protected void playSound(BlockPointer pointer) {
-            pointer.getWorld().syncWorldEvent(1000, pointer.getBlockPos(), 0);
+            pointer.getWorld().syncWorldEvent(1000, pointer.getPos(), 0);
         }
     };
-    private final AbstractMinecartEntity.Type type;
+    final AbstractMinecartEntity.Type type;
 
     public MinecartItem(AbstractMinecartEntity.Type type, Item.Settings settings) {
         super(settings);
@@ -90,6 +92,7 @@ extends Item {
                 abstractMinecartEntity.setCustomName(itemStack.getName());
             }
             world.spawnEntity(abstractMinecartEntity);
+            world.emitGameEvent((Entity)context.getPlayer(), GameEvent.ENTITY_PLACE, blockPos);
         }
         itemStack.decrement(1);
         return ActionResult.success(world.isClient);

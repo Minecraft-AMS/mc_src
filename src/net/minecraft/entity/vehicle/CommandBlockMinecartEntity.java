@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.vehicle;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
@@ -30,9 +24,10 @@ import net.minecraft.world.World;
 
 public class CommandBlockMinecartEntity
 extends AbstractMinecartEntity {
-    private static final TrackedData<String> COMMAND = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.STRING);
-    private static final TrackedData<Text> LAST_OUTPUT = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.TEXT_COMPONENT);
+    static final TrackedData<String> COMMAND = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.STRING);
+    static final TrackedData<Text> LAST_OUTPUT = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.TEXT_COMPONENT);
     private final CommandBlockExecutor commandExecutor = new CommandExecutor();
+    private static final int field_30701 = 4;
     private int lastExecuted;
 
     public CommandBlockMinecartEntity(EntityType<? extends CommandBlockMinecartEntity> entityType, World world) {
@@ -123,12 +118,10 @@ extends AbstractMinecartEntity {
         }
 
         @Override
-        @Environment(value=EnvType.CLIENT)
         public Vec3d getPos() {
             return CommandBlockMinecartEntity.this.getPos();
         }
 
-        @Environment(value=EnvType.CLIENT)
         public CommandBlockMinecartEntity getMinecart() {
             return CommandBlockMinecartEntity.this;
         }

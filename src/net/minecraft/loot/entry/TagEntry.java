@@ -28,16 +28,17 @@ import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.registry.Registry;
 
 public class TagEntry
 extends LeafEntry {
-    private final Tag<Item> name;
-    private final boolean expand;
+    final Tag<Item> name;
+    final boolean expand;
 
-    private TagEntry(Tag<Item> name, boolean expand, int weight, int quality, LootCondition[] conditions, LootFunction[] functions) {
-        super(weight, quality, conditions, functions);
-        this.name = name;
-        this.expand = expand;
+    TagEntry(Tag<Item> tag, boolean bl, int i, int j, LootCondition[] lootConditions, LootFunction[] lootFunctions) {
+        super(i, j, lootConditions, lootFunctions);
+        this.name = tag;
+        this.expand = bl;
     }
 
     @Override
@@ -74,8 +75,12 @@ extends LeafEntry {
         return super.expand(lootContext, consumer);
     }
 
+    public static LeafEntry.Builder<?> builder(Tag<Item> name) {
+        return TagEntry.builder((int weight, int quality, LootCondition[] conditions, LootFunction[] functions) -> new TagEntry(name, false, weight, quality, conditions, functions));
+    }
+
     public static LeafEntry.Builder<?> expandBuilder(Tag<Item> name) {
-        return TagEntry.builder((weight, quality, conditions, functions) -> new TagEntry(name, true, weight, quality, conditions, functions));
+        return TagEntry.builder((int weight, int quality, LootCondition[] conditions, LootFunction[] functions) -> new TagEntry(name, true, weight, quality, conditions, functions));
     }
 
     public static class Serializer
@@ -83,17 +88,14 @@ extends LeafEntry {
         @Override
         public void addEntryFields(JsonObject jsonObject, TagEntry tagEntry, JsonSerializationContext jsonSerializationContext) {
             super.addEntryFields(jsonObject, tagEntry, jsonSerializationContext);
-            jsonObject.addProperty("name", ServerTagManagerHolder.getTagManager().getItems().getTagId(tagEntry.name).toString());
+            jsonObject.addProperty("name", ServerTagManagerHolder.getTagManager().getTagId(Registry.ITEM_KEY, tagEntry.name, () -> new IllegalStateException("Unknown item tag")).toString());
             jsonObject.addProperty("expand", Boolean.valueOf(tagEntry.expand));
         }
 
         @Override
         protected TagEntry fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, int i, int j, LootCondition[] lootConditions, LootFunction[] lootFunctions) {
             Identifier identifier = new Identifier(JsonHelper.getString(jsonObject, "name"));
-            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getItems().getTag(identifier);
-            if (tag == null) {
-                throw new JsonParseException("Can't find tag: " + identifier);
-            }
+            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getTag(Registry.ITEM_KEY, identifier, id -> new JsonParseException("Can't find tag: " + id));
             boolean bl = JsonHelper.getBoolean(jsonObject, "expand");
             return new TagEntry(tag, bl, i, j, lootConditions, lootFunctions);
         }

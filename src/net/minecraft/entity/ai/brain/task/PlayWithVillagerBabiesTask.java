@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.TargetFinder;
+import net.minecraft.entity.ai.FuzzyTargeting;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
@@ -31,6 +31,13 @@ import org.jetbrains.annotations.Nullable;
 
 public class PlayWithVillagerBabiesTask
 extends Task<PathAwareEntity> {
+    private static final int HORIZONTAL_RANGE = 20;
+    private static final int VERTICAL_RANGE = 8;
+    private static final float WALK_SPEED = 0.6f;
+    private static final float PLAYING_WALK_SPEED = 0.6f;
+    private static final int MAX_BABY_INTERACTION_COUNT = 5;
+    private static final int RUN_CHANCE = 10;
+
     public PlayWithVillagerBabiesTask() {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.VISIBLE_VILLAGER_BABIES, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED), MemoryModuleType.INTERACTION_TARGET, (Object)((Object)MemoryModuleState.REGISTERED)));
     }
@@ -57,7 +64,7 @@ extends Task<PathAwareEntity> {
 
     private void setGroundTarget(ServerWorld world, PathAwareEntity entity, LivingEntity unusedBaby) {
         for (int i = 0; i < 10; ++i) {
-            Vec3d vec3d = TargetFinder.findGroundTarget(entity, 20, 8);
+            Vec3d vec3d = FuzzyTargeting.find(entity, 20, 8);
             if (vec3d == null || !world.isNearOccupiedPointOfInterest(new BlockPos(vec3d))) continue;
             entity.getBrain().remember(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3d, 0.6f, 0));
             return;

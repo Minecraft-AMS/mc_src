@@ -16,10 +16,12 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class BoatItem
 extends Item {
@@ -42,7 +44,7 @@ extends Item {
         double d = 5.0;
         List<Entity> list = world.getOtherEntities(user, user.getBoundingBox().stretch(vec3d.multiply(5.0)).expand(1.0), RIDERS);
         if (!list.isEmpty()) {
-            Vec3d vec3d2 = user.getCameraPosVec(1.0f);
+            Vec3d vec3d2 = user.getEyePos();
             for (Entity entity : list) {
                 Box box = entity.getBoundingBox().expand(entity.getTargetingMargin());
                 if (!box.contains(vec3d2)) continue;
@@ -52,13 +54,14 @@ extends Item {
         if (((HitResult)hitResult).getType() == HitResult.Type.BLOCK) {
             BoatEntity boatEntity = new BoatEntity(world, hitResult.getPos().x, hitResult.getPos().y, hitResult.getPos().z);
             boatEntity.setBoatType(this.type);
-            boatEntity.yaw = user.yaw;
+            boatEntity.setYaw(user.getYaw());
             if (!world.isSpaceEmpty(boatEntity, boatEntity.getBoundingBox().expand(-0.1))) {
                 return TypedActionResult.fail(itemStack);
             }
             if (!world.isClient) {
                 world.spawnEntity(boatEntity);
-                if (!user.abilities.creativeMode) {
+                world.emitGameEvent((Entity)user, GameEvent.ENTITY_PLACE, new BlockPos(hitResult.getPos()));
+                if (!user.getAbilities().creativeMode) {
                     itemStack.decrement(1);
                 }
             }

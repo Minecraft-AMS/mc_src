@@ -12,7 +12,7 @@ extends WorldAccess {
     public ServerWorld toServerWorld();
 
     default public void spawnEntityAndPassengers(Entity entity) {
-        entity.streamPassengersRecursively().forEach(this::spawnEntity);
+        entity.streamSelfAndPassengers().forEach(this::spawnEntity);
     }
 }
 

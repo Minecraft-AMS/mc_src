@@ -2,19 +2,17 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.fluid;
 
+import java.util.Optional;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.Item;
 import net.minecraft.particle.ParticleEffect;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.state.StateManager;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.collection.IdList;
@@ -56,7 +54,6 @@ public abstract class Fluid {
 
     public abstract Item getBucketItem();
 
-    @Environment(value=EnvType.CLIENT)
     protected void randomDisplayTick(World world, BlockPos pos, FluidState state, Random random) {
     }
 
@@ -67,7 +64,6 @@ public abstract class Fluid {
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     protected ParticleEffect getParticle() {
         return null;
     }
@@ -107,5 +103,9 @@ public abstract class Fluid {
     }
 
     public abstract VoxelShape getShape(FluidState var1, BlockView var2, BlockPos var3);
+
+    public Optional<SoundEvent> getBucketFillSound() {
+        return Optional.empty();
+    }
 }
 

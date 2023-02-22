@@ -30,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 public class SkeletonHorseEntity
 extends HorseBaseEntity {
     private final SkeletonHorseTrapTriggerGoal trapTriggerGoal = new SkeletonHorseTrapTriggerGoal(this);
+    private static final int DESPAWN_AGE = 18000;
     private boolean trapped;
     private int trapTime;
 
@@ -121,7 +122,7 @@ extends HorseBaseEntity {
     public void tickMovement() {
         super.tickMovement();
         if (this.isTrapped() && this.trapTime++ >= 18000) {
-            this.remove();
+            this.discard();
         }
     }
 
@@ -188,7 +189,7 @@ extends HorseBaseEntity {
             return super.interactMob(player, hand);
         }
         if (!itemStack.isEmpty()) {
-            if (itemStack.getItem() == Items.SADDLE && !this.isSaddled()) {
+            if (itemStack.isOf(Items.SADDLE) && !this.isSaddled()) {
                 this.openInventory(player);
                 return ActionResult.success(this.world.isClient);
             }

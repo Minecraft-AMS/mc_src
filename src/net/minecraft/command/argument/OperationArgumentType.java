@@ -40,8 +40,8 @@ implements ArgumentType<Operation> {
         return new OperationArgumentType();
     }
 
-    public static Operation getOperation(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        return (Operation)commandContext.getArgument(string, Operation.class);
+    public static Operation getOperation(CommandContext<ServerCommandSource> context, String name) {
+        return (Operation)context.getArgument(name, Operation.class);
     }
 
     public Operation parse(StringReader stringReader) throws CommandSyntaxException {
@@ -63,45 +63,45 @@ implements ArgumentType<Operation> {
         return EXAMPLES;
     }
 
-    private static Operation getOperator(String string) throws CommandSyntaxException {
-        if (string.equals("><")) {
-            return (scoreboardPlayerScore, scoreboardPlayerScore2) -> {
-                int i = scoreboardPlayerScore.getScore();
-                scoreboardPlayerScore.setScore(scoreboardPlayerScore2.getScore());
-                scoreboardPlayerScore2.setScore(i);
+    private static Operation getOperator(String operator) throws CommandSyntaxException {
+        if (operator.equals("><")) {
+            return (a, b) -> {
+                int i = a.getScore();
+                a.setScore(b.getScore());
+                b.setScore(i);
             };
         }
-        return OperationArgumentType.getIntOperator(string);
+        return OperationArgumentType.getIntOperator(operator);
     }
 
-    private static IntOperator getIntOperator(String string) throws CommandSyntaxException {
-        switch (string) {
+    private static IntOperator getIntOperator(String operator) throws CommandSyntaxException {
+        switch (operator) {
             case "=": {
-                return (i, j) -> j;
+                return (a, b) -> b;
             }
             case "+=": {
-                return (i, j) -> i + j;
+                return (a, b) -> a + b;
             }
             case "-=": {
-                return (i, j) -> i - j;
+                return (a, b) -> a - b;
             }
             case "*=": {
-                return (i, j) -> i * j;
+                return (a, b) -> a * b;
             }
             case "/=": {
-                return (i, j) -> {
-                    if (j == 0) {
+                return (a, b) -> {
+                    if (b == 0) {
                         throw DIVISION_ZERO_EXCEPTION.create();
                     }
-                    return MathHelper.floorDiv(i, j);
+                    return MathHelper.floorDiv(a, b);
                 };
             }
             case "%=": {
-                return (i, j) -> {
-                    if (j == 0) {
+                return (a, b) -> {
+                    if (b == 0) {
                         throw DIVISION_ZERO_EXCEPTION.create();
                     }
-                    return MathHelper.floorMod(i, j);
+                    return MathHelper.floorMod(a, b);
                 };
             }
             case "<": {
@@ -114,8 +114,13 @@ implements ArgumentType<Operation> {
         throw INVALID_OPERATION.create();
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
+    }
+
+    @FunctionalInterface
+    public static interface Operation {
+        public void apply(ScoreboardPlayerScore var1, ScoreboardPlayerScore var2) throws CommandSyntaxException;
     }
 
     @FunctionalInterface
@@ -127,11 +132,6 @@ implements ArgumentType<Operation> {
         default public void apply(ScoreboardPlayerScore scoreboardPlayerScore, ScoreboardPlayerScore scoreboardPlayerScore2) throws CommandSyntaxException {
             scoreboardPlayerScore.setScore(this.apply(scoreboardPlayerScore.getScore(), scoreboardPlayerScore2.getScore()));
         }
-    }
-
-    @FunctionalInterface
-    public static interface Operation {
-        public void apply(ScoreboardPlayerScore var1, ScoreboardPlayerScore var2) throws CommandSyntaxException;
     }
 }
 

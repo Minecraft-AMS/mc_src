@@ -3,21 +3,20 @@
  * 
  * Could not load the following classes:
  *  com.google.common.hash.Hashing
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.world.biome.source;
 
 import com.google.common.hash.Hashing;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccessType;
+import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.BiomeSource;
 
 public class BiomeAccess {
+    static final int CHUNK_CENTER_OFFSET = BiomeCoords.fromBlock(8);
     private final Storage storage;
     private final long seed;
     private final BiomeAccessType type;
@@ -40,29 +39,34 @@ public class BiomeAccess {
         return this.type.getBiome(this.seed, pos.getX(), pos.getY(), pos.getZ(), this.storage);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Biome getBiomeForNoiseGen(double x, double y, double z) {
-        int i = MathHelper.floor(x) >> 2;
-        int j = MathHelper.floor(y) >> 2;
-        int k = MathHelper.floor(z) >> 2;
+        int i = BiomeCoords.fromBlock(MathHelper.floor(x));
+        int j = BiomeCoords.fromBlock(MathHelper.floor(y));
+        int k = BiomeCoords.fromBlock(MathHelper.floor(z));
         return this.getBiomeForNoiseGen(i, j, k);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Biome getBiomeForNoiseGen(BlockPos pos) {
-        int i = pos.getX() >> 2;
-        int j = pos.getY() >> 2;
-        int k = pos.getZ() >> 2;
+        int i = BiomeCoords.fromBlock(pos.getX());
+        int j = BiomeCoords.fromBlock(pos.getY());
+        int k = BiomeCoords.fromBlock(pos.getZ());
         return this.getBiomeForNoiseGen(i, j, k);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Biome getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
         return this.storage.getBiomeForNoiseGen(biomeX, biomeY, biomeZ);
     }
 
+    public Biome getBiomeForNoiseGen(ChunkPos chunkPos) {
+        return this.storage.getBiomeForNoiseGen(chunkPos);
+    }
+
     public static interface Storage {
         public Biome getBiomeForNoiseGen(int var1, int var2, int var3);
+
+        default public Biome getBiomeForNoiseGen(ChunkPos chunkPos) {
+            return this.getBiomeForNoiseGen(BiomeCoords.fromChunk(chunkPos.x) + CHUNK_CENTER_OFFSET, 0, BiomeCoords.fromChunk(chunkPos.z) + CHUNK_CENTER_OFFSET);
+        }
     }
 }
 

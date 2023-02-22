@@ -39,6 +39,9 @@ import net.minecraft.world.World;
 public class TridentItem
 extends Item
 implements Vanishable {
+    public static final int field_30926 = 10;
+    public static final float field_30927 = 8.0f;
+    public static final float field_30928 = 2.5f;
     private final Multimap<EntityAttribute, EntityAttributeModifier> attributeModifiers;
 
     public TridentItem(Item.Settings settings) {
@@ -82,21 +85,21 @@ implements Vanishable {
             stack.damage(1, playerEntity, p -> p.sendToolBreakStatus(user.getActiveHand()));
             if (j == 0) {
                 TridentEntity tridentEntity = new TridentEntity(world, (LivingEntity)playerEntity, stack);
-                tridentEntity.setProperties(playerEntity, playerEntity.pitch, playerEntity.yaw, 0.0f, 2.5f + (float)j * 0.5f, 1.0f);
-                if (playerEntity.abilities.creativeMode) {
+                tridentEntity.setProperties(playerEntity, playerEntity.getPitch(), playerEntity.getYaw(), 0.0f, 2.5f + (float)j * 0.5f, 1.0f);
+                if (playerEntity.getAbilities().creativeMode) {
                     tridentEntity.pickupType = PersistentProjectileEntity.PickupPermission.CREATIVE_ONLY;
                 }
                 world.spawnEntity(tridentEntity);
                 world.playSoundFromEntity(null, tridentEntity, SoundEvents.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.0f, 1.0f);
-                if (!playerEntity.abilities.creativeMode) {
-                    playerEntity.inventory.removeOne(stack);
+                if (!playerEntity.getAbilities().creativeMode) {
+                    playerEntity.getInventory().removeOne(stack);
                 }
             }
         }
         playerEntity.incrementStat(Stats.USED.getOrCreateStat(this));
         if (j > 0) {
-            float f = playerEntity.yaw;
-            float g = playerEntity.pitch;
+            float f = playerEntity.getYaw();
+            float g = playerEntity.getPitch();
             float h = -MathHelper.sin(f * ((float)Math.PI / 180)) * MathHelper.cos(g * ((float)Math.PI / 180));
             float k = -MathHelper.sin(g * ((float)Math.PI / 180));
             float l = MathHelper.cos(f * ((float)Math.PI / 180)) * MathHelper.cos(g * ((float)Math.PI / 180));

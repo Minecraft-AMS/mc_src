@@ -5,6 +5,7 @@
  *  com.google.common.collect.Lists
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen.recipebook;
 
@@ -19,6 +20,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.util.math.MatrixStack;
@@ -31,22 +33,27 @@ import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RecipeAlternativesWidget
 extends DrawableHelper
 implements Drawable,
 Element {
-    private static final Identifier BACKGROUND_TEXTURE = new Identifier("textures/gui/recipe_book.png");
+    static final Identifier BACKGROUND_TEXTURE = new Identifier("textures/gui/recipe_book.png");
+    private static final int field_32406 = 4;
+    private static final int field_32407 = 5;
+    private static final float field_33739 = 0.375f;
     private final List<AlternativeButtonWidget> alternativeButtons = Lists.newArrayList();
     private boolean visible;
     private int buttonX;
     private int buttonY;
-    private MinecraftClient client;
+    MinecraftClient client;
     private RecipeResultCollection resultCollection;
+    @Nullable
     private Recipe<?> lastClickedRecipe;
-    private float time;
-    private boolean furnace;
+    float time;
+    boolean furnace;
 
     public void showAlternativesForResult(MinecraftClient client, RecipeResultCollection results, int buttonX, int buttonY, int areaCenterX, int areaCenterY, float delta) {
         float p;
@@ -104,6 +111,7 @@ Element {
         return this.resultCollection;
     }
 
+    @Nullable
     public Recipe<?> getLastClickedRecipe() {
         return this.lastClickedRecipe;
     }
@@ -133,10 +141,10 @@ Element {
         }
         this.time += delta;
         RenderSystem.enableBlend();
-        RenderSystem.color4f(1.0f, 1.0f, 1.0f, 1.0f);
-        this.client.getTextureManager().bindTexture(BACKGROUND_TEXTURE);
-        RenderSystem.pushMatrix();
-        RenderSystem.translatef(0.0f, 0.0f, 170.0f);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
+        matrices.push();
+        matrices.translate(0.0, 0.0, 170.0);
         int i = this.alternativeButtons.size() <= 16 ? 4 : 5;
         int j = Math.min(this.alternativeButtons.size(), i);
         int k = MathHelper.ceil((float)this.alternativeButtons.size() / (float)i);
@@ -149,7 +157,7 @@ Element {
         for (AlternativeButtonWidget alternativeButtonWidget : this.alternativeButtons) {
             alternativeButtonWidget.render(matrices, mouseX, mouseY, delta);
         }
-        RenderSystem.popMatrix();
+        matrices.pop();
     }
 
     private void renderGrid(MatrixStack matrices, int i, int j, int k, int l, int m, int n) {
@@ -187,10 +195,24 @@ Element {
     }
 
     @Environment(value=EnvType.CLIENT)
+    class FurnaceAlternativeButtonWidget
+    extends AlternativeButtonWidget {
+        public FurnaceAlternativeButtonWidget(int i, int j, Recipe<?> recipe, boolean bl) {
+            super(i, j, recipe, bl);
+        }
+
+        @Override
+        protected void alignRecipe(Recipe<?> recipe) {
+            ItemStack[] itemStacks = recipe.getIngredients().get(0).getMatchingStacks();
+            this.slots.add(new AlternativeButtonWidget.InputSlot(10, 10, itemStacks));
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
     class AlternativeButtonWidget
     extends ClickableWidget
     implements RecipeGridAligner<Ingredient> {
-        private final Recipe<?> recipe;
+        final Recipe<?> recipe;
         private final boolean craftable;
         protected final List<InputSlot> slots;
 
@@ -209,8 +231,13 @@ Element {
         }
 
         @Override
+        public void appendNarrations(NarrationMessageBuilder builder) {
+            this.appendDefaultNarrations(builder);
+        }
+
+        @Override
         public void acceptAlignedInput(Iterator<Ingredient> inputs, int slot, int amount, int gridX, int gridY) {
-            ItemStack[] itemStacks = inputs.next().getMatchingStacksClient();
+            ItemStack[] itemStacks = inputs.next().getMatchingStacks();
             if (itemStacks.length != 0) {
                 this.slots.add(new InputSlot(3 + gridY * 7, 3 + gridX * 7, itemStacks));
             }
@@ -219,8 +246,7 @@ Element {
         @Override
         public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
             int j;
-            RenderSystem.enableAlphaTest();
-            RecipeAlternativesWidget.this.client.getTextureManager().bindTexture(BACKGROUND_TEXTURE);
+            RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
             int i = 152;
             if (!this.craftable) {
                 i += 26;
@@ -230,20 +256,24 @@ Element {
                 j += 26;
             }
             this.drawTexture(matrices, this.x, this.y, i, j, this.width, this.height);
+            MatrixStack matrixStack = RenderSystem.getModelViewStack();
+            matrixStack.push();
+            matrixStack.translate(this.x + 2, this.y + 2, 125.0);
             for (InputSlot inputSlot : this.slots) {
-                RenderSystem.pushMatrix();
-                float f = 0.42f;
-                int k = (int)((float)(this.x + inputSlot.y) / 0.42f - 3.0f);
-                int l = (int)((float)(this.y + inputSlot.x) / 0.42f - 3.0f);
-                RenderSystem.scalef(0.42f, 0.42f, 1.0f);
-                RecipeAlternativesWidget.this.client.getItemRenderer().renderInGuiWithOverrides(inputSlot.stacks[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.stacks.length], k, l);
-                RenderSystem.popMatrix();
+                matrixStack.push();
+                matrixStack.translate(inputSlot.y, inputSlot.x, 0.0);
+                matrixStack.scale(0.375f, 0.375f, 1.0f);
+                matrixStack.translate(-8.0, -8.0, 0.0);
+                RenderSystem.applyModelViewMatrix();
+                RecipeAlternativesWidget.this.client.getItemRenderer().renderInGuiWithOverrides(inputSlot.stacks[MathHelper.floor(RecipeAlternativesWidget.this.time / 30.0f) % inputSlot.stacks.length], 0, 0);
+                matrixStack.pop();
             }
-            RenderSystem.disableAlphaTest();
+            matrixStack.pop();
+            RenderSystem.applyModelViewMatrix();
         }
 
         @Environment(value=EnvType.CLIENT)
-        public class InputSlot {
+        protected class InputSlot {
             public final ItemStack[] stacks;
             public final int y;
             public final int x;
@@ -253,20 +283,6 @@ Element {
                 this.x = x;
                 this.stacks = stacks;
             }
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    class FurnaceAlternativeButtonWidget
-    extends AlternativeButtonWidget {
-        public FurnaceAlternativeButtonWidget(int i, int j, Recipe<?> recipe, boolean bl) {
-            super(i, j, recipe, bl);
-        }
-
-        @Override
-        protected void alignRecipe(Recipe<?> recipe) {
-            ItemStack[] itemStacks = recipe.getIngredients().get(0).getMatchingStacksClient();
-            this.slots.add(new AlternativeButtonWidget.InputSlot(10, 10, itemStacks));
         }
     }
 }

@@ -41,8 +41,8 @@ extends FeatureSize {
     }
 
     @Override
-    public int method_27378(int i, int j) {
-        return j < this.limit ? this.lowerSize : this.upperSize;
+    public int getRadius(int height, int y) {
+        return y < this.limit ? this.lowerSize : this.upperSize;
     }
 }
 

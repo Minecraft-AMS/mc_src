@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractRedstoneGateBlock;
 import net.minecraft.block.Block;
@@ -42,7 +36,7 @@ extends AbstractRedstoneGateBlock {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (!player.abilities.allowModifyWorld) {
+        if (!player.getAbilities().allowModifyWorld) {
             return ActionResult.PASS;
         }
         world.setBlockState(pos, (BlockState)state.cycle(DELAY), 3);
@@ -79,7 +73,6 @@ extends AbstractRedstoneGateBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (!state.get(POWERED).booleanValue()) {
             return;

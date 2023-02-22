@@ -2,14 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -53,11 +49,6 @@ extends PersistentProjectileEntity {
         this.dataTracker.set(ENCHANTED, stack.hasGlint());
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public TridentEntity(World world, double x, double y, double z) {
-        super(EntityType.TRIDENT, x, y, z, world);
-    }
-
     @Override
     protected void initDataTracker() {
         super.initDataTracker();
@@ -71,16 +62,16 @@ extends PersistentProjectileEntity {
             this.dealtDamage = true;
         }
         Entity entity = this.getOwner();
-        if ((this.dealtDamage || this.isNoClip()) && entity != null) {
-            byte i = this.dataTracker.get(LOYALTY);
-            if (i > 0 && !this.isOwnerAlive()) {
+        byte i = this.dataTracker.get(LOYALTY);
+        if (i > 0 && (this.dealtDamage || this.isNoClip()) && entity != null) {
+            if (!this.isOwnerAlive()) {
                 if (!this.world.isClient && this.pickupType == PersistentProjectileEntity.PickupPermission.ALLOWED) {
                     this.dropStack(this.asItemStack(), 0.1f);
                 }
-                this.remove();
-            } else if (i > 0) {
+                this.discard();
+            } else {
                 this.setNoClip(true);
-                Vec3d vec3d = new Vec3d(entity.getX() - this.getX(), entity.getEyeY() - this.getY(), entity.getZ() - this.getZ());
+                Vec3d vec3d = entity.getEyePos().subtract(this.getPos());
                 this.setPos(this.getX(), this.getY() + vec3d.y * 0.015 * (double)i, this.getZ());
                 if (this.world.isClient) {
                     this.lastRenderY = this.getY();
@@ -109,7 +100,6 @@ extends PersistentProjectileEntity {
         return this.tridentStack.copy();
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isEnchanted() {
         return this.dataTracker.get(ENCHANTED);
     }
@@ -151,7 +141,7 @@ extends PersistentProjectileEntity {
         }
         this.setVelocity(this.getVelocity().multiply(-0.01, -0.1, -0.01));
         float g = 1.0f;
-        if (this.world instanceof ServerWorld && this.world.isThundering() && EnchantmentHelper.hasChanneling(this.tridentStack) && this.world.isSkyVisible(blockPos = entity.getBlockPos())) {
+        if (this.world instanceof ServerWorld && this.world.isThundering() && this.hasChanneling() && this.world.isSkyVisible(blockPos = entity.getBlockPos())) {
             LightningEntity lightningEntity = EntityType.LIGHTNING_BOLT.create(this.world);
             lightningEntity.refreshPositionAfterTeleport(Vec3d.ofBottomCenter(blockPos));
             lightningEntity.setChanneler(entity2 instanceof ServerPlayerEntity ? (ServerPlayerEntity)entity2 : null);
@@ -162,6 +152,15 @@ extends PersistentProjectileEntity {
         this.playSound(soundEvent, g, 1.0f);
     }
 
+    public boolean hasChanneling() {
+        return EnchantmentHelper.hasChanneling(this.tridentStack);
+    }
+
+    @Override
+    protected boolean tryPickup(PlayerEntity player) {
+        return super.tryPickup(player) || this.isNoClip() && this.isOwner(player) && player.getInventory().insertStack(this.asItemStack());
+    }
+
     @Override
     protected SoundEvent getHitSound() {
         return SoundEvents.ITEM_TRIDENT_HIT_GROUND;
@@ -169,11 +168,9 @@ extends PersistentProjectileEntity {
 
     @Override
     public void onPlayerCollision(PlayerEntity player) {
-        Entity entity = this.getOwner();
-        if (entity != null && entity.getUuid() != player.getUuid()) {
-            return;
+        if (this.isOwner(player) || this.getOwner() == null) {
+            super.onPlayerCollision(player);
         }
-        super.onPlayerCollision(player);
     }
 
     @Override
@@ -207,7 +204,6 @@ extends PersistentProjectileEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double cameraX, double cameraY, double cameraZ) {
         return true;
     }

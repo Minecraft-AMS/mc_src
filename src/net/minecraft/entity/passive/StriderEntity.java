@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Sets
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
@@ -12,8 +10,6 @@ package net.minecraft.entity.passive;
 import com.google.common.collect.Sets;
 import java.util.LinkedHashSet;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
@@ -50,7 +46,6 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
@@ -84,6 +79,9 @@ public class StriderEntity
 extends AnimalEntity
 implements ItemSteerable,
 Saddleable {
+    private static final float COLD_SADDLED_SPEED = 0.23f;
+    private static final float COLD_SPEED = 0.66f;
+    private static final float DEFAULT_SADDLED_SPEED = 0.55f;
     private static final Ingredient BREEDING_INGREDIENT = Ingredient.ofItems(Items.WARPED_FUNGUS);
     private static final Ingredient ATTRACTING_INGREDIENT = Ingredient.ofItems(Items.WARPED_FUNGUS, Items.WARPED_FUNGUS_ON_A_STICK);
     private static final TrackedData<Integer> BOOST_TIME = DataTracker.registerData(StriderEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -162,7 +160,7 @@ Saddleable {
         this.escapeDangerGoal = new EscapeDangerGoal(this, 1.65);
         this.goalSelector.add(1, this.escapeDangerGoal);
         this.goalSelector.add(2, new AnimalMateGoal(this, 1.0));
-        this.temptGoal = new TemptGoal((PathAwareEntity)this, 1.4, false, ATTRACTING_INGREDIENT);
+        this.temptGoal = new TemptGoal(this, 1.4, ATTRACTING_INGREDIENT, false);
         this.goalSelector.add(3, this.temptGoal);
         this.goalSelector.add(4, new GoBackToLavaGoal(this, 1.5));
         this.goalSelector.add(5, new FollowParentGoal(this, 1.1));
@@ -202,7 +200,7 @@ Saddleable {
             return false;
         }
         PlayerEntity playerEntity = (PlayerEntity)entity;
-        return playerEntity.getMainHandStack().getItem() == Items.WARPED_FUNGUS_ON_A_STICK || playerEntity.getOffHandStack().getItem() == Items.WARPED_FUNGUS_ON_A_STICK;
+        return playerEntity.getMainHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK) || playerEntity.getOffHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK);
     }
 
     @Override
@@ -213,15 +211,12 @@ Saddleable {
     @Override
     @Nullable
     public Entity getPrimaryPassenger() {
-        if (this.getPassengerList().isEmpty()) {
-            return null;
-        }
-        return this.getPassengerList().get(0);
+        return this.getFirstPassenger();
     }
 
     @Override
     public Vec3d updatePassengerForDismount(LivingEntity passenger) {
-        Vec3d[] vec3ds = new Vec3d[]{StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.yaw), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.yaw - 22.5f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.yaw + 22.5f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.yaw - 45.0f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.yaw + 45.0f)};
+        Vec3d[] vec3ds = new Vec3d[]{StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.getYaw()), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.getYaw() - 22.5f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.getYaw() + 22.5f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.getYaw() - 45.0f), StriderEntity.getPassengerDismountOffset(this.getWidth(), passenger.getWidth(), passenger.getYaw() + 45.0f)};
         LinkedHashSet set = Sets.newLinkedHashSet();
         double d = this.getBoundingBox().maxY;
         double e = this.getBoundingBox().minY - 0.5;
@@ -294,9 +289,9 @@ Saddleable {
 
     @Override
     public void tick() {
-        if (this.method_30079() && this.random.nextInt(140) == 0) {
+        if (this.isBeingTempted() && this.random.nextInt(140) == 0) {
             this.playSound(SoundEvents.ENTITY_STRIDER_HAPPY, 1.0f, this.getSoundPitch());
-        } else if (this.method_30078() && this.random.nextInt(60) == 0) {
+        } else if (this.isEscapingDanger() && this.random.nextInt(60) == 0) {
             this.playSound(SoundEvents.ENTITY_STRIDER_RETREAT, 1.0f, this.getSoundPitch());
         }
         BlockState blockState = this.world.getBlockState(this.getBlockPos());
@@ -308,11 +303,11 @@ Saddleable {
         this.checkBlockCollision();
     }
 
-    private boolean method_30078() {
+    private boolean isEscapingDanger() {
         return this.escapeDangerGoal != null && this.escapeDangerGoal.isActive();
     }
 
-    private boolean method_30079() {
+    private boolean isBeingTempted() {
         return this.temptGoal != null && this.temptGoal.isActive();
     }
 
@@ -338,7 +333,7 @@ Saddleable {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        if (this.method_30078() || this.method_30079()) {
+        if (this.isEscapingDanger() || this.isBeingTempted()) {
             return null;
         }
         return SoundEvents.ENTITY_STRIDER_AMBIENT;
@@ -356,7 +351,7 @@ Saddleable {
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
-        return this.getPassengerList().isEmpty() && !this.isSubmergedIn(FluidTags.LAVA);
+        return !this.hasPassengers() && !this.isSubmergedIn(FluidTags.LAVA);
     }
 
     @Override
@@ -412,7 +407,7 @@ Saddleable {
         ActionResult actionResult = super.interactMob(player, hand);
         if (!actionResult.isAccepted()) {
             ItemStack itemStack = player.getStackInHand(hand);
-            if (itemStack.getItem() == Items.SADDLE) {
+            if (itemStack.isOf(Items.SADDLE)) {
                 return itemStack.useOnEntity(player, this, hand);
             }
             return ActionResult.PASS;
@@ -424,8 +419,7 @@ Saddleable {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
-    public Vec3d method_29919() {
+    public Vec3d getLeashOffset() {
         return new Vec3d(0.0, 0.6f * this.getStandingEyeHeight(), this.getWidth() * 0.4f);
     }
 
@@ -437,23 +431,23 @@ Saddleable {
         }
         if (this.random.nextInt(30) == 0) {
             MobEntity mobEntity = EntityType.ZOMBIFIED_PIGLIN.create(world.toServerWorld());
-            entityData = this.method_30336(world, difficulty, mobEntity, new ZombieEntity.ZombieData(ZombieEntity.method_29936(this.random), false));
+            entityData = this.initializeRider(world, difficulty, mobEntity, new ZombieEntity.ZombieData(ZombieEntity.shouldBeBaby(this.random), false));
             mobEntity.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.WARPED_FUNGUS_ON_A_STICK));
             this.saddle(null);
         } else if (this.random.nextInt(10) == 0) {
             PassiveEntity passiveEntity = EntityType.STRIDER.create(world.toServerWorld());
             passiveEntity.setBreedingAge(-24000);
-            entityData = this.method_30336(world, difficulty, passiveEntity, null);
+            entityData = this.initializeRider(world, difficulty, passiveEntity, null);
         } else {
             entityData = new PassiveEntity.PassiveData(0.5f);
         }
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
-    private EntityData method_30336(ServerWorldAccess serverWorldAccess, LocalDifficulty localDifficulty, MobEntity mobEntity, @Nullable EntityData entityData) {
-        mobEntity.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.yaw, 0.0f);
-        mobEntity.initialize(serverWorldAccess, localDifficulty, SpawnReason.JOCKEY, entityData, null);
-        mobEntity.startRiding(this, true);
+    private EntityData initializeRider(ServerWorldAccess world, LocalDifficulty difficulty, MobEntity rider, @Nullable EntityData entityData) {
+        rider.refreshPositionAndAngles(this.getX(), this.getY(), this.getZ(), this.getYaw(), 0.0f);
+        rider.initialize(world, difficulty, SpawnReason.JOCKEY, entityData, null);
+        rider.startRiding(this, true);
         return new PassiveEntity.PassiveData(0.0f);
     }
 
@@ -466,9 +460,9 @@ Saddleable {
     extends MoveToTargetPosGoal {
         private final StriderEntity strider;
 
-        private GoBackToLavaGoal(StriderEntity strider, double speed) {
-            super(strider, speed, 8, 2);
-            this.strider = strider;
+        GoBackToLavaGoal(StriderEntity striderEntity, double d) {
+            super(striderEntity, d, 8, 2);
+            this.strider = striderEntity;
         }
 
         @Override

@@ -11,8 +11,14 @@ package net.minecraft.client.render.entity.model;
 import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.model.ModelUtil;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.BeeEntity;
@@ -21,8 +27,15 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class BeeEntityModel<T extends BeeEntity>
 extends AnimalModel<T> {
+    private static final float BONE_BASE_Y_PIVOT = 19.0f;
+    private static final String BONE = "bone";
+    private static final String STINGER = "stinger";
+    private static final String LEFT_ANTENNA = "left_antenna";
+    private static final String RIGHT_ANTENNA = "right_antenna";
+    private static final String FRONT_LEGS = "front_legs";
+    private static final String MIDDLE_LEGS = "middle_legs";
+    private static final String BACK_LEGS = "back_legs";
     private final ModelPart bone;
-    private final ModelPart torso;
     private final ModelPart rightWing;
     private final ModelPart leftWing;
     private final ModelPart frontLegs;
@@ -33,54 +46,36 @@ extends AnimalModel<T> {
     private final ModelPart rightAntenna;
     private float bodyPitch;
 
-    public BeeEntityModel() {
+    public BeeEntityModel(ModelPart root) {
         super(false, 24.0f, 0.0f);
-        this.textureWidth = 64;
-        this.textureHeight = 64;
-        this.bone = new ModelPart(this);
-        this.bone.setPivot(0.0f, 19.0f, 0.0f);
-        this.torso = new ModelPart(this, 0, 0);
-        this.torso.setPivot(0.0f, 0.0f, 0.0f);
-        this.bone.addChild(this.torso);
-        this.torso.addCuboid(-3.5f, -4.0f, -5.0f, 7.0f, 7.0f, 10.0f, 0.0f);
-        this.stinger = new ModelPart(this, 26, 7);
-        this.stinger.addCuboid(0.0f, -1.0f, 5.0f, 0.0f, 1.0f, 2.0f, 0.0f);
-        this.torso.addChild(this.stinger);
-        this.leftAntenna = new ModelPart(this, 2, 0);
-        this.leftAntenna.setPivot(0.0f, -2.0f, -5.0f);
-        this.leftAntenna.addCuboid(1.5f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f, 0.0f);
-        this.rightAntenna = new ModelPart(this, 2, 3);
-        this.rightAntenna.setPivot(0.0f, -2.0f, -5.0f);
-        this.rightAntenna.addCuboid(-2.5f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f, 0.0f);
-        this.torso.addChild(this.leftAntenna);
-        this.torso.addChild(this.rightAntenna);
-        this.rightWing = new ModelPart(this, 0, 18);
-        this.rightWing.setPivot(-1.5f, -4.0f, -3.0f);
-        this.rightWing.pitch = 0.0f;
-        this.rightWing.yaw = -0.2618f;
-        this.rightWing.roll = 0.0f;
-        this.bone.addChild(this.rightWing);
-        this.rightWing.addCuboid(-9.0f, 0.0f, 0.0f, 9.0f, 0.0f, 6.0f, 0.001f);
-        this.leftWing = new ModelPart(this, 0, 18);
-        this.leftWing.setPivot(1.5f, -4.0f, -3.0f);
-        this.leftWing.pitch = 0.0f;
-        this.leftWing.yaw = 0.2618f;
-        this.leftWing.roll = 0.0f;
-        this.leftWing.mirror = true;
-        this.bone.addChild(this.leftWing);
-        this.leftWing.addCuboid(0.0f, 0.0f, 0.0f, 9.0f, 0.0f, 6.0f, 0.001f);
-        this.frontLegs = new ModelPart(this);
-        this.frontLegs.setPivot(1.5f, 3.0f, -2.0f);
-        this.bone.addChild(this.frontLegs);
-        this.frontLegs.addCuboid("frontLegBox", -5.0f, 0.0f, 0.0f, 7, 2, 0, 0.0f, 26, 1);
-        this.middleLegs = new ModelPart(this);
-        this.middleLegs.setPivot(1.5f, 3.0f, 0.0f);
-        this.bone.addChild(this.middleLegs);
-        this.middleLegs.addCuboid("midLegBox", -5.0f, 0.0f, 0.0f, 7, 2, 0, 0.0f, 26, 3);
-        this.backLegs = new ModelPart(this);
-        this.backLegs.setPivot(1.5f, 3.0f, 2.0f);
-        this.bone.addChild(this.backLegs);
-        this.backLegs.addCuboid("backLegBox", -5.0f, 0.0f, 0.0f, 7, 2, 0, 0.0f, 26, 5);
+        this.bone = root.getChild(BONE);
+        ModelPart modelPart = this.bone.getChild("body");
+        this.stinger = modelPart.getChild(STINGER);
+        this.leftAntenna = modelPart.getChild(LEFT_ANTENNA);
+        this.rightAntenna = modelPart.getChild(RIGHT_ANTENNA);
+        this.rightWing = this.bone.getChild("right_wing");
+        this.leftWing = this.bone.getChild("left_wing");
+        this.frontLegs = this.bone.getChild(FRONT_LEGS);
+        this.middleLegs = this.bone.getChild(MIDDLE_LEGS);
+        this.backLegs = this.bone.getChild(BACK_LEGS);
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        float f = 19.0f;
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        ModelPartData modelPartData2 = modelPartData.addChild(BONE, ModelPartBuilder.create(), ModelTransform.pivot(0.0f, 19.0f, 0.0f));
+        ModelPartData modelPartData3 = modelPartData2.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-3.5f, -4.0f, -5.0f, 7.0f, 7.0f, 10.0f), ModelTransform.NONE);
+        modelPartData3.addChild(STINGER, ModelPartBuilder.create().uv(26, 7).cuboid(0.0f, -1.0f, 5.0f, 0.0f, 1.0f, 2.0f), ModelTransform.NONE);
+        modelPartData3.addChild(LEFT_ANTENNA, ModelPartBuilder.create().uv(2, 0).cuboid(1.5f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f), ModelTransform.pivot(0.0f, -2.0f, -5.0f));
+        modelPartData3.addChild(RIGHT_ANTENNA, ModelPartBuilder.create().uv(2, 3).cuboid(-2.5f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f), ModelTransform.pivot(0.0f, -2.0f, -5.0f));
+        Dilation dilation = new Dilation(0.001f);
+        modelPartData2.addChild("right_wing", ModelPartBuilder.create().uv(0, 18).cuboid(-9.0f, 0.0f, 0.0f, 9.0f, 0.0f, 6.0f, dilation), ModelTransform.of(-1.5f, -4.0f, -3.0f, 0.0f, -0.2618f, 0.0f));
+        modelPartData2.addChild("left_wing", ModelPartBuilder.create().uv(0, 18).mirrored().cuboid(0.0f, 0.0f, 0.0f, 9.0f, 0.0f, 6.0f, dilation), ModelTransform.of(1.5f, -4.0f, -3.0f, 0.0f, 0.2618f, 0.0f));
+        modelPartData2.addChild(FRONT_LEGS, ModelPartBuilder.create().cuboid(FRONT_LEGS, -5.0f, 0.0f, 0.0f, 7, 2, 0, 26, 1), ModelTransform.pivot(1.5f, 3.0f, -2.0f));
+        modelPartData2.addChild(MIDDLE_LEGS, ModelPartBuilder.create().cuboid(MIDDLE_LEGS, -5.0f, 0.0f, 0.0f, 7, 2, 0, 26, 3), ModelTransform.pivot(1.5f, 3.0f, 0.0f));
+        modelPartData2.addChild(BACK_LEGS, ModelPartBuilder.create().cuboid(BACK_LEGS, -5.0f, 0.0f, 0.0f, 7, 2, 0, 26, 5), ModelTransform.pivot(1.5f, 3.0f, 2.0f));
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
@@ -98,7 +93,6 @@ extends AnimalModel<T> {
         this.leftAntenna.pitch = 0.0f;
         this.rightAntenna.pitch = 0.0f;
         this.bone.pitch = 0.0f;
-        this.bone.pivotY = 19.0f;
         boolean bl2 = bl = ((Entity)beeEntity).isOnGround() && ((Entity)beeEntity).getVelocity().lengthSquared() < 1.0E-7;
         if (bl) {
             this.rightWing.yaw = -0.2618f;
@@ -110,7 +104,7 @@ extends AnimalModel<T> {
             this.middleLegs.pitch = 0.0f;
             this.backLegs.pitch = 0.0f;
         } else {
-            k = h * 2.1f;
+            k = h * 120.32113f * ((float)Math.PI / 180);
             this.rightWing.yaw = 0.0f;
             this.rightWing.roll = MathHelper.cos(k) * (float)Math.PI * 0.15f;
             this.leftWing.pitch = this.rightWing.pitch;

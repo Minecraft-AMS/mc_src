@@ -32,7 +32,6 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +41,7 @@ extends ProtoChunk {
     private final WorldChunk wrapped;
 
     public ReadOnlyChunk(WorldChunk wrapped) {
-        super(wrapped.getPos(), UpgradeData.NO_UPGRADE_DATA);
+        super(wrapped.getPos(), UpgradeData.NO_UPGRADE_DATA, wrapped);
         this.wrapped = wrapped;
     }
 
@@ -75,7 +74,7 @@ extends ProtoChunk {
     }
 
     @Override
-    public void setBlockEntity(BlockPos pos, BlockEntity blockEntity) {
+    public void setBlockEntity(BlockEntity blockEntity) {
     }
 
     @Override
@@ -89,12 +88,6 @@ extends ProtoChunk {
     @Override
     public ChunkSection[] getSectionArray() {
         return this.wrapped.getSectionArray();
-    }
-
-    @Override
-    @Nullable
-    public LightingProvider getLightingProvider() {
-        return this.wrapped.getLightingProvider();
     }
 
     @Override
@@ -117,12 +110,13 @@ extends ProtoChunk {
     }
 
     @Override
-    public ChunkPos getPos() {
-        return this.wrapped.getPos();
+    public BlockPos method_35319(Heightmap.Type type) {
+        return this.wrapped.method_35319(this.transformHeightmapType(type));
     }
 
     @Override
-    public void setLastSaveTime(long lastSaveTime) {
+    public ChunkPos getPos() {
+        return this.wrapped.getPos();
     }
 
     @Override
@@ -216,12 +210,12 @@ extends ProtoChunk {
 
     @Override
     public ChunkTickScheduler<Block> getBlockTickScheduler() {
-        return new ChunkTickScheduler<Block>(block -> block.getDefaultState().isAir(), this.getPos());
+        return new ChunkTickScheduler<Block>(block -> block.getDefaultState().isAir(), this.getPos(), this);
     }
 
     @Override
     public ChunkTickScheduler<Fluid> getFluidTickScheduler() {
-        return new ChunkTickScheduler<Fluid>(fluid -> fluid == Fluids.EMPTY, this.getPos());
+        return new ChunkTickScheduler<Fluid>(fluid -> fluid == Fluids.EMPTY, this.getPos(), this);
     }
 
     @Override

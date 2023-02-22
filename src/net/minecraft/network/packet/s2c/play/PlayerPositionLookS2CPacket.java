@@ -1,35 +1,26 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 
 public class PlayerPositionLookS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private double x;
-    private double y;
-    private double z;
-    private float yaw;
-    private float pitch;
-    private Set<Flag> flags;
-    private int teleportId;
+    private final double x;
+    private final double y;
+    private final double z;
+    private final float yaw;
+    private final float pitch;
+    private final Set<Flag> flags;
+    private final int teleportId;
+    private final boolean shouldDismount;
 
-    public PlayerPositionLookS2CPacket() {
-    }
-
-    public PlayerPositionLookS2CPacket(double x, double y, double z, float yaw, float pitch, Set<Flag> flags, int teleportId) {
+    public PlayerPositionLookS2CPacket(double x, double y, double z, float yaw, float pitch, Set<Flag> flags, int teleportId, boolean shouldDismount) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -37,10 +28,10 @@ implements Packet<ClientPlayPacketListener> {
         this.pitch = pitch;
         this.flags = flags;
         this.teleportId = teleportId;
+        this.shouldDismount = shouldDismount;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PlayerPositionLookS2CPacket(PacketByteBuf buf) {
         this.x = buf.readDouble();
         this.y = buf.readDouble();
         this.z = buf.readDouble();
@@ -48,10 +39,11 @@ implements Packet<ClientPlayPacketListener> {
         this.pitch = buf.readFloat();
         this.flags = Flag.getFlags(buf.readUnsignedByte());
         this.teleportId = buf.readVarInt();
+        this.shouldDismount = buf.readBoolean();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeDouble(this.x);
         buf.writeDouble(this.y);
         buf.writeDouble(this.z);
@@ -59,6 +51,7 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeFloat(this.pitch);
         buf.writeByte(Flag.getBitfield(this.flags));
         buf.writeVarInt(this.teleportId);
+        buf.writeBoolean(this.shouldDismount);
     }
 
     @Override
@@ -66,49 +59,55 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerPositionLook(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return this.x;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return this.y;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return this.z;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getYaw() {
         return this.yaw;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getPitch() {
         return this.pitch;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getTeleportId() {
         return this.teleportId;
     }
 
-    @Environment(value=EnvType.CLIENT)
+    public boolean shouldDismount() {
+        return this.shouldDismount;
+    }
+
     public Set<Flag> getFlags() {
         return this.flags;
     }
 
-    public static enum Flag {
-        X(0),
-        Y(1),
-        Z(2),
-        Y_ROT(3),
-        X_ROT(4);
-
+    public static final class Flag
+    extends Enum<Flag> {
+        public static final /* enum */ Flag X = new Flag(0);
+        public static final /* enum */ Flag Y = new Flag(1);
+        public static final /* enum */ Flag Z = new Flag(2);
+        public static final /* enum */ Flag Y_ROT = new Flag(3);
+        public static final /* enum */ Flag X_ROT = new Flag(4);
         private final int shift;
+        private static final /* synthetic */ Flag[] field_12402;
+
+        public static Flag[] values() {
+            return (Flag[])field_12402.clone();
+        }
+
+        public static Flag valueOf(String string) {
+            return Enum.valueOf(Flag.class, string);
+        }
 
         private Flag(int shift) {
             this.shift = shift;
@@ -118,25 +117,33 @@ implements Packet<ClientPlayPacketListener> {
             return 1 << this.shift;
         }
 
-        private boolean isSet(int i) {
-            return (i & this.getMask()) == this.getMask();
+        private boolean isSet(int mask) {
+            return (mask & this.getMask()) == this.getMask();
         }
 
-        public static Set<Flag> getFlags(int i) {
+        public static Set<Flag> getFlags(int mask) {
             EnumSet<Flag> set = EnumSet.noneOf(Flag.class);
             for (Flag flag : Flag.values()) {
-                if (!flag.isSet(i)) continue;
+                if (!flag.isSet(mask)) continue;
                 set.add(flag);
             }
             return set;
         }
 
-        public static int getBitfield(Set<Flag> set) {
+        public static int getBitfield(Set<Flag> flags) {
             int i = 0;
-            for (Flag flag : set) {
+            for (Flag flag : flags) {
                 i |= flag.getMask();
             }
             return i;
+        }
+
+        private static /* synthetic */ Flag[] method_36952() {
+            return new Flag[]{X, Y, Z, Y_ROT, X_ROT};
+        }
+
+        static {
+            field_12402 = Flag.method_36952();
         }
     }
 }

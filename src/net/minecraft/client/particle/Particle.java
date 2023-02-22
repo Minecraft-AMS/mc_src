@@ -7,11 +7,13 @@
  */
 package net.minecraft.client.particle;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleTextureSheet;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.VertexConsumer;
@@ -21,7 +23,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.collection.ReusableStream;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 
@@ -55,6 +56,8 @@ public abstract class Particle {
     protected float colorAlpha = 1.0f;
     protected float angle;
     protected float prevAngle;
+    protected float field_28786 = 0.98f;
+    protected boolean field_28787 = false;
 
     protected Particle(ClientWorld world, double x, double y, double z) {
         this.world = world;
@@ -71,11 +74,11 @@ public abstract class Particle {
         this.velocityX = velocityX + (Math.random() * 2.0 - 1.0) * (double)0.4f;
         this.velocityY = velocityY + (Math.random() * 2.0 - 1.0) * (double)0.4f;
         this.velocityZ = velocityZ + (Math.random() * 2.0 - 1.0) * (double)0.4f;
-        float f = (float)(Math.random() + Math.random() + 1.0) * 0.15f;
-        float g = MathHelper.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY + this.velocityZ * this.velocityZ);
-        this.velocityX = this.velocityX / (double)g * (double)f * (double)0.4f;
-        this.velocityY = this.velocityY / (double)g * (double)f * (double)0.4f + (double)0.1f;
-        this.velocityZ = this.velocityZ / (double)g * (double)f * (double)0.4f;
+        double d = (Math.random() + Math.random() + 1.0) * (double)0.15f;
+        double e = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY + this.velocityZ * this.velocityZ);
+        this.velocityX = this.velocityX / e * d * (double)0.4f;
+        this.velocityY = this.velocityY / e * d * (double)0.4f + (double)0.1f;
+        this.velocityZ = this.velocityZ / e * d * (double)0.4f;
     }
 
     public Particle move(float speed) {
@@ -83,6 +86,12 @@ public abstract class Particle {
         this.velocityY = (this.velocityY - (double)0.1f) * (double)speed + (double)0.1f;
         this.velocityZ *= (double)speed;
         return this;
+    }
+
+    public void setVelocity(double velocityX, double velocityY, double velocityZ) {
+        this.velocityX = velocityX;
+        this.velocityY = velocityY;
+        this.velocityZ = velocityZ;
     }
 
     public Particle scale(float scale) {
@@ -118,9 +127,13 @@ public abstract class Particle {
         }
         this.velocityY -= 0.04 * (double)this.gravityStrength;
         this.move(this.velocityX, this.velocityY, this.velocityZ);
-        this.velocityX *= (double)0.98f;
-        this.velocityY *= (double)0.98f;
-        this.velocityZ *= (double)0.98f;
+        if (this.field_28787 && this.y == this.prevPosY) {
+            this.velocityX *= 1.1;
+            this.velocityZ *= 1.1;
+        }
+        this.velocityX *= (double)this.field_28786;
+        this.velocityY *= (double)this.field_28786;
+        this.velocityZ *= (double)this.field_28786;
         if (this.onGround) {
             this.velocityX *= (double)0.7f;
             this.velocityZ *= (double)0.7f;
@@ -213,6 +226,10 @@ public abstract class Particle {
 
     public void setBoundingBox(Box boundingBox) {
         this.boundingBox = boundingBox;
+    }
+
+    public Optional<ParticleGroup> getGroup() {
+        return Optional.empty();
     }
 }
 

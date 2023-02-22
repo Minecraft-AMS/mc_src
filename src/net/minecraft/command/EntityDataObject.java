@@ -25,6 +25,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.DataCommand;
@@ -79,7 +80,7 @@ implements DataCommandObject {
 
     @Override
     public Text feedbackQuery(NbtElement element) {
-        return new TranslatableText("commands.data.entity.query", this.entity.getDisplayName(), element.toText());
+        return new TranslatableText("commands.data.entity.query", this.entity.getDisplayName(), NbtHelper.toPrettyPrintedText(element));
     }
 
     @Override

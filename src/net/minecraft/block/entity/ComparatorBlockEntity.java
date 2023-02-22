@@ -7,13 +7,14 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.math.BlockPos;
 
 public class ComparatorBlockEntity
 extends BlockEntity {
     private int outputSignal;
 
-    public ComparatorBlockEntity() {
-        super(BlockEntityType.COMPARATOR);
+    public ComparatorBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.COMPARATOR, pos, state);
     }
 
     @Override
@@ -24,9 +25,9 @@ extends BlockEntity {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        this.outputSignal = tag.getInt("OutputSignal");
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        this.outputSignal = nbt.getInt("OutputSignal");
     }
 
     public int getOutputSignal() {

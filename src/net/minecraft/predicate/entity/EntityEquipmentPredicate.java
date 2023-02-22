@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class EntityEquipmentPredicate {
     public static final EntityEquipmentPredicate ANY = new EntityEquipmentPredicate(ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY);
-    public static final EntityEquipmentPredicate OMINOUS_BANNER_ON_HEAD = new EntityEquipmentPredicate(ItemPredicate.Builder.create().item(Items.WHITE_BANNER).nbt(Raid.getOminousBanner().getTag()).build(), ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY);
+    public static final EntityEquipmentPredicate OMINOUS_BANNER_ON_HEAD = new EntityEquipmentPredicate(ItemPredicate.Builder.create().items(Items.WHITE_BANNER).nbt(Raid.getOminousBanner().getNbt()).build(), ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY, ItemPredicate.ANY);
     private final ItemPredicate head;
     private final ItemPredicate chest;
     private final ItemPredicate legs;
@@ -123,6 +123,16 @@ public class EntityEquipmentPredicate {
 
         public Builder feet(ItemPredicate feet) {
             this.feet = feet;
+            return this;
+        }
+
+        public Builder mainhand(ItemPredicate mainhand) {
+            this.mainhand = mainhand;
+            return this;
+        }
+
+        public Builder offhand(ItemPredicate offhand) {
+            this.offhand = offhand;
             return this;
         }
 

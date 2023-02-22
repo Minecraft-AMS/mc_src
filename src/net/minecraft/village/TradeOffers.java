@@ -60,6 +60,20 @@ import net.minecraft.world.gen.feature.StructureFeature;
 import org.jetbrains.annotations.Nullable;
 
 public class TradeOffers {
+    private static final int DEFAULT_MAX_USES = 12;
+    private static final int COMMON_MAX_USES = 16;
+    private static final int RARE_MAX_USES = 3;
+    private static final int NOVICE_SELL_XP = 1;
+    private static final int NOVICE_BUY_XP = 2;
+    private static final int APPRENTICE_SELL_XP = 5;
+    private static final int APPRENTICE_BUY_XP = 10;
+    private static final int JOURNEYMAN_SELL_XP = 10;
+    private static final int JOURNEYMAN_BUY_XP = 20;
+    private static final int EXPERT_SELL_XP = 15;
+    private static final int EXPERT_BUY_XP = 30;
+    private static final int MASTER_TRADE_XP = 30;
+    private static final float LOW_PRICE_MULTIPLIER = 0.05f;
+    private static final float HIGH_PRICE_MULTIPLIER = 0.2f;
     public static final Map<VillagerProfession, Int2ObjectMap<Factory[]>> PROFESSION_TO_LEVELED_TRADE = Util.make(Maps.newHashMap(), map -> {
         map.put(VillagerProfession.FARMER, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.WHEAT, 20, 16, 2), new BuyForOneEmeraldFactory(Items.POTATO, 26, 16, 2), new BuyForOneEmeraldFactory(Items.CARROT, 22, 16, 2), new BuyForOneEmeraldFactory(Items.BEETROOT, 15, 16, 2), new SellItemFactory(Items.BREAD, 1, 6, 16, 1)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Blocks.PUMPKIN, 6, 12, 10), new SellItemFactory(Items.PUMPKIN_PIE, 1, 4, 5), new SellItemFactory(Items.APPLE, 1, 4, 16, 5)}, (Object)3, (Object)new Factory[]{new SellItemFactory(Items.COOKIE, 3, 18, 10), new BuyForOneEmeraldFactory(Blocks.MELON, 4, 12, 20)}, (Object)4, (Object)new Factory[]{new SellItemFactory(Blocks.CAKE, 1, 1, 12, 15), new SellSuspiciousStewFactory(StatusEffects.NIGHT_VISION, 100, 15), new SellSuspiciousStewFactory(StatusEffects.JUMP_BOOST, 160, 15), new SellSuspiciousStewFactory(StatusEffects.WEAKNESS, 140, 15), new SellSuspiciousStewFactory(StatusEffects.BLINDNESS, 120, 15), new SellSuspiciousStewFactory(StatusEffects.POISON, 280, 15), new SellSuspiciousStewFactory(StatusEffects.SATURATION, 7, 15)}, (Object)5, (Object)new Factory[]{new SellItemFactory(Items.GOLDEN_CARROT, 3, 3, 30), new SellItemFactory(Items.GLISTERING_MELON_SLICE, 4, 3, 30)})));
         map.put(VillagerProfession.FISHERMAN, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.STRING, 20, 16, 2), new BuyForOneEmeraldFactory(Items.COAL, 10, 16, 2), new ProcessItemFactory(Items.COD, 6, Items.COOKED_COD, 6, 16, 1), new SellItemFactory(Items.COD_BUCKET, 3, 1, 16, 1)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.COD, 15, 16, 10), new ProcessItemFactory(Items.SALMON, 6, Items.COOKED_SALMON, 6, 16, 5), new SellItemFactory(Items.CAMPFIRE, 2, 1, 5)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.SALMON, 13, 16, 20), new SellEnchantedToolFactory(Items.FISHING_ROD, 3, 3, 10, 0.2f)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.TROPICAL_FISH, 6, 12, 30)}, (Object)5, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.PUFFERFISH, 4, 12, 30), new TypeAwareBuyForOneEmeraldFactory(1, 12, 30, (Map<VillagerType, Item>)ImmutableMap.builder().put((Object)VillagerType.PLAINS, (Object)Items.OAK_BOAT).put((Object)VillagerType.TAIGA, (Object)Items.SPRUCE_BOAT).put((Object)VillagerType.SNOW, (Object)Items.SPRUCE_BOAT).put((Object)VillagerType.DESERT, (Object)Items.JUNGLE_BOAT).put((Object)VillagerType.JUNGLE, (Object)Items.JUNGLE_BOAT).put((Object)VillagerType.SAVANNA, (Object)Items.ACACIA_BOAT).put((Object)VillagerType.SWAMP, (Object)Items.DARK_OAK_BOAT).build())})));
@@ -73,230 +87,39 @@ public class TradeOffers {
         map.put(VillagerProfession.TOOLSMITH, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.COAL, 15, 16, 2), new SellItemFactory(new ItemStack(Items.STONE_AXE), 1, 1, 12, 1, 0.2f), new SellItemFactory(new ItemStack(Items.STONE_SHOVEL), 1, 1, 12, 1, 0.2f), new SellItemFactory(new ItemStack(Items.STONE_PICKAXE), 1, 1, 12, 1, 0.2f), new SellItemFactory(new ItemStack(Items.STONE_HOE), 1, 1, 12, 1, 0.2f)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.IRON_INGOT, 4, 12, 10), new SellItemFactory(new ItemStack(Items.BELL), 36, 1, 12, 5, 0.2f)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.FLINT, 30, 12, 20), new SellEnchantedToolFactory(Items.IRON_AXE, 1, 3, 10, 0.2f), new SellEnchantedToolFactory(Items.IRON_SHOVEL, 2, 3, 10, 0.2f), new SellEnchantedToolFactory(Items.IRON_PICKAXE, 3, 3, 10, 0.2f), new SellItemFactory(new ItemStack(Items.DIAMOND_HOE), 4, 1, 3, 10, 0.2f)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.DIAMOND, 1, 12, 30), new SellEnchantedToolFactory(Items.DIAMOND_AXE, 12, 3, 15, 0.2f), new SellEnchantedToolFactory(Items.DIAMOND_SHOVEL, 5, 3, 15, 0.2f)}, (Object)5, (Object)new Factory[]{new SellEnchantedToolFactory(Items.DIAMOND_PICKAXE, 13, 3, 30, 0.2f)})));
         map.put(VillagerProfession.BUTCHER, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.CHICKEN, 14, 16, 2), new BuyForOneEmeraldFactory(Items.PORKCHOP, 7, 16, 2), new BuyForOneEmeraldFactory(Items.RABBIT, 4, 16, 2), new SellItemFactory(Items.RABBIT_STEW, 1, 1, 1)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.COAL, 15, 16, 2), new SellItemFactory(Items.COOKED_PORKCHOP, 1, 5, 16, 5), new SellItemFactory(Items.COOKED_CHICKEN, 1, 8, 16, 5)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.MUTTON, 7, 16, 20), new BuyForOneEmeraldFactory(Items.BEEF, 10, 16, 20)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.DRIED_KELP_BLOCK, 10, 12, 30)}, (Object)5, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.SWEET_BERRIES, 10, 12, 30)})));
         map.put(VillagerProfession.LEATHERWORKER, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.LEATHER, 6, 16, 2), new SellDyedArmorFactory(Items.LEATHER_LEGGINGS, 3), new SellDyedArmorFactory(Items.LEATHER_CHESTPLATE, 7)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.FLINT, 26, 12, 10), new SellDyedArmorFactory(Items.LEATHER_HELMET, 5, 12, 5), new SellDyedArmorFactory(Items.LEATHER_BOOTS, 4, 12, 5)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.RABBIT_HIDE, 9, 12, 20), new SellDyedArmorFactory(Items.LEATHER_CHESTPLATE, 7)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.SCUTE, 4, 12, 30), new SellDyedArmorFactory(Items.LEATHER_HORSE_ARMOR, 6, 12, 15)}, (Object)5, (Object)new Factory[]{new SellItemFactory(new ItemStack(Items.SADDLE), 6, 1, 12, 30, 0.2f), new SellDyedArmorFactory(Items.LEATHER_HELMET, 5, 12, 30)})));
-        map.put(VillagerProfession.MASON, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.CLAY_BALL, 10, 16, 2), new SellItemFactory(Items.BRICK, 1, 10, 16, 1)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Blocks.STONE, 20, 16, 10), new SellItemFactory(Blocks.CHISELED_STONE_BRICKS, 1, 4, 16, 5)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Blocks.GRANITE, 16, 16, 20), new BuyForOneEmeraldFactory(Blocks.ANDESITE, 16, 16, 20), new BuyForOneEmeraldFactory(Blocks.DIORITE, 16, 16, 20), new SellItemFactory(Blocks.POLISHED_ANDESITE, 1, 4, 16, 10), new SellItemFactory(Blocks.POLISHED_DIORITE, 1, 4, 16, 10), new SellItemFactory(Blocks.POLISHED_GRANITE, 1, 4, 16, 10)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.QUARTZ, 12, 12, 30), new SellItemFactory(Blocks.ORANGE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.WHITE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLUE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_BLUE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GRAY_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_GRAY_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLACK_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.RED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PINK_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.MAGENTA_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIME_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GREEN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.CYAN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PURPLE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.YELLOW_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BROWN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.ORANGE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.WHITE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLUE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_BLUE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GRAY_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_GRAY_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLACK_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.RED_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PINK_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.MAGENTA_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIME_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GREEN_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.CYAN_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PURPLE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.YELLOW_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BROWN_GLAZED_TERRACOTTA, 1, 1, 12, 15)}, (Object)5, (Object)new Factory[]{new SellItemFactory(Blocks.QUARTZ_PILLAR, 1, 1, 12, 30), new SellItemFactory(Blocks.QUARTZ_BLOCK, 1, 1, 12, 30)})));
+        map.put(VillagerProfession.MASON, TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.CLAY_BALL, 10, 16, 2), new SellItemFactory(Items.BRICK, 1, 10, 16, 1)}, (Object)2, (Object)new Factory[]{new BuyForOneEmeraldFactory(Blocks.STONE, 20, 16, 10), new SellItemFactory(Blocks.CHISELED_STONE_BRICKS, 1, 4, 16, 5)}, (Object)3, (Object)new Factory[]{new BuyForOneEmeraldFactory(Blocks.GRANITE, 16, 16, 20), new BuyForOneEmeraldFactory(Blocks.ANDESITE, 16, 16, 20), new BuyForOneEmeraldFactory(Blocks.DIORITE, 16, 16, 20), new SellItemFactory(Blocks.DRIPSTONE_BLOCK, 1, 4, 16, 10), new SellItemFactory(Blocks.POLISHED_ANDESITE, 1, 4, 16, 10), new SellItemFactory(Blocks.POLISHED_DIORITE, 1, 4, 16, 10), new SellItemFactory(Blocks.POLISHED_GRANITE, 1, 4, 16, 10)}, (Object)4, (Object)new Factory[]{new BuyForOneEmeraldFactory(Items.QUARTZ, 12, 12, 30), new SellItemFactory(Blocks.ORANGE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.WHITE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLUE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_BLUE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GRAY_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_GRAY_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLACK_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.RED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PINK_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.MAGENTA_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIME_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GREEN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.CYAN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PURPLE_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.YELLOW_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BROWN_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.ORANGE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.WHITE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLUE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_BLUE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GRAY_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIGHT_GRAY_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BLACK_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.RED_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PINK_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.MAGENTA_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.LIME_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.GREEN_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.CYAN_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.PURPLE_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.YELLOW_GLAZED_TERRACOTTA, 1, 1, 12, 15), new SellItemFactory(Blocks.BROWN_GLAZED_TERRACOTTA, 1, 1, 12, 15)}, (Object)5, (Object)new Factory[]{new SellItemFactory(Blocks.QUARTZ_PILLAR, 1, 1, 12, 30), new SellItemFactory(Blocks.QUARTZ_BLOCK, 1, 1, 12, 30)})));
     });
-    public static final Int2ObjectMap<Factory[]> WANDERING_TRADER_TRADES = TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new SellItemFactory(Items.SEA_PICKLE, 2, 1, 5, 1), new SellItemFactory(Items.SLIME_BALL, 4, 1, 5, 1), new SellItemFactory(Items.GLOWSTONE, 2, 1, 5, 1), new SellItemFactory(Items.NAUTILUS_SHELL, 5, 1, 5, 1), new SellItemFactory(Items.FERN, 1, 1, 12, 1), new SellItemFactory(Items.SUGAR_CANE, 1, 1, 8, 1), new SellItemFactory(Items.PUMPKIN, 1, 1, 4, 1), new SellItemFactory(Items.KELP, 3, 1, 12, 1), new SellItemFactory(Items.CACTUS, 3, 1, 8, 1), new SellItemFactory(Items.DANDELION, 1, 1, 12, 1), new SellItemFactory(Items.POPPY, 1, 1, 12, 1), new SellItemFactory(Items.BLUE_ORCHID, 1, 1, 8, 1), new SellItemFactory(Items.ALLIUM, 1, 1, 12, 1), new SellItemFactory(Items.AZURE_BLUET, 1, 1, 12, 1), new SellItemFactory(Items.RED_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.ORANGE_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.WHITE_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.PINK_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.OXEYE_DAISY, 1, 1, 12, 1), new SellItemFactory(Items.CORNFLOWER, 1, 1, 12, 1), new SellItemFactory(Items.LILY_OF_THE_VALLEY, 1, 1, 7, 1), new SellItemFactory(Items.WHEAT_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.BEETROOT_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.PUMPKIN_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.MELON_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.ACACIA_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.BIRCH_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.DARK_OAK_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.JUNGLE_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.OAK_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.SPRUCE_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.RED_DYE, 1, 3, 12, 1), new SellItemFactory(Items.WHITE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BLUE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.PINK_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BLACK_DYE, 1, 3, 12, 1), new SellItemFactory(Items.GREEN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIGHT_GRAY_DYE, 1, 3, 12, 1), new SellItemFactory(Items.MAGENTA_DYE, 1, 3, 12, 1), new SellItemFactory(Items.YELLOW_DYE, 1, 3, 12, 1), new SellItemFactory(Items.GRAY_DYE, 1, 3, 12, 1), new SellItemFactory(Items.PURPLE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIGHT_BLUE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIME_DYE, 1, 3, 12, 1), new SellItemFactory(Items.ORANGE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BROWN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.CYAN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BRAIN_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.BUBBLE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.FIRE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.HORN_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.TUBE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.VINE, 1, 1, 12, 1), new SellItemFactory(Items.BROWN_MUSHROOM, 1, 1, 12, 1), new SellItemFactory(Items.RED_MUSHROOM, 1, 1, 12, 1), new SellItemFactory(Items.LILY_PAD, 1, 2, 5, 1), new SellItemFactory(Items.SAND, 1, 8, 8, 1), new SellItemFactory(Items.RED_SAND, 1, 4, 6, 1)}, (Object)2, (Object)new Factory[]{new SellItemFactory(Items.TROPICAL_FISH_BUCKET, 5, 1, 4, 1), new SellItemFactory(Items.PUFFERFISH_BUCKET, 5, 1, 4, 1), new SellItemFactory(Items.PACKED_ICE, 3, 1, 6, 1), new SellItemFactory(Items.BLUE_ICE, 6, 1, 6, 1), new SellItemFactory(Items.GUNPOWDER, 1, 1, 8, 1), new SellItemFactory(Items.PODZOL, 3, 3, 6, 1)}));
+    public static final Int2ObjectMap<Factory[]> WANDERING_TRADER_TRADES = TradeOffers.copyToFastUtilMap((ImmutableMap<Integer, Factory[]>)ImmutableMap.of((Object)1, (Object)new Factory[]{new SellItemFactory(Items.SEA_PICKLE, 2, 1, 5, 1), new SellItemFactory(Items.SLIME_BALL, 4, 1, 5, 1), new SellItemFactory(Items.GLOWSTONE, 2, 1, 5, 1), new SellItemFactory(Items.NAUTILUS_SHELL, 5, 1, 5, 1), new SellItemFactory(Items.FERN, 1, 1, 12, 1), new SellItemFactory(Items.SUGAR_CANE, 1, 1, 8, 1), new SellItemFactory(Items.PUMPKIN, 1, 1, 4, 1), new SellItemFactory(Items.KELP, 3, 1, 12, 1), new SellItemFactory(Items.CACTUS, 3, 1, 8, 1), new SellItemFactory(Items.DANDELION, 1, 1, 12, 1), new SellItemFactory(Items.POPPY, 1, 1, 12, 1), new SellItemFactory(Items.BLUE_ORCHID, 1, 1, 8, 1), new SellItemFactory(Items.ALLIUM, 1, 1, 12, 1), new SellItemFactory(Items.AZURE_BLUET, 1, 1, 12, 1), new SellItemFactory(Items.RED_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.ORANGE_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.WHITE_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.PINK_TULIP, 1, 1, 12, 1), new SellItemFactory(Items.OXEYE_DAISY, 1, 1, 12, 1), new SellItemFactory(Items.CORNFLOWER, 1, 1, 12, 1), new SellItemFactory(Items.LILY_OF_THE_VALLEY, 1, 1, 7, 1), new SellItemFactory(Items.WHEAT_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.BEETROOT_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.PUMPKIN_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.MELON_SEEDS, 1, 1, 12, 1), new SellItemFactory(Items.ACACIA_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.BIRCH_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.DARK_OAK_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.JUNGLE_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.OAK_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.SPRUCE_SAPLING, 5, 1, 8, 1), new SellItemFactory(Items.RED_DYE, 1, 3, 12, 1), new SellItemFactory(Items.WHITE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BLUE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.PINK_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BLACK_DYE, 1, 3, 12, 1), new SellItemFactory(Items.GREEN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIGHT_GRAY_DYE, 1, 3, 12, 1), new SellItemFactory(Items.MAGENTA_DYE, 1, 3, 12, 1), new SellItemFactory(Items.YELLOW_DYE, 1, 3, 12, 1), new SellItemFactory(Items.GRAY_DYE, 1, 3, 12, 1), new SellItemFactory(Items.PURPLE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIGHT_BLUE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.LIME_DYE, 1, 3, 12, 1), new SellItemFactory(Items.ORANGE_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BROWN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.CYAN_DYE, 1, 3, 12, 1), new SellItemFactory(Items.BRAIN_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.BUBBLE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.FIRE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.HORN_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.TUBE_CORAL_BLOCK, 3, 1, 8, 1), new SellItemFactory(Items.VINE, 1, 1, 12, 1), new SellItemFactory(Items.BROWN_MUSHROOM, 1, 1, 12, 1), new SellItemFactory(Items.RED_MUSHROOM, 1, 1, 12, 1), new SellItemFactory(Items.LILY_PAD, 1, 2, 5, 1), new SellItemFactory(Items.SMALL_DRIPLEAF, 1, 2, 5, 1), new SellItemFactory(Items.SAND, 1, 8, 8, 1), new SellItemFactory(Items.RED_SAND, 1, 4, 6, 1), new SellItemFactory(Items.POINTED_DRIPSTONE, 1, 2, 5, 1), new SellItemFactory(Items.ROOTED_DIRT, 1, 2, 5, 1), new SellItemFactory(Items.MOSS_BLOCK, 1, 2, 5, 1)}, (Object)2, (Object)new Factory[]{new SellItemFactory(Items.TROPICAL_FISH_BUCKET, 5, 1, 4, 1), new SellItemFactory(Items.PUFFERFISH_BUCKET, 5, 1, 4, 1), new SellItemFactory(Items.PACKED_ICE, 3, 1, 6, 1), new SellItemFactory(Items.BLUE_ICE, 6, 1, 6, 1), new SellItemFactory(Items.GUNPOWDER, 1, 1, 8, 1), new SellItemFactory(Items.PODZOL, 3, 3, 6, 1)}));
 
     private static Int2ObjectMap<Factory[]> copyToFastUtilMap(ImmutableMap<Integer, Factory[]> map) {
         return new Int2ObjectOpenHashMap(map);
     }
 
-    static class ProcessItemFactory
+    public static interface Factory {
+        @Nullable
+        public TradeOffer create(Entity var1, Random var2);
+    }
+
+    static class BuyForOneEmeraldFactory
     implements Factory {
-        private final ItemStack secondBuy;
-        private final int secondCount;
+        private final Item buy;
         private final int price;
-        private final ItemStack sell;
-        private final int sellCount;
         private final int maxUses;
         private final int experience;
         private final float multiplier;
 
-        public ProcessItemFactory(ItemConvertible item, int secondCount, Item sellItem, int sellCount, int maxUses, int experience) {
-            this(item, secondCount, 1, sellItem, sellCount, maxUses, experience);
-        }
-
-        public ProcessItemFactory(ItemConvertible item, int secondCount, int price, Item sellItem, int sellCount, int maxUses, int experience) {
-            this.secondBuy = new ItemStack(item);
-            this.secondCount = secondCount;
+        public BuyForOneEmeraldFactory(ItemConvertible item, int price, int maxUses, int experience) {
+            this.buy = item.asItem();
             this.price = price;
-            this.sell = new ItemStack(sellItem);
-            this.sellCount = sellCount;
             this.maxUses = maxUses;
             this.experience = experience;
             this.multiplier = 0.05f;
         }
 
         @Override
-        @Nullable
         public TradeOffer create(Entity entity, Random random) {
-            return new TradeOffer(new ItemStack(Items.EMERALD, this.price), new ItemStack(this.secondBuy.getItem(), this.secondCount), new ItemStack(this.sell.getItem(), this.sellCount), this.maxUses, this.experience, this.multiplier);
-        }
-    }
-
-    static class SellMapFactory
-    implements Factory {
-        private final int price;
-        private final StructureFeature<?> structure;
-        private final MapIcon.Type iconType;
-        private final int maxUses;
-        private final int experience;
-
-        public SellMapFactory(int price, StructureFeature<?> feature, MapIcon.Type iconType, int maxUses, int experience) {
-            this.price = price;
-            this.structure = feature;
-            this.iconType = iconType;
-            this.maxUses = maxUses;
-            this.experience = experience;
-        }
-
-        @Override
-        @Nullable
-        public TradeOffer create(Entity entity, Random random) {
-            if (!(entity.world instanceof ServerWorld)) {
-                return null;
-            }
-            ServerWorld serverWorld = (ServerWorld)entity.world;
-            BlockPos blockPos = serverWorld.locateStructure(this.structure, entity.getBlockPos(), 100, true);
-            if (blockPos != null) {
-                ItemStack itemStack = FilledMapItem.createMap(serverWorld, blockPos.getX(), blockPos.getZ(), (byte)2, true, true);
-                FilledMapItem.fillExplorationMap(serverWorld, itemStack);
-                MapState.addDecorationsNbt(itemStack, blockPos, "+", this.iconType);
-                itemStack.setCustomName(new TranslatableText("filled_map." + this.structure.getName().toLowerCase(Locale.ROOT)));
-                return new TradeOffer(new ItemStack(Items.EMERALD, this.price), new ItemStack(Items.COMPASS), itemStack, this.maxUses, this.experience, 0.2f);
-            }
-            return null;
-        }
-    }
-
-    static class EnchantBookFactory
-    implements Factory {
-        private final int experience;
-
-        public EnchantBookFactory(int experience) {
-            this.experience = experience;
-        }
-
-        @Override
-        public TradeOffer create(Entity entity, Random random) {
-            List list = Registry.ENCHANTMENT.stream().filter(Enchantment::isAvailableForEnchantedBookOffer).collect(Collectors.toList());
-            Enchantment enchantment = (Enchantment)list.get(random.nextInt(list.size()));
-            int i = MathHelper.nextInt(random, enchantment.getMinLevel(), enchantment.getMaxLevel());
-            ItemStack itemStack = EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry(enchantment, i));
-            int j = 2 + random.nextInt(5 + i * 10) + 3 * i;
-            if (enchantment.isTreasure()) {
-                j *= 2;
-            }
-            if (j > 64) {
-                j = 64;
-            }
-            return new TradeOffer(new ItemStack(Items.EMERALD, j), new ItemStack(Items.BOOK), itemStack, 12, this.experience, 0.2f);
-        }
-    }
-
-    static class SellDyedArmorFactory
-    implements Factory {
-        private final Item sell;
-        private final int price;
-        private final int maxUses;
-        private final int experience;
-
-        public SellDyedArmorFactory(Item item, int price) {
-            this(item, price, 12, 1);
-        }
-
-        public SellDyedArmorFactory(Item item, int price, int maxUses, int experience) {
-            this.sell = item;
-            this.price = price;
-            this.maxUses = maxUses;
-            this.experience = experience;
-        }
-
-        @Override
-        public TradeOffer create(Entity entity, Random random) {
-            ItemStack itemStack = new ItemStack(Items.EMERALD, this.price);
-            ItemStack itemStack2 = new ItemStack(this.sell);
-            if (this.sell instanceof DyeableArmorItem) {
-                ArrayList list = Lists.newArrayList();
-                list.add(SellDyedArmorFactory.getDye(random));
-                if (random.nextFloat() > 0.7f) {
-                    list.add(SellDyedArmorFactory.getDye(random));
-                }
-                if (random.nextFloat() > 0.8f) {
-                    list.add(SellDyedArmorFactory.getDye(random));
-                }
-                itemStack2 = DyeableItem.blendAndSetColor(itemStack2, list);
-            }
-            return new TradeOffer(itemStack, itemStack2, this.maxUses, this.experience, 0.2f);
-        }
-
-        private static DyeItem getDye(Random random) {
-            return DyeItem.byColor(DyeColor.byId(random.nextInt(16)));
-        }
-    }
-
-    static class SellPotionHoldingItemFactory
-    implements Factory {
-        private final ItemStack sell;
-        private final int sellCount;
-        private final int price;
-        private final int maxUses;
-        private final int experience;
-        private final Item secondBuy;
-        private final int secondCount;
-        private final float priceMultiplier;
-
-        public SellPotionHoldingItemFactory(Item arrow, int secondCount, Item tippedArrow, int sellCount, int price, int maxUses, int experience) {
-            this.sell = new ItemStack(tippedArrow);
-            this.price = price;
-            this.maxUses = maxUses;
-            this.experience = experience;
-            this.secondBuy = arrow;
-            this.secondCount = secondCount;
-            this.sellCount = sellCount;
-            this.priceMultiplier = 0.05f;
-        }
-
-        @Override
-        public TradeOffer create(Entity entity, Random random) {
-            ItemStack itemStack = new ItemStack(Items.EMERALD, this.price);
-            List list = Registry.POTION.stream().filter(potion -> !potion.getEffects().isEmpty() && BrewingRecipeRegistry.isBrewable(potion)).collect(Collectors.toList());
-            Potion potion2 = (Potion)list.get(random.nextInt(list.size()));
-            ItemStack itemStack2 = PotionUtil.setPotion(new ItemStack(this.sell.getItem(), this.sellCount), potion2);
-            return new TradeOffer(itemStack, new ItemStack(this.secondBuy, this.secondCount), itemStack2, this.maxUses, this.experience, this.priceMultiplier);
-        }
-    }
-
-    static class SellEnchantedToolFactory
-    implements Factory {
-        private final ItemStack tool;
-        private final int basePrice;
-        private final int maxUses;
-        private final int experience;
-        private final float multiplier;
-
-        public SellEnchantedToolFactory(Item item, int basePrice, int maxUses, int experience) {
-            this(item, basePrice, maxUses, experience, 0.05f);
-        }
-
-        public SellEnchantedToolFactory(Item item, int basePrice, int maxUses, int experience, float multiplier) {
-            this.tool = new ItemStack(item);
-            this.basePrice = basePrice;
-            this.maxUses = maxUses;
-            this.experience = experience;
-            this.multiplier = multiplier;
-        }
-
-        @Override
-        public TradeOffer create(Entity entity, Random random) {
-            int i = 5 + random.nextInt(15);
-            ItemStack itemStack = EnchantmentHelper.enchant(random, new ItemStack(this.tool.getItem()), i, false);
-            int j = Math.min(this.basePrice + i, 64);
-            ItemStack itemStack2 = new ItemStack(Items.EMERALD, j);
-            return new TradeOffer(itemStack2, itemStack, this.maxUses, this.experience, this.multiplier);
-        }
-    }
-
-    static class SellSuspiciousStewFactory
-    implements Factory {
-        final StatusEffect effect;
-        final int duration;
-        final int experience;
-        private final float multiplier;
-
-        public SellSuspiciousStewFactory(StatusEffect effect, int duration, int experience) {
-            this.effect = effect;
-            this.duration = duration;
-            this.experience = experience;
-            this.multiplier = 0.05f;
-        }
-
-        @Override
-        @Nullable
-        public TradeOffer create(Entity entity, Random random) {
-            ItemStack itemStack = new ItemStack(Items.SUSPICIOUS_STEW, 1);
-            SuspiciousStewItem.addEffectToStew(itemStack, this.effect, this.duration);
-            return new TradeOffer(new ItemStack(Items.EMERALD, 1), itemStack, 12, this.experience, this.multiplier);
+            ItemStack itemStack = new ItemStack(this.buy, this.price);
+            return new TradeOffer(itemStack, new ItemStack(Items.EMERALD), this.maxUses, this.experience, this.multiplier);
         }
     }
 
@@ -340,6 +163,92 @@ public class TradeOffers {
         }
     }
 
+    static class SellSuspiciousStewFactory
+    implements Factory {
+        final StatusEffect effect;
+        final int duration;
+        final int experience;
+        private final float multiplier;
+
+        public SellSuspiciousStewFactory(StatusEffect effect, int duration, int experience) {
+            this.effect = effect;
+            this.duration = duration;
+            this.experience = experience;
+            this.multiplier = 0.05f;
+        }
+
+        @Override
+        @Nullable
+        public TradeOffer create(Entity entity, Random random) {
+            ItemStack itemStack = new ItemStack(Items.SUSPICIOUS_STEW, 1);
+            SuspiciousStewItem.addEffectToStew(itemStack, this.effect, this.duration);
+            return new TradeOffer(new ItemStack(Items.EMERALD, 1), itemStack, 12, this.experience, this.multiplier);
+        }
+    }
+
+    static class ProcessItemFactory
+    implements Factory {
+        private final ItemStack secondBuy;
+        private final int secondCount;
+        private final int price;
+        private final ItemStack sell;
+        private final int sellCount;
+        private final int maxUses;
+        private final int experience;
+        private final float multiplier;
+
+        public ProcessItemFactory(ItemConvertible item, int secondCount, Item sellItem, int sellCount, int maxUses, int experience) {
+            this(item, secondCount, 1, sellItem, sellCount, maxUses, experience);
+        }
+
+        public ProcessItemFactory(ItemConvertible item, int secondCount, int price, Item sellItem, int sellCount, int maxUses, int experience) {
+            this.secondBuy = new ItemStack(item);
+            this.secondCount = secondCount;
+            this.price = price;
+            this.sell = new ItemStack(sellItem);
+            this.sellCount = sellCount;
+            this.maxUses = maxUses;
+            this.experience = experience;
+            this.multiplier = 0.05f;
+        }
+
+        @Override
+        @Nullable
+        public TradeOffer create(Entity entity, Random random) {
+            return new TradeOffer(new ItemStack(Items.EMERALD, this.price), new ItemStack(this.secondBuy.getItem(), this.secondCount), new ItemStack(this.sell.getItem(), this.sellCount), this.maxUses, this.experience, this.multiplier);
+        }
+    }
+
+    static class SellEnchantedToolFactory
+    implements Factory {
+        private final ItemStack tool;
+        private final int basePrice;
+        private final int maxUses;
+        private final int experience;
+        private final float multiplier;
+
+        public SellEnchantedToolFactory(Item item, int basePrice, int maxUses, int experience) {
+            this(item, basePrice, maxUses, experience, 0.05f);
+        }
+
+        public SellEnchantedToolFactory(Item item, int basePrice, int maxUses, int experience, float multiplier) {
+            this.tool = new ItemStack(item);
+            this.basePrice = basePrice;
+            this.maxUses = maxUses;
+            this.experience = experience;
+            this.multiplier = multiplier;
+        }
+
+        @Override
+        public TradeOffer create(Entity entity, Random random) {
+            int i = 5 + random.nextInt(15);
+            ItemStack itemStack = EnchantmentHelper.enchant(random, new ItemStack(this.tool.getItem()), i, false);
+            int j = Math.min(this.basePrice + i, 64);
+            ItemStack itemStack2 = new ItemStack(Items.EMERALD, j);
+            return new TradeOffer(itemStack2, itemStack, this.maxUses, this.experience, this.multiplier);
+        }
+    }
+
     static class TypeAwareBuyForOneEmeraldFactory
     implements Factory {
         private final Map<VillagerType, Item> map;
@@ -368,32 +277,137 @@ public class TradeOffers {
         }
     }
 
-    static class BuyForOneEmeraldFactory
+    static class SellPotionHoldingItemFactory
     implements Factory {
-        private final Item buy;
+        private final ItemStack sell;
+        private final int sellCount;
         private final int price;
         private final int maxUses;
         private final int experience;
-        private final float multiplier;
+        private final Item secondBuy;
+        private final int secondCount;
+        private final float priceMultiplier;
 
-        public BuyForOneEmeraldFactory(ItemConvertible item, int price, int maxUses, int experience) {
-            this.buy = item.asItem();
+        public SellPotionHoldingItemFactory(Item arrow, int secondCount, Item tippedArrow, int sellCount, int price, int maxUses, int experience) {
+            this.sell = new ItemStack(tippedArrow);
             this.price = price;
             this.maxUses = maxUses;
             this.experience = experience;
-            this.multiplier = 0.05f;
+            this.secondBuy = arrow;
+            this.secondCount = secondCount;
+            this.sellCount = sellCount;
+            this.priceMultiplier = 0.05f;
         }
 
         @Override
         public TradeOffer create(Entity entity, Random random) {
-            ItemStack itemStack = new ItemStack(this.buy, this.price);
-            return new TradeOffer(itemStack, new ItemStack(Items.EMERALD), this.maxUses, this.experience, this.multiplier);
+            ItemStack itemStack = new ItemStack(Items.EMERALD, this.price);
+            List list = Registry.POTION.stream().filter(potion -> !potion.getEffects().isEmpty() && BrewingRecipeRegistry.isBrewable(potion)).collect(Collectors.toList());
+            Potion potion2 = (Potion)list.get(random.nextInt(list.size()));
+            ItemStack itemStack2 = PotionUtil.setPotion(new ItemStack(this.sell.getItem(), this.sellCount), potion2);
+            return new TradeOffer(itemStack, new ItemStack(this.secondBuy, this.secondCount), itemStack2, this.maxUses, this.experience, this.priceMultiplier);
         }
     }
 
-    public static interface Factory {
+    static class EnchantBookFactory
+    implements Factory {
+        private final int experience;
+
+        public EnchantBookFactory(int experience) {
+            this.experience = experience;
+        }
+
+        @Override
+        public TradeOffer create(Entity entity, Random random) {
+            List list = Registry.ENCHANTMENT.stream().filter(Enchantment::isAvailableForEnchantedBookOffer).collect(Collectors.toList());
+            Enchantment enchantment = (Enchantment)list.get(random.nextInt(list.size()));
+            int i = MathHelper.nextInt(random, enchantment.getMinLevel(), enchantment.getMaxLevel());
+            ItemStack itemStack = EnchantedBookItem.forEnchantment(new EnchantmentLevelEntry(enchantment, i));
+            int j = 2 + random.nextInt(5 + i * 10) + 3 * i;
+            if (enchantment.isTreasure()) {
+                j *= 2;
+            }
+            if (j > 64) {
+                j = 64;
+            }
+            return new TradeOffer(new ItemStack(Items.EMERALD, j), new ItemStack(Items.BOOK), itemStack, 12, this.experience, 0.2f);
+        }
+    }
+
+    static class SellMapFactory
+    implements Factory {
+        private final int price;
+        private final StructureFeature<?> structure;
+        private final MapIcon.Type iconType;
+        private final int maxUses;
+        private final int experience;
+
+        public SellMapFactory(int price, StructureFeature<?> feature, MapIcon.Type iconType, int maxUses, int experience) {
+            this.price = price;
+            this.structure = feature;
+            this.iconType = iconType;
+            this.maxUses = maxUses;
+            this.experience = experience;
+        }
+
+        @Override
         @Nullable
-        public TradeOffer create(Entity var1, Random var2);
+        public TradeOffer create(Entity entity, Random random) {
+            if (!(entity.world instanceof ServerWorld)) {
+                return null;
+            }
+            ServerWorld serverWorld = (ServerWorld)entity.world;
+            BlockPos blockPos = serverWorld.locateStructure(this.structure, entity.getBlockPos(), 100, true);
+            if (blockPos != null) {
+                ItemStack itemStack = FilledMapItem.createMap(serverWorld, blockPos.getX(), blockPos.getZ(), (byte)2, true, true);
+                FilledMapItem.fillExplorationMap(serverWorld, itemStack);
+                MapState.addDecorationsNbt(itemStack, blockPos, "+", this.iconType);
+                itemStack.setCustomName(new TranslatableText("filled_map." + this.structure.getName().toLowerCase(Locale.ROOT)));
+                return new TradeOffer(new ItemStack(Items.EMERALD, this.price), new ItemStack(Items.COMPASS), itemStack, this.maxUses, this.experience, 0.2f);
+            }
+            return null;
+        }
+    }
+
+    static class SellDyedArmorFactory
+    implements Factory {
+        private final Item sell;
+        private final int price;
+        private final int maxUses;
+        private final int experience;
+
+        public SellDyedArmorFactory(Item item, int price) {
+            this(item, price, 12, 1);
+        }
+
+        public SellDyedArmorFactory(Item item, int price, int maxUses, int experience) {
+            this.sell = item;
+            this.price = price;
+            this.maxUses = maxUses;
+            this.experience = experience;
+        }
+
+        @Override
+        public TradeOffer create(Entity entity, Random random) {
+            ItemStack itemStack = new ItemStack(Items.EMERALD, this.price);
+            ItemStack itemStack2 = new ItemStack(this.sell);
+            if (this.sell instanceof DyeableArmorItem) {
+                ArrayList list = Lists.newArrayList();
+                list.add(SellDyedArmorFactory.getDye(random));
+                if (random.nextFloat() > 0.7f) {
+                    list.add(SellDyedArmorFactory.getDye(random));
+                }
+                if (random.nextFloat() > 0.8f) {
+                    list.add(SellDyedArmorFactory.getDye(random));
+                }
+                itemStack2 = DyeableItem.blendAndSetColor(itemStack2, list);
+            }
+            return new TradeOffer(itemStack, itemStack2, this.maxUses, this.experience, 0.2f);
+        }
+
+        private static DyeItem getDye(Random random) {
+            return DyeItem.byColor(DyeColor.byId(random.nextInt(16)));
+        }
     }
 }
 

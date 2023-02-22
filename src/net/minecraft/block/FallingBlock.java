@@ -1,18 +1,13 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.LandingBlock;
 import net.minecraft.block.Material;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.particle.BlockStateParticleEffect;
@@ -26,7 +21,8 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 
 public class FallingBlock
-extends Block {
+extends Block
+implements LandingBlock {
     public FallingBlock(AbstractBlock.Settings settings) {
         super(settings);
     }
@@ -44,7 +40,7 @@ extends Block {
 
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (!FallingBlock.canFallThrough(world.getBlockState(pos.down())) || pos.getY() < 0) {
+        if (!FallingBlock.canFallThrough(world.getBlockState(pos.down())) || pos.getY() < world.getBottomY()) {
             return;
         }
         FallingBlockEntity fallingBlockEntity = new FallingBlockEntity(world, (double)pos.getX() + 0.5, pos.getY(), (double)pos.getZ() + 0.5, world.getBlockState(pos));
@@ -64,14 +60,7 @@ extends Block {
         return state.isAir() || state.isIn(BlockTags.FIRE) || material.isLiquid() || material.isReplaceable();
     }
 
-    public void onLanding(World world, BlockPos pos, BlockState fallingBlockState, BlockState currentStateInPos, FallingBlockEntity fallingBlockEntity) {
-    }
-
-    public void onDestroyedOnLanding(World world, BlockPos pos, FallingBlockEntity fallingBlockEntity) {
-    }
-
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         BlockPos blockPos;
         if (random.nextInt(16) == 0 && FallingBlock.canFallThrough(world.getBlockState(blockPos = pos.down()))) {
@@ -82,7 +71,6 @@ extends Block {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getColor(BlockState state, BlockView world, BlockPos pos) {
         return -16777216;
     }

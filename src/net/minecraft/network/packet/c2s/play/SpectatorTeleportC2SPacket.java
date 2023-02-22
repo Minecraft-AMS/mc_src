@@ -6,7 +6,6 @@
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
 import java.util.UUID;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
@@ -17,22 +16,18 @@ import org.jetbrains.annotations.Nullable;
 
 public class SpectatorTeleportC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private UUID targetUuid;
-
-    public SpectatorTeleportC2SPacket() {
-    }
+    private final UUID targetUuid;
 
     public SpectatorTeleportC2SPacket(UUID targetUuid) {
         this.targetUuid = targetUuid;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public SpectatorTeleportC2SPacket(PacketByteBuf buf) {
         this.targetUuid = buf.readUuid();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeUuid(this.targetUuid);
     }
 

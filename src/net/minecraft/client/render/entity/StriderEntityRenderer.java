@@ -9,9 +9,10 @@ package net.minecraft.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.feature.SaddleFeatureRenderer;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.StriderEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -24,9 +25,9 @@ extends MobEntityRenderer<StriderEntity, StriderEntityModel<StriderEntity>> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/strider/strider.png");
     private static final Identifier COLD_TEXTURE = new Identifier("textures/entity/strider/strider_cold.png");
 
-    public StriderEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher, new StriderEntityModel(), 0.5f);
-        this.addFeature(new SaddleFeatureRenderer(this, new StriderEntityModel(), new Identifier("textures/entity/strider/strider_saddle.png")));
+    public StriderEntityRenderer(EntityRendererFactory.Context context) {
+        super(context, new StriderEntityModel(context.getPart(EntityModelLayers.STRIDER)), 0.5f);
+        this.addFeature(new SaddleFeatureRenderer(this, new StriderEntityModel(context.getPart(EntityModelLayers.STRIDER_SADDLE)), new Identifier("textures/entity/strider/strider_saddle.png")));
     }
 
     @Override
@@ -46,7 +47,7 @@ extends MobEntityRenderer<StriderEntity, StriderEntityModel<StriderEntity>> {
 
     @Override
     protected boolean isShaking(StriderEntity striderEntity) {
-        return striderEntity.isCold();
+        return super.isShaking(striderEntity) || striderEntity.isCold();
     }
 
     @Override

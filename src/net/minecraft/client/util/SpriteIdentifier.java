@@ -56,18 +56,18 @@ public class SpriteIdentifier {
         return this.getSprite().getTextureSpecificVertexConsumer(vertexConsumers.getBuffer(this.getRenderLayer(layerFactory)));
     }
 
-    public VertexConsumer method_30001(VertexConsumerProvider vertexConsumerProvider, Function<Identifier, RenderLayer> function, boolean bl) {
-        return this.getSprite().getTextureSpecificVertexConsumer(ItemRenderer.getDirectItemGlintConsumer(vertexConsumerProvider, this.getRenderLayer(function), true, bl));
+    public VertexConsumer getVertexConsumer(VertexConsumerProvider vertexConsumers, Function<Identifier, RenderLayer> layerFactory, boolean bl) {
+        return this.getSprite().getTextureSpecificVertexConsumer(ItemRenderer.getDirectItemGlintConsumer(vertexConsumers, this.getRenderLayer(layerFactory), true, bl));
     }
 
-    public boolean equals(Object object) {
-        if (this == object) {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (object == null || this.getClass() != object.getClass()) {
+        if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
-        SpriteIdentifier spriteIdentifier = (SpriteIdentifier)object;
+        SpriteIdentifier spriteIdentifier = (SpriteIdentifier)o;
         return this.atlas.equals(spriteIdentifier.atlas) && this.texture.equals(spriteIdentifier.texture);
     }
 
@@ -76,7 +76,7 @@ public class SpriteIdentifier {
     }
 
     public String toString() {
-        return "Material{atlasLocation=" + this.atlas + ", texture=" + this.texture + '}';
+        return "Material{atlasLocation=" + this.atlas + ", texture=" + this.texture + "}";
     }
 }
 

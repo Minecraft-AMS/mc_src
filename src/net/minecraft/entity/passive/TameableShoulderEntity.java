@@ -11,6 +11,7 @@ import net.minecraft.world.World;
 
 public abstract class TameableShoulderEntity
 extends TameableEntity {
+    private static final int READY_TO_SIT_COOLDOWN = 100;
     private int ticks;
 
     protected TameableShoulderEntity(EntityType<? extends TameableShoulderEntity> entityType, World world) {
@@ -22,7 +23,7 @@ extends TameableEntity {
         nbtCompound.putString("id", this.getSavedEntityId());
         this.writeNbt(nbtCompound);
         if (player.addShoulderEntity(nbtCompound)) {
-            this.remove();
+            this.discard();
             return true;
         }
         return false;

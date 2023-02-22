@@ -32,7 +32,7 @@ import net.minecraft.util.registry.Registry;
 public class EnchantmentArgumentType
 implements ArgumentType<Enchantment> {
     private static final Collection<String> EXAMPLES = Arrays.asList("unbreaking", "silk_touch");
-    public static final DynamicCommandExceptionType UNKNOWN_ENCHANTMENT_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("enchantment.unknown", object));
+    public static final DynamicCommandExceptionType UNKNOWN_ENCHANTMENT_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("enchantment.unknown", id));
 
     public static EnchantmentArgumentType enchantment() {
         return new EnchantmentArgumentType();
@@ -55,8 +55,8 @@ implements ArgumentType<Enchantment> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

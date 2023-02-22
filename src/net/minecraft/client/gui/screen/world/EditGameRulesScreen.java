@@ -28,11 +28,15 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
-import net.minecraft.client.gui.widget.EntryListWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.math.MatrixStack;
@@ -67,9 +71,9 @@ extends Screen {
         this.client.keyboard.setRepeatEvents(true);
         super.init();
         this.ruleListWidget = new RuleListWidget(this.gameRules);
-        this.children.add(this.ruleListWidget);
-        this.addButton(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 29, 150, 20, ScreenTexts.CANCEL, buttonWidget -> this.ruleSaver.accept(Optional.empty())));
-        this.doneButton = this.addButton(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, ScreenTexts.DONE, buttonWidget -> this.ruleSaver.accept(Optional.of(this.gameRules))));
+        this.addSelectableChild(this.ruleListWidget);
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 29, 150, 20, ScreenTexts.CANCEL, button -> this.ruleSaver.accept(Optional.empty())));
+        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, ScreenTexts.DONE, button -> this.ruleSaver.accept(Optional.of(this.gameRules))));
     }
 
     @Override
@@ -93,7 +97,7 @@ extends Screen {
         }
     }
 
-    private void setTooltipDescription(@Nullable List<OrderedText> description) {
+    void setTooltipDescription(@Nullable List<OrderedText> description) {
         this.tooltip = description;
     }
 
@@ -101,12 +105,12 @@ extends Screen {
         this.doneButton.active = this.invalidRuleWidgets.isEmpty();
     }
 
-    private void markInvalid(AbstractRuleWidget ruleWidget) {
+    void markInvalid(AbstractRuleWidget ruleWidget) {
         this.invalidRuleWidgets.add(ruleWidget);
         this.updateDoneButton();
     }
 
-    private void markValid(AbstractRuleWidget ruleWidget) {
+    void markValid(AbstractRuleWidget ruleWidget) {
         this.invalidRuleWidgets.remove(ruleWidget);
         this.updateDoneButton();
     }
@@ -121,16 +125,16 @@ extends Screen {
 
                 @Override
                 public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
-                    this.createRuleWidget(key, (text, list, string, booleanRule) -> new BooleanRuleWidget(text, list, string, (GameRules.BooleanRule)booleanRule));
+                    this.createRuleWidget(key, (name, description, ruleName, rule) -> new BooleanRuleWidget(name, description, ruleName, (GameRules.BooleanRule)rule));
                 }
 
                 @Override
                 public void visitInt(GameRules.Key<GameRules.IntRule> key, GameRules.Type<GameRules.IntRule> type) {
-                    this.createRuleWidget(key, (text, list, string, intRule) -> new IntRuleWidget(text, list, string, (GameRules.IntRule)intRule));
+                    this.createRuleWidget(key, (name, description, ruleName, rule) -> new IntRuleWidget(name, description, ruleName, (GameRules.IntRule)rule));
                 }
 
                 private <T extends GameRules.Rule<T>> void createRuleWidget(GameRules.Key<T> key, RuleWidgetFactory<T> widgetFactory) {
-                    String string3;
+                    Object string3;
                     ImmutableList list;
                     TranslatableText text = new TranslatableText(key.getTranslationKey());
                     MutableText text2 = new LiteralText(key.getName()).formatted(Formatting.YELLOW);
@@ -148,20 +152,20 @@ extends Screen {
                         list = ImmutableList.of((Object)text2.asOrderedText(), (Object)text3.asOrderedText());
                         string3 = text3.getString();
                     }
-                    map.computeIfAbsent(key.getCategory(), category -> Maps.newHashMap()).put(key, widgetFactory.create(text, (List<OrderedText>)list, string3, rule));
+                    map.computeIfAbsent(key.getCategory(), category -> Maps.newHashMap()).put(key, widgetFactory.create(text, (List<OrderedText>)list, (String)string3, rule));
                 }
             });
             map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry2 -> {
                 this.addEntry(new RuleCategoryWidget(new TranslatableText(((GameRules.Category)((Object)((Object)entry2.getKey()))).getCategory()).formatted(Formatting.BOLD, Formatting.YELLOW)));
-                ((Map)entry2.getValue()).entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName))).forEach(entry -> this.addEntry((EntryListWidget.Entry)entry.getValue()));
+                ((Map)entry2.getValue()).entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName))).forEach(entry -> this.addEntry((AbstractRuleWidget)entry.getValue()));
             });
         }
 
         @Override
         public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-            AbstractRuleWidget abstractRuleWidget;
             super.render(matrices, mouseX, mouseY, delta);
-            if (this.isMouseOver(mouseX, mouseY) && (abstractRuleWidget = (AbstractRuleWidget)this.getEntryAtPosition(mouseX, mouseY)) != null) {
+            AbstractRuleWidget abstractRuleWidget = (AbstractRuleWidget)this.getHoveredEntry();
+            if (abstractRuleWidget != null) {
                 EditGameRulesScreen.this.setTooltipDescription(abstractRuleWidget.description);
             }
         }
@@ -176,8 +180,8 @@ extends Screen {
             super(description, name);
             this.valueWidget = new TextFieldWidget(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, 10, 5, 42, 20, name.shallowCopy().append("\n").append(ruleName).append("\n"));
             this.valueWidget.setText(Integer.toString(rule.get()));
-            this.valueWidget.setChangedListener(string -> {
-                if (rule.validate((String)string)) {
+            this.valueWidget.setChangedListener(value -> {
+                if (rule.validate((String)value)) {
                     this.valueWidget.setEditableColor(0xE0E0E0);
                     EditGameRulesScreen.this.markValid(this);
                 } else {
@@ -200,21 +204,11 @@ extends Screen {
     @Environment(value=EnvType.CLIENT)
     public class BooleanRuleWidget
     extends NamedRuleWidget {
-        private final ButtonWidget toggleButton;
+        private final CyclingButtonWidget<Boolean> toggleButton;
 
-        public BooleanRuleWidget(final Text name, List<OrderedText> description, final String ruleName, final GameRules.BooleanRule booleanRule) {
+        public BooleanRuleWidget(Text name, List<OrderedText> description, String ruleName, GameRules.BooleanRule rule) {
             super(description, name);
-            this.toggleButton = new ButtonWidget(10, 5, 44, 20, ScreenTexts.getToggleText(booleanRule.get()), buttonWidget -> {
-                boolean bl = !booleanRule.get();
-                booleanRule.set(bl, null);
-                buttonWidget.setMessage(ScreenTexts.getToggleText(booleanRule.get()));
-            }){
-
-                @Override
-                protected MutableText getNarrationMessage() {
-                    return ScreenTexts.composeToggleText(name, booleanRule.get()).append("\n").append(ruleName);
-                }
-            };
+            this.toggleButton = CyclingButtonWidget.onOffBuilder(rule.get()).omitKeyText().narration(button -> button.getGenericNarrationMessage().append("\n").append(ruleName)).build(10, 5, 44, 20, name, (button, value) -> rule.set((boolean)value, null));
             this.children.add(this.toggleButton);
         }
 
@@ -231,7 +225,7 @@ extends Screen {
     public abstract class NamedRuleWidget
     extends AbstractRuleWidget {
         private final List<OrderedText> name;
-        protected final List<Element> children;
+        protected final List<ClickableWidget> children;
 
         public NamedRuleWidget(List<OrderedText> description, Text name) {
             super(description);
@@ -241,6 +235,11 @@ extends Screen {
 
         @Override
         public List<? extends Element> children() {
+            return this.children;
+        }
+
+        @Override
+        public List<? extends Selectable> selectableChildren() {
             return this.children;
         }
 
@@ -263,7 +262,7 @@ extends Screen {
     @Environment(value=EnvType.CLIENT)
     public class RuleCategoryWidget
     extends AbstractRuleWidget {
-        private final Text name;
+        final Text name;
 
         public RuleCategoryWidget(Text text) {
             super(null);
@@ -279,13 +278,29 @@ extends Screen {
         public List<? extends Element> children() {
             return ImmutableList.of();
         }
+
+        @Override
+        public List<? extends Selectable> selectableChildren() {
+            return ImmutableList.of((Object)new Selectable(){
+
+                @Override
+                public Selectable.SelectionType getType() {
+                    return Selectable.SelectionType.HOVERED;
+                }
+
+                @Override
+                public void appendNarrations(NarrationMessageBuilder builder) {
+                    builder.put(NarrationPart.TITLE, RuleCategoryWidget.this.name);
+                }
+            });
+        }
     }
 
     @Environment(value=EnvType.CLIENT)
     public abstract class AbstractRuleWidget
     extends ElementListWidget.Entry<AbstractRuleWidget> {
         @Nullable
-        private final List<OrderedText> description;
+        final List<OrderedText> description;
 
         public AbstractRuleWidget(List<OrderedText> description) {
             this.description = description;

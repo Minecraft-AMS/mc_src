@@ -19,7 +19,7 @@ import net.minecraft.util.Identifier;
 
 public class FilledBucketCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("filled_bucket");
+    static final Identifier ID = new Identifier("filled_bucket");
 
     @Override
     public Identifier getId() {
@@ -33,7 +33,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, ItemStack stack) {
-        this.test(player, conditions -> conditions.matches(stack));
+        this.trigger(player, (T conditions) -> conditions.matches(stack));
     }
 
     @Override

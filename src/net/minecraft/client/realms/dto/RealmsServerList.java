@@ -49,7 +49,7 @@ extends ValueObject {
             }
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse McoServerList: " + exception.getMessage());
+            LOGGER.error("Could not parse McoServerList: {}", (Object)exception.getMessage());
         }
         return realmsServerList;
     }

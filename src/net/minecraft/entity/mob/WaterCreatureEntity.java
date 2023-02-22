@@ -3,12 +3,22 @@
  */
 package net.minecraft.entity.mob;
 
+import java.util.Random;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.tag.BlockTags;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.world.Heightmap;
+import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 
@@ -71,6 +81,29 @@ extends PathAwareEntity {
     @Override
     public boolean canBeLeashedBy(PlayerEntity player) {
         return false;
+    }
+
+    public static boolean canSpawnUnderground(EntityType<? extends LivingEntity> entityType, ServerWorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
+        return pos.getY() < world.getSeaLevel() && pos.getY() < world.getTopY(Heightmap.Type.OCEAN_FLOOR, pos.getX(), pos.getZ()) && WaterCreatureEntity.hasNoLight(world, pos) && WaterCreatureEntity.hasStoneFloor(pos, world);
+    }
+
+    public static boolean hasStoneFloor(BlockPos pos, ServerWorldAccess world) {
+        BlockPos.Mutable mutable = pos.mutableCopy();
+        for (int i = 0; i < 5; ++i) {
+            mutable.move(Direction.DOWN);
+            BlockState blockState = world.getBlockState(mutable);
+            if (blockState.isIn(BlockTags.BASE_STONE_OVERWORLD)) {
+                return true;
+            }
+            if (blockState.isOf(Blocks.WATER)) continue;
+            return false;
+        }
+        return false;
+    }
+
+    public static boolean hasNoLight(ServerWorldAccess world, BlockPos pos) {
+        int i = world.toServerWorld().isThundering() ? world.getLightLevel(pos, 10) : world.getLightLevel(pos);
+        return i == 0;
     }
 }
 

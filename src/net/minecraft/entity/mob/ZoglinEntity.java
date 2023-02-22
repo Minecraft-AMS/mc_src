@@ -6,8 +6,6 @@
  *  com.google.common.collect.ImmutableSet
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.Dynamic
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.mob;
 
@@ -18,8 +16,6 @@ import com.mojang.serialization.Dynamic;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityGroup;
@@ -57,13 +53,12 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.IntRange;
+import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.World;
 
 public class ZoglinEntity
@@ -71,6 +66,16 @@ extends HostileEntity
 implements Monster,
 Hoglin {
     private static final TrackedData<Boolean> BABY = DataTracker.registerData(ZoglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final int field_30514 = 40;
+    private static final int field_30505 = 1;
+    private static final float field_30506 = 0.6f;
+    private static final int field_30507 = 6;
+    private static final float field_30508 = 0.5f;
+    private static final int field_30509 = 40;
+    private static final int field_30510 = 15;
+    private static final int field_30511 = 200;
+    private static final float field_30512 = 0.3f;
+    private static final float field_30513 = 0.4f;
     private int movementCooldownTicks;
     protected static final ImmutableList<? extends SensorType<? extends Sensor<? super ZoglinEntity>>> USED_SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS);
     protected static final ImmutableList<? extends MemoryModuleType<?>> USED_MEMORY_MODULES = ImmutableList.of(MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.LOOK_TARGET, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN);
@@ -87,34 +92,34 @@ Hoglin {
     @Override
     protected Brain<?> deserializeBrain(Dynamic<?> dynamic) {
         Brain<ZoglinEntity> brain = this.createBrainProfile().deserialize(dynamic);
-        ZoglinEntity.method_26928(brain);
-        ZoglinEntity.method_26929(brain);
-        ZoglinEntity.method_26930(brain);
+        ZoglinEntity.addCoreTasks(brain);
+        ZoglinEntity.addIdleTasks(brain);
+        ZoglinEntity.addFightTasks(brain);
         brain.setCoreActivities((Set<Activity>)ImmutableSet.of((Object)Activity.CORE));
         brain.setDefaultActivity(Activity.IDLE);
         brain.resetPossibleActivities();
         return brain;
     }
 
-    private static void method_26928(Brain<ZoglinEntity> brain) {
+    private static void addCoreTasks(Brain<ZoglinEntity> brain) {
         brain.setTaskList(Activity.CORE, 0, (ImmutableList<Task<ZoglinEntity>>)ImmutableList.of((Object)new LookAroundTask(45, 90), (Object)new WanderAroundTask()));
     }
 
-    private static void method_26929(Brain<ZoglinEntity> brain) {
-        brain.setTaskList(Activity.IDLE, 10, (ImmutableList<Task<ZoglinEntity>>)ImmutableList.of(new UpdateAttackTargetTask<ZoglinEntity>(ZoglinEntity::method_26934), new TimeLimitedTask<LivingEntity>(new FollowMobTask(8.0f), IntRange.between(30, 60)), new RandomTask(ImmutableList.of((Object)Pair.of((Object)new StrollTask(0.4f), (Object)2), (Object)Pair.of((Object)new GoTowardsLookTarget(0.4f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1)))));
+    private static void addIdleTasks(Brain<ZoglinEntity> brain) {
+        brain.setTaskList(Activity.IDLE, 10, (ImmutableList<Task<ZoglinEntity>>)ImmutableList.of(new UpdateAttackTargetTask<ZoglinEntity>(ZoglinEntity::getHoglinTarget), new TimeLimitedTask<LivingEntity>(new FollowMobTask(8.0f), UniformIntProvider.create(30, 60)), new RandomTask(ImmutableList.of((Object)Pair.of((Object)new StrollTask(0.4f), (Object)2), (Object)Pair.of((Object)new GoTowardsLookTarget(0.4f, 3), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1)))));
     }
 
-    private static void method_26930(Brain<ZoglinEntity> brain) {
+    private static void addFightTasks(Brain<ZoglinEntity> brain) {
         brain.setTaskList(Activity.FIGHT, 10, (ImmutableList<Task<ZoglinEntity>>)ImmutableList.of((Object)new RangedApproachTask(1.0f), new ConditionalTask<MobEntity>(ZoglinEntity::isAdult, new MeleeAttackTask(40)), new ConditionalTask<MobEntity>(ZoglinEntity::isBaby, new MeleeAttackTask(15)), new ForgetAttackTargetTask()), MemoryModuleType.ATTACK_TARGET);
     }
 
-    private Optional<? extends LivingEntity> method_26934() {
-        return this.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse((List<LivingEntity>)ImmutableList.of()).stream().filter(ZoglinEntity::method_26936).findFirst();
+    private Optional<? extends LivingEntity> getHoglinTarget() {
+        return this.getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).orElse((List<LivingEntity>)ImmutableList.of()).stream().filter(this::shouldAttack).findFirst();
     }
 
-    private static boolean method_26936(LivingEntity livingEntity) {
+    private boolean shouldAttack(LivingEntity livingEntity) {
         EntityType<?> entityType = livingEntity.getType();
-        return entityType != EntityType.ZOGLIN && entityType != EntityType.CREEPER && EntityPredicates.EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL.test(livingEntity);
+        return entityType != EntityType.ZOGLIN && entityType != EntityType.CREEPER && Sensor.testAttackableTargetPredicate(this, livingEntity);
     }
 
     @Override
@@ -177,15 +182,15 @@ Hoglin {
             return bl;
         }
         LivingEntity livingEntity = (LivingEntity)source.getAttacker();
-        if (EntityPredicates.EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL.test(livingEntity) && !LookTargetUtil.isNewTargetTooFar(this, livingEntity, 4.0)) {
-            this.method_26938(livingEntity);
+        if (this.canTarget(livingEntity) && !LookTargetUtil.isNewTargetTooFar(this, livingEntity, 4.0)) {
+            this.setAttackTarget(livingEntity);
         }
         return bl;
     }
 
-    private void method_26938(LivingEntity livingEntity) {
+    private void setAttackTarget(LivingEntity entity) {
         this.brain.forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-        this.brain.remember(MemoryModuleType.ATTACK_TARGET, livingEntity, 200L);
+        this.brain.remember(MemoryModuleType.ATTACK_TARGET, entity, 200L);
     }
 
     public Brain<ZoglinEntity> getBrain() {
@@ -232,7 +237,6 @@ Hoglin {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 4) {
             this.movementCooldownTicks = 10;
@@ -243,7 +247,6 @@ Hoglin {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public int getMovementCooldownTicks() {
         return this.movementCooldownTicks;
     }

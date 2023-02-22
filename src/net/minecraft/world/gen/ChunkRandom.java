@@ -4,9 +4,11 @@
 package net.minecraft.world.gen;
 
 import java.util.Random;
+import net.minecraft.world.gen.WorldGenRandom;
 
 public class ChunkRandom
-extends Random {
+extends Random
+implements WorldGenRandom {
     private int sampleCount;
 
     public ChunkRandom() {
@@ -16,14 +18,12 @@ extends Random {
         super(seed);
     }
 
-    public void consume(int count) {
-        for (int i = 0; i < count; ++i) {
-            this.next(1);
-        }
+    public int getSampleCount() {
+        return this.sampleCount;
     }
 
     @Override
-    protected int next(int count) {
+    public int next(int count) {
         ++this.sampleCount;
         return super.next(count);
     }
@@ -56,6 +56,16 @@ extends Random {
         long n = (long)chunkX * l ^ (long)chunkZ * m ^ worldSeed;
         this.setSeed(n);
         return n;
+    }
+
+    public long setDeepslateSeed(long worldSeed, int x, int y, int z) {
+        this.setSeed(worldSeed);
+        long l = this.nextLong();
+        long m = this.nextLong();
+        long n = this.nextLong();
+        long o = (long)x * l ^ (long)y * m ^ (long)z * n ^ worldSeed;
+        this.setSeed(o);
+        return o;
     }
 
     public long setRegionSeed(long worldSeed, int regionX, int regionZ, int salt) {

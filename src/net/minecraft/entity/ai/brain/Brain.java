@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.ImmutableList$Builder
  *  com.google.common.collect.ImmutableSet
@@ -23,6 +24,7 @@
  */
 package net.minecraft.entity.ai.brain;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -54,6 +56,7 @@ import net.minecraft.entity.ai.brain.sensor.SensorType;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Util;
+import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.registry.Registry;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.logging.log4j.LogManager;
@@ -61,8 +64,9 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class Brain<E extends LivingEntity> {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
     private final Supplier<Codec<Brain<E>>> codecSupplier;
+    private static final int ACTIVITY_REFRESH_COOLDOWN = 20;
     private final Map<MemoryModuleType<?>, Optional<? extends Memory<?>>> memories = Maps.newHashMap();
     private final Map<SensorType<? extends Sensor<? super E>>, Sensor<? super E>> sensors = Maps.newLinkedHashMap();
     private final Map<Integer, Map<Activity, Set<Task<? super E>>>> tasks = Maps.newTreeMap();
@@ -135,7 +139,7 @@ public class Brain<E extends LivingEntity> {
         return this.codecSupplier.get().encodeStart(ops, (Object)this);
     }
 
-    private Stream<MemoryEntry<?>> streamMemories() {
+    Stream<MemoryEntry<?>> streamMemories() {
         return this.memories.entrySet().stream().map(entry -> MemoryEntry.of((MemoryModuleType)entry.getKey(), (Optional)entry.getValue()));
     }
 
@@ -156,10 +160,10 @@ public class Brain<E extends LivingEntity> {
     }
 
     public <U> void remember(MemoryModuleType<U> type, Optional<? extends U> value) {
-        this.setMemory(type, value.map(Memory::method_28355));
+        this.setMemory(type, value.map(Memory::permanent));
     }
 
-    private <U> void setMemory(MemoryModuleType<U> type, Optional<? extends Memory<?>> memory) {
+    <U> void setMemory(MemoryModuleType<U> type, Optional<? extends Memory<?>> memory) {
         if (this.memories.containsKey(type)) {
             if (memory.isPresent() && this.isEmptyCollection(memory.get().getValue())) {
                 this.forget(type);
@@ -173,11 +177,22 @@ public class Brain<E extends LivingEntity> {
         return this.memories.get(type).map(Memory::getValue);
     }
 
-    public <U> boolean method_29519(MemoryModuleType<U> memoryModuleType, U object) {
-        if (!this.hasMemoryModule(memoryModuleType)) {
+    public <U> long getMemory(MemoryModuleType<U> type) {
+        Optional<Memory<?>> optional = this.memories.get(type);
+        return optional.map(Memory::getExpiry).orElse(0L);
+    }
+
+    @Deprecated
+    @Debug
+    public Map<MemoryModuleType<?>, Optional<? extends Memory<?>>> getMemories() {
+        return this.memories;
+    }
+
+    public <U> boolean hasMemoryModuleWithValue(MemoryModuleType<U> type, U value) {
+        if (!this.hasMemoryModule(type)) {
             return false;
         }
-        return this.getOptionalMemory(memoryModuleType).filter(object2 -> object2.equals(object)).isPresent();
+        return this.getOptionalMemory(type).filter(object2 -> object2.equals(value)).isPresent();
     }
 
     public boolean isMemoryInState(MemoryModuleType<?> type, MemoryModuleState state) {
@@ -201,6 +216,13 @@ public class Brain<E extends LivingEntity> {
     }
 
     @Deprecated
+    @Debug
+    public Set<Activity> getPossibleActivities() {
+        return this.possibleActivities;
+    }
+
+    @Deprecated
+    @Debug
     public List<Task<? super E>> getRunningTasks() {
         ObjectArrayList list = new ObjectArrayList();
         for (Map<Activity, Set<Task<E>>> map : this.tasks.values()) {
@@ -294,14 +316,19 @@ public class Brain<E extends LivingEntity> {
         this.setTaskList(activity, indexedTasks, requiredMemories, Sets.newHashSet());
     }
 
-    private void setTaskList(Activity activity2, ImmutableList<? extends Pair<Integer, ? extends Task<? super E>>> indexedTasks, Set<Pair<MemoryModuleType<?>, MemoryModuleState>> requiredMemories, Set<MemoryModuleType<?>> forgettingMemories) {
+    public void setTaskList(Activity activity2, ImmutableList<? extends Pair<Integer, ? extends Task<? super E>>> indexedTasks, Set<Pair<MemoryModuleType<?>, MemoryModuleState>> requiredMemories, Set<MemoryModuleType<?>> forgettingMemories) {
         this.requiredActivityMemories.put(activity2, requiredMemories);
         if (!forgettingMemories.isEmpty()) {
             this.forgettingActivityMemories.put(activity2, forgettingMemories);
         }
         for (Pair pair : indexedTasks) {
-            this.tasks.computeIfAbsent((Integer)pair.getFirst(), integer -> Maps.newHashMap()).computeIfAbsent(activity2, activity -> Sets.newLinkedHashSet()).add(pair.getSecond());
+            this.tasks.computeIfAbsent((Integer)pair.getFirst(), integer -> Maps.newHashMap()).computeIfAbsent(activity2, activity -> Sets.newLinkedHashSet()).add((Task)pair.getSecond());
         }
+    }
+
+    @VisibleForTesting
+    public void clear() {
+        this.tasks.clear();
     }
 
     public boolean hasActivity(Activity activity) {
@@ -396,34 +423,12 @@ public class Brain<E extends LivingEntity> {
         return builder.build();
     }
 
-    static final class MemoryEntry<U> {
-        private final MemoryModuleType<U> type;
-        private final Optional<? extends Memory<U>> data;
-
-        private static <U> MemoryEntry<U> of(MemoryModuleType<U> type, Optional<? extends Memory<?>> data) {
-            return new MemoryEntry<U>(type, data);
-        }
-
-        private MemoryEntry(MemoryModuleType<U> type, Optional<? extends Memory<U>> data) {
-            this.type = type;
-            this.data = data;
-        }
-
-        private void apply(Brain<?> brain) {
-            ((Brain)brain).setMemory(this.type, this.data);
-        }
-
-        public <T> void serialize(DynamicOps<T> ops, RecordBuilder<T> builder) {
-            this.type.getCodec().ifPresent(codec -> this.data.ifPresent(memory -> builder.add(Registry.MEMORY_MODULE_TYPE.encodeStart(ops, this.type), codec.encodeStart(ops, memory))));
-        }
-    }
-
     public static final class Profile<E extends LivingEntity> {
         private final Collection<? extends MemoryModuleType<?>> memoryModules;
         private final Collection<? extends SensorType<? extends Sensor<? super E>>> sensors;
         private final Codec<Brain<E>> codec;
 
-        private Profile(Collection<? extends MemoryModuleType<?>> memoryModules, Collection<? extends SensorType<? extends Sensor<? super E>>> sensors) {
+        Profile(Collection<? extends MemoryModuleType<?>> memoryModules, Collection<? extends SensorType<? extends Sensor<? super E>>> sensors) {
             this.memoryModules = memoryModules;
             this.sensors = sensors;
             this.codec = Brain.createBrainCodec(memoryModules, sensors);
@@ -431,6 +436,28 @@ public class Brain<E extends LivingEntity> {
 
         public Brain<E> deserialize(Dynamic<?> data) {
             return this.codec.parse(data).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).orElseGet(() -> new Brain(this.memoryModules, this.sensors, ImmutableList.of(), () -> this.codec));
+        }
+    }
+
+    static final class MemoryEntry<U> {
+        private final MemoryModuleType<U> type;
+        private final Optional<? extends Memory<U>> data;
+
+        static <U> MemoryEntry<U> of(MemoryModuleType<U> type, Optional<? extends Memory<?>> data) {
+            return new MemoryEntry<U>(type, data);
+        }
+
+        MemoryEntry(MemoryModuleType<U> type, Optional<? extends Memory<U>> data) {
+            this.type = type;
+            this.data = data;
+        }
+
+        void apply(Brain<?> brain) {
+            brain.setMemory(this.type, this.data);
+        }
+
+        public <T> void serialize(DynamicOps<T> ops, RecordBuilder<T> builder) {
+            this.type.getCodec().ifPresent(codec -> this.data.ifPresent(memory -> builder.add(Registry.MEMORY_MODULE_TYPE.encodeStart(ops, this.type), codec.encodeStart(ops, memory))));
         }
     }
 }

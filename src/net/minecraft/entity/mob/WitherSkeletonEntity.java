@@ -14,7 +14,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.pathing.PathNodeType;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
@@ -44,7 +44,7 @@ extends AbstractSkeletonEntity {
 
     @Override
     protected void initGoals() {
-        this.targetSelector.add(3, new FollowTargetGoal<AbstractPiglinEntity>((MobEntity)this, AbstractPiglinEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<AbstractPiglinEntity>((MobEntity)this, AbstractPiglinEntity.class, true));
         super.initGoals();
     }
 
@@ -108,7 +108,7 @@ extends AbstractSkeletonEntity {
             return false;
         }
         if (target instanceof LivingEntity) {
-            ((LivingEntity)target).addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 200));
+            ((LivingEntity)target).addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 200), this);
         }
         return true;
     }

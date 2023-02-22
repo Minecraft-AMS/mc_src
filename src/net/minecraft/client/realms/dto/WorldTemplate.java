@@ -49,19 +49,36 @@ extends ValueObject {
             worldTemplate.type = WorldTemplateType.valueOf(JsonUtils.getStringOr("type", node, WorldTemplateType.WORLD_TEMPLATE.name()));
         }
         catch (Exception exception) {
-            LOGGER.error("Could not parse WorldTemplate: " + exception.getMessage());
+            LOGGER.error("Could not parse WorldTemplate: {}", (Object)exception.getMessage());
         }
         return worldTemplate;
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum WorldTemplateType {
-        WORLD_TEMPLATE,
-        MINIGAME,
-        ADVENTUREMAP,
-        EXPERIENCE,
-        INSPIRATION;
+    public static final class WorldTemplateType
+    extends Enum<WorldTemplateType> {
+        public static final /* enum */ WorldTemplateType WORLD_TEMPLATE = new WorldTemplateType();
+        public static final /* enum */ WorldTemplateType MINIGAME = new WorldTemplateType();
+        public static final /* enum */ WorldTemplateType ADVENTUREMAP = new WorldTemplateType();
+        public static final /* enum */ WorldTemplateType EXPERIENCE = new WorldTemplateType();
+        public static final /* enum */ WorldTemplateType INSPIRATION = new WorldTemplateType();
+        private static final /* synthetic */ WorldTemplateType[] field_19452;
 
+        public static WorldTemplateType[] values() {
+            return (WorldTemplateType[])field_19452.clone();
+        }
+
+        public static WorldTemplateType valueOf(String name) {
+            return Enum.valueOf(WorldTemplateType.class, name);
+        }
+
+        private static /* synthetic */ WorldTemplateType[] method_36851() {
+            return new WorldTemplateType[]{WORLD_TEMPLATE, MINIGAME, ADVENTUREMAP, EXPERIENCE, INSPIRATION};
+        }
+
+        static {
+            field_19452 = WorldTemplateType.method_36851();
+        }
     }
 }
 

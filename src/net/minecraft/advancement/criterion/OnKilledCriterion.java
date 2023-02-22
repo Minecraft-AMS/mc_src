@@ -22,7 +22,7 @@ import net.minecraft.util.Identifier;
 
 public class OnKilledCriterion
 extends AbstractCriterion<Conditions> {
-    private final Identifier id;
+    final Identifier id;
 
     public OnKilledCriterion(Identifier id) {
         this.id = id;
@@ -40,7 +40,7 @@ extends AbstractCriterion<Conditions> {
 
     public void trigger(ServerPlayerEntity player, Entity entity, DamageSource killingDamage) {
         LootContext lootContext = EntityPredicate.createAdvancementEntityLootContext(player, entity);
-        this.test(player, conditions -> conditions.test(player, lootContext, killingDamage));
+        this.trigger(player, conditions -> conditions.test(player, lootContext, killingDamage));
     }
 
     @Override
@@ -59,6 +59,10 @@ extends AbstractCriterion<Conditions> {
             this.killingBlow = killingBlow;
         }
 
+        public static Conditions createPlayerKilledEntity(EntityPredicate killedEntityPredicate) {
+            return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicate), DamageSourcePredicate.EMPTY);
+        }
+
         public static Conditions createPlayerKilledEntity(EntityPredicate.Builder killedEntityPredicateBuilder) {
             return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicateBuilder.build()), DamageSourcePredicate.EMPTY);
         }
@@ -67,12 +71,48 @@ extends AbstractCriterion<Conditions> {
             return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.EMPTY, DamageSourcePredicate.EMPTY);
         }
 
+        public static Conditions createPlayerKilledEntity(EntityPredicate killedEntityPredicate, DamageSourcePredicate damageSourcePredicate) {
+            return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicate), damageSourcePredicate);
+        }
+
+        public static Conditions createPlayerKilledEntity(EntityPredicate.Builder killedEntityPredicateBuilder, DamageSourcePredicate damageSourcePredicate) {
+            return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicateBuilder.build()), damageSourcePredicate);
+        }
+
+        public static Conditions createPlayerKilledEntity(EntityPredicate killedEntityPredicate, DamageSourcePredicate.Builder damageSourcePredicateBuilder) {
+            return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicate), damageSourcePredicateBuilder.build());
+        }
+
         public static Conditions createPlayerKilledEntity(EntityPredicate.Builder killedEntityPredicateBuilder, DamageSourcePredicate.Builder killingBlowBuilder) {
             return new Conditions(Criteria.PLAYER_KILLED_ENTITY.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killedEntityPredicateBuilder.build()), killingBlowBuilder.build());
         }
 
+        public static Conditions createEntityKilledPlayer(EntityPredicate killerEntityPredicate) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicate), DamageSourcePredicate.EMPTY);
+        }
+
+        public static Conditions createEntityKilledPlayer(EntityPredicate.Builder killerEntityPredicateBuilder) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicateBuilder.build()), DamageSourcePredicate.EMPTY);
+        }
+
         public static Conditions createEntityKilledPlayer() {
             return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.EMPTY, DamageSourcePredicate.EMPTY);
+        }
+
+        public static Conditions createEntityKilledPlayer(EntityPredicate killerEntityPredicate, DamageSourcePredicate damageSourcePredicate) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicate), damageSourcePredicate);
+        }
+
+        public static Conditions createEntityKilledPlayer(EntityPredicate.Builder killerEntityPredicateBuilder, DamageSourcePredicate damageSourcePredicate) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicateBuilder.build()), damageSourcePredicate);
+        }
+
+        public static Conditions createEntityKilledPlayer(EntityPredicate killerEntityPredicate, DamageSourcePredicate.Builder damageSourcePredicateBuilder) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicate), damageSourcePredicateBuilder.build());
+        }
+
+        public static Conditions createEntityKilledPlayer(EntityPredicate.Builder killerEntityPredicateBuilder, DamageSourcePredicate.Builder damageSourcePredicateBuilder) {
+            return new Conditions(Criteria.ENTITY_KILLED_PLAYER.id, EntityPredicate.Extended.EMPTY, EntityPredicate.Extended.ofLegacy(killerEntityPredicateBuilder.build()), damageSourcePredicateBuilder.build());
         }
 
         public boolean test(ServerPlayerEntity player, LootContext killedEntityContext, DamageSource killingBlow) {

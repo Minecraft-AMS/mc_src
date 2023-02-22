@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
  *  org.jetbrains.annotations.Nullable
@@ -20,8 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.metadata.ResourceMetadataReader;
@@ -61,7 +57,6 @@ implements ResourcePack {
     protected abstract InputStream openFile(String var1) throws IOException;
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public InputStream openRoot(String fileName) throws IOException {
         if (fileName.contains("/") || fileName.contains("\\")) {
             throw new IllegalArgumentException("Root resources can only be filenames, not paths (no / allowed!)");

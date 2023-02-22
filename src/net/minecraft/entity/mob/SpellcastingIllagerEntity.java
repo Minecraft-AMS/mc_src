@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.Goal;
@@ -54,7 +50,6 @@ extends IllagerEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public IllagerEntity.State getState() {
         if (this.isSpellcasting()) {
             return IllagerEntity.State.SPELLCASTING;
@@ -114,16 +109,25 @@ extends IllagerEntity {
 
     protected abstract SoundEvent getCastSpellSound();
 
-    public static enum Spell {
-        NONE(0, 0.0, 0.0, 0.0),
-        SUMMON_VEX(1, 0.7, 0.7, 0.8),
-        FANGS(2, 0.4, 0.3, 0.35),
-        WOLOLO(3, 0.7, 0.5, 0.2),
-        DISAPPEAR(4, 0.3, 0.3, 0.8),
-        BLINDNESS(5, 0.1, 0.1, 0.2);
+    protected static final class Spell
+    extends Enum<Spell> {
+        public static final /* enum */ Spell NONE = new Spell(0, 0.0, 0.0, 0.0);
+        public static final /* enum */ Spell SUMMON_VEX = new Spell(1, 0.7, 0.7, 0.8);
+        public static final /* enum */ Spell FANGS = new Spell(2, 0.4, 0.3, 0.35);
+        public static final /* enum */ Spell WOLOLO = new Spell(3, 0.7, 0.5, 0.2);
+        public static final /* enum */ Spell DISAPPEAR = new Spell(4, 0.3, 0.3, 0.8);
+        public static final /* enum */ Spell BLINDNESS = new Spell(5, 0.1, 0.1, 0.2);
+        final int id;
+        final double[] particleVelocity;
+        private static final /* synthetic */ Spell[] field_7376;
 
-        private final int id;
-        private final double[] particleVelocity;
+        public static Spell[] values() {
+            return (Spell[])field_7376.clone();
+        }
+
+        public static Spell valueOf(String string) {
+            return Enum.valueOf(Spell.class, string);
+        }
 
         private Spell(int id, double particleVelocityX, double particleVelocityY, double particleVelocityZ) {
             this.id = id;
@@ -137,9 +141,17 @@ extends IllagerEntity {
             }
             return NONE;
         }
+
+        private static /* synthetic */ Spell[] method_36658() {
+            return new Spell[]{NONE, SUMMON_VEX, FANGS, WOLOLO, DISAPPEAR, BLINDNESS};
+        }
+
+        static {
+            field_7376 = Spell.method_36658();
+        }
     }
 
-    public abstract class CastSpellGoal
+    protected abstract class CastSpellGoal
     extends Goal {
         protected int spellCooldown;
         protected int startTime;
@@ -202,7 +214,7 @@ extends IllagerEntity {
         protected abstract Spell getSpell();
     }
 
-    public class LookAtTargetGoal
+    protected class LookAtTargetGoal
     extends Goal {
         public LookAtTargetGoal() {
             this.setControls(EnumSet.of(Goal.Control.MOVE, Goal.Control.LOOK));

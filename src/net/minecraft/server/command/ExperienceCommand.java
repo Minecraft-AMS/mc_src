@@ -41,8 +41,8 @@ public class ExperienceCommand {
     private static final SimpleCommandExceptionType SET_POINT_INVALID_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.experience.set.points.invalid"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("experience").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).then(CommandManager.literal("add").then(CommandManager.argument("targets", EntityArgumentType.players()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("amount", IntegerArgumentType.integer()).executes(commandContext -> ExperienceCommand.executeAdd((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.POINTS))).then(CommandManager.literal("points").executes(commandContext -> ExperienceCommand.executeAdd((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.POINTS)))).then(CommandManager.literal("levels").executes(commandContext -> ExperienceCommand.executeAdd((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.LEVELS))))))).then(CommandManager.literal("set").then(CommandManager.argument("targets", EntityArgumentType.players()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("amount", IntegerArgumentType.integer((int)0)).executes(commandContext -> ExperienceCommand.executeSet((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.POINTS))).then(CommandManager.literal("points").executes(commandContext -> ExperienceCommand.executeSet((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.POINTS)))).then(CommandManager.literal("levels").executes(commandContext -> ExperienceCommand.executeSet((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "targets"), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"amount"), Component.LEVELS))))))).then(CommandManager.literal("query").then(((RequiredArgumentBuilder)CommandManager.argument("targets", EntityArgumentType.player()).then(CommandManager.literal("points").executes(commandContext -> ExperienceCommand.executeQuery((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayer((CommandContext<ServerCommandSource>)commandContext, "targets"), Component.POINTS)))).then(CommandManager.literal("levels").executes(commandContext -> ExperienceCommand.executeQuery((ServerCommandSource)commandContext.getSource(), EntityArgumentType.getPlayer((CommandContext<ServerCommandSource>)commandContext, "targets"), Component.LEVELS))))));
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("xp").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))).redirect((CommandNode)literalCommandNode));
+        LiteralCommandNode literalCommandNode = dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("experience").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.literal("add").then(CommandManager.argument("targets", EntityArgumentType.players()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("amount", IntegerArgumentType.integer()).executes(context -> ExperienceCommand.executeAdd((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.POINTS))).then(CommandManager.literal("points").executes(context -> ExperienceCommand.executeAdd((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.POINTS)))).then(CommandManager.literal("levels").executes(context -> ExperienceCommand.executeAdd((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.LEVELS))))))).then(CommandManager.literal("set").then(CommandManager.argument("targets", EntityArgumentType.players()).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("amount", IntegerArgumentType.integer((int)0)).executes(context -> ExperienceCommand.executeSet((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.POINTS))).then(CommandManager.literal("points").executes(context -> ExperienceCommand.executeSet((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.POINTS)))).then(CommandManager.literal("levels").executes(context -> ExperienceCommand.executeSet((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "targets"), IntegerArgumentType.getInteger((CommandContext)context, (String)"amount"), Component.LEVELS))))))).then(CommandManager.literal("query").then(((RequiredArgumentBuilder)CommandManager.argument("targets", EntityArgumentType.player()).then(CommandManager.literal("points").executes(context -> ExperienceCommand.executeQuery((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayer((CommandContext<ServerCommandSource>)context, "targets"), Component.POINTS)))).then(CommandManager.literal("levels").executes(context -> ExperienceCommand.executeQuery((ServerCommandSource)context.getSource(), EntityArgumentType.getPlayer((CommandContext<ServerCommandSource>)context, "targets"), Component.LEVELS))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("xp").requires(source -> source.hasPermissionLevel(2))).redirect((CommandNode)literalCommandNode));
     }
 
     private static int executeQuery(ServerCommandSource source, ServerPlayerEntity player, Component component) {
@@ -80,29 +80,46 @@ public class ExperienceCommand {
         return targets.size();
     }
 
-    static enum Component {
-        POINTS("points", PlayerEntity::addExperience, (serverPlayerEntity, integer) -> {
-            if (integer >= serverPlayerEntity.getNextLevelExperience()) {
+    static final class Component
+    extends Enum<Component> {
+        public static final /* enum */ Component POINTS = new Component("points", PlayerEntity::addExperience, (player, xp) -> {
+            if (xp >= player.getNextLevelExperience()) {
                 return false;
             }
-            serverPlayerEntity.setExperiencePoints((int)integer);
+            player.setExperiencePoints((int)xp);
             return true;
-        }, serverPlayerEntity -> MathHelper.floor(serverPlayerEntity.experienceProgress * (float)serverPlayerEntity.getNextLevelExperience())),
-        LEVELS("levels", ServerPlayerEntity::addExperienceLevels, (serverPlayerEntity, integer) -> {
-            serverPlayerEntity.setExperienceLevel((int)integer);
+        }, player -> MathHelper.floor(player.experienceProgress * (float)player.getNextLevelExperience()));
+        public static final /* enum */ Component LEVELS = new Component("levels", ServerPlayerEntity::addExperienceLevels, (player, level) -> {
+            player.setExperienceLevel((int)level);
             return true;
-        }, serverPlayerEntity -> serverPlayerEntity.experienceLevel);
-
+        }, player -> player.experienceLevel);
         public final BiConsumer<ServerPlayerEntity, Integer> adder;
         public final BiPredicate<ServerPlayerEntity, Integer> setter;
         public final String name;
-        private final ToIntFunction<ServerPlayerEntity> getter;
+        final ToIntFunction<ServerPlayerEntity> getter;
+        private static final /* synthetic */ Component[] field_13640;
+
+        public static Component[] values() {
+            return (Component[])field_13640.clone();
+        }
+
+        public static Component valueOf(String string) {
+            return Enum.valueOf(Component.class, string);
+        }
 
         private Component(String name, BiConsumer<ServerPlayerEntity, Integer> adder, BiPredicate<ServerPlayerEntity, Integer> setter, ToIntFunction<ServerPlayerEntity> getter) {
             this.adder = adder;
             this.name = name;
             this.setter = setter;
             this.getter = getter;
+        }
+
+        private static /* synthetic */ Component[] method_36967() {
+            return new Component[]{POINTS, LEVELS};
+        }
+
+        static {
+            field_13640 = Component.method_36967();
         }
     }
 }

@@ -38,6 +38,9 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class ModelElement {
+    private static final boolean field_32785 = false;
+    private static final float field_32786 = -16.0f;
+    private static final float field_32787 = 32.0f;
     public final Vec3f from;
     public final Vec3f to;
     public final Map<Direction, ModelElementFace> faces;
@@ -83,8 +86,10 @@ public class ModelElement {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static class Deserializer
+    protected static class Deserializer
     implements JsonDeserializer<ModelElement> {
+        private static final boolean DEFAULT_SHADE = true;
+
         protected Deserializer() {
         }
 
@@ -146,7 +151,7 @@ public class ModelElement {
             JsonObject jsonObject = JsonHelper.getObject(object, "faces");
             for (Map.Entry entry : jsonObject.entrySet()) {
                 Direction direction = this.getDirection((String)entry.getKey());
-                map.put(direction, context.deserialize((JsonElement)entry.getValue(), ModelElementFace.class));
+                map.put(direction, (ModelElementFace)context.deserialize((JsonElement)entry.getValue(), ModelElementFace.class));
             }
             return map;
         }

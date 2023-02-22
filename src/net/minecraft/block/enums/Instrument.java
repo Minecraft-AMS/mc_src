@@ -11,27 +11,36 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.StringIdentifiable;
 
-public enum Instrument implements StringIdentifiable
-{
-    HARP("harp", SoundEvents.BLOCK_NOTE_BLOCK_HARP),
-    BASEDRUM("basedrum", SoundEvents.BLOCK_NOTE_BLOCK_BASEDRUM),
-    SNARE("snare", SoundEvents.BLOCK_NOTE_BLOCK_SNARE),
-    HAT("hat", SoundEvents.BLOCK_NOTE_BLOCK_HAT),
-    BASS("bass", SoundEvents.BLOCK_NOTE_BLOCK_BASS),
-    FLUTE("flute", SoundEvents.BLOCK_NOTE_BLOCK_FLUTE),
-    BELL("bell", SoundEvents.BLOCK_NOTE_BLOCK_BELL),
-    GUITAR("guitar", SoundEvents.BLOCK_NOTE_BLOCK_GUITAR),
-    CHIME("chime", SoundEvents.BLOCK_NOTE_BLOCK_CHIME),
-    XYLOPHONE("xylophone", SoundEvents.BLOCK_NOTE_BLOCK_XYLOPHONE),
-    IRON_XYLOPHONE("iron_xylophone", SoundEvents.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE),
-    COW_BELL("cow_bell", SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL),
-    DIDGERIDOO("didgeridoo", SoundEvents.BLOCK_NOTE_BLOCK_DIDGERIDOO),
-    BIT("bit", SoundEvents.BLOCK_NOTE_BLOCK_BIT),
-    BANJO("banjo", SoundEvents.BLOCK_NOTE_BLOCK_BANJO),
-    PLING("pling", SoundEvents.BLOCK_NOTE_BLOCK_PLING);
-
+public final class Instrument
+extends Enum<Instrument>
+implements StringIdentifiable {
+    public static final /* enum */ Instrument HARP = new Instrument("harp", SoundEvents.BLOCK_NOTE_BLOCK_HARP);
+    public static final /* enum */ Instrument BASEDRUM = new Instrument("basedrum", SoundEvents.BLOCK_NOTE_BLOCK_BASEDRUM);
+    public static final /* enum */ Instrument SNARE = new Instrument("snare", SoundEvents.BLOCK_NOTE_BLOCK_SNARE);
+    public static final /* enum */ Instrument HAT = new Instrument("hat", SoundEvents.BLOCK_NOTE_BLOCK_HAT);
+    public static final /* enum */ Instrument BASS = new Instrument("bass", SoundEvents.BLOCK_NOTE_BLOCK_BASS);
+    public static final /* enum */ Instrument FLUTE = new Instrument("flute", SoundEvents.BLOCK_NOTE_BLOCK_FLUTE);
+    public static final /* enum */ Instrument BELL = new Instrument("bell", SoundEvents.BLOCK_NOTE_BLOCK_BELL);
+    public static final /* enum */ Instrument GUITAR = new Instrument("guitar", SoundEvents.BLOCK_NOTE_BLOCK_GUITAR);
+    public static final /* enum */ Instrument CHIME = new Instrument("chime", SoundEvents.BLOCK_NOTE_BLOCK_CHIME);
+    public static final /* enum */ Instrument XYLOPHONE = new Instrument("xylophone", SoundEvents.BLOCK_NOTE_BLOCK_XYLOPHONE);
+    public static final /* enum */ Instrument IRON_XYLOPHONE = new Instrument("iron_xylophone", SoundEvents.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE);
+    public static final /* enum */ Instrument COW_BELL = new Instrument("cow_bell", SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL);
+    public static final /* enum */ Instrument DIDGERIDOO = new Instrument("didgeridoo", SoundEvents.BLOCK_NOTE_BLOCK_DIDGERIDOO);
+    public static final /* enum */ Instrument BIT = new Instrument("bit", SoundEvents.BLOCK_NOTE_BLOCK_BIT);
+    public static final /* enum */ Instrument BANJO = new Instrument("banjo", SoundEvents.BLOCK_NOTE_BLOCK_BANJO);
+    public static final /* enum */ Instrument PLING = new Instrument("pling", SoundEvents.BLOCK_NOTE_BLOCK_PLING);
     private final String name;
     private final SoundEvent sound;
+    private static final /* synthetic */ Instrument[] field_12652;
+
+    public static Instrument[] values() {
+        return (Instrument[])field_12652.clone();
+    }
+
+    public static Instrument valueOf(String string) {
+        return Enum.valueOf(Instrument.class, string);
+    }
 
     private Instrument(String name, SoundEvent sound) {
         this.name = name;
@@ -95,6 +104,14 @@ public enum Instrument implements StringIdentifiable
             return BASS;
         }
         return HARP;
+    }
+
+    private static /* synthetic */ Instrument[] method_36730() {
+        return new Instrument[]{HARP, BASEDRUM, SNARE, HAT, BASS, FLUTE, BELL, GUITAR, CHIME, XYLOPHONE, IRON_XYLOPHONE, COW_BELL, DIDGERIDOO, BIT, BANJO, PLING};
+    }
+
+    static {
+        field_12652 = Instrument.method_36730();
     }
 }
 

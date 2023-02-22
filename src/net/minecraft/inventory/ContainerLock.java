@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Unmodifiable;
 @Unmodifiable
 public class ContainerLock {
     public static final ContainerLock EMPTY = new ContainerLock("");
+    public static final String LOCK_KEY = "Lock";
     private final String key;
 
     public ContainerLock(String key) {
@@ -25,13 +26,13 @@ public class ContainerLock {
 
     public void writeNbt(NbtCompound nbt) {
         if (!this.key.isEmpty()) {
-            nbt.putString("Lock", this.key);
+            nbt.putString(LOCK_KEY, this.key);
         }
     }
 
     public static ContainerLock fromNbt(NbtCompound nbt) {
-        if (nbt.contains("Lock", 8)) {
-            return new ContainerLock(nbt.getString("Lock"));
+        if (nbt.contains(LOCK_KEY, 8)) {
+            return new ContainerLock(nbt.getString(LOCK_KEY));
         }
         return EMPTY;
     }

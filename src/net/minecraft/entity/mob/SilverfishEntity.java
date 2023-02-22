@@ -8,12 +8,13 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.InfestedBlock;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
@@ -51,7 +52,7 @@ extends HostileEntity {
         this.goalSelector.add(4, new MeleeAttackGoal(this, 1.0, false));
         this.goalSelector.add(5, new WanderAndInfestGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this, new Class[0]).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
     }
 
     @Override
@@ -69,8 +70,8 @@ extends HostileEntity {
     }
 
     @Override
-    protected boolean canClimb() {
-        return false;
+    protected Entity.MoveEffect getMoveEffect() {
+        return Entity.MoveEffect.EVENTS;
     }
 
     @Override
@@ -106,13 +107,13 @@ extends HostileEntity {
 
     @Override
     public void tick() {
-        this.bodyYaw = this.yaw;
+        this.bodyYaw = this.getYaw();
         super.tick();
     }
 
     @Override
     public void setBodyYaw(float bodyYaw) {
-        this.yaw = bodyYaw;
+        this.setYaw(bodyYaw);
         super.setBodyYaw(bodyYaw);
     }
 
@@ -135,6 +136,60 @@ extends HostileEntity {
     @Override
     public EntityGroup getGroup() {
         return EntityGroup.ARTHROPOD;
+    }
+
+    static class CallForHelpGoal
+    extends Goal {
+        private final SilverfishEntity silverfish;
+        private int delay;
+
+        public CallForHelpGoal(SilverfishEntity silverfish) {
+            this.silverfish = silverfish;
+        }
+
+        public void onHurt() {
+            if (this.delay == 0) {
+                this.delay = 20;
+            }
+        }
+
+        @Override
+        public boolean canStart() {
+            return this.delay > 0;
+        }
+
+        @Override
+        public void tick() {
+            --this.delay;
+            if (this.delay <= 0) {
+                World world = this.silverfish.world;
+                Random random = this.silverfish.getRandom();
+                BlockPos blockPos = this.silverfish.getBlockPos();
+                int i = 0;
+                block0: while (i <= 5 && i >= -5) {
+                    int j = 0;
+                    while (j <= 10 && j >= -10) {
+                        int k = 0;
+                        while (k <= 10 && k >= -10) {
+                            BlockPos blockPos2 = blockPos.add(j, i, k);
+                            BlockState blockState = world.getBlockState(blockPos2);
+                            Block block = blockState.getBlock();
+                            if (block instanceof InfestedBlock) {
+                                if (world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+                                    world.breakBlock(blockPos2, true, this.silverfish);
+                                } else {
+                                    world.setBlockState(blockPos2, ((InfestedBlock)block).toRegularState(world.getBlockState(blockPos2)), 3);
+                                }
+                                if (random.nextBoolean()) break block0;
+                            }
+                            k = (k <= 0 ? 1 : 0) - k;
+                        }
+                        j = (j <= 0 ? 1 : 0) - j;
+                    }
+                    i = (i <= 0 ? 1 : 0) - i;
+                }
+            }
+        }
     }
 
     static class WanderAndInfestGoal
@@ -187,63 +242,9 @@ extends HostileEntity {
             BlockPos blockPos = new BlockPos(this.mob.getX(), this.mob.getY() + 0.5, this.mob.getZ()).offset(this.direction);
             BlockState blockState = worldAccess.getBlockState(blockPos);
             if (InfestedBlock.isInfestable(blockState)) {
-                worldAccess.setBlockState(blockPos, InfestedBlock.fromRegularBlock(blockState.getBlock()), 3);
+                worldAccess.setBlockState(blockPos, InfestedBlock.fromRegularState(blockState), 3);
                 this.mob.playSpawnEffects();
-                this.mob.remove();
-            }
-        }
-    }
-
-    static class CallForHelpGoal
-    extends Goal {
-        private final SilverfishEntity silverfish;
-        private int delay;
-
-        public CallForHelpGoal(SilverfishEntity silverfish) {
-            this.silverfish = silverfish;
-        }
-
-        public void onHurt() {
-            if (this.delay == 0) {
-                this.delay = 20;
-            }
-        }
-
-        @Override
-        public boolean canStart() {
-            return this.delay > 0;
-        }
-
-        @Override
-        public void tick() {
-            --this.delay;
-            if (this.delay <= 0) {
-                World world = this.silverfish.world;
-                Random random = this.silverfish.getRandom();
-                BlockPos blockPos = this.silverfish.getBlockPos();
-                int i = 0;
-                block0: while (i <= 5 && i >= -5) {
-                    int j = 0;
-                    while (j <= 10 && j >= -10) {
-                        int k = 0;
-                        while (k <= 10 && k >= -10) {
-                            BlockPos blockPos2 = blockPos.add(j, i, k);
-                            BlockState blockState = world.getBlockState(blockPos2);
-                            Block block = blockState.getBlock();
-                            if (block instanceof InfestedBlock) {
-                                if (world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-                                    world.breakBlock(blockPos2, true, this.silverfish);
-                                } else {
-                                    world.setBlockState(blockPos2, ((InfestedBlock)block).getRegularBlock().getDefaultState(), 3);
-                                }
-                                if (random.nextBoolean()) break block0;
-                            }
-                            k = (k <= 0 ? 1 : 0) - k;
-                        }
-                        j = (j <= 0 ? 1 : 0) - j;
-                    }
-                    i = (i <= 0 ? 1 : 0) - i;
-                }
+                this.mob.discard();
             }
         }
     }

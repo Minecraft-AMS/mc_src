@@ -2,15 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -19,26 +14,22 @@ import org.jetbrains.annotations.Nullable;
 
 public class NbtQueryResponseS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private int transactionId;
+    private final int transactionId;
     @Nullable
-    private NbtCompound nbt;
-
-    public NbtQueryResponseS2CPacket() {
-    }
+    private final NbtCompound nbt;
 
     public NbtQueryResponseS2CPacket(int transactionId, @Nullable NbtCompound nbt) {
         this.transactionId = transactionId;
         this.nbt = nbt;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public NbtQueryResponseS2CPacket(PacketByteBuf buf) {
         this.transactionId = buf.readVarInt();
         this.nbt = buf.readNbt();
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.transactionId);
         buf.writeNbt(this.nbt);
     }
@@ -48,13 +39,11 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onTagQuery(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getTransactionId() {
         return this.transactionId;
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public NbtCompound getNbt() {
         return this.nbt;
     }

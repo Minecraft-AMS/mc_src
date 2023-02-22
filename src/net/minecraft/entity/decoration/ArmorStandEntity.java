@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.decoration;
 
 import java.util.List;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.piston.PistonBehavior;
@@ -49,18 +45,31 @@ import net.minecraft.util.math.EulerAngle;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class ArmorStandEntity
 extends LivingEntity {
+    public static final int field_30443 = 5;
+    private static final boolean field_30445 = true;
     private static final EulerAngle DEFAULT_HEAD_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
     private static final EulerAngle DEFAULT_BODY_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
     private static final EulerAngle DEFAULT_LEFT_ARM_ROTATION = new EulerAngle(-10.0f, 0.0f, -10.0f);
     private static final EulerAngle DEFAULT_RIGHT_ARM_ROTATION = new EulerAngle(-15.0f, 0.0f, 10.0f);
     private static final EulerAngle DEFAULT_LEFT_LEG_ROTATION = new EulerAngle(-1.0f, 0.0f, -1.0f);
     private static final EulerAngle DEFAULT_RIGHT_LEG_ROTATION = new EulerAngle(1.0f, 0.0f, 1.0f);
-    private static final EntityDimensions field_26745 = new EntityDimensions(0.0f, 0.0f, true);
-    private static final EntityDimensions field_26746 = EntityType.ARMOR_STAND.getDimensions().scaled(0.5f);
+    private static final EntityDimensions MARKER_DIMENSIONS = new EntityDimensions(0.0f, 0.0f, true);
+    private static final EntityDimensions SMALL_DIMENSIONS = EntityType.ARMOR_STAND.getDimensions().scaled(0.5f);
+    private static final double field_30447 = 0.1;
+    private static final double field_30448 = 0.9;
+    private static final double field_30449 = 0.4;
+    private static final double field_30450 = 1.6;
+    public static final int field_30446 = 8;
+    public static final int field_30451 = 16;
+    public static final int SMALL_FLAG = 1;
+    public static final int SHOW_ARMS_FLAG = 4;
+    public static final int HIDE_BASE_PLATE_FLAG = 8;
+    public static final int MARKER_FLAG = 16;
     public static final TrackedData<Byte> ARMOR_STAND_FLAGS = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.BYTE);
     public static final TrackedData<EulerAngle> TRACKER_HEAD_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
     public static final TrackedData<EulerAngle> TRACKER_BODY_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
@@ -146,6 +155,7 @@ extends LivingEntity {
 
     @Override
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
+        this.processEquippedStack(stack);
         switch (slot.getType()) {
             case HAND: {
                 this.onEquipStack(stack);
@@ -157,31 +167,6 @@ extends LivingEntity {
                 this.armorItems.set(slot.getEntitySlotId(), stack);
             }
         }
-    }
-
-    @Override
-    public boolean equip(int slot, ItemStack item) {
-        EquipmentSlot equipmentSlot;
-        if (slot == 98) {
-            equipmentSlot = EquipmentSlot.MAINHAND;
-        } else if (slot == 99) {
-            equipmentSlot = EquipmentSlot.OFFHAND;
-        } else if (slot == 100 + EquipmentSlot.HEAD.getEntitySlotId()) {
-            equipmentSlot = EquipmentSlot.HEAD;
-        } else if (slot == 100 + EquipmentSlot.CHEST.getEntitySlotId()) {
-            equipmentSlot = EquipmentSlot.CHEST;
-        } else if (slot == 100 + EquipmentSlot.LEGS.getEntitySlotId()) {
-            equipmentSlot = EquipmentSlot.LEGS;
-        } else if (slot == 100 + EquipmentSlot.FEET.getEntitySlotId()) {
-            equipmentSlot = EquipmentSlot.FEET;
-        } else {
-            return false;
-        }
-        if (item.isEmpty() || MobEntity.canEquipmentSlotContain(equipmentSlot, item) || equipmentSlot == EquipmentSlot.HEAD) {
-            this.equipStack(equipmentSlot, item);
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -310,7 +295,7 @@ extends LivingEntity {
     @Override
     public ActionResult interactAt(PlayerEntity player, Vec3d hitPos, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (this.isMarker() || itemStack.getItem() == Items.NAME_TAG) {
+        if (this.isMarker() || itemStack.isOf(Items.NAME_TAG)) {
             return ActionResult.PASS;
         }
         if (player.isSpectator()) {
@@ -389,7 +374,7 @@ extends LivingEntity {
         if (itemStack.isEmpty() && (this.disabledSlots & 1 << slot.getArmorStandSlotId() + 16) != 0) {
             return false;
         }
-        if (player.abilities.creativeMode && itemStack.isEmpty() && !stack.isEmpty()) {
+        if (player.getAbilities().creativeMode && itemStack.isEmpty() && !stack.isEmpty()) {
             ItemStack itemStack2 = stack.copy();
             itemStack2.setCount(1);
             this.equipStack(slot, itemStack2);
@@ -412,11 +397,11 @@ extends LivingEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (this.world.isClient || this.removed) {
+        if (this.world.isClient || this.isRemoved()) {
             return false;
         }
         if (DamageSource.OUT_OF_WORLD.equals(source)) {
-            this.remove();
+            this.kill();
             return false;
         }
         if (this.isInvulnerableTo(source) || this.invisible || this.isMarker()) {
@@ -424,7 +409,7 @@ extends LivingEntity {
         }
         if (source.isExplosive()) {
             this.onBreak(source);
-            this.remove();
+            this.kill();
             return false;
         }
         if (DamageSource.IN_FIRE.equals(source)) {
@@ -445,29 +430,29 @@ extends LivingEntity {
         if (!bl3 && !bl) {
             return false;
         }
-        if (source.getAttacker() instanceof PlayerEntity && !((PlayerEntity)source.getAttacker()).abilities.allowModifyWorld) {
+        if (source.getAttacker() instanceof PlayerEntity && !((PlayerEntity)source.getAttacker()).getAbilities().allowModifyWorld) {
             return false;
         }
         if (source.isSourceCreativePlayer()) {
             this.playBreakSound();
             this.spawnBreakParticles();
-            this.remove();
+            this.kill();
             return bl2;
         }
         long l = this.world.getTime();
         if (l - this.lastHitTime <= 5L || bl) {
             this.breakAndDropItem(source);
             this.spawnBreakParticles();
-            this.remove();
+            this.kill();
         } else {
             this.world.sendEntityStatus(this, (byte)32);
+            this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
             this.lastHitTime = l;
         }
         return true;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 32) {
             if (this.world.isClient) {
@@ -480,7 +465,6 @@ extends LivingEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         double d = this.getBoundingBox().getAverageSideLength() * 4.0;
         if (Double.isNaN(d) || d == 0.0) {
@@ -499,9 +483,10 @@ extends LivingEntity {
         float f = this.getHealth();
         if ((f -= amount) <= 0.5f) {
             this.onBreak(damageSource);
-            this.remove();
+            this.kill();
         } else {
             this.setHealth(f);
+            this.emitGameEvent(GameEvent.ENTITY_DAMAGED, damageSource.getAttacker());
         }
     }
 
@@ -536,7 +521,7 @@ extends LivingEntity {
     @Override
     protected float turnHead(float bodyRotation, float headRotation) {
         this.prevBodyYaw = this.prevYaw;
-        this.bodyYaw = this.yaw;
+        this.bodyYaw = this.getYaw();
         return 0.0f;
     }
 
@@ -617,7 +602,7 @@ extends LivingEntity {
 
     @Override
     public void kill() {
-        this.remove();
+        this.remove(Entity.RemovalReason.KILLED);
     }
 
     @Override
@@ -708,22 +693,18 @@ extends LivingEntity {
         return this.bodyRotation;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public EulerAngle getLeftArmRotation() {
         return this.leftArmRotation;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public EulerAngle getRightArmRotation() {
         return this.rightArmRotation;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public EulerAngle getLeftLegRotation() {
         return this.leftLegRotation;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public EulerAngle getRightLegRotation() {
         return this.rightLegRotation;
     }
@@ -785,21 +766,20 @@ extends LivingEntity {
 
     @Override
     public EntityDimensions getDimensions(EntityPose pose) {
-        return this.method_31168(this.isMarker());
+        return this.getDimensions(this.isMarker());
     }
 
-    private EntityDimensions method_31168(boolean bl) {
-        if (bl) {
-            return field_26745;
+    private EntityDimensions getDimensions(boolean marker) {
+        if (marker) {
+            return MARKER_DIMENSIONS;
         }
-        return this.isBaby() ? field_26746 : this.getType().getDimensions();
+        return this.isBaby() ? SMALL_DIMENSIONS : this.getType().getDimensions();
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Vec3d getClientCameraPosVec(float tickDelta) {
         if (this.isMarker()) {
-            Box box = this.method_31168(false).getBoxAt(this.getPos());
+            Box box = this.getDimensions(false).getBoxAt(this.getPos());
             BlockPos blockPos = this.getBlockPos();
             int i = Integer.MIN_VALUE;
             for (BlockPos blockPos2 : BlockPos.iterate(new BlockPos(box.minX, box.minY, box.minZ), new BlockPos(box.maxX, box.maxY, box.maxZ))) {
@@ -814,6 +794,16 @@ extends LivingEntity {
             return Vec3d.ofCenter(blockPos);
         }
         return super.getClientCameraPosVec(tickDelta);
+    }
+
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(Items.ARMOR_STAND);
+    }
+
+    @Override
+    public boolean isPartOfGame() {
+        return !this.isInvisible() && !this.isMarker();
     }
 }
 

@@ -28,6 +28,7 @@ public class BlockStateFlattening {
     private static final Dynamic<?>[] field_24646 = new Dynamic[256];
     private static final Object2IntMap<Dynamic<?>> OLD_STATE_TO_ID = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> object2IntOpenHashMap.defaultReturnValue(-1));
     private static final Object2IntMap<String> OLD_BLOCK_TO_ID = (Object2IntMap)DataFixUtils.make((Object)new Object2IntOpenHashMap(), object2IntOpenHashMap -> object2IntOpenHashMap.defaultReturnValue(-1));
+    static final String field_29869 = "%%FILTER_ME%%";
 
     private static void putStates(int oldId, String newStateStr, String ... oldStateStrings) {
         Dynamic<?> dynamic = BlockStateFlattening.parseState(newStateStr);
@@ -95,11 +96,7 @@ public class BlockStateFlattening {
         return dynamic == null ? field_24645[0] : dynamic;
     }
 
-    /*
-     * Opcode count of 30443 triggered aggressive code reduction.  Override with --aggressivesizethreshold.
-     */
-    static {
-        OLD_STATE_TO_ID.defaultReturnValue(-1);
+    static void putStatesFromBlocks0To15() {
         BlockStateFlattening.putStates(0, "{Name:'minecraft:air'}", "{Name:'minecraft:air'}");
         BlockStateFlattening.putStates(16, "{Name:'minecraft:stone'}", "{Name:'minecraft:stone',Properties:{variant:'stone'}}");
         BlockStateFlattening.putStates(17, "{Name:'minecraft:granite'}", "{Name:'minecraft:stone',Properties:{variant:'granite'}}");
@@ -201,6 +198,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(208, "{Name:'minecraft:gravel'}", "{Name:'minecraft:gravel'}");
         BlockStateFlattening.putStates(224, "{Name:'minecraft:gold_ore'}", "{Name:'minecraft:gold_ore'}");
         BlockStateFlattening.putStates(240, "{Name:'minecraft:iron_ore'}", "{Name:'minecraft:iron_ore'}");
+    }
+
+    static void putStatesFromBlocks16To31() {
         BlockStateFlattening.putStates(256, "{Name:'minecraft:coal_ore'}", "{Name:'minecraft:coal_ore'}");
         BlockStateFlattening.putStates(272, "{Name:'minecraft:oak_log',Properties:{axis:'y'}}", "{Name:'minecraft:log',Properties:{axis:'y',variant:'oak'}}");
         BlockStateFlattening.putStates(273, "{Name:'minecraft:spruce_log',Properties:{axis:'y'}}", "{Name:'minecraft:log',Properties:{axis:'y',variant:'spruce'}}");
@@ -307,6 +307,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(496, "{Name:'minecraft:dead_bush'}", "{Name:'minecraft:tallgrass',Properties:{type:'dead_bush'}}");
         BlockStateFlattening.putStates(497, "{Name:'minecraft:grass'}", "{Name:'minecraft:tallgrass',Properties:{type:'tall_grass'}}");
         BlockStateFlattening.putStates(498, "{Name:'minecraft:fern'}", "{Name:'minecraft:tallgrass',Properties:{type:'fern'}}");
+    }
+
+    static void putStatesFromBlocks32To47() {
         BlockStateFlattening.putStates(512, "{Name:'minecraft:dead_bush'}", "{Name:'minecraft:deadbush'}");
         BlockStateFlattening.putStates(528, "{Name:'minecraft:piston',Properties:{extended:'false',facing:'down'}}", "{Name:'minecraft:piston',Properties:{extended:'false',facing:'down'}}");
         BlockStateFlattening.putStates(529, "{Name:'minecraft:piston',Properties:{extended:'false',facing:'up'}}", "{Name:'minecraft:piston',Properties:{extended:'false',facing:'up'}}");
@@ -410,6 +413,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(736, "{Name:'minecraft:tnt',Properties:{unstable:'false'}}", "{Name:'minecraft:tnt',Properties:{explode:'false'}}");
         BlockStateFlattening.putStates(737, "{Name:'minecraft:tnt',Properties:{unstable:'true'}}", "{Name:'minecraft:tnt',Properties:{explode:'true'}}");
         BlockStateFlattening.putStates(752, "{Name:'minecraft:bookshelf'}", "{Name:'minecraft:bookshelf'}");
+    }
+
+    static void putStatesFromBlocks48To63() {
         BlockStateFlattening.putStates(768, "{Name:'minecraft:mossy_cobblestone'}", "{Name:'minecraft:mossy_cobblestone'}");
         BlockStateFlattening.putStates(784, "{Name:'minecraft:obsidian'}", "{Name:'minecraft:obsidian'}");
         BlockStateFlattening.putStates(801, "{Name:'minecraft:wall_torch',Properties:{facing:'east'}}", "{Name:'minecraft:torch',Properties:{facing:'east'}}");
@@ -505,6 +511,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(1021, "{Name:'minecraft:sign',Properties:{rotation:'13'}}", "{Name:'minecraft:standing_sign',Properties:{rotation:'13'}}");
         BlockStateFlattening.putStates(1022, "{Name:'minecraft:sign',Properties:{rotation:'14'}}", "{Name:'minecraft:standing_sign',Properties:{rotation:'14'}}");
         BlockStateFlattening.putStates(1023, "{Name:'minecraft:sign',Properties:{rotation:'15'}}", "{Name:'minecraft:standing_sign',Properties:{rotation:'15'}}");
+    }
+
+    static void putStatesFromBlocks64To79() {
         BlockStateFlattening.putStates(1024, "{Name:'minecraft:oak_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'east',half:'lower',hinge:'left',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'east',half:'lower',hinge:'left',open:'false',powered:'true'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'true'}}");
         BlockStateFlattening.putStates(1025, "{Name:'minecraft:oak_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'south',half:'lower',hinge:'left',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'south',half:'lower',hinge:'left',open:'false',powered:'true'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'true'}}");
         BlockStateFlattening.putStates(1026, "{Name:'minecraft:oak_door',Properties:{facing:'west',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'west',half:'lower',hinge:'left',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'west',half:'lower',hinge:'left',open:'false',powered:'true'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'west',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:wooden_door',Properties:{facing:'west',half:'lower',hinge:'right',open:'false',powered:'true'}}");
@@ -616,6 +625,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(1254, "{Name:'minecraft:snow',Properties:{layers:'7'}}", "{Name:'minecraft:snow_layer',Properties:{layers:'7'}}");
         BlockStateFlattening.putStates(1255, "{Name:'minecraft:snow',Properties:{layers:'8'}}", "{Name:'minecraft:snow_layer',Properties:{layers:'8'}}");
         BlockStateFlattening.putStates(1264, "{Name:'minecraft:ice'}", "{Name:'minecraft:ice'}");
+    }
+
+    static void putStatesFromBlocks80To95() {
         BlockStateFlattening.putStates(1280, "{Name:'minecraft:snow_block'}", "{Name:'minecraft:snow'}");
         BlockStateFlattening.putStates(1296, "{Name:'minecraft:cactus',Properties:{age:'0'}}", "{Name:'minecraft:cactus',Properties:{age:'0'}}");
         BlockStateFlattening.putStates(1297, "{Name:'minecraft:cactus',Properties:{age:'1'}}", "{Name:'minecraft:cactus',Properties:{age:'1'}}");
@@ -721,6 +733,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(1533, "{Name:'minecraft:green_stained_glass'}", "{Name:'minecraft:stained_glass',Properties:{color:'green'}}");
         BlockStateFlattening.putStates(1534, "{Name:'minecraft:red_stained_glass'}", "{Name:'minecraft:stained_glass',Properties:{color:'red'}}");
         BlockStateFlattening.putStates(1535, "{Name:'minecraft:black_stained_glass'}", "{Name:'minecraft:stained_glass',Properties:{color:'black'}}");
+    }
+
+    static void putStatesFromBlocks96To111() {
         BlockStateFlattening.putStates(1536, "{Name:'minecraft:oak_trapdoor',Properties:{facing:'north',half:'bottom',open:'false'}}", "{Name:'minecraft:trapdoor',Properties:{facing:'north',half:'bottom',open:'false'}}");
         BlockStateFlattening.putStates(1537, "{Name:'minecraft:oak_trapdoor',Properties:{facing:'south',half:'bottom',open:'false'}}", "{Name:'minecraft:trapdoor',Properties:{facing:'south',half:'bottom',open:'false'}}");
         BlockStateFlattening.putStates(1538, "{Name:'minecraft:oak_trapdoor',Properties:{facing:'west',half:'bottom',open:'false'}}", "{Name:'minecraft:trapdoor',Properties:{facing:'west',half:'bottom',open:'false'}}");
@@ -848,6 +863,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(1751, "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'straight'}}", "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'inner_left'}}", "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'inner_right'}}", "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'outer_left'}}", "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'outer_right'}}", "{Name:'minecraft:stone_brick_stairs',Properties:{facing:'north',half:'top',shape:'straight'}}");
         BlockStateFlattening.putStates(1760, "{Name:'minecraft:mycelium',Properties:{snowy:'false'}}", "{Name:'minecraft:mycelium',Properties:{snowy:'false'}}", "{Name:'minecraft:mycelium',Properties:{snowy:'true'}}");
         BlockStateFlattening.putStates(1776, "{Name:'minecraft:lily_pad'}", "{Name:'minecraft:waterlily'}");
+    }
+
+    static void putStatesFromBlocks112To127() {
         BlockStateFlattening.putStates(1792, "{Name:'minecraft:nether_bricks'}", "{Name:'minecraft:nether_brick'}");
         BlockStateFlattening.putStates(1808, "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:nether_brick_fence',Properties:{east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(1824, "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'straight'}}", "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'inner_left'}}", "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'inner_right'}}", "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'outer_left'}}", "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'outer_right'}}", "{Name:'minecraft:nether_brick_stairs',Properties:{facing:'east',half:'bottom',shape:'straight'}}");
@@ -918,6 +936,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(2041, "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'west'}}", "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'west'}}");
         BlockStateFlattening.putStates(2042, "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'north'}}", "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'north'}}");
         BlockStateFlattening.putStates(2043, "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'east'}}", "{Name:'minecraft:cocoa',Properties:{age:'2',facing:'east'}}");
+    }
+
+    static void putStatesFromBlocks128To143() {
         BlockStateFlattening.putStates(2048, "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'straight'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'inner_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'inner_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'outer_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'outer_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'east',half:'bottom',shape:'straight'}}");
         BlockStateFlattening.putStates(2049, "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'straight'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'inner_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'inner_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'outer_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'outer_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'west',half:'bottom',shape:'straight'}}");
         BlockStateFlattening.putStates(2050, "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'straight'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'inner_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'inner_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'outer_left'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'outer_right'}}", "{Name:'minecraft:sandstone_stairs',Properties:{facing:'south',half:'bottom',shape:'straight'}}");
@@ -1046,6 +1067,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(2299, "{Name:'minecraft:oak_button',Properties:{face:'wall',facing:'south',powered:'true'}}", "{Name:'minecraft:wooden_button',Properties:{facing:'south',powered:'true'}}");
         BlockStateFlattening.putStates(2300, "{Name:'minecraft:oak_button',Properties:{face:'wall',facing:'north',powered:'true'}}", "{Name:'minecraft:wooden_button',Properties:{facing:'north',powered:'true'}}");
         BlockStateFlattening.putStates(2301, "{Name:'minecraft:oak_button',Properties:{face:'floor',facing:'north',powered:'true'}}", "{Name:'minecraft:wooden_button',Properties:{facing:'up',powered:'true'}}");
+    }
+
+    static void putStatesFromBlocks144To159() {
         BlockStateFlattening.putStates(2304, "{Name:'%%FILTER_ME%%',Properties:{facing:'down',nodrop:'false'}}", "{Name:'minecraft:skull',Properties:{facing:'down',nodrop:'false'}}");
         BlockStateFlattening.putStates(2305, "{Name:'%%FILTER_ME%%',Properties:{facing:'up',nodrop:'false'}}", "{Name:'minecraft:skull',Properties:{facing:'up',nodrop:'false'}}");
         BlockStateFlattening.putStates(2306, "{Name:'%%FILTER_ME%%',Properties:{facing:'north',nodrop:'false'}}", "{Name:'minecraft:skull',Properties:{facing:'north',nodrop:'false'}}");
@@ -1219,6 +1243,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(2557, "{Name:'minecraft:green_terracotta'}", "{Name:'minecraft:stained_hardened_clay',Properties:{color:'green'}}");
         BlockStateFlattening.putStates(2558, "{Name:'minecraft:red_terracotta'}", "{Name:'minecraft:stained_hardened_clay',Properties:{color:'red'}}");
         BlockStateFlattening.putStates(2559, "{Name:'minecraft:black_terracotta'}", "{Name:'minecraft:stained_hardened_clay',Properties:{color:'black'}}");
+    }
+
+    static void putStatesFromBlocks160To175() {
         BlockStateFlattening.putStates(2560, "{Name:'minecraft:white_stained_glass_pane',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'white',east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(2561, "{Name:'minecraft:orange_stained_glass_pane',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'orange',east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(2562, "{Name:'minecraft:magenta_stained_glass_pane',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:stained_glass_pane',Properties:{color:'magenta',east:'true',north:'true',south:'true',west:'true'}}");
@@ -1321,6 +1348,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(2809, "{Name:'minecraft:peony',Properties:{half:'upper'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'double_fern'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'double_grass'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'double_rose'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'paeonia'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'sunflower'}}", "{Name:'minecraft:double_plant',Properties:{facing:'west',half:'upper',variant:'syringa'}}");
         BlockStateFlattening.putStates(2810, "{Name:'minecraft:peony',Properties:{half:'upper'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'double_fern'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'double_grass'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'double_rose'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'paeonia'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'sunflower'}}", "{Name:'minecraft:double_plant',Properties:{facing:'north',half:'upper',variant:'syringa'}}");
         BlockStateFlattening.putStates(2811, "{Name:'minecraft:peony',Properties:{half:'upper'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'double_fern'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'double_grass'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'double_rose'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'paeonia'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'sunflower'}}", "{Name:'minecraft:double_plant',Properties:{facing:'east',half:'upper',variant:'syringa'}}");
+    }
+
+    static void putStatesFromBlocks176To191() {
         BlockStateFlattening.putStates(2816, "{Name:'minecraft:white_banner',Properties:{rotation:'0'}}", "{Name:'minecraft:standing_banner',Properties:{rotation:'0'}}");
         BlockStateFlattening.putStates(2817, "{Name:'minecraft:white_banner',Properties:{rotation:'1'}}", "{Name:'minecraft:standing_banner',Properties:{rotation:'1'}}");
         BlockStateFlattening.putStates(2818, "{Name:'minecraft:white_banner',Properties:{rotation:'2'}}", "{Name:'minecraft:standing_banner',Properties:{rotation:'2'}}");
@@ -1456,6 +1486,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(3024, "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:birch_fence',Properties:{east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(3040, "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:jungle_fence',Properties:{east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(3056, "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:dark_oak_fence',Properties:{east:'true',north:'true',south:'true',west:'true'}}");
+    }
+
+    static void putStatesFromBlocks192To207() {
         BlockStateFlattening.putStates(3072, "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'false',north:'true',south:'true',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'false',south:'false',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'false',south:'false',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'false',south:'true',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'false',south:'true',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'true',south:'false',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'true',south:'false',west:'true'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'true',south:'true',west:'false'}}", "{Name:'minecraft:acacia_fence',Properties:{east:'true',north:'true',south:'true',west:'true'}}");
         BlockStateFlattening.putStates(3088, "{Name:'minecraft:spruce_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'east',half:'lower',hinge:'left',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'east',half:'lower',hinge:'left',open:'false',powered:'true'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'east',half:'lower',hinge:'right',open:'false',powered:'true'}}");
         BlockStateFlattening.putStates(3089, "{Name:'minecraft:spruce_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'south',half:'lower',hinge:'left',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'south',half:'lower',hinge:'left',open:'false',powered:'true'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'false'}}", "{Name:'minecraft:spruce_door',Properties:{facing:'south',half:'lower',hinge:'right',open:'false',powered:'true'}}");
@@ -1550,6 +1583,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(3313, "{Name:'minecraft:beetroots',Properties:{age:'1'}}", "{Name:'minecraft:beetroots',Properties:{age:'1'}}");
         BlockStateFlattening.putStates(3314, "{Name:'minecraft:beetroots',Properties:{age:'2'}}", "{Name:'minecraft:beetroots',Properties:{age:'2'}}");
         BlockStateFlattening.putStates(3315, "{Name:'minecraft:beetroots',Properties:{age:'3'}}", "{Name:'minecraft:beetroots',Properties:{age:'3'}}");
+    }
+
+    static void putStatesFromBlocks208To223() {
         BlockStateFlattening.putStates(3328, "{Name:'minecraft:grass_path'}", "{Name:'minecraft:grass_path'}");
         BlockStateFlattening.putStates(3344, "{Name:'minecraft:end_gateway'}", "{Name:'minecraft:end_gateway'}");
         BlockStateFlattening.putStates(3360, "{Name:'minecraft:repeating_command_block',Properties:{conditional:'false',facing:'down'}}", "{Name:'minecraft:repeating_command_block',Properties:{conditional:'false',facing:'down'}}");
@@ -1629,6 +1665,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(3571, "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'south'}}", "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'south'}}");
         BlockStateFlattening.putStates(3572, "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'west'}}", "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'west'}}");
         BlockStateFlattening.putStates(3573, "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'east'}}", "{Name:'minecraft:yellow_shulker_box',Properties:{facing:'east'}}");
+    }
+
+    static void putStatesFromBlocks224To239() {
         BlockStateFlattening.putStates(3584, "{Name:'minecraft:lime_shulker_box',Properties:{facing:'down'}}", "{Name:'minecraft:lime_shulker_box',Properties:{facing:'down'}}");
         BlockStateFlattening.putStates(3585, "{Name:'minecraft:lime_shulker_box',Properties:{facing:'up'}}", "{Name:'minecraft:lime_shulker_box',Properties:{facing:'up'}}");
         BlockStateFlattening.putStates(3586, "{Name:'minecraft:lime_shulker_box',Properties:{facing:'north'}}", "{Name:'minecraft:lime_shulker_box',Properties:{facing:'north'}}");
@@ -1715,6 +1754,9 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(3825, "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'west'}}", "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'west'}}");
         BlockStateFlattening.putStates(3826, "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'north'}}", "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'north'}}");
         BlockStateFlattening.putStates(3827, "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'east'}}", "{Name:'minecraft:yellow_glazed_terracotta',Properties:{facing:'east'}}");
+    }
+
+    static void putStatesFromBlocks240To255() {
         BlockStateFlattening.putStates(3840, "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'south'}}", "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'south'}}");
         BlockStateFlattening.putStates(3841, "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'west'}}", "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'west'}}");
         BlockStateFlattening.putStates(3842, "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'north'}}", "{Name:'minecraft:lime_glazed_terracotta',Properties:{facing:'north'}}");
@@ -1796,6 +1838,26 @@ public class BlockStateFlattening {
         BlockStateFlattening.putStates(4082, "{Name:'minecraft:structure_block',Properties:{mode:'corner'}}", "{Name:'minecraft:structure_block',Properties:{mode:'corner'}}");
         BlockStateFlattening.putStates(4083, "{Name:'minecraft:structure_block',Properties:{mode:'data'}}", "{Name:'minecraft:structure_block',Properties:{mode:'data'}}");
         BlockStateFlattening.fillEmptyStates();
+    }
+
+    static {
+        OLD_STATE_TO_ID.defaultReturnValue(-1);
+        BlockStateFlattening.putStatesFromBlocks0To15();
+        BlockStateFlattening.putStatesFromBlocks16To31();
+        BlockStateFlattening.putStatesFromBlocks32To47();
+        BlockStateFlattening.putStatesFromBlocks48To63();
+        BlockStateFlattening.putStatesFromBlocks64To79();
+        BlockStateFlattening.putStatesFromBlocks80To95();
+        BlockStateFlattening.putStatesFromBlocks96To111();
+        BlockStateFlattening.putStatesFromBlocks112To127();
+        BlockStateFlattening.putStatesFromBlocks128To143();
+        BlockStateFlattening.putStatesFromBlocks144To159();
+        BlockStateFlattening.putStatesFromBlocks160To175();
+        BlockStateFlattening.putStatesFromBlocks176To191();
+        BlockStateFlattening.putStatesFromBlocks192To207();
+        BlockStateFlattening.putStatesFromBlocks208To223();
+        BlockStateFlattening.putStatesFromBlocks224To239();
+        BlockStateFlattening.putStatesFromBlocks240To255();
     }
 }
 

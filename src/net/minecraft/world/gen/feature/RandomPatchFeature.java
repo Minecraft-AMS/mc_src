@@ -14,9 +14,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.RandomPatchFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 
 public class RandomPatchFeature
 extends Feature<RandomPatchFeatureConfig> {
@@ -25,7 +25,11 @@ extends Feature<RandomPatchFeatureConfig> {
     }
 
     @Override
-    public boolean generate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, RandomPatchFeatureConfig randomPatchFeatureConfig) {
+    public boolean generate(FeatureContext<RandomPatchFeatureConfig> context) {
+        RandomPatchFeatureConfig randomPatchFeatureConfig = context.getConfig();
+        Random random = context.getRandom();
+        BlockPos blockPos = context.getOrigin();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
         BlockState blockState = randomPatchFeatureConfig.stateProvider.getBlockState(random, blockPos);
         BlockPos blockPos2 = randomPatchFeatureConfig.project ? structureWorldAccess.getTopPosition(Heightmap.Type.WORLD_SURFACE_WG, blockPos) : blockPos;
         int i = 0;

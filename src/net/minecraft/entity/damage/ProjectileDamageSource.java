@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ProjectileDamageSource
 extends EntityDamageSource {
+    @Nullable
     private final Entity attacker;
 
     public ProjectileDamageSource(String name, Entity projectile, @Nullable Entity attacker) {

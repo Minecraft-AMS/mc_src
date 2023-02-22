@@ -19,7 +19,7 @@ import net.minecraft.util.Identifier;
 
 public class EntityHurtPlayerCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("entity_hurt_player");
+    static final Identifier ID = new Identifier("entity_hurt_player");
 
     @Override
     public Identifier getId() {
@@ -33,7 +33,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, DamageSource source, float dealt, float taken, boolean blocked) {
-        this.test(player, conditions -> conditions.matches(player, source, dealt, taken, blocked));
+        this.trigger(player, conditions -> conditions.matches(player, source, dealt, taken, blocked));
     }
 
     @Override
@@ -48,6 +48,14 @@ extends AbstractCriterion<Conditions> {
         public Conditions(EntityPredicate.Extended player, DamagePredicate damage) {
             super(ID, player);
             this.damage = damage;
+        }
+
+        public static Conditions create() {
+            return new Conditions(EntityPredicate.Extended.EMPTY, DamagePredicate.ANY);
+        }
+
+        public static Conditions create(DamagePredicate predicate) {
+            return new Conditions(EntityPredicate.Extended.EMPTY, predicate);
         }
 
         public static Conditions create(DamagePredicate.Builder damageBuilder) {

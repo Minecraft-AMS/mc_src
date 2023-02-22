@@ -9,6 +9,7 @@ package net.minecraft.client.font;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.util.math.Matrix4f;
@@ -17,6 +18,7 @@ import net.minecraft.util.math.Matrix4f;
 public class GlyphRenderer {
     private final RenderLayer textLayer;
     private final RenderLayer seeThroughTextLayer;
+    private final RenderLayer polygonOffsetTextLayer;
     private final float minU;
     private final float maxU;
     private final float minV;
@@ -26,9 +28,10 @@ public class GlyphRenderer {
     private final float minY;
     private final float maxY;
 
-    public GlyphRenderer(RenderLayer textLayer, RenderLayer seeThroughTextLayer, float minU, float maxU, float minV, float maxV, float minX, float maxX, float minY, float maxY) {
+    public GlyphRenderer(RenderLayer textLayer, RenderLayer seeThroughTextLayer, RenderLayer polygonOffsetTextLayer, float minU, float maxU, float minV, float maxV, float minX, float maxX, float minY, float maxY) {
         this.textLayer = textLayer;
         this.seeThroughTextLayer = seeThroughTextLayer;
+        this.polygonOffsetTextLayer = polygonOffsetTextLayer;
         this.minU = minU;
         this.maxU = maxU;
         this.minV = minV;
@@ -56,33 +59,42 @@ public class GlyphRenderer {
     }
 
     public void drawRectangle(Rectangle rectangle, Matrix4f matrix, VertexConsumer vertexConsumer, int light) {
-        vertexConsumer.vertex(matrix, rectangle.xMin, rectangle.yMin, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.minU, this.minV).light(light).next();
-        vertexConsumer.vertex(matrix, rectangle.xMax, rectangle.yMin, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.minU, this.maxV).light(light).next();
-        vertexConsumer.vertex(matrix, rectangle.xMax, rectangle.yMax, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.maxU, this.maxV).light(light).next();
-        vertexConsumer.vertex(matrix, rectangle.xMin, rectangle.yMax, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.maxU, this.minV).light(light).next();
+        vertexConsumer.vertex(matrix, rectangle.minX, rectangle.minY, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.minU, this.minV).light(light).next();
+        vertexConsumer.vertex(matrix, rectangle.maxX, rectangle.minY, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.minU, this.maxV).light(light).next();
+        vertexConsumer.vertex(matrix, rectangle.maxX, rectangle.maxY, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.maxU, this.maxV).light(light).next();
+        vertexConsumer.vertex(matrix, rectangle.minX, rectangle.maxY, rectangle.zIndex).color(rectangle.red, rectangle.green, rectangle.blue, rectangle.alpha).texture(this.maxU, this.minV).light(light).next();
     }
 
-    public RenderLayer getLayer(boolean seeThrough) {
-        return seeThrough ? this.seeThroughTextLayer : this.textLayer;
+    public RenderLayer getLayer(TextRenderer.TextLayerType layerType) {
+        switch (layerType) {
+            default: {
+                return this.textLayer;
+            }
+            case SEE_THROUGH: {
+                return this.seeThroughTextLayer;
+            }
+            case POLYGON_OFFSET: 
+        }
+        return this.polygonOffsetTextLayer;
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class Rectangle {
-        protected final float xMin;
-        protected final float yMin;
-        protected final float xMax;
-        protected final float yMax;
+        protected final float minX;
+        protected final float minY;
+        protected final float maxX;
+        protected final float maxY;
         protected final float zIndex;
         protected final float red;
         protected final float green;
         protected final float blue;
         protected final float alpha;
 
-        public Rectangle(float xMin, float yMin, float xMax, float yMax, float zIndex, float red, float green, float blue, float alpha) {
-            this.xMin = xMin;
-            this.yMin = yMin;
-            this.xMax = xMax;
-            this.yMax = yMax;
+        public Rectangle(float minX, float minY, float maxX, float maxY, float zIndex, float red, float green, float blue, float alpha) {
+            this.minX = minX;
+            this.minY = minY;
+            this.maxX = maxX;
+            this.maxY = maxY;
             this.zIndex = zIndex;
             this.red = red;
             this.green = green;

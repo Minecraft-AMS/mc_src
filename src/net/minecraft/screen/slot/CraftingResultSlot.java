@@ -60,7 +60,7 @@ extends Slot {
     }
 
     @Override
-    public ItemStack onTakeItem(PlayerEntity player, ItemStack stack) {
+    public void onTakeItem(PlayerEntity player, ItemStack stack) {
         this.onCrafted(stack);
         DefaultedList<ItemStack> defaultedList = player.world.getRecipeManager().getRemainingStacks(RecipeType.CRAFTING, this.input, player.world);
         for (int i = 0; i < defaultedList.size(); ++i) {
@@ -75,15 +75,14 @@ extends Slot {
                 this.input.setStack(i, itemStack2);
                 continue;
             }
-            if (ItemStack.areItemsEqualIgnoreDamage(itemStack, itemStack2) && ItemStack.areTagsEqual(itemStack, itemStack2)) {
+            if (ItemStack.areItemsEqualIgnoreDamage(itemStack, itemStack2) && ItemStack.areNbtEqual(itemStack, itemStack2)) {
                 itemStack2.increment(itemStack.getCount());
                 this.input.setStack(i, itemStack2);
                 continue;
             }
-            if (this.player.inventory.insertStack(itemStack2)) continue;
+            if (this.player.getInventory().insertStack(itemStack2)) continue;
             this.player.dropItem(itemStack2, false);
         }
-        return stack;
     }
 }
 

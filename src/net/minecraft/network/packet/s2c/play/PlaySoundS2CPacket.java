@@ -2,15 +2,10 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.Validate
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -21,16 +16,14 @@ import org.apache.commons.lang3.Validate;
 
 public class PlaySoundS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private SoundEvent sound;
-    private SoundCategory category;
-    private int fixedX;
-    private int fixedY;
-    private int fixedZ;
-    private float volume;
-    private float pitch;
-
-    public PlaySoundS2CPacket() {
-    }
+    public static final float COORDINATE_SCALE = 8.0f;
+    private final SoundEvent sound;
+    private final SoundCategory category;
+    private final int fixedX;
+    private final int fixedY;
+    private final int fixedZ;
+    private final float volume;
+    private final float pitch;
 
     public PlaySoundS2CPacket(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
         Validate.notNull((Object)sound, (String)"sound", (Object[])new Object[0]);
@@ -43,8 +36,7 @@ implements Packet<ClientPlayPacketListener> {
         this.pitch = pitch;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PlaySoundS2CPacket(PacketByteBuf buf) {
         this.sound = (SoundEvent)Registry.SOUND_EVENT.get(buf.readVarInt());
         this.category = buf.readEnumConstant(SoundCategory.class);
         this.fixedX = buf.readInt();
@@ -55,7 +47,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeVarInt(Registry.SOUND_EVENT.getRawId(this.sound));
         buf.writeEnumConstant(this.category);
         buf.writeInt(this.fixedX);
@@ -65,37 +57,30 @@ implements Packet<ClientPlayPacketListener> {
         buf.writeFloat(this.pitch);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public SoundEvent getSound() {
         return this.sound;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public SoundCategory getCategory() {
         return this.category;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getX() {
         return (float)this.fixedX / 8.0f;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getY() {
         return (float)this.fixedY / 8.0f;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public double getZ() {
         return (float)this.fixedZ / 8.0f;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getVolume() {
         return this.volume;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public float getPitch() {
         return this.pitch;
     }

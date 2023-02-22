@@ -62,7 +62,7 @@ extends AbstractCollection<T> {
         if (!this.elementType.isAssignableFrom(type)) {
             throw new IllegalArgumentException("Don't know how to search for " + type);
         }
-        List list = this.elementsByType.computeIfAbsent(type, class_ -> this.allElements.stream().filter(class_::isInstance).collect(Collectors.toList()));
+        List list = this.elementsByType.computeIfAbsent(type, typeClass -> this.allElements.stream().filter(typeClass::isInstance).collect(Collectors.toList()));
         return Collections.unmodifiableCollection(list);
     }
 
@@ -74,7 +74,7 @@ extends AbstractCollection<T> {
         return Iterators.unmodifiableIterator(this.allElements.iterator());
     }
 
-    public List<T> method_29903() {
+    public List<T> copy() {
         return ImmutableList.copyOf(this.allElements);
     }
 

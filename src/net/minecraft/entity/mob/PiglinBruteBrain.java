@@ -19,6 +19,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
+import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.task.FindEntityTask;
 import net.minecraft.entity.ai.brain.task.FindInteractionTargetTask;
 import net.minecraft.entity.ai.brain.task.FollowMobTask;
@@ -40,35 +41,45 @@ import net.minecraft.entity.ai.brain.task.WanderAroundTask;
 import net.minecraft.entity.mob.AbstractPiglinEntity;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.mob.PiglinBruteEntity;
-import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.util.dynamic.GlobalPos;
 
 public class PiglinBruteBrain {
+    private static final int field_30589 = 600;
+    private static final int field_30590 = 20;
+    private static final double field_30591 = 0.0125;
+    private static final int field_30592 = 8;
+    private static final int field_30593 = 8;
+    private static final double field_30594 = 12.0;
+    private static final float field_30595 = 0.6f;
+    private static final int field_30596 = 2;
+    private static final int field_30597 = 100;
+    private static final int field_30598 = 5;
+
     protected static Brain<?> create(PiglinBruteEntity piglinBrute, Brain<PiglinBruteEntity> brain) {
-        PiglinBruteBrain.method_30257(piglinBrute, brain);
-        PiglinBruteBrain.method_30260(piglinBrute, brain);
-        PiglinBruteBrain.method_30262(piglinBrute, brain);
+        PiglinBruteBrain.addCoreActivities(piglinBrute, brain);
+        PiglinBruteBrain.addIdleActivities(piglinBrute, brain);
+        PiglinBruteBrain.addFightActivities(piglinBrute, brain);
         brain.setCoreActivities((Set<Activity>)ImmutableSet.of((Object)Activity.CORE));
         brain.setDefaultActivity(Activity.IDLE);
         brain.resetPossibleActivities();
         return brain;
     }
 
-    protected static void method_30250(PiglinBruteEntity piglinBruteEntity) {
-        GlobalPos globalPos = GlobalPos.create(piglinBruteEntity.world.getRegistryKey(), piglinBruteEntity.getBlockPos());
-        piglinBruteEntity.getBrain().remember(MemoryModuleType.HOME, globalPos);
+    protected static void setCurrentPosAsHome(PiglinBruteEntity piglinBrute) {
+        GlobalPos globalPos = GlobalPos.create(piglinBrute.world.getRegistryKey(), piglinBrute.getBlockPos());
+        piglinBrute.getBrain().remember(MemoryModuleType.HOME, globalPos);
     }
 
-    private static void method_30257(PiglinBruteEntity piglinBruteEntity, Brain<PiglinBruteEntity> brain) {
+    private static void addCoreActivities(PiglinBruteEntity piglinBrute, Brain<PiglinBruteEntity> brain) {
         brain.setTaskList(Activity.CORE, 0, (ImmutableList<Task<PiglinBruteEntity>>)ImmutableList.of((Object)new LookAroundTask(45, 90), (Object)new WanderAroundTask(), (Object)new OpenDoorsTask(), new ForgetAngryAtTargetTask()));
     }
 
-    private static void method_30260(PiglinBruteEntity piglinBruteEntity, Brain<PiglinBruteEntity> brain) {
+    private static void addIdleActivities(PiglinBruteEntity piglinBrute, Brain<PiglinBruteEntity> brain) {
         brain.setTaskList(Activity.IDLE, 10, (ImmutableList<Task<PiglinBruteEntity>>)ImmutableList.of(new UpdateAttackTargetTask<PiglinBruteEntity>(PiglinBruteBrain::method_30247), PiglinBruteBrain.method_30244(), PiglinBruteBrain.method_30254(), (Object)new FindInteractionTargetTask(EntityType.PLAYER, 4)));
     }
 
-    private static void method_30262(PiglinBruteEntity piglinBruteEntity, Brain<PiglinBruteEntity> brain) {
-        brain.setTaskList(Activity.FIGHT, 10, (ImmutableList<Task<PiglinBruteEntity>>)ImmutableList.of(new ForgetAttackTargetTask(livingEntity -> !PiglinBruteBrain.method_30248(piglinBruteEntity, livingEntity)), (Object)new RangedApproachTask(1.0f), (Object)new MeleeAttackTask(20)), MemoryModuleType.ATTACK_TARGET);
+    private static void addFightActivities(PiglinBruteEntity piglinBrute, Brain<PiglinBruteEntity> brain) {
+        brain.setTaskList(Activity.FIGHT, 10, (ImmutableList<Task<PiglinBruteEntity>>)ImmutableList.of(new ForgetAttackTargetTask(livingEntity -> !PiglinBruteBrain.method_30248(piglinBrute, livingEntity)), (Object)new RangedApproachTask(1.0f), (Object)new MeleeAttackTask(20)), MemoryModuleType.ATTACK_TARGET);
     }
 
     private static RandomTask<PiglinBruteEntity> method_30244() {
@@ -79,58 +90,59 @@ public class PiglinBruteBrain {
         return new RandomTask<PiglinBruteEntity>((List<Pair<Task<PiglinBruteEntity>, Integer>>)ImmutableList.of((Object)Pair.of((Object)new StrollTask(0.6f), (Object)2), (Object)Pair.of(FindEntityTask.create(EntityType.PIGLIN, 8, MemoryModuleType.INTERACTION_TARGET, 0.6f, 2), (Object)2), (Object)Pair.of(FindEntityTask.create(EntityType.PIGLIN_BRUTE, 8, MemoryModuleType.INTERACTION_TARGET, 0.6f, 2), (Object)2), (Object)Pair.of((Object)new GoToNearbyPositionTask(MemoryModuleType.HOME, 0.6f, 2, 100), (Object)2), (Object)Pair.of((Object)new GoToIfNearbyTask(MemoryModuleType.HOME, 0.6f, 5), (Object)2), (Object)Pair.of((Object)new WaitTask(30, 60), (Object)1)));
     }
 
-    protected static void method_30256(PiglinBruteEntity piglinBruteEntity) {
-        Brain<PiglinBruteEntity> brain = piglinBruteEntity.getBrain();
+    protected static void method_30256(PiglinBruteEntity piglinBrute) {
+        Brain<PiglinBruteEntity> brain = piglinBrute.getBrain();
         Activity activity = brain.getFirstPossibleNonCoreActivity().orElse(null);
         brain.resetPossibleActivities((List<Activity>)ImmutableList.of((Object)Activity.FIGHT, (Object)Activity.IDLE));
         Activity activity2 = brain.getFirstPossibleNonCoreActivity().orElse(null);
         if (activity != activity2) {
-            PiglinBruteBrain.method_30261(piglinBruteEntity);
+            PiglinBruteBrain.method_30261(piglinBrute);
         }
-        piglinBruteEntity.setAttacking(brain.hasMemoryModule(MemoryModuleType.ATTACK_TARGET));
+        piglinBrute.setAttacking(brain.hasMemoryModule(MemoryModuleType.ATTACK_TARGET));
     }
 
-    private static boolean method_30248(AbstractPiglinEntity abstractPiglinEntity, LivingEntity livingEntity) {
-        return PiglinBruteBrain.method_30247(abstractPiglinEntity).filter(livingEntity2 -> livingEntity2 == livingEntity).isPresent();
+    private static boolean method_30248(AbstractPiglinEntity piglin, LivingEntity livingEntity) {
+        return PiglinBruteBrain.method_30247(piglin).filter(livingEntity2 -> livingEntity2 == livingEntity).isPresent();
     }
 
-    private static Optional<? extends LivingEntity> method_30247(AbstractPiglinEntity abstractPiglinEntity) {
-        Optional<LivingEntity> optional = LookTargetUtil.getEntity(abstractPiglinEntity, MemoryModuleType.ANGRY_AT);
-        if (optional.isPresent() && PiglinBruteBrain.method_30245(optional.get())) {
+    private static Optional<? extends LivingEntity> method_30247(AbstractPiglinEntity piglin) {
+        Optional<LivingEntity> optional = LookTargetUtil.getEntity(piglin, MemoryModuleType.ANGRY_AT);
+        if (optional.isPresent() && Sensor.testAttackableTargetPredicateIgnoreVisibility(piglin, optional.get())) {
             return optional;
         }
-        Optional<? extends LivingEntity> optional2 = PiglinBruteBrain.method_30249(abstractPiglinEntity, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER);
+        Optional<? extends LivingEntity> optional2 = PiglinBruteBrain.method_30249(piglin, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER);
         if (optional2.isPresent()) {
             return optional2;
         }
-        return abstractPiglinEntity.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_VISIBLE_NEMESIS);
+        return piglin.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_VISIBLE_NEMESIS);
     }
 
-    private static boolean method_30245(LivingEntity livingEntity) {
-        return EntityPredicates.EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL.test(livingEntity);
+    private static Optional<? extends LivingEntity> method_30249(AbstractPiglinEntity piglin, MemoryModuleType<? extends LivingEntity> memoryModuleType) {
+        return piglin.getBrain().getOptionalMemory(memoryModuleType).filter(livingEntity -> livingEntity.isInRange(piglin, 12.0));
     }
 
-    private static Optional<? extends LivingEntity> method_30249(AbstractPiglinEntity abstractPiglinEntity, MemoryModuleType<? extends LivingEntity> memoryModuleType) {
-        return abstractPiglinEntity.getBrain().getOptionalMemory(memoryModuleType).filter(livingEntity -> livingEntity.isInRange(abstractPiglinEntity, 12.0));
-    }
-
-    protected static void method_30251(PiglinBruteEntity piglinBruteEntity, LivingEntity livingEntity) {
-        if (livingEntity instanceof AbstractPiglinEntity) {
+    protected static void tryRevenge(PiglinBruteEntity piglinBrute, LivingEntity target) {
+        if (target instanceof AbstractPiglinEntity) {
             return;
         }
-        PiglinBrain.tryRevenge(piglinBruteEntity, livingEntity);
+        PiglinBrain.tryRevenge(piglinBrute, target);
     }
 
-    protected static void method_30258(PiglinBruteEntity piglinBruteEntity) {
-        if ((double)piglinBruteEntity.world.random.nextFloat() < 0.0125) {
-            PiglinBruteBrain.method_30261(piglinBruteEntity);
+    protected static void method_35198(PiglinBruteEntity piglinBruteEntity, LivingEntity livingEntity) {
+        piglinBruteEntity.getBrain().forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        piglinBruteEntity.getBrain().remember(MemoryModuleType.ANGRY_AT, livingEntity.getUuid(), 600L);
+    }
+
+    protected static void method_30258(PiglinBruteEntity piglinBrute) {
+        if ((double)piglinBrute.world.random.nextFloat() < 0.0125) {
+            PiglinBruteBrain.method_30261(piglinBrute);
         }
     }
 
-    private static void method_30261(PiglinBruteEntity piglinBruteEntity) {
-        piglinBruteEntity.getBrain().getFirstPossibleNonCoreActivity().ifPresent(activity -> {
+    private static void method_30261(PiglinBruteEntity piglinBrute) {
+        piglinBrute.getBrain().getFirstPossibleNonCoreActivity().ifPresent(activity -> {
             if (activity == Activity.FIGHT) {
-                piglinBruteEntity.playAngrySound();
+                piglinBrute.playAngrySound();
             }
         });
     }

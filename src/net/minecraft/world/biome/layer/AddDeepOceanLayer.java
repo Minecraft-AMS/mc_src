@@ -7,10 +7,19 @@ import net.minecraft.world.biome.layer.BiomeLayers;
 import net.minecraft.world.biome.layer.type.CrossSamplingLayer;
 import net.minecraft.world.biome.layer.util.LayerRandomnessSource;
 
-public enum AddDeepOceanLayer implements CrossSamplingLayer
-{
-    INSTANCE;
+public final class AddDeepOceanLayer
+extends Enum<AddDeepOceanLayer>
+implements CrossSamplingLayer {
+    public static final /* enum */ AddDeepOceanLayer INSTANCE = new AddDeepOceanLayer();
+    private static final /* synthetic */ AddDeepOceanLayer[] field_16053;
 
+    public static AddDeepOceanLayer[] values() {
+        return (AddDeepOceanLayer[])field_16053.clone();
+    }
+
+    public static AddDeepOceanLayer valueOf(String string) {
+        return Enum.valueOf(AddDeepOceanLayer.class, string);
+    }
 
     @Override
     public int sample(LayerRandomnessSource context, int n, int e, int s, int w, int center) {
@@ -48,6 +57,14 @@ public enum AddDeepOceanLayer implements CrossSamplingLayer
             }
         }
         return center;
+    }
+
+    private static /* synthetic */ AddDeepOceanLayer[] method_36766() {
+        return new AddDeepOceanLayer[]{INSTANCE};
+    }
+
+    static {
+        field_16053 = AddDeepOceanLayer.method_36766();
     }
 }
 

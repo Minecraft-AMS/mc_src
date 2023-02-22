@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -18,17 +11,16 @@ import net.minecraft.util.math.BlockPos;
 
 public class UpdateCommandBlockC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private BlockPos pos;
-    private String command;
-    private boolean trackOutput;
-    private boolean conditional;
-    private boolean alwaysActive;
-    private CommandBlockBlockEntity.Type type;
+    private static final int TRACK_OUTPUT_MASK = 1;
+    private static final int CONDITIONAL_MASK = 2;
+    private static final int ALWAYS_ACTIVE_MASK = 4;
+    private final BlockPos pos;
+    private final String command;
+    private final boolean trackOutput;
+    private final boolean conditional;
+    private final boolean alwaysActive;
+    private final CommandBlockBlockEntity.Type type;
 
-    public UpdateCommandBlockC2SPacket() {
-    }
-
-    @Environment(value=EnvType.CLIENT)
     public UpdateCommandBlockC2SPacket(BlockPos pos, String command, CommandBlockBlockEntity.Type type, boolean trackOutput, boolean conditional, boolean alwaysActive) {
         this.pos = pos;
         this.command = command;
@@ -38,10 +30,9 @@ implements Packet<ServerPlayPacketListener> {
         this.type = type;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public UpdateCommandBlockC2SPacket(PacketByteBuf buf) {
         this.pos = buf.readBlockPos();
-        this.command = buf.readString(Short.MAX_VALUE);
+        this.command = buf.readString();
         this.type = buf.readEnumConstant(CommandBlockBlockEntity.Type.class);
         byte i = buf.readByte();
         this.trackOutput = (i & 1) != 0;
@@ -50,7 +41,7 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeBlockPos(this.pos);
         buf.writeString(this.command);
         buf.writeEnumConstant(this.type);

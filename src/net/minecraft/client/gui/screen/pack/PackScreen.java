@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
+ *  com.google.common.hash.Hashing
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.mutable.MutableBoolean
@@ -13,8 +14,11 @@
 package net.minecraft.client.gui.screen.pack;
 
 import com.google.common.collect.Maps;
+import com.google.common.hash.Hashing;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
@@ -38,9 +42,12 @@ import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.pack.PackListWidget;
 import net.minecraft.client.gui.screen.pack.ResourcePackOrganizer;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.text.LiteralText;
@@ -57,25 +64,27 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class PackScreen
 extends Screen {
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_32395 = 200;
     private static final Text DROP_INFO = new TranslatableText("pack.dropInfo").formatted(Formatting.GRAY);
-    private static final Text FOLDER_INFO = new TranslatableText("pack.folderInfo");
+    static final Text FOLDER_INFO = new TranslatableText("pack.folderInfo");
+    private static final int field_32396 = 20;
     private static final Identifier UNKNOWN_PACK = new Identifier("textures/misc/unknown_pack.png");
     private final ResourcePackOrganizer organizer;
     private final Screen parent;
     @Nullable
     private DirectoryWatcher directoryWatcher;
-    private long field_25788;
+    private long refreshTimeout;
     private PackListWidget availablePackList;
     private PackListWidget selectedPackList;
     private final File file;
     private ButtonWidget doneButton;
     private final Map<String, Identifier> iconTextures = Maps.newHashMap();
 
-    public PackScreen(Screen parent, ResourcePackManager packManager, Consumer<ResourcePackManager> consumer, File file, Text title) {
+    public PackScreen(Screen parent, ResourcePackManager packManager, Consumer<ResourcePackManager> applier, File file, Text title) {
         super(title);
         this.parent = parent;
-        this.organizer = new ResourcePackOrganizer(this::updatePackLists, this::getPackIconTexture, packManager, consumer);
+        this.organizer = new ResourcePackOrganizer(this::updatePackLists, this::getPackIconTexture, packManager, applier);
         this.file = file;
         this.directoryWatcher = DirectoryWatcher.create(file);
     }
@@ -83,7 +92,7 @@ extends Screen {
     @Override
     public void onClose() {
         this.organizer.apply();
-        this.client.openScreen(this.parent);
+        this.client.setScreen(this.parent);
         this.closeDirectoryWatcher();
     }
 
@@ -101,14 +110,25 @@ extends Screen {
 
     @Override
     protected void init() {
-        this.doneButton = this.addButton(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, buttonWidget -> this.onClose()));
-        this.addButton(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, new TranslatableText("pack.openFolder"), buttonWidget -> Util.getOperatingSystem().open(this.file), (buttonWidget, matrixStack, i, j) -> this.renderTooltip(matrixStack, FOLDER_INFO, i, j)));
+        this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, button -> this.onClose()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, new TranslatableText("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file), new ButtonWidget.TooltipSupplier(){
+
+            @Override
+            public void onTooltip(ButtonWidget buttonWidget, MatrixStack matrixStack, int i, int j) {
+                PackScreen.this.renderTooltip(matrixStack, FOLDER_INFO, i, j);
+            }
+
+            @Override
+            public void supply(Consumer<Text> consumer) {
+                consumer.accept(FOLDER_INFO);
+            }
+        }));
         this.availablePackList = new PackListWidget(this.client, 200, this.height, new TranslatableText("pack.available.title"));
         this.availablePackList.setLeftPos(this.width / 2 - 4 - 200);
-        this.children.add(this.availablePackList);
+        this.addSelectableChild(this.availablePackList);
         this.selectedPackList = new PackListWidget(this.client, 200, this.height, new TranslatableText("pack.selected.title"));
         this.selectedPackList.setLeftPos(this.width / 2 + 4);
-        this.children.add(this.selectedPackList);
+        this.addSelectableChild(this.selectedPackList);
         this.refresh();
     }
 
@@ -117,7 +137,7 @@ extends Screen {
         if (this.directoryWatcher != null) {
             try {
                 if (this.directoryWatcher.pollForChange()) {
-                    this.field_25788 = 20L;
+                    this.refreshTimeout = 20L;
                 }
             }
             catch (IOException iOException) {
@@ -125,7 +145,7 @@ extends Screen {
                 this.closeDirectoryWatcher();
             }
         }
-        if (this.field_25788 > 0L && --this.field_25788 == 0L) {
+        if (this.refreshTimeout > 0L && --this.refreshTimeout == 0L) {
             this.refresh();
         }
     }
@@ -144,7 +164,7 @@ extends Screen {
     private void refresh() {
         this.organizer.refresh();
         this.updatePackLists();
-        this.field_25788 = 0L;
+        this.refreshTimeout = 0L;
         this.iconTextures.clear();
     }
 
@@ -160,20 +180,20 @@ extends Screen {
 
     protected static void copyPacks(MinecraftClient client, List<Path> srcPaths, Path destPath) {
         MutableBoolean mutableBoolean = new MutableBoolean();
-        srcPaths.forEach(path2 -> {
-            try (Stream<Path> stream = Files.walk(path2, new FileVisitOption[0]);){
-                stream.forEach(path3 -> {
+        srcPaths.forEach(src -> {
+            try (Stream<Path> stream = Files.walk(src, new FileVisitOption[0]);){
+                stream.forEach(toCopy -> {
                     try {
-                        Util.relativeCopy(path2.getParent(), destPath, path3);
+                        Util.relativeCopy(src.getParent(), destPath, toCopy);
                     }
                     catch (IOException iOException) {
-                        LOGGER.warn("Failed to copy datapack file  from {} to {}", path3, (Object)destPath, (Object)iOException);
+                        LOGGER.warn("Failed to copy datapack file  from {} to {}", toCopy, (Object)destPath, (Object)iOException);
                         mutableBoolean.setTrue();
                     }
                 });
             }
             catch (IOException iOException) {
-                LOGGER.warn("Failed to copy datapack file from {} to {}", path2, (Object)destPath);
+                LOGGER.warn("Failed to copy datapack file from {} to {}", src, (Object)destPath);
                 mutableBoolean.setTrue();
             }
         });
@@ -185,43 +205,67 @@ extends Screen {
     @Override
     public void filesDragged(List<Path> paths) {
         String string = paths.stream().map(Path::getFileName).map(Path::toString).collect(Collectors.joining(", "));
-        this.client.openScreen(new ConfirmScreen(bl -> {
-            if (bl) {
+        this.client.setScreen(new ConfirmScreen(confirmed -> {
+            if (confirmed) {
                 PackScreen.copyPacks(this.client, paths, this.file.toPath());
                 this.refresh();
             }
-            this.client.openScreen(this);
+            this.client.setScreen(this);
         }, new TranslatableText("pack.dropConfirm"), new LiteralText(string)));
     }
 
     /*
-     * Exception decompiling
+     * Enabled aggressive exception aggregation
      */
     private Identifier loadPackIcon(TextureManager textureManager, ResourcePackProfile resourcePackProfile) {
-        /*
-         * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
-         * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.getStartingBlocks(Op04StructuredStatement.java:412)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op04StructuredStatement.buildNestedBlocks(Op04StructuredStatement.java:487)
-         *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op03SimpleStatement.createInitialStructuredBlock(Op03SimpleStatement.java:736)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisInner(CodeAnalyser.java:850)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysisOrWrapFail(CodeAnalyser.java:278)
-         *     at org.benf.cfr.reader.bytecode.CodeAnalyser.getAnalysis(CodeAnalyser.java:201)
-         *     at org.benf.cfr.reader.entities.attributes.AttributeCode.analyse(AttributeCode.java:94)
-         *     at org.benf.cfr.reader.entities.Method.analyse(Method.java:531)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseMid(ClassFile.java:1055)
-         *     at org.benf.cfr.reader.entities.ClassFile.analyseTop(ClassFile.java:942)
-         *     at org.benf.cfr.reader.Driver.doJarVersionTypes(Driver.java:257)
-         *     at org.benf.cfr.reader.Driver.doJar(Driver.java:139)
-         *     at org.benf.cfr.reader.CfrDriverImpl.analyse(CfrDriverImpl.java:76)
-         *     at org.benf.cfr.reader.Main.main(Main.java:54)
-         */
-        throw new IllegalStateException("Decompilation failed");
+        try (ResourcePack resourcePack2 = resourcePackProfile.createResourcePack();){
+            Identifier identifier;
+            block19: {
+                InputStream inputStream;
+                block17: {
+                    Identifier identifier2;
+                    block18: {
+                        inputStream = resourcePack2.openRoot("pack.png");
+                        try {
+                            if (inputStream != null) break block17;
+                            identifier2 = UNKNOWN_PACK;
+                            if (inputStream == null) break block18;
+                        }
+                        catch (Throwable throwable) {
+                            if (inputStream != null) {
+                                try {
+                                    inputStream.close();
+                                }
+                                catch (Throwable throwable2) {
+                                    throwable.addSuppressed(throwable2);
+                                }
+                            }
+                            throw throwable;
+                        }
+                        inputStream.close();
+                    }
+                    return identifier2;
+                }
+                String string = resourcePackProfile.getName();
+                Identifier identifier3 = new Identifier("minecraft", "pack/" + Util.replaceInvalidChars(string, Identifier::isPathCharacterValid) + "/" + Hashing.sha1().hashUnencodedChars((CharSequence)string) + "/icon");
+                NativeImage nativeImage = NativeImage.read(inputStream);
+                textureManager.registerTexture(identifier3, new NativeImageBackedTexture(nativeImage));
+                identifier = identifier3;
+                if (inputStream == null) break block19;
+                inputStream.close();
+            }
+            return identifier;
+        }
+        catch (FileNotFoundException resourcePack2) {
+        }
+        catch (Exception exception) {
+            LOGGER.warn("Failed to load icon from pack {}", (Object)resourcePackProfile.getName(), (Object)exception);
+        }
+        return UNKNOWN_PACK;
     }
 
     private Identifier getPackIconTexture(ResourcePackProfile resourcePackProfile) {
-        return this.iconTextures.computeIfAbsent(resourcePackProfile.getName(), string -> this.loadPackIcon(this.client.getTextureManager(), resourcePackProfile));
+        return this.iconTextures.computeIfAbsent(resourcePackProfile.getName(), profileName -> this.loadPackIcon(this.client.getTextureManager(), resourcePackProfile));
     }
 
     @Environment(value=EnvType.CLIENT)

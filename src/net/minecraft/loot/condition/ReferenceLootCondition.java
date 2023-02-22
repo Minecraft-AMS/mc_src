@@ -27,9 +27,9 @@ import org.apache.logging.log4j.Logger;
 public class ReferenceLootCondition
 implements LootCondition {
     private static final Logger LOGGER = LogManager.getLogger();
-    private final Identifier id;
+    final Identifier id;
 
-    private ReferenceLootCondition(Identifier id) {
+    ReferenceLootCondition(Identifier id) {
         this.id = id;
     }
 
@@ -70,6 +70,10 @@ implements LootCondition {
         }
         LOGGER.warn("Detected infinite loop in loot tables");
         return false;
+    }
+
+    public static LootCondition.Builder builder(Identifier id) {
+        return () -> new ReferenceLootCondition(id);
     }
 
     @Override

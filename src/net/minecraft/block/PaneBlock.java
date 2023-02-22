@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -68,7 +62,6 @@ extends HorizontalConnectingBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean isSideInvisible(BlockState state, BlockState stateFrom, Direction direction) {
         if (stateFrom.isOf(this)) {
             if (!direction.getAxis().isHorizontal()) {
@@ -82,8 +75,7 @@ extends HorizontalConnectingBlock {
     }
 
     public final boolean connectsTo(BlockState state, boolean sideSolidFullSquare) {
-        Block block = state.getBlock();
-        return !PaneBlock.cannotConnect(block) && sideSolidFullSquare || block instanceof PaneBlock || block.isIn(BlockTags.WALLS);
+        return !PaneBlock.cannotConnect(state) && sideSolidFullSquare || state.getBlock() instanceof PaneBlock || state.isIn(BlockTags.WALLS);
     }
 
     @Override

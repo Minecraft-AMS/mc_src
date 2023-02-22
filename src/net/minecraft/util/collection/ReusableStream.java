@@ -15,8 +15,8 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class ReusableStream<T> {
-    private final List<T> collectedElements = Lists.newArrayList();
-    private final Spliterator<T> source;
+    final List<T> collectedElements = Lists.newArrayList();
+    final Spliterator<T> source;
 
     public ReusableStream(Stream<T> stream) {
         this.source = stream.spliterator();

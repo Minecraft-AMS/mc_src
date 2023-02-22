@@ -1,18 +1,26 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.util;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.Objects;
 
 @FunctionalInterface
-@Environment(value=EnvType.CLIENT)
 public interface CharPredicate {
     public boolean test(char var1);
+
+    default public CharPredicate and(CharPredicate predicate) {
+        Objects.requireNonNull(predicate);
+        return c -> this.test(c) && predicate.test(c);
+    }
+
+    default public CharPredicate negate() {
+        return c -> !this.test(c);
+    }
+
+    default public CharPredicate or(CharPredicate predicate) {
+        Objects.requireNonNull(predicate);
+        return c -> this.test(c) || predicate.test(c);
+    }
 }
 

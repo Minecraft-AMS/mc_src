@@ -2,14 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.texture;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -26,6 +27,9 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public final class MissingSprite
 extends Sprite {
+    private static final int field_32950 = 16;
+    private static final int field_32951 = 16;
+    private static final String field_32952 = "missingno";
     private static final Identifier MISSINGNO = new Identifier("missingno");
     @Nullable
     private static NativeImageBackedTexture texture;
@@ -71,16 +75,16 @@ extends Sprite {
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
                     if (k < 8 ^ l < 8) {
-                        nativeImage.setPixelColor(l, k, -524040);
+                        nativeImage.setColor(l, k, -524040);
                         continue;
                     }
-                    nativeImage.setPixelColor(l, k, -16777216);
+                    nativeImage.setColor(l, k, -16777216);
                 }
             }
             nativeImage.untrack();
             return nativeImage;
         });
-        INFO = new Sprite.Info(MISSINGNO, 16, 16, new AnimationResourceMetadata(Lists.newArrayList((Object[])new AnimationFrameResourceMetadata[]{new AnimationFrameResourceMetadata(0, -1)}), 16, 16, 1, false));
+        INFO = new Sprite.Info(MISSINGNO, 16, 16, new AnimationResourceMetadata((List<AnimationFrameResourceMetadata>)ImmutableList.of((Object)new AnimationFrameResourceMetadata(0, -1)), 16, 16, 1, false));
     }
 }
 

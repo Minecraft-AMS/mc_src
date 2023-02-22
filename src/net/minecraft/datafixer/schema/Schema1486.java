@@ -21,8 +21,8 @@ extends IdentifierNormalizingSchema {
 
     public Map<String, Supplier<TypeTemplate>> registerEntities(Schema schema) {
         Map map = super.registerEntities(schema);
-        map.put("minecraft:cod", map.remove("minecraft:cod_mob"));
-        map.put("minecraft:salmon", map.remove("minecraft:salmon_mob"));
+        map.put("minecraft:cod", (Supplier)map.remove("minecraft:cod_mob"));
+        map.put("minecraft:salmon", (Supplier)map.remove("minecraft:salmon_mob"));
         return map;
     }
 }

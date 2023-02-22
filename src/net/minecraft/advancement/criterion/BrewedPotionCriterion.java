@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class BrewedPotionCriterion
 extends AbstractCriterion<Conditions> {
-    private static final Identifier ID = new Identifier("brewed_potion");
+    static final Identifier ID = new Identifier("brewed_potion");
 
     @Override
     public Identifier getId() {
@@ -42,7 +42,7 @@ extends AbstractCriterion<Conditions> {
     }
 
     public void trigger(ServerPlayerEntity player, Potion potion) {
-        this.test(player, conditions -> conditions.matches(potion));
+        this.trigger(player, (T conditions) -> conditions.matches(potion));
     }
 
     @Override

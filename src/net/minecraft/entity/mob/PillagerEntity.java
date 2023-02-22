@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
@@ -12,8 +10,6 @@ package net.minecraft.entity.mob;
 import com.google.common.collect.Maps;
 import java.util.HashMap;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.enchantment.Enchantment;
@@ -25,11 +21,12 @@ import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.CrossbowAttackGoal;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
@@ -48,9 +45,10 @@ import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.raid.RaiderEntity;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.inventory.StackReference;
 import net.minecraft.item.BannerItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.RangedWeaponItem;
@@ -69,8 +67,12 @@ import org.jetbrains.annotations.Nullable;
 
 public class PillagerEntity
 extends IllagerEntity
-implements CrossbowUser {
+implements CrossbowUser,
+InventoryOwner {
     private static final TrackedData<Boolean> CHARGING = DataTracker.registerData(PillagerEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final int field_30478 = 5;
+    private static final int field_30476 = 300;
+    private static final float field_30477 = 1.6f;
     private final SimpleInventory inventory = new SimpleInventory(5);
 
     public PillagerEntity(EntityType<? extends PillagerEntity> entityType, World world) {
@@ -87,9 +89,9 @@ implements CrossbowUser {
         this.goalSelector.add(9, new LookAtEntityGoal(this, PlayerEntity.class, 15.0f, 1.0f));
         this.goalSelector.add(10, new LookAtEntityGoal(this, MobEntity.class, 15.0f));
         this.targetSelector.add(1, new RevengeGoal(this, RaiderEntity.class).setGroupRevenge(new Class[0]));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
-        this.targetSelector.add(3, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
-        this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
+        this.targetSelector.add(3, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
     }
 
     public static DefaultAttributeContainer.Builder createPillagerAttributes() {
@@ -107,7 +109,6 @@ implements CrossbowUser {
         return weapon == Items.CROSSBOW;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isCharging() {
         return this.dataTracker.get(CHARGING);
     }
@@ -135,7 +136,6 @@ implements CrossbowUser {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public IllagerEntity.State getState() {
         if (this.isCharging()) {
             return IllagerEntity.State.CROSSBOW_CHARGE;
@@ -189,10 +189,10 @@ implements CrossbowUser {
     }
 
     @Override
-    protected void method_30759(float f) {
+    protected void enchantMainHandItem(float power) {
         ItemStack itemStack;
-        super.method_30759(f);
-        if (this.random.nextInt(300) == 0 && (itemStack = this.getMainHandStack()).getItem() == Items.CROSSBOW) {
+        super.enchantMainHandItem(power);
+        if (this.random.nextInt(300) == 0 && (itemStack = this.getMainHandStack()).isOf(Items.CROSSBOW)) {
             Map<Enchantment, Integer> map = EnchantmentHelper.get(itemStack);
             map.putIfAbsent(Enchantments.PIERCING, 1);
             EnchantmentHelper.set(map, itemStack);
@@ -237,39 +237,37 @@ implements CrossbowUser {
     }
 
     @Override
+    public Inventory getInventory() {
+        return this.inventory;
+    }
+
+    @Override
     protected void loot(ItemEntity item) {
         ItemStack itemStack = item.getStack();
         if (itemStack.getItem() instanceof BannerItem) {
             super.loot(item);
-        } else {
-            Item item2 = itemStack.getItem();
-            if (this.method_7111(item2)) {
-                this.method_29499(item);
-                ItemStack itemStack2 = this.inventory.addStack(itemStack);
-                if (itemStack2.isEmpty()) {
-                    item.remove();
-                } else {
-                    itemStack.setCount(itemStack2.getCount());
-                }
+        } else if (this.isRaidCaptain(itemStack)) {
+            this.triggerItemPickedUpByEntityCriteria(item);
+            ItemStack itemStack2 = this.inventory.addStack(itemStack);
+            if (itemStack2.isEmpty()) {
+                item.discard();
+            } else {
+                itemStack.setCount(itemStack2.getCount());
             }
         }
     }
 
-    private boolean method_7111(Item item) {
-        return this.hasActiveRaid() && item == Items.WHITE_BANNER;
+    private boolean isRaidCaptain(ItemStack stack) {
+        return this.hasActiveRaid() && stack.isOf(Items.WHITE_BANNER);
     }
 
     @Override
-    public boolean equip(int slot, ItemStack item) {
-        if (super.equip(slot, item)) {
-            return true;
-        }
-        int i = slot - 300;
+    public StackReference getStackReference(int mappedIndex) {
+        int i = mappedIndex - 300;
         if (i >= 0 && i < this.inventory.size()) {
-            this.inventory.setStack(i, item);
-            return true;
+            return StackReference.of(this.inventory, i);
         }
-        return false;
+        return super.getStackReference(mappedIndex);
     }
 
     @Override

@@ -21,8 +21,8 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class FlameParticle
 extends AbstractSlowingParticle {
-    private FlameParticle(ClientWorld world, double x, double y, double z, double velocityX, double velocityY, double velocityZ) {
-        super(world, x, y, z, velocityX, velocityY, velocityZ);
+    FlameParticle(ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+        super(clientWorld, d, e, f, g, h, i);
     }
 
     @Override
@@ -53,6 +53,24 @@ extends AbstractSlowingParticle {
             j = 240;
         }
         return j | k << 16;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static class SmallFactory
+    implements ParticleFactory<DefaultParticleType> {
+        private final SpriteProvider spriteProvider;
+
+        public SmallFactory(SpriteProvider spriteProvider) {
+            this.spriteProvider = spriteProvider;
+        }
+
+        @Override
+        public Particle createParticle(DefaultParticleType defaultParticleType, ClientWorld clientWorld, double d, double e, double f, double g, double h, double i) {
+            FlameParticle flameParticle = new FlameParticle(clientWorld, d, e, f, g, h, i);
+            flameParticle.setSprite(this.spriteProvider);
+            flameParticle.scale(0.5f);
+            return flameParticle;
+        }
     }
 
     @Environment(value=EnvType.CLIENT)

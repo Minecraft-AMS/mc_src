@@ -1,15 +1,9 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -22,12 +16,16 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
 public class FrostedIceBlock
 extends IceBlock {
+    public static final int MAX_AGE = 3;
     public static final IntProperty AGE = Properties.AGE_3;
+    private static final int field_31097 = 4;
+    private static final int field_31098 = 2;
 
     public FrostedIceBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -44,7 +42,7 @@ extends IceBlock {
         if ((random.nextInt(3) == 0 || this.canMelt(world, pos, 4)) && world.getLightLevel(pos) > 11 - state.get(AGE) - state.getOpacity(world, pos) && this.increaseAge(state, world, pos)) {
             BlockPos.Mutable mutable = new BlockPos.Mutable();
             for (Direction direction : Direction.values()) {
-                mutable.set(pos, direction);
+                mutable.set((Vec3i)pos, direction);
                 BlockState blockState = world.getBlockState(mutable);
                 if (!blockState.isOf(this) || this.increaseAge(blockState, world, mutable)) continue;
                 world.getBlockTickScheduler().schedule(mutable, this, MathHelper.nextInt(random, 20, 40));
@@ -66,7 +64,7 @@ extends IceBlock {
 
     @Override
     public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
-        if (block == this && this.canMelt(world, pos, 2)) {
+        if (block.getDefaultState().isOf(this) && this.canMelt(world, pos, 2)) {
             this.melt(state, world, pos);
         }
         super.neighborUpdate(state, world, pos, block, fromPos, notify);
@@ -76,7 +74,7 @@ extends IceBlock {
         int i = 0;
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (Direction direction : Direction.values()) {
-            mutable.set(pos, direction);
+            mutable.set((Vec3i)pos, direction);
             if (!world.getBlockState(mutable).isOf(this) || ++i < maxNeighbors) continue;
             return false;
         }
@@ -89,7 +87,6 @@ extends IceBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
     }

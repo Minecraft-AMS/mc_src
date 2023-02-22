@@ -22,19 +22,21 @@ import org.apache.commons.lang3.StringUtils;
 
 public class SkullItem
 extends WallStandingBlockItem {
+    public static final String SKULL_OWNER_KEY = "SkullOwner";
+
     public SkullItem(Block block, Block block2, Item.Settings settings) {
         super(block, block2, settings);
     }
 
     @Override
     public Text getName(ItemStack stack) {
-        if (stack.getItem() == Items.PLAYER_HEAD && stack.hasTag()) {
+        if (stack.isOf(Items.PLAYER_HEAD) && stack.hasNbt()) {
             NbtCompound nbtCompound2;
             String string = null;
-            NbtCompound nbtCompound = stack.getTag();
-            if (nbtCompound.contains("SkullOwner", 8)) {
-                string = nbtCompound.getString("SkullOwner");
-            } else if (nbtCompound.contains("SkullOwner", 10) && (nbtCompound2 = nbtCompound.getCompound("SkullOwner")).contains("Name", 8)) {
+            NbtCompound nbtCompound = stack.getNbt();
+            if (nbtCompound.contains(SKULL_OWNER_KEY, 8)) {
+                string = nbtCompound.getString(SKULL_OWNER_KEY);
+            } else if (nbtCompound.contains(SKULL_OWNER_KEY, 10) && (nbtCompound2 = nbtCompound.getCompound(SKULL_OWNER_KEY)).contains("Name", 8)) {
                 string = nbtCompound2.getString("Name");
             }
             if (string != null) {
@@ -45,15 +47,12 @@ extends WallStandingBlockItem {
     }
 
     @Override
-    public boolean postProcessNbt(NbtCompound nbt) {
+    public void postProcessNbt(NbtCompound nbt) {
         super.postProcessNbt(nbt);
-        if (nbt.contains("SkullOwner", 8) && !StringUtils.isBlank((CharSequence)nbt.getString("SkullOwner"))) {
-            GameProfile gameProfile = new GameProfile(null, nbt.getString("SkullOwner"));
-            gameProfile = SkullBlockEntity.loadProperties(gameProfile);
-            nbt.put("SkullOwner", NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
-            return true;
+        if (nbt.contains(SKULL_OWNER_KEY, 8) && !StringUtils.isBlank((CharSequence)nbt.getString(SKULL_OWNER_KEY))) {
+            GameProfile gameProfile = new GameProfile(null, nbt.getString(SKULL_OWNER_KEY));
+            SkullBlockEntity.loadProperties(gameProfile, profile -> nbt.put(SKULL_OWNER_KEY, NbtHelper.writeGameProfile(new NbtCompound(), profile)));
         }
-        return false;
     }
 }
 

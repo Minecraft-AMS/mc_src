@@ -1,16 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
+import java.util.function.Supplier;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -23,29 +17,32 @@ import net.minecraft.block.PlantBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
-import org.jetbrains.annotations.Nullable;
 
 public class StemBlock
 extends PlantBlock
 implements Fertilizable {
+    public static final int MAX_AGE = 7;
     public static final IntProperty AGE = Properties.AGE_7;
+    protected static final float field_31256 = 1.0f;
     protected static final VoxelShape[] AGE_TO_SHAPE = new VoxelShape[]{Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 2.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 4.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 6.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 8.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 10.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 12.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 14.0, 9.0), Block.createCuboidShape(7.0, 0.0, 7.0, 9.0, 16.0, 9.0)};
     private final GourdBlock gourdBlock;
+    private final Supplier<Item> pickBlockItem;
 
-    protected StemBlock(GourdBlock gourdBlock, AbstractBlock.Settings settings) {
+    protected StemBlock(GourdBlock gourdBlock, Supplier<Item> pickBlockItem, AbstractBlock.Settings settings) {
         super(settings);
         this.gourdBlock = gourdBlock;
+        this.pickBlockItem = pickBlockItem;
         this.setDefaultState((BlockState)((BlockState)this.stateManager.getDefaultState()).with(AGE, 0));
     }
 
@@ -74,7 +71,7 @@ implements Fertilizable {
                 Direction direction = Direction.Type.HORIZONTAL.random(random);
                 BlockPos blockPos = pos.offset(direction);
                 BlockState blockState = world.getBlockState(blockPos.down());
-                if (world.getBlockState(blockPos).isAir() && (blockState.isOf(Blocks.FARMLAND) || blockState.isOf(Blocks.DIRT) || blockState.isOf(Blocks.COARSE_DIRT) || blockState.isOf(Blocks.PODZOL) || blockState.isOf(Blocks.GRASS_BLOCK))) {
+                if (world.getBlockState(blockPos).isAir() && (blockState.isOf(Blocks.FARMLAND) || blockState.isIn(BlockTags.DIRT))) {
                     world.setBlockState(blockPos, this.gourdBlock.getDefaultState());
                     world.setBlockState(pos, (BlockState)this.gourdBlock.getAttachedStem().getDefaultState().with(HorizontalFacingBlock.FACING, direction));
                 }
@@ -82,23 +79,9 @@ implements Fertilizable {
         }
     }
 
-    @Nullable
-    @Environment(value=EnvType.CLIENT)
-    protected Item getPickItem() {
-        if (this.gourdBlock == Blocks.PUMPKIN) {
-            return Items.PUMPKIN_SEEDS;
-        }
-        if (this.gourdBlock == Blocks.MELON) {
-            return Items.MELON_SEEDS;
-        }
-        return null;
-    }
-
     @Override
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getPickStack(BlockView world, BlockPos pos, BlockState state) {
-        Item item = this.getPickItem();
-        return item == null ? ItemStack.EMPTY : new ItemStack(item);
+        return new ItemStack(this.pickBlockItem.get());
     }
 
     @Override

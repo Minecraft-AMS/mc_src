@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.projectile;
 
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
@@ -48,7 +44,6 @@ public final class ProjectileUtil {
     }
 
     @Nullable
-    @Environment(value=EnvType.CLIENT)
     public static EntityHitResult raycast(Entity entity, Vec3d vec3d, Vec3d vec3d2, Box box, Predicate<Entity> predicate, double d) {
         World world = entity.world;
         double e = d;
@@ -85,11 +80,16 @@ public final class ProjectileUtil {
 
     @Nullable
     public static EntityHitResult getEntityCollision(World world, Entity entity, Vec3d vec3d, Vec3d vec3d2, Box box, Predicate<Entity> predicate) {
+        return ProjectileUtil.method_37226(world, entity, vec3d, vec3d2, box, predicate, 0.3f);
+    }
+
+    @Nullable
+    public static EntityHitResult method_37226(World world, Entity entity, Vec3d vec3d, Vec3d vec3d2, Box box, Predicate<Entity> predicate, float f) {
         double d = Double.MAX_VALUE;
         Entity entity2 = null;
         for (Entity entity3 : world.getOtherEntities(entity, box, predicate)) {
             double e;
-            Box box2 = entity3.getBoundingBox().expand(0.3f);
+            Box box2 = entity3.getBoundingBox().expand(f);
             Optional<Vec3d> optional = box2.raycast(vec3d, vec3d2);
             if (!optional.isPresent() || !((e = vec3d.squaredDistanceTo(optional.get())) < d)) continue;
             entity2 = entity3;
@@ -101,39 +101,39 @@ public final class ProjectileUtil {
         return new EntityHitResult(entity2);
     }
 
-    public static final void method_7484(Entity entity, float f) {
+    public static void method_7484(Entity entity, float f) {
         Vec3d vec3d = entity.getVelocity();
         if (vec3d.lengthSquared() == 0.0) {
             return;
         }
-        float g = MathHelper.sqrt(Entity.squaredHorizontalLength(vec3d));
-        entity.yaw = (float)(MathHelper.atan2(vec3d.z, vec3d.x) * 57.2957763671875) + 90.0f;
-        entity.pitch = (float)(MathHelper.atan2(g, vec3d.y) * 57.2957763671875) - 90.0f;
-        while (entity.pitch - entity.prevPitch < -180.0f) {
+        double d = vec3d.horizontalLength();
+        entity.setYaw((float)(MathHelper.atan2(vec3d.z, vec3d.x) * 57.2957763671875) + 90.0f);
+        entity.setPitch((float)(MathHelper.atan2(d, vec3d.y) * 57.2957763671875) - 90.0f);
+        while (entity.getPitch() - entity.prevPitch < -180.0f) {
             entity.prevPitch -= 360.0f;
         }
-        while (entity.pitch - entity.prevPitch >= 180.0f) {
+        while (entity.getPitch() - entity.prevPitch >= 180.0f) {
             entity.prevPitch += 360.0f;
         }
-        while (entity.yaw - entity.prevYaw < -180.0f) {
+        while (entity.getYaw() - entity.prevYaw < -180.0f) {
             entity.prevYaw -= 360.0f;
         }
-        while (entity.yaw - entity.prevYaw >= 180.0f) {
+        while (entity.getYaw() - entity.prevYaw >= 180.0f) {
             entity.prevYaw += 360.0f;
         }
-        entity.pitch = MathHelper.lerp(f, entity.prevPitch, entity.pitch);
-        entity.yaw = MathHelper.lerp(f, entity.prevYaw, entity.yaw);
+        entity.setPitch(MathHelper.lerp(f, entity.prevPitch, entity.getPitch()));
+        entity.setYaw(MathHelper.lerp(f, entity.prevYaw, entity.getYaw()));
     }
 
     public static Hand getHandPossiblyHolding(LivingEntity entity, Item item) {
-        return entity.getMainHandStack().getItem() == item ? Hand.MAIN_HAND : Hand.OFF_HAND;
+        return entity.getMainHandStack().isOf(item) ? Hand.MAIN_HAND : Hand.OFF_HAND;
     }
 
     public static PersistentProjectileEntity createArrowProjectile(LivingEntity entity, ItemStack stack, float damageModifier) {
         ArrowItem arrowItem = (ArrowItem)(stack.getItem() instanceof ArrowItem ? stack.getItem() : Items.ARROW);
         PersistentProjectileEntity persistentProjectileEntity = arrowItem.createArrow(entity.world, stack, entity);
         persistentProjectileEntity.applyEnchantmentEffects(entity, damageModifier);
-        if (stack.getItem() == Items.TIPPED_ARROW && persistentProjectileEntity instanceof ArrowEntity) {
+        if (stack.isOf(Items.TIPPED_ARROW) && persistentProjectileEntity instanceof ArrowEntity) {
             ((ArrowEntity)persistentProjectileEntity).initFromStack(stack);
         }
         return persistentProjectileEntity;

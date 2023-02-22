@@ -22,6 +22,8 @@ import net.minecraft.util.math.BlockPos;
 @Environment(value=EnvType.CLIENT)
 public class RaidCenterDebugRenderer
 implements DebugRenderer.Renderer {
+    private static final int RANGE = 160;
+    private static final float DRAWN_STRING_SIZE = 0.04f;
     private final MinecraftClient client;
     private Collection<BlockPos> raidCenters = Lists.newArrayList();
 
@@ -35,27 +37,27 @@ implements DebugRenderer.Renderer {
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {
-        BlockPos blockPos = this.method_23125().getBlockPos();
+        BlockPos blockPos = this.getCamera().getBlockPos();
         for (BlockPos blockPos2 : this.raidCenters) {
             if (!blockPos.isWithinDistance(blockPos2, 160.0)) continue;
-            RaidCenterDebugRenderer.method_23122(blockPos2);
+            RaidCenterDebugRenderer.drawRaidCenter(blockPos2);
         }
     }
 
-    private static void method_23122(BlockPos blockPos) {
-        DebugRenderer.drawBox(blockPos.add(-0.5, -0.5, -0.5), blockPos.add(1.5, 1.5, 1.5), 1.0f, 0.0f, 0.0f, 0.15f);
+    private static void drawRaidCenter(BlockPos pos) {
+        DebugRenderer.drawBox(pos.add(-0.5, -0.5, -0.5), pos.add(1.5, 1.5, 1.5), 1.0f, 0.0f, 0.0f, 0.15f);
         int i = -65536;
-        RaidCenterDebugRenderer.method_23123("Raid center", blockPos, -65536);
+        RaidCenterDebugRenderer.drawString("Raid center", pos, -65536);
     }
 
-    private static void method_23123(String string, BlockPos blockPos, int i) {
-        double d = (double)blockPos.getX() + 0.5;
-        double e = (double)blockPos.getY() + 1.3;
-        double f = (double)blockPos.getZ() + 0.5;
-        DebugRenderer.drawString(string, d, e, f, i, 0.04f, true, 0.0f, true);
+    private static void drawString(String string, BlockPos pos, int color) {
+        double d = (double)pos.getX() + 0.5;
+        double e = (double)pos.getY() + 1.3;
+        double f = (double)pos.getZ() + 0.5;
+        DebugRenderer.drawString(string, d, e, f, color, 0.04f, true, 0.0f, true);
     }
 
-    private Camera method_23125() {
+    private Camera getCamera() {
         return this.client.gameRenderer.getCamera();
     }
 }

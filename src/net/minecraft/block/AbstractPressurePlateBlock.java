@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
@@ -20,6 +23,8 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractPressurePlateBlock
 extends Block {
@@ -63,7 +68,7 @@ extends Block {
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         int i = this.getRedstoneOutput(state);
         if (i > 0) {
-            this.updatePlateState(world, pos, state, i);
+            this.updatePlateState(null, world, pos, state, i);
         }
     }
 
@@ -74,16 +79,16 @@ extends Block {
         }
         int i = this.getRedstoneOutput(state);
         if (i == 0) {
-            this.updatePlateState(world, pos, state, i);
+            this.updatePlateState(entity, world, pos, state, i);
         }
     }
 
-    protected void updatePlateState(World world, BlockPos pos, BlockState state, int rsOut) {
+    protected void updatePlateState(@Nullable Entity entity, World world, BlockPos pos, BlockState state, int output) {
         boolean bl2;
         int i = this.getRedstoneOutput(world, pos);
-        boolean bl = rsOut > 0;
+        boolean bl = output > 0;
         boolean bl3 = bl2 = i > 0;
-        if (rsOut != i) {
+        if (output != i) {
             BlockState blockState = this.setRedstoneOutput(state, i);
             world.setBlockState(pos, blockState, 2);
             this.updateNeighbors(world, pos);
@@ -91,8 +96,10 @@ extends Block {
         }
         if (!bl2 && bl) {
             this.playDepressSound(world, pos);
+            world.emitGameEvent(entity, GameEvent.BLOCK_UNPRESS, pos);
         } else if (bl2 && !bl) {
             this.playPressSound(world, pos);
+            world.emitGameEvent(entity, GameEvent.BLOCK_PRESS, pos);
         }
         if (bl2) {
             world.getBlockTickScheduler().schedule(new BlockPos(pos), this, this.getTickRate());

@@ -12,7 +12,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.EntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
+import net.minecraft.client.render.entity.model.EntityModelLoader;
 import net.minecraft.client.render.entity.model.LargeTropicalFishEntityModel;
 import net.minecraft.client.render.entity.model.SmallTropicalFishEntityModel;
 import net.minecraft.client.render.entity.model.TintableCompositeModel;
@@ -21,12 +22,14 @@ import net.minecraft.entity.passive.TropicalFishEntity;
 
 @Environment(value=EnvType.CLIENT)
 public class TropicalFishColorFeatureRenderer
-extends FeatureRenderer<TropicalFishEntity, EntityModel<TropicalFishEntity>> {
-    private final SmallTropicalFishEntityModel<TropicalFishEntity> smallModel = new SmallTropicalFishEntityModel(0.008f);
-    private final LargeTropicalFishEntityModel<TropicalFishEntity> largeModel = new LargeTropicalFishEntityModel(0.008f);
+extends FeatureRenderer<TropicalFishEntity, TintableCompositeModel<TropicalFishEntity>> {
+    private final SmallTropicalFishEntityModel<TropicalFishEntity> smallModel;
+    private final LargeTropicalFishEntityModel<TropicalFishEntity> largeModel;
 
-    public TropicalFishColorFeatureRenderer(FeatureRendererContext<TropicalFishEntity, EntityModel<TropicalFishEntity>> featureRendererContext) {
-        super(featureRendererContext);
+    public TropicalFishColorFeatureRenderer(FeatureRendererContext<TropicalFishEntity, TintableCompositeModel<TropicalFishEntity>> context, EntityModelLoader loader) {
+        super(context);
+        this.smallModel = new SmallTropicalFishEntityModel(loader.getModelPart(EntityModelLayers.TROPICAL_FISH_SMALL_PATTERN));
+        this.largeModel = new LargeTropicalFishEntityModel(loader.getModelPart(EntityModelLayers.TROPICAL_FISH_LARGE_PATTERN));
     }
 
     @Override

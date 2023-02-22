@@ -42,6 +42,7 @@ import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginHelloS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
+import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -55,16 +56,18 @@ import org.jetbrains.annotations.Nullable;
 public class ServerLoginNetworkHandler
 implements ServerLoginPacketListener {
     private static final AtomicInteger NEXT_AUTHENTICATOR_THREAD_ID = new AtomicInteger(0);
-    private static final Logger LOGGER = LogManager.getLogger();
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final int TIMEOUT_TICKS = 600;
     private static final Random RANDOM = new Random();
     private final byte[] nonce = new byte[4];
-    private final MinecraftServer server;
+    final MinecraftServer server;
     public final ClientConnection connection;
-    private State state = State.HELLO;
+    State state = State.HELLO;
     private int loginTicks;
-    private GameProfile profile;
+    @Nullable
+    GameProfile profile;
     private final String serverId = "";
-    private SecretKey secretKey;
+    @Nullable
     private ServerPlayerEntity delayedPlayer;
 
     public ServerLoginNetworkHandler(MinecraftServer server, ClientConnection connection) {
@@ -79,7 +82,7 @@ implements ServerLoginPacketListener {
             this.acceptPlayer();
         } else if (this.state == State.DELAY_ACCEPT && (serverPlayerEntity = this.server.getPlayerManager().getPlayer(this.profile.getId())) == null) {
             this.state = State.READY_TO_ACCEPT;
-            this.server.getPlayerManager().onPlayerConnect(this.connection, this.delayedPlayer);
+            this.addToServer(this.delayedPlayer);
             this.delayedPlayer = null;
         }
         if (this.loginTicks++ == 600) {
@@ -113,17 +116,29 @@ implements ServerLoginPacketListener {
         } else {
             this.state = State.ACCEPTED;
             if (this.server.getNetworkCompressionThreshold() >= 0 && !this.connection.isLocal()) {
-                this.connection.send(new LoginCompressionS2CPacket(this.server.getNetworkCompressionThreshold()), (GenericFutureListener<? extends Future<? super Void>>)((ChannelFutureListener)channelFuture -> this.connection.setCompressionThreshold(this.server.getNetworkCompressionThreshold())));
+                this.connection.send(new LoginCompressionS2CPacket(this.server.getNetworkCompressionThreshold()), (GenericFutureListener<? extends Future<? super Void>>)((ChannelFutureListener)channelFuture -> this.connection.setCompressionThreshold(this.server.getNetworkCompressionThreshold(), true)));
             }
             this.connection.send(new LoginSuccessS2CPacket(this.profile));
             ServerPlayerEntity serverPlayerEntity = this.server.getPlayerManager().getPlayer(this.profile.getId());
-            if (serverPlayerEntity != null) {
-                this.state = State.DELAY_ACCEPT;
-                this.delayedPlayer = this.server.getPlayerManager().createPlayer(this.profile);
-            } else {
-                this.server.getPlayerManager().onPlayerConnect(this.connection, this.server.getPlayerManager().createPlayer(this.profile));
+            try {
+                ServerPlayerEntity serverPlayerEntity2 = this.server.getPlayerManager().createPlayer(this.profile);
+                if (serverPlayerEntity != null) {
+                    this.state = State.DELAY_ACCEPT;
+                    this.delayedPlayer = serverPlayerEntity2;
+                } else {
+                    this.addToServer(serverPlayerEntity2);
+                }
+            }
+            catch (Exception exception) {
+                TranslatableText text2 = new TranslatableText("multiplayer.disconnect.invalid_player_data");
+                this.connection.send(new DisconnectS2CPacket(text2));
+                this.connection.disconnect(text2);
             }
         }
+    }
+
+    private void addToServer(ServerPlayerEntity player) {
+        this.server.getPlayerManager().onPlayerConnect(this.connection, player);
     }
 
     @Override
@@ -159,10 +174,10 @@ implements ServerLoginPacketListener {
             if (!Arrays.equals(this.nonce, packet.decryptNonce(privateKey))) {
                 throw new IllegalStateException("Protocol error");
             }
-            this.secretKey = packet.decryptSecretKey(privateKey);
-            Cipher cipher = NetworkEncryptionUtils.cipherFromKey(2, this.secretKey);
-            Cipher cipher2 = NetworkEncryptionUtils.cipherFromKey(1, this.secretKey);
-            string = new BigInteger(NetworkEncryptionUtils.generateServerId("", this.server.getKeyPair().getPublic(), this.secretKey)).toString(16);
+            SecretKey secretKey = packet.decryptSecretKey(privateKey);
+            Cipher cipher = NetworkEncryptionUtils.cipherFromKey(2, secretKey);
+            Cipher cipher2 = NetworkEncryptionUtils.cipherFromKey(1, secretKey);
+            string = new BigInteger(NetworkEncryptionUtils.generateServerId("", this.server.getKeyPair().getPublic(), secretKey)).toString(16);
             this.state = State.AUTHENTICATING;
             this.connection.setupEncryption(cipher, cipher2);
         }
@@ -179,7 +194,7 @@ implements ServerLoginPacketListener {
                     if (ServerLoginNetworkHandler.this.profile != null) {
                         LOGGER.info("UUID of player {} is {}", (Object)ServerLoginNetworkHandler.this.profile.getName(), (Object)ServerLoginNetworkHandler.this.profile.getId());
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
-                    } else if (ServerLoginNetworkHandler.this.server.isSinglePlayer()) {
+                    } else if (ServerLoginNetworkHandler.this.server.isSingleplayer()) {
                         LOGGER.warn("Failed to verify username but will let them in anyway!");
                         ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
@@ -189,7 +204,7 @@ implements ServerLoginPacketListener {
                     }
                 }
                 catch (AuthenticationUnavailableException authenticationUnavailableException) {
-                    if (ServerLoginNetworkHandler.this.server.isSinglePlayer()) {
+                    if (ServerLoginNetworkHandler.this.server.isSingleplayer()) {
                         LOGGER.warn("Authentication servers are down but will let them in anyway!");
                         ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
@@ -219,15 +234,32 @@ implements ServerLoginPacketListener {
         return new GameProfile(uUID, profile.getName());
     }
 
-    static enum State {
-        HELLO,
-        KEY,
-        AUTHENTICATING,
-        NEGOTIATING,
-        READY_TO_ACCEPT,
-        DELAY_ACCEPT,
-        ACCEPTED;
+    static final class State
+    extends Enum<State> {
+        public static final /* enum */ State HELLO = new State();
+        public static final /* enum */ State KEY = new State();
+        public static final /* enum */ State AUTHENTICATING = new State();
+        public static final /* enum */ State NEGOTIATING = new State();
+        public static final /* enum */ State READY_TO_ACCEPT = new State();
+        public static final /* enum */ State DELAY_ACCEPT = new State();
+        public static final /* enum */ State ACCEPTED = new State();
+        private static final /* synthetic */ State[] field_14174;
 
+        public static State[] values() {
+            return (State[])field_14174.clone();
+        }
+
+        public static State valueOf(String string) {
+            return Enum.valueOf(State.class, string);
+        }
+
+        private static /* synthetic */ State[] method_36581() {
+            return new State[]{HELLO, KEY, AUTHENTICATING, NEGOTIATING, READY_TO_ACCEPT, DELAY_ACCEPT, ACCEPTED};
+        }
+
+        static {
+            field_14174 = State.method_36581();
+        }
     }
 }
 

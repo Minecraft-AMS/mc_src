@@ -1,17 +1,11 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.util.profiler;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.profiler.ProfileResult;
 import net.minecraft.util.profiler.ProfilerTiming;
 
@@ -23,13 +17,12 @@ implements ProfileResult {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public List<ProfilerTiming> getTimings(String parentPath) {
         return Collections.emptyList();
     }
 
     @Override
-    public boolean save(File file) {
+    public boolean save(Path path) {
         return false;
     }
 
@@ -51,6 +44,11 @@ implements ProfileResult {
     @Override
     public int getEndTick() {
         return 0;
+    }
+
+    @Override
+    public String getRootTimings() {
+        return "";
     }
 }
 

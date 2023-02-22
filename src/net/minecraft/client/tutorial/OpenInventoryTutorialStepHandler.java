@@ -15,11 +15,11 @@ import net.minecraft.client.tutorial.TutorialStep;
 import net.minecraft.client.tutorial.TutorialStepHandler;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
-import net.minecraft.world.GameMode;
 
 @Environment(value=EnvType.CLIENT)
 public class OpenInventoryTutorialStepHandler
 implements TutorialStepHandler {
+    private static final int DELAY = 600;
     private static final Text TITLE = new TranslatableText("tutorial.open_inventory.title");
     private static final Text DESCRIPTION = new TranslatableText("tutorial.open_inventory.description", TutorialManager.keyToText("inventory"));
     private final TutorialManager manager;
@@ -33,7 +33,7 @@ implements TutorialStepHandler {
     @Override
     public void tick() {
         ++this.ticks;
-        if (this.manager.getGameMode() != GameMode.SURVIVAL) {
+        if (!this.manager.isInSurvival()) {
             this.manager.setStep(TutorialStep.NONE);
             return;
         }

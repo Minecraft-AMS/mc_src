@@ -2,13 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.base.MoreObjects
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.item;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -40,6 +43,76 @@ import net.minecraft.util.math.Vec3f;
 public class HeldItemRenderer {
     private static final RenderLayer MAP_BACKGROUND = RenderLayer.getText(new Identifier("textures/map/map_background.png"));
     private static final RenderLayer MAP_BACKGROUND_CHECKERBOARD = RenderLayer.getText(new Identifier("textures/map/map_background_checkerboard.png"));
+    private static final float field_32735 = -0.4f;
+    private static final float field_32736 = 0.2f;
+    private static final float field_32737 = -0.2f;
+    private static final float field_32738 = -0.6f;
+    private static final float EQUIP_OFFSET_TRANSLATE_X = 0.56f;
+    private static final float EQUIP_OFFSET_TRANSLATE_Y = -0.52f;
+    private static final float EQUIP_OFFSET_TRANSLATE_Z = -0.72f;
+    private static final float field_32742 = 45.0f;
+    private static final float field_32743 = -80.0f;
+    private static final float field_32744 = -20.0f;
+    private static final float field_32745 = -20.0f;
+    private static final float EAT_OR_DRINK_X_ANGLE_MULTIPLIER = 10.0f;
+    private static final float EAT_OR_DRINK_Y_ANGLE_MULTIPLIER = 90.0f;
+    private static final float EAT_OR_DRINK_Z_ANGLE_MULTIPLIER = 30.0f;
+    private static final float field_32749 = 0.6f;
+    private static final float field_32750 = -0.5f;
+    private static final float field_32751 = 0.0f;
+    private static final double field_32752 = 27.0;
+    private static final float field_32753 = 0.8f;
+    private static final float field_32754 = 0.1f;
+    private static final float field_32755 = -0.3f;
+    private static final float field_32756 = 0.4f;
+    private static final float field_32757 = -0.4f;
+    private static final float ARM_HOLDING_ITEM_SECOND_Y_ANGLE_MULTIPLIER = 70.0f;
+    private static final float ARM_HOLDING_ITEM_FIRST_Z_ANGLE_MULTIPLIER = -20.0f;
+    private static final float field_32690 = -0.6f;
+    private static final float field_32691 = 0.8f;
+    private static final float field_32692 = 0.8f;
+    private static final float field_32693 = -0.75f;
+    private static final float field_32694 = -0.9f;
+    private static final float field_32695 = 45.0f;
+    private static final float field_32696 = -1.0f;
+    private static final float field_32697 = 3.6f;
+    private static final float field_32698 = 3.5f;
+    private static final float ARM_HOLDING_ITEM_TRANSLATE_X = 5.6f;
+    private static final int ARM_HOLDING_ITEM_X_ANGLE_MULTIPLIER = 200;
+    private static final int ARM_HOLDING_ITEM_THIRD_Y_ANGLE_MULTIPLIER = -135;
+    private static final int ARM_HOLDING_ITEM_SECOND_Z_ANGLE_MULTIPLIER = 120;
+    private static final float field_32703 = -0.4f;
+    private static final float field_32704 = -0.2f;
+    private static final float field_32705 = 0.0f;
+    private static final float field_32706 = 0.04f;
+    private static final float field_32707 = -0.72f;
+    private static final float field_32708 = -1.2f;
+    private static final float field_32709 = -0.5f;
+    private static final float field_32710 = 45.0f;
+    private static final float field_32711 = -85.0f;
+    private static final float ARM_X_ANGLE_MULTIPLIER = 45.0f;
+    private static final float ARM_Y_ANGLE_MULTIPLIER = 92.0f;
+    private static final float ARM_Z_ANGLE_MULTIPLIER = -41.0f;
+    private static final float ARM_TRANSLATE_X = 0.3f;
+    private static final float ARM_TRANSLATE_Y = -1.1f;
+    private static final float ARM_TRANSLATE_Z = 0.45f;
+    private static final float field_32718 = 20.0f;
+    private static final float FIRST_PERSON_MAP_FIRST_SCALE = 0.38f;
+    private static final float FIRST_PERSON_MAP_TRANSLATE_X = -0.5f;
+    private static final float FIRST_PERSON_MAP_TRANSLATE_Y = -0.5f;
+    private static final float FIRST_PERSON_MAP_TRANSLATE_Z = 0.0f;
+    private static final float FIRST_PERSON_MAP_SECOND_SCALE = 0.0078125f;
+    private static final int field_32724 = 7;
+    private static final int field_32725 = 128;
+    private static final int field_32726 = 128;
+    private static final float field_32727 = 0.0f;
+    private static final float field_32728 = 0.0f;
+    private static final float field_32729 = 0.04f;
+    private static final float field_32730 = 0.0f;
+    private static final float field_32731 = 0.004f;
+    private static final float field_32732 = 0.0f;
+    private static final float field_32733 = 0.2f;
+    private static final float field_32734 = 0.1f;
     private final MinecraftClient client;
     private ItemStack mainHand = ItemStack.EMPTY;
     private ItemStack offHand = ItemStack.EMPTY;
@@ -60,7 +133,7 @@ public class HeldItemRenderer {
         if (stack.isEmpty()) {
             return;
         }
-        this.itemRenderer.renderItem(entity, stack, renderMode, leftHanded, matrices, vertexConsumers, entity.world, light, OverlayTexture.DEFAULT_UV);
+        this.itemRenderer.renderItem(entity, stack, renderMode, leftHanded, matrices, vertexConsumers, entity.world, light, OverlayTexture.DEFAULT_UV, entity.getId() + renderMode.ordinal());
     }
 
     private float getMapAngle(float tickDelta) {
@@ -71,7 +144,7 @@ public class HeldItemRenderer {
     }
 
     private void renderArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, Arm arm) {
-        this.client.getTextureManager().bindTexture(this.client.player.getSkinTexture());
+        RenderSystem.setShaderTexture(0, this.client.player.getSkinTexture());
         PlayerEntityRenderer playerEntityRenderer = (PlayerEntityRenderer)this.renderManager.getRenderer(this.client.player);
         matrices.push();
         float f = arm == Arm.RIGHT ? 1.0f : -1.0f;
@@ -137,7 +210,8 @@ public class HeldItemRenderer {
         matrices.scale(0.38f, 0.38f, 0.38f);
         matrices.translate(-0.5, -0.5, 0.0);
         matrices.scale(0.0078125f, 0.0078125f, 0.0078125f);
-        MapState mapState = FilledMapItem.getOrCreateMapState(stack, this.client.world);
+        Integer integer = FilledMapItem.getMapId(stack);
+        MapState mapState = FilledMapItem.getMapState(integer, this.client.world);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(mapState == null ? MAP_BACKGROUND : MAP_BACKGROUND_CHECKERBOARD);
         Matrix4f matrix4f = matrices.peek().getModel();
         vertexConsumer.vertex(matrix4f, -7.0f, 135.0f, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(swingProgress).next();
@@ -145,7 +219,7 @@ public class HeldItemRenderer {
         vertexConsumer.vertex(matrix4f, 135.0f, -7.0f, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(swingProgress).next();
         vertexConsumer.vertex(matrix4f, -7.0f, -7.0f, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(swingProgress).next();
         if (mapState != null) {
-            this.client.gameRenderer.getMapRenderer().draw(matrices, vertexConsumers, mapState, false, swingProgress);
+            this.client.gameRenderer.getMapRenderer().draw(matrices, vertexConsumers, integer, mapState, false, swingProgress);
         }
     }
 
@@ -163,7 +237,7 @@ public class HeldItemRenderer {
         matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(f * l * 70.0f));
         matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(f * k * -20.0f));
         ClientPlayerEntity abstractClientPlayerEntity = this.client.player;
-        this.client.getTextureManager().bindTexture(abstractClientPlayerEntity.getSkinTexture());
+        RenderSystem.setShaderTexture(0, abstractClientPlayerEntity.getSkinTexture());
         matrices.translate(f * -1.0f, 3.6f, 3.5);
         matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(f * 120.0f));
         matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(200.0f));
@@ -210,52 +284,64 @@ public class HeldItemRenderer {
 
     public void renderItem(float tickDelta, MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers, ClientPlayerEntity player, int light) {
         float k;
-        ItemStack itemStack;
+        float j;
         float f = player.getHandSwingProgress(tickDelta);
         Hand hand = (Hand)((Object)MoreObjects.firstNonNull((Object)((Object)player.preferredHand), (Object)((Object)Hand.MAIN_HAND)));
-        float g = MathHelper.lerp(tickDelta, player.prevPitch, player.pitch);
-        boolean bl = true;
-        boolean bl2 = true;
-        if (player.isUsingItem()) {
-            ItemStack itemStack2;
-            Hand hand2;
-            itemStack = player.getActiveItem();
-            if (itemStack.getItem() == Items.BOW || itemStack.getItem() == Items.CROSSBOW) {
-                bl = player.getActiveHand() == Hand.MAIN_HAND;
-                boolean bl3 = bl2 = !bl;
-            }
-            if ((hand2 = player.getActiveHand()) == Hand.MAIN_HAND && (itemStack2 = player.getOffHandStack()).getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack2)) {
-                bl2 = false;
-            }
-        } else {
-            itemStack = player.getMainHandStack();
-            ItemStack itemStack3 = player.getOffHandStack();
-            if (itemStack.getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack)) {
-                boolean bl4 = bl2 = !bl;
-            }
-            if (itemStack3.getItem() == Items.CROSSBOW && CrossbowItem.isCharged(itemStack3)) {
-                bl = !itemStack.isEmpty();
-                bl2 = !bl;
-            }
-        }
+        float g = MathHelper.lerp(tickDelta, player.prevPitch, player.getPitch());
+        HandRenderType handRenderType = HeldItemRenderer.getHandRenderType(player);
         float h = MathHelper.lerp(tickDelta, player.lastRenderPitch, player.renderPitch);
         float i = MathHelper.lerp(tickDelta, player.lastRenderYaw, player.renderYaw);
         matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion((player.getPitch(tickDelta) - h) * 0.1f));
         matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion((player.getYaw(tickDelta) - i) * 0.1f));
-        if (bl) {
-            float j = hand == Hand.MAIN_HAND ? f : 0.0f;
+        if (handRenderType.renderMainHand) {
+            j = hand == Hand.MAIN_HAND ? f : 0.0f;
             k = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressMainHand, this.equipProgressMainHand);
             this.renderFirstPersonItem(player, tickDelta, g, Hand.MAIN_HAND, j, this.mainHand, k, matrices, vertexConsumers, light);
         }
-        if (bl2) {
-            float j = hand == Hand.OFF_HAND ? f : 0.0f;
+        if (handRenderType.renderOffHand) {
+            j = hand == Hand.OFF_HAND ? f : 0.0f;
             k = 1.0f - MathHelper.lerp(tickDelta, this.prevEquipProgressOffHand, this.equipProgressOffHand);
             this.renderFirstPersonItem(player, tickDelta, g, Hand.OFF_HAND, j, this.offHand, k, matrices, vertexConsumers, light);
         }
         vertexConsumers.draw();
     }
 
+    @VisibleForTesting
+    static HandRenderType getHandRenderType(ClientPlayerEntity player) {
+        boolean bl2;
+        ItemStack itemStack = player.getMainHandStack();
+        ItemStack itemStack2 = player.getOffHandStack();
+        boolean bl = itemStack.isOf(Items.BOW) || itemStack2.isOf(Items.BOW);
+        boolean bl3 = bl2 = itemStack.isOf(Items.CROSSBOW) || itemStack2.isOf(Items.CROSSBOW);
+        if (!bl && !bl2) {
+            return HandRenderType.RENDER_BOTH_HANDS;
+        }
+        if (player.isUsingItem()) {
+            return HeldItemRenderer.getUsingItemHandRenderType(player);
+        }
+        if (HeldItemRenderer.isChargedCrossbow(itemStack)) {
+            return HandRenderType.RENDER_MAIN_HAND_ONLY;
+        }
+        return HandRenderType.RENDER_BOTH_HANDS;
+    }
+
+    private static HandRenderType getUsingItemHandRenderType(ClientPlayerEntity player) {
+        ItemStack itemStack = player.getActiveItem();
+        Hand hand = player.getActiveHand();
+        if (itemStack.isOf(Items.BOW) || itemStack.isOf(Items.CROSSBOW)) {
+            return HandRenderType.shouldOnlyRender(hand);
+        }
+        return hand == Hand.MAIN_HAND && HeldItemRenderer.isChargedCrossbow(player.getOffHandStack()) ? HandRenderType.RENDER_MAIN_HAND_ONLY : HandRenderType.RENDER_BOTH_HANDS;
+    }
+
+    private static boolean isChargedCrossbow(ItemStack stack) {
+        return stack.isOf(Items.CROSSBOW) && CrossbowItem.isCharged(stack);
+    }
+
     private void renderFirstPersonItem(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+        if (player.isUsingSpyglass()) {
+            return;
+        }
         boolean bl = hand == Hand.MAIN_HAND;
         Arm arm = bl ? player.getMainArm() : player.getMainArm().getOpposite();
         matrices.push();
@@ -263,13 +349,13 @@ public class HeldItemRenderer {
             if (bl && !player.isInvisible()) {
                 this.renderArmHoldingItem(matrices, vertexConsumers, light, equipProgress, swingProgress, arm);
             }
-        } else if (item.getItem() == Items.FILLED_MAP) {
+        } else if (item.isOf(Items.FILLED_MAP)) {
             if (bl && this.offHand.isEmpty()) {
                 this.renderMapInBothHands(matrices, vertexConsumers, light, pitch, equipProgress, swingProgress);
             } else {
                 this.renderMapInOneHand(matrices, vertexConsumers, light, equipProgress, arm, swingProgress, item);
             }
-        } else if (item.getItem() == Items.CROSSBOW) {
+        } else if (item.isOf(Items.CROSSBOW)) {
             int i;
             boolean bl2 = CrossbowItem.isCharged(item);
             boolean bl3 = arm == Arm.RIGHT;
@@ -301,7 +387,7 @@ public class HeldItemRenderer {
                 matrices.translate((float)i * f, g, h);
                 this.applyEquipOffset(matrices, arm, equipProgress);
                 this.applySwingOffset(matrices, arm, swingProgress);
-                if (bl2 && swingProgress < 0.001f) {
+                if (bl2 && swingProgress < 0.001f && bl) {
                     matrices.translate((float)i * -0.641864f, 0.0, 0.0);
                     matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion((float)i * 10.0f));
                 }
@@ -426,6 +512,43 @@ public class HeldItemRenderer {
             this.equipProgressMainHand = 0.0f;
         } else {
             this.equipProgressOffHand = 0.0f;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    @VisibleForTesting
+    static final class HandRenderType
+    extends Enum<HandRenderType> {
+        public static final /* enum */ HandRenderType RENDER_BOTH_HANDS = new HandRenderType(true, true);
+        public static final /* enum */ HandRenderType RENDER_MAIN_HAND_ONLY = new HandRenderType(true, false);
+        public static final /* enum */ HandRenderType RENDER_OFF_HAND_ONLY = new HandRenderType(false, true);
+        final boolean renderMainHand;
+        final boolean renderOffHand;
+        private static final /* synthetic */ HandRenderType[] field_28389;
+
+        public static HandRenderType[] values() {
+            return (HandRenderType[])field_28389.clone();
+        }
+
+        public static HandRenderType valueOf(String string) {
+            return Enum.valueOf(HandRenderType.class, string);
+        }
+
+        private HandRenderType(boolean renderMainHand, boolean renderOffHand) {
+            this.renderMainHand = renderMainHand;
+            this.renderOffHand = renderOffHand;
+        }
+
+        public static HandRenderType shouldOnlyRender(Hand hand) {
+            return hand == Hand.MAIN_HAND ? RENDER_MAIN_HAND_ONLY : RENDER_OFF_HAND_ONLY;
+        }
+
+        private static /* synthetic */ HandRenderType[] method_36915() {
+            return new HandRenderType[]{RENDER_BOTH_HANDS, RENDER_MAIN_HAND_ONLY, RENDER_OFF_HAND_ONLY};
+        }
+
+        static {
+            field_28389 = HandRenderType.method_36915();
         }
     }
 }

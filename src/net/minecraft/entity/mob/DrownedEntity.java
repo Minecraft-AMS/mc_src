@@ -17,10 +17,10 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.RangedAttackMob;
-import net.minecraft.entity.ai.TargetFinder;
 import net.minecraft.entity.ai.control.MoveControl;
-import net.minecraft.entity.ai.goal.FollowTargetGoal;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.ai.goal.ProjectileAttackGoal;
@@ -37,6 +37,7 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.mob.ZombifiedPiglinEntity;
+import net.minecraft.entity.passive.AxolotlEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.TurtleEntity;
@@ -66,7 +67,8 @@ import org.jetbrains.annotations.Nullable;
 public class DrownedEntity
 extends ZombieEntity
 implements RangedAttackMob {
-    private boolean targetingUnderwater;
+    public static final float field_30460 = 0.03f;
+    boolean targetingUnderwater;
     protected final SwimNavigation waterNavigation;
     protected final MobNavigation landNavigation;
 
@@ -88,10 +90,11 @@ implements RangedAttackMob {
         this.goalSelector.add(6, new TargetAboveWaterGoal(this, 1.0, this.world.getSeaLevel()));
         this.goalSelector.add(7, new WanderAroundGoal(this, 1.0));
         this.targetSelector.add(1, new RevengeGoal(this, DrownedEntity.class).setGroupRevenge(ZombifiedPiglinEntity.class));
-        this.targetSelector.add(2, new FollowTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::canDrownedAttackTarget));
-        this.targetSelector.add(3, new FollowTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
-        this.targetSelector.add(3, new FollowTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
-        this.targetSelector.add(5, new FollowTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
+        this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>(this, PlayerEntity.class, 10, true, false, this::canDrownedAttackTarget));
+        this.targetSelector.add(3, new ActiveTargetGoal<MerchantEntity>((MobEntity)this, MerchantEntity.class, false));
+        this.targetSelector.add(3, new ActiveTargetGoal<IronGolemEntity>((MobEntity)this, IronGolemEntity.class, true));
+        this.targetSelector.add(3, new ActiveTargetGoal<AxolotlEntity>(this, AxolotlEntity.class, true, false));
+        this.targetSelector.add(5, new ActiveTargetGoal<TurtleEntity>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_TURTLE_ON_LAND_FILTER));
     }
 
     @Override
@@ -176,16 +179,16 @@ implements RangedAttackMob {
 
     @Override
     protected boolean prefersNewEquipment(ItemStack newStack, ItemStack oldStack) {
-        if (oldStack.getItem() == Items.NAUTILUS_SHELL) {
+        if (oldStack.isOf(Items.NAUTILUS_SHELL)) {
             return false;
         }
-        if (oldStack.getItem() == Items.TRIDENT) {
-            if (newStack.getItem() == Items.TRIDENT) {
+        if (oldStack.isOf(Items.TRIDENT)) {
+            if (newStack.isOf(Items.TRIDENT)) {
                 return newStack.getDamage() < oldStack.getDamage();
             }
             return false;
         }
-        if (newStack.getItem() == Items.TRIDENT) {
+        if (newStack.isOf(Items.TRIDENT)) {
             return true;
         }
         return super.prefersNewEquipment(newStack, oldStack);
@@ -213,7 +216,7 @@ implements RangedAttackMob {
         return !this.isSwimming();
     }
 
-    private boolean isTargetingUnderwater() {
+    boolean isTargetingUnderwater() {
         if (this.targetingUnderwater) {
             return true;
         }
@@ -258,7 +261,7 @@ implements RangedAttackMob {
         double d = target.getX() - this.getX();
         double e = target.getBodyY(0.3333333333333333) - tridentEntity.getY();
         double f = target.getZ() - this.getZ();
-        double g = MathHelper.sqrt(d * d + f * f);
+        double g = Math.sqrt(d * d + f * f);
         tridentEntity.setVelocity(d, e + g * (double)0.2f, f, 1.6f, 14 - this.world.getDifficulty().getId() * 4);
         this.playSound(SoundEvents.ENTITY_DROWNED_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
         this.world.spawnEntity(tridentEntity);
@@ -291,10 +294,11 @@ implements RangedAttackMob {
                 double d = this.targetX - this.drowned.getX();
                 double e = this.targetY - this.drowned.getY();
                 double f = this.targetZ - this.drowned.getZ();
-                double g = MathHelper.sqrt(d * d + e * e + f * f);
+                double g = Math.sqrt(d * d + e * e + f * f);
                 e /= g;
                 float h = (float)(MathHelper.atan2(f, d) * 57.2957763671875) - 90.0f;
-                this.drowned.bodyYaw = this.drowned.yaw = this.wrapDegrees(this.drowned.yaw, h, 90.0f);
+                this.drowned.setYaw(this.wrapDegrees(this.drowned.getYaw(), h, 90.0f));
+                this.drowned.bodyYaw = this.drowned.getYaw();
                 float i = (float)(this.speed * this.drowned.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED));
                 float j = MathHelper.lerp(0.125f, this.drowned.getMovementSpeed(), i);
                 this.drowned.setMovementSpeed(j);
@@ -305,26 +309,6 @@ implements RangedAttackMob {
                 }
                 super.tick();
             }
-        }
-    }
-
-    static class DrownedAttackGoal
-    extends ZombieAttackGoal {
-        private final DrownedEntity drowned;
-
-        public DrownedAttackGoal(DrownedEntity drowned, double speed, boolean pauseWhenMobIdle) {
-            super(drowned, speed, pauseWhenMobIdle);
-            this.drowned = drowned;
-        }
-
-        @Override
-        public boolean canStart() {
-            return super.canStart() && this.drowned.canDrownedAttackTarget(this.drowned.getTarget());
-        }
-
-        @Override
-        public boolean shouldContinue() {
-            return super.shouldContinue() && this.drowned.canDrownedAttackTarget(this.drowned.getTarget());
         }
     }
 
@@ -382,6 +366,55 @@ implements RangedAttackMob {
                 return Vec3d.ofBottomCenter(blockPos2);
             }
             return null;
+        }
+    }
+
+    static class TridentAttackGoal
+    extends ProjectileAttackGoal {
+        private final DrownedEntity drowned;
+
+        public TridentAttackGoal(RangedAttackMob rangedAttackMob, double d, int i, float f) {
+            super(rangedAttackMob, d, i, f);
+            this.drowned = (DrownedEntity)rangedAttackMob;
+        }
+
+        @Override
+        public boolean canStart() {
+            return super.canStart() && this.drowned.getMainHandStack().isOf(Items.TRIDENT);
+        }
+
+        @Override
+        public void start() {
+            super.start();
+            this.drowned.setAttacking(true);
+            this.drowned.setCurrentHand(Hand.MAIN_HAND);
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+            this.drowned.clearActiveItem();
+            this.drowned.setAttacking(false);
+        }
+    }
+
+    static class DrownedAttackGoal
+    extends ZombieAttackGoal {
+        private final DrownedEntity drowned;
+
+        public DrownedAttackGoal(DrownedEntity drowned, double speed, boolean pauseWhenMobIdle) {
+            super(drowned, speed, pauseWhenMobIdle);
+            this.drowned = drowned;
+        }
+
+        @Override
+        public boolean canStart() {
+            return super.canStart() && this.drowned.canDrownedAttackTarget(this.drowned.getTarget());
+        }
+
+        @Override
+        public boolean shouldContinue() {
+            return super.shouldContinue() && this.drowned.canDrownedAttackTarget(this.drowned.getTarget());
         }
     }
 
@@ -452,7 +485,7 @@ implements RangedAttackMob {
         @Override
         public void tick() {
             if (this.drowned.getY() < (double)(this.minY - 1) && (this.drowned.getNavigation().isIdle() || this.drowned.hasFinishedCurrentPath())) {
-                Vec3d vec3d = TargetFinder.findTargetTowards(this.drowned, 4, 8, new Vec3d(this.drowned.getX(), this.minY - 1, this.drowned.getZ()));
+                Vec3d vec3d = NoPenaltyTargeting.find(this.drowned, 4, 8, new Vec3d(this.drowned.getX(), this.minY - 1, this.drowned.getZ()), 1.5707963705062866);
                 if (vec3d == null) {
                     this.foundTarget = true;
                     return;
@@ -470,35 +503,6 @@ implements RangedAttackMob {
         @Override
         public void stop() {
             this.drowned.setTargetingUnderwater(false);
-        }
-    }
-
-    static class TridentAttackGoal
-    extends ProjectileAttackGoal {
-        private final DrownedEntity drowned;
-
-        public TridentAttackGoal(RangedAttackMob rangedAttackMob, double d, int i, float f) {
-            super(rangedAttackMob, d, i, f);
-            this.drowned = (DrownedEntity)rangedAttackMob;
-        }
-
-        @Override
-        public boolean canStart() {
-            return super.canStart() && this.drowned.getMainHandStack().getItem() == Items.TRIDENT;
-        }
-
-        @Override
-        public void start() {
-            super.start();
-            this.drowned.setAttacking(true);
-            this.drowned.setCurrentHand(Hand.MAIN_HAND);
-        }
-
-        @Override
-        public void stop() {
-            super.stop();
-            this.drowned.clearActiveItem();
-            this.drowned.setAttacking(false);
         }
     }
 }

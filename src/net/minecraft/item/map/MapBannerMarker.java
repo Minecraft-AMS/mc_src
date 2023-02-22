@@ -43,7 +43,7 @@ public class MapBannerMarker {
         BlockEntity blockEntity = blockView.getBlockEntity(blockPos);
         if (blockEntity instanceof BannerBlockEntity) {
             BannerBlockEntity bannerBlockEntity = (BannerBlockEntity)blockEntity;
-            DyeColor dyeColor = bannerBlockEntity.getColorForState(() -> blockView.getBlockState(blockPos));
+            DyeColor dyeColor = bannerBlockEntity.getColorForState();
             Text text = bannerBlockEntity.hasCustomName() ? bannerBlockEntity.getCustomName() : null;
             return new MapBannerMarker(blockPos, dyeColor, text);
         }
@@ -52,6 +52,10 @@ public class MapBannerMarker {
 
     public BlockPos getPos() {
         return this.pos;
+    }
+
+    public DyeColor getColor() {
+        return this.color;
     }
 
     public MapIcon.Type getIconType() {

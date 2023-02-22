@@ -32,7 +32,7 @@ import net.minecraft.util.JsonHelper;
 
 public class FillPlayerHeadLootFunction
 extends ConditionalLootFunction {
-    private final LootContext.EntityTarget entity;
+    final LootContext.EntityTarget entity;
 
     public FillPlayerHeadLootFunction(LootCondition[] conditions, LootContext.EntityTarget entity) {
         super(conditions);
@@ -52,11 +52,15 @@ extends ConditionalLootFunction {
     @Override
     public ItemStack process(ItemStack stack, LootContext context) {
         Entity entity;
-        if (stack.getItem() == Items.PLAYER_HEAD && (entity = context.get(this.entity.getParameter())) instanceof PlayerEntity) {
+        if (stack.isOf(Items.PLAYER_HEAD) && (entity = context.get(this.entity.getParameter())) instanceof PlayerEntity) {
             GameProfile gameProfile = ((PlayerEntity)entity).getGameProfile();
-            stack.getOrCreateTag().put("SkullOwner", NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
+            stack.getOrCreateNbt().put("SkullOwner", NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
         }
         return stack;
+    }
+
+    public static ConditionalLootFunction.Builder<?> builder(LootContext.EntityTarget target) {
+        return FillPlayerHeadLootFunction.builder((LootCondition[] conditions) -> new FillPlayerHeadLootFunction((LootCondition[])conditions, target));
     }
 
     public static class Serializer

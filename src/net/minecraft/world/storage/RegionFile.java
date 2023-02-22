@@ -40,10 +40,19 @@ import org.jetbrains.annotations.Nullable;
 public class RegionFile
 implements AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_31418 = 4096;
+    @VisibleForTesting
+    protected static final int field_31417 = 1024;
+    private static final int field_31419 = 5;
+    private static final int field_31420 = 0;
     private static final ByteBuffer ZERO = ByteBuffer.allocateDirect(1);
+    private static final String field_31421 = ".mcc";
+    private static final int field_31422 = 128;
+    private static final int field_31423 = 256;
+    private static final int field_31424 = 0;
     private final FileChannel channel;
     private final Path directory;
-    private final ChunkStreamVersion outputChunkStreamVersion;
+    final ChunkStreamVersion outputChunkStreamVersion;
     private final ByteBuffer header = ByteBuffer.allocateDirect(8192);
     private final IntBuffer sectorData;
     private final IntBuffer saveTimes;
@@ -99,7 +108,7 @@ implements AutoCloseable {
     }
 
     private Path getExternalChunkPath(ChunkPos chunkPos) {
-        String string = "c." + chunkPos.x + "." + chunkPos.z + ".mcc";
+        String string = "c." + chunkPos.x + "." + chunkPos.z + field_31421;
         return this.directory.resolve(string);
     }
 
@@ -141,6 +150,10 @@ implements AutoCloseable {
             return null;
         }
         return this.method_22409(pos, b, RegionFile.getInputStream(byteBuffer, n));
+    }
+
+    private static int method_31739() {
+        return (int)(Util.getEpochTimeMs() / 1000L);
     }
 
     private static boolean hasChunkStreamVersionId(byte b) {
@@ -237,8 +250,21 @@ implements AutoCloseable {
         return new DataOutputStream(new BufferedOutputStream(this.outputChunkStreamVersion.wrap(new ChunkBuffer(pos))));
     }
 
-    public void method_26981() throws IOException {
+    public void sync() throws IOException {
         this.channel.force(true);
+    }
+
+    public void method_31740(ChunkPos chunkPos) throws IOException {
+        int i = RegionFile.getIndex(chunkPos);
+        int j = this.sectorData.get(i);
+        if (j == 0) {
+            return;
+        }
+        this.sectorData.put(i, 0);
+        this.saveTimes.put(i, RegionFile.method_31739());
+        this.writeHeader();
+        Files.deleteIfExists(this.getExternalChunkPath(chunkPos));
+        this.sectors.free(RegionFile.getOffset(j), RegionFile.getSize(j));
     }
 
     protected synchronized void writeChunk(ChunkPos pos, ByteBuffer byteBuffer) throws IOException {
@@ -263,9 +289,8 @@ implements AutoCloseable {
             outputAction = () -> Files.deleteIfExists(this.getExternalChunkPath(pos));
             this.channel.write(byteBuffer, o * 4096);
         }
-        int p = (int)(Util.getEpochTimeMs() / 1000L);
         this.sectorData.put(i, this.packSectorData(o, n));
-        this.saveTimes.put(i, p);
+        this.saveTimes.put(i, RegionFile.method_31739());
         this.writeHeader();
         outputAction.run();
         if (k != 0) {
@@ -332,22 +357,18 @@ implements AutoCloseable {
         }
     }
 
-    static interface OutputAction {
-        public void run() throws IOException;
-    }
-
     class ChunkBuffer
     extends ByteArrayOutputStream {
         private final ChunkPos pos;
 
-        public ChunkBuffer(ChunkPos chunkPos) {
+        public ChunkBuffer(ChunkPos pos) {
             super(8096);
             super.write(0);
             super.write(0);
             super.write(0);
             super.write(0);
             super.write(RegionFile.this.outputChunkStreamVersion.getId());
-            this.pos = chunkPos;
+            this.pos = pos;
         }
 
         @Override
@@ -356,6 +377,10 @@ implements AutoCloseable {
             byteBuffer.putInt(0, this.count - 5 + 1);
             RegionFile.this.writeChunk(this.pos, byteBuffer);
         }
+    }
+
+    static interface OutputAction {
+        public void run() throws IOException;
     }
 }
 

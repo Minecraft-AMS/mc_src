@@ -15,20 +15,21 @@ import net.minecraft.block.entity.LecternBlockEntity;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.block.entity.EnchantingTableBlockEntityRenderer;
 import net.minecraft.client.render.entity.model.BookModel;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Vec3f;
 
 @Environment(value=EnvType.CLIENT)
 public class LecternBlockEntityRenderer
-extends BlockEntityRenderer<LecternBlockEntity> {
-    private final BookModel book = new BookModel();
+implements BlockEntityRenderer<LecternBlockEntity> {
+    private final BookModel book;
 
-    public LecternBlockEntityRenderer(BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
-        super(blockEntityRenderDispatcher);
+    public LecternBlockEntityRenderer(BlockEntityRendererFactory.Context ctx) {
+        this.book = new BookModel(ctx.getLayerModelPart(EntityModelLayers.BOOK));
     }
 
     @Override

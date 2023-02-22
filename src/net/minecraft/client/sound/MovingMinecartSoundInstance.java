@@ -10,7 +10,6 @@ package net.minecraft.client.sound;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.MovingSoundInstance;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -19,6 +18,11 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class MovingMinecartSoundInstance
 extends MovingSoundInstance {
+    private static final float field_33001 = 0.0f;
+    private static final float field_33002 = 0.7f;
+    private static final float field_33003 = 0.0f;
+    private static final float field_33004 = 1.0f;
+    private static final float field_33005 = 0.0025f;
     private final AbstractMinecartEntity minecart;
     private float distance = 0.0f;
 
@@ -45,15 +49,15 @@ extends MovingSoundInstance {
 
     @Override
     public void tick() {
-        if (this.minecart.removed) {
+        if (this.minecart.isRemoved()) {
             this.setDone();
             return;
         }
         this.x = (float)this.minecart.getX();
         this.y = (float)this.minecart.getY();
         this.z = (float)this.minecart.getZ();
-        float f = MathHelper.sqrt(Entity.squaredHorizontalLength(this.minecart.getVelocity()));
-        if ((double)f >= 0.01) {
+        float f = (float)this.minecart.getVelocity().horizontalLength();
+        if (f >= 0.01f) {
             this.distance = MathHelper.clamp(this.distance + 0.0025f, 0.0f, 1.0f);
             this.volume = MathHelper.lerp(MathHelper.clamp(f, 0.0f, 0.5f), 0.0f, 0.7f);
         } else {

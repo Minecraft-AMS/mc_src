@@ -29,6 +29,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.JsonHelper;
 
 public class ServerMetadata {
+    public static final int FAVICON_WIDTH = 64;
+    public static final int FAVICON_HEIGHT = 64;
     private Text description;
     private Players players;
     private Version version;
@@ -64,95 +66,6 @@ public class ServerMetadata {
 
     public String getFavicon() {
         return this.favicon;
-    }
-
-    public static class Deserializer
-    implements JsonDeserializer<ServerMetadata>,
-    JsonSerializer<ServerMetadata> {
-        public ServerMetadata deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            JsonObject jsonObject = JsonHelper.asObject(jsonElement, "status");
-            ServerMetadata serverMetadata = new ServerMetadata();
-            if (jsonObject.has("description")) {
-                serverMetadata.setDescription((Text)jsonDeserializationContext.deserialize(jsonObject.get("description"), Text.class));
-            }
-            if (jsonObject.has("players")) {
-                serverMetadata.setPlayers((Players)jsonDeserializationContext.deserialize(jsonObject.get("players"), Players.class));
-            }
-            if (jsonObject.has("version")) {
-                serverMetadata.setVersion((Version)jsonDeserializationContext.deserialize(jsonObject.get("version"), Version.class));
-            }
-            if (jsonObject.has("favicon")) {
-                serverMetadata.setFavicon(JsonHelper.getString(jsonObject, "favicon"));
-            }
-            return serverMetadata;
-        }
-
-        public JsonElement serialize(ServerMetadata serverMetadata, Type type, JsonSerializationContext jsonSerializationContext) {
-            JsonObject jsonObject = new JsonObject();
-            if (serverMetadata.getDescription() != null) {
-                jsonObject.add("description", jsonSerializationContext.serialize((Object)serverMetadata.getDescription()));
-            }
-            if (serverMetadata.getPlayers() != null) {
-                jsonObject.add("players", jsonSerializationContext.serialize((Object)serverMetadata.getPlayers()));
-            }
-            if (serverMetadata.getVersion() != null) {
-                jsonObject.add("version", jsonSerializationContext.serialize((Object)serverMetadata.getVersion()));
-            }
-            if (serverMetadata.getFavicon() != null) {
-                jsonObject.addProperty("favicon", serverMetadata.getFavicon());
-            }
-            return jsonObject;
-        }
-
-        public /* synthetic */ JsonElement serialize(Object object, Type type, JsonSerializationContext jsonSerializationContext) {
-            return this.serialize((ServerMetadata)object, type, jsonSerializationContext);
-        }
-
-        public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
-            return this.deserialize(functionJson, unused, context);
-        }
-    }
-
-    public static class Version {
-        private final String gameVersion;
-        private final int protocolVersion;
-
-        public Version(String gameVersion, int protocolVersion) {
-            this.gameVersion = gameVersion;
-            this.protocolVersion = protocolVersion;
-        }
-
-        public String getGameVersion() {
-            return this.gameVersion;
-        }
-
-        public int getProtocolVersion() {
-            return this.protocolVersion;
-        }
-
-        public static class Serializer
-        implements JsonDeserializer<Version>,
-        JsonSerializer<Version> {
-            public Version deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-                JsonObject jsonObject = JsonHelper.asObject(jsonElement, "version");
-                return new Version(JsonHelper.getString(jsonObject, "name"), JsonHelper.getInt(jsonObject, "protocol"));
-            }
-
-            public JsonElement serialize(Version version, Type type, JsonSerializationContext jsonSerializationContext) {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.addProperty("name", version.getGameVersion());
-                jsonObject.addProperty("protocol", (Number)version.getProtocolVersion());
-                return jsonObject;
-            }
-
-            public /* synthetic */ JsonElement serialize(Object entry, Type unused, JsonSerializationContext context) {
-                return this.serialize((Version)entry, unused, context);
-            }
-
-            public /* synthetic */ Object deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-                return this.deserialize(jsonElement, type, jsonDeserializationContext);
-            }
-        }
     }
 
     public static class Players {
@@ -222,9 +135,98 @@ public class ServerMetadata {
                 return this.serialize((Players)entry, unused, context);
             }
 
-            public /* synthetic */ Object deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-                return this.deserialize(jsonElement, type, jsonDeserializationContext);
+            public /* synthetic */ Object deserialize(JsonElement json, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                return this.deserialize(json, type, jsonDeserializationContext);
             }
+        }
+    }
+
+    public static class Version {
+        private final String gameVersion;
+        private final int protocolVersion;
+
+        public Version(String gameVersion, int protocolVersion) {
+            this.gameVersion = gameVersion;
+            this.protocolVersion = protocolVersion;
+        }
+
+        public String getGameVersion() {
+            return this.gameVersion;
+        }
+
+        public int getProtocolVersion() {
+            return this.protocolVersion;
+        }
+
+        public static class Serializer
+        implements JsonDeserializer<Version>,
+        JsonSerializer<Version> {
+            public Version deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                JsonObject jsonObject = JsonHelper.asObject(jsonElement, "version");
+                return new Version(JsonHelper.getString(jsonObject, "name"), JsonHelper.getInt(jsonObject, "protocol"));
+            }
+
+            public JsonElement serialize(Version version, Type type, JsonSerializationContext jsonSerializationContext) {
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.addProperty("name", version.getGameVersion());
+                jsonObject.addProperty("protocol", (Number)version.getProtocolVersion());
+                return jsonObject;
+            }
+
+            public /* synthetic */ JsonElement serialize(Object entry, Type unused, JsonSerializationContext context) {
+                return this.serialize((Version)entry, unused, context);
+            }
+
+            public /* synthetic */ Object deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+                return this.deserialize(json, type, context);
+            }
+        }
+    }
+
+    public static class Deserializer
+    implements JsonDeserializer<ServerMetadata>,
+    JsonSerializer<ServerMetadata> {
+        public ServerMetadata deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            JsonObject jsonObject = JsonHelper.asObject(jsonElement, "status");
+            ServerMetadata serverMetadata = new ServerMetadata();
+            if (jsonObject.has("description")) {
+                serverMetadata.setDescription((Text)jsonDeserializationContext.deserialize(jsonObject.get("description"), Text.class));
+            }
+            if (jsonObject.has("players")) {
+                serverMetadata.setPlayers((Players)jsonDeserializationContext.deserialize(jsonObject.get("players"), Players.class));
+            }
+            if (jsonObject.has("version")) {
+                serverMetadata.setVersion((Version)jsonDeserializationContext.deserialize(jsonObject.get("version"), Version.class));
+            }
+            if (jsonObject.has("favicon")) {
+                serverMetadata.setFavicon(JsonHelper.getString(jsonObject, "favicon"));
+            }
+            return serverMetadata;
+        }
+
+        public JsonElement serialize(ServerMetadata serverMetadata, Type type, JsonSerializationContext jsonSerializationContext) {
+            JsonObject jsonObject = new JsonObject();
+            if (serverMetadata.getDescription() != null) {
+                jsonObject.add("description", jsonSerializationContext.serialize((Object)serverMetadata.getDescription()));
+            }
+            if (serverMetadata.getPlayers() != null) {
+                jsonObject.add("players", jsonSerializationContext.serialize((Object)serverMetadata.getPlayers()));
+            }
+            if (serverMetadata.getVersion() != null) {
+                jsonObject.add("version", jsonSerializationContext.serialize((Object)serverMetadata.getVersion()));
+            }
+            if (serverMetadata.getFavicon() != null) {
+                jsonObject.addProperty("favicon", serverMetadata.getFavicon());
+            }
+            return jsonObject;
+        }
+
+        public /* synthetic */ JsonElement serialize(Object serverMetadata, Type type, JsonSerializationContext context) {
+            return this.serialize((ServerMetadata)serverMetadata, type, context);
+        }
+
+        public /* synthetic */ Object deserialize(JsonElement functionJson, Type unused, JsonDeserializationContext context) throws JsonParseException {
+            return this.deserialize(functionJson, unused, context);
         }
     }
 }

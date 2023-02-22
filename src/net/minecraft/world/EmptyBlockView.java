@@ -15,10 +15,19 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import org.jetbrains.annotations.Nullable;
 
-public enum EmptyBlockView implements BlockView
-{
-    INSTANCE;
+public final class EmptyBlockView
+extends Enum<EmptyBlockView>
+implements BlockView {
+    public static final /* enum */ EmptyBlockView INSTANCE = new EmptyBlockView();
+    private static final /* synthetic */ EmptyBlockView[] field_12295;
 
+    public static EmptyBlockView[] values() {
+        return (EmptyBlockView[])field_12295.clone();
+    }
+
+    public static EmptyBlockView valueOf(String string) {
+        return Enum.valueOf(EmptyBlockView.class, string);
+    }
 
     @Override
     @Nullable
@@ -34,6 +43,24 @@ public enum EmptyBlockView implements BlockView
     @Override
     public FluidState getFluidState(BlockPos pos) {
         return Fluids.EMPTY.getDefaultState();
+    }
+
+    @Override
+    public int getBottomY() {
+        return 0;
+    }
+
+    @Override
+    public int getHeight() {
+        return 0;
+    }
+
+    private static /* synthetic */ EmptyBlockView[] method_36692() {
+        return new EmptyBlockView[]{INSTANCE};
+    }
+
+    static {
+        field_12295 = EmptyBlockView.method_36692();
     }
 }
 

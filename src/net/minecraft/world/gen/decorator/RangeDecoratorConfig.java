@@ -14,18 +14,17 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.gen.decorator.DecoratorConfig;
+import net.minecraft.world.gen.feature.FeatureConfig;
+import net.minecraft.world.gen.heightprovider.HeightProvider;
 
 public class RangeDecoratorConfig
-implements DecoratorConfig {
-    public static final Codec<RangeDecoratorConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("bottom_offset").orElse((Object)0).forGetter(rangeDecoratorConfig -> rangeDecoratorConfig.bottomOffset), (App)Codec.INT.fieldOf("top_offset").orElse((Object)0).forGetter(rangeDecoratorConfig -> rangeDecoratorConfig.topOffset), (App)Codec.INT.fieldOf("maximum").orElse((Object)0).forGetter(rangeDecoratorConfig -> rangeDecoratorConfig.maximum)).apply((Applicative)instance, RangeDecoratorConfig::new));
-    public final int bottomOffset;
-    public final int topOffset;
-    public final int maximum;
+implements DecoratorConfig,
+FeatureConfig {
+    public static final Codec<RangeDecoratorConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)HeightProvider.CODEC.fieldOf("height").forGetter(rangeDecoratorConfig -> rangeDecoratorConfig.heightProvider)).apply((Applicative)instance, RangeDecoratorConfig::new));
+    public final HeightProvider heightProvider;
 
-    public RangeDecoratorConfig(int bottomOffset, int topOffset, int maximum) {
-        this.bottomOffset = bottomOffset;
-        this.topOffset = topOffset;
-        this.maximum = maximum;
+    public RangeDecoratorConfig(HeightProvider heightProvider) {
+        this.heightProvider = heightProvider;
     }
 }
 

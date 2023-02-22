@@ -11,7 +11,12 @@ package net.minecraft.client.render.entity.model;
 import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.entity.model.AnimalModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.HorseBaseEntity;
@@ -21,118 +26,99 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class HorseEntityModel<T extends HorseBaseEntity>
 extends AnimalModel<T> {
+    private static final float EATING_GRASS_ANIMATION_HEAD_BASE_PITCH = 2.1816616f;
+    private static final float ANGRY_ANIMATION_FRONT_LEG_PITCH_MULTIPLIER = 1.0471976f;
+    private static final float ANGRY_ANIMATION_BODY_PITCH_MULTIPLIER = 0.7853982f;
+    private static final float HEAD_TAIL_BASE_PITCH = 0.5235988f;
+    private static final float ANGRY_ANIMATION_HIND_LEG_PITCH_MULTIPLIER = 0.2617994f;
+    protected static final String HEAD_PARTS = "head_parts";
+    private static final String LEFT_HIND_BABY_LEG = "left_hind_baby_leg";
+    private static final String RIGHT_HIND_BABY_LEG = "right_hind_baby_leg";
+    private static final String LEFT_FRONT_BABY_LEG = "left_front_baby_leg";
+    private static final String RIGHT_FRONT_BABY_LEG = "right_front_baby_leg";
+    private static final String SADDLE = "saddle";
+    private static final String LEFT_SADDLE_MOUTH = "left_saddle_mouth";
+    private static final String LEFT_SADDLE_LINE = "left_saddle_line";
+    private static final String RIGHT_SADDLE_MOUTH = "right_saddle_mouth";
+    private static final String RIGHT_SADDLE_LINE = "right_saddle_line";
+    private static final String HEAD_SADDLE = "head_saddle";
+    private static final String MOUTH_SADDLE_WRAP = "mouth_saddle_wrap";
     protected final ModelPart body;
     protected final ModelPart head;
-    private final ModelPart leftBackLeg;
-    private final ModelPart rightBackLeg;
-    private final ModelPart leftFrontLeg;
+    private final ModelPart rightHindLeg;
+    private final ModelPart leftHindLeg;
     private final ModelPart rightFrontLeg;
-    private final ModelPart field_20930;
-    private final ModelPart field_20931;
-    private final ModelPart field_20932;
-    private final ModelPart field_20933;
+    private final ModelPart leftFrontLeg;
+    private final ModelPart rightHindBabyLeg;
+    private final ModelPart leftHindBabyLeg;
+    private final ModelPart rightFrontBabyLeg;
+    private final ModelPart leftFrontBabyLeg;
     private final ModelPart tail;
-    private final ModelPart[] field_3304;
-    private final ModelPart[] field_3301;
+    private final ModelPart[] saddle;
+    private final ModelPart[] straps;
 
-    public HorseEntityModel(float scale) {
+    public HorseEntityModel(ModelPart root) {
         super(true, 16.2f, 1.36f, 2.7272f, 2.0f, 20.0f);
-        this.textureWidth = 64;
-        this.textureHeight = 64;
-        this.body = new ModelPart(this, 0, 32);
-        this.body.addCuboid(-5.0f, -8.0f, -17.0f, 10.0f, 10.0f, 22.0f, 0.05f);
-        this.body.setPivot(0.0f, 11.0f, 5.0f);
-        this.head = new ModelPart(this, 0, 35);
-        this.head.addCuboid(-2.05f, -6.0f, -2.0f, 4.0f, 12.0f, 7.0f);
-        this.head.pitch = 0.5235988f;
-        ModelPart modelPart = new ModelPart(this, 0, 13);
-        modelPart.addCuboid(-3.0f, -11.0f, -2.0f, 6.0f, 5.0f, 7.0f, scale);
-        ModelPart modelPart2 = new ModelPart(this, 56, 36);
-        modelPart2.addCuboid(-1.0f, -11.0f, 5.01f, 2.0f, 16.0f, 2.0f, scale);
-        ModelPart modelPart3 = new ModelPart(this, 0, 25);
-        modelPart3.addCuboid(-2.0f, -11.0f, -7.0f, 4.0f, 5.0f, 5.0f, scale);
-        this.head.addChild(modelPart);
-        this.head.addChild(modelPart2);
-        this.head.addChild(modelPart3);
-        this.method_2789(this.head);
-        this.leftBackLeg = new ModelPart(this, 48, 21);
-        this.leftBackLeg.mirror = true;
-        this.leftBackLeg.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale);
-        this.leftBackLeg.setPivot(4.0f, 14.0f, 7.0f);
-        this.rightBackLeg = new ModelPart(this, 48, 21);
-        this.rightBackLeg.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale);
-        this.rightBackLeg.setPivot(-4.0f, 14.0f, 7.0f);
-        this.leftFrontLeg = new ModelPart(this, 48, 21);
-        this.leftFrontLeg.mirror = true;
-        this.leftFrontLeg.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale);
-        this.leftFrontLeg.setPivot(4.0f, 6.0f, -12.0f);
-        this.rightFrontLeg = new ModelPart(this, 48, 21);
-        this.rightFrontLeg.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale);
-        this.rightFrontLeg.setPivot(-4.0f, 6.0f, -12.0f);
-        float f = 5.5f;
-        this.field_20930 = new ModelPart(this, 48, 21);
-        this.field_20930.mirror = true;
-        this.field_20930.addCuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
-        this.field_20930.setPivot(4.0f, 14.0f, 7.0f);
-        this.field_20931 = new ModelPart(this, 48, 21);
-        this.field_20931.addCuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
-        this.field_20931.setPivot(-4.0f, 14.0f, 7.0f);
-        this.field_20932 = new ModelPart(this, 48, 21);
-        this.field_20932.mirror = true;
-        this.field_20932.addCuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
-        this.field_20932.setPivot(4.0f, 6.0f, -12.0f);
-        this.field_20933 = new ModelPart(this, 48, 21);
-        this.field_20933.addCuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, scale, scale + 5.5f, scale);
-        this.field_20933.setPivot(-4.0f, 6.0f, -12.0f);
-        this.tail = new ModelPart(this, 42, 36);
-        this.tail.addCuboid(-1.5f, 0.0f, 0.0f, 3.0f, 14.0f, 4.0f, scale);
-        this.tail.setPivot(0.0f, -5.0f, 2.0f);
-        this.tail.pitch = 0.5235988f;
-        this.body.addChild(this.tail);
-        ModelPart modelPart4 = new ModelPart(this, 26, 0);
-        modelPart4.addCuboid(-5.0f, -8.0f, -9.0f, 10.0f, 9.0f, 9.0f, 0.5f);
-        this.body.addChild(modelPart4);
-        ModelPart modelPart5 = new ModelPart(this, 29, 5);
-        modelPart5.addCuboid(2.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, scale);
-        this.head.addChild(modelPart5);
-        ModelPart modelPart6 = new ModelPart(this, 29, 5);
-        modelPart6.addCuboid(-3.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, scale);
-        this.head.addChild(modelPart6);
-        ModelPart modelPart7 = new ModelPart(this, 32, 2);
-        modelPart7.addCuboid(3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, scale);
-        modelPart7.pitch = -0.5235988f;
-        this.head.addChild(modelPart7);
-        ModelPart modelPart8 = new ModelPart(this, 32, 2);
-        modelPart8.addCuboid(-3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, scale);
-        modelPart8.pitch = -0.5235988f;
-        this.head.addChild(modelPart8);
-        ModelPart modelPart9 = new ModelPart(this, 1, 1);
-        modelPart9.addCuboid(-3.0f, -11.0f, -1.9f, 6.0f, 5.0f, 6.0f, 0.2f);
-        this.head.addChild(modelPart9);
-        ModelPart modelPart10 = new ModelPart(this, 19, 0);
-        modelPart10.addCuboid(-2.0f, -11.0f, -4.0f, 4.0f, 5.0f, 2.0f, 0.2f);
-        this.head.addChild(modelPart10);
-        this.field_3304 = new ModelPart[]{modelPart4, modelPart5, modelPart6, modelPart9, modelPart10};
-        this.field_3301 = new ModelPart[]{modelPart7, modelPart8};
+        this.body = root.getChild("body");
+        this.head = root.getChild(HEAD_PARTS);
+        this.rightHindLeg = root.getChild("right_hind_leg");
+        this.leftHindLeg = root.getChild("left_hind_leg");
+        this.rightFrontLeg = root.getChild("right_front_leg");
+        this.leftFrontLeg = root.getChild("left_front_leg");
+        this.rightHindBabyLeg = root.getChild(RIGHT_HIND_BABY_LEG);
+        this.leftHindBabyLeg = root.getChild(LEFT_HIND_BABY_LEG);
+        this.rightFrontBabyLeg = root.getChild(RIGHT_FRONT_BABY_LEG);
+        this.leftFrontBabyLeg = root.getChild(LEFT_FRONT_BABY_LEG);
+        this.tail = this.body.getChild("tail");
+        ModelPart modelPart = this.body.getChild(SADDLE);
+        ModelPart modelPart2 = this.head.getChild(LEFT_SADDLE_MOUTH);
+        ModelPart modelPart3 = this.head.getChild(RIGHT_SADDLE_MOUTH);
+        ModelPart modelPart4 = this.head.getChild(LEFT_SADDLE_LINE);
+        ModelPart modelPart5 = this.head.getChild(RIGHT_SADDLE_LINE);
+        ModelPart modelPart6 = this.head.getChild(HEAD_SADDLE);
+        ModelPart modelPart7 = this.head.getChild(MOUTH_SADDLE_WRAP);
+        this.saddle = new ModelPart[]{modelPart, modelPart2, modelPart3, modelPart6, modelPart7};
+        this.straps = new ModelPart[]{modelPart4, modelPart5};
     }
 
-    protected void method_2789(ModelPart modelPart) {
-        ModelPart modelPart2 = new ModelPart(this, 19, 16);
-        modelPart2.addCuboid(0.55f, -13.0f, 4.0f, 2.0f, 3.0f, 1.0f, -0.001f);
-        ModelPart modelPart3 = new ModelPart(this, 19, 16);
-        modelPart3.addCuboid(-2.55f, -13.0f, 4.0f, 2.0f, 3.0f, 1.0f, -0.001f);
-        modelPart.addChild(modelPart2);
-        modelPart.addChild(modelPart3);
+    public static ModelData getModelData(Dilation dilation) {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        ModelPartData modelPartData2 = modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 32).cuboid(-5.0f, -8.0f, -17.0f, 10.0f, 10.0f, 22.0f, new Dilation(0.05f)), ModelTransform.pivot(0.0f, 11.0f, 5.0f));
+        ModelPartData modelPartData3 = modelPartData.addChild(HEAD_PARTS, ModelPartBuilder.create().uv(0, 35).cuboid(-2.05f, -6.0f, -2.0f, 4.0f, 12.0f, 7.0f), ModelTransform.of(0.0f, 4.0f, -12.0f, 0.5235988f, 0.0f, 0.0f));
+        ModelPartData modelPartData4 = modelPartData3.addChild("head", ModelPartBuilder.create().uv(0, 13).cuboid(-3.0f, -11.0f, -2.0f, 6.0f, 5.0f, 7.0f, dilation), ModelTransform.NONE);
+        modelPartData3.addChild("mane", ModelPartBuilder.create().uv(56, 36).cuboid(-1.0f, -11.0f, 5.01f, 2.0f, 16.0f, 2.0f, dilation), ModelTransform.NONE);
+        modelPartData3.addChild("upper_mouth", ModelPartBuilder.create().uv(0, 25).cuboid(-2.0f, -11.0f, -7.0f, 4.0f, 5.0f, 5.0f, dilation), ModelTransform.NONE);
+        modelPartData.addChild("left_hind_leg", ModelPartBuilder.create().uv(48, 21).mirrored().cuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, dilation), ModelTransform.pivot(4.0f, 14.0f, 7.0f));
+        modelPartData.addChild("right_hind_leg", ModelPartBuilder.create().uv(48, 21).cuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, dilation), ModelTransform.pivot(-4.0f, 14.0f, 7.0f));
+        modelPartData.addChild("left_front_leg", ModelPartBuilder.create().uv(48, 21).mirrored().cuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, dilation), ModelTransform.pivot(4.0f, 14.0f, -12.0f));
+        modelPartData.addChild("right_front_leg", ModelPartBuilder.create().uv(48, 21).cuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, dilation), ModelTransform.pivot(-4.0f, 14.0f, -12.0f));
+        Dilation dilation2 = dilation.add(0.0f, 5.5f, 0.0f);
+        modelPartData.addChild(LEFT_HIND_BABY_LEG, ModelPartBuilder.create().uv(48, 21).mirrored().cuboid(-3.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, dilation2), ModelTransform.pivot(4.0f, 14.0f, 7.0f));
+        modelPartData.addChild(RIGHT_HIND_BABY_LEG, ModelPartBuilder.create().uv(48, 21).cuboid(-1.0f, -1.01f, -1.0f, 4.0f, 11.0f, 4.0f, dilation2), ModelTransform.pivot(-4.0f, 14.0f, 7.0f));
+        modelPartData.addChild(LEFT_FRONT_BABY_LEG, ModelPartBuilder.create().uv(48, 21).mirrored().cuboid(-3.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, dilation2), ModelTransform.pivot(4.0f, 14.0f, -12.0f));
+        modelPartData.addChild(RIGHT_FRONT_BABY_LEG, ModelPartBuilder.create().uv(48, 21).cuboid(-1.0f, -1.01f, -1.9f, 4.0f, 11.0f, 4.0f, dilation2), ModelTransform.pivot(-4.0f, 14.0f, -12.0f));
+        modelPartData2.addChild("tail", ModelPartBuilder.create().uv(42, 36).cuboid(-1.5f, 0.0f, 0.0f, 3.0f, 14.0f, 4.0f, dilation), ModelTransform.of(0.0f, -5.0f, 2.0f, 0.5235988f, 0.0f, 0.0f));
+        modelPartData2.addChild(SADDLE, ModelPartBuilder.create().uv(26, 0).cuboid(-5.0f, -8.0f, -9.0f, 10.0f, 9.0f, 9.0f, new Dilation(0.5f)), ModelTransform.NONE);
+        modelPartData3.addChild(LEFT_SADDLE_MOUTH, ModelPartBuilder.create().uv(29, 5).cuboid(2.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, dilation), ModelTransform.NONE);
+        modelPartData3.addChild(RIGHT_SADDLE_MOUTH, ModelPartBuilder.create().uv(29, 5).cuboid(-3.0f, -9.0f, -6.0f, 1.0f, 2.0f, 2.0f, dilation), ModelTransform.NONE);
+        modelPartData3.addChild(LEFT_SADDLE_LINE, ModelPartBuilder.create().uv(32, 2).cuboid(3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, dilation), ModelTransform.rotation(-0.5235988f, 0.0f, 0.0f));
+        modelPartData3.addChild(RIGHT_SADDLE_LINE, ModelPartBuilder.create().uv(32, 2).cuboid(-3.1f, -6.0f, -8.0f, 0.0f, 3.0f, 16.0f, dilation), ModelTransform.rotation(-0.5235988f, 0.0f, 0.0f));
+        modelPartData3.addChild(HEAD_SADDLE, ModelPartBuilder.create().uv(1, 1).cuboid(-3.0f, -11.0f, -1.9f, 6.0f, 5.0f, 6.0f, new Dilation(0.2f)), ModelTransform.NONE);
+        modelPartData3.addChild(MOUTH_SADDLE_WRAP, ModelPartBuilder.create().uv(19, 0).cuboid(-2.0f, -11.0f, -4.0f, 4.0f, 5.0f, 2.0f, new Dilation(0.2f)), ModelTransform.NONE);
+        modelPartData4.addChild("left_ear", ModelPartBuilder.create().uv(19, 16).cuboid(0.55f, -13.0f, 4.0f, 2.0f, 3.0f, 1.0f, new Dilation(-0.001f)), ModelTransform.NONE);
+        modelPartData4.addChild("right_ear", ModelPartBuilder.create().uv(19, 16).cuboid(-2.55f, -13.0f, 4.0f, 2.0f, 3.0f, 1.0f, new Dilation(-0.001f)), ModelTransform.NONE);
+        return modelData;
     }
 
     @Override
     public void setAngles(T horseBaseEntity, float f, float g, float h, float i, float j) {
         boolean bl = ((HorseBaseEntity)horseBaseEntity).isSaddled();
         boolean bl2 = ((Entity)horseBaseEntity).hasPassengers();
-        for (ModelPart modelPart : this.field_3304) {
+        for (ModelPart modelPart : this.saddle) {
             modelPart.visible = bl;
         }
-        for (ModelPart modelPart : this.field_3301) {
+        for (ModelPart modelPart : this.straps) {
             modelPart.visible = bl2 && bl;
         }
         this.body.pivotY = 11.0f;
@@ -145,7 +131,7 @@ extends AnimalModel<T> {
 
     @Override
     protected Iterable<ModelPart> getBodyParts() {
-        return ImmutableList.of((Object)this.body, (Object)this.leftBackLeg, (Object)this.rightBackLeg, (Object)this.leftFrontLeg, (Object)this.rightFrontLeg, (Object)this.field_20930, (Object)this.field_20931, (Object)this.field_20932, (Object)this.field_20933);
+        return ImmutableList.of((Object)this.body, (Object)this.rightHindLeg, (Object)this.leftHindLeg, (Object)this.rightFrontLeg, (Object)this.leftFrontLeg, (Object)this.rightHindBabyLeg, (Object)this.leftHindBabyLeg, (Object)this.rightFrontBabyLeg, (Object)this.leftFrontBabyLeg);
     }
 
     @Override
@@ -153,7 +139,7 @@ extends AnimalModel<T> {
         super.animateModel(horseBaseEntity, f, g, h);
         float i = MathHelper.lerpAngle(((HorseBaseEntity)horseBaseEntity).prevBodyYaw, ((HorseBaseEntity)horseBaseEntity).bodyYaw, h);
         float j = MathHelper.lerpAngle(((HorseBaseEntity)horseBaseEntity).prevHeadYaw, ((HorseBaseEntity)horseBaseEntity).headYaw, h);
-        float k = MathHelper.lerp(h, ((HorseBaseEntity)horseBaseEntity).prevPitch, ((HorseBaseEntity)horseBaseEntity).pitch);
+        float k = MathHelper.lerp(h, ((HorseBaseEntity)horseBaseEntity).prevPitch, ((Entity)horseBaseEntity).getPitch());
         float l = j - i;
         float m = k * ((float)Math.PI / 180);
         if (l > 20.0f) {
@@ -193,35 +179,35 @@ extends AnimalModel<T> {
         this.rightFrontLeg.pivotZ = this.leftFrontLeg.pivotZ;
         float y = (-1.0471976f + x) * o + u * p;
         float z = (-1.0471976f - x) * o - u * p;
-        this.leftBackLeg.pitch = w - t * 0.5f * g * p;
-        this.rightBackLeg.pitch = w + t * 0.5f * g * p;
+        this.leftHindLeg.pitch = w - t * 0.5f * g * p;
+        this.rightHindLeg.pitch = w + t * 0.5f * g * p;
         this.leftFrontLeg.pitch = y;
         this.rightFrontLeg.pitch = z;
         this.tail.pitch = 0.5235988f + g * 0.75f;
         this.tail.pivotY = -5.0f + g;
         this.tail.pivotZ = 2.0f + g * 2.0f;
         this.tail.yaw = bl ? MathHelper.cos(r * 0.7f) : 0.0f;
-        this.field_20930.pivotY = this.leftBackLeg.pivotY;
-        this.field_20930.pivotZ = this.leftBackLeg.pivotZ;
-        this.field_20930.pitch = this.leftBackLeg.pitch;
-        this.field_20931.pivotY = this.rightBackLeg.pivotY;
-        this.field_20931.pivotZ = this.rightBackLeg.pivotZ;
-        this.field_20931.pitch = this.rightBackLeg.pitch;
-        this.field_20932.pivotY = this.leftFrontLeg.pivotY;
-        this.field_20932.pivotZ = this.leftFrontLeg.pivotZ;
-        this.field_20932.pitch = this.leftFrontLeg.pitch;
-        this.field_20933.pivotY = this.rightFrontLeg.pivotY;
-        this.field_20933.pivotZ = this.rightFrontLeg.pivotZ;
-        this.field_20933.pitch = this.rightFrontLeg.pitch;
+        this.rightHindBabyLeg.pivotY = this.rightHindLeg.pivotY;
+        this.rightHindBabyLeg.pivotZ = this.rightHindLeg.pivotZ;
+        this.rightHindBabyLeg.pitch = this.rightHindLeg.pitch;
+        this.leftHindBabyLeg.pivotY = this.leftHindLeg.pivotY;
+        this.leftHindBabyLeg.pivotZ = this.leftHindLeg.pivotZ;
+        this.leftHindBabyLeg.pitch = this.leftHindLeg.pitch;
+        this.rightFrontBabyLeg.pivotY = this.rightFrontLeg.pivotY;
+        this.rightFrontBabyLeg.pivotZ = this.rightFrontLeg.pivotZ;
+        this.rightFrontBabyLeg.pitch = this.rightFrontLeg.pitch;
+        this.leftFrontBabyLeg.pivotY = this.leftFrontLeg.pivotY;
+        this.leftFrontBabyLeg.pivotZ = this.leftFrontLeg.pivotZ;
+        this.leftFrontBabyLeg.pitch = this.leftFrontLeg.pitch;
         boolean bl2 = ((PassiveEntity)horseBaseEntity).isBaby();
-        this.leftBackLeg.visible = !bl2;
-        this.rightBackLeg.visible = !bl2;
-        this.leftFrontLeg.visible = !bl2;
+        this.rightHindLeg.visible = !bl2;
+        this.leftHindLeg.visible = !bl2;
         this.rightFrontLeg.visible = !bl2;
-        this.field_20930.visible = bl2;
-        this.field_20931.visible = bl2;
-        this.field_20932.visible = bl2;
-        this.field_20933.visible = bl2;
+        this.leftFrontLeg.visible = !bl2;
+        this.rightHindBabyLeg.visible = bl2;
+        this.leftHindBabyLeg.visible = bl2;
+        this.rightFrontBabyLeg.visible = bl2;
+        this.leftFrontBabyLeg.visible = bl2;
         this.body.pivotY = bl2 ? 10.8f : 0.0f;
     }
 }

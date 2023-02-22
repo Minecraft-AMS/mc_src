@@ -7,7 +7,6 @@ import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.map.MapIcon;
 import net.minecraft.item.map.MapState;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
@@ -18,8 +17,8 @@ import net.minecraft.world.World;
 
 public class MapExtendingRecipe
 extends ShapedRecipe {
-    public MapExtendingRecipe(Identifier identifier) {
-        super(identifier, "", 3, 3, DefaultedList.copyOf(Ingredient.EMPTY, Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.FILLED_MAP), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER)), new ItemStack(Items.MAP));
+    public MapExtendingRecipe(Identifier id) {
+        super(id, "", 3, 3, DefaultedList.copyOf(Ingredient.EMPTY, Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.FILLED_MAP), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER), Ingredient.ofItems(Items.PAPER)), new ItemStack(Items.MAP));
     }
 
     @Override
@@ -30,7 +29,7 @@ extends ShapedRecipe {
         ItemStack itemStack = ItemStack.EMPTY;
         for (int i = 0; i < craftingInventory.size() && itemStack.isEmpty(); ++i) {
             ItemStack itemStack2 = craftingInventory.getStack(i);
-            if (itemStack2.getItem() != Items.FILLED_MAP) continue;
+            if (!itemStack2.isOf(Items.FILLED_MAP)) continue;
             itemStack = itemStack2;
         }
         if (itemStack.isEmpty()) {
@@ -40,20 +39,10 @@ extends ShapedRecipe {
         if (mapState == null) {
             return false;
         }
-        if (this.matches(mapState)) {
+        if (mapState.hasMonumentIcon()) {
             return false;
         }
         return mapState.scale < 4;
-    }
-
-    private boolean matches(MapState state) {
-        if (state.icons != null) {
-            for (MapIcon mapIcon : state.icons.values()) {
-                if (mapIcon.getType() != MapIcon.Type.MANSION && mapIcon.getType() != MapIcon.Type.MONUMENT) continue;
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -61,12 +50,12 @@ extends ShapedRecipe {
         ItemStack itemStack = ItemStack.EMPTY;
         for (int i = 0; i < craftingInventory.size() && itemStack.isEmpty(); ++i) {
             ItemStack itemStack2 = craftingInventory.getStack(i);
-            if (itemStack2.getItem() != Items.FILLED_MAP) continue;
+            if (!itemStack2.isOf(Items.FILLED_MAP)) continue;
             itemStack = itemStack2;
         }
         itemStack = itemStack.copy();
         itemStack.setCount(1);
-        itemStack.getOrCreateTag().putInt("map_scale_direction", 1);
+        itemStack.getOrCreateNbt().putInt("map_scale_direction", 1);
         return itemStack;
     }
 

@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.block;
 
@@ -13,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -33,6 +29,10 @@ public class RedstoneTorchBlock
 extends TorchBlock {
     public static final BooleanProperty LIT = Properties.LIT;
     private static final Map<BlockView, List<BurnoutEntry>> BURNOUT_MAP = new WeakHashMap<BlockView, List<BurnoutEntry>>();
+    public static final int field_31227 = 60;
+    public static final int field_31228 = 8;
+    public static final int field_31229 = 160;
+    private static final int SCHEDULED_TICK_DELAY = 2;
 
     protected RedstoneTorchBlock(AbstractBlock.Settings settings) {
         super(settings, DustParticleEffect.DEFAULT);
@@ -72,7 +72,7 @@ extends TorchBlock {
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         boolean bl = this.shouldUnpower(world, pos, state);
         List<BurnoutEntry> list = BURNOUT_MAP.get(world);
-        while (list != null && !list.isEmpty() && world.getTime() - list.get(0).time > 60L) {
+        while (list != null && !list.isEmpty() && world.getTime() - list.get((int)0).time > 60L) {
             list.remove(0);
         }
         if (state.get(LIT).booleanValue()) {
@@ -109,7 +109,6 @@ extends TorchBlock {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (!state.get(LIT).booleanValue()) {
             return;
@@ -125,10 +124,10 @@ extends TorchBlock {
         builder.add(LIT);
     }
 
-    private static boolean isBurnedOut(World world, BlockPos pos, boolean addNew) {
-        List list = BURNOUT_MAP.computeIfAbsent(world, blockView -> Lists.newArrayList());
+    private static boolean isBurnedOut(World world2, BlockPos pos, boolean addNew) {
+        List list = BURNOUT_MAP.computeIfAbsent(world2, world -> Lists.newArrayList());
         if (addNew) {
-            list.add(new BurnoutEntry(pos.toImmutable(), world.getTime()));
+            list.add(new BurnoutEntry(pos.toImmutable(), world2.getTime()));
         }
         int i = 0;
         for (int j = 0; j < list.size(); ++j) {
@@ -140,8 +139,8 @@ extends TorchBlock {
     }
 
     public static class BurnoutEntry {
-        private final BlockPos pos;
-        private final long time;
+        final BlockPos pos;
+        final long time;
 
         public BurnoutEntry(BlockPos pos, long time) {
             this.pos = pos;

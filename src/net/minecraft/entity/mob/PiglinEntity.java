@@ -23,6 +23,7 @@ import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
@@ -45,6 +46,7 @@ import net.minecraft.entity.mob.PiglinActivity;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -55,6 +57,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
@@ -65,14 +68,24 @@ import org.jetbrains.annotations.Nullable;
 
 public class PiglinEntity
 extends AbstractPiglinEntity
-implements CrossbowUser {
+implements CrossbowUser,
+InventoryOwner {
     private static final TrackedData<Boolean> BABY = DataTracker.registerData(PiglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> CHARGING = DataTracker.registerData(PiglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> DANCING = DataTracker.registerData(PiglinEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final UUID BABY_SPEED_BOOST_ID = UUID.fromString("766bfa64-11f3-11ea-8d71-362b9e155667");
     private static final EntityAttributeModifier BABY_SPEED_BOOST = new EntityAttributeModifier(BABY_SPEED_BOOST_ID, "Baby speed boost", (double)0.2f, EntityAttributeModifier.Operation.MULTIPLY_BASE);
+    private static final int field_30548 = 16;
+    private static final float field_30549 = 0.35f;
+    private static final int field_30550 = 5;
+    private static final float field_30551 = 1.6f;
+    private static final float field_30552 = 0.1f;
+    private static final int field_30553 = 3;
+    private static final float field_30554 = 0.2f;
+    private static final float field_30555 = 0.81f;
+    private static final double field_30556 = 0.5;
     private final SimpleInventory inventory = new SimpleInventory(8);
-    private boolean cannotHunt = false;
+    private boolean cannotHunt;
     protected static final ImmutableList<SensorType<? extends Sensor<? super PiglinEntity>>> SENSOR_TYPES = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_SPECIFIC_SENSOR);
     protected static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULE_TYPES = ImmutableList.of(MemoryModuleType.LOOK_TARGET, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS, MemoryModuleType.NEARBY_ADULT_PIGLINS, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.WALK_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.PATH, MemoryModuleType.ANGRY_AT, MemoryModuleType.UNIVERSAL_ANGER, MemoryModuleType.AVOID_TARGET, MemoryModuleType.ADMIRING_ITEM, MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM, MemoryModuleType.ADMIRING_DISABLED, MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryModuleType.CELEBRATE_LOCATION, MemoryModuleType.DANCING, MemoryModuleType.HUNTED_RECENTLY, MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, MemoryModuleType.NEAREST_VISIBLE_NEMESIS, MemoryModuleType.NEAREST_VISIBLE_ZOMBIFIED, MemoryModuleType.RIDE_TARGET, MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, MemoryModuleType.NEAREST_VISIBLE_HUNTABLE_HOGLIN, MemoryModuleType.NEAREST_TARGETABLE_PLAYER_NOT_WEARING_GOLD, MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM, MemoryModuleType.ATE_RECENTLY, MemoryModuleType.NEAREST_REPELLENT});
 
@@ -99,6 +112,12 @@ implements CrossbowUser {
         this.setBaby(nbt.getBoolean("IsBaby"));
         this.setCannotHunt(nbt.getBoolean("CannotHunt"));
         this.inventory.readNbtList(nbt.getList("Inventory", 10));
+    }
+
+    @Override
+    @Debug
+    public Inventory getInventory() {
+        return this.inventory;
     }
 
     @Override
@@ -290,7 +309,7 @@ implements CrossbowUser {
         if (this.isDancing()) {
             return PiglinActivity.DANCING;
         }
-        if (PiglinBrain.isGoldenItem(this.getOffHandStack().getItem())) {
+        if (PiglinBrain.isGoldenItem(this.getOffHandStack())) {
             return PiglinActivity.ADMIRING_ITEM;
         }
         if (this.isAttacking() && this.isHoldingTool()) {
@@ -345,7 +364,7 @@ implements CrossbowUser {
     }
 
     protected void equipToOffHand(ItemStack stack) {
-        if (stack.getItem() == PiglinBrain.BARTERING_ITEM) {
+        if (stack.isOf(PiglinBrain.BARTERING_ITEM)) {
             this.equipStack(EquipmentSlot.OFFHAND, stack);
             this.updateDropChances(EquipmentSlot.OFFHAND);
         } else {
@@ -370,15 +389,15 @@ implements CrossbowUser {
         if (EnchantmentHelper.hasBindingCurse(oldStack)) {
             return false;
         }
-        boolean bl = PiglinBrain.isGoldenItem(newStack.getItem()) || newStack.getItem() == Items.CROSSBOW;
-        boolean bl3 = bl2 = PiglinBrain.isGoldenItem(oldStack.getItem()) || oldStack.getItem() == Items.CROSSBOW;
+        boolean bl = PiglinBrain.isGoldenItem(newStack) || newStack.isOf(Items.CROSSBOW);
+        boolean bl3 = bl2 = PiglinBrain.isGoldenItem(oldStack) || oldStack.isOf(Items.CROSSBOW);
         if (bl && !bl2) {
             return true;
         }
         if (!bl && bl2) {
             return false;
         }
-        if (this.isAdult() && newStack.getItem() != Items.CROSSBOW && oldStack.getItem() == Items.CROSSBOW) {
+        if (this.isAdult() && !newStack.isOf(Items.CROSSBOW) && oldStack.isOf(Items.CROSSBOW)) {
             return false;
         }
         return super.prefersNewEquipment(newStack, oldStack);
@@ -386,24 +405,24 @@ implements CrossbowUser {
 
     @Override
     protected void loot(ItemEntity item) {
-        this.method_29499(item);
+        this.triggerItemPickedUpByEntityCriteria(item);
         PiglinBrain.loot(this, item);
     }
 
     @Override
     public boolean startRiding(Entity entity, boolean force) {
         if (this.isBaby() && entity.getType() == EntityType.HOGLIN) {
-            entity = this.method_26089(entity, 3);
+            entity = this.getTopMostPassenger(entity, 3);
         }
         return super.startRiding(entity, force);
     }
 
-    private Entity method_26089(Entity entity, int i) {
+    private Entity getTopMostPassenger(Entity entity, int maxLevel) {
         List<Entity> list = entity.getPassengerList();
-        if (i == 1 || list.isEmpty()) {
+        if (maxLevel == 1 || list.isEmpty()) {
             return entity;
         }
-        return this.method_26089(list.get(0), i - 1);
+        return this.getTopMostPassenger(list.get(0), maxLevel - 1);
     }
 
     @Override

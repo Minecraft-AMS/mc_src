@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.passive;
 
 import java.util.Random;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
@@ -35,10 +31,12 @@ import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AnimalEntity
 extends PassiveEntity {
+    static final int BREEDING_COOLDOWN = 6000;
     private int loveTicks;
     private UUID lovingPlayer;
 
@@ -131,7 +129,7 @@ extends PassiveEntity {
     }
 
     public boolean isBreedingItem(ItemStack stack) {
-        return stack.getItem() == Items.WHEAT;
+        return stack.isOf(Items.WHEAT);
     }
 
     @Override
@@ -140,13 +138,15 @@ extends PassiveEntity {
         if (this.isBreedingItem(itemStack)) {
             int i = this.getBreedingAge();
             if (!this.world.isClient && i == 0 && this.canEat()) {
-                this.eat(player, itemStack);
+                this.eat(player, hand, itemStack);
                 this.lovePlayer(player);
+                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             if (this.isBaby()) {
-                this.eat(player, itemStack);
+                this.eat(player, hand, itemStack);
                 this.growUp((int)((float)(-i / 20) * 0.1f), true);
+                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.success(this.world.isClient);
             }
             if (this.world.isClient) {
@@ -156,8 +156,8 @@ extends PassiveEntity {
         return super.interactMob(player, hand);
     }
 
-    protected void eat(PlayerEntity player, ItemStack stack) {
-        if (!player.abilities.creativeMode) {
+    protected void eat(PlayerEntity player, Hand hand, ItemStack stack) {
+        if (!player.getAbilities().creativeMode) {
             stack.decrement(1);
         }
     }
@@ -239,7 +239,6 @@ extends PassiveEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 18) {
             for (int i = 0; i < 7; ++i) {

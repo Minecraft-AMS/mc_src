@@ -19,8 +19,8 @@ extends ArrayList<TradeOffer> {
     public TradeOfferList() {
     }
 
-    public TradeOfferList(NbtCompound nbtCompound) {
-        NbtList nbtList = nbtCompound.getList("Recipes", 10);
+    public TradeOfferList(NbtCompound nbt) {
+        NbtList nbtList = nbt.getList("Recipes", 10);
         for (int i = 0; i < nbtList.size(); ++i) {
             this.add(new TradeOffer(nbtList.getCompound(i)));
         }

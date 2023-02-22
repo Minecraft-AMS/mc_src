@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 public class ResourceIndex {
     protected static final Logger LOGGER = LogManager.getLogger();
     private final Map<String, File> rootIndex = Maps.newHashMap();
-    private final Map<Identifier, File> field_21556 = Maps.newHashMap();
+    private final Map<Identifier, File> namespacedIndex = Maps.newHashMap();
 
     protected ResourceIndex() {
     }
@@ -69,7 +69,7 @@ public class ResourceIndex {
                         this.rootIndex.put(strings[0], file3);
                         continue;
                     }
-                    this.field_21556.put(new Identifier(strings[0], strings[1]), file3);
+                    this.namespacedIndex.put(new Identifier(strings[0], strings[1]), file3);
                 }
             }
         }
@@ -86,7 +86,7 @@ public class ResourceIndex {
 
     @Nullable
     public File getResource(Identifier identifier) {
-        return this.field_21556.get(identifier);
+        return this.namespacedIndex.get(identifier);
     }
 
     @Nullable
@@ -94,10 +94,10 @@ public class ResourceIndex {
         return this.rootIndex.get(path);
     }
 
-    public Collection<Identifier> getFilesRecursively(String string, String string2, int i, Predicate<String> predicate) {
-        return this.field_21556.keySet().stream().filter(identifier -> {
-            String string3 = identifier.getPath();
-            return identifier.getNamespace().equals(string2) && !string3.endsWith(".mcmeta") && string3.startsWith(string + "/") && predicate.test(string3);
+    public Collection<Identifier> getFilesRecursively(String prefix, String namespace, int maxDepth, Predicate<String> pathFilter) {
+        return this.namespacedIndex.keySet().stream().filter(id -> {
+            String string3 = id.getPath();
+            return id.getNamespace().equals(namespace) && !string3.endsWith(".mcmeta") && string3.startsWith(prefix + "/") && pathFilter.test(string3);
         }).collect(Collectors.toList());
     }
 }

@@ -3,8 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.effect;
@@ -12,8 +10,6 @@ package net.minecraft.entity.effect;
 import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.AttributeContainer;
@@ -21,7 +17,7 @@ import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.effect.StatusEffectType;
+import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
@@ -32,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class StatusEffect {
     private final Map<EntityAttribute, EntityAttributeModifier> attributeModifiers = Maps.newHashMap();
-    private final StatusEffectType type;
+    private final StatusEffectCategory category;
     private final int color;
     @Nullable
     private String translationKey;
@@ -46,8 +42,8 @@ public class StatusEffect {
         return Registry.STATUS_EFFECT.getRawId(type);
     }
 
-    protected StatusEffect(StatusEffectType type, int color) {
-        this.type = type;
+    protected StatusEffect(StatusEffectCategory category, int color) {
+        this.category = category;
         this.color = color;
     }
 
@@ -135,9 +131,8 @@ public class StatusEffect {
         return new TranslatableText(this.getTranslationKey());
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public StatusEffectType getType() {
-        return this.type;
+    public StatusEffectCategory getCategory() {
+        return this.category;
     }
 
     public int getColor() {
@@ -150,7 +145,6 @@ public class StatusEffect {
         return this;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Map<EntityAttribute, EntityAttributeModifier> getAttributeModifiers() {
         return this.attributeModifiers;
     }
@@ -177,9 +171,8 @@ public class StatusEffect {
         return modifier.getValue() * (double)(amplifier + 1);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean isBeneficial() {
-        return this.type == StatusEffectType.BENEFICIAL;
+        return this.category == StatusEffectCategory.BENEFICIAL;
     }
 }
 

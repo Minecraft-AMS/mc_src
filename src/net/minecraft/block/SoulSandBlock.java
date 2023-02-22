@@ -23,6 +23,7 @@ import net.minecraft.world.WorldAccess;
 public class SoulSandBlock
 extends Block {
     protected static final VoxelShape COLLISION_SHAPE = Block.createCuboidShape(0.0, 0.0, 0.0, 16.0, 14.0, 16.0);
+    private static final int SCHEDULED_TICK_DELAY = 20;
 
     public SoulSandBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -45,7 +46,7 @@ extends Block {
 
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        BubbleColumnBlock.update(world, pos.up(), false);
+        BubbleColumnBlock.update(world, pos.up(), state);
     }
 
     @Override

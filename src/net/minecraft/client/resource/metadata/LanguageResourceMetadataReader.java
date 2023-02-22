@@ -27,13 +27,15 @@ import net.minecraft.util.JsonHelper;
 @Environment(value=EnvType.CLIENT)
 public class LanguageResourceMetadataReader
 implements ResourceMetadataReader<LanguageResourceMetadata> {
+    private static final int MAX_CODE_LENGTH = 16;
+
     @Override
     public LanguageResourceMetadata fromJson(JsonObject jsonObject) {
         HashSet set = Sets.newHashSet();
         for (Map.Entry entry : jsonObject.entrySet()) {
             String string = (String)entry.getKey();
             if (string.length() > 16) {
-                throw new JsonParseException("Invalid language->'" + string + "': language code must not be more than " + 16 + " characters long");
+                throw new JsonParseException("Invalid language->'" + string + "': language code must not be more than 16 characters long");
             }
             JsonObject jsonObject2 = JsonHelper.asObject((JsonElement)entry.getValue(), "language");
             String string2 = JsonHelper.getString(jsonObject2, "region");

@@ -1,14 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.vehicle;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -30,6 +24,7 @@ import net.minecraft.world.explosion.Explosion;
 
 public class TntMinecartEntity
 extends AbstractMinecartEntity {
+    private static final byte PRIME_TNT_STATUS = 10;
     private int fuseTicks = -1;
 
     public TntMinecartEntity(EntityType<? extends TntMinecartEntity> entityType, World world) {
@@ -58,9 +53,9 @@ extends AbstractMinecartEntity {
             --this.fuseTicks;
             this.world.addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
         } else if (this.fuseTicks == 0) {
-            this.explode(TntMinecartEntity.squaredHorizontalLength(this.getVelocity()));
+            this.explode(this.getVelocity().horizontalLengthSquared());
         }
-        if (this.horizontalCollision && (d = TntMinecartEntity.squaredHorizontalLength(this.getVelocity())) >= (double)0.01f) {
+        if (this.horizontalCollision && (d = this.getVelocity().horizontalLengthSquared()) >= (double)0.01f) {
             this.explode(d);
         }
     }
@@ -77,7 +72,7 @@ extends AbstractMinecartEntity {
 
     @Override
     public void dropItems(DamageSource damageSource) {
-        double d = TntMinecartEntity.squaredHorizontalLength(this.getVelocity());
+        double d = this.getVelocity().horizontalLengthSquared();
         if (damageSource.isFire() || damageSource.isExplosive() || d >= (double)0.01f) {
             if (this.fuseTicks < 0) {
                 this.prime();
@@ -98,17 +93,17 @@ extends AbstractMinecartEntity {
                 d = 5.0;
             }
             this.world.createExplosion(this, this.getX(), this.getY(), this.getZ(), (float)(4.0 + this.random.nextDouble() * 1.5 * d), Explosion.DestructionType.BREAK);
-            this.remove();
+            this.discard();
         }
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier) {
+    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource) {
         if (fallDistance >= 3.0f) {
             float f = fallDistance / 10.0f;
             this.explode(f * f);
         }
-        return super.handleFallDamage(fallDistance, damageMultiplier);
+        return super.handleFallDamage(fallDistance, damageMultiplier, damageSource);
     }
 
     @Override
@@ -119,7 +114,6 @@ extends AbstractMinecartEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void handleStatus(byte status) {
         if (status == 10) {
             this.prime();
@@ -138,7 +132,6 @@ extends AbstractMinecartEntity {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getFuseTicks() {
         return this.fuseTicks;
     }

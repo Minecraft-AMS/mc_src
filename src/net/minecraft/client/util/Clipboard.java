@@ -27,6 +27,7 @@ import org.lwjgl.system.MemoryUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class Clipboard {
+    public static final int field_31905 = 65545;
     private final ByteBuffer clipboardBuffer = BufferUtils.createByteBuffer((int)8192);
 
     public String getClipboard(long window, GLFWErrorCallbackI gLFWErrorCallbackI) {
@@ -40,12 +41,12 @@ public class Clipboard {
         return string;
     }
 
-    private static void setClipboard(long l, ByteBuffer byteBuffer, byte[] bs) {
-        byteBuffer.clear();
-        byteBuffer.put(bs);
-        byteBuffer.put((byte)0);
-        byteBuffer.flip();
-        GLFW.glfwSetClipboardString((long)l, (ByteBuffer)byteBuffer);
+    private static void setClipboard(long window, ByteBuffer clipboardBuffer, byte[] content) {
+        clipboardBuffer.clear();
+        clipboardBuffer.put(content);
+        clipboardBuffer.put((byte)0);
+        clipboardBuffer.flip();
+        GLFW.glfwSetClipboardString((long)window, (ByteBuffer)clipboardBuffer);
     }
 
     /*

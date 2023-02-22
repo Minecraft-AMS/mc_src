@@ -32,14 +32,14 @@ import net.minecraft.util.registry.Registry;
 public class StatusEffectArgumentType
 implements ArgumentType<StatusEffect> {
     private static final Collection<String> EXAMPLES = Arrays.asList("spooky", "effect");
-    public static final DynamicCommandExceptionType INVALID_EFFECT_EXCEPTION = new DynamicCommandExceptionType(object -> new TranslatableText("effect.effectNotFound", object));
+    public static final DynamicCommandExceptionType INVALID_EFFECT_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("effect.effectNotFound", id));
 
     public static StatusEffectArgumentType statusEffect() {
         return new StatusEffectArgumentType();
     }
 
-    public static StatusEffect getStatusEffect(CommandContext<ServerCommandSource> commandContext, String string) throws CommandSyntaxException {
-        return (StatusEffect)commandContext.getArgument(string, StatusEffect.class);
+    public static StatusEffect getStatusEffect(CommandContext<ServerCommandSource> context, String name) {
+        return (StatusEffect)context.getArgument(name, StatusEffect.class);
     }
 
     public StatusEffect parse(StringReader stringReader) throws CommandSyntaxException {
@@ -55,8 +55,8 @@ implements ArgumentType<StatusEffect> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

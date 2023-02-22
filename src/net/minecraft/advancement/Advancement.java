@@ -9,8 +9,6 @@
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.ArrayUtils
  *  org.jetbrains.annotations.Nullable
  */
@@ -28,8 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.AdvancementCriterion;
 import net.minecraft.advancement.AdvancementDisplay;
 import net.minecraft.advancement.AdvancementFrame;
@@ -102,7 +98,7 @@ public class Advancement {
     }
 
     public String toString() {
-        return "SimpleAdvancement{id=" + this.getId() + ", parent=" + (this.parent == null ? "null" : this.parent.getId()) + ", display=" + this.display + ", rewards=" + this.rewards + ", criteria=" + this.criteria + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + '}';
+        return "SimpleAdvancement{id=" + this.getId() + ", parent=" + (Comparable)(this.parent == null ? "null" : this.parent.getId()) + ", display=" + this.display + ", rewards=" + this.rewards + ", criteria=" + this.criteria + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + "}";
     }
 
     public Iterable<Advancement> getChildren() {
@@ -113,7 +109,6 @@ public class Advancement {
         return this.criteria;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getRequirementCount() {
         return this.requirements.length;
     }
@@ -158,7 +153,7 @@ public class Advancement {
         private String[][] requirements;
         private CriterionMerger merger = CriterionMerger.AND;
 
-        private Task(@Nullable Identifier parentId, @Nullable AdvancementDisplay display, AdvancementRewards rewards, Map<String, AdvancementCriterion> criteria, String[][] requirements) {
+        Task(@Nullable Identifier parentId, @Nullable AdvancementDisplay display, AdvancementRewards rewards, Map<String, AdvancementCriterion> criteria, String[][] requirements) {
             this.parentId = parentId;
             this.display = display;
             this.rewards = rewards;
@@ -205,20 +200,25 @@ public class Advancement {
             return this;
         }
 
-        public Task criterion(String name, CriterionConditions criterionConditions) {
-            return this.criterion(name, new AdvancementCriterion(criterionConditions));
+        public Task criterion(String name, CriterionConditions conditions) {
+            return this.criterion(name, new AdvancementCriterion(conditions));
         }
 
-        public Task criterion(String name, AdvancementCriterion advancementCriterion) {
+        public Task criterion(String name, AdvancementCriterion criterion) {
             if (this.criteria.containsKey(name)) {
                 throw new IllegalArgumentException("Duplicate criterion " + name);
             }
-            this.criteria.put(name, advancementCriterion);
+            this.criteria.put(name, criterion);
             return this;
         }
 
         public Task criteriaMerger(CriterionMerger merger) {
             this.merger = merger;
+            return this;
+        }
+
+        public Task requirements(String[][] requirements) {
+            this.requirements = requirements;
             return this;
         }
 
@@ -232,18 +232,18 @@ public class Advancement {
             return this.parentObj != null;
         }
 
-        public Advancement build(Identifier id) {
-            if (!this.findParent(identifier -> null)) {
+        public Advancement build(Identifier id2) {
+            if (!this.findParent(id -> null)) {
                 throw new IllegalStateException("Tried to build incomplete advancement!");
             }
             if (this.requirements == null) {
                 this.requirements = this.merger.createRequirements(this.criteria.keySet());
             }
-            return new Advancement(id, this.parentObj, this.display, this.rewards, this.criteria, this.requirements);
+            return new Advancement(id2, this.parentObj, this.display, this.rewards, this.criteria, this.requirements);
         }
 
-        public Advancement build(Consumer<Advancement> consumer, String string) {
-            Advancement advancement = this.build(new Identifier(string));
+        public Advancement build(Consumer<Advancement> consumer, String id) {
+            Advancement advancement = this.build(new Identifier(id));
             consumer.accept(advancement);
             return advancement;
         }
@@ -303,7 +303,7 @@ public class Advancement {
         }
 
         public String toString() {
-            return "Task Advancement{parentId=" + this.parentId + ", display=" + this.display + ", rewards=" + this.rewards + ", criteria=" + this.criteria + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + '}';
+            return "Task Advancement{parentId=" + this.parentId + ", display=" + this.display + ", rewards=" + this.rewards + ", criteria=" + this.criteria + ", requirements=" + Arrays.deepToString((Object[])this.requirements) + "}";
         }
 
         public static Task fromJson(JsonObject obj, AdvancementEntityPredicateDeserializer predicateDeserializer) {
@@ -364,7 +364,7 @@ public class Advancement {
             for (int i = 0; i < strings.length; ++i) {
                 strings[i] = new String[buf.readVarInt()];
                 for (int j = 0; j < strings[i].length; ++j) {
-                    strings[i][j] = buf.readString(Short.MAX_VALUE);
+                    strings[i][j] = buf.readString();
                 }
             }
             return new Task(identifier, advancementDisplay, AdvancementRewards.NONE, map, strings);

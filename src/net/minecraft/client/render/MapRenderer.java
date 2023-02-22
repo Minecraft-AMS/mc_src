@@ -2,15 +2,16 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
+ *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
+ *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render;
 
-import com.google.common.collect.Maps;
-import java.util.Map;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.util.Objects;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.MapColor;
@@ -29,40 +30,37 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
-import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class MapRenderer
 implements AutoCloseable {
     private static final Identifier MAP_ICONS_TEXTURE = new Identifier("textures/map/map_icons.png");
-    private static final RenderLayer MAP_ICONS_RENDER_LAYER = RenderLayer.getText(MAP_ICONS_TEXTURE);
-    private final TextureManager textureManager;
-    private final Map<String, MapTexture> mapTextures = Maps.newHashMap();
+    static final RenderLayer MAP_ICONS_RENDER_LAYER = RenderLayer.getText(MAP_ICONS_TEXTURE);
+    private static final int DEFAULT_IMAGE_WIDTH = 128;
+    private static final int DEFAULT_IMAGE_HEIGHT = 128;
+    final TextureManager textureManager;
+    private final Int2ObjectMap<MapTexture> mapTextures = new Int2ObjectOpenHashMap();
 
     public MapRenderer(TextureManager textureManager) {
         this.textureManager = textureManager;
     }
 
-    public void updateTexture(MapState mapState) {
-        this.getMapTexture(mapState).updateTexture();
+    public void updateTexture(int id, MapState state) {
+        this.getMapTexture(id, state).setNeedsUpdate();
     }
 
-    public void draw(MatrixStack matrices, VertexConsumerProvider vertexConsumers, MapState mapState, boolean bl, int light) {
-        this.getMapTexture(mapState).draw(matrices, vertexConsumers, bl, light);
+    public void draw(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int id, MapState state, boolean hidePlayerIcons, int light) {
+        this.getMapTexture(id, state).draw(matrices, vertexConsumers, hidePlayerIcons, light);
     }
 
-    private MapTexture getMapTexture(MapState mapState) {
-        MapTexture mapTexture = this.mapTextures.get(mapState.getId());
-        if (mapTexture == null) {
-            mapTexture = new MapTexture(mapState);
-            this.mapTextures.put(mapState.getId(), mapTexture);
-        }
-        return mapTexture;
-    }
-
-    @Nullable
-    public MapTexture getTexture(String string) {
-        return this.mapTextures.get(string);
+    private MapTexture getMapTexture(int id, MapState state) {
+        return (MapTexture)this.mapTextures.compute(id, (integer, mapTexture) -> {
+            if (mapTexture == null) {
+                return new MapTexture((int)integer, state);
+            }
+            mapTexture.setState(state);
+            return mapTexture;
+        });
     }
 
     public void clearStateTextures() {
@@ -70,14 +68,6 @@ implements AutoCloseable {
             mapTexture.close();
         }
         this.mapTextures.clear();
-    }
-
-    @Nullable
-    public MapState getState(@Nullable MapTexture texture) {
-        if (texture != null) {
-            return texture.mapState;
-        }
-        return null;
     }
 
     @Override
@@ -88,33 +78,48 @@ implements AutoCloseable {
     @Environment(value=EnvType.CLIENT)
     class MapTexture
     implements AutoCloseable {
-        private final MapState mapState;
+        private MapState state;
         private final NativeImageBackedTexture texture;
         private final RenderLayer renderLayer;
+        private boolean needsUpdate = true;
 
-        private MapTexture(MapState state) {
-            this.mapState = state;
+        MapTexture(int id, MapState state) {
+            this.state = state;
             this.texture = new NativeImageBackedTexture(128, 128, true);
-            Identifier identifier = MapRenderer.this.textureManager.registerDynamicTexture("map/" + state.getId(), this.texture);
+            Identifier identifier = MapRenderer.this.textureManager.registerDynamicTexture("map/" + id, this.texture);
             this.renderLayer = RenderLayer.getText(identifier);
+        }
+
+        void setState(MapState state) {
+            boolean bl = this.state != state;
+            this.state = state;
+            this.needsUpdate |= bl;
+        }
+
+        public void setNeedsUpdate() {
+            this.needsUpdate = true;
         }
 
         private void updateTexture() {
             for (int i = 0; i < 128; ++i) {
                 for (int j = 0; j < 128; ++j) {
                     int k = j + i * 128;
-                    int l = this.mapState.colors[k] & 0xFF;
+                    int l = this.state.colors[k] & 0xFF;
                     if (l / 4 == 0) {
-                        this.texture.getImage().setPixelColor(j, i, 0);
+                        this.texture.getImage().setColor(j, i, 0);
                         continue;
                     }
-                    this.texture.getImage().setPixelColor(j, i, MapColor.COLORS[l / 4].getRenderColor(l & 3));
+                    this.texture.getImage().setColor(j, i, MapColor.COLORS[l / 4].getRenderColor(l & 3));
                 }
             }
             this.texture.upload();
         }
 
-        private void draw(MatrixStack matrices, VertexConsumerProvider vertexConsumers, boolean bl, int light) {
+        void draw(MatrixStack matrices, VertexConsumerProvider vertexConsumers, boolean hidePlayerIcons, int light) {
+            if (this.needsUpdate) {
+                this.updateTexture();
+                this.needsUpdate = false;
+            }
             boolean i = false;
             boolean j = false;
             float f = 0.0f;
@@ -125,8 +130,8 @@ implements AutoCloseable {
             vertexConsumer.vertex(matrix4f, 128.0f, 0.0f, -0.01f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(light).next();
             vertexConsumer.vertex(matrix4f, 0.0f, 0.0f, -0.01f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light).next();
             int k = 0;
-            for (MapIcon mapIcon : this.mapState.icons.values()) {
-                if (bl && !mapIcon.isAlwaysRendered()) continue;
+            for (MapIcon mapIcon : this.state.getIcons()) {
+                if (hidePlayerIcons && !mapIcon.isAlwaysRendered()) continue;
                 matrices.push();
                 matrices.translate(0.0f + (float)mapIcon.getX() / 2.0f + 64.0f, 0.0f + (float)mapIcon.getZ() / 2.0f + 64.0f, -0.02f);
                 matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion((float)(mapIcon.getRotation() * 360) / 16.0f));
@@ -150,7 +155,7 @@ implements AutoCloseable {
                     Text text = mapIcon.getText();
                     float o = textRenderer.getWidth(text);
                     float f2 = 25.0f / o;
-                    textRenderer.getClass();
+                    Objects.requireNonNull(textRenderer);
                     float p = MathHelper.clamp(f2, 0.0f, 6.0f / 9.0f);
                     matrices.push();
                     matrices.translate(0.0f + (float)mapIcon.getX() / 2.0f + 64.0f - o * p / 2.0f, 0.0f + (float)mapIcon.getZ() / 2.0f + 64.0f + 4.0f, -0.025f);

@@ -12,8 +12,9 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.EvokerFangsEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.mob.EvokerFangsEntity;
@@ -24,10 +25,11 @@ import net.minecraft.util.math.Vec3f;
 public class EvokerFangsEntityRenderer
 extends EntityRenderer<EvokerFangsEntity> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/illager/evoker_fangs.png");
-    private final EvokerFangsEntityModel<EvokerFangsEntity> model = new EvokerFangsEntityModel();
+    private final EvokerFangsEntityModel<EvokerFangsEntity> model;
 
-    public EvokerFangsEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public EvokerFangsEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
+        this.model = new EvokerFangsEntityModel(context.getPart(EntityModelLayers.EVOKER_FANGS));
     }
 
     @Override
@@ -41,12 +43,12 @@ extends EntityRenderer<EvokerFangsEntity> {
             j = (float)((double)j * ((1.0 - (double)h) / (double)0.1f));
         }
         matrixStack.push();
-        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(90.0f - evokerFangsEntity.yaw));
+        matrixStack.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(90.0f - evokerFangsEntity.getYaw()));
         matrixStack.scale(-j, -j, j);
         float k = 0.03125f;
         matrixStack.translate(0.0, -0.626f, 0.0);
         matrixStack.scale(0.5f, 0.5f, 0.5f);
-        this.model.setAngles(evokerFangsEntity, h, 0.0f, 0.0f, evokerFangsEntity.yaw, evokerFangsEntity.pitch);
+        this.model.setAngles(evokerFangsEntity, h, 0.0f, 0.0f, evokerFangsEntity.getYaw(), evokerFangsEntity.getPitch());
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(this.model.getLayer(TEXTURE));
         this.model.render(matrixStack, vertexConsumer, i, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
         matrixStack.pop();

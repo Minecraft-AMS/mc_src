@@ -31,7 +31,6 @@ import net.minecraft.entity.mob.PiglinBruteEntity;
 import net.minecraft.entity.mob.PiglinEntity;
 import net.minecraft.entity.mob.WitherSkeletonEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
@@ -87,7 +86,7 @@ extends Sensor<LivingEntity> {
             }
             if (livingEntity instanceof PlayerEntity) {
                 PlayerEntity playerEntity = (PlayerEntity)livingEntity;
-                if (!optional6.isPresent() && EntityPredicates.EXCEPT_CREATIVE_SPECTATOR_OR_PEACEFUL.test(livingEntity) && !PiglinBrain.wearsGoldArmor(playerEntity)) {
+                if (!optional6.isPresent() && entity.canTarget(livingEntity) && !PiglinBrain.wearsGoldArmor(playerEntity)) {
                     optional6 = Optional.of(playerEntity);
                 }
                 if (optional7.isPresent() || playerEntity.isSpectator() || !PiglinBrain.isGoldHoldingPlayer(playerEntity)) continue;
@@ -119,11 +118,11 @@ extends Sensor<LivingEntity> {
     }
 
     private static Optional<BlockPos> findPiglinRepellent(ServerWorld world, LivingEntity entity) {
-        return BlockPos.findClosest(entity.getBlockPos(), 8, 4, blockPos -> PiglinSpecificSensor.method_24648(world, blockPos));
+        return BlockPos.findClosest(entity.getBlockPos(), 8, 4, pos -> PiglinSpecificSensor.isPiglinRepellent(world, pos));
     }
 
-    private static boolean method_24648(ServerWorld serverWorld, BlockPos blockPos) {
-        BlockState blockState = serverWorld.getBlockState(blockPos);
+    private static boolean isPiglinRepellent(ServerWorld world, BlockPos pos) {
+        BlockState blockState = world.getBlockState(pos);
         boolean bl = blockState.isIn(BlockTags.PIGLIN_REPELLENTS);
         if (bl && blockState.isOf(Blocks.SOUL_CAMPFIRE)) {
             return CampfireBlock.isLitCampfire(blockState);

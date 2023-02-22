@@ -15,14 +15,14 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Nameable;
-import net.minecraft.util.Tickable;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class EnchantingTableBlockEntity
 extends BlockEntity
-implements Nameable,
-Tickable {
+implements Nameable {
     public int ticks;
     public float nextPageAngle;
     public float pageAngle;
@@ -36,8 +36,8 @@ Tickable {
     private static final Random RANDOM = new Random();
     private Text customName;
 
-    public EnchantingTableBlockEntity() {
-        super(BlockEntityType.ENCHANTING_TABLE);
+    public EnchantingTableBlockEntity(BlockPos pos, BlockState state) {
+        super(BlockEntityType.ENCHANTING_TABLE, pos, state);
     }
 
     @Override
@@ -50,60 +50,59 @@ Tickable {
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        if (tag.contains("CustomName", 8)) {
-            this.customName = Text.Serializer.fromJson(tag.getString("CustomName"));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        if (nbt.contains("CustomName", 8)) {
+            this.customName = Text.Serializer.fromJson(nbt.getString("CustomName"));
         }
     }
 
-    @Override
-    public void tick() {
+    public static void tick(World world, BlockPos pos, BlockState state, EnchantingTableBlockEntity blockEntity) {
         float g;
-        this.pageTurningSpeed = this.nextPageTurningSpeed;
-        this.field_11963 = this.field_11964;
-        PlayerEntity playerEntity = this.world.getClosestPlayer((double)this.pos.getX() + 0.5, (double)this.pos.getY() + 0.5, (double)this.pos.getZ() + 0.5, 3.0, false);
+        blockEntity.pageTurningSpeed = blockEntity.nextPageTurningSpeed;
+        blockEntity.field_11963 = blockEntity.field_11964;
+        PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 3.0, false);
         if (playerEntity != null) {
-            double d = playerEntity.getX() - ((double)this.pos.getX() + 0.5);
-            double e = playerEntity.getZ() - ((double)this.pos.getZ() + 0.5);
-            this.field_11962 = (float)MathHelper.atan2(e, d);
-            this.nextPageTurningSpeed += 0.1f;
-            if (this.nextPageTurningSpeed < 0.5f || RANDOM.nextInt(40) == 0) {
-                float f = this.field_11969;
+            double d = playerEntity.getX() - ((double)pos.getX() + 0.5);
+            double e = playerEntity.getZ() - ((double)pos.getZ() + 0.5);
+            blockEntity.field_11962 = (float)MathHelper.atan2(e, d);
+            blockEntity.nextPageTurningSpeed += 0.1f;
+            if (blockEntity.nextPageTurningSpeed < 0.5f || RANDOM.nextInt(40) == 0) {
+                float f = blockEntity.field_11969;
                 do {
-                    this.field_11969 += (float)(RANDOM.nextInt(4) - RANDOM.nextInt(4));
-                } while (f == this.field_11969);
+                    blockEntity.field_11969 += (float)(RANDOM.nextInt(4) - RANDOM.nextInt(4));
+                } while (f == blockEntity.field_11969);
             }
         } else {
-            this.field_11962 += 0.02f;
-            this.nextPageTurningSpeed -= 0.1f;
+            blockEntity.field_11962 += 0.02f;
+            blockEntity.nextPageTurningSpeed -= 0.1f;
         }
-        while (this.field_11964 >= (float)Math.PI) {
-            this.field_11964 -= (float)Math.PI * 2;
+        while (blockEntity.field_11964 >= (float)Math.PI) {
+            blockEntity.field_11964 -= (float)Math.PI * 2;
         }
-        while (this.field_11964 < (float)(-Math.PI)) {
-            this.field_11964 += (float)Math.PI * 2;
+        while (blockEntity.field_11964 < (float)(-Math.PI)) {
+            blockEntity.field_11964 += (float)Math.PI * 2;
         }
-        while (this.field_11962 >= (float)Math.PI) {
-            this.field_11962 -= (float)Math.PI * 2;
+        while (blockEntity.field_11962 >= (float)Math.PI) {
+            blockEntity.field_11962 -= (float)Math.PI * 2;
         }
-        while (this.field_11962 < (float)(-Math.PI)) {
-            this.field_11962 += (float)Math.PI * 2;
+        while (blockEntity.field_11962 < (float)(-Math.PI)) {
+            blockEntity.field_11962 += (float)Math.PI * 2;
         }
-        for (g = this.field_11962 - this.field_11964; g >= (float)Math.PI; g -= (float)Math.PI * 2) {
+        for (g = blockEntity.field_11962 - blockEntity.field_11964; g >= (float)Math.PI; g -= (float)Math.PI * 2) {
         }
         while (g < (float)(-Math.PI)) {
             g += (float)Math.PI * 2;
         }
-        this.field_11964 += g * 0.4f;
-        this.nextPageTurningSpeed = MathHelper.clamp(this.nextPageTurningSpeed, 0.0f, 1.0f);
-        ++this.ticks;
-        this.pageAngle = this.nextPageAngle;
-        float h = (this.field_11969 - this.nextPageAngle) * 0.4f;
+        blockEntity.field_11964 += g * 0.4f;
+        blockEntity.nextPageTurningSpeed = MathHelper.clamp(blockEntity.nextPageTurningSpeed, 0.0f, 1.0f);
+        ++blockEntity.ticks;
+        blockEntity.pageAngle = blockEntity.nextPageAngle;
+        float h = (blockEntity.field_11969 - blockEntity.nextPageAngle) * 0.4f;
         float i = 0.2f;
         h = MathHelper.clamp(h, -0.2f, 0.2f);
-        this.field_11967 += (h - this.field_11967) * 0.9f;
-        this.nextPageAngle += this.field_11967;
+        blockEntity.field_11967 += (h - blockEntity.field_11967) * 0.9f;
+        blockEntity.nextPageAngle += blockEntity.field_11967;
     }
 
     @Override

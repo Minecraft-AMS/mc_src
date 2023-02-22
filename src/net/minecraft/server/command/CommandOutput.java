@@ -36,5 +36,9 @@ public interface CommandOutput {
     public boolean shouldTrackOutput();
 
     public boolean shouldBroadcastConsoleToOps();
+
+    default public boolean cannotBeSilenced() {
+        return false;
+    }
 }
 

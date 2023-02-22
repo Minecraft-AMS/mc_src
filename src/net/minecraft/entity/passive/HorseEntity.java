@@ -196,7 +196,7 @@ extends HorseBaseEntity {
         if (!itemStack.isEmpty()) {
             boolean bl;
             if (this.isBreedingItem(itemStack)) {
-                return this.method_30009(player, itemStack);
+                return this.interactHorse(player, itemStack);
             }
             ActionResult actionResult = itemStack.useOnEntity(player, this, hand);
             if (actionResult.isAccepted()) {
@@ -206,7 +206,7 @@ extends HorseBaseEntity {
                 this.playAngrySound();
                 return ActionResult.success(this.world.isClient);
             }
-            boolean bl2 = bl = !this.isBaby() && !this.isSaddled() && itemStack.getItem() == Items.SADDLE;
+            boolean bl2 = bl = !this.isBaby() && !this.isSaddled() && itemStack.isOf(Items.SADDLE);
             if (this.isHorseArmor(itemStack) || bl) {
                 this.openInventory(player);
                 return ActionResult.success(this.world.isClient);

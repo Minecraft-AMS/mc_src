@@ -16,10 +16,13 @@ import net.minecraft.item.ItemStack;
 
 public class DamageEnchantment
 extends Enchantment {
-    private static final String[] typeNames = new String[]{"all", "undead", "arthropods"};
-    private static final int[] field_9063 = new int[]{1, 5, 5};
-    private static final int[] field_9066 = new int[]{11, 8, 8};
-    private static final int[] field_9064 = new int[]{20, 20, 20};
+    public static final int ALL_INDEX = 0;
+    public static final int UNDEAD_INDEX = 1;
+    public static final int ARTHROPODS_INDEX = 2;
+    private static final String[] TYPE_NAMES = new String[]{"all", "undead", "arthropods"};
+    private static final int[] BASE_POWERS = new int[]{1, 5, 5};
+    private static final int[] POWERS_PER_LEVEL = new int[]{11, 8, 8};
+    private static final int[] MIN_MAX_POWER_DIFFERENCES = new int[]{20, 20, 20};
     public final int typeIndex;
 
     public DamageEnchantment(Enchantment.Rarity weight, int typeIndex, EquipmentSlot ... slots) {
@@ -29,12 +32,12 @@ extends Enchantment {
 
     @Override
     public int getMinPower(int level) {
-        return field_9063[this.typeIndex] + (level - 1) * field_9066[this.typeIndex];
+        return BASE_POWERS[this.typeIndex] + (level - 1) * POWERS_PER_LEVEL[this.typeIndex];
     }
 
     @Override
     public int getMaxPower(int level) {
-        return this.getMinPower(level) + field_9064[this.typeIndex];
+        return this.getMinPower(level) + MIN_MAX_POWER_DIFFERENCES[this.typeIndex];
     }
 
     @Override
@@ -73,7 +76,7 @@ extends Enchantment {
     public void onTargetDamaged(LivingEntity user, Entity target, int level) {
         if (target instanceof LivingEntity) {
             LivingEntity livingEntity = (LivingEntity)target;
-            if (this.typeIndex == 2 && livingEntity.getGroup() == EntityGroup.ARTHROPOD) {
+            if (this.typeIndex == 2 && level > 0 && livingEntity.getGroup() == EntityGroup.ARTHROPOD) {
                 int i = 20 + user.getRandom().nextInt(10 * level);
                 livingEntity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, i, 3));
             }

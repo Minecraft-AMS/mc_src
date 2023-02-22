@@ -24,7 +24,7 @@ public interface NbtType<T extends NbtElement> {
         return new NbtType<NbtNull>(){
 
             @Override
-            public NbtNull read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) throws IOException {
+            public NbtNull read(DataInput dataInput, int i, NbtTagSizeTracker nbtTagSizeTracker) {
                 throw new IllegalArgumentException("Invalid tag id: " + type);
             }
 

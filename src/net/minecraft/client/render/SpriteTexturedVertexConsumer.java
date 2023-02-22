@@ -59,6 +59,16 @@ implements VertexConsumer {
     }
 
     @Override
+    public void fixedColor(int red, int green, int blue, int alpha) {
+        this.parent.fixedColor(red, green, blue, alpha);
+    }
+
+    @Override
+    public void unfixColor() {
+        this.parent.unfixColor();
+    }
+
+    @Override
     public void vertex(float x, float y, float z, float red, float green, float blue, float alpha, float u, float v, int overlay, int light, float normalX, float normalY, float normalZ) {
         this.parent.vertex(x, y, z, red, green, blue, alpha, this.sprite.getFrameU(u * 16.0f), this.sprite.getFrameV(v * 16.0f), overlay, light, normalX, normalY, normalZ);
     }

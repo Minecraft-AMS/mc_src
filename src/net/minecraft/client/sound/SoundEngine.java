@@ -41,7 +41,9 @@ import org.lwjgl.system.MemoryStack;
 
 @Environment(value=EnvType.CLIENT)
 public class SoundEngine {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_31896 = 3;
+    static final Logger LOGGER = LogManager.getLogger();
+    private static final int field_31897 = 30;
     private long devicePointer;
     private long contextPointer;
     private static final SourceSet EMPTY_SOURCE_SET = new SourceSet(){
@@ -168,6 +170,20 @@ public class SoundEngine {
     }
 
     @Environment(value=EnvType.CLIENT)
+    static interface SourceSet {
+        @Nullable
+        public Source createSource();
+
+        public boolean release(Source var1);
+
+        public void close();
+
+        public int getMaxSourceCount();
+
+        public int getSourceCount();
+    }
+
+    @Environment(value=EnvType.CLIENT)
     static class SourceSetImpl
     implements SourceSet {
         private final int maxSourceCount;
@@ -218,24 +234,27 @@ public class SoundEngine {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static interface SourceSet {
-        @Nullable
-        public Source createSource();
+    public static final class RunMode
+    extends Enum<RunMode> {
+        public static final /* enum */ RunMode STATIC = new RunMode();
+        public static final /* enum */ RunMode STREAMING = new RunMode();
+        private static final /* synthetic */ RunMode[] field_18354;
 
-        public boolean release(Source var1);
+        public static RunMode[] values() {
+            return (RunMode[])field_18354.clone();
+        }
 
-        public void close();
+        public static RunMode valueOf(String string) {
+            return Enum.valueOf(RunMode.class, string);
+        }
 
-        public int getMaxSourceCount();
+        private static /* synthetic */ RunMode[] method_36800() {
+            return new RunMode[]{STATIC, STREAMING};
+        }
 
-        public int getSourceCount();
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    public static enum RunMode {
-        STATIC,
-        STREAMING;
-
+        static {
+            field_18354 = RunMode.method_36800();
+        }
     }
 }
 

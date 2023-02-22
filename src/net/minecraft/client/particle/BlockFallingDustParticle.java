@@ -31,16 +31,16 @@ extends SpriteBillboardParticle {
     private final float field_3809;
     private final SpriteProvider spriteProvider;
 
-    private BlockFallingDustParticle(ClientWorld world, double x, double y, double z, float colorRed, float colorGreen, float colorBlue, SpriteProvider spriteProvider) {
-        super(world, x, y, z);
+    BlockFallingDustParticle(ClientWorld clientWorld, double d, double e, double f, float g, float h, float i, SpriteProvider spriteProvider) {
+        super(clientWorld, d, e, f);
         this.spriteProvider = spriteProvider;
-        this.colorRed = colorRed;
-        this.colorGreen = colorGreen;
-        this.colorBlue = colorBlue;
-        float f = 0.9f;
+        this.colorRed = g;
+        this.colorGreen = h;
+        this.colorBlue = i;
+        float j = 0.9f;
         this.scale *= 0.67499995f;
-        int i = (int)(32.0 / (Math.random() * 0.8 + 0.2));
-        this.maxAge = (int)Math.max((float)i * 0.9f, 1.0f);
+        int k = (int)(32.0 / (Math.random() * 0.8 + 0.2));
+        this.maxAge = (int)Math.max((float)k * 0.9f, 1.0f);
         this.setSpriteForAge(spriteProvider);
         this.field_3809 = ((float)Math.random() - 0.5f) * 0.1f;
         this.angle = (float)Math.random() * ((float)Math.PI * 2);
@@ -94,7 +94,7 @@ extends SpriteBillboardParticle {
                 return null;
             }
             BlockPos blockPos = new BlockPos(d, e, f);
-            int j = MinecraftClient.getInstance().getBlockColors().getColor(blockState, clientWorld, blockPos);
+            int j = MinecraftClient.getInstance().getBlockColors().getParticleColor(blockState, clientWorld, blockPos);
             if (blockState.getBlock() instanceof FallingBlock) {
                 j = ((FallingBlock)blockState.getBlock()).getColor(blockState, clientWorld, blockPos);
             }

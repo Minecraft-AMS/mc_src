@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
 import java.util.List;
 import java.util.Random;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -23,6 +19,8 @@ import net.minecraft.block.FireBlock;
 import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.entity.BeehiveBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
@@ -34,6 +32,7 @@ import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.entity.vehicle.TntMinecartEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -44,6 +43,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.stat.Stats;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.IntProperty;
@@ -58,10 +58,10 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class BeehiveBlock
@@ -69,6 +69,8 @@ extends BlockWithEntity {
     private static final Direction[] GENERATE_DIRECTIONS = new Direction[]{Direction.WEST, Direction.EAST, Direction.SOUTH};
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final IntProperty HONEY_LEVEL = Properties.HONEY_LEVEL;
+    public static final int FULL_HONEY_LEVEL = 5;
+    private static final int DROPPED_HONEYCOMB_COUNT = 3;
 
     public BeehiveBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -95,7 +97,7 @@ extends BlockWithEntity {
                 world.updateComparators(pos, this);
                 this.angerNearbyBees(world, pos);
             }
-            Criteria.BEE_NEST_DESTROYED.test((ServerPlayerEntity)player, state.getBlock(), stack, beehiveBlockEntity.getBeeCount());
+            Criteria.BEE_NEST_DESTROYED.trigger((ServerPlayerEntity)player, state, stack, beehiveBlockEntity.getBeeCount());
         }
     }
 
@@ -121,20 +123,26 @@ extends BlockWithEntity {
         int i = state.get(HONEY_LEVEL);
         boolean bl = false;
         if (i >= 5) {
-            if (itemStack.getItem() == Items.SHEARS) {
+            Item item = itemStack.getItem();
+            if (itemStack.isOf(Items.SHEARS)) {
                 world.playSound(player2, player2.getX(), player2.getY(), player2.getZ(), SoundEvents.BLOCK_BEEHIVE_SHEAR, SoundCategory.NEUTRAL, 1.0f, 1.0f);
                 BeehiveBlock.dropHoneycomb(world, pos);
                 itemStack.damage(1, player2, player -> player.sendToolBreakStatus(hand));
                 bl = true;
-            } else if (itemStack.getItem() == Items.GLASS_BOTTLE) {
+                world.emitGameEvent((Entity)player2, GameEvent.SHEAR, pos);
+            } else if (itemStack.isOf(Items.GLASS_BOTTLE)) {
                 itemStack.decrement(1);
                 world.playSound(player2, player2.getX(), player2.getY(), player2.getZ(), SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 1.0f, 1.0f);
                 if (itemStack.isEmpty()) {
                     player2.setStackInHand(hand, new ItemStack(Items.HONEY_BOTTLE));
-                } else if (!player2.inventory.insertStack(new ItemStack(Items.HONEY_BOTTLE))) {
+                } else if (!player2.getInventory().insertStack(new ItemStack(Items.HONEY_BOTTLE))) {
                     player2.dropItem(new ItemStack(Items.HONEY_BOTTLE), false);
                 }
                 bl = true;
+                world.emitGameEvent((Entity)player2, GameEvent.FLUID_PICKUP, pos);
+            }
+            if (!world.isClient() && bl) {
+                player2.incrementStat(Stats.USED.getOrCreateStat(item));
             }
         }
         if (bl) {
@@ -174,7 +182,6 @@ extends BlockWithEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public void randomDisplayTick(BlockState state, World world, BlockPos pos, Random random) {
         if (state.get(HONEY_LEVEL) >= 5) {
             for (int i = 0; i < random.nextInt(1) + 1; ++i) {
@@ -183,7 +190,6 @@ extends BlockWithEntity {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     private void spawnHoneyParticles(World world, BlockPos pos, BlockState state) {
         if (!state.getFluidState().isEmpty() || world.random.nextFloat() < 0.3f) {
             return;
@@ -206,12 +212,10 @@ extends BlockWithEntity {
         }
     }
 
-    @Environment(value=EnvType.CLIENT)
     private void addHoneyParticle(World world, BlockPos pos, VoxelShape shape, double height) {
         this.addHoneyParticle(world, (double)pos.getX() + shape.getMin(Direction.Axis.X), (double)pos.getX() + shape.getMax(Direction.Axis.X), (double)pos.getZ() + shape.getMin(Direction.Axis.Z), (double)pos.getZ() + shape.getMax(Direction.Axis.Z), height);
     }
 
-    @Environment(value=EnvType.CLIENT)
     private void addHoneyParticle(World world, double minX, double maxX, double minZ, double maxZ, double height) {
         world.addParticle(ParticleTypes.DRIPPING_HONEY, MathHelper.lerp(world.random.nextDouble(), minX, maxX), height, MathHelper.lerp(world.random.nextDouble(), minZ, maxZ), 0.0, 0.0, 0.0);
     }
@@ -233,34 +237,39 @@ extends BlockWithEntity {
 
     @Override
     @Nullable
-    public BlockEntity createBlockEntity(BlockView world) {
-        return new BeehiveBlockEntity();
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new BeehiveBlockEntity(pos, state);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return world.isClient ? null : BeehiveBlock.checkType(type, BlockEntityType.BEEHIVE, BeehiveBlockEntity::serverTick);
     }
 
     @Override
     public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
         BlockEntity blockEntity;
         if (!world.isClient && player.isCreative() && world.getGameRules().getBoolean(GameRules.DO_TILE_DROPS) && (blockEntity = world.getBlockEntity(pos)) instanceof BeehiveBlockEntity) {
-            NbtCompound nbtCompound;
             boolean bl;
             BeehiveBlockEntity beehiveBlockEntity = (BeehiveBlockEntity)blockEntity;
             ItemStack itemStack = new ItemStack(this);
             int i = state.get(HONEY_LEVEL);
             boolean bl2 = bl = !beehiveBlockEntity.hasNoBees();
-            if (!bl && i == 0) {
-                return;
-            }
-            if (bl) {
+            if (bl || i > 0) {
+                NbtCompound nbtCompound;
+                if (bl) {
+                    nbtCompound = new NbtCompound();
+                    nbtCompound.put("Bees", beehiveBlockEntity.getBees());
+                    itemStack.setSubNbt("BlockEntityTag", nbtCompound);
+                }
                 nbtCompound = new NbtCompound();
-                nbtCompound.put("Bees", beehiveBlockEntity.getBees());
-                itemStack.putSubTag("BlockEntityTag", nbtCompound);
+                nbtCompound.putInt("honey_level", i);
+                itemStack.setSubNbt("BlockStateTag", nbtCompound);
+                ItemEntity itemEntity = new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+                itemEntity.setToDefaultPickupDelay();
+                world.spawnEntity(itemEntity);
             }
-            nbtCompound = new NbtCompound();
-            nbtCompound.putInt("honey_level", i);
-            itemStack.putSubTag("BlockStateTag", nbtCompound);
-            ItemEntity itemEntity = new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), itemStack);
-            itemEntity.setToDefaultPickupDelay();
-            world.spawnEntity(itemEntity);
         }
         super.onBreak(world, pos, state, player);
     }

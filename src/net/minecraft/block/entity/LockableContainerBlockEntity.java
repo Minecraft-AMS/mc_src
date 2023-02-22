@@ -21,6 +21,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Nameable;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class LockableContainerBlockEntity
@@ -31,16 +32,16 @@ Nameable {
     private ContainerLock lock = ContainerLock.EMPTY;
     private Text customName;
 
-    protected LockableContainerBlockEntity(BlockEntityType<?> blockEntityType) {
-        super(blockEntityType);
+    protected LockableContainerBlockEntity(BlockEntityType<?> blockEntityType, BlockPos blockPos, BlockState blockState) {
+        super(blockEntityType, blockPos, blockState);
     }
 
     @Override
-    public void fromTag(BlockState state, NbtCompound tag) {
-        super.fromTag(state, tag);
-        this.lock = ContainerLock.fromNbt(tag);
-        if (tag.contains("CustomName", 8)) {
-            this.customName = Text.Serializer.fromJson(tag.getString("CustomName"));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        this.lock = ContainerLock.fromNbt(nbt);
+        if (nbt.contains("CustomName", 8)) {
+            this.customName = Text.Serializer.fromJson(nbt.getString("CustomName"));
         }
     }
 

@@ -5,8 +5,6 @@
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
  *  it.unimi.dsi.fastutil.ints.Int2IntFunction
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.resource.language;
 
@@ -17,14 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextVisitFactory;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Style;
 
-@Environment(value=EnvType.CLIENT)
 public class TextReorderingProcessor {
     private final String string;
     private final List<Style> styles;
@@ -63,7 +58,11 @@ public class TextReorderingProcessor {
         return reverse ? Lists.reverse((List)list) : list;
     }
 
-    public static TextReorderingProcessor create(StringVisitable visitable, Int2IntFunction reverser, UnaryOperator<String> unaryOperator) {
+    public static TextReorderingProcessor create(StringVisitable visitable) {
+        return TextReorderingProcessor.create(visitable, codePoint -> codePoint, string -> string);
+    }
+
+    public static TextReorderingProcessor create(StringVisitable visitable, Int2IntFunction reverser, UnaryOperator<String> shaper) {
         StringBuilder stringBuilder = new StringBuilder();
         ArrayList list = Lists.newArrayList();
         visitable.visit((style2, text) -> {
@@ -77,7 +76,7 @@ public class TextReorderingProcessor {
             });
             return Optional.empty();
         }, Style.EMPTY);
-        return new TextReorderingProcessor((String)unaryOperator.apply(stringBuilder.toString()), list, reverser);
+        return new TextReorderingProcessor((String)shaper.apply(stringBuilder.toString()), list, reverser);
     }
 }
 

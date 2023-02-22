@@ -26,8 +26,6 @@ import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeGridAligner;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
-import net.minecraft.screen.CraftingScreenHandler;
-import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.apache.logging.log4j.LogManager;
@@ -41,55 +39,38 @@ implements RecipeGridAligner<Integer> {
     protected PlayerInventory inventory;
     protected AbstractRecipeScreenHandler<C> handler;
 
-    public InputSlotFiller(AbstractRecipeScreenHandler<C> abstractRecipeScreenHandler) {
-        this.handler = abstractRecipeScreenHandler;
+    public InputSlotFiller(AbstractRecipeScreenHandler<C> handler) {
+        this.handler = handler;
     }
 
     public void fillInputSlots(ServerPlayerEntity entity, @Nullable Recipe<C> recipe, boolean craftAll) {
         if (recipe == null || !entity.getRecipeBook().contains(recipe)) {
             return;
         }
-        this.inventory = entity.inventory;
+        this.inventory = entity.getInventory();
         if (!this.canReturnInputs() && !entity.isCreative()) {
             return;
         }
         this.matcher.clear();
-        entity.inventory.populateRecipeFinder(this.matcher);
+        entity.getInventory().populateRecipeFinder(this.matcher);
         this.handler.populateRecipeFinder(this.matcher);
         if (this.matcher.match(recipe, null)) {
             this.fillInputSlots(recipe, craftAll);
         } else {
-            this.returnInputs();
+            this.returnInputs(true);
             entity.networkHandler.sendPacket(new CraftFailedResponseS2CPacket(entity.currentScreenHandler.syncId, recipe));
         }
-        entity.inventory.markDirty();
+        entity.getInventory().markDirty();
     }
 
-    protected void returnInputs() {
-        for (int i = 0; i < this.handler.getCraftingWidth() * this.handler.getCraftingHeight() + 1; ++i) {
-            if (i == this.handler.getCraftingResultSlotIndex() && (this.handler instanceof CraftingScreenHandler || this.handler instanceof PlayerScreenHandler)) continue;
-            this.returnSlot(i);
+    protected void returnInputs(boolean bl) {
+        for (int i = 0; i < this.handler.getCraftingSlotCount(); ++i) {
+            if (!this.handler.canInsertIntoSlot(i)) continue;
+            ItemStack itemStack = this.handler.getSlot(i).getStack().copy();
+            this.inventory.offer(itemStack, false);
+            this.handler.getSlot(i).setStack(itemStack);
         }
         this.handler.clearCraftingSlots();
-    }
-
-    protected void returnSlot(int i) {
-        ItemStack itemStack = this.handler.getSlot(i).getStack();
-        if (itemStack.isEmpty()) {
-            return;
-        }
-        while (itemStack.getCount() > 0) {
-            int j = this.inventory.getOccupiedSlotWithRoomForStack(itemStack);
-            if (j == -1) {
-                j = this.inventory.getEmptySlot();
-            }
-            ItemStack itemStack2 = itemStack.copy();
-            itemStack2.setCount(1);
-            if (!this.inventory.insertStack(j, itemStack2)) {
-                LOGGER.error("Can't find any space for item in the inventory");
-            }
-            this.handler.getSlot(i).takeStack(1);
-        }
     }
 
     protected void fillInputSlots(Recipe<C> recipe, boolean craftAll) {
@@ -115,7 +96,7 @@ implements RecipeGridAligner<Integer> {
             }
             j = k;
             if (this.matcher.match(recipe, (IntList)intList, j)) {
-                this.returnInputs();
+                this.returnInputs(false);
                 this.alignRecipeToGrid(this.handler.getCraftingWidth(), this.handler.getCraftingHeight(), this.handler.getCraftingResultSlotIndex(), recipe, intList.iterator(), j);
             }
         }
@@ -151,7 +132,7 @@ implements RecipeGridAligner<Integer> {
     }
 
     protected void fillInputSlot(Slot slot, ItemStack stack) {
-        int i = this.inventory.method_7371(stack);
+        int i = this.inventory.indexOf(stack);
         if (i == -1) {
             return;
         }

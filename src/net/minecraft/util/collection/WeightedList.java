@@ -27,88 +27,80 @@ public class WeightedList<U> {
     private final Random random = new Random();
 
     public WeightedList() {
-        this(Lists.newArrayList());
+        this.entries = Lists.newArrayList();
     }
 
-    private WeightedList(List<Entry<U>> entries) {
-        this.entries = Lists.newArrayList(entries);
+    private WeightedList(List<Entry<U>> list) {
+        this.entries = Lists.newArrayList(list);
     }
 
     public static <U> Codec<WeightedList<U>> createCodec(Codec<U> codec) {
-        return Entry.createCodec(codec).listOf().xmap(WeightedList::new, list -> list.entries);
+        return Entry.createCodec(codec).listOf().xmap(WeightedList::new, weightedList -> weightedList.entries);
     }
 
-    public WeightedList<U> add(U item, int weight) {
-        this.entries.add(new Entry(item, weight));
+    public WeightedList<U> add(U data, int weight) {
+        this.entries.add(new Entry<U>(data, weight));
         return this;
     }
 
     public WeightedList<U> shuffle() {
-        return this.shuffle(this.random);
-    }
-
-    public WeightedList<U> shuffle(Random random) {
-        this.entries.forEach(entry -> ((Entry)entry).setShuffledOrder(random.nextFloat()));
-        this.entries.sort(Comparator.comparingDouble(object -> ((Entry)object).getShuffledOrder()));
+        this.entries.forEach(entry -> entry.setShuffledOrder(this.random.nextFloat()));
+        this.entries.sort(Comparator.comparingDouble(Entry::getShuffledOrder));
         return this;
-    }
-
-    public boolean isEmpty() {
-        return this.entries.isEmpty();
     }
 
     public Stream<U> stream() {
         return this.entries.stream().map(Entry::getElement);
     }
 
-    public U pickRandom(Random random) {
-        return this.shuffle(random).stream().findFirst().orElseThrow(RuntimeException::new);
-    }
-
     public String toString() {
-        return "WeightedList[" + this.entries + "]";
+        return "ShufflingList[" + this.entries + "]";
     }
 
     public static class Entry<T> {
-        private final T item;
-        private final int weight;
+        final T data;
+        final int weight;
         private double shuffledOrder;
 
-        private Entry(T item, int weight) {
+        Entry(T data, int weight) {
             this.weight = weight;
-            this.item = item;
+            this.data = data;
         }
 
         private double getShuffledOrder() {
             return this.shuffledOrder;
         }
 
-        private void setShuffledOrder(float random) {
+        void setShuffledOrder(float random) {
             this.shuffledOrder = -Math.pow(random, 1.0f / (float)this.weight);
         }
 
         public T getElement() {
-            return this.item;
+            return this.data;
+        }
+
+        public int getWeight() {
+            return this.weight;
         }
 
         public String toString() {
-            return "" + this.weight + ":" + this.item;
+            return this.weight + ":" + this.data;
         }
 
         public static <E> Codec<Entry<E>> createCodec(final Codec<E> codec) {
             return new Codec<Entry<E>>(){
 
-                public <T> DataResult<Pair<Entry<E>, T>> decode(DynamicOps<T> ops, T object2) {
-                    Dynamic dynamic = new Dynamic(ops, object2);
-                    return dynamic.get("data").flatMap(arg_0 -> ((Codec)codec).parse(arg_0)).map(object -> new Entry(object, dynamic.get("weight").asInt(1))).map(entry -> Pair.of((Object)entry, (Object)ops.empty()));
+                public <T> DataResult<Pair<Entry<E>, T>> decode(DynamicOps<T> ops, T data2) {
+                    Dynamic dynamic = new Dynamic(ops, data2);
+                    return dynamic.get("data").flatMap(arg_0 -> ((Codec)codec).parse(arg_0)).map(data -> new Entry<Object>(data, dynamic.get("weight").asInt(1))).map(entry -> Pair.of((Object)entry, (Object)ops.empty()));
                 }
 
                 public <T> DataResult<T> encode(Entry<E> entry, DynamicOps<T> dynamicOps, T object) {
-                    return dynamicOps.mapBuilder().add("weight", dynamicOps.createInt(entry.weight)).add("data", codec.encodeStart(dynamicOps, entry.item)).build(object);
+                    return dynamicOps.mapBuilder().add("weight", dynamicOps.createInt(entry.weight)).add("data", codec.encodeStart(dynamicOps, entry.data)).build(object);
                 }
 
-                public /* synthetic */ DataResult encode(Object entry, DynamicOps ops, Object object) {
-                    return this.encode((Entry)entry, ops, object);
+                public /* synthetic */ DataResult encode(Object entries, DynamicOps ops, Object data) {
+                    return this.encode((Entry)entries, ops, data);
                 }
             };
         }

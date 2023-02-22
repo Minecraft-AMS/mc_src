@@ -2,20 +2,25 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.option;
 
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.DoubleOptionSliderWidget;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.Option;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
@@ -28,8 +33,9 @@ extends Option {
     private final Function<GameOptions, Double> getter;
     private final BiConsumer<GameOptions, Double> setter;
     private final BiFunction<GameOptions, DoubleOption, Text> displayStringGetter;
+    private final Function<MinecraftClient, List<OrderedText>> tooltipsGetter;
 
-    public DoubleOption(String key, double min, double max, float step, Function<GameOptions, Double> getter, BiConsumer<GameOptions, Double> setter, BiFunction<GameOptions, DoubleOption, Text> displayStringGetter) {
+    public DoubleOption(String key, double min, double max, float step, Function<GameOptions, Double> getter, BiConsumer<GameOptions, Double> setter, BiFunction<GameOptions, DoubleOption, Text> displayStringGetter, Function<MinecraftClient, List<OrderedText>> tooltipsGetter) {
         super(key);
         this.min = min;
         this.max = max;
@@ -37,11 +43,17 @@ extends Option {
         this.getter = getter;
         this.setter = setter;
         this.displayStringGetter = displayStringGetter;
+        this.tooltipsGetter = tooltipsGetter;
+    }
+
+    public DoubleOption(String key, double min, double max, float step, Function<GameOptions, Double> getter, BiConsumer<GameOptions, Double> setter, BiFunction<GameOptions, DoubleOption, Text> displayStringGetter) {
+        this(key, min, max, step, getter, setter, displayStringGetter, client -> ImmutableList.of());
     }
 
     @Override
     public ClickableWidget createButton(GameOptions options, int x, int y, int width) {
-        return new DoubleOptionSliderWidget(options, x, y, width, 20, this);
+        List<OrderedText> list = this.tooltipsGetter.apply(MinecraftClient.getInstance());
+        return new DoubleOptionSliderWidget(options, x, y, width, 20, this, list);
     }
 
     public double getRatio(double value) {

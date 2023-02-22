@@ -31,7 +31,7 @@ extends ChoiceFix {
     @Override
     protected Typed<?> transform(Typed<?> inputType) {
         Dynamic dynamic = (Dynamic)inputType.get(DSL.remainderFinder());
-        return inputType.set(DSL.remainderFinder(), (Object)dynamic.remove("Profession").remove("Career").remove("CareerLevel").set("VillagerData", dynamic.createMap((Map)ImmutableMap.of((Object)dynamic.createString("type"), (Object)dynamic.createString("minecraft:plains"), (Object)dynamic.createString("profession"), (Object)dynamic.createString(VillagerProfessionFix.convertProfessionId(dynamic.get("Profession").asInt(0), dynamic.get("Career").asInt(0))), (Object)dynamic.createString("level"), (Object)DataFixUtils.orElse((Optional)dynamic.get("CareerLevel").result(), (Object)dynamic.createInt(1))))));
+        return inputType.set(DSL.remainderFinder(), (Object)dynamic.remove("Profession").remove("Career").remove("CareerLevel").set("VillagerData", dynamic.createMap((Map)ImmutableMap.of((Object)dynamic.createString("type"), (Object)dynamic.createString("minecraft:plains"), (Object)dynamic.createString("profession"), (Object)dynamic.createString(VillagerProfessionFix.convertProfessionId(dynamic.get("Profession").asInt(0), dynamic.get("Career").asInt(0))), (Object)dynamic.createString("level"), (Object)((Dynamic)DataFixUtils.orElse((Optional)dynamic.get("CareerLevel").result(), (Object)dynamic.createInt(1)))))));
     }
 
     private static String convertProfessionId(int professionId, int careerId) {

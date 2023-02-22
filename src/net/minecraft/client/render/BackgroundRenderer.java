@@ -7,19 +7,17 @@
  */
 package net.minecraft.client.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.CameraSubmersionType;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.tag.FluidTags;
 import net.minecraft.util.CubicSampler;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -31,6 +29,8 @@ import net.minecraft.world.biome.source.BiomeAccess;
 
 @Environment(value=EnvType.CLIENT)
 public class BackgroundRenderer {
+    private static final int field_32685 = 192;
+    public static final float field_32684 = 5000.0f;
     private static float red;
     private static float green;
     private static float blue;
@@ -40,8 +40,9 @@ public class BackgroundRenderer {
 
     public static void render(Camera camera, float tickDelta, ClientWorld world, int i2, float f) {
         int j2;
-        FluidState fluidState = camera.getSubmergedFluidState();
-        if (fluidState.isIn(FluidTags.WATER)) {
+        CameraSubmersionType cameraSubmersionType = camera.getSubmersionType();
+        Entity entity = camera.getFocusedEntity();
+        if (cameraSubmersionType == CameraSubmersionType.WATER) {
             long l = Util.getMeasuringTimeMs();
             j2 = world.getBiome(new BlockPos(camera.getPos())).getWaterFogColor();
             if (lastWaterFogColorUpdateTime < 0L) {
@@ -67,25 +68,31 @@ public class BackgroundRenderer {
                 nextWaterFogColor = MathHelper.floor(h) << 16 | MathHelper.floor(r) << 8 | MathHelper.floor(s);
                 lastWaterFogColorUpdateTime = l;
             }
-        } else if (fluidState.isIn(FluidTags.LAVA)) {
+        } else if (cameraSubmersionType == CameraSubmersionType.LAVA) {
             red = 0.6f;
             green = 0.1f;
             blue = 0.0f;
             lastWaterFogColorUpdateTime = -1L;
+        } else if (cameraSubmersionType == CameraSubmersionType.POWDER_SNOW) {
+            red = 0.623f;
+            green = 0.734f;
+            blue = 0.785f;
+            lastWaterFogColorUpdateTime = -1L;
+            RenderSystem.clearColor(red, green, blue, 0.0f);
         } else {
             float h;
             float r;
             float g;
             float t = 0.25f + 0.75f * (float)i2 / 32.0f;
             t = 1.0f - (float)Math.pow(t, 0.25);
-            Vec3d vec3d = world.method_23777(camera.getBlockPos(), tickDelta);
+            Vec3d vec3d = world.getSkyColor(camera.getPos(), tickDelta);
             float u = (float)vec3d.x;
             float v = (float)vec3d.y;
             float w = (float)vec3d.z;
             float x = MathHelper.clamp(MathHelper.cos(world.getSkyAngle(tickDelta) * ((float)Math.PI * 2)) * 2.0f + 0.5f, 0.0f, 1.0f);
             BiomeAccess biomeAccess = world.getBiomeAccess();
             Vec3d vec3d2 = camera.getPos().subtract(2.0, 2.0, 2.0).multiply(0.25);
-            Vec3d vec3d3 = CubicSampler.sampleColor(vec3d2, (i, j, k) -> world.getSkyProperties().adjustFogColor(Vec3d.unpackRgb(biomeAccess.getBiomeForNoiseGen(i, j, k).getFogColor()), x));
+            Vec3d vec3d3 = CubicSampler.sampleColor(vec3d2, (i, j, k) -> world.getDimensionEffects().adjustFogColor(Vec3d.unpackRgb(biomeAccess.getBiomeForNoiseGen(i, j, k).getFogColor()), x));
             red = (float)vec3d3.getX();
             green = (float)vec3d3.getY();
             blue = (float)vec3d3.getZ();
@@ -97,7 +104,7 @@ public class BackgroundRenderer {
                 if (r < 0.0f) {
                     r = 0.0f;
                 }
-                if (r > 0.0f && (fs = world.getSkyProperties().getFogColorOverride(world.getSkyAngle(tickDelta), tickDelta)) != null) {
+                if (r > 0.0f && (fs = world.getDimensionEffects().getFogColorOverride(world.getSkyAngle(tickDelta), tickDelta)) != null) {
                     red = red * (1.0f - (r *= fs[3])) + fs[0] * r;
                     green = green * (1.0f - r) + fs[1] * r;
                     blue = blue * (1.0f - r) + fs[2] * r;
@@ -122,12 +129,12 @@ public class BackgroundRenderer {
             }
             lastWaterFogColorUpdateTime = -1L;
         }
-        double d = camera.getPos().y * world.getLevelProperties().getHorizonShadingRatio();
+        double d = (camera.getPos().y - (double)world.getBottomY()) * world.getLevelProperties().getHorizonShadingRatio();
         if (camera.getFocusedEntity() instanceof LivingEntity && ((LivingEntity)camera.getFocusedEntity()).hasStatusEffect(StatusEffects.BLINDNESS)) {
             j2 = ((LivingEntity)camera.getFocusedEntity()).getStatusEffect(StatusEffects.BLINDNESS).getDuration();
             d = j2 < 20 ? (d *= (double)(1.0f - (float)j2 / 20.0f)) : 0.0;
         }
-        if (d < 1.0 && !fluidState.isIn(FluidTags.LAVA)) {
+        if (d < 1.0 && cameraSubmersionType != CameraSubmersionType.LAVA) {
             if (d < 0.0) {
                 d = 0.0;
             }
@@ -141,18 +148,8 @@ public class BackgroundRenderer {
             green = green * (1.0f - f) + green * 0.6f * f;
             blue = blue * (1.0f - f) + blue * 0.6f * f;
         }
-        if (fluidState.isIn(FluidTags.WATER)) {
-            float u = 0.0f;
-            if (camera.getFocusedEntity() instanceof ClientPlayerEntity) {
-                ClientPlayerEntity clientPlayerEntity = (ClientPlayerEntity)camera.getFocusedEntity();
-                u = clientPlayerEntity.getUnderwaterVisibility();
-            }
-            float v = Math.min(1.0f / red, Math.min(1.0f / green, 1.0f / blue));
-            red = red * (1.0f - u) + red * v * u;
-            green = green * (1.0f - u) + green * v * u;
-            blue = blue * (1.0f - u) + blue * v * u;
-        } else if (camera.getFocusedEntity() instanceof LivingEntity && ((LivingEntity)camera.getFocusedEntity()).hasStatusEffect(StatusEffects.NIGHT_VISION)) {
-            float u = GameRenderer.getNightVisionStrength((LivingEntity)camera.getFocusedEntity(), tickDelta);
+        float u = cameraSubmersionType == CameraSubmersionType.WATER ? (entity instanceof ClientPlayerEntity ? ((ClientPlayerEntity)entity).getUnderwaterVisibility() : 1.0f) : (entity instanceof LivingEntity && ((LivingEntity)entity).hasStatusEffect(StatusEffects.NIGHT_VISION) ? GameRenderer.getNightVisionStrength((LivingEntity)entity, tickDelta) : 0.0f);
+        if (red != 0.0f && green != 0.0f && blue != 0.0f) {
             float v = Math.min(1.0f / red, Math.min(1.0f / green, 1.0f / blue));
             red = red * (1.0f - u) + red * v * u;
             green = green * (1.0f - u) + green * v * u;
@@ -162,31 +159,32 @@ public class BackgroundRenderer {
     }
 
     public static void method_23792() {
-        RenderSystem.fogDensity(0.0f);
-        RenderSystem.fogMode(GlStateManager.FogMode.EXP2);
+        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
     }
 
     public static void applyFog(Camera camera, FogType fogType, float viewDistance, boolean thickFog) {
-        FluidState fluidState = camera.getSubmergedFluidState();
+        CameraSubmersionType cameraSubmersionType = camera.getSubmersionType();
         Entity entity = camera.getFocusedEntity();
-        if (fluidState.isIn(FluidTags.WATER)) {
-            float f = 1.0f;
-            f = 0.05f;
+        if (cameraSubmersionType == CameraSubmersionType.WATER) {
+            float f = 192.0f;
             if (entity instanceof ClientPlayerEntity) {
                 ClientPlayerEntity clientPlayerEntity = (ClientPlayerEntity)entity;
-                f -= clientPlayerEntity.getUnderwaterVisibility() * clientPlayerEntity.getUnderwaterVisibility() * 0.03f;
+                f *= Math.max(0.25f, clientPlayerEntity.getUnderwaterVisibility());
                 Biome biome = clientPlayerEntity.world.getBiome(clientPlayerEntity.getBlockPos());
                 if (biome.getCategory() == Biome.Category.SWAMP) {
-                    f += 0.005f;
+                    f *= 0.85f;
                 }
             }
-            RenderSystem.fogDensity(f);
-            RenderSystem.fogMode(GlStateManager.FogMode.EXP2);
+            RenderSystem.setShaderFogStart(-8.0f);
+            RenderSystem.setShaderFogEnd(f * 0.5f);
         } else {
             float g;
             float f;
-            if (fluidState.isIn(FluidTags.LAVA)) {
-                if (entity instanceof LivingEntity && ((LivingEntity)entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
+            if (cameraSubmersionType == CameraSubmersionType.LAVA) {
+                if (entity.isSpectator()) {
+                    f = -8.0f;
+                    g = viewDistance * 0.5f;
+                } else if (entity instanceof LivingEntity && ((LivingEntity)entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
                     f = 0.0f;
                     g = 3.0f;
                 } else {
@@ -203,6 +201,14 @@ public class BackgroundRenderer {
                     f = h * 0.25f;
                     g = h;
                 }
+            } else if (cameraSubmersionType == CameraSubmersionType.POWDER_SNOW) {
+                if (entity.isSpectator()) {
+                    f = -8.0f;
+                    g = viewDistance * 0.5f;
+                } else {
+                    f = 0.0f;
+                    g = 2.0f;
+                }
             } else if (thickFog) {
                 f = viewDistance * 0.05f;
                 g = Math.min(viewDistance, 192.0f) * 0.5f;
@@ -213,15 +219,13 @@ public class BackgroundRenderer {
                 f = viewDistance * 0.75f;
                 g = viewDistance;
             }
-            RenderSystem.fogStart(f);
-            RenderSystem.fogEnd(g);
-            RenderSystem.fogMode(GlStateManager.FogMode.LINEAR);
-            RenderSystem.setupNvFogDistance();
+            RenderSystem.setShaderFogStart(f);
+            RenderSystem.setShaderFogEnd(g);
         }
     }
 
     public static void setFogBlack() {
-        RenderSystem.fog(2918, red, green, blue, 1.0f);
+        RenderSystem.setShaderFogColor(red, green, blue);
     }
 
     static {
@@ -231,10 +235,27 @@ public class BackgroundRenderer {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum FogType {
-        FOG_SKY,
-        FOG_TERRAIN;
+    public static final class FogType
+    extends Enum<FogType> {
+        public static final /* enum */ FogType FOG_SKY = new FogType();
+        public static final /* enum */ FogType FOG_TERRAIN = new FogType();
+        private static final /* synthetic */ FogType[] field_20947;
 
+        public static FogType[] values() {
+            return (FogType[])field_20947.clone();
+        }
+
+        public static FogType valueOf(String string) {
+            return Enum.valueOf(FogType.class, string);
+        }
+
+        private static /* synthetic */ FogType[] method_36914() {
+            return new FogType[]{FOG_SKY, FOG_TERRAIN};
+        }
+
+        static {
+            field_20947 = FogType.method_36914();
+        }
     }
 }
 

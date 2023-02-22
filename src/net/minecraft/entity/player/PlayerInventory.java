@@ -3,16 +3,12 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.entity.player;
 
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.function.Predicate;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.damage.DamageSource;
@@ -35,18 +31,23 @@ import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
-import net.minecraft.world.World;
 
 public class PlayerInventory
 implements Inventory,
 Nameable {
+    public static final int ITEM_USAGE_COOLDOWN = 5;
+    public static final int MAIN_SIZE = 36;
+    private static final int HOTBAR_SIZE = 9;
+    public static final int OFF_HAND_SLOT = 40;
+    public static final int NOT_FOUND = -1;
+    public static final int[] ARMOR_SLOTS = new int[]{0, 1, 2, 3};
+    public static final int[] HELMET_SLOTS = new int[]{3};
     public final DefaultedList<ItemStack> main = DefaultedList.ofSize(36, ItemStack.EMPTY);
     public final DefaultedList<ItemStack> armor = DefaultedList.ofSize(4, ItemStack.EMPTY);
     public final DefaultedList<ItemStack> offHand = DefaultedList.ofSize(1, ItemStack.EMPTY);
     private final List<DefaultedList<ItemStack>> combinedInventory = ImmutableList.of(this.main, this.armor, this.offHand);
     public int selectedSlot;
     public final PlayerEntity player;
-    private ItemStack cursorStack = ItemStack.EMPTY;
     private int changeCount;
 
     public PlayerInventory(PlayerEntity player) {
@@ -65,11 +66,7 @@ Nameable {
     }
 
     private boolean canStackAddMore(ItemStack existingStack, ItemStack stack) {
-        return !existingStack.isEmpty() && this.areItemsEqual(existingStack, stack) && existingStack.isStackable() && existingStack.getCount() < existingStack.getMaxCount() && existingStack.getCount() < this.getMaxCountPerStack();
-    }
-
-    private boolean areItemsEqual(ItemStack stack1, ItemStack stack2) {
-        return stack1.getItem() == stack2.getItem() && ItemStack.areTagsEqual(stack1, stack2);
+        return !existingStack.isEmpty() && ItemStack.canCombine(existingStack, stack) && existingStack.isStackable() && existingStack.getCount() < existingStack.getMaxCount() && existingStack.getCount() < this.getMaxCountPerStack();
     }
 
     public int getEmptySlot() {
@@ -80,7 +77,6 @@ Nameable {
         return -1;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void addPickBlock(ItemStack stack) {
         int i = this.getSlotWithStack(stack);
         if (PlayerInventory.isValidHotbarIndex(i)) {
@@ -110,19 +106,18 @@ Nameable {
         return slot >= 0 && slot < 9;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getSlotWithStack(ItemStack stack) {
         for (int i = 0; i < this.main.size(); ++i) {
-            if (this.main.get(i).isEmpty() || !this.areItemsEqual(stack, this.main.get(i))) continue;
+            if (this.main.get(i).isEmpty() || !ItemStack.canCombine(stack, this.main.get(i))) continue;
             return i;
         }
         return -1;
     }
 
-    public int method_7371(ItemStack itemStack) {
+    public int indexOf(ItemStack stack) {
         for (int i = 0; i < this.main.size(); ++i) {
-            ItemStack itemStack2 = this.main.get(i);
-            if (this.main.get(i).isEmpty() || !this.areItemsEqual(itemStack, this.main.get(i)) || this.main.get(i).isDamaged() || itemStack2.hasEnchantments() || itemStack2.hasCustomName()) continue;
+            ItemStack itemStack = this.main.get(i);
+            if (this.main.get(i).isEmpty() || !ItemStack.canCombine(stack, this.main.get(i)) || this.main.get(i).isDamaged() || itemStack.hasEnchantments() || itemStack.hasCustomName()) continue;
             return i;
         }
         return -1;
@@ -144,7 +139,6 @@ Nameable {
         return this.selectedSlot;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public void scrollInHotbar(double scrollAmount) {
         if (scrollAmount > 0.0) {
             scrollAmount = 1.0;
@@ -166,9 +160,10 @@ Nameable {
         boolean bl = maxCount == 0;
         i += Inventories.remove(this, shouldRemove, maxCount - i, bl);
         i += Inventories.remove(craftingInventory, shouldRemove, maxCount - i, bl);
-        i += Inventories.remove(this.cursorStack, shouldRemove, maxCount - i, bl);
-        if (this.cursorStack.isEmpty()) {
-            this.cursorStack = ItemStack.EMPTY;
+        ItemStack itemStack = this.player.currentScreenHandler.getCursorStack();
+        i += Inventories.remove(itemStack, shouldRemove, maxCount - i, bl);
+        if (itemStack.isEmpty()) {
+            this.player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
         }
         return i;
     }
@@ -191,8 +186,8 @@ Nameable {
         ItemStack itemStack = this.getStack(slot);
         if (itemStack.isEmpty()) {
             itemStack = new ItemStack(item, 0);
-            if (stack.hasTag()) {
-                itemStack.setTag(stack.getTag().copy());
+            if (stack.hasNbt()) {
+                itemStack.setNbt(stack.getNbt().copy());
             }
             this.setStack(slot, itemStack);
         }
@@ -252,7 +247,7 @@ Nameable {
                     }
                     stack.setCount(this.addStack(slot, stack));
                 } while (!stack.isEmpty() && stack.getCount() < i);
-                if (stack.getCount() == i && this.player.abilities.creativeMode) {
+                if (stack.getCount() == i && this.player.getAbilities().creativeMode) {
                     stack.setCount(0);
                     return true;
                 }
@@ -267,7 +262,7 @@ Nameable {
                 stack.setCount(0);
                 return true;
             }
-            if (this.player.abilities.creativeMode) {
+            if (this.player.getAbilities().creativeMode) {
                 stack.setCount(0);
                 return true;
             }
@@ -283,10 +278,11 @@ Nameable {
         }
     }
 
-    public void offerOrDrop(World world, ItemStack stack) {
-        if (world.isClient) {
-            return;
-        }
+    public void offerOrDrop(ItemStack stack) {
+        this.offer(stack, true);
+    }
+
+    public void offer(ItemStack stack, boolean notifiesClient) {
         while (!stack.isEmpty()) {
             int i = this.getOccupiedSlotWithRoomForStack(stack);
             if (i == -1) {
@@ -297,8 +293,8 @@ Nameable {
                 break;
             }
             int j = stack.getMaxCount() - this.getStack(i).getCount();
-            if (!this.insertStack(i, stack.split(j))) continue;
-            ((ServerPlayerEntity)this.player).networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(-2, i, this.getStack(i)));
+            if (!this.insertStack(i, stack.split(j)) || !notifiesClient || !(this.player instanceof ServerPlayerEntity)) continue;
+            ((ServerPlayerEntity)this.player).networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(-2, 0, i, this.getStack(i)));
         }
     }
 
@@ -454,23 +450,21 @@ Nameable {
         return new TranslatableText("container.inventory");
     }
 
-    @Environment(value=EnvType.CLIENT)
     public ItemStack getArmorStack(int slot) {
         return this.armor.get(slot);
     }
 
-    public void damageArmor(DamageSource damageSource, float f) {
-        if (f <= 0.0f) {
+    public void damageArmor(DamageSource damageSource, float amount, int[] slots) {
+        if (amount <= 0.0f) {
             return;
         }
-        if ((f /= 4.0f) < 1.0f) {
-            f = 1.0f;
+        if ((amount /= 4.0f) < 1.0f) {
+            amount = 1.0f;
         }
-        for (int i = 0; i < this.armor.size(); ++i) {
+        for (int i : slots) {
             ItemStack itemStack = this.armor.get(i);
             if (damageSource.isFire() && itemStack.getItem().isFireproof() || !(itemStack.getItem() instanceof ArmorItem)) continue;
-            int j = i;
-            itemStack.damage((int)f, this.player, playerEntity -> playerEntity.sendEquipmentBreakStatus(EquipmentSlot.fromTypeIndex(EquipmentSlot.Type.ARMOR, j)));
+            itemStack.damage((int)amount, this.player, player -> player.sendEquipmentBreakStatus(EquipmentSlot.fromTypeIndex(EquipmentSlot.Type.ARMOR, i)));
         }
     }
 
@@ -490,22 +484,13 @@ Nameable {
         ++this.changeCount;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getChangeCount() {
         return this.changeCount;
     }
 
-    public void setCursorStack(ItemStack stack) {
-        this.cursorStack = stack;
-    }
-
-    public ItemStack getCursorStack() {
-        return this.cursorStack;
-    }
-
     @Override
     public boolean canPlayerUse(PlayerEntity player) {
-        if (this.player.removed) {
+        if (this.player.isRemoved()) {
             return false;
         }
         return !(player.squaredDistanceTo(this.player) > 64.0);
@@ -521,11 +506,10 @@ Nameable {
         return false;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public boolean contains(Tag<Item> tag) {
         for (List list : this.combinedInventory) {
             for (ItemStack itemStack : list) {
-                if (itemStack.isEmpty() || !tag.contains(itemStack.getItem())) continue;
+                if (itemStack.isEmpty() || !itemStack.isIn(tag)) continue;
                 return true;
             }
         }
@@ -550,6 +534,14 @@ Nameable {
         for (ItemStack itemStack : this.main) {
             finder.addUnenchantedInput(itemStack);
         }
+    }
+
+    public ItemStack dropSelectedItem(boolean entireStack) {
+        ItemStack itemStack = this.getMainHandStack();
+        if (itemStack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return this.removeStack(this.selectedSlot, entireStack ? itemStack.getCount() : 1);
     }
 }
 

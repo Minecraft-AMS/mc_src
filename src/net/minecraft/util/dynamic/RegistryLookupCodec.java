@@ -38,7 +38,7 @@ extends MapCodec<Registry<E>> {
 
     public <T> DataResult<Registry<E>> decode(DynamicOps<T> dynamicOps, MapLike<T> mapLike) {
         if (dynamicOps instanceof RegistryOps) {
-            return ((RegistryOps)dynamicOps).method_31152(this.registryKey);
+            return ((RegistryOps)dynamicOps).getRegistry(this.registryKey);
         }
         return DataResult.error((String)"Not a registry ops");
     }
@@ -51,8 +51,8 @@ extends MapCodec<Registry<E>> {
         return Stream.empty();
     }
 
-    public /* synthetic */ RecordBuilder encode(Object object, DynamicOps dynamicOps, RecordBuilder recordBuilder) {
-        return this.encode((Registry)object, dynamicOps, recordBuilder);
+    public /* synthetic */ RecordBuilder encode(Object registry, DynamicOps dynamicOps, RecordBuilder recordBuilder) {
+        return this.encode((Registry)registry, dynamicOps, recordBuilder);
     }
 }
 

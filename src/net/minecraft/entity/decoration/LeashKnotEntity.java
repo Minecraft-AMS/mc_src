@@ -2,15 +2,11 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.decoration;
 
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
@@ -18,6 +14,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
@@ -28,35 +26,29 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class LeashKnotEntity
 extends AbstractDecorationEntity {
+    public static final double field_30455 = 0.375;
+
     public LeashKnotEntity(EntityType<? extends LeashKnotEntity> entityType, World world) {
         super((EntityType<? extends AbstractDecorationEntity>)entityType, world);
     }
 
     public LeashKnotEntity(World world, BlockPos pos) {
         super(EntityType.LEASH_KNOT, world, pos);
-        this.setPosition((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5);
-        float f = 0.125f;
-        float g = 0.1875f;
-        float h = 0.25f;
-        this.setBoundingBox(new Box(this.getX() - 0.1875, this.getY() - 0.25 + 0.125, this.getZ() - 0.1875, this.getX() + 0.1875, this.getY() + 0.25 + 0.125, this.getZ() + 0.1875));
-        this.teleporting = true;
-    }
-
-    @Override
-    public void setPosition(double x, double y, double z) {
-        super.setPosition((double)MathHelper.floor(x) + 0.5, (double)MathHelper.floor(y) + 0.5, (double)MathHelper.floor(z) + 0.5);
+        this.setPosition(pos.getX(), pos.getY(), pos.getZ());
     }
 
     @Override
     protected void updateAttachmentPosition() {
-        this.setPos((double)this.attachmentPos.getX() + 0.5, (double)this.attachmentPos.getY() + 0.5, (double)this.attachmentPos.getZ() + 0.5);
+        this.setPos((double)this.attachmentPos.getX() + 0.5, (double)this.attachmentPos.getY() + 0.375, (double)this.attachmentPos.getZ() + 0.5);
+        double d = (double)this.getType().getWidth() / 2.0;
+        double e = this.getType().getHeight();
+        this.setBoundingBox(new Box(this.getX() - d, this.getY(), this.getZ() - d, this.getX() + d, this.getY() + e, this.getZ() + d));
     }
 
     @Override
@@ -75,11 +67,10 @@ extends AbstractDecorationEntity {
 
     @Override
     protected float getEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return -0.0625f;
+        return 0.0625f;
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public boolean shouldRender(double distance) {
         return distance < 1024.0;
     }
@@ -111,8 +102,8 @@ extends AbstractDecorationEntity {
             bl = true;
         }
         if (!bl) {
-            this.remove();
-            if (player.abilities.creativeMode) {
+            this.discard();
+            if (player.getAbilities().creativeMode) {
                 for (MobEntity mobEntity : list) {
                     if (!mobEntity.isLeashed() || mobEntity.getHoldingEntity() != this) continue;
                     mobEntity.detachLeash(true, false);
@@ -124,7 +115,7 @@ extends AbstractDecorationEntity {
 
     @Override
     public boolean canStayAttached() {
-        return this.world.getBlockState(this.attachmentPos).getBlock().isIn(BlockTags.FENCES);
+        return this.world.getBlockState(this.attachmentPos).isIn(BlockTags.FENCES);
     }
 
     public static LeashKnotEntity getOrCreate(World world, BlockPos pos) {
@@ -138,7 +129,6 @@ extends AbstractDecorationEntity {
         }
         LeashKnotEntity leashKnotEntity2 = new LeashKnotEntity(world, pos);
         world.spawnEntity(leashKnotEntity2);
-        leashKnotEntity2.onPlace();
         return leashKnotEntity2;
     }
 
@@ -153,9 +143,13 @@ extends AbstractDecorationEntity {
     }
 
     @Override
-    @Environment(value=EnvType.CLIENT)
     public Vec3d method_30951(float f) {
-        return this.method_30950(f).add(0.0, 0.2, 0.0);
+        return this.getLerpedPos(f).add(0.0, 0.2, 0.0);
+    }
+
+    @Override
+    public ItemStack getPickBlockStack() {
+        return new ItemStack(Items.LEAD);
     }
 }
 

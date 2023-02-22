@@ -46,18 +46,22 @@ extends Task<E> {
         return new FindEntityTask<LivingEntity, LivingEntity>(entityType, maxDistance, livingEntity -> true, livingEntity -> true, targetModule, speed, completionRange);
     }
 
+    public static <T extends LivingEntity> FindEntityTask<LivingEntity, T> create(EntityType<? extends T> entityType, int maxDistance, Predicate<T> condition, MemoryModuleType<T> moduleType, float speed, int completionRange) {
+        return new FindEntityTask<LivingEntity, T>(entityType, maxDistance, livingEntity -> true, condition, moduleType, speed, completionRange);
+    }
+
     @Override
     protected boolean shouldRun(ServerWorld world, E entity) {
-        return this.shouldRunPredicate.test(entity) && this.method_24582(entity);
+        return this.shouldRunPredicate.test(entity) && this.anyVisibleTo(entity);
     }
 
-    private boolean method_24582(E livingEntity) {
-        List<LivingEntity> list = ((LivingEntity)livingEntity).getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get();
-        return list.stream().anyMatch(this::method_24583);
+    private boolean anyVisibleTo(E entity) {
+        List<LivingEntity> list = ((LivingEntity)entity).getBrain().getOptionalMemory(MemoryModuleType.VISIBLE_MOBS).get();
+        return list.stream().anyMatch(this::testPredicate);
     }
 
-    private boolean method_24583(LivingEntity livingEntity) {
-        return this.entityType.equals(livingEntity.getType()) && this.predicate.test(livingEntity);
+    private boolean testPredicate(LivingEntity entity) {
+        return this.entityType.equals(entity.getType()) && this.predicate.test(entity);
     }
 
     @Override

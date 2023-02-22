@@ -1,16 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.EnvironmentInterface
- *  net.fabricmc.api.EnvironmentInterfaces
  */
 package net.minecraft.entity.projectile.thrown;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.EnvironmentInterface;
-import net.fabricmc.api.EnvironmentInterfaces;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
 import net.minecraft.entity.LivingEntity;
@@ -24,7 +16,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Util;
 import net.minecraft.world.World;
 
-@EnvironmentInterfaces(value={@EnvironmentInterface(value=EnvType.CLIENT, itf=FlyingItemEntity.class)})
 public abstract class ThrownItemEntity
 extends ThrownEntity
 implements FlyingItemEntity {
@@ -43,8 +34,8 @@ implements FlyingItemEntity {
     }
 
     public void setItem(ItemStack item) {
-        if (item.getItem() != this.getDefaultItem() || item.hasTag()) {
-            this.getDataTracker().set(ITEM, Util.make(item.copy(), itemStack -> itemStack.setCount(1)));
+        if (!item.isOf(this.getDefaultItem()) || item.hasNbt()) {
+            this.getDataTracker().set(ITEM, Util.make(item.copy(), stack -> stack.setCount(1)));
         }
     }
 

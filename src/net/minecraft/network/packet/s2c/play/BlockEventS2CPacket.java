@@ -1,15 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.network.packet.s2c.play;
 
-import java.io.IOException;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -19,13 +12,10 @@ import net.minecraft.util.registry.Registry;
 
 public class BlockEventS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private BlockPos pos;
-    private int type;
-    private int data;
-    private Block block;
-
-    public BlockEventS2CPacket() {
-    }
+    private final BlockPos pos;
+    private final int type;
+    private final int data;
+    private final Block block;
 
     public BlockEventS2CPacket(BlockPos pos, Block block, int type, int data) {
         this.pos = pos;
@@ -34,8 +24,7 @@ implements Packet<ClientPlayPacketListener> {
         this.data = data;
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public BlockEventS2CPacket(PacketByteBuf buf) {
         this.pos = buf.readBlockPos();
         this.type = buf.readUnsignedByte();
         this.data = buf.readUnsignedByte();
@@ -43,7 +32,7 @@ implements Packet<ClientPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeBlockPos(this.pos);
         buf.writeByte(this.type);
         buf.writeByte(this.data);
@@ -55,22 +44,18 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onBlockEvent(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public BlockPos getPos() {
         return this.pos;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getType() {
         return this.type;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public int getData() {
         return this.data;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Block getBlock() {
         return this.block;
     }

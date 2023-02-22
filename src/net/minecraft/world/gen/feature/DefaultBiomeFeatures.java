@@ -54,11 +54,28 @@ public class DefaultBiomeFeatures {
     }
 
     public static void addMineables(GenerationSettings.Builder builder) {
+        DefaultBiomeFeatures.addMineables(builder, false);
+    }
+
+    public static void addMineables(GenerationSettings.Builder builder, boolean bl) {
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_DIRT);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_GRAVEL);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_GRANITE);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_DIORITE);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_ANDESITE);
+        if (!bl) {
+            builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.GLOW_LICHEN);
+        }
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_TUFF);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_DEEPSLATE);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, ConfiguredFeatures.RARE_DRIPSTONE_CLUSTER);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, ConfiguredFeatures.RARE_SMALL_DRIPSTONE);
+    }
+
+    public static void addDripstone(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.LOCAL_MODIFICATIONS, ConfiguredFeatures.LARGE_DRIPSTONE);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, ConfiguredFeatures.DRIPSTONE_CLUSTER);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, ConfiguredFeatures.SMALL_DRIPSTONE);
     }
 
     public static void addDefaultOres(GenerationSettings.Builder builder) {
@@ -68,6 +85,7 @@ public class DefaultBiomeFeatures {
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_REDSTONE);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_DIAMOND);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_LAPIS);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_COPPER);
     }
 
     public static void addExtraGoldOre(GenerationSettings.Builder builder) {
@@ -145,6 +163,20 @@ public class DefaultBiomeFeatures {
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.TREES_SHATTERED_SAVANNA);
     }
 
+    public static void addLushCavesDecoration(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.LUSH_CAVES_CEILING_VEGETATION);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.CAVE_VINES);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.LUSH_CAVES_CLAY);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.LUSH_CAVES_VEGETATION);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.ROOTED_AZALEA_TREES);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.SPORE_BLOSSOM);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.CLASSIC_VINES_CAVE_FEATURE);
+    }
+
+    public static void addClayOre(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, ConfiguredFeatures.ORE_CLAY);
+    }
+
     public static void addMountainTrees(GenerationSettings.Builder builder) {
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.TREES_MOUNTAIN);
     }
@@ -162,11 +194,11 @@ public class DefaultBiomeFeatures {
     }
 
     public static void addBadlandsPlateauTrees(GenerationSettings.Builder builder) {
-        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.OAK_BADLANDS);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.TREES_BADLANDS);
     }
 
     public static void addSnowySpruceTrees(GenerationSettings.Builder builder) {
-        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.SPRUCE_SNOWY);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.TREES_SNOWY);
     }
 
     public static void addJungleGrass(GenerationSettings.Builder builder) {
@@ -199,7 +231,7 @@ public class DefaultBiomeFeatures {
     }
 
     public static void addSwampFeatures(GenerationSettings.Builder builder) {
-        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.SWAMP_TREE);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.TREES_SWAMP);
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.FLOWER_SWAMP);
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.PATCH_GRASS_NORMAL);
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, ConfiguredFeatures.PATCH_DEAD_BUSH);
@@ -336,6 +368,10 @@ public class DefaultBiomeFeatures {
         builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, ConfiguredFeatures.ORE_DEBRIS_SMALL);
     }
 
+    public static void addAmethystGeodes(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.LOCAL_MODIFICATIONS, ConfiguredFeatures.AMETHYST_GEODE);
+    }
+
     public static void addFarmAnimals(SpawnSettings.Builder builder) {
         builder.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.SHEEP, 12, 4, 4));
         builder.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.PIG, 10, 4, 4));
@@ -345,11 +381,17 @@ public class DefaultBiomeFeatures {
 
     public static void addCaveMobs(SpawnSettings.Builder builder) {
         builder.spawn(SpawnGroup.AMBIENT, new SpawnSettings.SpawnEntry(EntityType.BAT, 10, 8, 8));
+        DefaultBiomeFeatures.addCaveWaterMobs(builder);
     }
 
     public static void addBatsAndMonsters(SpawnSettings.Builder builder) {
         DefaultBiomeFeatures.addCaveMobs(builder);
         DefaultBiomeFeatures.addMonsters(builder, 95, 5, 100);
+    }
+
+    public static void addCaveWaterMobs(SpawnSettings.Builder builder) {
+        builder.spawn(SpawnGroup.UNDERGROUND_WATER_CREATURE, new SpawnSettings.SpawnEntry(EntityType.GLOW_SQUID, 10, 4, 6));
+        builder.spawn(SpawnGroup.UNDERGROUND_WATER_CREATURE, new SpawnSettings.SpawnEntry(EntityType.AXOLOTL, 10, 4, 6));
     }
 
     public static void addOceanMobs(SpawnSettings.Builder builder, int squidWeight, int squidMaxGroupSize, int codWeight) {

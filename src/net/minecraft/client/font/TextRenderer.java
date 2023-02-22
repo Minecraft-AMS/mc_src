@@ -16,7 +16,6 @@ import com.google.common.collect.Lists;
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -48,6 +47,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class TextRenderer {
+    private static final float field_32166 = 0.01f;
     private static final Vec3f FORWARD_SHIFT = new Vec3f(0.0f, 0.0f, 0.03f);
     public final int fontHeight = 9;
     public final Random random = new Random();
@@ -59,7 +59,7 @@ public class TextRenderer {
         this.handler = new TextHandler((i, style) -> this.getFontStorage(style.getFont()).getGlyph(i).getAdvance(style.isBold()));
     }
 
-    private FontStorage getFontStorage(Identifier id) {
+    FontStorage getFontStorage(Identifier id) {
         return this.fontStorageAccessor.apply(id);
     }
 
@@ -68,32 +68,26 @@ public class TextRenderer {
     }
 
     public int drawWithShadow(MatrixStack matrices, String text, float x, float y, int color, boolean rightToLeft) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text, x, y, color, matrices.peek().getModel(), true, rightToLeft);
     }
 
     public int draw(MatrixStack matrices, String text, float x, float y, int color) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text, x, y, color, matrices.peek().getModel(), false, this.isRightToLeft());
     }
 
     public int drawWithShadow(MatrixStack matrices, OrderedText text, float x, float y, int color) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text, x, y, color, matrices.peek().getModel(), true);
     }
 
     public int drawWithShadow(MatrixStack matrices, Text text, float x, float y, int color) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text.asOrderedText(), x, y, color, matrices.peek().getModel(), true);
     }
 
     public int draw(MatrixStack matrices, OrderedText text, float x, float y, int color) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text, x, y, color, matrices.peek().getModel(), false);
     }
 
     public int draw(MatrixStack matrices, Text text, float x, float y, int color) {
-        RenderSystem.enableAlphaTest();
         return this.draw(text.asOrderedText(), x, y, color, matrices.peek().getModel(), false);
     }
 
@@ -141,6 +135,31 @@ public class TextRenderer {
         return this.drawInternal(text, x, y, color, shadow, matrix, vertexConsumers, seeThrough, backgroundColor, light);
     }
 
+    public void drawWithOutline(OrderedText text, float x, float y, int color, int outlineColor, Matrix4f matrix, VertexConsumerProvider vertexConsumers, int light) {
+        int i = TextRenderer.tweakTransparency(outlineColor);
+        Drawer drawer = new Drawer(vertexConsumers, 0.0f, 0.0f, i, false, matrix, TextLayerType.NORMAL, light);
+        for (int j = -1; j <= 1; ++j) {
+            for (int k = -1; k <= 1; ++k) {
+                if (j == 0 && k == 0) continue;
+                float[] fs = new float[]{x};
+                int l2 = j;
+                int m2 = k;
+                text.accept((l, style, m) -> {
+                    boolean bl = style.isBold();
+                    FontStorage fontStorage = this.getFontStorage(style.getFont());
+                    Glyph glyph = fontStorage.getGlyph(m);
+                    drawer.x = fs[0] + (float)l2 * glyph.getShadowOffset();
+                    drawer.y = y + (float)m2 * glyph.getShadowOffset();
+                    fs[0] = fs[0] + glyph.getAdvance(bl);
+                    return drawer.accept(l, style.withColor(i), m);
+                });
+            }
+        }
+        Drawer drawer2 = new Drawer(vertexConsumers, x, y, TextRenderer.tweakTransparency(color), false, matrix, TextLayerType.POLYGON_OFFSET, light);
+        text.accept(drawer2);
+        drawer2.drawLayer(0, x);
+    }
+
     private static int tweakTransparency(int argb) {
         if ((argb & 0xFC000000) == 0) {
             return argb | 0xFF000000;
@@ -185,7 +204,7 @@ public class TextRenderer {
         return drawer.drawLayer(underlineColor, x);
     }
 
-    private void drawGlyph(GlyphRenderer glyphRenderer, boolean bold, boolean italic, float weight, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, int light) {
+    void drawGlyph(GlyphRenderer glyphRenderer, boolean bold, boolean italic, float weight, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, int light) {
         glyphRenderer.draw(italic, x, y, matrix, vertexConsumer, red, green, blue, alpha, light);
         if (bold) {
             glyphRenderer.draw(italic, x + weight, y, matrix, vertexConsumer, red, green, blue, alpha, light);
@@ -251,10 +270,10 @@ public class TextRenderer {
         private final float blue;
         private final float alpha;
         private final Matrix4f matrix;
-        private final boolean seeThrough;
+        private final TextLayerType layerType;
         private final int light;
-        private float x;
-        private float y;
+        float x;
+        float y;
         @Nullable
         private List<GlyphRenderer.Rectangle> rectangles;
 
@@ -266,6 +285,10 @@ public class TextRenderer {
         }
 
         public Drawer(VertexConsumerProvider vertexConsumers, float x, float y, int color, boolean shadow, Matrix4f matrix, boolean seeThrough, int light) {
+            this(vertexConsumers, x, y, color, shadow, matrix, seeThrough ? TextLayerType.SEE_THROUGH : TextLayerType.NORMAL, light);
+        }
+
+        public Drawer(VertexConsumerProvider vertexConsumers, float x, float y, int color, boolean shadow, Matrix4f matrix, TextLayerType layerType, int light) {
             this.vertexConsumers = vertexConsumers;
             this.x = x;
             this.y = y;
@@ -276,7 +299,7 @@ public class TextRenderer {
             this.blue = (float)(color & 0xFF) / 255.0f * this.brightnessMultiplier;
             this.alpha = (float)(color >> 24 & 0xFF) / 255.0f;
             this.matrix = matrix;
-            this.seeThrough = seeThrough;
+            this.layerType = layerType;
             this.light = light;
         }
 
@@ -305,7 +328,7 @@ public class TextRenderer {
             if (!(glyphRenderer instanceof EmptyGlyphRenderer)) {
                 float m = bl ? glyph.getBoldOffset() : 0.0f;
                 n = this.shadow ? glyph.getShadowOffset() : 0.0f;
-                VertexConsumer vertexConsumer = this.vertexConsumers.getBuffer(glyphRenderer.getLayer(this.seeThrough));
+                VertexConsumer vertexConsumer = this.vertexConsumers.getBuffer(glyphRenderer.getLayer(this.layerType));
                 TextRenderer.this.drawGlyph(glyphRenderer, bl, style.isItalic(), m, this.x + n, this.y + n, this.matrix, vertexConsumer, g, h, l, f, this.light);
             }
             float m = glyph.getAdvance(bl);
@@ -330,12 +353,37 @@ public class TextRenderer {
             }
             if (this.rectangles != null) {
                 GlyphRenderer glyphRenderer = TextRenderer.this.getFontStorage(Style.DEFAULT_FONT_ID).getRectangleRenderer();
-                VertexConsumer vertexConsumer = this.vertexConsumers.getBuffer(glyphRenderer.getLayer(this.seeThrough));
+                VertexConsumer vertexConsumer = this.vertexConsumers.getBuffer(glyphRenderer.getLayer(this.layerType));
                 for (GlyphRenderer.Rectangle rectangle : this.rectangles) {
                     glyphRenderer.drawRectangle(rectangle, this.matrix, vertexConsumer, this.light);
                 }
             }
             return this.x;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static final class TextLayerType
+    extends Enum<TextLayerType> {
+        public static final /* enum */ TextLayerType NORMAL = new TextLayerType();
+        public static final /* enum */ TextLayerType SEE_THROUGH = new TextLayerType();
+        public static final /* enum */ TextLayerType POLYGON_OFFSET = new TextLayerType();
+        private static final /* synthetic */ TextLayerType[] field_33996;
+
+        public static TextLayerType[] values() {
+            return (TextLayerType[])field_33996.clone();
+        }
+
+        public static TextLayerType valueOf(String string) {
+            return Enum.valueOf(TextLayerType.class, string);
+        }
+
+        private static /* synthetic */ TextLayerType[] method_37344() {
+            return new TextLayerType[]{NORMAL, SEE_THROUGH, POLYGON_OFFSET};
+        }
+
+        static {
+            field_33996 = TextLayerType.method_37344();
         }
     }
 }

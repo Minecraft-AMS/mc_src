@@ -9,41 +9,41 @@ package net.minecraft.client.render.entity.model;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.model.SkullEntityModel;
+import net.minecraft.client.render.block.entity.SkullBlockEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 
 @Environment(value=EnvType.CLIENT)
 public class DragonHeadEntityModel
-extends SkullEntityModel {
+extends SkullBlockEntityModel {
     private final ModelPart head;
     private final ModelPart jaw;
 
-    public DragonHeadEntityModel(float scale) {
-        this.textureWidth = 256;
-        this.textureHeight = 256;
+    public DragonHeadEntityModel(ModelPart root) {
+        this.head = root.getChild("head");
+        this.jaw = this.head.getChild("jaw");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
         float f = -16.0f;
-        this.head = new ModelPart(this);
-        this.head.addCuboid("upperlip", -6.0f, -1.0f, -24.0f, 12, 5, 16, scale, 176, 44);
-        this.head.addCuboid("upperhead", -8.0f, -8.0f, -10.0f, 16, 16, 16, scale, 112, 30);
-        this.head.mirror = true;
-        this.head.addCuboid("scale", -5.0f, -12.0f, -4.0f, 2, 4, 6, scale, 0, 0);
-        this.head.addCuboid("nostril", -5.0f, -3.0f, -22.0f, 2, 2, 4, scale, 112, 0);
-        this.head.mirror = false;
-        this.head.addCuboid("scale", 3.0f, -12.0f, -4.0f, 2, 4, 6, scale, 0, 0);
-        this.head.addCuboid("nostril", 3.0f, -3.0f, -22.0f, 2, 2, 4, scale, 112, 0);
-        this.jaw = new ModelPart(this);
-        this.jaw.setPivot(0.0f, 4.0f, -8.0f);
-        this.jaw.addCuboid("jaw", -6.0f, 0.0f, -16.0f, 12, 4, 16, scale, 176, 65);
-        this.head.addChild(this.jaw);
+        ModelPartData modelPartData2 = modelPartData.addChild("head", ModelPartBuilder.create().cuboid("upper_lip", -6.0f, -1.0f, -24.0f, 12, 5, 16, 176, 44).cuboid("upper_head", -8.0f, -8.0f, -10.0f, 16, 16, 16, 112, 30).mirrored(true).cuboid("scale", -5.0f, -12.0f, -4.0f, 2, 4, 6, 0, 0).cuboid("nostril", -5.0f, -3.0f, -22.0f, 2, 2, 4, 112, 0).mirrored(false).cuboid("scale", 3.0f, -12.0f, -4.0f, 2, 4, 6, 0, 0).cuboid("nostril", 3.0f, -3.0f, -22.0f, 2, 2, 4, 112, 0), ModelTransform.NONE);
+        modelPartData2.addChild("jaw", ModelPartBuilder.create().uv(176, 65).cuboid("jaw", -6.0f, 0.0f, -16.0f, 12.0f, 4.0f, 16.0f), ModelTransform.pivot(0.0f, 4.0f, -8.0f));
+        return TexturedModelData.of(modelData, 256, 256);
     }
 
     @Override
-    public void method_2821(float f, float g, float h) {
-        this.jaw.pitch = (float)(Math.sin(f * (float)Math.PI * 0.2f) + 1.0) * 0.2f;
-        this.head.yaw = g * ((float)Math.PI / 180);
-        this.head.pitch = h * ((float)Math.PI / 180);
+    public void setHeadRotation(float animationProgress, float yaw, float pitch) {
+        this.jaw.pitch = (float)(Math.sin(animationProgress * (float)Math.PI * 0.2f) + 1.0) * 0.2f;
+        this.head.yaw = yaw * ((float)Math.PI / 180);
+        this.head.pitch = pitch * ((float)Math.PI / 180);
     }
 
     @Override

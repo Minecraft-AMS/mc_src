@@ -7,41 +7,40 @@
  */
 package net.minecraft.client.option;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
-public enum CloudRenderMode {
-    OFF(0, "options.off"),
-    FAST(1, "options.clouds.fast"),
-    FANCY(2, "options.clouds.fancy");
-
-    private static final CloudRenderMode[] VALUES;
-    private final int id;
+public final class CloudRenderMode
+extends Enum<CloudRenderMode> {
+    public static final /* enum */ CloudRenderMode OFF = new CloudRenderMode("options.off");
+    public static final /* enum */ CloudRenderMode FAST = new CloudRenderMode("options.clouds.fast");
+    public static final /* enum */ CloudRenderMode FANCY = new CloudRenderMode("options.clouds.fancy");
     private final String translationKey;
+    private static final /* synthetic */ CloudRenderMode[] field_18168;
 
-    private CloudRenderMode(int id, String translationKey) {
-        this.id = id;
-        this.translationKey = translationKey;
+    public static CloudRenderMode[] values() {
+        return (CloudRenderMode[])field_18168.clone();
     }
 
-    public int getId() {
-        return this.id;
+    public static CloudRenderMode valueOf(String string) {
+        return Enum.valueOf(CloudRenderMode.class, string);
+    }
+
+    private CloudRenderMode(String translationKey) {
+        this.translationKey = translationKey;
     }
 
     public String getTranslationKey() {
         return this.translationKey;
     }
 
-    public static CloudRenderMode byId(int id) {
-        return VALUES[MathHelper.floorMod(id, VALUES.length)];
+    private static /* synthetic */ CloudRenderMode[] method_36860() {
+        return new CloudRenderMode[]{OFF, FAST, FANCY};
     }
 
     static {
-        VALUES = (CloudRenderMode[])Arrays.stream(CloudRenderMode.values()).sorted(Comparator.comparingInt(CloudRenderMode::getId)).toArray(CloudRenderMode[]::new);
+        field_18168 = CloudRenderMode.method_36860();
     }
 }
 

@@ -10,16 +10,19 @@ import com.mojang.serialization.Codec;
 import java.util.function.Function;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.DustColorTransitionParticleEffect;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ItemStackParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
+import net.minecraft.particle.VibrationParticleEffect;
 import net.minecraft.util.registry.Registry;
 
 public class ParticleTypes {
     public static final DefaultParticleType AMBIENT_ENTITY_EFFECT = ParticleTypes.register("ambient_entity_effect", false);
     public static final DefaultParticleType ANGRY_VILLAGER = ParticleTypes.register("angry_villager", false);
     public static final DefaultParticleType BARRIER = ParticleTypes.register("barrier", false);
+    public static final DefaultParticleType LIGHT = ParticleTypes.register("light", false);
     public static final ParticleType<BlockStateParticleEffect> BLOCK = ParticleTypes.register("block", BlockStateParticleEffect.PARAMETERS_FACTORY, BlockStateParticleEffect::method_29128);
     public static final DefaultParticleType BUBBLE = ParticleTypes.register("bubble", false);
     public static final DefaultParticleType CLOUD = ParticleTypes.register("cloud", false);
@@ -32,6 +35,7 @@ public class ParticleTypes {
     public static final DefaultParticleType DRIPPING_WATER = ParticleTypes.register("dripping_water", false);
     public static final DefaultParticleType FALLING_WATER = ParticleTypes.register("falling_water", false);
     public static final ParticleType<DustParticleEffect> DUST = ParticleTypes.register("dust", DustParticleEffect.PARAMETERS_FACTORY, particleType -> DustParticleEffect.CODEC);
+    public static final ParticleType<DustColorTransitionParticleEffect> DUST_COLOR_TRANSITION = ParticleTypes.register("dust_color_transition", DustColorTransitionParticleEffect.FACTORY, particleType -> DustColorTransitionParticleEffect.CODEC);
     public static final DefaultParticleType EFFECT = ParticleTypes.register("effect", false);
     public static final DefaultParticleType ELDER_GUARDIAN = ParticleTypes.register("elder_guardian", true);
     public static final DefaultParticleType ENCHANTED_HIT = ParticleTypes.register("enchanted_hit", false);
@@ -52,6 +56,7 @@ public class ParticleTypes {
     public static final DefaultParticleType HEART = ParticleTypes.register("heart", false);
     public static final DefaultParticleType INSTANT_EFFECT = ParticleTypes.register("instant_effect", false);
     public static final ParticleType<ItemStackParticleEffect> ITEM = ParticleTypes.register("item", ItemStackParticleEffect.PARAMETERS_FACTORY, ItemStackParticleEffect::method_29136);
+    public static final ParticleType<VibrationParticleEffect> VIBRATION = ParticleTypes.register("vibration", VibrationParticleEffect.PARAMETERS_FACTORY, particleType -> VibrationParticleEffect.CODEC);
     public static final DefaultParticleType ITEM_SLIME = ParticleTypes.register("item_slime", false);
     public static final DefaultParticleType ITEM_SNOWBALL = ParticleTypes.register("item_snowball", false);
     public static final DefaultParticleType LARGE_SMOKE = ParticleTypes.register("large_smoke", false);
@@ -81,14 +86,28 @@ public class ParticleTypes {
     public static final DefaultParticleType FALLING_HONEY = ParticleTypes.register("falling_honey", false);
     public static final DefaultParticleType LANDING_HONEY = ParticleTypes.register("landing_honey", false);
     public static final DefaultParticleType FALLING_NECTAR = ParticleTypes.register("falling_nectar", false);
+    public static final DefaultParticleType FALLING_SPORE_BLOSSOM = ParticleTypes.register("falling_spore_blossom", false);
     public static final DefaultParticleType ASH = ParticleTypes.register("ash", false);
     public static final DefaultParticleType CRIMSON_SPORE = ParticleTypes.register("crimson_spore", false);
     public static final DefaultParticleType WARPED_SPORE = ParticleTypes.register("warped_spore", false);
+    public static final DefaultParticleType SPORE_BLOSSOM_AIR = ParticleTypes.register("spore_blossom_air", false);
     public static final DefaultParticleType DRIPPING_OBSIDIAN_TEAR = ParticleTypes.register("dripping_obsidian_tear", false);
     public static final DefaultParticleType FALLING_OBSIDIAN_TEAR = ParticleTypes.register("falling_obsidian_tear", false);
     public static final DefaultParticleType LANDING_OBSIDIAN_TEAR = ParticleTypes.register("landing_obsidian_tear", false);
     public static final DefaultParticleType REVERSE_PORTAL = ParticleTypes.register("reverse_portal", false);
     public static final DefaultParticleType WHITE_ASH = ParticleTypes.register("white_ash", false);
+    public static final DefaultParticleType SMALL_FLAME = ParticleTypes.register("small_flame", false);
+    public static final DefaultParticleType SNOWFLAKE = ParticleTypes.register("snowflake", false);
+    public static final DefaultParticleType DRIPPING_DRIPSTONE_LAVA = ParticleTypes.register("dripping_dripstone_lava", false);
+    public static final DefaultParticleType FALLING_DRIPSTONE_LAVA = ParticleTypes.register("falling_dripstone_lava", false);
+    public static final DefaultParticleType DRIPPING_DRIPSTONE_WATER = ParticleTypes.register("dripping_dripstone_water", false);
+    public static final DefaultParticleType FALLING_DRIPSTONE_WATER = ParticleTypes.register("falling_dripstone_water", false);
+    public static final DefaultParticleType GLOW_SQUID_INK = ParticleTypes.register("glow_squid_ink", true);
+    public static final DefaultParticleType GLOW = ParticleTypes.register("glow", true);
+    public static final DefaultParticleType WAX_ON = ParticleTypes.register("wax_on", true);
+    public static final DefaultParticleType WAX_OFF = ParticleTypes.register("wax_off", true);
+    public static final DefaultParticleType ELECTRIC_SPARK = ParticleTypes.register("electric_spark", true);
+    public static final DefaultParticleType SCRAPE = ParticleTypes.register("scrape", true);
     public static final Codec<ParticleEffect> TYPE_CODEC = Registry.PARTICLE_TYPE.dispatch("type", ParticleEffect::getType, ParticleType::getCodec);
 
     private static DefaultParticleType register(String name, boolean alwaysShow) {

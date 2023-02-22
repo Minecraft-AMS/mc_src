@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.Maps
- *  com.google.common.collect.Sets
  */
 package net.minecraft.item;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -24,6 +21,7 @@ import net.minecraft.item.MiningToolItem;
 import net.minecraft.item.ToolMaterial;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -31,16 +29,10 @@ import net.minecraft.world.World;
 
 public class ShovelItem
 extends MiningToolItem {
-    private static final Set<Block> EFFECTIVE_BLOCKS = Sets.newHashSet((Object[])new Block[]{Blocks.CLAY, Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.PODZOL, Blocks.FARMLAND, Blocks.GRASS_BLOCK, Blocks.GRAVEL, Blocks.MYCELIUM, Blocks.SAND, Blocks.RED_SAND, Blocks.SNOW_BLOCK, Blocks.SNOW, Blocks.SOUL_SAND, Blocks.GRASS_PATH, Blocks.WHITE_CONCRETE_POWDER, Blocks.ORANGE_CONCRETE_POWDER, Blocks.MAGENTA_CONCRETE_POWDER, Blocks.LIGHT_BLUE_CONCRETE_POWDER, Blocks.YELLOW_CONCRETE_POWDER, Blocks.LIME_CONCRETE_POWDER, Blocks.PINK_CONCRETE_POWDER, Blocks.GRAY_CONCRETE_POWDER, Blocks.LIGHT_GRAY_CONCRETE_POWDER, Blocks.CYAN_CONCRETE_POWDER, Blocks.PURPLE_CONCRETE_POWDER, Blocks.BLUE_CONCRETE_POWDER, Blocks.BROWN_CONCRETE_POWDER, Blocks.GREEN_CONCRETE_POWDER, Blocks.RED_CONCRETE_POWDER, Blocks.BLACK_CONCRETE_POWDER, Blocks.SOUL_SOIL});
-    protected static final Map<Block, BlockState> PATH_STATES = Maps.newHashMap((Map)ImmutableMap.of((Object)Blocks.GRASS_BLOCK, (Object)Blocks.GRASS_PATH.getDefaultState()));
+    protected static final Map<Block, BlockState> PATH_STATES = Maps.newHashMap((Map)new ImmutableMap.Builder().put((Object)Blocks.GRASS_BLOCK, (Object)Blocks.DIRT_PATH.getDefaultState()).put((Object)Blocks.DIRT, (Object)Blocks.DIRT_PATH.getDefaultState()).put((Object)Blocks.PODZOL, (Object)Blocks.DIRT_PATH.getDefaultState()).put((Object)Blocks.COARSE_DIRT, (Object)Blocks.DIRT_PATH.getDefaultState()).put((Object)Blocks.MYCELIUM, (Object)Blocks.DIRT_PATH.getDefaultState()).put((Object)Blocks.ROOTED_DIRT, (Object)Blocks.DIRT_PATH.getDefaultState()).build());
 
     public ShovelItem(ToolMaterial material, float attackDamage, float attackSpeed, Item.Settings settings) {
-        super(attackDamage, attackSpeed, material, EFFECTIVE_BLOCKS, settings);
-    }
-
-    @Override
-    public boolean isSuitableFor(BlockState state) {
-        return state.isOf(Blocks.SNOW) || state.isOf(Blocks.SNOW_BLOCK);
+        super(attackDamage, attackSpeed, material, BlockTags.SHOVEL_MINEABLE, settings);
     }
 
     @Override
@@ -59,7 +51,7 @@ extends MiningToolItem {
                 if (!world.isClient()) {
                     world.syncWorldEvent(null, 1009, blockPos, 0);
                 }
-                CampfireBlock.extinguish(world, blockPos, blockState);
+                CampfireBlock.extinguish(context.getPlayer(), world, blockPos, blockState);
                 blockState3 = (BlockState)blockState.with(CampfireBlock.LIT, false);
             }
             if (blockState3 != null) {

@@ -13,7 +13,6 @@ import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
@@ -25,7 +24,6 @@ extends Screen {
     protected final Text notice;
     private MultilineText noticeLines = MultilineText.EMPTY;
     protected final Text buttonText;
-    private int field_2347;
 
     public NoticeScreen(Runnable actionHandler, Text title, Text notice) {
         this(actionHandler, title, notice, ScreenTexts.BACK);
@@ -41,7 +39,7 @@ extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.addButton(new ButtonWidget(this.width / 2 - 100, this.height / 6 + 168, 200, 20, this.buttonText, buttonWidget -> this.actionHandler.run()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 6 + 168, 200, 20, this.buttonText, button -> this.actionHandler.run()));
         this.noticeLines = MultilineText.create(this.textRenderer, (StringVisitable)this.notice, this.width - 50);
     }
 
@@ -51,16 +49,6 @@ extends Screen {
         NoticeScreen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 70, 0xFFFFFF);
         this.noticeLines.drawCenterWithShadow(matrices, this.width / 2, 90);
         super.render(matrices, mouseX, mouseY, delta);
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (--this.field_2347 == 0) {
-            for (ClickableWidget clickableWidget : this.buttons) {
-                clickableWidget.active = true;
-            }
-        }
     }
 }
 

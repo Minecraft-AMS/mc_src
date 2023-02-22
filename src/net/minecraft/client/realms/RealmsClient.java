@@ -25,6 +25,7 @@ import net.minecraft.client.realms.dto.Ops;
 import net.minecraft.client.realms.dto.PendingInvite;
 import net.minecraft.client.realms.dto.PendingInvitesList;
 import net.minecraft.client.realms.dto.PingResult;
+import net.minecraft.client.realms.dto.PlayerActivities;
 import net.minecraft.client.realms.dto.PlayerInfo;
 import net.minecraft.client.realms.dto.RealmsDescriptionDto;
 import net.minecraft.client.realms.dto.RealmsNews;
@@ -41,6 +42,7 @@ import net.minecraft.client.realms.dto.WorldTemplatePaginatedList;
 import net.minecraft.client.realms.exception.RealmsHttpException;
 import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.exception.RetryCallException;
+import net.minecraft.client.realms.gui.screen.ResetWorldInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -53,6 +55,44 @@ public class RealmsClient {
     private final String sessionId;
     private final String username;
     private final MinecraftClient client;
+    private static final String WORLDS_ENDPOINT = "worlds";
+    private static final String INVITES_ENDPOINT = "invites";
+    private static final String MCO_ENDPOINT = "mco";
+    private static final String SUBSCRIPTIONS_ENDPOINT = "subscriptions";
+    private static final String ACTIVITIES_ENDPOINT = "activities";
+    private static final String OPS_ENDPOINT = "ops";
+    private static final String PING_STAT_ENDPOINT = "regions/ping/stat";
+    private static final String TRIAL_ENDPOINT = "trial";
+    private static final String WORLD_INITIALIZE_ENDPOINT = "/$WORLD_ID/initialize";
+    private static final String WORLD_ENDPOINT = "/$WORLD_ID";
+    private static final String LIVEPLAYERLIST_ENDPOINT = "/liveplayerlist";
+    private static final String WORLD_ENDPOINT_2 = "/$WORLD_ID";
+    private static final String WORLD_PROFILE_ENDPOINT = "/$WORLD_ID/$PROFILE_UUID";
+    private static final String MINIGAMES_ENDPOINT = "/minigames/$MINIGAME_ID/$WORLD_ID";
+    private static final String AVAILABLE_ENDPOINT = "/available";
+    private static final String TEMPLATES_ENDPOINT = "/templates/$WORLD_TYPE";
+    private static final String JOIN_PC_ENDPOINT = "/v1/$ID/join/pc";
+    private static final String ID_ENDPOINT = "/$ID";
+    private static final String WORLD_ENDPOINT_3 = "/$WORLD_ID";
+    private static final String INVITE_ENDPOINT = "/$WORLD_ID/invite/$UUID";
+    private static final String COUNT_PENDING_ENDPOINT = "/count/pending";
+    private static final String PENDING_ENDPOINT = "/pending";
+    private static final String ACCEPT_INVITATION_ENDPOINT = "/accept/$INVITATION_ID";
+    private static final String REJECT_INVITATION_ENDPOINT = "/reject/$INVITATION_ID";
+    private static final String WORLD_ENDPOINT_4 = "/$WORLD_ID";
+    private static final String WORLD_ENDPOINT_5 = "/$WORLD_ID";
+    private static final String WORLD_SLOT_ENDPOINT = "/$WORLD_ID/slot/$SLOT_ID";
+    private static final String WORLD_OPEN_ENDPOINT = "/$WORLD_ID/open";
+    private static final String WORLD_CLOSE_ENDPOINT = "/$WORLD_ID/close";
+    private static final String WORLD_RESET_ENDPOINT = "/$WORLD_ID/reset";
+    private static final String WORLD_ENDPOINT_6 = "/$WORLD_ID";
+    private static final String WORLD_BACKUPS_ENDPOINT = "/$WORLD_ID/backups";
+    private static final String WORLD_SLOT_DOWNLOAD_ENDPOINT = "/$WORLD_ID/slot/$SLOT_ID/download";
+    private static final String WORLD_BACKUPS_UPLOAD_ENDPOINT = "/$WORLD_ID/backups/upload";
+    private static final String CLIENT_COMPATIBLE_ENDPOINT = "/client/compatible";
+    private static final String TOS_AGREED_ENDPOINT = "/tos/agreed";
+    private static final String NEWS_ENDPOINT = "/v1/news";
+    private static final String STAGE_AVAILABLE_ENDPOINT = "/stageAvailable";
     private static final CheckedGson JSON;
 
     public static RealmsClient createRealmsClient() {
@@ -96,15 +136,21 @@ public class RealmsClient {
     }
 
     public RealmsServerList listWorlds() throws RealmsServiceException {
-        String string = this.url("worlds");
+        String string = this.url(WORLDS_ENDPOINT);
         String string2 = this.execute(Request.get(string));
         return RealmsServerList.parse(string2);
     }
 
     public RealmsServer getOwnWorld(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$ID".replace("$ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + ID_ENDPOINT.replace("$ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.get(string));
         return RealmsServer.parse(string2);
+    }
+
+    public PlayerActivities getPlayerActivities(long worldId) throws RealmsServiceException {
+        String string = this.url(ACTIVITIES_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string2 = this.execute(Request.get(string));
+        return PlayerActivities.parse(string2);
     }
 
     public RealmsServerPlayerLists getLiveStats() throws RealmsServiceException {
@@ -114,14 +160,14 @@ public class RealmsClient {
     }
 
     public RealmsServerAddress join(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/v1/$ID/join/pc".replace("$ID", "" + worldId));
+        String string = this.url(WORLDS_ENDPOINT + JOIN_PC_ENDPOINT.replace("$ID", "" + worldId));
         String string2 = this.execute(Request.get(string, 5000, 30000));
         return RealmsServerAddress.parse(string2);
     }
 
     public void initializeWorld(long worldId, String name, String motd) throws RealmsServiceException {
         RealmsDescriptionDto realmsDescriptionDto = new RealmsDescriptionDto(name, motd);
-        String string = this.url("worlds" + "/$WORLD_ID/initialize".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_INITIALIZE_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = JSON.toJson(realmsDescriptionDto);
         this.execute(Request.post(string, string2, 5000, 10000));
     }
@@ -152,104 +198,104 @@ public class RealmsClient {
     }
 
     public void uninvite(long worldId, String profileUuid) throws RealmsServiceException {
-        String string = this.url("invites" + "/$WORLD_ID/invite/$UUID".replace("$WORLD_ID", String.valueOf(worldId)).replace("$UUID", profileUuid));
+        String string = this.url(INVITES_ENDPOINT + INVITE_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$UUID", profileUuid));
         this.execute(Request.delete(string));
     }
 
     public void uninviteMyselfFrom(long worldId) throws RealmsServiceException {
-        String string = this.url("invites" + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(INVITES_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
         this.execute(Request.delete(string));
     }
 
     public RealmsServer invite(long worldId, String profileName) throws RealmsServiceException {
         PlayerInfo playerInfo = new PlayerInfo();
         playerInfo.setName(profileName);
-        String string = this.url("invites" + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(INVITES_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.post(string, JSON.toJson(playerInfo)));
         return RealmsServer.parse(string2);
     }
 
     public BackupList backupsFor(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/backups".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_BACKUPS_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.get(string));
         return BackupList.parse(string2);
     }
 
     public void update(long worldId, String name, String motd) throws RealmsServiceException {
         RealmsDescriptionDto realmsDescriptionDto = new RealmsDescriptionDto(name, motd);
-        String string = this.url("worlds" + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
         this.execute(Request.post(string, JSON.toJson(realmsDescriptionDto)));
     }
 
     public void updateSlot(long worldId, int slot, RealmsWorldOptions options) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/slot/$SLOT_ID".replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slot)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_SLOT_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slot)));
         String string2 = options.toJson();
         this.execute(Request.post(string, string2));
     }
 
     public boolean switchSlot(long worldId, int slot) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/slot/$SLOT_ID".replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slot)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_SLOT_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slot)));
         String string2 = this.execute(Request.put(string, ""));
         return Boolean.valueOf(string2);
     }
 
     public void restoreWorld(long worldId, String backupId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/backups".replace("$WORLD_ID", String.valueOf(worldId)), "backupId=" + backupId);
+        String string = this.url(WORLDS_ENDPOINT + WORLD_BACKUPS_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)), "backupId=" + backupId);
         this.execute(Request.put(string, "", 40000, 600000));
     }
 
     public WorldTemplatePaginatedList fetchWorldTemplates(int page, int pageSize, RealmsServer.WorldType type) throws RealmsServiceException {
-        String string = this.url("worlds" + "/templates/$WORLD_TYPE".replace("$WORLD_TYPE", type.toString()), String.format("page=%d&pageSize=%d", page, pageSize));
+        String string = this.url(WORLDS_ENDPOINT + TEMPLATES_ENDPOINT.replace("$WORLD_TYPE", type.toString()), String.format("page=%d&pageSize=%d", page, pageSize));
         String string2 = this.execute(Request.get(string));
         return WorldTemplatePaginatedList.parse(string2);
     }
 
     public Boolean putIntoMinigameMode(long worldId, String minigameId) throws RealmsServiceException {
-        String string = "/minigames/$MINIGAME_ID/$WORLD_ID".replace("$MINIGAME_ID", minigameId).replace("$WORLD_ID", String.valueOf(worldId));
-        String string2 = this.url("worlds" + string);
+        String string = MINIGAMES_ENDPOINT.replace("$MINIGAME_ID", minigameId).replace("$WORLD_ID", String.valueOf(worldId));
+        String string2 = this.url(WORLDS_ENDPOINT + string);
         return Boolean.valueOf(this.execute(Request.put(string2, "")));
     }
 
     public Ops op(long worldId, String profileUuid) throws RealmsServiceException {
-        String string = "/$WORLD_ID/$PROFILE_UUID".replace("$WORLD_ID", String.valueOf(worldId)).replace("$PROFILE_UUID", profileUuid);
-        String string2 = this.url("ops" + string);
+        String string = WORLD_PROFILE_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$PROFILE_UUID", profileUuid);
+        String string2 = this.url(OPS_ENDPOINT + string);
         return Ops.parse(this.execute(Request.post(string2, "")));
     }
 
     public Ops deop(long worldId, String profileUuid) throws RealmsServiceException {
-        String string = "/$WORLD_ID/$PROFILE_UUID".replace("$WORLD_ID", String.valueOf(worldId)).replace("$PROFILE_UUID", profileUuid);
-        String string2 = this.url("ops" + string);
+        String string = WORLD_PROFILE_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$PROFILE_UUID", profileUuid);
+        String string2 = this.url(OPS_ENDPOINT + string);
         return Ops.parse(this.execute(Request.delete(string2)));
     }
 
     public Boolean open(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/open".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_OPEN_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.put(string, ""));
         return Boolean.valueOf(string2);
     }
 
     public Boolean close(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/close".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_CLOSE_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.put(string, ""));
         return Boolean.valueOf(string2);
     }
 
-    public Boolean resetWorldWithSeed(long worldId, String seed, Integer levelType, boolean generateStructures) throws RealmsServiceException {
-        RealmsWorldResetDto realmsWorldResetDto = new RealmsWorldResetDto(seed, -1L, levelType, generateStructures);
-        String string = this.url("worlds" + "/$WORLD_ID/reset".replace("$WORLD_ID", String.valueOf(worldId)));
+    public Boolean resetWorldWithSeed(long worldId, ResetWorldInfo resetWorldInfo) throws RealmsServiceException {
+        RealmsWorldResetDto realmsWorldResetDto = new RealmsWorldResetDto(resetWorldInfo.getSeed(), -1L, resetWorldInfo.getLevelType().getId(), resetWorldInfo.shouldGenerateStructures());
+        String string = this.url(WORLDS_ENDPOINT + WORLD_RESET_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.post(string, JSON.toJson(realmsWorldResetDto), 30000, 80000));
         return Boolean.valueOf(string2);
     }
 
     public Boolean resetWorldWithTemplate(long worldId, String worldTemplateId) throws RealmsServiceException {
         RealmsWorldResetDto realmsWorldResetDto = new RealmsWorldResetDto(null, Long.valueOf(worldTemplateId), -1, false);
-        String string = this.url("worlds" + "/$WORLD_ID/reset".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_RESET_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.post(string, JSON.toJson(realmsWorldResetDto), 30000, 80000));
         return Boolean.valueOf(string2);
     }
 
     public Subscription subscriptionFor(long worldId) throws RealmsServiceException {
-        String string = this.url("subscriptions" + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(SUBSCRIPTIONS_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
         String string2 = this.execute(Request.get(string));
         return Subscription.parse(string2);
     }
@@ -277,24 +323,24 @@ public class RealmsClient {
     }
 
     public void acceptInvitation(String invitationId) throws RealmsServiceException {
-        String string = this.url("invites" + "/accept/$INVITATION_ID".replace("$INVITATION_ID", invitationId));
+        String string = this.url(INVITES_ENDPOINT + ACCEPT_INVITATION_ENDPOINT.replace("$INVITATION_ID", invitationId));
         this.execute(Request.put(string, ""));
     }
 
     public WorldDownload download(long worldId, int slotId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/slot/$SLOT_ID/download".replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slotId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_SLOT_DOWNLOAD_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)).replace("$SLOT_ID", String.valueOf(slotId)));
         String string2 = this.execute(Request.get(string));
         return WorldDownload.parse(string2);
     }
 
     @Nullable
     public UploadInfo upload(long worldId, @Nullable String token) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID/backups/upload".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + WORLD_BACKUPS_UPLOAD_ENDPOINT.replace("$WORLD_ID", String.valueOf(worldId)));
         return UploadInfo.parse(this.execute(Request.put(string, UploadInfo.createRequestContent(token))));
     }
 
     public void rejectInvitation(String invitationId) throws RealmsServiceException {
-        String string = this.url("invites" + "/reject/$INVITATION_ID".replace("$INVITATION_ID", invitationId));
+        String string = this.url(INVITES_ENDPOINT + REJECT_INVITATION_ENDPOINT.replace("$INVITATION_ID", invitationId));
         this.execute(Request.put(string, ""));
     }
 
@@ -310,18 +356,18 @@ public class RealmsClient {
     }
 
     public void sendPingResults(PingResult pingResult) throws RealmsServiceException {
-        String string = this.url("regions/ping/stat");
+        String string = this.url(PING_STAT_ENDPOINT);
         this.execute(Request.post(string, JSON.toJson(pingResult)));
     }
 
     public Boolean trialAvailable() throws RealmsServiceException {
-        String string = this.url("trial");
+        String string = this.url(TRIAL_ENDPOINT);
         String string2 = this.execute(Request.get(string));
         return Boolean.valueOf(string2);
     }
 
     public void deleteWorld(long worldId) throws RealmsServiceException {
-        String string = this.url("worlds" + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
+        String string = this.url(WORLDS_ENDPOINT + "/$WORLD_ID".replace("$WORLD_ID", String.valueOf(worldId)));
         this.execute(Request.delete(string));
     }
 
@@ -355,15 +401,15 @@ public class RealmsClient {
             if (i < 200 || i >= 300) {
                 if (i == 401) {
                     String string2 = r.getHeader("WWW-Authenticate");
-                    LOGGER.info("Could not authorize you against Realms server: " + string2);
+                    LOGGER.info("Could not authorize you against Realms server: {}", (Object)string2);
                     throw new RealmsServiceException(i, string2, -1, string2);
                 }
                 if (string == null || string.length() == 0) {
-                    LOGGER.error("Realms error code: " + i + " message: " + string);
+                    LOGGER.error("Realms error code: {} message: {}", (Object)i, (Object)string);
                     throw new RealmsServiceException(i, string, i, "");
                 }
                 RealmsError realmsError = RealmsError.create(string);
-                LOGGER.error("Realms http code: " + i + " -  error code: " + realmsError.getErrorCode() + " -  message: " + realmsError.getErrorMessage() + " - raw body: " + string);
+                LOGGER.error("Realms http code: {} -  error code: {} -  message: {} - raw body: {}", (Object)i, (Object)realmsError.getErrorCode(), (Object)realmsError.getErrorMessage(), (Object)string);
                 throw new RealmsServiceException(i, string, realmsError);
             }
             return string;
@@ -379,25 +425,59 @@ public class RealmsClient {
     }
 
     @net.fabricmc.api.Environment(value=EnvType.CLIENT)
-    public static enum CompatibleVersionResponse {
-        COMPATIBLE,
-        OUTDATED,
-        OTHER;
-
-    }
-
-    @net.fabricmc.api.Environment(value=EnvType.CLIENT)
-    public static enum Environment {
-        PRODUCTION("pc.realms.minecraft.net", "https"),
-        STAGE("pc-stage.realms.minecraft.net", "https"),
-        LOCAL("localhost:8080", "http");
-
+    public static final class Environment
+    extends Enum<Environment> {
+        public static final /* enum */ Environment PRODUCTION = new Environment("pc.realms.minecraft.net", "https");
+        public static final /* enum */ Environment STAGE = new Environment("pc-stage.realms.minecraft.net", "https");
+        public static final /* enum */ Environment LOCAL = new Environment("localhost:8080", "http");
         public String baseUrl;
         public String protocol;
+        private static final /* synthetic */ Environment[] field_19591;
+
+        public static Environment[] values() {
+            return (Environment[])field_19591.clone();
+        }
+
+        public static Environment valueOf(String name) {
+            return Enum.valueOf(Environment.class, name);
+        }
 
         private Environment(String baseUrl, String protocol) {
             this.baseUrl = baseUrl;
             this.protocol = protocol;
+        }
+
+        private static /* synthetic */ Environment[] method_36847() {
+            return new Environment[]{PRODUCTION, STAGE, LOCAL};
+        }
+
+        static {
+            field_19591 = Environment.method_36847();
+        }
+    }
+
+    @net.fabricmc.api.Environment(value=EnvType.CLIENT)
+    public static final class CompatibleVersionResponse
+    extends Enum<CompatibleVersionResponse> {
+        public static final /* enum */ CompatibleVersionResponse COMPATIBLE = new CompatibleVersionResponse();
+        public static final /* enum */ CompatibleVersionResponse OUTDATED = new CompatibleVersionResponse();
+        public static final /* enum */ CompatibleVersionResponse OTHER = new CompatibleVersionResponse();
+        private static final /* synthetic */ CompatibleVersionResponse[] field_19585;
+
+        public static CompatibleVersionResponse[] values() {
+            return (CompatibleVersionResponse[])field_19585.clone();
+        }
+
+        public static CompatibleVersionResponse valueOf(String name) {
+            return Enum.valueOf(CompatibleVersionResponse.class, name);
+        }
+
+        private static /* synthetic */ CompatibleVersionResponse[] method_36846() {
+            return new CompatibleVersionResponse[]{COMPATIBLE, OUTDATED, OTHER};
+        }
+
+        static {
+            field_19585 = CompatibleVersionResponse.method_36846();
         }
     }
 }

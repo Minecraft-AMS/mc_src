@@ -33,32 +33,20 @@ implements ArgumentType<EnumSet<Direction.Axis>> {
         return new SwizzleArgumentType();
     }
 
-    public static EnumSet<Direction.Axis> getSwizzle(CommandContext<ServerCommandSource> commandContext, String string) {
-        return (EnumSet)commandContext.getArgument(string, EnumSet.class);
+    public static EnumSet<Direction.Axis> getSwizzle(CommandContext<ServerCommandSource> context, String name) {
+        return (EnumSet)context.getArgument(name, EnumSet.class);
     }
 
     public EnumSet<Direction.Axis> parse(StringReader stringReader) throws CommandSyntaxException {
         EnumSet<Direction.Axis> enumSet = EnumSet.noneOf(Direction.Axis.class);
         while (stringReader.canRead() && stringReader.peek() != ' ') {
-            Direction.Axis axis;
             char c = stringReader.read();
-            switch (c) {
-                case 'x': {
-                    axis = Direction.Axis.X;
-                    break;
-                }
-                case 'y': {
-                    axis = Direction.Axis.Y;
-                    break;
-                }
-                case 'z': {
-                    axis = Direction.Axis.Z;
-                    break;
-                }
-                default: {
-                    throw INVALID_SWIZZLE_EXCEPTION.create();
-                }
-            }
+            Direction.Axis axis = switch (c) {
+                case 'x' -> Direction.Axis.X;
+                case 'y' -> Direction.Axis.Y;
+                case 'z' -> Direction.Axis.Z;
+                default -> throw INVALID_SWIZZLE_EXCEPTION.create();
+            };
             if (enumSet.contains(axis)) {
                 throw INVALID_SWIZZLE_EXCEPTION.create();
             }
@@ -71,8 +59,8 @@ implements ArgumentType<EnumSet<Direction.Axis>> {
         return EXAMPLES;
     }
 
-    public /* synthetic */ Object parse(StringReader stringReader) throws CommandSyntaxException {
-        return this.parse(stringReader);
+    public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader);
     }
 }
 

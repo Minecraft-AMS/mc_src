@@ -22,8 +22,8 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.PlayerModelPart;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
@@ -48,11 +48,12 @@ public abstract class LivingEntityRenderer<T extends LivingEntity, M extends Ent
 extends EntityRenderer<T>
 implements FeatureRendererContext<T, M> {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final float field_32939 = 0.1f;
     protected M model;
     protected final List<FeatureRenderer<T, M>> features = Lists.newArrayList();
 
-    public LivingEntityRenderer(EntityRenderDispatcher dispatcher, M model, float shadowRadius) {
-        super(dispatcher);
+    public LivingEntityRenderer(EntityRendererFactory.Context ctx, M model, float shadowRadius) {
+        super(ctx);
         this.model = model;
         this.shadowRadius = shadowRadius;
     }
@@ -94,7 +95,7 @@ implements FeatureRendererContext<T, M> {
             }
             k = j - h;
         }
-        float m = MathHelper.lerp(g, ((LivingEntity)livingEntity).prevPitch, ((LivingEntity)livingEntity).pitch);
+        float m = MathHelper.lerp(g, ((LivingEntity)livingEntity).prevPitch, ((Entity)livingEntity).getPitch());
         if (((Entity)livingEntity).getPose() == EntityPose.SLEEPING && (direction = ((LivingEntity)livingEntity).getSleepingDirection()) != null) {
             n = ((Entity)livingEntity).getEyeHeight(EntityPose.STANDING) - 0.1f;
             matrixStack.translate((float)(-direction.getOffsetX()) * n, 0.0, (float)(-direction.getOffsetZ()) * n);
@@ -179,7 +180,7 @@ implements FeatureRendererContext<T, M> {
     }
 
     protected boolean isShaking(T entity) {
-        return false;
+        return ((Entity)entity).isFreezing();
     }
 
     protected void setupTransforms(T entity, MatrixStack matrices, float animationProgress, float bodyYaw, float tickDelta) {
@@ -198,7 +199,7 @@ implements FeatureRendererContext<T, M> {
             }
             matrices.multiply(Vec3f.POSITIVE_Z.getDegreesQuaternion(f * this.getLyingAngle(entity)));
         } else if (((LivingEntity)entity).isUsingRiptide()) {
-            matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(-90.0f - ((LivingEntity)entity).pitch));
+            matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(-90.0f - ((Entity)entity).getPitch()));
             matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(((float)((LivingEntity)entity).age + tickDelta) * -75.0f));
         } else if (entityPose == EntityPose.SLEEPING) {
             Direction direction = ((LivingEntity)entity).getSleepingDirection();

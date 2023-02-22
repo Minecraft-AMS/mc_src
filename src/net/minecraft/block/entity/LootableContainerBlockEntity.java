@@ -8,6 +8,7 @@ package net.minecraft.block.entity;
 
 import java.util.Random;
 import net.minecraft.advancement.criterion.Criteria;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.LockableContainerBlockEntity;
@@ -32,12 +33,14 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class LootableContainerBlockEntity
 extends LockableContainerBlockEntity {
+    public static final String LOOT_TABLE_KEY = "LootTable";
+    public static final String LOOT_TABLE_SEED_KEY = "LootTableSeed";
     @Nullable
     protected Identifier lootTableId;
     protected long lootTableSeed;
 
-    protected LootableContainerBlockEntity(BlockEntityType<?> blockEntityType) {
-        super(blockEntityType);
+    protected LootableContainerBlockEntity(BlockEntityType<?> blockEntityType, BlockPos blockPos, BlockState blockState) {
+        super(blockEntityType, blockPos, blockState);
     }
 
     public static void setLootTable(BlockView world, Random random, BlockPos pos, Identifier id) {
@@ -48,9 +51,9 @@ extends LockableContainerBlockEntity {
     }
 
     protected boolean deserializeLootTable(NbtCompound nbt) {
-        if (nbt.contains("LootTable", 8)) {
-            this.lootTableId = new Identifier(nbt.getString("LootTable"));
-            this.lootTableSeed = nbt.getLong("LootTableSeed");
+        if (nbt.contains(LOOT_TABLE_KEY, 8)) {
+            this.lootTableId = new Identifier(nbt.getString(LOOT_TABLE_KEY));
+            this.lootTableSeed = nbt.getLong(LOOT_TABLE_SEED_KEY);
             return true;
         }
         return false;
@@ -60,9 +63,9 @@ extends LockableContainerBlockEntity {
         if (this.lootTableId == null) {
             return false;
         }
-        nbt.putString("LootTable", this.lootTableId.toString());
+        nbt.putString(LOOT_TABLE_KEY, this.lootTableId.toString());
         if (this.lootTableSeed != 0L) {
-            nbt.putLong("LootTableSeed", this.lootTableSeed);
+            nbt.putLong(LOOT_TABLE_SEED_KEY, this.lootTableSeed);
         }
         return true;
     }
@@ -71,7 +74,7 @@ extends LockableContainerBlockEntity {
         if (this.lootTableId != null && this.world.getServer() != null) {
             LootTable lootTable = this.world.getServer().getLootManager().getTable(this.lootTableId);
             if (player instanceof ServerPlayerEntity) {
-                Criteria.PLAYER_GENERATES_CONTAINER_LOOT.test((ServerPlayerEntity)player, this.lootTableId);
+                Criteria.PLAYER_GENERATES_CONTAINER_LOOT.trigger((ServerPlayerEntity)player, this.lootTableId);
             }
             this.lootTableId = null;
             LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).parameter(LootContextParameters.ORIGIN, Vec3d.ofCenter(this.pos)).random(this.lootTableSeed);

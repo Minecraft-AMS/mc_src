@@ -11,8 +11,6 @@
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  it.unimi.dsi.fastutil.ints.IntComparators
  *  it.unimi.dsi.fastutil.ints.IntList
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.recipe;
@@ -34,13 +32,12 @@ import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.RecipeMatcher;
+import net.minecraft.recipe.ShapedRecipe;
 import net.minecraft.tag.ServerTagManagerHolder;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
@@ -59,8 +56,7 @@ implements Predicate<ItemStack> {
         this.entries = (Entry[])entries.toArray(Entry[]::new);
     }
 
-    @Environment(value=EnvType.CLIENT)
-    public ItemStack[] getMatchingStacksClient() {
+    public ItemStack[] getMatchingStacks() {
         this.cacheMatchingStacks();
         return this.matchingStacks;
     }
@@ -81,7 +77,7 @@ implements Predicate<ItemStack> {
             return itemStack.isEmpty();
         }
         for (ItemStack itemStack2 : this.matchingStacks) {
-            if (itemStack2.getItem() != itemStack.getItem()) continue;
+            if (!itemStack2.isOf(itemStack.getItem())) continue;
             return true;
         }
         return false;
@@ -101,10 +97,7 @@ implements Predicate<ItemStack> {
 
     public void write(PacketByteBuf buf) {
         this.cacheMatchingStacks();
-        buf.writeVarInt(this.matchingStacks.length);
-        for (int i = 0; i < this.matchingStacks.length; ++i) {
-            buf.writeItemStack(this.matchingStacks[i]);
-        }
+        buf.writeCollection(Arrays.asList(this.matchingStacks), PacketByteBuf::writeItemStack);
     }
 
     public JsonElement toJson() {
@@ -127,17 +120,20 @@ implements Predicate<ItemStack> {
         return ingredient.entries.length == 0 ? EMPTY : ingredient;
     }
 
+    public static Ingredient empty() {
+        return EMPTY;
+    }
+
     public static Ingredient ofItems(ItemConvertible ... items) {
         return Ingredient.ofStacks(Arrays.stream(items).map(ItemStack::new));
     }
 
-    @Environment(value=EnvType.CLIENT)
     public static Ingredient ofStacks(ItemStack ... stacks) {
         return Ingredient.ofStacks(Arrays.stream(stacks));
     }
 
     public static Ingredient ofStacks(Stream<ItemStack> stacks) {
-        return Ingredient.ofEntries(stacks.filter(itemStack -> !itemStack.isEmpty()).map(stack -> new StackEntry((ItemStack)stack)));
+        return Ingredient.ofEntries(stacks.filter(stack -> !stack.isEmpty()).map(StackEntry::new));
     }
 
     public static Ingredient fromTag(Tag<Item> tag) {
@@ -145,8 +141,7 @@ implements Predicate<ItemStack> {
     }
 
     public static Ingredient fromPacket(PacketByteBuf buf) {
-        int i = buf.readVarInt();
-        return Ingredient.ofEntries(Stream.generate(() -> new StackEntry(buf.readItemStack())).limit(i));
+        return Ingredient.ofEntries(buf.readList(PacketByteBuf::readItemStack).stream().map(StackEntry::new));
     }
 
     public static Ingredient fromJson(@Nullable JsonElement json) {
@@ -171,16 +166,12 @@ implements Predicate<ItemStack> {
             throw new JsonParseException("An ingredient entry is either a tag or an item, not both");
         }
         if (json.has("item")) {
-            Identifier identifier = new Identifier(JsonHelper.getString(json, "item"));
-            Item item = Registry.ITEM.getOrEmpty(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown item '" + identifier + "'"));
+            Item item = ShapedRecipe.getItem(json);
             return new StackEntry(new ItemStack(item));
         }
         if (json.has("tag")) {
-            Identifier identifier = new Identifier(JsonHelper.getString(json, "tag"));
-            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getItems().getTag(identifier);
-            if (tag == null) {
-                throw new JsonSyntaxException("Unknown item tag '" + identifier + "'");
-            }
+            Identifier identifier2 = new Identifier(JsonHelper.getString(json, "tag"));
+            Tag<Item> tag = ServerTagManagerHolder.getTagManager().getTag(Registry.ITEM_KEY, identifier2, identifier -> new JsonSyntaxException("Unknown item tag '" + identifier + "'"));
             return new TagEntry(tag);
         }
         throw new JsonParseException("An ingredient entry needs either a tag or an item");
@@ -191,11 +182,17 @@ implements Predicate<ItemStack> {
         return this.test((ItemStack)stack);
     }
 
+    static interface Entry {
+        public Collection<ItemStack> getStacks();
+
+        public JsonObject toJson();
+    }
+
     static class TagEntry
     implements Entry {
         private final Tag<Item> tag;
 
-        private TagEntry(Tag<Item> tag) {
+        TagEntry(Tag<Item> tag) {
             this.tag = tag;
         }
 
@@ -211,7 +208,7 @@ implements Predicate<ItemStack> {
         @Override
         public JsonObject toJson() {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getItems().getTagId(this.tag).toString());
+            jsonObject.addProperty("tag", ServerTagManagerHolder.getTagManager().getTagId(Registry.ITEM_KEY, this.tag, () -> new IllegalStateException("Unknown item tag")).toString());
             return jsonObject;
         }
     }
@@ -220,8 +217,8 @@ implements Predicate<ItemStack> {
     implements Entry {
         private final ItemStack stack;
 
-        private StackEntry(ItemStack stack) {
-            this.stack = stack;
+        StackEntry(ItemStack itemStack) {
+            this.stack = itemStack;
         }
 
         @Override
@@ -235,12 +232,6 @@ implements Predicate<ItemStack> {
             jsonObject.addProperty("item", Registry.ITEM.getId(this.stack.getItem()).toString());
             return jsonObject;
         }
-    }
-
-    static interface Entry {
-        public Collection<ItemStack> getStacks();
-
-        public JsonObject toJson();
     }
 }
 

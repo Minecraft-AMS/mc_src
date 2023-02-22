@@ -13,8 +13,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LightningEntity;
@@ -24,8 +24,8 @@ import net.minecraft.util.math.Matrix4f;
 @Environment(value=EnvType.CLIENT)
 public class LightningEntityRenderer
 extends EntityRenderer<LightningEntity> {
-    public LightningEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
-        super(entityRenderDispatcher);
+    public LightningEntityRenderer(EntityRendererFactory.Context context) {
+        super(context);
     }
 
     @Override
@@ -78,20 +78,20 @@ extends EntityRenderer<LightningEntity> {
                     if (m == 0) {
                         z *= (float)(r - 1) * 0.1f + 1.0f;
                     }
-                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, false, true, false);
-                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, false, true, true);
-                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, true, false, true);
-                    LightningEntityRenderer.method_23183(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, true, false, false);
+                    LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, false, true, false);
+                    LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, false, true, true);
+                    LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, true, true, false, true);
+                    LightningEntityRenderer.drawBranch(matrix4f, vertexConsumer, p, q, r, s, t, 0.45f, 0.45f, 0.5f, y, z, false, true, false, false);
                 }
             }
         }
     }
 
-    private static void method_23183(Matrix4f matrix4f, VertexConsumer vertexConsumer, float f, float g, int i, float h, float j, float k, float l, float m, float n, float o, boolean bl, boolean bl2, boolean bl3, boolean bl4) {
-        vertexConsumer.vertex(matrix4f, f + (bl ? o : -o), i * 16, g + (bl2 ? o : -o)).color(k, l, m, 0.3f).next();
-        vertexConsumer.vertex(matrix4f, h + (bl ? n : -n), (i + 1) * 16, j + (bl2 ? n : -n)).color(k, l, m, 0.3f).next();
-        vertexConsumer.vertex(matrix4f, h + (bl3 ? n : -n), (i + 1) * 16, j + (bl4 ? n : -n)).color(k, l, m, 0.3f).next();
-        vertexConsumer.vertex(matrix4f, f + (bl3 ? o : -o), i * 16, g + (bl4 ? o : -o)).color(k, l, m, 0.3f).next();
+    private static void drawBranch(Matrix4f matrix, VertexConsumer buffer, float x1, float z1, int y, float x2, float z2, float red, float green, float blue, float offset2, float offset1, boolean shiftEast1, boolean shiftSouth1, boolean shiftEast2, boolean shiftSouth2) {
+        buffer.vertex(matrix, x1 + (shiftEast1 ? offset1 : -offset1), y * 16, z1 + (shiftSouth1 ? offset1 : -offset1)).color(red, green, blue, 0.3f).next();
+        buffer.vertex(matrix, x2 + (shiftEast1 ? offset2 : -offset2), (y + 1) * 16, z2 + (shiftSouth1 ? offset2 : -offset2)).color(red, green, blue, 0.3f).next();
+        buffer.vertex(matrix, x2 + (shiftEast2 ? offset2 : -offset2), (y + 1) * 16, z2 + (shiftSouth2 ? offset2 : -offset2)).color(red, green, blue, 0.3f).next();
+        buffer.vertex(matrix, x1 + (shiftEast2 ? offset1 : -offset1), y * 16, z1 + (shiftSouth2 ? offset1 : -offset1)).color(red, green, blue, 0.3f).next();
     }
 
     @Override

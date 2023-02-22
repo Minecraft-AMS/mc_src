@@ -3,7 +3,6 @@
  */
 package net.minecraft.network.packet.c2s.play;
 
-import java.io.IOException;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
@@ -11,25 +10,21 @@ import net.minecraft.network.listener.ServerPlayPacketListener;
 
 public class VehicleMoveC2SPacket
 implements Packet<ServerPlayPacketListener> {
-    private double x;
-    private double y;
-    private double z;
-    private float yaw;
-    private float pitch;
-
-    public VehicleMoveC2SPacket() {
-    }
+    private final double x;
+    private final double y;
+    private final double z;
+    private final float yaw;
+    private final float pitch;
 
     public VehicleMoveC2SPacket(Entity entity) {
         this.x = entity.getX();
         this.y = entity.getY();
         this.z = entity.getZ();
-        this.yaw = entity.yaw;
-        this.pitch = entity.pitch;
+        this.yaw = entity.getYaw();
+        this.pitch = entity.getPitch();
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public VehicleMoveC2SPacket(PacketByteBuf buf) {
         this.x = buf.readDouble();
         this.y = buf.readDouble();
         this.z = buf.readDouble();
@@ -38,7 +33,7 @@ implements Packet<ServerPlayPacketListener> {
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeDouble(this.x);
         buf.writeDouble(this.y);
         buf.writeDouble(this.z);

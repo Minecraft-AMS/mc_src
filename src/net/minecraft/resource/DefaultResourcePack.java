@@ -2,8 +2,9 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableMap
+ *  com.google.common.collect.ImmutableMap$Builder
  *  com.google.common.collect.ImmutableSet
- *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  org.apache.logging.log4j.LogManager
  *  org.apache.logging.log4j.Logger
@@ -11,17 +12,18 @@
  */
 package net.minecraft.resource;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitOption;
@@ -41,8 +43,11 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.resource.AbstractFileResourcePack;
 import net.minecraft.resource.DirectoryResourcePack;
+import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFactory;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourceType;
+import net.minecraft.resource.metadata.PackResourceMetadata;
 import net.minecraft.resource.metadata.ResourceMetadataReader;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -51,14 +56,35 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class DefaultResourcePack
-implements ResourcePack {
+implements ResourcePack,
+ResourceFactory {
     public static Path resourcePath;
     private static final Logger LOGGER;
     public static Class<?> resourceClass;
-    private static final Map<ResourceType, FileSystem> typeToFileSystem;
+    private static final Map<ResourceType, Path> TYPE_TO_FILE_SYSTEM;
+    public final PackResourceMetadata metadata;
     public final Set<String> namespaces;
 
-    public DefaultResourcePack(String ... namespaces) {
+    private static Path getPath(URI uri) throws IOException {
+        try {
+            return Paths.get(uri);
+        }
+        catch (FileSystemNotFoundException fileSystemNotFoundException) {
+        }
+        catch (Throwable throwable) {
+            LOGGER.warn("Unable to get path for: {}", (Object)uri, (Object)throwable);
+        }
+        try {
+            FileSystems.newFileSystem(uri, Collections.emptyMap());
+        }
+        catch (FileSystemAlreadyExistsException fileSystemAlreadyExistsException) {
+            // empty catch block
+        }
+        return Paths.get(uri);
+    }
+
+    public DefaultResourcePack(PackResourceMetadata metadata, String ... namespaces) {
+        this.metadata = metadata;
         this.namespaces = ImmutableSet.copyOf((Object[])namespaces);
     }
 
@@ -85,7 +111,6 @@ implements ResourcePack {
 
     @Override
     public Collection<Identifier> findResources(ResourceType type, String namespace, String prefix, int maxDepth, Predicate<String> pathFilter) {
-        URI uRI;
         HashSet set = Sets.newHashSet();
         if (resourcePath != null) {
             try {
@@ -104,44 +129,34 @@ implements ResourcePack {
                 }
                 while (enumeration != null && enumeration.hasMoreElements()) {
                     try {
-                        uRI = ((URL)enumeration.nextElement()).toURI();
+                        URI uRI = enumeration.nextElement().toURI();
                         if (!"file".equals(uRI.getScheme())) continue;
                         DefaultResourcePack.getIdentifiers(set, maxDepth, namespace, Paths.get(uRI), prefix, pathFilter);
                     }
-                    catch (IOException | URISyntaxException uRI2) {}
+                    catch (IOException | URISyntaxException exception) {}
                 }
             }
         }
         try {
-            URL uRL = DefaultResourcePack.class.getResource("/" + type.getDirectory() + "/.mcassetsroot");
-            if (uRL == null) {
-                LOGGER.error("Couldn't find .mcassetsroot, cannot load vanilla resources");
-                return set;
-            }
-            uRI = uRL.toURI();
-            if ("file".equals(uRI.getScheme())) {
-                URL uRL2 = new URL(uRL.toString().substring(0, uRL.toString().length() - ".mcassetsroot".length()));
-                Path path = Paths.get(uRL2.toURI());
+            Path path = TYPE_TO_FILE_SYSTEM.get((Object)type);
+            if (path != null) {
                 DefaultResourcePack.getIdentifiers(set, maxDepth, namespace, path, prefix, pathFilter);
-            } else if ("jar".equals(uRI.getScheme())) {
-                Path path2 = typeToFileSystem.get((Object)type).getPath("/" + type.getDirectory(), new String[0]);
-                DefaultResourcePack.getIdentifiers(set, maxDepth, "minecraft", path2, prefix, pathFilter);
             } else {
-                LOGGER.error("Unsupported scheme {} trying to list vanilla resources (NYI?)", (Object)uRI);
+                LOGGER.error("Can't access assets root for type: {}", (Object)type);
             }
         }
-        catch (FileNotFoundException | NoSuchFileException uRL) {
+        catch (FileNotFoundException | NoSuchFileException path) {
         }
-        catch (IOException | URISyntaxException exception) {
-            LOGGER.error("Couldn't get a list of all vanilla resources", (Throwable)exception);
+        catch (IOException iOException) {
+            LOGGER.error("Couldn't get a list of all vanilla resources", (Throwable)iOException);
         }
         return set;
     }
 
     private static void getIdentifiers(Collection<Identifier> results, int maxDepth, String namespace, Path root, String prefix, Predicate<String> pathFilter) throws IOException {
-        Path path3 = root.resolve(namespace);
-        try (Stream<Path> stream = Files.walk(path3.resolve(prefix), maxDepth, new FileVisitOption[0]);){
-            stream.filter(path -> !path.endsWith(".mcmeta") && Files.isRegularFile(path, new LinkOption[0]) && pathFilter.test(path.getFileName().toString())).map(path2 -> new Identifier(namespace, path3.relativize((Path)path2).toString().replaceAll("\\\\", "/"))).forEach(results::add);
+        Path path2 = root.resolve(namespace);
+        try (Stream<Path> stream = Files.walk(path2.resolve(prefix), maxDepth, new FileVisitOption[0]);){
+            stream.filter(path -> !path.endsWith(".mcmeta") && Files.isRegularFile(path, new LinkOption[0]) && pathFilter.test(path.getFileName().toString())).map(path -> new Identifier(namespace, path2.relativize((Path)path).toString().replaceAll("\\\\", "/"))).forEach(results::add);
         }
     }
 
@@ -212,12 +227,17 @@ implements ResourcePack {
     @Nullable
     public <T> T parseMetadata(ResourceMetadataReader<T> metaReader) throws IOException {
         try (InputStream inputStream = this.openRoot("pack.mcmeta");){
-            T t = AbstractFileResourcePack.parseMetadata(metaReader, inputStream);
-            return t;
+            T object;
+            if (inputStream != null && (object = AbstractFileResourcePack.parseMetadata(metaReader, inputStream)) != null) {
+                T t = object;
+                return t;
+            }
         }
         catch (FileNotFoundException | RuntimeException exception) {
-            return null;
+            // empty catch block
         }
+        if (metaReader != PackResourceMetadata.READER) return null;
+        return (T)this.metadata;
     }
 
     @Override
@@ -229,31 +249,81 @@ implements ResourcePack {
     public void close() {
     }
 
+    @Override
+    public Resource getResource(final Identifier id) throws IOException {
+        return new Resource(){
+            @Nullable
+            InputStream stream;
+
+            @Override
+            public void close() throws IOException {
+                if (this.stream != null) {
+                    this.stream.close();
+                }
+            }
+
+            @Override
+            public Identifier getId() {
+                return id;
+            }
+
+            @Override
+            public InputStream getInputStream() {
+                try {
+                    this.stream = DefaultResourcePack.this.open(ResourceType.CLIENT_RESOURCES, id);
+                }
+                catch (IOException iOException) {
+                    throw new UncheckedIOException("Could not get client resource from vanilla pack", iOException);
+                }
+                return this.stream;
+            }
+
+            @Override
+            public boolean hasMetadata() {
+                return false;
+            }
+
+            @Override
+            @Nullable
+            public <T> T getMetadata(ResourceMetadataReader<T> metaReader) {
+                return null;
+            }
+
+            @Override
+            public String getResourcePackName() {
+                return id.toString();
+            }
+        };
+    }
+
     static {
         LOGGER = LogManager.getLogger();
-        typeToFileSystem = Util.make(Maps.newHashMap(), hashMap -> {
+        TYPE_TO_FILE_SYSTEM = (Map)Util.make(() -> {
             Class<DefaultResourcePack> clazz = DefaultResourcePack.class;
             synchronized (DefaultResourcePack.class) {
+                ImmutableMap.Builder builder = ImmutableMap.builder();
                 for (ResourceType resourceType : ResourceType.values()) {
-                    URL uRL = DefaultResourcePack.class.getResource("/" + resourceType.getDirectory() + "/.mcassetsroot");
-                    try {
-                        FileSystem fileSystem;
-                        URI uRI = uRL.toURI();
-                        if (!"jar".equals(uRI.getScheme())) continue;
-                        try {
-                            fileSystem = FileSystems.getFileSystem(uRI);
-                        }
-                        catch (FileSystemNotFoundException fileSystemNotFoundException) {
-                            fileSystem = FileSystems.newFileSystem(uRI, Collections.emptyMap());
-                        }
-                        hashMap.put(resourceType, fileSystem);
+                    String string = "/" + resourceType.getDirectory() + "/.mcassetsroot";
+                    URL uRL = DefaultResourcePack.class.getResource(string);
+                    if (uRL == null) {
+                        LOGGER.error("File {} does not exist in classpath", (Object)string);
+                        continue;
                     }
-                    catch (IOException | URISyntaxException exception) {
-                        LOGGER.error("Couldn't get a list of all vanilla resources", (Throwable)exception);
+                    try {
+                        URI uRI = uRL.toURI();
+                        String string2 = uRI.getScheme();
+                        if (!"jar".equals(string2) && !"file".equals(string2)) {
+                            LOGGER.warn("Assets URL '{}' uses unexpected schema", (Object)uRI);
+                        }
+                        Path path = DefaultResourcePack.getPath(uRI);
+                        builder.put((Object)resourceType, (Object)path.getParent());
+                    }
+                    catch (Exception exception) {
+                        LOGGER.error("Couldn't resolve path to vanilla assets", (Throwable)exception);
                     }
                 }
-                // ** MonitorExit[var1_1] (shouldn't be in output)
-                return;
+                // ** MonitorExit[var0] (shouldn't be in output)
+                return builder.build();
             }
         });
     }

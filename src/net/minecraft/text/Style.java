@@ -10,8 +10,6 @@
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSerializer
  *  com.google.gson.JsonSyntaxException
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
@@ -26,8 +24,6 @@ import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
 import java.lang.reflect.Type;
 import java.util.Objects;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.TextColor;
@@ -41,27 +37,27 @@ public class Style {
     public static final Style EMPTY = new Style(null, null, null, null, null, null, null, null, null, null);
     public static final Identifier DEFAULT_FONT_ID = new Identifier("minecraft", "default");
     @Nullable
-    private final TextColor color;
+    final TextColor color;
     @Nullable
-    private final Boolean bold;
+    final Boolean bold;
     @Nullable
-    private final Boolean italic;
+    final Boolean italic;
     @Nullable
-    private final Boolean underlined;
+    final Boolean underlined;
     @Nullable
-    private final Boolean strikethrough;
+    final Boolean strikethrough;
     @Nullable
-    private final Boolean obfuscated;
+    final Boolean obfuscated;
     @Nullable
-    private final ClickEvent clickEvent;
+    final ClickEvent clickEvent;
     @Nullable
-    private final HoverEvent hoverEvent;
+    final HoverEvent hoverEvent;
     @Nullable
-    private final String insertion;
+    final String insertion;
     @Nullable
-    private final Identifier font;
+    final Identifier font;
 
-    private Style(@Nullable TextColor color, @Nullable Boolean bold, @Nullable Boolean italic, @Nullable Boolean underlined, @Nullable Boolean strikethrough, @Nullable Boolean obfuscated, @Nullable ClickEvent clickEvent, @Nullable HoverEvent hoverEvent, @Nullable String insertion, @Nullable Identifier font) {
+    Style(@Nullable TextColor color, @Nullable Boolean bold, @Nullable Boolean italic, @Nullable Boolean underlined, @Nullable Boolean strikethrough, @Nullable Boolean obfuscated, @Nullable ClickEvent clickEvent, @Nullable HoverEvent hoverEvent, @Nullable String insertion, @Nullable Identifier font) {
         this.color = color;
         this.bold = bold;
         this.italic = italic;
@@ -130,6 +126,10 @@ public class Style {
         return this.withColor(color != null ? TextColor.fromFormatting(color) : null);
     }
 
+    public Style withColor(int rgbColor) {
+        return this.withColor(TextColor.fromRgb(rgbColor));
+    }
+
     public Style withBold(@Nullable Boolean bold) {
         return new Style(this.color, bold, this.italic, this.underlined, this.strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font);
     }
@@ -138,9 +138,16 @@ public class Style {
         return new Style(this.color, this.bold, italic, this.underlined, this.strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Style withUnderline(@Nullable Boolean underline) {
         return new Style(this.color, this.bold, this.italic, underline, this.strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font);
+    }
+
+    public Style withStrikethrough(@Nullable Boolean strikethrough) {
+        return new Style(this.color, this.bold, this.italic, this.underlined, strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font);
+    }
+
+    public Style obfuscated(@Nullable Boolean obfuscated) {
+        return new Style(this.color, this.bold, this.italic, this.underlined, this.strikethrough, obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font);
     }
 
     public Style withClickEvent(@Nullable ClickEvent clickEvent) {
@@ -155,7 +162,6 @@ public class Style {
         return new Style(this.color, this.bold, this.italic, this.underlined, this.strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, insertion, this.font);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Style withFont(@Nullable Identifier font) {
         return new Style(this.color, this.bold, this.italic, this.underlined, this.strikethrough, this.obfuscated, this.clickEvent, this.hoverEvent, this.insertion, font);
     }
@@ -198,7 +204,6 @@ public class Style {
         return new Style(textColor, boolean_, boolean2, boolean4, boolean3, boolean5, this.clickEvent, this.hoverEvent, this.insertion, this.font);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Style withExclusiveFormatting(Formatting formatting) {
         TextColor textColor = this.color;
         Boolean boolean_ = this.bold;
@@ -293,7 +298,7 @@ public class Style {
     }
 
     public String toString() {
-        return "Style{ color=" + this.color + ", bold=" + this.bold + ", italic=" + this.italic + ", underlined=" + this.underlined + ", strikethrough=" + this.strikethrough + ", obfuscated=" + this.obfuscated + ", clickEvent=" + this.getClickEvent() + ", hoverEvent=" + this.getHoverEvent() + ", insertion=" + this.getInsertion() + ", font=" + this.getFont() + '}';
+        return "Style{ color=" + this.color + ", bold=" + this.bold + ", italic=" + this.italic + ", underlined=" + this.underlined + ", strikethrough=" + this.strikethrough + ", obfuscated=" + this.obfuscated + ", clickEvent=" + this.getClickEvent() + ", hoverEvent=" + this.getHoverEvent() + ", insertion=" + this.getInsertion() + ", font=" + this.getFont() + "}";
     }
 
     public boolean equals(Object o) {

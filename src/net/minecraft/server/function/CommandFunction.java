@@ -16,19 +16,20 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunctionManager;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 public class CommandFunction {
     private final Element[] elements;
-    private final Identifier id;
+    final Identifier id;
 
     public CommandFunction(Identifier id, Element[] elements) {
         this.id = id;
@@ -73,6 +74,40 @@ public class CommandFunction {
         return new CommandFunction(id, list.toArray(new Element[0]));
     }
 
+    @FunctionalInterface
+    public static interface Element {
+        public void execute(CommandFunctionManager var1, ServerCommandSource var2, Deque<CommandFunctionManager.Entry> var3, int var4, int var5, @Nullable CommandFunctionManager.Tracer var6) throws CommandSyntaxException;
+    }
+
+    public static class CommandElement
+    implements Element {
+        private final ParseResults<ServerCommandSource> parsed;
+
+        public CommandElement(ParseResults<ServerCommandSource> parsed) {
+            this.parsed = parsed;
+        }
+
+        @Override
+        public void execute(CommandFunctionManager manager, ServerCommandSource source, Deque<CommandFunctionManager.Entry> entries, int maxChainLength, int depth, @Nullable CommandFunctionManager.Tracer tracer) throws CommandSyntaxException {
+            if (tracer != null) {
+                String string = this.parsed.getReader().getString();
+                tracer.traceCommandStart(depth, string);
+                int i = this.execute(manager, source);
+                tracer.traceCommandEnd(depth, string, i);
+            } else {
+                this.execute(manager, source);
+            }
+        }
+
+        private int execute(CommandFunctionManager manager, ServerCommandSource source) throws CommandSyntaxException {
+            return manager.getDispatcher().execute(new ParseResults(this.parsed.getContext().withSource((Object)source), this.parsed.getReader(), this.parsed.getExceptions()));
+        }
+
+        public String toString() {
+            return this.parsed.getReader().getString();
+        }
+    }
+
     public static class LazyContainer {
         public static final LazyContainer EMPTY = new LazyContainer((Identifier)null);
         @Nullable
@@ -102,7 +137,7 @@ public class CommandFunction {
 
         @Nullable
         public Identifier getId() {
-            return this.function.map(commandFunction -> ((CommandFunction)commandFunction).id).orElse(this.id);
+            return this.function.map(f -> f.id).orElse(this.id);
         }
     }
 
@@ -110,18 +145,25 @@ public class CommandFunction {
     implements Element {
         private final LazyContainer function;
 
-        public FunctionElement(CommandFunction commandFunction) {
-            this.function = new LazyContainer(commandFunction);
+        public FunctionElement(CommandFunction function) {
+            this.function = new LazyContainer(function);
         }
 
         @Override
-        public void execute(CommandFunctionManager manager, ServerCommandSource source, ArrayDeque<CommandFunctionManager.Entry> stack, int maxChainLength) {
-            this.function.get(manager).ifPresent(commandFunction -> {
-                Element[] elements = commandFunction.getElements();
-                int j = maxChainLength - stack.size();
-                int k = Math.min(elements.length, j);
-                for (int l = k - 1; l >= 0; --l) {
-                    stack.addFirst(new CommandFunctionManager.Entry(manager, source, elements[l]));
+        public void execute(CommandFunctionManager manager, ServerCommandSource source, Deque<CommandFunctionManager.Entry> entries, int maxChainLength, int depth, @Nullable CommandFunctionManager.Tracer tracer) {
+            Util.ifPresentOrElse(this.function.get(manager), f -> {
+                Element[] elements = f.getElements();
+                if (tracer != null) {
+                    tracer.traceFunctionCall(depth, f.getId(), elements.length);
+                }
+                int k = maxChainLength - entries.size();
+                int l = Math.min(elements.length, k);
+                for (int m = l - 1; m >= 0; --m) {
+                    entries.addFirst(new CommandFunctionManager.Entry(source, depth + 1, elements[m]));
+                }
+            }, () -> {
+                if (tracer != null) {
+                    tracer.traceFunctionCall(depth, this.function.getId(), -1);
                 }
             });
         }
@@ -129,28 +171,6 @@ public class CommandFunction {
         public String toString() {
             return "function " + this.function.getId();
         }
-    }
-
-    public static class CommandElement
-    implements Element {
-        private final ParseResults<ServerCommandSource> parsed;
-
-        public CommandElement(ParseResults<ServerCommandSource> parsed) {
-            this.parsed = parsed;
-        }
-
-        @Override
-        public void execute(CommandFunctionManager manager, ServerCommandSource source, ArrayDeque<CommandFunctionManager.Entry> stack, int maxChainLength) throws CommandSyntaxException {
-            manager.getDispatcher().execute(new ParseResults(this.parsed.getContext().withSource((Object)source), this.parsed.getReader(), this.parsed.getExceptions()));
-        }
-
-        public String toString() {
-            return this.parsed.getReader().getString();
-        }
-    }
-
-    public static interface Element {
-        public void execute(CommandFunctionManager var1, ServerCommandSource var2, ArrayDeque<CommandFunctionManager.Entry> var3, int var4) throws CommandSyntaxException;
     }
 }
 

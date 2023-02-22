@@ -95,11 +95,20 @@ implements SoundContainer<Sound> {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static enum RegistrationType {
-        FILE("file"),
-        SOUND_EVENT("event");
-
+    public static final class RegistrationType
+    extends Enum<RegistrationType> {
+        public static final /* enum */ RegistrationType FILE = new RegistrationType("file");
+        public static final /* enum */ RegistrationType SOUND_EVENT = new RegistrationType("event");
         private final String name;
+        private static final /* synthetic */ RegistrationType[] field_5471;
+
+        public static RegistrationType[] values() {
+            return (RegistrationType[])field_5471.clone();
+        }
+
+        public static RegistrationType valueOf(String string) {
+            return Enum.valueOf(RegistrationType.class, string);
+        }
 
         private RegistrationType(String name) {
             this.name = name;
@@ -111,6 +120,14 @@ implements SoundContainer<Sound> {
                 return registrationType;
             }
             return null;
+        }
+
+        private static /* synthetic */ RegistrationType[] method_36926() {
+            return new RegistrationType[]{FILE, SOUND_EVENT};
+        }
+
+        static {
+            field_5471 = RegistrationType.method_36926();
         }
     }
 }

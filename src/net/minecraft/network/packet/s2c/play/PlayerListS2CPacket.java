@@ -6,8 +6,7 @@
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.properties.Property
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  com.mojang.authlib.properties.PropertyMap
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
@@ -16,10 +15,9 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
-import java.io.IOException;
+import com.mojang.authlib.properties.PropertyMap;
+import java.util.Collection;
 import java.util.List;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
@@ -30,133 +28,34 @@ import org.jetbrains.annotations.Nullable;
 
 public class PlayerListS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private Action action;
-    private final List<Entry> entries = Lists.newArrayList();
-
-    public PlayerListS2CPacket() {
-    }
+    private final Action action;
+    private final List<Entry> entries;
 
     public PlayerListS2CPacket(Action action, ServerPlayerEntity ... players) {
         this.action = action;
+        this.entries = Lists.newArrayListWithCapacity((int)players.length);
         for (ServerPlayerEntity serverPlayerEntity : players) {
             this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.getPlayerListName()));
         }
     }
 
-    public PlayerListS2CPacket(Action action, Iterable<ServerPlayerEntity> iterable) {
+    public PlayerListS2CPacket(Action action, Collection<ServerPlayerEntity> players) {
         this.action = action;
-        for (ServerPlayerEntity serverPlayerEntity : iterable) {
+        this.entries = Lists.newArrayListWithCapacity((int)players.size());
+        for (ServerPlayerEntity serverPlayerEntity : players) {
             this.entries.add(new Entry(serverPlayerEntity.getGameProfile(), serverPlayerEntity.pingMilliseconds, serverPlayerEntity.interactionManager.getGameMode(), serverPlayerEntity.getPlayerListName()));
         }
     }
 
-    @Override
-    public void read(PacketByteBuf buf) throws IOException {
+    public PlayerListS2CPacket(PacketByteBuf buf) {
         this.action = buf.readEnumConstant(Action.class);
-        int i = buf.readVarInt();
-        for (int j = 0; j < i; ++j) {
-            GameProfile gameProfile = null;
-            int k = 0;
-            GameMode gameMode = null;
-            Text text = null;
-            switch (this.action) {
-                case ADD_PLAYER: {
-                    gameProfile = new GameProfile(buf.readUuid(), buf.readString(16));
-                    int l = buf.readVarInt();
-                    for (int m = 0; m < l; ++m) {
-                        String string = buf.readString(Short.MAX_VALUE);
-                        String string2 = buf.readString(Short.MAX_VALUE);
-                        if (buf.readBoolean()) {
-                            gameProfile.getProperties().put((Object)string, (Object)new Property(string, string2, buf.readString(Short.MAX_VALUE)));
-                            continue;
-                        }
-                        gameProfile.getProperties().put((Object)string, (Object)new Property(string, string2));
-                    }
-                    gameMode = GameMode.byId(buf.readVarInt());
-                    k = buf.readVarInt();
-                    if (!buf.readBoolean()) break;
-                    text = buf.readText();
-                    break;
-                }
-                case UPDATE_GAME_MODE: {
-                    gameProfile = new GameProfile(buf.readUuid(), null);
-                    gameMode = GameMode.byId(buf.readVarInt());
-                    break;
-                }
-                case UPDATE_LATENCY: {
-                    gameProfile = new GameProfile(buf.readUuid(), null);
-                    k = buf.readVarInt();
-                    break;
-                }
-                case UPDATE_DISPLAY_NAME: {
-                    gameProfile = new GameProfile(buf.readUuid(), null);
-                    if (!buf.readBoolean()) break;
-                    text = buf.readText();
-                    break;
-                }
-                case REMOVE_PLAYER: {
-                    gameProfile = new GameProfile(buf.readUuid(), null);
-                }
-            }
-            this.entries.add(new Entry(gameProfile, k, gameMode, text));
-        }
+        this.entries = buf.readList(this.action::read);
     }
 
     @Override
-    public void write(PacketByteBuf buf) throws IOException {
+    public void write(PacketByteBuf buf) {
         buf.writeEnumConstant(this.action);
-        buf.writeVarInt(this.entries.size());
-        for (Entry entry : this.entries) {
-            switch (this.action) {
-                case ADD_PLAYER: {
-                    buf.writeUuid(entry.getProfile().getId());
-                    buf.writeString(entry.getProfile().getName());
-                    buf.writeVarInt(entry.getProfile().getProperties().size());
-                    for (Property property : entry.getProfile().getProperties().values()) {
-                        buf.writeString(property.getName());
-                        buf.writeString(property.getValue());
-                        if (property.hasSignature()) {
-                            buf.writeBoolean(true);
-                            buf.writeString(property.getSignature());
-                            continue;
-                        }
-                        buf.writeBoolean(false);
-                    }
-                    buf.writeVarInt(entry.getGameMode().getId());
-                    buf.writeVarInt(entry.getLatency());
-                    if (entry.getDisplayName() == null) {
-                        buf.writeBoolean(false);
-                        break;
-                    }
-                    buf.writeBoolean(true);
-                    buf.writeText(entry.getDisplayName());
-                    break;
-                }
-                case UPDATE_GAME_MODE: {
-                    buf.writeUuid(entry.getProfile().getId());
-                    buf.writeVarInt(entry.getGameMode().getId());
-                    break;
-                }
-                case UPDATE_LATENCY: {
-                    buf.writeUuid(entry.getProfile().getId());
-                    buf.writeVarInt(entry.getLatency());
-                    break;
-                }
-                case UPDATE_DISPLAY_NAME: {
-                    buf.writeUuid(entry.getProfile().getId());
-                    if (entry.getDisplayName() == null) {
-                        buf.writeBoolean(false);
-                        break;
-                    }
-                    buf.writeBoolean(true);
-                    buf.writeText(entry.getDisplayName());
-                    break;
-                }
-                case REMOVE_PLAYER: {
-                    buf.writeUuid(entry.getProfile().getId());
-                }
-            }
-        }
+        buf.writeCollection(this.entries, this.action::write);
     }
 
     @Override
@@ -164,27 +63,164 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerList(this);
     }
 
-    @Environment(value=EnvType.CLIENT)
     public List<Entry> getEntries() {
         return this.entries;
     }
 
-    @Environment(value=EnvType.CLIENT)
     public Action getAction() {
         return this.action;
+    }
+
+    @Nullable
+    static Text readOptionalText(PacketByteBuf buf) {
+        return buf.readBoolean() ? buf.readText() : null;
+    }
+
+    static void writeOptionalText(PacketByteBuf buf, @Nullable Text text) {
+        if (text == null) {
+            buf.writeBoolean(false);
+        } else {
+            buf.writeBoolean(true);
+            buf.writeText(text);
+        }
     }
 
     public String toString() {
         return MoreObjects.toStringHelper((Object)this).add("action", (Object)this.action).add("entries", this.entries).toString();
     }
 
-    public class Entry {
+    public static abstract class Action
+    extends Enum<Action> {
+        public static final /* enum */ Action ADD_PLAYER = new Action(){
+
+            @Override
+            protected Entry read(PacketByteBuf buf2) {
+                GameProfile gameProfile = new GameProfile(buf2.readUuid(), buf2.readString(16));
+                PropertyMap propertyMap = gameProfile.getProperties();
+                buf2.forEachInCollection(buf -> {
+                    String string = buf.readString();
+                    String string2 = buf.readString();
+                    if (buf.readBoolean()) {
+                        String string3 = buf.readString();
+                        propertyMap.put((Object)string, (Object)new Property(string, string2, string3));
+                    } else {
+                        propertyMap.put((Object)string, (Object)new Property(string, string2));
+                    }
+                });
+                GameMode gameMode = GameMode.byId(buf2.readVarInt());
+                int i = buf2.readVarInt();
+                Text text = PlayerListS2CPacket.readOptionalText(buf2);
+                return new Entry(gameProfile, i, gameMode, text);
+            }
+
+            @Override
+            protected void write(PacketByteBuf buf2, Entry entry) {
+                buf2.writeUuid(entry.getProfile().getId());
+                buf2.writeString(entry.getProfile().getName());
+                buf2.writeCollection(entry.getProfile().getProperties().values(), (buf, property) -> {
+                    buf.writeString(property.getName());
+                    buf.writeString(property.getValue());
+                    if (property.hasSignature()) {
+                        buf.writeBoolean(true);
+                        buf.writeString(property.getSignature());
+                    } else {
+                        buf.writeBoolean(false);
+                    }
+                });
+                buf2.writeVarInt(entry.getGameMode().getId());
+                buf2.writeVarInt(entry.getLatency());
+                PlayerListS2CPacket.writeOptionalText(buf2, entry.getDisplayName());
+            }
+        };
+        public static final /* enum */ Action UPDATE_GAME_MODE = new Action(){
+
+            @Override
+            protected Entry read(PacketByteBuf buf) {
+                GameProfile gameProfile = new GameProfile(buf.readUuid(), null);
+                GameMode gameMode = GameMode.byId(buf.readVarInt());
+                return new Entry(gameProfile, 0, gameMode, null);
+            }
+
+            @Override
+            protected void write(PacketByteBuf buf, Entry entry) {
+                buf.writeUuid(entry.getProfile().getId());
+                buf.writeVarInt(entry.getGameMode().getId());
+            }
+        };
+        public static final /* enum */ Action UPDATE_LATENCY = new Action(){
+
+            @Override
+            protected Entry read(PacketByteBuf buf) {
+                GameProfile gameProfile = new GameProfile(buf.readUuid(), null);
+                int i = buf.readVarInt();
+                return new Entry(gameProfile, i, null, null);
+            }
+
+            @Override
+            protected void write(PacketByteBuf buf, Entry entry) {
+                buf.writeUuid(entry.getProfile().getId());
+                buf.writeVarInt(entry.getLatency());
+            }
+        };
+        public static final /* enum */ Action UPDATE_DISPLAY_NAME = new Action(){
+
+            @Override
+            protected Entry read(PacketByteBuf buf) {
+                GameProfile gameProfile = new GameProfile(buf.readUuid(), null);
+                Text text = PlayerListS2CPacket.readOptionalText(buf);
+                return new Entry(gameProfile, 0, null, text);
+            }
+
+            @Override
+            protected void write(PacketByteBuf buf, Entry entry) {
+                buf.writeUuid(entry.getProfile().getId());
+                PlayerListS2CPacket.writeOptionalText(buf, entry.getDisplayName());
+            }
+        };
+        public static final /* enum */ Action REMOVE_PLAYER = new Action(){
+
+            @Override
+            protected Entry read(PacketByteBuf buf) {
+                GameProfile gameProfile = new GameProfile(buf.readUuid(), null);
+                return new Entry(gameProfile, 0, null, null);
+            }
+
+            @Override
+            protected void write(PacketByteBuf buf, Entry entry) {
+                buf.writeUuid(entry.getProfile().getId());
+            }
+        };
+        private static final /* synthetic */ Action[] field_29141;
+
+        public static Action[] values() {
+            return (Action[])field_29141.clone();
+        }
+
+        public static Action valueOf(String string) {
+            return Enum.valueOf(Action.class, string);
+        }
+
+        protected abstract Entry read(PacketByteBuf var1);
+
+        protected abstract void write(PacketByteBuf var1, Entry var2);
+
+        private static /* synthetic */ Action[] method_36951() {
+            return new Action[]{ADD_PLAYER, UPDATE_GAME_MODE, UPDATE_LATENCY, UPDATE_DISPLAY_NAME, REMOVE_PLAYER};
+        }
+
+        static {
+            field_29141 = Action.method_36951();
+        }
+    }
+
+    public static class Entry {
         private final int latency;
         private final GameMode gameMode;
         private final GameProfile profile;
+        @Nullable
         private final Text displayName;
 
-        public Entry(GameProfile profile, @Nullable int latency, @Nullable GameMode gameMode, Text displayName) {
+        public Entry(GameProfile profile, int latency, @Nullable GameMode gameMode, @Nullable Text displayName) {
             this.profile = profile;
             this.latency = latency;
             this.gameMode = gameMode;
@@ -211,15 +247,6 @@ implements Packet<ClientPlayPacketListener> {
         public String toString() {
             return MoreObjects.toStringHelper((Object)this).add("latency", this.latency).add("gameMode", (Object)this.gameMode).add("profile", (Object)this.profile).add("displayName", this.displayName == null ? null : Text.Serializer.toJson(this.displayName)).toString();
         }
-    }
-
-    public static enum Action {
-        ADD_PLAYER,
-        UPDATE_GAME_MODE,
-        UPDATE_LATENCY,
-        UPDATE_DISPLAY_NAME,
-        REMOVE_PLAYER;
-
     }
 }
 

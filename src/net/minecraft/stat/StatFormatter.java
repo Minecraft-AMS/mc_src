@@ -1,9 +1,5 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
  */
 package net.minecraft.stat;
 
@@ -11,8 +7,6 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.Locale;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.util.Util;
 
 public interface StatFormatter {
@@ -51,7 +45,6 @@ public interface StatFormatter {
         return d + " s";
     };
 
-    @Environment(value=EnvType.CLIENT)
     public String format(int var1);
 }
 

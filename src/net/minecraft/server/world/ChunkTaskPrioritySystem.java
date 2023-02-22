@@ -36,8 +36,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ChunkTaskPrioritySystem
-implements AutoCloseable,
-ChunkHolder.LevelUpdateListener {
+implements ChunkHolder.LevelUpdateListener,
+AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger();
     private final Map<MessageListener<?>, LevelPrioritizedQueue<? extends Function<MessageListener<Unit>, ?>>> queues;
     private final Set<MessageListener<?>> idleActors;
@@ -47,6 +47,10 @@ ChunkHolder.LevelUpdateListener {
         this.queues = actors.stream().collect(Collectors.toMap(Function.identity(), actor -> new LevelPrioritizedQueue(actor.getName() + "_queue", maxQueues)));
         this.idleActors = Sets.newHashSet(actors);
         this.controlActor = new TaskExecutor<TaskQueue.PrioritizedTask>(new TaskQueue.Prioritized(4), executor, "sorter");
+    }
+
+    public static <T> Task<T> createTask(Function<MessageListener<Unit>, T> taskFunction, long pos, IntSupplier lastLevelUpdatedToProvider) {
+        return new Task<T>(taskFunction, pos, lastLevelUpdatedToProvider);
     }
 
     public static Task<Runnable> createMessage(Runnable task, long pos, IntSupplier lastLevelUpdatedToProvider) {
@@ -60,6 +64,10 @@ ChunkHolder.LevelUpdateListener {
         return ChunkTaskPrioritySystem.createMessage(task, holder.getPos().toLong(), holder::getCompletedLevel);
     }
 
+    public static <T> Task<T> createTask(ChunkHolder holder, Function<MessageListener<Unit>, T> taskFunction) {
+        return ChunkTaskPrioritySystem.createTask(taskFunction, holder.getPos().toLong(), holder::getCompletedLevel);
+    }
+
     public static UnblockingMessage createUnblockingMessage(Runnable task, long pos, boolean removeTask) {
         return new UnblockingMessage(task, pos, removeTask);
     }
@@ -67,12 +75,12 @@ ChunkHolder.LevelUpdateListener {
     public <T> MessageListener<Task<T>> createExecutor(MessageListener<T> executor, boolean addBlocker) {
         return (MessageListener)this.controlActor.ask(yield -> new TaskQueue.PrioritizedTask(0, () -> {
             this.getQueue(executor);
-            yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), task -> this.enqueueChunk(executor, ((Task)task).taskFunction, ((Task)task).pos, ((Task)task).lastLevelUpdatedToProvider, addBlocker)));
+            yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), task -> this.enqueueChunk(executor, task.taskFunction, task.pos, task.lastLevelUpdatedToProvider, addBlocker)));
         })).join();
     }
 
     public MessageListener<UnblockingMessage> createUnblockingExecutor(MessageListener<Runnable> executor) {
-        return (MessageListener)this.controlActor.ask(yield -> new TaskQueue.PrioritizedTask(0, () -> yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), unblockingMessage -> this.removeChunk(executor, ((UnblockingMessage)unblockingMessage).pos, ((UnblockingMessage)unblockingMessage).callback, ((UnblockingMessage)unblockingMessage).removeTask))))).join();
+        return (MessageListener)this.controlActor.ask(yield -> new TaskQueue.PrioritizedTask(0, () -> yield.send(MessageListener.create("chunk priority sorter around " + executor.getName(), unblockingMessage -> this.removeChunk(executor, unblockingMessage.pos, unblockingMessage.callback, unblockingMessage.removeTask))))).join();
     }
 
     @Override
@@ -115,7 +123,7 @@ ChunkHolder.LevelUpdateListener {
             if (stream == null) {
                 this.idleActors.add(actor);
             } else {
-                Util.combine(stream.map(executeOrAddBlocking -> (CompletableFuture)executeOrAddBlocking.map(actor::ask, addBlocking -> {
+                Util.combineSafe(stream.map(executeOrAddBlocking -> (CompletableFuture)executeOrAddBlocking.map(actor::ask, addBlocking -> {
                     addBlocking.run();
                     return CompletableFuture.completedFuture(Unit.INSTANCE);
                 })).collect(Collectors.toList())).thenAccept(list -> this.enqueueExecution(queue, actor));
@@ -141,27 +149,27 @@ ChunkHolder.LevelUpdateListener {
         this.queues.keySet().forEach(MessageListener::close);
     }
 
-    public static final class UnblockingMessage {
-        private final Runnable callback;
-        private final long pos;
-        private final boolean removeTask;
+    public static final class Task<T> {
+        final Function<MessageListener<Unit>, T> taskFunction;
+        final long pos;
+        final IntSupplier lastLevelUpdatedToProvider;
 
-        private UnblockingMessage(Runnable callback, long pos, boolean removeTask) {
-            this.callback = callback;
+        Task(Function<MessageListener<Unit>, T> taskFunction, long pos, IntSupplier lastLevelUpdatedToProvider) {
+            this.taskFunction = taskFunction;
             this.pos = pos;
-            this.removeTask = removeTask;
+            this.lastLevelUpdatedToProvider = lastLevelUpdatedToProvider;
         }
     }
 
-    public static final class Task<T> {
-        private final Function<MessageListener<Unit>, T> taskFunction;
-        private final long pos;
-        private final IntSupplier lastLevelUpdatedToProvider;
+    public static final class UnblockingMessage {
+        final Runnable callback;
+        final long pos;
+        final boolean removeTask;
 
-        private Task(Function<MessageListener<Unit>, T> function, long pos, IntSupplier lastLevelUpdatedToProvider) {
-            this.taskFunction = function;
+        UnblockingMessage(Runnable callback, long pos, boolean removeTask) {
+            this.callback = callback;
             this.pos = pos;
-            this.lastLevelUpdatedToProvider = lastLevelUpdatedToProvider;
+            this.removeTask = removeTask;
         }
     }
 }

@@ -8,8 +8,9 @@
  *  com.google.common.collect.ImmutableSet$Builder
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
- *  net.fabricmc.api.EnvType
- *  net.fabricmc.api.Environment
+ *  it.unimi.dsi.fastutil.ints.IntArrayList
+ *  it.unimi.dsi.fastutil.ints.IntList
+ *  it.unimi.dsi.fastutil.ints.IntListIterator
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.tag;
@@ -19,17 +20,18 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntListIterator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.tag.SetTag;
 import net.minecraft.tag.Tag;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.DefaultedRegistry;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,21 +46,21 @@ public interface TagGroup<T> {
     public Tag<T> getTagOrEmpty(Identifier var1);
 
     @Nullable
+    default public Identifier getId(Tag.Identified<T> tag) {
+        return tag.getId();
+    }
+
+    @Nullable
     public Identifier getUncheckedTagId(Tag<T> var1);
 
-    default public Identifier getTagId(Tag<T> tag) {
-        Identifier identifier = this.getUncheckedTagId(tag);
-        if (identifier == null) {
-            throw new IllegalStateException("Unrecognized tag");
-        }
-        return identifier;
+    default public boolean contains(Identifier id) {
+        return this.getTags().containsKey(id);
     }
 
     default public Collection<Identifier> getTagIds() {
         return this.getTags().keySet();
     }
 
-    @Environment(value=EnvType.CLIENT)
     default public Collection<Identifier> getTagsFor(T object) {
         ArrayList list = Lists.newArrayList();
         for (Map.Entry<Identifier, Tag<T>> entry : this.getTags().entrySet()) {
@@ -68,30 +70,31 @@ public interface TagGroup<T> {
         return list;
     }
 
-    default public void toPacket(PacketByteBuf buf, DefaultedRegistry<T> registry) {
+    default public Serialized serialize(Registry<T> registry) {
         Map<Identifier, Tag<T>> map = this.getTags();
-        buf.writeVarInt(map.size());
-        for (Map.Entry<Identifier, Tag<T>> entry : map.entrySet()) {
-            buf.writeIdentifier(entry.getKey());
-            buf.writeVarInt(entry.getValue().values().size());
-            for (T object : entry.getValue().values()) {
-                buf.writeVarInt(registry.getRawId(object));
+        HashMap map2 = Maps.newHashMapWithExpectedSize((int)map.size());
+        map.forEach((id, tag) -> {
+            List list = tag.values();
+            IntArrayList intList = new IntArrayList(list.size());
+            for (Object object : list) {
+                intList.add(registry.getRawId(object));
             }
-        }
+            map2.put(id, intList);
+        });
+        return new Serialized(map2);
     }
 
-    public static <T> TagGroup<T> fromPacket(PacketByteBuf buf, Registry<T> registry) {
-        HashMap map = Maps.newHashMap();
-        int i = buf.readVarInt();
-        for (int j = 0; j < i; ++j) {
-            Identifier identifier = buf.readIdentifier();
-            int k = buf.readVarInt();
+    public static <T> TagGroup<T> deserialize(Serialized serialized, Registry<? extends T> registry) {
+        HashMap map = Maps.newHashMapWithExpectedSize((int)serialized.contents.size());
+        serialized.contents.forEach((id, entries) -> {
             ImmutableSet.Builder builder = ImmutableSet.builder();
-            for (int l = 0; l < k; ++l) {
-                builder.add(registry.get(buf.readVarInt()));
+            IntListIterator intListIterator = entries.iterator();
+            while (intListIterator.hasNext()) {
+                int i = (Integer)intListIterator.next();
+                builder.add(registry.get(i));
             }
-            map.put(identifier, Tag.of(builder.build()));
-        }
+            map.put(id, Tag.of(builder.build()));
+        });
         return TagGroup.create(map);
     }
 
@@ -127,6 +130,22 @@ public interface TagGroup<T> {
                 return this.tags;
             }
         };
+    }
+
+    public static class Serialized {
+        final Map<Identifier, IntList> contents;
+
+        Serialized(Map<Identifier, IntList> contents) {
+            this.contents = contents;
+        }
+
+        public void writeBuf(PacketByteBuf buf) {
+            buf.writeMap(this.contents, PacketByteBuf::writeIdentifier, PacketByteBuf::writeIntList);
+        }
+
+        public static Serialized fromBuf(PacketByteBuf buf) {
+            return new Serialized(buf.readMap(PacketByteBuf::readIdentifier, PacketByteBuf::readIntList));
+        }
     }
 }
 

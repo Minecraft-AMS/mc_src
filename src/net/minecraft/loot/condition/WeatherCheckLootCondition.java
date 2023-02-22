@@ -24,11 +24,11 @@ import org.jetbrains.annotations.Nullable;
 public class WeatherCheckLootCondition
 implements LootCondition {
     @Nullable
-    private final Boolean raining;
+    final Boolean raining;
     @Nullable
-    private final Boolean thundering;
+    final Boolean thundering;
 
-    private WeatherCheckLootCondition(@Nullable Boolean raining, @Nullable Boolean thundering) {
+    WeatherCheckLootCondition(@Nullable Boolean raining, @Nullable Boolean thundering) {
         this.raining = raining;
         this.thundering = thundering;
     }
@@ -47,9 +47,41 @@ implements LootCondition {
         return this.thundering == null || this.thundering.booleanValue() == serverWorld.isThundering();
     }
 
+    public static Builder create() {
+        return new Builder();
+    }
+
     @Override
     public /* synthetic */ boolean test(Object context) {
         return this.test((LootContext)context);
+    }
+
+    public static class Builder
+    implements LootCondition.Builder {
+        @Nullable
+        private Boolean raining;
+        @Nullable
+        private Boolean thundering;
+
+        public Builder raining(@Nullable Boolean raining) {
+            this.raining = raining;
+            return this;
+        }
+
+        public Builder thundering(@Nullable Boolean thundering) {
+            this.thundering = thundering;
+            return this;
+        }
+
+        @Override
+        public WeatherCheckLootCondition build() {
+            return new WeatherCheckLootCondition(this.raining, this.thundering);
+        }
+
+        @Override
+        public /* synthetic */ LootCondition build() {
+            return this.build();
+        }
     }
 
     public static class Serializer

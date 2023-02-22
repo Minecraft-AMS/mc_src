@@ -15,17 +15,26 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 
 @Environment(value=EnvType.CLIENT)
-enum AdvancementTabType {
-    ABOVE(0, 0, 28, 32, 8),
-    BELOW(84, 0, 28, 32, 8),
-    LEFT(0, 64, 32, 28, 5),
-    RIGHT(96, 64, 32, 28, 5);
-
+final class AdvancementTabType
+extends Enum<AdvancementTabType> {
+    public static final /* enum */ AdvancementTabType ABOVE = new AdvancementTabType(0, 0, 28, 32, 8);
+    public static final /* enum */ AdvancementTabType BELOW = new AdvancementTabType(84, 0, 28, 32, 8);
+    public static final /* enum */ AdvancementTabType LEFT = new AdvancementTabType(0, 64, 32, 28, 5);
+    public static final /* enum */ AdvancementTabType RIGHT = new AdvancementTabType(96, 64, 32, 28, 5);
     private final int u;
     private final int v;
     private final int width;
     private final int height;
     private final int tabCount;
+    private static final /* synthetic */ AdvancementTabType[] field_2676;
+
+    public static AdvancementTabType[] values() {
+        return (AdvancementTabType[])field_2676.clone();
+    }
+
+    public static AdvancementTabType valueOf(String string) {
+        return Enum.valueOf(AdvancementTabType.class, string);
+    }
 
     private AdvancementTabType(int u, int v, int width, int height, int tabCount) {
         this.u = u;
@@ -39,16 +48,16 @@ enum AdvancementTabType {
         return this.tabCount;
     }
 
-    public void drawBackground(MatrixStack matrices, DrawableHelper drawableHelper, int i, int j, boolean bl, int k) {
-        int l = this.u;
-        if (k > 0) {
-            l += this.width;
+    public void drawBackground(MatrixStack matrices, DrawableHelper tab, int x, int y, boolean selected, int index) {
+        int i = this.u;
+        if (index > 0) {
+            i += this.width;
         }
-        if (k == this.tabCount - 1) {
-            l += this.width;
+        if (index == this.tabCount - 1) {
+            i += this.width;
         }
-        int m = bl ? this.v + this.height : this.v;
-        drawableHelper.drawTexture(matrices, i + this.getTabX(k), j + this.getTabY(k), l, m, this.width, this.height);
+        int j = selected ? this.v + this.height : this.v;
+        tab.drawTexture(matrices, x + this.getTabX(index), y + this.getTabY(index), i, j, this.width, this.height);
     }
 
     public void drawIcon(int x, int y, int index, ItemRenderer itemRenderer, ItemStack icon) {
@@ -93,7 +102,7 @@ enum AdvancementTabType {
                 return 248;
             }
         }
-        throw new UnsupportedOperationException("Don't know what this tab type is!" + (Object)((Object)this));
+        throw new UnsupportedOperationException("Don't know what this tab type is!" + this);
     }
 
     public int getTabY(int index) {
@@ -111,13 +120,21 @@ enum AdvancementTabType {
                 return this.height * index;
             }
         }
-        throw new UnsupportedOperationException("Don't know what this tab type is!" + (Object)((Object)this));
+        throw new UnsupportedOperationException("Don't know what this tab type is!" + this);
     }
 
     public boolean isClickOnTab(int screenX, int screenY, int index, double mouseX, double mouseY) {
         int i = screenX + this.getTabX(index);
         int j = screenY + this.getTabY(index);
         return mouseX > (double)i && mouseX < (double)(i + this.width) && mouseY > (double)j && mouseY < (double)(j + this.height);
+    }
+
+    private static /* synthetic */ AdvancementTabType[] method_36883() {
+        return new AdvancementTabType[]{ABOVE, BELOW, LEFT, RIGHT};
+    }
+
+    static {
+        field_2676 = AdvancementTabType.method_36883();
     }
 }
 

@@ -2,20 +2,24 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
 package net.minecraft.client.render.entity.model;
 
-import com.google.common.collect.ImmutableList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.model.Dilation;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.entity.model.CompositeEntityModel;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.CrossbowPosing;
 import net.minecraft.client.render.entity.model.ModelWithArms;
 import net.minecraft.client.render.entity.model.ModelWithHead;
+import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.IllagerEntity;
@@ -24,61 +28,49 @@ import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public class IllagerEntityModel<T extends IllagerEntity>
-extends CompositeEntityModel<T>
+extends SinglePartEntityModel<T>
 implements ModelWithArms,
 ModelWithHead {
+    private final ModelPart root;
     private final ModelPart head;
     private final ModelPart hat;
-    private final ModelPart torso;
     private final ModelPart arms;
     private final ModelPart leftLeg;
     private final ModelPart rightLeg;
     private final ModelPart rightArm;
     private final ModelPart leftArm;
 
-    public IllagerEntityModel(float scale, float pivotY, int textureWidth, int textureHeight) {
-        this.head = new ModelPart(this).setTextureSize(textureWidth, textureHeight);
-        this.head.setPivot(0.0f, 0.0f + pivotY, 0.0f);
-        this.head.setTextureOffset(0, 0).addCuboid(-4.0f, -10.0f, -4.0f, 8.0f, 10.0f, 8.0f, scale);
-        this.hat = new ModelPart(this, 32, 0).setTextureSize(textureWidth, textureHeight);
-        this.hat.addCuboid(-4.0f, -10.0f, -4.0f, 8.0f, 12.0f, 8.0f, scale + 0.45f);
-        this.head.addChild(this.hat);
+    public IllagerEntityModel(ModelPart root) {
+        this.root = root;
+        this.head = root.getChild("head");
+        this.hat = this.head.getChild("hat");
         this.hat.visible = false;
-        ModelPart modelPart = new ModelPart(this).setTextureSize(textureWidth, textureHeight);
-        modelPart.setPivot(0.0f, pivotY - 2.0f, 0.0f);
-        modelPart.setTextureOffset(24, 0).addCuboid(-1.0f, -1.0f, -6.0f, 2.0f, 4.0f, 2.0f, scale);
-        this.head.addChild(modelPart);
-        this.torso = new ModelPart(this).setTextureSize(textureWidth, textureHeight);
-        this.torso.setPivot(0.0f, 0.0f + pivotY, 0.0f);
-        this.torso.setTextureOffset(16, 20).addCuboid(-4.0f, 0.0f, -3.0f, 8.0f, 12.0f, 6.0f, scale);
-        this.torso.setTextureOffset(0, 38).addCuboid(-4.0f, 0.0f, -3.0f, 8.0f, 18.0f, 6.0f, scale + 0.5f);
-        this.arms = new ModelPart(this).setTextureSize(textureWidth, textureHeight);
-        this.arms.setPivot(0.0f, 0.0f + pivotY + 2.0f, 0.0f);
-        this.arms.setTextureOffset(44, 22).addCuboid(-8.0f, -2.0f, -2.0f, 4.0f, 8.0f, 4.0f, scale);
-        ModelPart modelPart2 = new ModelPart(this, 44, 22).setTextureSize(textureWidth, textureHeight);
-        modelPart2.mirror = true;
-        modelPart2.addCuboid(4.0f, -2.0f, -2.0f, 4.0f, 8.0f, 4.0f, scale);
-        this.arms.addChild(modelPart2);
-        this.arms.setTextureOffset(40, 38).addCuboid(-4.0f, 2.0f, -2.0f, 8.0f, 4.0f, 4.0f, scale);
-        this.leftLeg = new ModelPart(this, 0, 22).setTextureSize(textureWidth, textureHeight);
-        this.leftLeg.setPivot(-2.0f, 12.0f + pivotY, 0.0f);
-        this.leftLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.rightLeg = new ModelPart(this, 0, 22).setTextureSize(textureWidth, textureHeight);
-        this.rightLeg.mirror = true;
-        this.rightLeg.setPivot(2.0f, 12.0f + pivotY, 0.0f);
-        this.rightLeg.addCuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.rightArm = new ModelPart(this, 40, 46).setTextureSize(textureWidth, textureHeight);
-        this.rightArm.addCuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.rightArm.setPivot(-5.0f, 2.0f + pivotY, 0.0f);
-        this.leftArm = new ModelPart(this, 40, 46).setTextureSize(textureWidth, textureHeight);
-        this.leftArm.mirror = true;
-        this.leftArm.addCuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f, scale);
-        this.leftArm.setPivot(5.0f, 2.0f + pivotY, 0.0f);
+        this.arms = root.getChild("arms");
+        this.leftLeg = root.getChild("left_leg");
+        this.rightLeg = root.getChild("right_leg");
+        this.leftArm = root.getChild("left_arm");
+        this.rightArm = root.getChild("right_arm");
+    }
+
+    public static TexturedModelData getTexturedModelData() {
+        ModelData modelData = new ModelData();
+        ModelPartData modelPartData = modelData.getRoot();
+        ModelPartData modelPartData2 = modelPartData.addChild("head", ModelPartBuilder.create().uv(0, 0).cuboid(-4.0f, -10.0f, -4.0f, 8.0f, 10.0f, 8.0f), ModelTransform.pivot(0.0f, 0.0f, 0.0f));
+        modelPartData2.addChild("hat", ModelPartBuilder.create().uv(32, 0).cuboid(-4.0f, -10.0f, -4.0f, 8.0f, 12.0f, 8.0f, new Dilation(0.45f)), ModelTransform.NONE);
+        modelPartData2.addChild("nose", ModelPartBuilder.create().uv(24, 0).cuboid(-1.0f, -1.0f, -6.0f, 2.0f, 4.0f, 2.0f), ModelTransform.pivot(0.0f, -2.0f, 0.0f));
+        modelPartData.addChild("body", ModelPartBuilder.create().uv(16, 20).cuboid(-4.0f, 0.0f, -3.0f, 8.0f, 12.0f, 6.0f).uv(0, 38).cuboid(-4.0f, 0.0f, -3.0f, 8.0f, 18.0f, 6.0f, new Dilation(0.5f)), ModelTransform.pivot(0.0f, 0.0f, 0.0f));
+        ModelPartData modelPartData3 = modelPartData.addChild("arms", ModelPartBuilder.create().uv(44, 22).cuboid(-8.0f, -2.0f, -2.0f, 4.0f, 8.0f, 4.0f).uv(40, 38).cuboid(-4.0f, 2.0f, -2.0f, 8.0f, 4.0f, 4.0f), ModelTransform.of(0.0f, 3.0f, -1.0f, -0.75f, 0.0f, 0.0f));
+        modelPartData3.addChild("left_shoulder", ModelPartBuilder.create().uv(44, 22).mirrored().cuboid(4.0f, -2.0f, -2.0f, 4.0f, 8.0f, 4.0f), ModelTransform.NONE);
+        modelPartData.addChild("right_leg", ModelPartBuilder.create().uv(0, 22).cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f), ModelTransform.pivot(-2.0f, 12.0f, 0.0f));
+        modelPartData.addChild("left_leg", ModelPartBuilder.create().uv(0, 22).mirrored().cuboid(-2.0f, 0.0f, -2.0f, 4.0f, 12.0f, 4.0f), ModelTransform.pivot(2.0f, 12.0f, 0.0f));
+        modelPartData.addChild("right_arm", ModelPartBuilder.create().uv(40, 46).cuboid(-3.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f), ModelTransform.pivot(-5.0f, 2.0f, 0.0f));
+        modelPartData.addChild("left_arm", ModelPartBuilder.create().uv(40, 46).mirrored().cuboid(-1.0f, -2.0f, -2.0f, 4.0f, 12.0f, 4.0f), ModelTransform.pivot(5.0f, 2.0f, 0.0f));
+        return TexturedModelData.of(modelData, 64, 64);
     }
 
     @Override
-    public Iterable<ModelPart> getParts() {
-        return ImmutableList.of((Object)this.head, (Object)this.torso, (Object)this.leftLeg, (Object)this.rightLeg, (Object)this.arms, (Object)this.rightArm, (Object)this.leftArm);
+    public ModelPart getPart() {
+        return this.root;
     }
 
     @Override
@@ -86,9 +78,6 @@ ModelWithHead {
         boolean bl;
         this.head.yaw = i * ((float)Math.PI / 180);
         this.head.pitch = j * ((float)Math.PI / 180);
-        this.arms.pivotY = 3.0f;
-        this.arms.pivotZ = -1.0f;
-        this.arms.pitch = -0.75f;
         if (this.riding) {
             this.rightArm.pitch = -0.62831855f;
             this.rightArm.yaw = 0.0f;
@@ -96,12 +85,12 @@ ModelWithHead {
             this.leftArm.pitch = -0.62831855f;
             this.leftArm.yaw = 0.0f;
             this.leftArm.roll = 0.0f;
-            this.leftLeg.pitch = -1.4137167f;
-            this.leftLeg.yaw = 0.31415927f;
-            this.leftLeg.roll = 0.07853982f;
             this.rightLeg.pitch = -1.4137167f;
-            this.rightLeg.yaw = -0.31415927f;
-            this.rightLeg.roll = -0.07853982f;
+            this.rightLeg.yaw = 0.31415927f;
+            this.rightLeg.roll = 0.07853982f;
+            this.leftLeg.pitch = -1.4137167f;
+            this.leftLeg.yaw = -0.31415927f;
+            this.leftLeg.roll = -0.07853982f;
         } else {
             this.rightArm.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 2.0f * g * 0.5f;
             this.rightArm.yaw = 0.0f;
@@ -109,19 +98,19 @@ ModelWithHead {
             this.leftArm.pitch = MathHelper.cos(f * 0.6662f) * 2.0f * g * 0.5f;
             this.leftArm.yaw = 0.0f;
             this.leftArm.roll = 0.0f;
-            this.leftLeg.pitch = MathHelper.cos(f * 0.6662f) * 1.4f * g * 0.5f;
-            this.leftLeg.yaw = 0.0f;
-            this.leftLeg.roll = 0.0f;
-            this.rightLeg.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g * 0.5f;
+            this.rightLeg.pitch = MathHelper.cos(f * 0.6662f) * 1.4f * g * 0.5f;
             this.rightLeg.yaw = 0.0f;
             this.rightLeg.roll = 0.0f;
+            this.leftLeg.pitch = MathHelper.cos(f * 0.6662f + (float)Math.PI) * 1.4f * g * 0.5f;
+            this.leftLeg.yaw = 0.0f;
+            this.leftLeg.roll = 0.0f;
         }
         IllagerEntity.State state = ((IllagerEntity)illagerEntity).getState();
         if (state == IllagerEntity.State.ATTACKING) {
             if (((LivingEntity)illagerEntity).getMainHandStack().isEmpty()) {
-                CrossbowPosing.method_29352(this.leftArm, this.rightArm, true, this.handSwingProgress, h);
+                CrossbowPosing.meleeAttack(this.leftArm, this.rightArm, true, this.handSwingProgress, h);
             } else {
-                CrossbowPosing.method_29351(this.rightArm, this.leftArm, illagerEntity, this.handSwingProgress, h);
+                CrossbowPosing.meleeAttack(this.rightArm, this.leftArm, illagerEntity, this.handSwingProgress, h);
             }
         } else if (state == IllagerEntity.State.SPELLCASTING) {
             this.rightArm.pivotZ = 0.0f;

@@ -38,8 +38,16 @@ extends Task<E> {
         return map;
     }
 
+    public ConditionalTask(Predicate<E> condition, Task<? super E> delegate, boolean allowsContinuation) {
+        this((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(), (Predicate<? super E>)condition, delegate, allowsContinuation);
+    }
+
     public ConditionalTask(Predicate<E> condition, Task<? super E> delegate) {
         this((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(), (Predicate<? super E>)condition, delegate, false);
+    }
+
+    public ConditionalTask(Map<MemoryModuleType<?>, MemoryModuleState> memory, Task<? super E> delegate) {
+        this(memory, livingEntity -> true, delegate, false);
     }
 
     @Override

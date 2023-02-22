@@ -37,13 +37,13 @@ implements Predicate<ItemStack> {
 
     @Override
     public boolean test(ItemStack itemStack) {
-        return itemStack.getItem() == this.item && NbtHelper.matches(this.nbt, itemStack.getTag(), true);
+        return itemStack.isOf(this.item) && NbtHelper.matches(this.nbt, itemStack.getNbt(), true);
     }
 
     public ItemStack createStack(int amount, boolean checkOverstack) throws CommandSyntaxException {
         ItemStack itemStack = new ItemStack(this.item, amount);
         if (this.nbt != null) {
-            itemStack.setTag(this.nbt);
+            itemStack.setNbt(this.nbt);
         }
         if (checkOverstack && amount > itemStack.getMaxCount()) {
             throw OVERSTACKED_EXCEPTION.create((Object)Registry.ITEM.getId(this.item), (Object)itemStack.getMaxCount());
@@ -60,8 +60,8 @@ implements Predicate<ItemStack> {
     }
 
     @Override
-    public /* synthetic */ boolean test(Object object) {
-        return this.test((ItemStack)object);
+    public /* synthetic */ boolean test(Object stack) {
+        return this.test((ItemStack)stack);
     }
 }
 

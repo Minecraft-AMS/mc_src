@@ -23,11 +23,12 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 
 public class GameModeCommand {
+    public static final int field_33393 = 2;
+
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)CommandManager.literal("gamemode").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2));
+        LiteralArgumentBuilder literalArgumentBuilder = (LiteralArgumentBuilder)CommandManager.literal("gamemode").requires(source -> source.hasPermissionLevel(2));
         for (GameMode gameMode : GameMode.values()) {
-            if (gameMode == GameMode.NOT_SET) continue;
-            literalArgumentBuilder.then(((LiteralArgumentBuilder)CommandManager.literal(gameMode.getName()).executes(commandContext -> GameModeCommand.execute((CommandContext<ServerCommandSource>)commandContext, Collections.singleton(((ServerCommandSource)commandContext.getSource()).getPlayer()), gameMode))).then(CommandManager.argument("target", EntityArgumentType.players()).executes(commandContext -> GameModeCommand.execute((CommandContext<ServerCommandSource>)commandContext, EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)commandContext, "target"), gameMode))));
+            literalArgumentBuilder.then(((LiteralArgumentBuilder)CommandManager.literal(gameMode.getName()).executes(context -> GameModeCommand.execute((CommandContext<ServerCommandSource>)context, Collections.singleton(((ServerCommandSource)context.getSource()).getPlayer()), gameMode))).then(CommandManager.argument("target", EntityArgumentType.players()).executes(context -> GameModeCommand.execute((CommandContext<ServerCommandSource>)context, EntityArgumentType.getPlayers((CommandContext<ServerCommandSource>)context, "target"), gameMode))));
         }
         dispatcher.register(literalArgumentBuilder);
     }
@@ -47,8 +48,7 @@ public class GameModeCommand {
     private static int execute(CommandContext<ServerCommandSource> context, Collection<ServerPlayerEntity> targets, GameMode gameMode) {
         int i = 0;
         for (ServerPlayerEntity serverPlayerEntity : targets) {
-            if (serverPlayerEntity.interactionManager.getGameMode() == gameMode) continue;
-            serverPlayerEntity.setGameMode(gameMode);
+            if (!serverPlayerEntity.changeGameMode(gameMode)) continue;
             GameModeCommand.sendFeedback((ServerCommandSource)context.getSource(), serverPlayerEntity, gameMode);
             ++i;
         }

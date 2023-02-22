@@ -14,6 +14,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.World;
@@ -33,23 +34,22 @@ implements BlockRenderView {
     protected final int sizeZ;
     protected final WorldChunk[][] chunks;
     protected final BlockState[] blockStates;
-    protected final FluidState[] fluidStates;
     protected final World world;
 
     @Nullable
     public static ChunkRendererRegion create(World world, BlockPos startPos, BlockPos endPos, int chunkRadius) {
         int m;
-        int i = startPos.getX() - chunkRadius >> 4;
-        int j = startPos.getZ() - chunkRadius >> 4;
-        int k = endPos.getX() + chunkRadius >> 4;
-        int l = endPos.getZ() + chunkRadius >> 4;
+        int i = ChunkSectionPos.getSectionCoord(startPos.getX() - chunkRadius);
+        int j = ChunkSectionPos.getSectionCoord(startPos.getZ() - chunkRadius);
+        int k = ChunkSectionPos.getSectionCoord(endPos.getX() + chunkRadius);
+        int l = ChunkSectionPos.getSectionCoord(endPos.getZ() + chunkRadius);
         WorldChunk[][] worldChunks = new WorldChunk[k - i + 1][l - j + 1];
         for (m = i; m <= k; ++m) {
             for (int n = j; n <= l; ++n) {
                 worldChunks[m - i][n - j] = world.getChunk(m, n);
             }
         }
-        if (ChunkRendererRegion.method_30000(startPos, endPos, i, j, worldChunks)) {
+        if (ChunkRendererRegion.isEmptyBetween(startPos, endPos, i, j, worldChunks)) {
             return null;
         }
         m = 1;
@@ -58,11 +58,11 @@ implements BlockRenderView {
         return new ChunkRendererRegion(world, i, j, worldChunks, blockPos, blockPos2);
     }
 
-    public static boolean method_30000(BlockPos blockPos, BlockPos blockPos2, int i, int j, WorldChunk[][] worldChunks) {
-        for (int k = blockPos.getX() >> 4; k <= blockPos2.getX() >> 4; ++k) {
-            for (int l = blockPos.getZ() >> 4; l <= blockPos2.getZ() >> 4; ++l) {
-                WorldChunk worldChunk = worldChunks[k - i][l - j];
-                if (worldChunk.areSectionsEmptyBetween(blockPos.getY(), blockPos2.getY())) continue;
+    public static boolean isEmptyBetween(BlockPos from, BlockPos to, int i, int j, WorldChunk[][] chunks) {
+        for (int k = ChunkSectionPos.getSectionCoord(from.getX()); k <= ChunkSectionPos.getSectionCoord(to.getX()); ++k) {
+            for (int l = ChunkSectionPos.getSectionCoord(from.getZ()); l <= ChunkSectionPos.getSectionCoord(to.getZ()); ++l) {
+                WorldChunk worldChunk = chunks[k - i][l - j];
+                if (worldChunk.areSectionsEmptyBetween(from.getY(), to.getY())) continue;
                 return false;
             }
         }
@@ -79,14 +79,12 @@ implements BlockRenderView {
         this.sizeY = endPos.getY() - startPos.getY() + 1;
         this.sizeZ = endPos.getZ() - startPos.getZ() + 1;
         this.blockStates = new BlockState[this.sizeX * this.sizeY * this.sizeZ];
-        this.fluidStates = new FluidState[this.sizeX * this.sizeY * this.sizeZ];
         for (BlockPos blockPos : BlockPos.iterate(startPos, endPos)) {
-            int i = (blockPos.getX() >> 4) - chunkX;
-            int j = (blockPos.getZ() >> 4) - chunkZ;
+            int i = ChunkSectionPos.getSectionCoord(blockPos.getX()) - chunkX;
+            int j = ChunkSectionPos.getSectionCoord(blockPos.getZ()) - chunkZ;
             WorldChunk worldChunk = chunks[i][j];
             int k = this.getIndex(blockPos);
             this.blockStates[k] = worldChunk.getBlockState(blockPos);
-            this.fluidStates[k] = worldChunk.getFluidState(blockPos);
         }
     }
 
@@ -108,7 +106,7 @@ implements BlockRenderView {
 
     @Override
     public FluidState getFluidState(BlockPos pos) {
-        return this.fluidStates[this.getIndex(pos)];
+        return this.blockStates[this.getIndex(pos)].getFluidState();
     }
 
     @Override
@@ -129,14 +127,24 @@ implements BlockRenderView {
 
     @Nullable
     public BlockEntity getBlockEntity(BlockPos pos, WorldChunk.CreationType creationType) {
-        int i = (pos.getX() >> 4) - this.chunkXOffset;
-        int j = (pos.getZ() >> 4) - this.chunkZOffset;
+        int i = ChunkSectionPos.getSectionCoord(pos.getX()) - this.chunkXOffset;
+        int j = ChunkSectionPos.getSectionCoord(pos.getZ()) - this.chunkZOffset;
         return this.chunks[i][j].getBlockEntity(pos, creationType);
     }
 
     @Override
     public int getColor(BlockPos pos, ColorResolver colorResolver) {
         return this.world.getColor(pos, colorResolver);
+    }
+
+    @Override
+    public int getBottomY() {
+        return this.world.getBottomY();
+    }
+
+    @Override
+    public int getHeight() {
+        return this.world.getHeight();
     }
 }
 

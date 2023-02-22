@@ -15,7 +15,9 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
+import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.math.MatrixStack;
@@ -73,7 +75,8 @@ public abstract class DrawableHelper {
         RenderSystem.enableBlend();
         RenderSystem.disableTexture();
         RenderSystem.defaultBlendFunc();
-        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
         bufferBuilder.vertex(matrix, x1, y2, 0.0f).color(g, h, j, f).next();
         bufferBuilder.vertex(matrix, x2, y2, 0.0f).color(g, h, j, f).next();
         bufferBuilder.vertex(matrix, x2, y1, 0.0f).color(g, h, j, f).next();
@@ -85,19 +88,20 @@ public abstract class DrawableHelper {
     }
 
     protected void fillGradient(MatrixStack matrices, int startX, int startY, int endX, int endY, int colorStart, int colorEnd) {
+        DrawableHelper.fillGradient(matrices, startX, startY, endX, endY, colorStart, colorEnd, this.zOffset);
+    }
+
+    protected static void fillGradient(MatrixStack matrices, int startX, int startY, int endX, int endY, int colorStart, int colorEnd, int z) {
         RenderSystem.disableTexture();
         RenderSystem.enableBlend();
-        RenderSystem.disableAlphaTest();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.shadeModel(7425);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bufferBuilder = tessellator.getBuffer();
-        bufferBuilder.begin(7, VertexFormats.POSITION_COLOR);
-        DrawableHelper.fillGradient(matrices.peek().getModel(), bufferBuilder, startX, startY, endX, endY, this.zOffset, colorStart, colorEnd);
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        DrawableHelper.fillGradient(matrices.peek().getModel(), bufferBuilder, startX, startY, endX, endY, z, colorStart, colorEnd);
         tessellator.draw();
-        RenderSystem.shadeModel(7424);
         RenderSystem.disableBlend();
-        RenderSystem.enableAlphaTest();
         RenderSystem.enableTexture();
     }
 
@@ -125,7 +129,15 @@ public abstract class DrawableHelper {
         textRenderer.drawWithShadow(matrices, orderedText, (float)(centerX - textRenderer.getWidth(orderedText) / 2), (float)y, color);
     }
 
+    public static void drawCenteredTextWithShadow(MatrixStack matrices, TextRenderer textRenderer, OrderedText text, int centerX, int y, int color) {
+        textRenderer.drawWithShadow(matrices, text, (float)(centerX - textRenderer.getWidth(text) / 2), (float)y, color);
+    }
+
     public static void drawStringWithShadow(MatrixStack matrices, TextRenderer textRenderer, String text, int x, int y, int color) {
+        textRenderer.drawWithShadow(matrices, text, (float)x, (float)y, color);
+    }
+
+    public static void drawWithShadow(MatrixStack matrices, TextRenderer textRenderer, OrderedText text, int x, int y, int color) {
         textRenderer.drawWithShadow(matrices, text, (float)x, (float)y, color);
     }
 
@@ -133,14 +145,14 @@ public abstract class DrawableHelper {
         textRenderer.drawWithShadow(matrices, text, (float)x, (float)y, color);
     }
 
-    public void method_29343(int i, int j, BiConsumer<Integer, Integer> biConsumer) {
+    public void drawWithOutline(int x, int y, BiConsumer<Integer, Integer> renderAction) {
         RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ZERO, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        biConsumer.accept(i + 1, j);
-        biConsumer.accept(i - 1, j);
-        biConsumer.accept(i, j + 1);
-        biConsumer.accept(i, j - 1);
+        renderAction.accept(x + 1, y);
+        renderAction.accept(x - 1, y);
+        renderAction.accept(x, y + 1);
+        renderAction.accept(x, y - 1);
         RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        biConsumer.accept(i, j);
+        renderAction.accept(x, y);
     }
 
     public static void drawSprite(MatrixStack matrices, int x, int y, int z, int width, int height, Sprite sprite) {
@@ -163,19 +175,19 @@ public abstract class DrawableHelper {
         DrawableHelper.drawTexture(matrices, x, y, width, height, u, v, width, height, textureWidth, textureHeight);
     }
 
-    private static void drawTexture(MatrixStack matrices, int x0, int y0, int x1, int y1, int z, int regionWidth, int regionHeight, float u, float v, int textureWidth, int textureHeight) {
-        DrawableHelper.drawTexturedQuad(matrices.peek().getModel(), x0, y0, x1, y1, z, (u + 0.0f) / (float)textureWidth, (u + (float)regionWidth) / (float)textureWidth, (v + 0.0f) / (float)textureHeight, (v + (float)regionHeight) / (float)textureHeight);
+    private static void drawTexture(MatrixStack matrices, int x0, int x1, int y0, int y1, int z, int regionWidth, int regionHeight, float u, float v, int textureWidth, int textureHeight) {
+        DrawableHelper.drawTexturedQuad(matrices.peek().getModel(), x0, x1, y0, y1, z, (u + 0.0f) / (float)textureWidth, (u + (float)regionWidth) / (float)textureWidth, (v + 0.0f) / (float)textureHeight, (v + (float)regionHeight) / (float)textureHeight);
     }
 
-    private static void drawTexturedQuad(Matrix4f matrices, int x0, int x1, int y0, int y1, int z, float u0, float u1, float v0, float v1) {
+    private static void drawTexturedQuad(Matrix4f matrix, int x0, int x1, int y0, int y1, int z, float u0, float u1, float v0, float v1) {
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
         BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-        bufferBuilder.begin(7, VertexFormats.POSITION_TEXTURE);
-        bufferBuilder.vertex(matrices, x0, y1, z).texture(u0, v1).next();
-        bufferBuilder.vertex(matrices, x1, y1, z).texture(u1, v1).next();
-        bufferBuilder.vertex(matrices, x1, y0, z).texture(u1, v0).next();
-        bufferBuilder.vertex(matrices, x0, y0, z).texture(u0, v0).next();
+        bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+        bufferBuilder.vertex(matrix, x0, y1, z).texture(u0, v1).next();
+        bufferBuilder.vertex(matrix, x1, y1, z).texture(u1, v1).next();
+        bufferBuilder.vertex(matrix, x1, y0, z).texture(u1, v0).next();
+        bufferBuilder.vertex(matrix, x0, y0, z).texture(u0, v0).next();
         bufferBuilder.end();
-        RenderSystem.enableAlphaTest();
         BufferRenderer.draw(bufferBuilder);
     }
 

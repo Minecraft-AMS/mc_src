@@ -32,8 +32,12 @@ import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class BakedQuadFactory {
+    public static final int field_32796 = 8;
     private static final float MIN_SCALE = 1.0f / (float)Math.cos(0.3926991f) - 1.0f;
     private static final float MAX_SCALE = 1.0f / (float)Math.cos(0.7853981852531433) - 1.0f;
+    public static final int field_32797 = 4;
+    private static final int field_32799 = 3;
+    public static final int field_32798 = 4;
 
     public BakedQuad bake(Vec3f from, Vec3f to, ModelElementFace face, Sprite texture, Direction side, ModelBakeSettings settings, @Nullable ModelRotation rotation, boolean shade, Identifier modelId) {
         ModelElementTexture modelElementTexture = face.textureData;
@@ -136,32 +140,26 @@ public class BakedQuadFactory {
     }
 
     private void rotateVertex(Vec3f vector, @Nullable ModelRotation rotation) {
-        Vec3f vec3f2;
         Vec3f vec3f;
         if (rotation == null) {
             return;
         }
-        switch (rotation.axis) {
-            case X: {
-                vec3f = new Vec3f(1.0f, 0.0f, 0.0f);
-                vec3f2 = new Vec3f(0.0f, 1.0f, 1.0f);
-                break;
+        Vec3f vec3f2 = switch (rotation.axis) {
+            case Direction.Axis.X -> {
+                vec3f = Vec3f.POSITIVE_X;
+                yield new Vec3f(0.0f, 1.0f, 1.0f);
             }
-            case Y: {
-                vec3f = new Vec3f(0.0f, 1.0f, 0.0f);
-                vec3f2 = new Vec3f(1.0f, 0.0f, 1.0f);
-                break;
+            case Direction.Axis.Y -> {
+                vec3f = Vec3f.POSITIVE_Y;
+                yield new Vec3f(1.0f, 0.0f, 1.0f);
             }
-            case Z: {
-                vec3f = new Vec3f(0.0f, 0.0f, 1.0f);
-                vec3f2 = new Vec3f(1.0f, 1.0f, 0.0f);
-                break;
+            case Direction.Axis.Z -> {
+                vec3f = Vec3f.POSITIVE_Z;
+                yield new Vec3f(1.0f, 1.0f, 0.0f);
             }
-            default: {
-                throw new IllegalArgumentException("There are only 3 axes");
-            }
-        }
-        Quaternion quaternion = new Quaternion(vec3f, rotation.angle, true);
+            default -> throw new IllegalArgumentException("There are only 3 axes");
+        };
+        Quaternion quaternion = vec3f.getDegreesQuaternion(rotation.angle);
         if (rotation.rescale) {
             if (Math.abs(rotation.angle) == 22.5f) {
                 vec3f2.scale(MIN_SCALE);
