@@ -8,6 +8,7 @@
  *  com.google.common.collect.Sets$SetView
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
+ *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.Lifecycle
  *  it.unimi.dsi.fastutil.objects.Object2IntMap
  *  it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
@@ -24,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Lifecycle;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
@@ -39,7 +41,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
 import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.MutableRegistry;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
@@ -212,14 +214,30 @@ extends MutableRegistry<T> {
     }
 
     @Override
-    public RegistryEntry<T> getOrCreateEntry(RegistryKey<T> key2) {
-        return this.keyToEntry.computeIfAbsent(key2, key -> {
+    public RegistryEntry<T> getOrCreateEntry(RegistryKey<T> key) {
+        return this.keyToEntry.computeIfAbsent(key, entry -> {
             if (this.valueToEntryFunction != null) {
                 throw new IllegalStateException("This registry can't create new holders without value");
             }
-            this.assertNotFrozen((RegistryKey<T>)key);
-            return RegistryEntry.Reference.standAlone(this, key);
+            this.assertNotFrozen((RegistryKey<T>)entry);
+            return RegistryEntry.Reference.standAlone(this, entry);
         });
+    }
+
+    @Override
+    public DataResult<RegistryEntry<T>> getOrCreateEntryDataResult(RegistryKey<T> key) {
+        RegistryEntry.Reference<T> reference = this.keyToEntry.get(key);
+        if (reference == null) {
+            if (this.valueToEntryFunction != null) {
+                return DataResult.error((String)("This registry can't create new holders without value (requested key: " + key + ")"));
+            }
+            if (this.frozen) {
+                return DataResult.error((String)("Registry is already frozen (requested key: " + key + ")"));
+            }
+            reference = RegistryEntry.Reference.standAlone(this, key);
+            this.keyToEntry.put(key, reference);
+        }
+        return DataResult.success(reference);
     }
 
     @Override
@@ -257,6 +275,11 @@ extends MutableRegistry<T> {
     @Override
     public Set<Identifier> getIds() {
         return Collections.unmodifiableSet(this.idToEntry.keySet());
+    }
+
+    @Override
+    public Set<RegistryKey<T>> getKeys() {
+        return Collections.unmodifiableSet(this.keyToEntry.keySet());
     }
 
     @Override
@@ -345,7 +368,7 @@ extends MutableRegistry<T> {
         if (this.frozen || this.unfrozenValueToEntry == null) {
             throw new IllegalStateException("Registry is already frozen");
         }
-        return this.unfrozenValueToEntry.computeIfAbsent(value, key -> RegistryEntry.Reference.intrusive(this, key));
+        return this.unfrozenValueToEntry.computeIfAbsent(value, valuex -> RegistryEntry.Reference.intrusive(this, valuex));
     }
 
     @Override

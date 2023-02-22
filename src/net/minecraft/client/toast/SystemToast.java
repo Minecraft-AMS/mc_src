@@ -19,17 +19,16 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class SystemToast
 implements Toast {
-    private static final long DURATION = 5000L;
     private static final int MIN_WIDTH = 200;
+    private static final int LINE_HEIGHT = 12;
+    private static final int PADDING_Y = 10;
     private final Type type;
     private Text title;
     private List<OrderedText> lines;
@@ -65,8 +64,13 @@ implements Toast {
     }
 
     @Override
+    public int getHeight() {
+        return 20 + this.lines.size() * 12;
+    }
+
+    @Override
     public Toast.Visibility draw(MatrixStack matrices, ToastManager manager, long startTime) {
-        int k;
+        int j;
         if (this.justUpdated) {
             this.startTime = startTime;
             this.justUpdated = false;
@@ -74,28 +78,27 @@ implements Toast {
         RenderSystem.setShaderTexture(0, TEXTURE);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         int i = this.getWidth();
-        int j = 12;
         if (i == 160 && this.lines.size() <= 1) {
             manager.drawTexture(matrices, 0, 0, 0, 64, i, this.getHeight());
         } else {
-            k = this.getHeight() + Math.max(0, this.lines.size() - 1) * 12;
-            int l = 28;
-            int m = Math.min(4, k - 28);
+            j = this.getHeight();
+            int k = 28;
+            int l = Math.min(4, j - 28);
             this.drawPart(matrices, manager, i, 0, 0, 28);
-            for (int n = 28; n < k - m; n += 10) {
-                this.drawPart(matrices, manager, i, 16, n, Math.min(16, k - n - m));
+            for (int m = 28; m < j - l; m += 10) {
+                this.drawPart(matrices, manager, i, 16, m, Math.min(16, j - m - l));
             }
-            this.drawPart(matrices, manager, i, 32 - m, k - m, m);
+            this.drawPart(matrices, manager, i, 32 - l, j - l, l);
         }
         if (this.lines == null) {
             manager.getClient().textRenderer.draw(matrices, this.title, 18.0f, 12.0f, -256);
         } else {
             manager.getClient().textRenderer.draw(matrices, this.title, 18.0f, 7.0f, -256);
-            for (k = 0; k < this.lines.size(); ++k) {
-                manager.getClient().textRenderer.draw(matrices, this.lines.get(k), 18.0f, (float)(18 + k * 12), -1);
+            for (j = 0; j < this.lines.size(); ++j) {
+                manager.getClient().textRenderer.draw(matrices, this.lines.get(j), 18.0f, (float)(18 + j * 12), -1);
             }
         }
-        return startTime - this.startTime < 5000L ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
+        return startTime - this.startTime < this.type.displayDuration ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
     }
 
     private void drawPart(MatrixStack matrices, ToastManager manager, int width, int textureV, int y, int height) {
@@ -132,15 +135,15 @@ implements Toast {
     }
 
     public static void addWorldAccessFailureToast(MinecraftClient client, String worldName) {
-        SystemToast.add(client.getToastManager(), Type.WORLD_ACCESS_FAILURE, new TranslatableText("selectWorld.access_failure"), new LiteralText(worldName));
+        SystemToast.add(client.getToastManager(), Type.WORLD_ACCESS_FAILURE, Text.translatable("selectWorld.access_failure"), Text.literal(worldName));
     }
 
     public static void addWorldDeleteFailureToast(MinecraftClient client, String worldName) {
-        SystemToast.add(client.getToastManager(), Type.WORLD_ACCESS_FAILURE, new TranslatableText("selectWorld.delete_failure"), new LiteralText(worldName));
+        SystemToast.add(client.getToastManager(), Type.WORLD_ACCESS_FAILURE, Text.translatable("selectWorld.delete_failure"), Text.literal(worldName));
     }
 
     public static void addPackCopyFailure(MinecraftClient client, String directory) {
-        SystemToast.add(client.getToastManager(), Type.PACK_COPY_FAILURE, new TranslatableText("pack.copyFailure"), new LiteralText(directory));
+        SystemToast.add(client.getToastManager(), Type.PACK_COPY_FAILURE, Text.translatable("pack.copyFailure"), Text.literal(directory));
     }
 
     @Override
@@ -159,6 +162,9 @@ implements Toast {
         public static final /* enum */ Type WORLD_ACCESS_FAILURE = new Type();
         public static final /* enum */ Type PACK_COPY_FAILURE = new Type();
         public static final /* enum */ Type PERIODIC_NOTIFICATION = new Type();
+        public static final /* enum */ Type CHAT_PREVIEW_WARNING = new Type(10000L);
+        public static final /* enum */ Type UNSECURE_SERVER_WARNING = new Type(10000L);
+        final long displayDuration;
         private static final /* synthetic */ Type[] field_2221;
 
         public static Type[] values() {
@@ -169,8 +175,16 @@ implements Toast {
             return Enum.valueOf(Type.class, string);
         }
 
+        private Type(long displayDuration) {
+            this.displayDuration = displayDuration;
+        }
+
+        private Type() {
+            this(5000L);
+        }
+
         private static /* synthetic */ Type[] method_36871() {
-            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION};
+            return new Type[]{TUTORIAL_HINT, NARRATOR_TOGGLE, WORLD_BACKUP, WORLD_GEN_SETTINGS_TRANSFER, PACK_LOAD_FAILURE, WORLD_ACCESS_FAILURE, PACK_COPY_FAILURE, PERIODIC_NOTIFICATION, CHAT_PREVIEW_WARNING, UNSECURE_SERVER_WARNING};
         }
 
         static {

@@ -30,7 +30,7 @@ import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeGridAligner;
 import net.minecraft.screen.AbstractFurnaceScreenHandler;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -217,7 +217,7 @@ Element {
         protected final List<InputSlot> slots;
 
         public AlternativeButtonWidget(int x, int y, Recipe<?> recipe, boolean craftable) {
-            super(x, y, 200, 20, LiteralText.EMPTY);
+            super(x, y, 200, 20, ScreenTexts.EMPTY);
             this.slots = Lists.newArrayList();
             this.width = 24;
             this.height = 24;

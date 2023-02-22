@@ -26,19 +26,15 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.option.NarratorMode;
-import net.minecraft.client.option.Option;
 import net.minecraft.client.util.Clipboard;
 import net.minecraft.client.util.GlfwUtil;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -108,7 +104,7 @@ public class Keyboard {
     }
 
     private void addDebugMessage(Formatting formatting, Text text) {
-        this.client.inGameHud.getChatHud().addMessage(new LiteralText("").append(new TranslatableText("debug.prefix").formatted(formatting, Formatting.BOLD)).append(" ").append(text));
+        this.client.inGameHud.getChatHud().addMessage(Text.empty().append(Text.translatable("debug.prefix").formatted(formatting, Formatting.BOLD)).append(" ").append(text));
     }
 
     private void debugLog(Text text) {
@@ -116,15 +112,15 @@ public class Keyboard {
     }
 
     private void debugLog(String key, Object ... args) {
-        this.debugLog(new TranslatableText(key, args));
+        this.debugLog(Text.translatable(key, args));
     }
 
     private void debugError(String key, Object ... args) {
-        this.addDebugMessage(Formatting.RED, new TranslatableText(key, args));
+        this.addDebugMessage(Formatting.RED, Text.translatable(key, args));
     }
 
     private void debugFormattedLog(String pattern, Object ... args) {
-        this.debugLog(new LiteralText(MessageFormat.format(pattern, args)));
+        this.debugLog(Text.literal(MessageFormat.format(pattern, args)));
     }
 
     private boolean processF3(int key) {
@@ -149,11 +145,6 @@ public class Keyboard {
                 }
                 return true;
             }
-            case 70: {
-                Option.RENDER_DISTANCE.set(this.client.options, MathHelper.clamp((double)(this.client.options.viewDistance + (Screen.hasShiftDown() ? -1 : 1)), Option.RENDER_DISTANCE.getMin(), Option.RENDER_DISTANCE.getMax()));
-                this.debugLog("debug.cycle_renderdistance.message", this.client.options.viewDistance);
-                return true;
-            }
             case 71: {
                 boolean bl2 = this.client.debugRenderer.toggleShowChunkBorder();
                 this.debugLog(bl2 ? "debug.chunk_boundaries.on" : "debug.chunk_boundaries.off", new Object[0]);
@@ -175,9 +166,9 @@ public class Keyboard {
                 if (!this.client.player.hasPermissionLevel(2)) {
                     this.debugLog("debug.creative_spectator.error", new Object[0]);
                 } else if (!this.client.player.isSpectator()) {
-                    this.client.player.sendChatMessage("/gamemode spectator");
+                    this.client.player.sendCommand("gamemode spectator");
                 } else {
-                    this.client.player.sendChatMessage("/gamemode " + ((GameMode)((Object)MoreObjects.firstNonNull((Object)((Object)this.client.interactionManager.getPreviousGameMode()), (Object)((Object)GameMode.CREATIVE)))).getName());
+                    this.client.player.sendCommand("gamemode " + ((GameMode)((Object)MoreObjects.firstNonNull((Object)((Object)this.client.interactionManager.getPreviousGameMode()), (Object)((Object)GameMode.CREATIVE)))).getName());
                 }
                 return true;
             }
@@ -198,21 +189,20 @@ public class Keyboard {
             case 81: {
                 this.debugLog("debug.help.message", new Object[0]);
                 ChatHud chatHud = this.client.inGameHud.getChatHud();
-                chatHud.addMessage(new TranslatableText("debug.reload_chunks.help"));
-                chatHud.addMessage(new TranslatableText("debug.show_hitboxes.help"));
-                chatHud.addMessage(new TranslatableText("debug.copy_location.help"));
-                chatHud.addMessage(new TranslatableText("debug.clear_chat.help"));
-                chatHud.addMessage(new TranslatableText("debug.cycle_renderdistance.help"));
-                chatHud.addMessage(new TranslatableText("debug.chunk_boundaries.help"));
-                chatHud.addMessage(new TranslatableText("debug.advanced_tooltips.help"));
-                chatHud.addMessage(new TranslatableText("debug.inspect.help"));
-                chatHud.addMessage(new TranslatableText("debug.profiling.help"));
-                chatHud.addMessage(new TranslatableText("debug.creative_spectator.help"));
-                chatHud.addMessage(new TranslatableText("debug.pause_focus.help"));
-                chatHud.addMessage(new TranslatableText("debug.help.help"));
-                chatHud.addMessage(new TranslatableText("debug.reload_resourcepacks.help"));
-                chatHud.addMessage(new TranslatableText("debug.pause.help"));
-                chatHud.addMessage(new TranslatableText("debug.gamemodes.help"));
+                chatHud.addMessage(Text.translatable("debug.reload_chunks.help"));
+                chatHud.addMessage(Text.translatable("debug.show_hitboxes.help"));
+                chatHud.addMessage(Text.translatable("debug.copy_location.help"));
+                chatHud.addMessage(Text.translatable("debug.clear_chat.help"));
+                chatHud.addMessage(Text.translatable("debug.chunk_boundaries.help"));
+                chatHud.addMessage(Text.translatable("debug.advanced_tooltips.help"));
+                chatHud.addMessage(Text.translatable("debug.inspect.help"));
+                chatHud.addMessage(Text.translatable("debug.profiling.help"));
+                chatHud.addMessage(Text.translatable("debug.creative_spectator.help"));
+                chatHud.addMessage(Text.translatable("debug.pause_focus.help"));
+                chatHud.addMessage(Text.translatable("debug.help.help"));
+                chatHud.addMessage(Text.translatable("debug.reload_resourcepacks.help"));
+                chatHud.addMessage(Text.translatable("debug.pause.help"));
+                chatHud.addMessage(Text.translatable("debug.gamemodes.help"));
                 return true;
             }
             case 84: {
@@ -334,8 +324,7 @@ public class Keyboard {
         if (!(action != 1 || this.client.currentScreen instanceof KeybindsScreen && ((KeybindsScreen)screen).lastKeyCodeUpdateTime > Util.getMeasuringTimeMs() - 20L)) {
             if (this.client.options.fullscreenKey.matchesKey(key, scancode)) {
                 this.client.getWindow().toggleFullscreen();
-                this.client.options.fullscreen = this.client.getWindow().isFullscreen();
-                this.client.options.write();
+                this.client.options.getFullscreen().setValue(this.client.getWindow().isFullscreen());
                 return;
             }
             if (this.client.options.screenshotKey.matchesKey(key, scancode)) {
@@ -346,13 +335,12 @@ public class Keyboard {
                 return;
             }
         }
-        if (NarratorManager.INSTANCE.isActive()) {
+        if (this.client.getNarratorManager().isActive()) {
             boolean bl;
             boolean bl3 = bl = screen == null || !(screen.getFocused() instanceof TextFieldWidget) || !((TextFieldWidget)screen.getFocused()).isActive();
             if (action != 0 && key == 66 && Screen.hasControlDown() && bl) {
-                bl2 = this.client.options.narrator == NarratorMode.OFF;
-                this.client.options.narrator = NarratorMode.byId(this.client.options.narrator.getId() + 1);
-                NarratorManager.INSTANCE.addToast(this.client.options.narrator);
+                bl2 = this.client.options.getNarrator().getValue() == NarratorMode.OFF;
+                this.client.options.getNarrator().setValue(NarratorMode.byId(this.client.options.getNarrator().getValue().getId() + 1));
                 if (screen instanceof SimpleOptionsScreen) {
                     ((SimpleOptionsScreen)screen).updateNarratorButtonText();
                 }

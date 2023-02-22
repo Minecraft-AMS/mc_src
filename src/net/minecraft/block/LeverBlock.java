@@ -3,7 +3,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -23,6 +22,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -95,7 +95,7 @@ extends WallMountedBlock {
         BlockState blockState = this.togglePower(state, world, pos);
         float f = blockState.get(POWERED) != false ? 0.6f : 0.5f;
         world.playSound(null, pos, SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.BLOCKS, 0.3f, f);
-        world.emitGameEvent((Entity)player, blockState.get(POWERED) != false ? GameEvent.BLOCK_SWITCH : GameEvent.BLOCK_UNSWITCH, pos);
+        world.emitGameEvent((Entity)player, blockState.get(POWERED) != false ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, pos);
         return ActionResult.CONSUME;
     }
 

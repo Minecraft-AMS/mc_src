@@ -8,8 +8,9 @@
 package net.minecraft.block;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import net.minecraft.block.AbstractBlock;
@@ -47,12 +48,14 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class PointedDripstoneBlock
@@ -155,7 +158,7 @@ Waterloggable {
         if (f > 0.12f) {
             return;
         }
-        PointedDripstoneBlock.getFluid(world, pos, state).filter(fluid -> f < 0.02f || PointedDripstoneBlock.isFluidLiquid(fluid)).ifPresent(fluid -> PointedDripstoneBlock.createParticle(world, pos, state, fluid));
+        PointedDripstoneBlock.getFluid(world, pos, state).filter(fluid -> f < 0.02f || PointedDripstoneBlock.isFluidLiquid(fluid.fluid)).ifPresent(fluid -> PointedDripstoneBlock.createParticle(world, pos, state, fluid.fluid));
     }
 
     @Override
@@ -184,7 +187,11 @@ Waterloggable {
         if (!PointedDripstoneBlock.isHeldByPointedDripstone(state, world, pos)) {
             return;
         }
-        Fluid fluid = PointedDripstoneBlock.getDripFluid((World)world, pos);
+        Optional<DrippingFluid> optional = PointedDripstoneBlock.getFluid(world, pos, state);
+        if (optional.isEmpty()) {
+            return;
+        }
+        Fluid fluid = optional.get().fluid;
         if (fluid == Fluids.WATER) {
             f = 0.17578125f;
         } else if (fluid == Fluids.LAVA) {
@@ -199,6 +206,14 @@ Waterloggable {
         if (blockPos == null) {
             return;
         }
+        if (optional.get().sourceState.isOf(Blocks.MUD) && fluid == Fluids.WATER) {
+            BlockState blockState = Blocks.CLAY.getDefaultState();
+            world.setBlockState(optional.get().pos, blockState);
+            Block.pushEntitiesUpBeforeBlockChange(optional.get().sourceState, blockState, world, optional.get().pos);
+            world.emitGameEvent(GameEvent.BLOCK_CHANGE, optional.get().pos, GameEvent.Emitter.of(blockState));
+            world.syncWorldEvent(1504, blockPos, 0);
+            return;
+        }
         BlockPos blockPos2 = PointedDripstoneBlock.getCauldronPos(world, blockPos, fluid);
         if (blockPos2 == null) {
             return;
@@ -206,8 +221,8 @@ Waterloggable {
         world.syncWorldEvent(1504, blockPos, 0);
         int i = blockPos.getY() - blockPos2.getY();
         int j = 50 + i;
-        BlockState blockState = world.getBlockState(blockPos2);
-        world.createAndScheduleBlockTick(blockPos2, blockState.getBlock(), j);
+        BlockState blockState2 = world.getBlockState(blockPos2);
+        world.createAndScheduleBlockTick(blockPos2, blockState2.getBlock(), j);
     }
 
     @Override
@@ -257,11 +272,6 @@ Waterloggable {
     @Override
     public boolean isShapeFullCube(BlockState state, BlockView world, BlockPos pos) {
         return false;
-    }
-
-    @Override
-    public AbstractBlock.OffsetType getOffsetType() {
-        return AbstractBlock.OffsetType.XZ;
     }
 
     @Override
@@ -375,7 +385,7 @@ Waterloggable {
     }
 
     public static void createParticle(World world, BlockPos pos, BlockState state) {
-        PointedDripstoneBlock.getFluid(world, pos, state).ifPresent(fluid -> PointedDripstoneBlock.createParticle(world, pos, state, fluid));
+        PointedDripstoneBlock.getFluid(world, pos, state).ifPresent(fluid -> PointedDripstoneBlock.createParticle(world, pos, state, fluid.fluid));
     }
 
     private static void createParticle(World world, BlockPos pos, BlockState state, Fluid fluid) {
@@ -510,15 +520,20 @@ Waterloggable {
         return PointedDripstoneBlock.searchInDirection(world, pos2, Direction.UP.getDirection(), biPredicate, PointedDripstoneBlock::canDrip, 11).orElse(null);
     }
 
-    public static Fluid getDripFluid(World world, BlockPos pos) {
-        return PointedDripstoneBlock.getFluid(world, pos, world.getBlockState(pos)).filter(PointedDripstoneBlock::isFluidLiquid).orElse(Fluids.EMPTY);
+    public static Fluid getDripFluid(ServerWorld world, BlockPos pos) {
+        return PointedDripstoneBlock.getFluid(world, pos, world.getBlockState(pos)).map(fluid -> fluid.fluid).filter(PointedDripstoneBlock::isFluidLiquid).orElse(Fluids.EMPTY);
     }
 
-    private static Optional<Fluid> getFluid(World world, BlockPos pos2, BlockState state) {
+    private static Optional<DrippingFluid> getFluid(World world, BlockPos pos2, BlockState state) {
         if (!PointedDripstoneBlock.isPointingDown(state)) {
             return Optional.empty();
         }
-        return PointedDripstoneBlock.getSupportingPos(world, pos2, state, 11).map(pos -> world.getFluidState(pos.up()).getFluid());
+        return PointedDripstoneBlock.getSupportingPos(world, pos2, state, 11).map(pos -> {
+            BlockPos blockPos = pos.up();
+            BlockState blockState = world.getBlockState(blockPos);
+            Fluid fluid = blockState.isOf(Blocks.MUD) && !world.getDimension().ultrawarm() ? Fluids.WATER : world.getFluidState(blockPos).getFluid();
+            return new DrippingFluid(blockPos, fluid, blockState);
+        });
     }
 
     private static boolean isFluidLiquid(Fluid fluid) {
@@ -531,7 +546,7 @@ Waterloggable {
 
     private static Fluid getDripFluid(World world, Fluid fluid) {
         if (fluid.matchesType(Fluids.EMPTY)) {
-            return world.getDimension().isUltrawarm() ? Fluids.LAVA : Fluids.WATER;
+            return world.getDimension().ultrawarm() ? Fluids.LAVA : Fluids.WATER;
         }
         return fluid;
     }
@@ -563,6 +578,46 @@ Waterloggable {
         }
         VoxelShape voxelShape = state.getCollisionShape(world, pos);
         return !VoxelShapes.matchesAnywhere(DRIP_COLLISION_SHAPE, voxelShape, BooleanBiFunction.AND);
+    }
+
+    static final class DrippingFluid
+    extends Record {
+        final BlockPos pos;
+        final Fluid fluid;
+        final BlockState sourceState;
+
+        DrippingFluid(BlockPos blockPos, Fluid fluid, BlockState blockState) {
+            this.pos = blockPos;
+            this.fluid = fluid;
+            this.sourceState = blockState;
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{DrippingFluid.class, "pos;fluid;sourceState", "pos", "fluid", "sourceState"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{DrippingFluid.class, "pos;fluid;sourceState", "pos", "fluid", "sourceState"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{DrippingFluid.class, "pos;fluid;sourceState", "pos", "fluid", "sourceState"}, this, object);
+        }
+
+        public BlockPos pos() {
+            return this.pos;
+        }
+
+        public Fluid fluid() {
+            return this.fluid;
+        }
+
+        public BlockState sourceState() {
+            return this.sourceState;
+        }
     }
 }
 

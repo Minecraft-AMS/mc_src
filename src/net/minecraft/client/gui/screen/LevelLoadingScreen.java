@@ -20,7 +20,6 @@ import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.ChunkStatus;
@@ -68,7 +67,7 @@ extends Screen {
     @Override
     protected void addElementNarrations(NarrationMessageBuilder builder) {
         if (this.done) {
-            builder.put(NarrationPart.TITLE, (Text)new TranslatableText("narrator.loading.done"));
+            builder.put(NarrationPart.TITLE, (Text)Text.translatable("narrator.loading.done"));
         } else {
             String string = this.getPercentage();
             builder.put(NarrationPart.TITLE, string);

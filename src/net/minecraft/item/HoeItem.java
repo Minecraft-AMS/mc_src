@@ -32,6 +32,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class HoeItem
 extends MiningToolItem {
@@ -66,12 +67,16 @@ extends MiningToolItem {
     }
 
     public static Consumer<ItemUsageContext> createTillAction(BlockState result) {
-        return context -> context.getWorld().setBlockState(context.getBlockPos(), result, 11);
+        return context -> {
+            context.getWorld().setBlockState(context.getBlockPos(), result, 11);
+            context.getWorld().emitGameEvent(GameEvent.BLOCK_CHANGE, context.getBlockPos(), GameEvent.Emitter.of(context.getPlayer(), result));
+        };
     }
 
     public static Consumer<ItemUsageContext> createTillAndDropAction(BlockState result, ItemConvertible droppedItem) {
         return context -> {
             context.getWorld().setBlockState(context.getBlockPos(), result, 11);
+            context.getWorld().emitGameEvent(GameEvent.BLOCK_CHANGE, context.getBlockPos(), GameEvent.Emitter.of(context.getPlayer(), result));
             Block.dropStack(context.getWorld(), context.getBlockPos(), context.getSide(), new ItemStack(droppedItem));
         };
     }

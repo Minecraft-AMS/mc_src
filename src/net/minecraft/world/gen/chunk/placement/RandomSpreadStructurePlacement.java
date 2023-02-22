@@ -15,46 +15,67 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.dynamic.Codecs;
+import java.util.Optional;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.CheckedRandom;
+import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.placement.SpreadType;
 import net.minecraft.world.gen.chunk.placement.StructurePlacement;
 import net.minecraft.world.gen.chunk.placement.StructurePlacementType;
-import net.minecraft.world.gen.random.AtomicSimpleRandom;
-import net.minecraft.world.gen.random.ChunkRandom;
+import net.minecraft.world.gen.noise.NoiseConfig;
 
-public record RandomSpreadStructurePlacement(int spacing, int separation, SpreadType spreadType, int salt, Vec3i locateOffset) implements StructurePlacement
-{
-    public static final Codec<RandomSpreadStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(RandomSpreadStructurePlacement::spacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(RandomSpreadStructurePlacement::separation), (App)SpreadType.CODEC.optionalFieldOf("spread_type", (Object)SpreadType.LINEAR).forGetter(RandomSpreadStructurePlacement::spreadType), (App)Codecs.NONNEGATIVE_INT.fieldOf("salt").forGetter(RandomSpreadStructurePlacement::salt), (App)Vec3i.createOffsetCodec(16).optionalFieldOf("locate_offset", (Object)Vec3i.ZERO).forGetter(RandomSpreadStructurePlacement::locateOffset)).apply((Applicative)instance, RandomSpreadStructurePlacement::new)).flatXmap(placement -> {
+public class RandomSpreadStructurePlacement
+extends StructurePlacement {
+    public static final Codec<RandomSpreadStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> RandomSpreadStructurePlacement.method_41637(instance).and(instance.group((App)Codec.intRange((int)0, (int)4096).fieldOf("spacing").forGetter(RandomSpreadStructurePlacement::getSpacing), (App)Codec.intRange((int)0, (int)4096).fieldOf("separation").forGetter(RandomSpreadStructurePlacement::getSeparation), (App)SpreadType.CODEC.optionalFieldOf("spread_type", (Object)SpreadType.LINEAR).forGetter(RandomSpreadStructurePlacement::getSpreadType))).apply((Applicative)instance, RandomSpreadStructurePlacement::new)).flatXmap(placement -> {
         if (placement.spacing <= placement.separation) {
             return DataResult.error((String)"Spacing has to be larger than separation");
         }
         return DataResult.success((Object)placement);
     }, DataResult::success).codec();
+    private final int spacing;
+    private final int separation;
+    private final SpreadType spreadType;
 
-    public RandomSpreadStructurePlacement(int spacing, int separation, SpreadType spreadType, int salt) {
-        this(spacing, separation, spreadType, salt, Vec3i.ZERO);
+    public RandomSpreadStructurePlacement(Vec3i locateOffset, StructurePlacement.FrequencyReductionMethod frequencyReductionMethod, float frequency, int salt, Optional<StructurePlacement.ExclusionZone> exclusionZone, int spacing, int separation, SpreadType spreadType) {
+        super(locateOffset, frequencyReductionMethod, frequency, salt, exclusionZone);
+        this.spacing = spacing;
+        this.separation = separation;
+        this.spreadType = spreadType;
     }
 
-    public ChunkPos getStartChunk(long seed, int x, int z) {
-        int i = this.spacing();
-        int j = this.separation();
-        int k = Math.floorDiv(x, i);
-        int l = Math.floorDiv(z, i);
-        ChunkRandom chunkRandom = new ChunkRandom(new AtomicSimpleRandom(0L));
-        chunkRandom.setRegionSeed(seed, k, l, this.salt());
-        int m = i - j;
-        int n = this.spreadType().get(chunkRandom, m);
-        int o = this.spreadType().get(chunkRandom, m);
-        return new ChunkPos(k * i + n, l * i + o);
+    public RandomSpreadStructurePlacement(int spacing, int separation, SpreadType spreadType, int salt) {
+        this(Vec3i.ZERO, StructurePlacement.FrequencyReductionMethod.DEFAULT, 1.0f, salt, Optional.empty(), spacing, separation, spreadType);
+    }
+
+    public int getSpacing() {
+        return this.spacing;
+    }
+
+    public int getSeparation() {
+        return this.separation;
+    }
+
+    public SpreadType getSpreadType() {
+        return this.spreadType;
+    }
+
+    public ChunkPos getStartChunk(long seed, int chunkX, int chunkZ) {
+        int i = Math.floorDiv(chunkX, this.spacing);
+        int j = Math.floorDiv(chunkZ, this.spacing);
+        ChunkRandom chunkRandom = new ChunkRandom(new CheckedRandom(0L));
+        chunkRandom.setRegionSeed(seed, i, j, this.getSalt());
+        int k = this.spacing - this.separation;
+        int l = this.spreadType.get(chunkRandom, k);
+        int m = this.spreadType.get(chunkRandom, k);
+        return new ChunkPos(i * this.spacing + l, j * this.spacing + m);
     }
 
     @Override
-    public boolean isStartChunk(ChunkGenerator chunkGenerator, long l, int i, int j) {
-        ChunkPos chunkPos = this.getStartChunk(l, i, j);
-        return chunkPos.x == i && chunkPos.z == j;
+    protected boolean isStartChunk(ChunkGenerator chunkGenerator, NoiseConfig noiseConfig, long seed, int chunkX, int chunkZ) {
+        ChunkPos chunkPos = this.getStartChunk(seed, chunkX, chunkZ);
+        return chunkPos.x == chunkX && chunkPos.z == chunkZ;
     }
 
     @Override

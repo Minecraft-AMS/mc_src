@@ -24,7 +24,7 @@ public class SeekWaterTask
 extends Task<PathAwareEntity> {
     private final int range;
     private final float speed;
-    private long field_33759;
+    private long seekWaterTime;
 
     public SeekWaterTask(int range, float speed) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED)));
@@ -34,7 +34,7 @@ extends Task<PathAwareEntity> {
 
     @Override
     protected void finishRunning(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
-        this.field_33759 = l + 20L + 2L;
+        this.seekWaterTime = l + 20L + 2L;
     }
 
     @Override
@@ -44,7 +44,7 @@ extends Task<PathAwareEntity> {
 
     @Override
     protected void run(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
-        if (l < this.field_33759) {
+        if (l < this.seekWaterTime) {
             return;
         }
         BlockPos blockPos = null;
@@ -67,7 +67,7 @@ extends Task<PathAwareEntity> {
             blockPos = blockPos2;
         }
         if (blockPos != null) {
-            this.field_33759 = l + 40L;
+            this.seekWaterTime = l + 40L;
             LookTargetUtil.walkTowards((LivingEntity)pathAwareEntity, blockPos, this.speed, 0);
         }
     }

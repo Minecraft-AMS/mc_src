@@ -8,6 +8,8 @@
  *  com.google.common.collect.Range
  *  com.google.common.collect.Sets
  *  com.mojang.logging.LogUtils
+ *  it.unimi.dsi.fastutil.objects.ObjectArrayList
+ *  it.unimi.dsi.fastutil.objects.ObjectListIterator
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -19,12 +21,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.mojang.logging.LogUtils;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.advancement.criterion.Criteria;
@@ -53,13 +55,15 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Unit;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
@@ -82,9 +86,9 @@ public class EnderDragonFight {
     private static final int field_31448 = 96;
     public static final int SPAWN_Y = 128;
     private static final Predicate<Entity> VALID_ENTITY = EntityPredicates.VALID_ENTITY.and(EntityPredicates.maxDistance(0.0, 128.0, 0.0, 192.0));
-    private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(new TranslatableText("entity.minecraft.ender_dragon"), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
+    private final ServerBossBar bossBar = (ServerBossBar)new ServerBossBar(Text.translatable("entity.minecraft.ender_dragon"), BossBar.Color.PINK, BossBar.Style.PROGRESS).setDragonMusic(true).setThickenFog(true);
     private final ServerWorld world;
-    private final List<Integer> gateways = Lists.newArrayList();
+    private final ObjectArrayList<Integer> gateways = new ObjectArrayList();
     private final BlockPattern endPortalPattern;
     private int dragonSeenTimer;
     private int endCrystalsAlive;
@@ -127,11 +131,11 @@ public class EnderDragonFight {
         if (nbt.contains("Gateways", 9)) {
             NbtList nbtList = nbt.getList("Gateways", 3);
             for (int i = 0; i < nbtList.size(); ++i) {
-                this.gateways.add(nbtList.getInt(i));
+                this.gateways.add((Object)nbtList.getInt(i));
             }
         } else {
-            this.gateways.addAll((Collection<Integer>)ContiguousSet.create((Range)Range.closedOpen((Comparable)Integer.valueOf(0), (Comparable)Integer.valueOf(20)), (DiscreteDomain)DiscreteDomain.integers()));
-            Collections.shuffle(this.gateways, new Random(gatewaysSeed));
+            this.gateways.addAll((Collection)ContiguousSet.create((Range)Range.closedOpen((Comparable)Integer.valueOf(0), (Comparable)Integer.valueOf(20)), (DiscreteDomain)DiscreteDomain.integers()));
+            Util.shuffle(this.gateways, Random.create(gatewaysSeed));
         }
         this.endPortalPattern = BlockPatternBuilder.start().aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("       ", "       ", "       ", "   #   ", "       ", "       ", "       ").aisle("  ###  ", " #   # ", "#     #", "#  #  #", "#     #", " #   # ", "  ###  ").aisle("       ", "  ###  ", " ##### ", " ##### ", " ##### ", "  ###  ", "       ").where('#', CachedBlockPosition.matchesBlockState(BlockPredicate.make(Blocks.BEDROCK))).build();
     }
@@ -148,7 +152,9 @@ public class EnderDragonFight {
             nbtCompound.put("ExitPortalLocation", NbtHelper.fromBlockPos(this.exitPortalLocation));
         }
         NbtList nbtList = new NbtList();
-        for (int i : this.gateways) {
+        ObjectListIterator objectListIterator = this.gateways.iterator();
+        while (objectListIterator.hasNext()) {
+            int i = (Integer)objectListIterator.next();
             nbtList.add(NbtInt.of(i));
         }
         nbtCompound.put("Gateways", nbtList);
@@ -347,7 +353,7 @@ public class EnderDragonFight {
         if (this.gateways.isEmpty()) {
             return;
         }
-        int i = this.gateways.remove(this.gateways.size() - 1);
+        int i = (Integer)this.gateways.remove(this.gateways.size() - 1);
         int j = MathHelper.floor(96.0 * Math.cos(2.0 * (-Math.PI + 0.15707963267948966 * (double)i)));
         int k = MathHelper.floor(96.0 * Math.sin(2.0 * (-Math.PI + 0.15707963267948966 * (double)i)));
         this.generateEndGateway(new BlockPos(j, 75, k));
@@ -355,7 +361,7 @@ public class EnderDragonFight {
 
     private void generateEndGateway(BlockPos pos) {
         this.world.syncWorldEvent(3000, pos, 0);
-        EndConfiguredFeatures.END_GATEWAY_DELAYED.value().generate(this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), pos);
+        EndConfiguredFeatures.END_GATEWAY_DELAYED.value().generate(this.world, this.world.getChunkManager().getChunkGenerator(), Random.create(), pos);
     }
 
     private void generateEndPortal(boolean previouslyKilled) {
@@ -366,7 +372,7 @@ public class EnderDragonFight {
                 this.exitPortalLocation = this.exitPortalLocation.down();
             }
         }
-        endPortalFeature.generateIfValid(FeatureConfig.DEFAULT, this.world, this.world.getChunkManager().getChunkGenerator(), new Random(), this.exitPortalLocation);
+        endPortalFeature.generateIfValid(FeatureConfig.DEFAULT, this.world, this.world.getChunkManager().getChunkGenerator(), Random.create(), this.exitPortalLocation);
     }
 
     private EnderDragonEntity createDragon() {

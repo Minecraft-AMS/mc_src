@@ -19,19 +19,20 @@ import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.GlobalPos;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.poi.PointOfInterestType;
 
 public class ForgetCompletedPointOfInterestTask
 extends Task<LivingEntity> {
     private static final int MAX_RANGE = 16;
     private final MemoryModuleType<GlobalPos> memoryModule;
-    private final Predicate<PointOfInterestType> condition;
+    private final Predicate<RegistryEntry<PointOfInterestType>> poiTypePredicate;
 
-    public ForgetCompletedPointOfInterestTask(PointOfInterestType poiType, MemoryModuleType<GlobalPos> memoryModule) {
+    public ForgetCompletedPointOfInterestTask(Predicate<RegistryEntry<PointOfInterestType>> poiTypePredicate, MemoryModuleType<GlobalPos> memoryModule) {
         super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(memoryModule, (Object)((Object)MemoryModuleState.VALUE_PRESENT)));
-        this.condition = poiType.getCompletionCondition();
+        this.poiTypePredicate = poiTypePredicate;
         this.memoryModule = memoryModule;
     }
 
@@ -62,7 +63,7 @@ extends Task<LivingEntity> {
     }
 
     private boolean hasCompletedPointOfInterest(ServerWorld world, BlockPos pos) {
-        return !world.getPointOfInterestStorage().test(pos, this.condition);
+        return !world.getPointOfInterestStorage().test(pos, this.poiTypePredicate);
     }
 }
 

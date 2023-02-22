@@ -36,7 +36,7 @@ import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
@@ -105,12 +105,12 @@ implements BlockEntityProvider {
         }
         if (state.get(OCCUPIED).booleanValue()) {
             if (!this.wakeVillager(world, pos)) {
-                player.sendMessage(new TranslatableText("block.minecraft.bed.occupied"), true);
+                player.sendMessage(Text.translatable("block.minecraft.bed.occupied"), true);
             }
             return ActionResult.SUCCESS;
         }
         player.trySleep(pos).ifLeft(reason -> {
-            if (reason != null) {
+            if (reason.getMessage() != null) {
                 player.sendMessage(reason.getMessage(), true);
             }
         });
@@ -118,7 +118,7 @@ implements BlockEntityProvider {
     }
 
     public static boolean isBedWorking(World world) {
-        return world.getDimension().isBedWorking();
+        return world.getDimension().bedWorks();
     }
 
     private boolean wakeVillager(World world, BlockPos pos) {

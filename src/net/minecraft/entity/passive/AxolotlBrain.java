@@ -34,6 +34,7 @@ import net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask;
 import net.minecraft.entity.ai.brain.task.ForgetTask;
 import net.minecraft.entity.ai.brain.task.GoTowardsLookTarget;
 import net.minecraft.entity.ai.brain.task.LookAroundTask;
+import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.MeleeAttackTask;
 import net.minecraft.entity.ai.brain.task.PlayDeadTask;
 import net.minecraft.entity.ai.brain.task.PlayDeadTimerTask;
@@ -76,11 +77,11 @@ public class AxolotlBrain {
     }
 
     private static void addPlayDeadActivities(Brain<AxolotlEntity> brain) {
-        brain.setTaskList(Activity.PLAY_DEAD, (ImmutableList<Pair<Integer, Task<AxolotlEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, (Object)new PlayDeadTask()), (Object)Pair.of((Object)1, new ForgetTask<AxolotlEntity>(AxolotlBrain::hasBreedTarget, MemoryModuleType.PLAY_DEAD_TICKS))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.PLAY_DEAD_TICKS, (Object)((Object)MemoryModuleState.VALUE_PRESENT))), (Set<MemoryModuleType<?>>)ImmutableSet.of(MemoryModuleType.PLAY_DEAD_TICKS));
+        brain.setTaskList(Activity.PLAY_DEAD, (ImmutableList<Pair<Integer, Task<AxolotlEntity>>>)ImmutableList.of((Object)Pair.of((Object)0, (Object)new PlayDeadTask()), (Object)Pair.of((Object)1, new ForgetTask<AxolotlEntity>(LookTargetUtil::hasBreedTarget, MemoryModuleType.PLAY_DEAD_TICKS))), (Set<Pair<MemoryModuleType<?>, MemoryModuleState>>)ImmutableSet.of((Object)Pair.of(MemoryModuleType.PLAY_DEAD_TICKS, (Object)((Object)MemoryModuleState.VALUE_PRESENT))), (Set<MemoryModuleType<?>>)ImmutableSet.of(MemoryModuleType.PLAY_DEAD_TICKS));
     }
 
     private static void addFightActivities(Brain<AxolotlEntity> brain) {
-        brain.setTaskList(Activity.FIGHT, 0, (ImmutableList<Task<AxolotlEntity>>)ImmutableList.of(new ForgetAttackTargetTask<AxolotlEntity>(AxolotlEntity::appreciatePlayer), (Object)new RangedApproachTask(AxolotlBrain::getTargetApproachingSpeed), (Object)new MeleeAttackTask(20), new ForgetTask<AxolotlEntity>(AxolotlBrain::hasBreedTarget, MemoryModuleType.ATTACK_TARGET)), MemoryModuleType.ATTACK_TARGET);
+        brain.setTaskList(Activity.FIGHT, 0, (ImmutableList<Task<AxolotlEntity>>)ImmutableList.of(new ForgetAttackTargetTask<AxolotlEntity>(AxolotlEntity::appreciatePlayer), (Object)new RangedApproachTask(AxolotlBrain::getTargetApproachingSpeed), (Object)new MeleeAttackTask(20), new ForgetTask<AxolotlEntity>(LookTargetUtil::hasBreedTarget, MemoryModuleType.ATTACK_TARGET)), MemoryModuleType.ATTACK_TARGET);
     }
 
     private static void addCoreActivities(Brain<AxolotlEntity> brain) {
@@ -125,14 +126,10 @@ public class AxolotlBrain {
     }
 
     private static Optional<? extends LivingEntity> getAttackTarget(AxolotlEntity axolotl) {
-        if (AxolotlBrain.hasBreedTarget(axolotl)) {
+        if (LookTargetUtil.hasBreedTarget(axolotl)) {
             return Optional.empty();
         }
         return axolotl.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_ATTACKABLE);
-    }
-
-    private static boolean hasBreedTarget(AxolotlEntity axolotl) {
-        return axolotl.getBrain().hasMemoryModule(MemoryModuleType.BREED_TARGET);
     }
 
     public static Ingredient getTemptItems() {

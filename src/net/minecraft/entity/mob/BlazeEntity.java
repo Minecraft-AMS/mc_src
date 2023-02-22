@@ -114,7 +114,7 @@ extends HostileEntity {
         --this.eyeOffsetCooldown;
         if (this.eyeOffsetCooldown <= 0) {
             this.eyeOffsetCooldown = 100;
-            this.eyeOffset = 0.5f + (float)this.random.nextGaussian() * 3.0f;
+            this.eyeOffset = (float)this.random.nextTriangular(0.5, 6.891);
         }
         if ((livingEntity = this.getTarget()) != null && livingEntity.getEyeY() > this.getEyeY() + (double)this.eyeOffset && this.canTarget(livingEntity)) {
             Vec3d vec3d = this.getVelocity();
@@ -219,7 +219,7 @@ extends HostileEntity {
                             this.blaze.world.syncWorldEvent(null, 1018, this.blaze.getBlockPos(), 0);
                         }
                         for (int i = 0; i < 1; ++i) {
-                            SmallFireballEntity smallFireballEntity = new SmallFireballEntity(this.blaze.world, this.blaze, e + this.blaze.getRandom().nextGaussian() * h, f, g + this.blaze.getRandom().nextGaussian() * h);
+                            SmallFireballEntity smallFireballEntity = new SmallFireballEntity(this.blaze.world, this.blaze, this.blaze.getRandom().nextTriangular(e, 2.297 * h), f, this.blaze.getRandom().nextTriangular(g, 2.297 * h));
                             smallFireballEntity.setPosition(smallFireballEntity.getX(), this.blaze.getBodyY(0.5) + 0.5, smallFireballEntity.getZ());
                             this.blaze.world.spawnEntity(smallFireballEntity);
                         }

@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -52,6 +51,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -280,7 +280,7 @@ extends AnimalEntity {
 
     @Override
     public boolean bypassesSteppingEffects() {
-        return this.getPose() == EntityPose.CROUCHING || super.bypassesSteppingEffects();
+        return this.isInSneakingPose() || super.bypassesSteppingEffects();
     }
 
     @Override

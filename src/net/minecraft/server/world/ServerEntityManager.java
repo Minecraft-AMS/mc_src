@@ -408,6 +408,9 @@ implements AutoCloseable {
             EntityTrackingStatus entityTrackingStatus2;
             EntityTrackingStatus entityTrackingStatus = ServerEntityManager.getNeededLoadStatus(this.entity, oldStatus);
             if (entityTrackingStatus == (entityTrackingStatus2 = ServerEntityManager.getNeededLoadStatus(this.entity, newStatus))) {
+                if (entityTrackingStatus2.shouldTrack()) {
+                    this.manager.handler.updateLoadStatus(this.entity);
+                }
                 return;
             }
             boolean bl = entityTrackingStatus.shouldTrack();
@@ -423,6 +426,9 @@ implements AutoCloseable {
                 this.manager.stopTicking(this.entity);
             } else if (!bl3 && bl4) {
                 this.manager.startTicking(this.entity);
+            }
+            if (bl2) {
+                this.manager.handler.updateLoadStatus(this.entity);
             }
         }
 

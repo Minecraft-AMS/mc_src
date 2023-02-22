@@ -73,6 +73,10 @@ extends RenderPhase {
         MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_TRANSLUCENT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).overlay(ENABLE_OVERLAY_COLOR).build((boolean)affectsOutline);
         return RenderLayer.of("entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, true, multiPhaseParameters);
     });
+    private static final BiFunction<Identifier, Boolean, RenderLayer> ENTITY_TRANSLUCENT_EMISSIVE = Util.memoize((texture, affectsOutline) -> {
+        MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_TRANSLUCENT_EMISSIVE_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).transparency(TRANSLUCENT_TRANSPARENCY).cull(DISABLE_CULLING).writeMaskState(COLOR_MASK).overlay(ENABLE_OVERLAY_COLOR).build((boolean)affectsOutline);
+        return RenderLayer.of("entity_translucent_emissive", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, true, true, multiPhaseParameters);
+    });
     private static final Function<Identifier, RenderLayer> ENTITY_SMOOTH_CUTOUT = Util.memoize(texture -> {
         MultiPhaseParameters multiPhaseParameters = MultiPhaseParameters.builder().shader(ENTITY_SMOOTH_CUTOUT_SHADER).texture(new RenderPhase.Texture((Identifier)texture, false, false)).cull(DISABLE_CULLING).lightmap(ENABLE_LIGHTMAP).build(true);
         return RenderLayer.of("entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS, 256, multiPhaseParameters);
@@ -126,6 +130,7 @@ extends RenderPhase {
     private static final RenderLayer END_GATEWAY = RenderLayer.of("end_gateway", VertexFormats.POSITION, VertexFormat.DrawMode.QUADS, 256, false, false, MultiPhaseParameters.builder().shader(END_GATEWAY_SHADER).texture(RenderPhase.Textures.create().add(EndPortalBlockEntityRenderer.SKY_TEXTURE, false, false).add(EndPortalBlockEntityRenderer.PORTAL_TEXTURE, false, false).build()).build(false));
     public static final MultiPhase LINES = RenderLayer.of("lines", VertexFormats.LINES, VertexFormat.DrawMode.LINES, 256, MultiPhaseParameters.builder().shader(LINES_SHADER).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
     public static final MultiPhase LINE_STRIP = RenderLayer.of("line_strip", VertexFormats.LINES, VertexFormat.DrawMode.LINE_STRIP, 256, MultiPhaseParameters.builder().shader(LINES_SHADER).lineWidth(new RenderPhase.LineWidth(OptionalDouble.empty())).layering(VIEW_OFFSET_Z_LAYERING).transparency(TRANSLUCENT_TRANSPARENCY).target(ITEM_TARGET).writeMaskState(ALL_MASK).cull(DISABLE_CULLING).build(false));
+    private static final ImmutableList<RenderLayer> BLOCK_LAYERS = ImmutableList.of((Object)RenderLayer.getSolid(), (Object)RenderLayer.getCutoutMipped(), (Object)RenderLayer.getCutout(), (Object)RenderLayer.getTranslucent(), (Object)RenderLayer.getTripwire());
     private final VertexFormat vertexFormat;
     private final VertexFormat.DrawMode drawMode;
     private final int expectedBufferSize;
@@ -207,6 +212,14 @@ extends RenderPhase {
 
     public static RenderLayer getEntityTranslucent(Identifier texture) {
         return RenderLayer.getEntityTranslucent(texture, true);
+    }
+
+    public static RenderLayer getEntityTranslucentEmissive(Identifier texture, boolean affectsOutline) {
+        return ENTITY_TRANSLUCENT_EMISSIVE.apply(texture, affectsOutline);
+    }
+
+    public static RenderLayer getEntityTranslucentEmissive(Identifier texture) {
+        return RenderLayer.getEntityTranslucentEmissive(texture, true);
     }
 
     public static RenderLayer getEntitySmoothCutout(Identifier texture) {
@@ -362,9 +375,9 @@ extends RenderPhase {
         if (this.translucent) {
             buffer.sortFrom(cameraX, cameraY, cameraZ);
         }
-        buffer.end();
+        BufferBuilder.BuiltBuffer builtBuffer = buffer.end();
         this.startDrawing();
-        BufferRenderer.draw(buffer);
+        BufferRenderer.drawWithShader(builtBuffer);
         this.endDrawing();
     }
 
@@ -374,7 +387,7 @@ extends RenderPhase {
     }
 
     public static List<RenderLayer> getBlockLayers() {
-        return ImmutableList.of((Object)RenderLayer.getSolid(), (Object)RenderLayer.getCutoutMipped(), (Object)RenderLayer.getCutout(), (Object)RenderLayer.getTranslucent(), (Object)RenderLayer.getTripwire());
+        return BLOCK_LAYERS;
     }
 
     public int getExpectedBufferSize() {
@@ -399,6 +412,10 @@ extends RenderPhase {
 
     public boolean hasCrumbling() {
         return this.hasCrumbling;
+    }
+
+    public boolean areVerticesNotShared() {
+        return !this.drawMode.shareVertices;
     }
 
     public Optional<RenderLayer> asOptional() {

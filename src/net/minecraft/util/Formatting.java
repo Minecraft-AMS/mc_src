@@ -3,11 +3,13 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.serialization.Codec
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util;
 
 import com.google.common.collect.Lists;
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,10 +17,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import net.minecraft.util.StringIdentifiable;
 import org.jetbrains.annotations.Nullable;
 
 public final class Formatting
-extends Enum<Formatting> {
+extends Enum<Formatting>
+implements StringIdentifiable {
     public static final /* enum */ Formatting BLACK = new Formatting("BLACK", '0', 0, 0);
     public static final /* enum */ Formatting DARK_BLUE = new Formatting("DARK_BLUE", '1', 1, 170);
     public static final /* enum */ Formatting DARK_GREEN = new Formatting("DARK_GREEN", '2', 2, 43520);
@@ -41,6 +45,7 @@ extends Enum<Formatting> {
     public static final /* enum */ Formatting UNDERLINE = new Formatting("UNDERLINE", 'n', true);
     public static final /* enum */ Formatting ITALIC = new Formatting("ITALIC", 'o', true);
     public static final /* enum */ Formatting RESET = new Formatting("RESET", 'r', -1, null);
+    public static final Codec<Formatting> CODEC;
     public static final char FORMATTING_CODE_PREFIX = '\u00a7';
     private static final Map<String, Formatting> BY_NAME;
     private static final Pattern FORMATTING_CODE_PATTERN;
@@ -155,12 +160,18 @@ extends Enum<Formatting> {
         return list;
     }
 
+    @Override
+    public String asString() {
+        return this.getName();
+    }
+
     private static /* synthetic */ Formatting[] method_36946() {
         return new Formatting[]{BLACK, DARK_BLUE, DARK_GREEN, DARK_AQUA, DARK_RED, DARK_PURPLE, GOLD, GRAY, DARK_GRAY, BLUE, GREEN, AQUA, RED, LIGHT_PURPLE, YELLOW, WHITE, OBFUSCATED, BOLD, STRIKETHROUGH, UNDERLINE, ITALIC, RESET};
     }
 
     static {
         field_1072 = Formatting.method_36946();
+        CODEC = StringIdentifiable.createCodec(Formatting::values);
         BY_NAME = Arrays.stream(Formatting.values()).collect(Collectors.toMap(f -> Formatting.sanitize(f.name), f -> f));
         FORMATTING_CODE_PATTERN = Pattern.compile("(?i)\u00a7[0-9A-FK-OR]");
     }

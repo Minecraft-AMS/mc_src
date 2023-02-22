@@ -11,6 +11,8 @@
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSerializer
  *  com.mojang.logging.LogUtils
+ *  it.unimi.dsi.fastutil.objects.ObjectArrayList
+ *  it.unimi.dsi.fastutil.objects.ObjectListIterator
  *  org.apache.commons.lang3.ArrayUtils
  *  org.slf4j.Logger
  */
@@ -25,12 +27,12 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.mojang.logging.LogUtils;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import net.minecraft.inventory.Inventory;
@@ -45,7 +47,9 @@ import net.minecraft.loot.function.LootFunctionConsumingBuilder;
 import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 
@@ -96,10 +100,10 @@ public class LootTable {
         this.generateUnprocessedLoot(context, LootTable.processStacks(lootConsumer));
     }
 
-    public List<ItemStack> generateLoot(LootContext context) {
-        ArrayList list = Lists.newArrayList();
-        this.generateLoot(context, list::add);
-        return list;
+    public ObjectArrayList<ItemStack> generateLoot(LootContext context) {
+        ObjectArrayList objectArrayList = new ObjectArrayList();
+        this.generateLoot(context, arg_0 -> ((ObjectArrayList)objectArrayList).add(arg_0));
+        return objectArrayList;
     }
 
     public LootContextType getType() {
@@ -117,28 +121,28 @@ public class LootTable {
     }
 
     public void supplyInventory(Inventory inventory, LootContext context) {
-        List<ItemStack> list = this.generateLoot(context);
+        ObjectArrayList<ItemStack> objectArrayList = this.generateLoot(context);
         Random random = context.getRandom();
-        List<Integer> list2 = this.getFreeSlots(inventory, random);
-        this.shuffle(list, list2.size(), random);
-        for (ItemStack itemStack : list) {
-            if (list2.isEmpty()) {
+        List<Integer> list = this.getFreeSlots(inventory, random);
+        this.shuffle(objectArrayList, list.size(), random);
+        for (ItemStack itemStack : objectArrayList) {
+            if (list.isEmpty()) {
                 LOGGER.warn("Tried to over-fill a container");
                 return;
             }
             if (itemStack.isEmpty()) {
-                inventory.setStack(list2.remove(list2.size() - 1), ItemStack.EMPTY);
+                inventory.setStack(list.remove(list.size() - 1), ItemStack.EMPTY);
                 continue;
             }
-            inventory.setStack(list2.remove(list2.size() - 1), itemStack);
+            inventory.setStack(list.remove(list.size() - 1), itemStack);
         }
     }
 
-    private void shuffle(List<ItemStack> drops, int freeSlots, Random random) {
+    private void shuffle(ObjectArrayList<ItemStack> drops, int freeSlots, Random random) {
         ArrayList list = Lists.newArrayList();
-        Iterator<ItemStack> iterator = drops.iterator();
+        ObjectListIterator iterator = drops.iterator();
         while (iterator.hasNext()) {
-            ItemStack itemStack = iterator.next();
+            ItemStack itemStack = (ItemStack)iterator.next();
             if (itemStack.isEmpty()) {
                 iterator.remove();
                 continue;
@@ -154,26 +158,26 @@ public class LootTable {
             if (itemStack2.getCount() > 1 && random.nextBoolean()) {
                 list.add(itemStack2);
             } else {
-                drops.add(itemStack2);
+                drops.add((Object)itemStack2);
             }
             if (itemStack3.getCount() > 1 && random.nextBoolean()) {
                 list.add(itemStack3);
                 continue;
             }
-            drops.add(itemStack3);
+            drops.add((Object)itemStack3);
         }
-        drops.addAll(list);
-        Collections.shuffle(drops, random);
+        drops.addAll((Collection)list);
+        Util.shuffle(drops, random);
     }
 
     private List<Integer> getFreeSlots(Inventory inventory, Random random) {
-        ArrayList list = Lists.newArrayList();
+        ObjectArrayList objectArrayList = new ObjectArrayList();
         for (int i = 0; i < inventory.size(); ++i) {
             if (!inventory.getStack(i).isEmpty()) continue;
-            list.add(i);
+            objectArrayList.add((Object)i);
         }
-        Collections.shuffle(list, random);
-        return list;
+        Util.shuffle(objectArrayList, random);
+        return objectArrayList;
     }
 
     public static Builder builder() {
@@ -203,7 +207,7 @@ public class LootTable {
         }
 
         @Override
-        public Builder getThis() {
+        public Builder getThisFunctionConsumingBuilder() {
             return this;
         }
 
@@ -212,12 +216,12 @@ public class LootTable {
         }
 
         @Override
-        public /* synthetic */ Object getThis() {
-            return this.getThis();
+        public /* synthetic */ LootFunctionConsumingBuilder getThisFunctionConsumingBuilder() {
+            return this.getThisFunctionConsumingBuilder();
         }
 
         @Override
-        public /* synthetic */ Object apply(LootFunction.Builder function) {
+        public /* synthetic */ LootFunctionConsumingBuilder apply(LootFunction.Builder function) {
             return this.apply(function);
         }
     }

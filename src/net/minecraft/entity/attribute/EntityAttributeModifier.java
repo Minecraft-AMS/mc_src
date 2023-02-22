@@ -3,20 +3,18 @@
  * 
  * Could not load the following classes:
  *  com.mojang.logging.LogUtils
- *  io.netty.util.internal.ThreadLocalRandom
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.entity.attribute;
 
 import com.mojang.logging.LogUtils;
-import io.netty.util.internal.ThreadLocalRandom;
 import java.util.Objects;
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -28,7 +26,7 @@ public class EntityAttributeModifier {
     private final UUID uuid;
 
     public EntityAttributeModifier(String name, double value, Operation operation) {
-        this(MathHelper.randomUuid((Random)ThreadLocalRandom.current()), () -> name, value, operation);
+        this(MathHelper.randomUuid(Random.createLocal()), () -> name, value, operation);
     }
 
     public EntityAttributeModifier(UUID uuid, String name, double value, Operation operation) {

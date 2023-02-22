@@ -22,17 +22,23 @@ import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.Arrays;
 import java.util.IllegalFormatException;
+import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.FontLoader;
+import net.minecraft.client.font.Glyph;
+import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
 import net.minecraft.client.texture.NativeImage;
-import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -46,6 +52,7 @@ implements Font {
     private static final int field_32232 = 256;
     private static final int field_32233 = 256;
     private static final int field_32234 = 256;
+    private static final byte field_37905 = 0;
     private final ResourceManager resourceManager;
     private final byte[] sizes;
     private final String template;
@@ -58,8 +65,8 @@ implements Font {
         for (int i = 0; i < 256; ++i) {
             int j = i * 256;
             Identifier identifier = this.getImageId(j);
-            try (Resource resource = this.resourceManager.getResource(identifier);
-                 NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, resource.getInputStream());){
+            try (InputStream inputStream = this.resourceManager.open(identifier);
+                 NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);){
                 if (nativeImage.getWidth() == 256 && nativeImage.getHeight() == 256) {
                     for (int k = 0; k < 256; ++k) {
                         byte b = sizes[j + k];
@@ -82,15 +89,15 @@ implements Font {
     }
 
     private Identifier getImageId(int codePoint) {
-        Identifier identifier = new Identifier(String.format(this.template, String.format("%02x", codePoint / 256)));
+        Identifier identifier = new Identifier(String.format(Locale.ROOT, this.template, String.format(Locale.ROOT, "%02x", codePoint / 256)));
         return new Identifier(identifier.getNamespace(), "textures/" + identifier.getPath());
     }
 
     @Override
     @Nullable
-    public RenderableGlyph getGlyph(int codePoint) {
+    public Glyph getGlyph(int codePoint) {
         NativeImage nativeImage;
-        if (codePoint < 0 || codePoint > 65535) {
+        if (codePoint < 0 || codePoint >= this.sizes.length) {
             return null;
         }
         byte b = this.sizes[codePoint];
@@ -104,7 +111,7 @@ implements Font {
     @Override
     public IntSet getProvidedGlyphs() {
         IntOpenHashSet intSet = new IntOpenHashSet();
-        for (int i = 0; i < 65535; ++i) {
+        for (int i = 0; i < this.sizes.length; ++i) {
             if (this.sizes[i] == 0) continue;
             intSet.add(i);
         }
@@ -115,16 +122,16 @@ implements Font {
     private NativeImage getGlyphImage(Identifier glyphId) {
         NativeImage nativeImage;
         block8: {
-            Resource resource = this.resourceManager.getResource(glyphId);
+            InputStream inputStream = this.resourceManager.open(glyphId);
             try {
-                nativeImage = NativeImage.read(NativeImage.Format.RGBA, resource.getInputStream());
-                if (resource == null) break block8;
+                nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
+                if (inputStream == null) break block8;
             }
             catch (Throwable throwable) {
                 try {
-                    if (resource != null) {
+                    if (inputStream != null) {
                         try {
-                            resource.close();
+                            inputStream.close();
                         }
                         catch (Throwable throwable2) {
                             throwable.addSuppressed(throwable2);
@@ -137,7 +144,7 @@ implements Font {
                     return null;
                 }
             }
-            resource.close();
+            inputStream.close();
         }
         return nativeImage;
     }
@@ -151,50 +158,26 @@ implements Font {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static class UnicodeTextureGlyph
-    implements RenderableGlyph {
-        private final int width;
-        private final int height;
-        private final int unpackSkipPixels;
-        private final int unpackSkipRows;
-        private final NativeImage image;
+    static final class UnicodeTextureGlyph
+    extends Record
+    implements Glyph {
+        final int unpackSkipPixels;
+        final int unpackSkipRows;
+        final int width;
+        final int height;
+        final NativeImage image;
 
-        UnicodeTextureGlyph(int unpackSkipPixels, int unpackSkipRows, int width, int height, NativeImage image) {
-            this.width = width;
-            this.height = height;
-            this.unpackSkipPixels = unpackSkipPixels;
-            this.unpackSkipRows = unpackSkipRows;
+        UnicodeTextureGlyph(int i, int j, int k, int l, NativeImage image) {
+            this.unpackSkipPixels = i;
+            this.unpackSkipRows = j;
+            this.width = k;
+            this.height = l;
             this.image = image;
-        }
-
-        @Override
-        public float getOversample() {
-            return 2.0f;
-        }
-
-        @Override
-        public int getWidth() {
-            return this.width;
-        }
-
-        @Override
-        public int getHeight() {
-            return this.height;
         }
 
         @Override
         public float getAdvance() {
             return this.width / 2 + 1;
-        }
-
-        @Override
-        public void upload(int x, int y) {
-            this.image.upload(0, x, y, this.unpackSkipPixels, this.unpackSkipRows, this.width, this.height, false, false);
-        }
-
-        @Override
-        public boolean hasColor() {
-            return this.image.getFormat().getChannelCount() > 1;
         }
 
         @Override
@@ -205,6 +188,72 @@ implements Font {
         @Override
         public float getBoldOffset() {
             return 0.5f;
+        }
+
+        @Override
+        public GlyphRenderer bake(Function<RenderableGlyph, GlyphRenderer> function) {
+            return function.apply(new RenderableGlyph(){
+
+                @Override
+                public float getOversample() {
+                    return 2.0f;
+                }
+
+                @Override
+                public int getWidth() {
+                    return width;
+                }
+
+                @Override
+                public int getHeight() {
+                    return height;
+                }
+
+                @Override
+                public void upload(int x, int y) {
+                    image.upload(0, x, y, unpackSkipPixels, unpackSkipRows, width, height, false, false);
+                }
+
+                @Override
+                public boolean hasColor() {
+                    return image.getFormat().getChannelCount() > 1;
+                }
+            });
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{UnicodeTextureGlyph.class, "sourceX;sourceY;width;height;source", "unpackSkipPixels", "unpackSkipRows", "width", "height", "image"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{UnicodeTextureGlyph.class, "sourceX;sourceY;width;height;source", "unpackSkipPixels", "unpackSkipRows", "width", "height", "image"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{UnicodeTextureGlyph.class, "sourceX;sourceY;width;height;source", "unpackSkipPixels", "unpackSkipRows", "width", "height", "image"}, this, object);
+        }
+
+        public int unpackSkipPixels() {
+            return this.unpackSkipPixels;
+        }
+
+        public int unpackSkipRows() {
+            return this.unpackSkipRows;
+        }
+
+        public int width() {
+            return this.width;
+        }
+
+        public int height() {
+            return this.height;
+        }
+
+        public NativeImage image() {
+            return this.image;
         }
     }
 
@@ -226,7 +275,7 @@ implements Font {
         private static String getLegacyUnicodeTemplate(JsonObject json) {
             String string = JsonHelper.getString(json, "template");
             try {
-                String.format(string, "");
+                String.format(Locale.ROOT, string, "");
             }
             catch (IllegalFormatException illegalFormatException) {
                 throw new JsonParseException("Invalid legacy unicode template supplied, expected single '%s': " + string);
@@ -239,18 +288,17 @@ implements Font {
         public Font load(ResourceManager manager) {
             UnicodeTextureFont unicodeTextureFont;
             block8: {
-                Resource resource = MinecraftClient.getInstance().getResourceManager().getResource(this.sizes);
+                InputStream inputStream = MinecraftClient.getInstance().getResourceManager().open(this.sizes);
                 try {
-                    byte[] bs = new byte[65536];
-                    resource.getInputStream().read(bs);
+                    byte[] bs = inputStream.readNBytes(65536);
                     unicodeTextureFont = new UnicodeTextureFont(manager, bs, this.template);
-                    if (resource == null) break block8;
+                    if (inputStream == null) break block8;
                 }
                 catch (Throwable throwable) {
                     try {
-                        if (resource != null) {
+                        if (inputStream != null) {
                             try {
-                                resource.close();
+                                inputStream.close();
                             }
                             catch (Throwable throwable2) {
                                 throwable.addSuppressed(throwable2);
@@ -263,7 +311,7 @@ implements Font {
                         return null;
                     }
                 }
-                resource.close();
+                inputStream.close();
             }
             return unicodeTextureFont;
         }

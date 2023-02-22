@@ -8,7 +8,6 @@ package net.minecraft.entity.ai.brain.task;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Random;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.MemoryModuleState;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
@@ -17,21 +16,24 @@ import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 
 public class GoToCelebrateTask<E extends MobEntity>
 extends Task<E> {
+    private final MemoryModuleType<BlockPos> memoryModuleType;
     private final int completionRange;
     private final float speed;
 
-    public GoToCelebrateTask(int completionRange, float speed) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.CELEBRATE_LOCATION, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED)));
+    public GoToCelebrateTask(MemoryModuleType<BlockPos> memoryModuleType, int completionRange, float speed) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(memoryModuleType, (Object)((Object)MemoryModuleState.VALUE_PRESENT), MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.WALK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.LOOK_TARGET, (Object)((Object)MemoryModuleState.REGISTERED)));
+        this.memoryModuleType = memoryModuleType;
         this.completionRange = completionRange;
         this.speed = speed;
     }
 
     @Override
     protected void run(ServerWorld serverWorld, MobEntity mobEntity, long l) {
-        BlockPos blockPos = GoToCelebrateTask.getCelebrateLocation(mobEntity);
+        BlockPos blockPos = this.getCelebrateLocation(mobEntity);
         boolean bl = blockPos.isWithinDistance(mobEntity.getBlockPos(), (double)this.completionRange);
         if (!bl) {
             LookTargetUtil.walkTowards((LivingEntity)mobEntity, GoToCelebrateTask.fuzz(mobEntity, blockPos), this.speed, this.completionRange);
@@ -47,8 +49,8 @@ extends Task<E> {
         return random.nextInt(3) - 1;
     }
 
-    private static BlockPos getCelebrateLocation(MobEntity entity) {
-        return entity.getBrain().getOptionalMemory(MemoryModuleType.CELEBRATE_LOCATION).get();
+    private BlockPos getCelebrateLocation(MobEntity entity) {
+        return entity.getBrain().getOptionalMemory(this.memoryModuleType).get();
     }
 }
 

@@ -23,6 +23,7 @@ import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -34,11 +35,11 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.debug.DebugRenderer;
-import net.minecraft.client.render.debug.NameGenerator;
 import net.minecraft.client.render.debug.PathfindingDebugRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.pathing.Path;
+import net.minecraft.util.NameGenerator;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec3i;
@@ -58,6 +59,7 @@ implements DebugRenderer.Renderer {
     private static final boolean field_32880 = false;
     private static final boolean field_32881 = false;
     private static final boolean field_32882 = true;
+    private static final boolean field_38346 = false;
     private static final boolean field_32883 = true;
     private static final boolean field_32884 = true;
     private static final boolean field_32885 = true;
@@ -68,6 +70,7 @@ implements DebugRenderer.Renderer {
     private static final boolean field_32890 = true;
     private static final boolean field_32891 = true;
     private static final boolean field_32892 = true;
+    private static final boolean field_38347 = true;
     private static final boolean field_32893 = true;
     private static final int POI_RANGE = 30;
     private static final int BRAIN_RANGE = 30;
@@ -219,7 +222,7 @@ implements DebugRenderer.Renderer {
         }
         if (bl) {
             int j = brain.health < brain.maxHealth ? -23296 : -1;
-            VillageDebugRenderer.drawString(brain.pos, i, "health: " + String.format("%.1f", Float.valueOf(brain.health)) + " / " + String.format("%.1f", Float.valueOf(brain.maxHealth)), j, 0.02f);
+            VillageDebugRenderer.drawString(brain.pos, i, "health: " + String.format(Locale.ROOT, "%.1f", Float.valueOf(brain.health)) + " / " + String.format(Locale.ROOT, "%.1f", Float.valueOf(brain.maxHealth)), j, 0.02f);
             ++i;
         }
         if (bl && !brain.inventory.equals("")) {
@@ -240,6 +243,10 @@ implements DebugRenderer.Renderer {
         }
         if (brain.wantsGolem) {
             VillageDebugRenderer.drawString(brain.pos, i, "Wants Golem", -23296, 0.02f);
+            ++i;
+        }
+        if (bl && brain.angerLevel != -1) {
+            VillageDebugRenderer.drawString(brain.pos, i, "Anger Level: " + brain.angerLevel, -98404, 0.02f);
             ++i;
         }
         if (bl) {
@@ -318,9 +325,9 @@ implements DebugRenderer.Renderer {
     private Map<BlockPos, List<String>> getGhostPointsOfInterest() {
         HashMap map = Maps.newHashMap();
         for (Brain brain : this.brains.values()) {
-            for (BlockPos blockPos2 : Iterables.concat(brain.pointsOfInterest, brain.potentialJobSites)) {
-                if (this.pointsOfInterest.containsKey(blockPos2)) continue;
-                map.computeIfAbsent(blockPos2, blockPos -> Lists.newArrayList()).add(brain.name);
+            for (BlockPos blockPos : Iterables.concat(brain.pointsOfInterest, brain.potentialJobSites)) {
+                if (this.pointsOfInterest.containsKey(blockPos)) continue;
+                map.computeIfAbsent(blockPos, pos -> Lists.newArrayList()).add(brain.name);
             }
         }
         return map;
@@ -358,6 +365,7 @@ implements DebugRenderer.Renderer {
         public final String inventory;
         public final Path path;
         public final boolean wantsGolem;
+        public final int angerLevel;
         public final List<String> possibleActivities = Lists.newArrayList();
         public final List<String> runningTasks = Lists.newArrayList();
         public final List<String> memories = Lists.newArrayList();
@@ -365,7 +373,7 @@ implements DebugRenderer.Renderer {
         public final Set<BlockPos> pointsOfInterest = Sets.newHashSet();
         public final Set<BlockPos> potentialJobSites = Sets.newHashSet();
 
-        public Brain(UUID uuid, int entityId, String name, String profession, int xp, float health, float maxHealth, Position pos, String inventory, @Nullable Path path, boolean wantsGolem) {
+        public Brain(UUID uuid, int entityId, String name, String profession, int xp, float health, float maxHealth, Position pos, String inventory, @Nullable Path path, boolean wantsGolem, int angerLevel) {
             this.uuid = uuid;
             this.entityId = entityId;
             this.name = name;
@@ -377,6 +385,7 @@ implements DebugRenderer.Renderer {
             this.inventory = inventory;
             this.path = path;
             this.wantsGolem = wantsGolem;
+            this.angerLevel = angerLevel;
         }
 
         boolean isPointOfInterest(BlockPos pos) {

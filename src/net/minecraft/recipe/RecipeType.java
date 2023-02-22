@@ -3,8 +3,6 @@
  */
 package net.minecraft.recipe;
 
-import java.util.Optional;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.recipe.BlastingRecipe;
 import net.minecraft.recipe.CampfireCookingRecipe;
 import net.minecraft.recipe.CraftingRecipe;
@@ -15,7 +13,6 @@ import net.minecraft.recipe.SmokingRecipe;
 import net.minecraft.recipe.StonecuttingRecipe;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.World;
 
 public interface RecipeType<T extends Recipe<?>> {
     public static final RecipeType<CraftingRecipe> CRAFTING = RecipeType.register("crafting");
@@ -33,10 +30,6 @@ public interface RecipeType<T extends Recipe<?>> {
                 return id;
             }
         });
-    }
-
-    default public <C extends Inventory> Optional<T> match(Recipe<C> recipe, World world, C inventory) {
-        return recipe.matches(inventory, world) ? Optional.of(recipe) : Optional.empty();
     }
 }
 

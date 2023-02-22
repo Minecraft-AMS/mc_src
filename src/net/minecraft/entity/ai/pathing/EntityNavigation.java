@@ -23,10 +23,12 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.Util;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkCache;
 import org.jetbrains.annotations.Nullable;
@@ -56,10 +58,10 @@ public abstract class EntityNavigation {
     private final PathNodeNavigator pathNodeNavigator;
     private boolean nearPathStartPos;
 
-    public EntityNavigation(MobEntity mob, World world) {
-        this.entity = mob;
+    public EntityNavigation(MobEntity entity, World world) {
+        this.entity = entity;
         this.world = world;
-        int i = MathHelper.floor(mob.getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE) * 16.0);
+        int i = MathHelper.floor(entity.getAttributeValue(EntityAttributes.GENERIC_FOLLOW_RANGE) * 16.0);
         this.pathNodeNavigator = this.createPathNodeNavigator(i);
     }
 
@@ -333,6 +335,11 @@ public abstract class EntityNavigation {
 
     protected boolean canPathDirectlyThrough(Vec3d origin, Vec3d target) {
         return false;
+    }
+
+    protected static boolean doesNotCollide(MobEntity entity, Vec3d startPos, Vec3d entityPos) {
+        Vec3d vec3d = new Vec3d(entityPos.x, entityPos.y + (double)entity.getHeight() * 0.5, entityPos.z);
+        return entity.world.raycast(new RaycastContext(startPos, vec3d, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity)).getType() == HitResult.Type.MISS;
     }
 
     public boolean isValidPosition(BlockPos pos) {

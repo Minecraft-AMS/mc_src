@@ -18,11 +18,12 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import net.minecraft.network.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 public class CriterionProgress {
-    private static final SimpleDateFormat FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
+    private static final SimpleDateFormat FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT);
     @Nullable
     private Date obtainedDate;
 
@@ -48,10 +49,7 @@ public class CriterionProgress {
     }
 
     public void toPacket(PacketByteBuf buf) {
-        buf.writeBoolean(this.obtainedDate != null);
-        if (this.obtainedDate != null) {
-            buf.writeDate(this.obtainedDate);
-        }
+        buf.writeNullable(this.obtainedDate, PacketByteBuf::writeDate);
     }
 
     public JsonElement toJson() {
@@ -63,9 +61,7 @@ public class CriterionProgress {
 
     public static CriterionProgress fromPacket(PacketByteBuf buf) {
         CriterionProgress criterionProgress = new CriterionProgress();
-        if (buf.readBoolean()) {
-            criterionProgress.obtainedDate = buf.readDate();
-        }
+        criterionProgress.obtainedDate = (Date)buf.readNullable(PacketByteBuf::readDate);
         return criterionProgress;
     }
 

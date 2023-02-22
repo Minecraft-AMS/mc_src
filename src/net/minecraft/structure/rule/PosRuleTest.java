@@ -7,9 +7,9 @@
 package net.minecraft.structure.rule;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.structure.rule.PosRuleTestType;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 
 public abstract class PosRuleTest {

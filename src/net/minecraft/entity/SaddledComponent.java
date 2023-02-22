@@ -3,10 +3,10 @@
  */
 package net.minecraft.entity;
 
-import java.util.Random;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.math.random.Random;
 
 public class SaddledComponent {
     private static final int MIN_BOOST_TIME = 140;

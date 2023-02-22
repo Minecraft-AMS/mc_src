@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.particle;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.particle.Particle;
@@ -27,6 +26,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class BlockLeakParticle
@@ -161,7 +161,7 @@ extends SpriteBillboardParticle {
 
         public FallingSporeBlossomFactory(SpriteProvider spriteProvider) {
             this.spriteProvider = spriteProvider;
-            this.random = new Random();
+            this.random = Random.create();
         }
 
         @Override

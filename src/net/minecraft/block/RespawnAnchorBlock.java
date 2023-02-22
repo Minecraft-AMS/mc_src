@@ -9,7 +9,6 @@ package net.minecraft.block;
 
 import com.google.common.collect.ImmutableList;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -38,6 +37,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import net.minecraft.world.World;
@@ -130,7 +130,7 @@ extends Block {
     }
 
     public static boolean isNether(World world) {
-        return world.getDimension().isRespawnAnchorWorking();
+        return world.getDimension().respawnAnchorWorks();
     }
 
     public static void charge(World world, BlockPos pos, BlockState state) {

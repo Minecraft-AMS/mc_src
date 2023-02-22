@@ -13,19 +13,18 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class DirectConnectScreen
 extends Screen {
-    private static final Text ENTER_IP_TEXT = new TranslatableText("addServer.enterIp");
+    private static final Text ENTER_IP_TEXT = Text.translatable("addServer.enterIp");
     private ButtonWidget selectServerButton;
     private final ServerInfo serverEntry;
     private TextFieldWidget addressField;
@@ -33,7 +32,7 @@ extends Screen {
     private final Screen parent;
 
     public DirectConnectScreen(Screen parent, BooleanConsumer callback, ServerInfo server) {
-        super(new TranslatableText("selectServer.direct"));
+        super(Text.translatable("selectServer.direct"));
         this.parent = parent;
         this.serverEntry = server;
         this.callback = callback;
@@ -56,9 +55,9 @@ extends Screen {
     @Override
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.selectServerButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20, new TranslatableText("selectServer.select"), button -> this.saveAndClose()));
+        this.selectServerButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20, Text.translatable("selectServer.select"), button -> this.saveAndClose()));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20, ScreenTexts.CANCEL, button -> this.callback.accept(false)));
-        this.addressField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 116, 200, 20, new TranslatableText("addServer.enterIp"));
+        this.addressField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 116, 200, 20, Text.translatable("addServer.enterIp"));
         this.addressField.setMaxLength(128);
         this.addressField.setTextFieldFocused(true);
         this.addressField.setText(this.client.options.lastServer);

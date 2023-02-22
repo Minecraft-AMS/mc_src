@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.block;
 
@@ -7,6 +10,7 @@ import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.enums.Instrument;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.particle.ParticleTypes;
@@ -24,6 +28,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
+import org.jetbrains.annotations.Nullable;
 
 public class NoteBlock
 extends Block {
@@ -50,20 +56,22 @@ extends Block {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         boolean bl = world.isReceivingRedstonePower(pos);
         if (bl != state.get(POWERED)) {
             if (bl) {
-                this.playNote(world, pos);
+                this.playNote(null, world, pos);
             }
             world.setBlockState(pos, (BlockState)state.with(POWERED, bl), 3);
         }
     }
 
-    private void playNote(World world, BlockPos pos) {
-        if (world.getBlockState(pos.up()).isAir()) {
-            world.addSyncedBlockEvent(pos, this, 0, 0);
+    private void playNote(@Nullable Entity entity, World world, BlockPos pos) {
+        if (!world.getBlockState(pos.up()).isAir()) {
+            return;
         }
+        world.addSyncedBlockEvent(pos, this, 0, 0);
+        world.emitGameEvent(entity, GameEvent.NOTE_BLOCK_PLAY, pos);
     }
 
     @Override
@@ -73,7 +81,7 @@ extends Block {
         }
         state = (BlockState)state.cycle(NOTE);
         world.setBlockState(pos, state, 3);
-        this.playNote(world, pos);
+        this.playNote(player, world, pos);
         player.incrementStat(Stats.TUNE_NOTEBLOCK);
         return ActionResult.CONSUME;
     }
@@ -83,7 +91,7 @@ extends Block {
         if (world.isClient) {
             return;
         }
-        this.playNote(world, pos);
+        this.playNote(player, world, pos);
         player.incrementStat(Stats.PLAY_NOTEBLOCK);
     }
 

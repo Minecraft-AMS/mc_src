@@ -28,15 +28,20 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.FontLoader;
+import net.minecraft.client.font.Glyph;
+import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
 import net.minecraft.client.texture.NativeImage;
-import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
@@ -62,8 +67,8 @@ implements Font {
 
     @Override
     @Nullable
-    public RenderableGlyph getGlyph(int codePoint) {
-        return (RenderableGlyph)this.glyphs.get(codePoint);
+    public Glyph getGlyph(int codePoint) {
+        return (Glyph)this.glyphs.get(codePoint);
     }
 
     @Override
@@ -73,15 +78,16 @@ implements Font {
 
     @Environment(value=EnvType.CLIENT)
     static final class BitmapFontGlyph
-    implements RenderableGlyph {
-        private final float scaleFactor;
-        private final NativeImage image;
-        private final int x;
-        private final int y;
-        private final int width;
-        private final int height;
+    extends Record
+    implements Glyph {
+        final float scaleFactor;
+        final NativeImage image;
+        final int x;
+        final int y;
+        final int width;
+        final int height;
         private final int advance;
-        private final int ascent;
+        final int ascent;
 
         BitmapFontGlyph(float scaleFactor, NativeImage image, int x, int y, int width, int height, int advance, int ascent) {
             this.scaleFactor = scaleFactor;
@@ -95,38 +101,91 @@ implements Font {
         }
 
         @Override
-        public float getOversample() {
-            return 1.0f / this.scaleFactor;
-        }
-
-        @Override
-        public int getWidth() {
-            return this.width;
-        }
-
-        @Override
-        public int getHeight() {
-            return this.height;
-        }
-
-        @Override
         public float getAdvance() {
             return this.advance;
         }
 
         @Override
-        public float getAscent() {
-            return RenderableGlyph.super.getAscent() + 7.0f - (float)this.ascent;
+        public GlyphRenderer bake(Function<RenderableGlyph, GlyphRenderer> function) {
+            return function.apply(new RenderableGlyph(){
+
+                @Override
+                public float getOversample() {
+                    return 1.0f / scaleFactor;
+                }
+
+                @Override
+                public int getWidth() {
+                    return width;
+                }
+
+                @Override
+                public int getHeight() {
+                    return height;
+                }
+
+                @Override
+                public float getAscent() {
+                    return RenderableGlyph.super.getAscent() + 7.0f - (float)ascent;
+                }
+
+                @Override
+                public void upload(int x, int y) {
+                    image.upload(0, x, y, x, y, width, height, false, false);
+                }
+
+                @Override
+                public boolean hasColor() {
+                    return image.getFormat().getChannelCount() > 1;
+                }
+            });
         }
 
         @Override
-        public void upload(int x, int y) {
-            this.image.upload(0, x, y, this.x, this.y, this.width, this.height, false, false);
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{BitmapFontGlyph.class, "scale;image;offsetX;offsetY;width;height;advance;ascent", "scaleFactor", "image", "x", "y", "width", "height", "advance", "ascent"}, this);
         }
 
         @Override
-        public boolean hasColor() {
-            return this.image.getFormat().getChannelCount() > 1;
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{BitmapFontGlyph.class, "scale;image;offsetX;offsetY;width;height;advance;ascent", "scaleFactor", "image", "x", "y", "width", "height", "advance", "ascent"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{BitmapFontGlyph.class, "scale;image;offsetX;offsetY;width;height;advance;ascent", "scaleFactor", "image", "x", "y", "width", "height", "advance", "ascent"}, this, object);
+        }
+
+        public float scaleFactor() {
+            return this.scaleFactor;
+        }
+
+        public NativeImage image() {
+            return this.image;
+        }
+
+        public int x() {
+            return this.x;
+        }
+
+        public int y() {
+            return this.y;
+        }
+
+        public int width() {
+            return this.width;
+        }
+
+        public int height() {
+            return this.height;
+        }
+
+        public int advance() {
+            return this.advance;
+        }
+
+        public int ascent() {
+            return this.ascent;
         }
     }
 
@@ -173,9 +232,9 @@ implements Font {
         public Font load(ResourceManager manager) {
             BitmapFont bitmapFont;
             block10: {
-                Resource resource = manager.getResource(this.filename);
+                InputStream inputStream = manager.open(this.filename);
                 try {
-                    NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, resource.getInputStream());
+                    NativeImage nativeImage = NativeImage.read(NativeImage.Format.RGBA, inputStream);
                     int i = nativeImage.getWidth();
                     int j = nativeImage.getHeight();
                     int k = i / this.chars.get(0).length;
@@ -188,18 +247,18 @@ implements Font {
                             int q;
                             BitmapFontGlyph bitmapFontGlyph;
                             int p = n++;
-                            if (o == 0 || o == 32 || (bitmapFontGlyph = (BitmapFontGlyph)int2ObjectMap.put(o, (Object)new BitmapFontGlyph(f, nativeImage, p * k, m * l, k, l, (int)(0.5 + (double)((float)(q = this.findCharacterStartX(nativeImage, k, l, p, m)) * f)) + 1, this.ascent))) == null) continue;
+                            if (o == 0 || (bitmapFontGlyph = (BitmapFontGlyph)int2ObjectMap.put(o, (Object)new BitmapFontGlyph(f, nativeImage, p * k, m * l, k, l, (int)(0.5 + (double)((float)(q = this.findCharacterStartX(nativeImage, k, l, p, m)) * f)) + 1, this.ascent))) == null) continue;
                             LOGGER.warn("Codepoint '{}' declared multiple times in {}", (Object)Integer.toHexString(o), (Object)this.filename);
                         }
                     }
                     bitmapFont = new BitmapFont(nativeImage, (Int2ObjectMap<BitmapFontGlyph>)int2ObjectMap);
-                    if (resource == null) break block10;
+                    if (inputStream == null) break block10;
                 }
                 catch (Throwable throwable) {
                     try {
-                        if (resource != null) {
+                        if (inputStream != null) {
                             try {
-                                resource.close();
+                                inputStream.close();
                             }
                             catch (Throwable throwable2) {
                                 throwable.addSuppressed(throwable2);
@@ -211,7 +270,7 @@ implements Font {
                         throw new RuntimeException(iOException.getMessage());
                     }
                 }
-                resource.close();
+                inputStream.close();
             }
             return bitmapFont;
         }

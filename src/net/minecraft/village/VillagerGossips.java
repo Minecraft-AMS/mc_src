@@ -35,7 +35,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.DoublePredicate;
@@ -44,6 +43,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.dynamic.DynamicSerializableUuid;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.village.VillageGossipType;
 
 public class VillagerGossips {

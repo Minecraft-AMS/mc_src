@@ -43,8 +43,8 @@ extends DataFix {
     private static final Splitter SPLIT_ON_ASTERISK = Splitter.on((char)'*').limit(2);
     private static final Splitter SPLIT_ON_COLON = Splitter.on((char)':').limit(3);
 
-    public LevelFlatGeneratorInfoFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public LevelFlatGeneratorInfoFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public TypeRewriteRule makeRule() {

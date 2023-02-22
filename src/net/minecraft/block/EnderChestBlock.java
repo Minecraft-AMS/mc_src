@@ -6,7 +6,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractChestBlock;
 import net.minecraft.block.Block;
@@ -38,7 +37,6 @@ import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -46,6 +44,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -58,7 +57,7 @@ implements Waterloggable {
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
     public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
     protected static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 14.0, 15.0);
-    private static final Text CONTAINER_NAME = new TranslatableText("container.enderchest");
+    private static final Text CONTAINER_NAME = Text.translatable("container.enderchest");
 
     protected EnderChestBlock(AbstractBlock.Settings settings) {
         super(settings, () -> BlockEntityType.ENDER_CHEST);

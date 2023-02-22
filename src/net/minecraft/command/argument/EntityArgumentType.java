@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.EntitySelectorReader;
@@ -39,19 +40,17 @@ import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class EntityArgumentType
 implements ArgumentType<EntitySelector> {
     private static final Collection<String> EXAMPLES = Arrays.asList("Player", "0123", "@e", "@e[type=foo]", "dd12be42-52a9-4a91-a8a1-11c01849e498");
-    public static final SimpleCommandExceptionType TOO_MANY_ENTITIES_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.toomany"));
-    public static final SimpleCommandExceptionType TOO_MANY_PLAYERS_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.player.toomany"));
-    public static final SimpleCommandExceptionType PLAYER_SELECTOR_HAS_ENTITIES_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.player.entities"));
-    public static final SimpleCommandExceptionType ENTITY_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.notfound.entity"));
-    public static final SimpleCommandExceptionType PLAYER_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.notfound.player"));
-    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed"));
-    private static final byte SINGLE_TARGET_MASK = 1;
-    private static final byte PLAYERS_ONLY_MASK = 2;
+    public static final SimpleCommandExceptionType TOO_MANY_ENTITIES_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.toomany"));
+    public static final SimpleCommandExceptionType TOO_MANY_PLAYERS_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.player.toomany"));
+    public static final SimpleCommandExceptionType PLAYER_SELECTOR_HAS_ENTITIES_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.player.entities"));
+    public static final SimpleCommandExceptionType ENTITY_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.notfound.entity"));
+    public static final SimpleCommandExceptionType PLAYER_NOT_FOUND_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.notfound.player"));
+    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.selector.not_allowed"));
     final boolean singleTarget;
     final boolean playersOnly;
 
@@ -128,10 +127,11 @@ implements ArgumentType<EntitySelector> {
     }
 
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder2) {
-        if (context.getSource() instanceof CommandSource) {
+        Object object = context.getSource();
+        if (object instanceof CommandSource) {
+            CommandSource commandSource = (CommandSource)object;
             StringReader stringReader = new StringReader(builder2.getInput());
             stringReader.setCursor(builder2.getStart());
-            CommandSource commandSource = (CommandSource)context.getSource();
             EntitySelectorReader entitySelectorReader = new EntitySelectorReader(stringReader, commandSource.hasPermissionLevel(2));
             try {
                 entitySelectorReader.read();
@@ -157,34 +157,68 @@ implements ArgumentType<EntitySelector> {
     }
 
     public static class Serializer
-    implements ArgumentSerializer<EntityArgumentType> {
+    implements ArgumentSerializer<EntityArgumentType, Properties> {
+        private static final byte SINGLE_FLAG = 1;
+        private static final byte PLAYERS_ONLY_FLAG = 2;
+
         @Override
-        public void toPacket(EntityArgumentType entityArgumentType, PacketByteBuf packetByteBuf) {
-            byte b = 0;
-            if (entityArgumentType.singleTarget) {
-                b = (byte)(b | 1);
+        public void writePacket(Properties properties, PacketByteBuf packetByteBuf) {
+            int i = 0;
+            if (properties.single) {
+                i |= 1;
             }
-            if (entityArgumentType.playersOnly) {
-                b = (byte)(b | 2);
+            if (properties.playersOnly) {
+                i |= 2;
             }
-            packetByteBuf.writeByte(b);
+            packetByteBuf.writeByte(i);
         }
 
         @Override
-        public EntityArgumentType fromPacket(PacketByteBuf packetByteBuf) {
+        public Properties fromPacket(PacketByteBuf packetByteBuf) {
             byte b = packetByteBuf.readByte();
-            return new EntityArgumentType((b & 1) != 0, (b & 2) != 0);
+            return new Properties((b & 1) != 0, (b & 2) != 0);
         }
 
         @Override
-        public void toJson(EntityArgumentType entityArgumentType, JsonObject jsonObject) {
-            jsonObject.addProperty("amount", entityArgumentType.singleTarget ? "single" : "multiple");
-            jsonObject.addProperty("type", entityArgumentType.playersOnly ? "players" : "entities");
+        public void writeJson(Properties properties, JsonObject jsonObject) {
+            jsonObject.addProperty("amount", properties.single ? "single" : "multiple");
+            jsonObject.addProperty("type", properties.playersOnly ? "players" : "entities");
         }
 
         @Override
-        public /* synthetic */ ArgumentType fromPacket(PacketByteBuf buf) {
+        public Properties getArgumentTypeProperties(EntityArgumentType entityArgumentType) {
+            return new Properties(entityArgumentType.singleTarget, entityArgumentType.playersOnly);
+        }
+
+        @Override
+        public /* synthetic */ ArgumentSerializer.ArgumentTypeProperties fromPacket(PacketByteBuf buf) {
             return this.fromPacket(buf);
+        }
+
+        public final class Properties
+        implements ArgumentSerializer.ArgumentTypeProperties<EntityArgumentType> {
+            final boolean single;
+            final boolean playersOnly;
+
+            Properties(boolean single, boolean playersOnly) {
+                this.single = single;
+                this.playersOnly = playersOnly;
+            }
+
+            @Override
+            public EntityArgumentType createType(CommandRegistryAccess commandRegistryAccess) {
+                return new EntityArgumentType(this.single, this.playersOnly);
+            }
+
+            @Override
+            public ArgumentSerializer<EntityArgumentType, ?> getSerializer() {
+                return Serializer.this;
+            }
+
+            @Override
+            public /* synthetic */ ArgumentType createType(CommandRegistryAccess commandRegistryAccess) {
+                return this.createType(commandRegistryAccess);
+            }
         }
     }
 }

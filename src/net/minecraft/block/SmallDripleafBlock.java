@@ -6,7 +6,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BigDripleafBlock;
 import net.minecraft.block.Block;
@@ -31,6 +30,7 @@ import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -142,11 +142,6 @@ Waterloggable {
     @Override
     public BlockState mirror(BlockState state, BlockMirror mirror) {
         return state.rotate(mirror.getRotation(state.get(FACING)));
-    }
-
-    @Override
-    public AbstractBlock.OffsetType getOffsetType() {
-        return AbstractBlock.OffsetType.XYZ;
     }
 
     @Override

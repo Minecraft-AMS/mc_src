@@ -3,12 +3,12 @@
  */
 package net.minecraft.enchantment;
 
-import java.util.Random;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentTarget;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.random.Random;
 
 public class UnbreakingEnchantment
 extends Enchantment {

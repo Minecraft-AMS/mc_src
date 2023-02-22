@@ -36,8 +36,8 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class FurnaceRecipesFix
 extends DataFix {
-    public FurnaceRecipesFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public FurnaceRecipesFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     protected TypeRewriteRule makeRule() {

@@ -14,11 +14,11 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Random;
 import net.minecraft.util.collection.DataPool;
 import net.minecraft.util.collection.Weighted;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.util.math.intprovider.IntProviderType;
+import net.minecraft.util.math.random.Random;
 
 public class WeightedListIntProvider
 extends IntProvider {

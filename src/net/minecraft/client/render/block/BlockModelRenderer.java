@@ -14,7 +14,6 @@ import it.unimi.dsi.fastutil.longs.Long2FloatLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntLinkedOpenHashMap;
 import java.util.BitSet;
 import java.util.List;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
@@ -35,6 +34,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockRenderView;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,15 +51,16 @@ public class BlockModelRenderer {
         this.colors = colors;
     }
 
-    public boolean render(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
+    public void render(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
         boolean bl = MinecraftClient.isAmbientOcclusionEnabled() && state.getLuminance() == 0 && model.useAmbientOcclusion();
         Vec3d vec3d = state.getModelOffset(world, pos);
         matrices.translate(vec3d.x, vec3d.y, vec3d.z);
         try {
             if (bl) {
-                return this.renderSmooth(world, model, state, pos, matrices, vertexConsumer, cull, random, seed, overlay);
+                this.renderSmooth(world, model, state, pos, matrices, vertexConsumer, cull, random, seed, overlay);
+            } else {
+                this.renderFlat(world, model, state, pos, matrices, vertexConsumer, cull, random, seed, overlay);
             }
-            return this.renderFlat(world, model, state, pos, matrices, vertexConsumer, cull, random, seed, overlay);
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Tesselating block model");
@@ -70,8 +71,7 @@ public class BlockModelRenderer {
         }
     }
 
-    public boolean renderSmooth(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
-        boolean bl = false;
+    public void renderSmooth(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
         float[] fs = new float[DIRECTIONS.length * 2];
         BitSet bitSet = new BitSet(3);
         AmbientOcclusionCalculator ambientOcclusionCalculator = new AmbientOcclusionCalculator();
@@ -83,19 +83,15 @@ public class BlockModelRenderer {
             mutable.set((Vec3i)pos, direction);
             if (cull && !Block.shouldDrawSide(state, world, pos, direction, mutable)) continue;
             this.renderQuadsSmooth(world, state, pos, matrices, vertexConsumer, list, fs, bitSet, ambientOcclusionCalculator, overlay);
-            bl = true;
         }
         random.setSeed(seed);
         List<BakedQuad> list2 = model.getQuads(state, null, random);
         if (!list2.isEmpty()) {
             this.renderQuadsSmooth(world, state, pos, matrices, vertexConsumer, list2, fs, bitSet, ambientOcclusionCalculator, overlay);
-            bl = true;
         }
-        return bl;
     }
 
-    public boolean renderFlat(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
-        boolean bl = false;
+    public void renderFlat(BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
         BitSet bitSet = new BitSet(3);
         BlockPos.Mutable mutable = pos.mutableCopy();
         for (Direction direction : DIRECTIONS) {
@@ -106,15 +102,12 @@ public class BlockModelRenderer {
             if (cull && !Block.shouldDrawSide(state, world, pos, direction, mutable)) continue;
             int i = WorldRenderer.getLightmapCoordinates(world, state, mutable);
             this.renderQuadsFlat(world, state, pos, i, overlay, false, matrices, vertexConsumer, list, bitSet);
-            bl = true;
         }
         random.setSeed(seed);
         List<BakedQuad> list2 = model.getQuads(state, null, random);
         if (!list2.isEmpty()) {
             this.renderQuadsFlat(world, state, pos, -1, overlay, true, matrices, vertexConsumer, list2, bitSet);
-            bl = true;
         }
-        return bl;
     }
 
     private void renderQuadsSmooth(BlockRenderView world, BlockState state, BlockPos pos, MatrixStack matrices, VertexConsumer vertexConsumer, List<BakedQuad> quads, float[] box, BitSet flags, AmbientOcclusionCalculator ambientOcclusionCalculator, int overlay) {
@@ -225,7 +218,7 @@ public class BlockModelRenderer {
     }
 
     public void render(MatrixStack.Entry entry, VertexConsumer vertexConsumer, @Nullable BlockState state, BakedModel bakedModel, float red, float green, float blue, int light, int overlay) {
-        Random random = new Random();
+        Random random = Random.create();
         long l = 42L;
         for (Direction direction : DIRECTIONS) {
             random.setSeed(42L);
@@ -262,7 +255,7 @@ public class BlockModelRenderer {
     }
 
     @Environment(value=EnvType.CLIENT)
-    class AmbientOcclusionCalculator {
+    static class AmbientOcclusionCalculator {
         final float[] brightness = new float[4];
         final int[] light = new int[4];
 
@@ -431,7 +424,7 @@ public class BlockModelRenderer {
         private final Long2IntLinkedOpenHashMap intCache = Util.make(() -> {
             Long2IntLinkedOpenHashMap long2IntLinkedOpenHashMap = new Long2IntLinkedOpenHashMap(100, 0.25f){
 
-                protected void rehash(int i) {
+                protected void rehash(int newN) {
                 }
             };
             long2IntLinkedOpenHashMap.defaultReturnValue(Integer.MAX_VALUE);
@@ -440,7 +433,7 @@ public class BlockModelRenderer {
         private final Long2FloatLinkedOpenHashMap floatCache = Util.make(() -> {
             Long2FloatLinkedOpenHashMap long2FloatLinkedOpenHashMap = new Long2FloatLinkedOpenHashMap(100, 0.25f){
 
-                protected void rehash(int i) {
+                protected void rehash(int newN) {
                 }
             };
             long2FloatLinkedOpenHashMap.defaultReturnValue(Float.NaN);
@@ -508,7 +501,7 @@ public class BlockModelRenderer {
         final NeighborOrientation[] field_4185;
         final NeighborOrientation[] field_4180;
         final NeighborOrientation[] field_4188;
-        private static final NeighborData[] field_4190;
+        private static final NeighborData[] VALUES;
         private static final /* synthetic */ NeighborData[] field_4193;
 
         public static NeighborData[] values() {
@@ -529,7 +522,7 @@ public class BlockModelRenderer {
         }
 
         public static NeighborData getData(Direction direction) {
-            return field_4190[direction.getId()];
+            return VALUES[direction.getId()];
         }
 
         private static /* synthetic */ NeighborData[] method_36917() {
@@ -538,13 +531,13 @@ public class BlockModelRenderer {
 
         static {
             field_4193 = NeighborData.method_36917();
-            field_4190 = Util.make(new NeighborData[6], neighborDatas -> {
-                neighborDatas[Direction.DOWN.getId()] = DOWN;
-                neighborDatas[Direction.UP.getId()] = UP;
-                neighborDatas[Direction.NORTH.getId()] = NORTH;
-                neighborDatas[Direction.SOUTH.getId()] = SOUTH;
-                neighborDatas[Direction.WEST.getId()] = WEST;
-                neighborDatas[Direction.EAST.getId()] = EAST;
+            VALUES = Util.make(new NeighborData[6], values -> {
+                values[Direction.DOWN.getId()] = DOWN;
+                values[Direction.UP.getId()] = UP;
+                values[Direction.NORTH.getId()] = NORTH;
+                values[Direction.SOUTH.getId()] = SOUTH;
+                values[Direction.WEST.getId()] = WEST;
+                values[Direction.EAST.getId()] = EAST;
             });
         }
     }
@@ -629,13 +622,13 @@ public class BlockModelRenderer {
 
         static {
             field_4208 = Translation.method_36918();
-            VALUES = Util.make(new Translation[6], translations -> {
-                translations[Direction.DOWN.getId()] = DOWN;
-                translations[Direction.UP.getId()] = UP;
-                translations[Direction.NORTH.getId()] = NORTH;
-                translations[Direction.SOUTH.getId()] = SOUTH;
-                translations[Direction.WEST.getId()] = WEST;
-                translations[Direction.EAST.getId()] = EAST;
+            VALUES = Util.make(new Translation[6], values -> {
+                values[Direction.DOWN.getId()] = DOWN;
+                values[Direction.UP.getId()] = UP;
+                values[Direction.NORTH.getId()] = NORTH;
+                values[Direction.SOUTH.getId()] = SOUTH;
+                values[Direction.WEST.getId()] = WEST;
+                values[Direction.EAST.getId()] = EAST;
             });
         }
     }

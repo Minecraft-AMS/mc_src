@@ -1,16 +1,12 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.event.listener;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
+import java.util.function.BiConsumer;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
-import org.jetbrains.annotations.Nullable;
 
 public interface GameEventDispatcher {
     public static final GameEventDispatcher EMPTY = new GameEventDispatcher(){
@@ -29,7 +25,8 @@ public interface GameEventDispatcher {
         }
 
         @Override
-        public void dispatch(GameEvent event, @Nullable Entity entity, BlockPos pos) {
+        public boolean dispatch(GameEvent event, Vec3d pos, GameEvent.Emitter emitter, BiConsumer<GameEventListener, Vec3d> onListenerAccept) {
+            return false;
         }
     };
 
@@ -39,6 +36,6 @@ public interface GameEventDispatcher {
 
     public void removeListener(GameEventListener var1);
 
-    public void dispatch(GameEvent var1, @Nullable Entity var2, BlockPos var3);
+    public boolean dispatch(GameEvent var1, Vec3d var2, GameEvent.Emitter var3, BiConsumer<GameEventListener, Vec3d> var4);
 }
 

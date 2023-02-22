@@ -42,7 +42,7 @@ extends DispenserBlock {
         ItemStack itemStack2;
         BlockPointerImpl blockPointerImpl = new BlockPointerImpl(world, pos);
         DispenserBlockEntity dispenserBlockEntity = (DispenserBlockEntity)blockPointerImpl.getBlockEntity();
-        int i = dispenserBlockEntity.chooseNonEmptySlot();
+        int i = dispenserBlockEntity.chooseNonEmptySlot(world.random);
         if (i < 0) {
             world.syncWorldEvent(1001, pos, 0);
             return;

@@ -22,18 +22,18 @@ public class GlBlendState {
     private final int srcAlpha;
     private final int dstRgb;
     private final int dstAlpha;
-    private final int func;
+    private final int mode;
     private final boolean separateBlend;
     private final boolean blendDisabled;
 
-    private GlBlendState(boolean separateBlend, boolean blendDisabled, int srcRgb, int dstRgb, int srcAlpha, int dstAlpha, int func) {
+    private GlBlendState(boolean separateBlend, boolean blendDisabled, int srcRgb, int dstRgb, int srcAlpha, int dstAlpha, int mode) {
         this.separateBlend = separateBlend;
         this.srcRgb = srcRgb;
         this.dstRgb = dstRgb;
         this.srcAlpha = srcAlpha;
         this.dstAlpha = dstAlpha;
         this.blendDisabled = blendDisabled;
-        this.func = func;
+        this.mode = mode;
     }
 
     public GlBlendState() {
@@ -60,7 +60,7 @@ public class GlBlendState {
             }
             RenderSystem.enableBlend();
         }
-        RenderSystem.blendEquation(this.func);
+        RenderSystem.blendEquation(this.mode);
         if (this.separateBlend) {
             RenderSystem.blendFuncSeparate(this.srcRgb, this.dstRgb, this.srcAlpha, this.dstAlpha);
         } else {
@@ -76,7 +76,7 @@ public class GlBlendState {
             return false;
         }
         GlBlendState glBlendState = (GlBlendState)o;
-        if (this.func != glBlendState.func) {
+        if (this.mode != glBlendState.mode) {
             return false;
         }
         if (this.dstAlpha != glBlendState.dstAlpha) {
@@ -102,7 +102,7 @@ public class GlBlendState {
         i = 31 * i + this.srcAlpha;
         i = 31 * i + this.dstRgb;
         i = 31 * i + this.dstAlpha;
-        i = 31 * i + this.func;
+        i = 31 * i + this.mode;
         i = 31 * i + (this.separateBlend ? 1 : 0);
         i = 31 * i + (this.blendDisabled ? 1 : 0);
         return i;
@@ -112,7 +112,7 @@ public class GlBlendState {
         return this.blendDisabled;
     }
 
-    public static int getFuncFromString(String name) {
+    public static int getModeFromString(String name) {
         String string = name.trim().toLowerCase(Locale.ROOT);
         if ("add".equals(string)) {
             return 32774;
@@ -135,7 +135,7 @@ public class GlBlendState {
         return 32774;
     }
 
-    public static int getComponentFromString(String expression) {
+    public static int getFactorFromString(String expression) {
         String string = expression.trim().toLowerCase(Locale.ROOT);
         string = string.replaceAll("_", "");
         string = string.replaceAll("one", "1");

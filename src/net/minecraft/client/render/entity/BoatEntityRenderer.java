@@ -22,6 +22,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.BoatEntityModel;
+import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.vehicle.BoatEntity;
@@ -35,10 +36,22 @@ public class BoatEntityRenderer
 extends EntityRenderer<BoatEntity> {
     private final Map<BoatEntity.Type, Pair<Identifier, BoatEntityModel>> texturesAndModels;
 
-    public BoatEntityRenderer(EntityRendererFactory.Context context) {
-        super(context);
+    public BoatEntityRenderer(EntityRendererFactory.Context ctx, boolean chest) {
+        super(ctx);
         this.shadowRadius = 0.8f;
-        this.texturesAndModels = (Map)Stream.of(BoatEntity.Type.values()).collect(ImmutableMap.toImmutableMap(type -> type, boatType -> Pair.of((Object)new Identifier("textures/entity/boat/" + boatType.getName() + ".png"), (Object)new BoatEntityModel(context.getPart(EntityModelLayers.createBoat(boatType))))));
+        this.texturesAndModels = (Map)Stream.of(BoatEntity.Type.values()).collect(ImmutableMap.toImmutableMap(type -> type, type -> Pair.of((Object)new Identifier(BoatEntityRenderer.getTexture(type, chest)), (Object)this.createModel(ctx, (BoatEntity.Type)((Object)type), chest))));
+    }
+
+    private BoatEntityModel createModel(EntityRendererFactory.Context ctx, BoatEntity.Type type, boolean chest) {
+        EntityModelLayer entityModelLayer = chest ? EntityModelLayers.createChestBoat(type) : EntityModelLayers.createBoat(type);
+        return new BoatEntityModel(ctx.getPart(entityModelLayer), chest);
+    }
+
+    private static String getTexture(BoatEntity.Type type, boolean chest) {
+        if (chest) {
+            return "textures/entity/chest_boat/" + type.getName() + ".png";
+        }
+        return "textures/entity/boat/" + type.getName() + ".png";
     }
 
     @Override

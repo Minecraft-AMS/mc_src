@@ -3,17 +3,22 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.Lists
+ *  com.mojang.brigadier.ParseResults
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.network;
 
 import com.google.common.collect.Lists;
+import com.mojang.brigadier.ParseResults;
+import com.mojang.logging.LogUtils;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.StreamSupport;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -46,6 +51,9 @@ import net.minecraft.client.sound.MinecartInsideSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.ClientPlayerTickable;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.argument.DecoratableArgumentList;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EquipmentSlot;
@@ -61,10 +69,17 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.ElytraItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.network.encryption.Signer;
+import net.minecraft.network.message.ArgumentSignatureDataMap;
+import net.minecraft.network.message.DecoratedContents;
+import net.minecraft.network.message.LastSeenMessageList;
+import net.minecraft.network.message.MessageMetadata;
+import net.minecraft.network.message.MessageSignatureData;
 import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
+import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
 import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInputC2SPacket;
@@ -83,6 +98,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.Hand;
+import net.minecraft.util.StringHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -92,16 +108,19 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.CommandBlockExecutor;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientPlayerEntity
 extends AbstractClientPlayerEntity {
+    public static final Logger field_39078 = LogUtils.getLogger();
     private static final int field_32671 = 20;
     private static final int field_32672 = 600;
     private static final int field_32673 = 100;
     private static final float field_32674 = 0.6f;
     private static final double field_32675 = 0.35;
     private static final double MAX_SOFT_COLLISION_RADIANS = 0.13962633907794952;
+    private static final float field_38337 = 0.3f;
     public final ClientPlayNetworkHandler networkHandler;
     private final StatHandler statHandler;
     private final ClientRecipeBook recipeBook;
@@ -143,7 +162,7 @@ extends AbstractClientPlayerEntity {
     private boolean showsDeathScreen = true;
 
     public ClientPlayerEntity(MinecraftClient client, ClientWorld world, ClientPlayNetworkHandler networkHandler, StatHandler stats, ClientRecipeBook recipeBook, boolean lastSneaking, boolean lastSprinting) {
-        super(world, networkHandler.getProfile());
+        super(world, networkHandler.getProfile(), client.getProfileKeys().getPublicKey().orElse(null));
         this.client = client;
         this.networkHandler = networkHandler;
         this.statHandler = stats;
@@ -271,7 +290,7 @@ extends AbstractClientPlayerEntity {
                 this.lastPitch = this.getPitch();
             }
             this.lastOnGround = this.onGround;
-            this.autoJumpEnabled = this.client.options.autoJump;
+            this.autoJumpEnabled = this.client.options.getAutoJump().getValue();
         }
     }
 
@@ -282,8 +301,84 @@ extends AbstractClientPlayerEntity {
         return !itemStack.isEmpty();
     }
 
-    public void sendChatMessage(String message) {
-        this.networkHandler.sendPacket(new ChatMessageC2SPacket(message));
+    public void sendChatMessage(String message, @Nullable Text preview) {
+        this.sendChatMessageInternal(message, preview);
+    }
+
+    public boolean hasSignedArgument(String command) {
+        ParseResults parseResults = this.networkHandler.getCommandDispatcher().parse(command, (Object)this.networkHandler.getCommandSource());
+        return ArgumentSignatureDataMap.hasSignedArgument(DecoratableArgumentList.of(parseResults));
+    }
+
+    public boolean sendCommand(String command) {
+        if (!this.hasSignedArgument(command)) {
+            LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
+            this.networkHandler.sendPacket(new CommandExecutionC2SPacket(command, Instant.now(), 0L, ArgumentSignatureDataMap.EMPTY, false, acknowledgment));
+            return true;
+        }
+        return false;
+    }
+
+    public void sendCommand(String command, @Nullable Text preview) {
+        this.sendCommandInternal(command, preview);
+    }
+
+    private void sendChatMessageInternal(String message, @Nullable Text preview) {
+        DecoratedContents decoratedContents = this.toDecoratedContents(message, preview);
+        MessageMetadata messageMetadata = this.createMessageMetadata();
+        LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
+        MessageSignatureData messageSignatureData = this.signChatMessage(messageMetadata, decoratedContents, acknowledgment.lastSeen());
+        this.networkHandler.sendPacket(new ChatMessageC2SPacket(decoratedContents.plain(), messageMetadata.timestamp(), messageMetadata.salt(), messageSignatureData, decoratedContents.isDecorated(), acknowledgment));
+    }
+
+    private MessageSignatureData signChatMessage(MessageMetadata metadata, DecoratedContents content, LastSeenMessageList lastSeenMessages) {
+        try {
+            Signer signer = this.client.getProfileKeys().getSigner();
+            if (signer != null) {
+                return this.networkHandler.getMessagePacker().pack(signer, metadata, content, lastSeenMessages).signature();
+            }
+        }
+        catch (Exception exception) {
+            field_39078.error("Failed to sign chat message: '{}'", (Object)content.plain(), (Object)exception);
+        }
+        return MessageSignatureData.EMPTY;
+    }
+
+    private void sendCommandInternal(String command, @Nullable Text preview) {
+        ParseResults parseResults = this.networkHandler.getCommandDispatcher().parse(command, (Object)this.networkHandler.getCommandSource());
+        MessageMetadata messageMetadata = this.createMessageMetadata();
+        LastSeenMessageList.Acknowledgment acknowledgment = this.networkHandler.consumeAcknowledgment();
+        ArgumentSignatureDataMap argumentSignatureDataMap = this.signArguments(messageMetadata, (ParseResults<CommandSource>)parseResults, preview, acknowledgment.lastSeen());
+        this.networkHandler.sendPacket(new CommandExecutionC2SPacket(command, messageMetadata.timestamp(), messageMetadata.salt(), argumentSignatureDataMap, preview != null, acknowledgment));
+    }
+
+    private ArgumentSignatureDataMap signArguments(MessageMetadata signer, ParseResults<CommandSource> parseResults, @Nullable Text preview, LastSeenMessageList lastSeenMessages) {
+        Signer signer2 = this.client.getProfileKeys().getSigner();
+        if (signer2 == null) {
+            return ArgumentSignatureDataMap.EMPTY;
+        }
+        try {
+            return ArgumentSignatureDataMap.sign(DecoratableArgumentList.of(parseResults), (argumentName, value) -> {
+                DecoratedContents decoratedContents = this.toDecoratedContents(value, preview);
+                return this.networkHandler.getMessagePacker().pack(signer2, signer, decoratedContents, lastSeenMessages).signature();
+            });
+        }
+        catch (Exception exception) {
+            field_39078.error("Failed to sign command arguments", (Throwable)exception);
+            return ArgumentSignatureDataMap.EMPTY;
+        }
+    }
+
+    private DecoratedContents toDecoratedContents(String message, @Nullable Text preview) {
+        String string = StringHelper.truncateChat(message);
+        if (preview != null) {
+            return new DecoratedContents(string, preview);
+        }
+        return new DecoratedContents(string);
+    }
+
+    private MessageMetadata createMessageMetadata() {
+        return MessageMetadata.of(this.getUuid());
     }
 
     @Override
@@ -403,12 +498,8 @@ extends AbstractClientPlayerEntity {
     }
 
     @Override
-    public void sendMessage(Text message, boolean actionBar) {
-        if (actionBar) {
-            this.client.inGameHud.setOverlayMessage(message, false);
-        } else {
-            this.client.inGameHud.getChatHud().addMessage(message);
-        }
+    public void sendMessage(Text message, boolean overlay) {
+        this.client.getMessageHandler().onGameMessage(message, overlay);
     }
 
     private void pushOutOfBlocks(double x, double z) {
@@ -458,7 +549,7 @@ extends AbstractClientPlayerEntity {
     }
 
     @Override
-    public void sendSystemMessage(Text message, UUID sender) {
+    public void sendMessage(Text message) {
         this.client.inGameHud.getChatHud().addMessage(message);
     }
 
@@ -601,7 +692,7 @@ extends AbstractClientPlayerEntity {
     }
 
     public boolean shouldSlowDown() {
-        return this.isInSneakingPose() || this.shouldLeaveSwimmingPose();
+        return this.isInSneakingPose() || this.isCrawling();
     }
 
     @Override
@@ -651,7 +742,8 @@ extends AbstractClientPlayerEntity {
         boolean bl2 = this.input.sneaking;
         boolean bl3 = this.isWalking();
         this.inSneakingPose = !this.getAbilities().flying && !this.isSwimming() && this.wouldPoseNotCollide(EntityPose.CROUCHING) && (this.isSneaking() || !this.isSleeping() && !this.wouldPoseNotCollide(EntityPose.STANDING));
-        this.input.tick(this.shouldSlowDown());
+        float f = MathHelper.clamp(0.3f + EnchantmentHelper.getSwiftSneakSpeedBoost(this), 0.0f, 1.0f);
+        this.input.tick(this.shouldSlowDown(), f);
         this.client.getTutorialManager().onMovement(this.input);
         if (this.isUsingItem() && !this.hasVehicle()) {
             this.input.movementSideways *= 0.2f;
@@ -808,7 +900,7 @@ extends AbstractClientPlayerEntity {
                 this.nextNauseaStrength = 0.0f;
             }
         }
-        this.tickNetherPortalCooldown();
+        this.tickPortalCooldown();
     }
 
     @Override
@@ -1023,6 +1115,11 @@ extends AbstractClientPlayerEntity {
     @Override
     public void onPickupSlotClick(ItemStack cursorStack, ItemStack slotStack, ClickType clickType) {
         this.client.getTutorialManager().onPickupSlotClick(cursorStack, slotStack, clickType);
+    }
+
+    @Override
+    public float getBodyYaw() {
+        return this.getYaw();
     }
 }
 

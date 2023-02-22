@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
@@ -11,17 +10,15 @@
  */
 package net.minecraft.world.explosion;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -43,11 +40,13 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.Util;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -60,7 +59,7 @@ public class Explosion {
     private static final int field_30960 = 16;
     private final boolean createFire;
     private final DestructionType destructionType;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final World world;
     private final double x;
     private final double y;
@@ -70,7 +69,7 @@ public class Explosion {
     private final float power;
     private final DamageSource damageSource;
     private final ExplosionBehavior behavior;
-    private final List<BlockPos> affectedBlocks = Lists.newArrayList();
+    private final ObjectArrayList<BlockPos> affectedBlocks = new ObjectArrayList();
     private final Map<PlayerEntity, Vec3d> affectedPlayers = Maps.newHashMap();
 
     public Explosion(World world, @Nullable Entity entity, double x, double y, double z, float power) {
@@ -139,7 +138,7 @@ public class Explosion {
     public void collectBlocksAndDamageEntities() {
         int l;
         int k;
-        this.world.emitGameEvent(this.entity, GameEvent.EXPLODE, new BlockPos(this.x, this.y, this.z));
+        this.world.emitGameEvent(this.entity, GameEvent.EXPLODE, new Vec3d(this.x, this.y, this.z));
         HashSet set = Sets.newHashSet();
         int i = 16;
         for (int j = 0; j < 16; ++j) {
@@ -176,7 +175,7 @@ public class Explosion {
                 }
             }
         }
-        this.affectedBlocks.addAll(set);
+        this.affectedBlocks.addAll((Collection)set);
         float q = this.power * 2.0f;
         k = MathHelper.floor(this.x - (double)q - 1.0);
         l = MathHelper.floor(this.x + (double)q + 1.0);
@@ -226,19 +225,23 @@ public class Explosion {
         }
         if (bl) {
             ObjectArrayList objectArrayList = new ObjectArrayList();
-            Collections.shuffle(this.affectedBlocks, this.world.random);
+            boolean bl22 = this.getCausingEntity() instanceof PlayerEntity;
+            Util.shuffle(this.affectedBlocks, this.world.random);
             for (BlockPos blockPos : this.affectedBlocks) {
+                World world;
                 BlockState blockState = this.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
                 if (blockState.isAir()) continue;
                 BlockPos blockPos2 = blockPos.toImmutable();
                 this.world.getProfiler().push("explosion_blocks");
-                if (block.shouldDropItemsOnExplosion(this) && this.world instanceof ServerWorld) {
+                if (block.shouldDropItemsOnExplosion(this) && (world = this.world) instanceof ServerWorld) {
+                    ServerWorld serverWorld = (ServerWorld)world;
                     BlockEntity blockEntity = blockState.hasBlockEntity() ? this.world.getBlockEntity(blockPos) : null;
-                    LootContext.Builder builder = new LootContext.Builder((ServerWorld)this.world).random(this.world.random).parameter(LootContextParameters.ORIGIN, Vec3d.ofCenter(blockPos)).parameter(LootContextParameters.TOOL, ItemStack.EMPTY).optionalParameter(LootContextParameters.BLOCK_ENTITY, blockEntity).optionalParameter(LootContextParameters.THIS_ENTITY, this.entity);
+                    LootContext.Builder builder = new LootContext.Builder(serverWorld).random(this.world.random).parameter(LootContextParameters.ORIGIN, Vec3d.ofCenter(blockPos)).parameter(LootContextParameters.TOOL, ItemStack.EMPTY).optionalParameter(LootContextParameters.BLOCK_ENTITY, blockEntity).optionalParameter(LootContextParameters.THIS_ENTITY, this.entity);
                     if (this.destructionType == DestructionType.DESTROY) {
                         builder.parameter(LootContextParameters.EXPLOSION_RADIUS, Float.valueOf(this.power));
                     }
+                    blockState.onStacksDropped(serverWorld, blockPos, ItemStack.EMPTY, bl22);
                     blockState.getDroppedStacks(builder).forEach(stack -> Explosion.tryMergeStack((ObjectArrayList<Pair<ItemStack, BlockPos>>)objectArrayList, stack, blockPos2));
                 }
                 this.world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 3);

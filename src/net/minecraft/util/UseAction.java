@@ -13,6 +13,7 @@ extends Enum<UseAction> {
     public static final /* enum */ UseAction SPEAR = new UseAction();
     public static final /* enum */ UseAction CROSSBOW = new UseAction();
     public static final /* enum */ UseAction SPYGLASS = new UseAction();
+    public static final /* enum */ UseAction TOOT_HORN = new UseAction();
     private static final /* synthetic */ UseAction[] field_8948;
 
     public static UseAction[] values() {
@@ -24,7 +25,7 @@ extends Enum<UseAction> {
     }
 
     private static /* synthetic */ UseAction[] method_36686() {
-        return new UseAction[]{NONE, EAT, DRINK, BLOCK, BOW, SPEAR, CROSSBOW, SPYGLASS};
+        return new UseAction[]{NONE, EAT, DRINK, BLOCK, BOW, SPEAR, CROSSBOW, SPYGLASS, TOOT_HORN};
     }
 
     static {

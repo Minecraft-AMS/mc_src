@@ -19,10 +19,8 @@ import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsGenericErrorScreen
@@ -51,14 +49,14 @@ extends RealmsScreen {
 
     private static Pair<Text, Text> getErrorMessages(RealmsServiceException exception) {
         if (exception.error == null) {
-            return Pair.of((Object)new LiteralText("An error occurred (" + exception.httpResultCode + "):"), (Object)new LiteralText(exception.httpResponseText));
+            return Pair.of((Object)Text.literal("An error occurred (" + exception.httpResultCode + "):"), (Object)Text.literal(exception.httpResponseText));
         }
         String string = "mco.errorMessage." + exception.error.getErrorCode();
-        return Pair.of((Object)new LiteralText("Realms (" + exception.error + "):"), (Object)(I18n.hasTranslation(string) ? new TranslatableText(string) : Text.of(exception.error.getErrorMessage())));
+        return Pair.of((Object)Text.literal("Realms (" + exception.error + "):"), (Object)(I18n.hasTranslation(string) ? Text.translatable(string) : Text.of(exception.error.getErrorMessage())));
     }
 
     private static Pair<Text, Text> getErrorMessages(Text description) {
-        return Pair.of((Object)new LiteralText("An error occurred: "), (Object)description);
+        return Pair.of((Object)Text.literal("An error occurred: "), (Object)description);
     }
 
     private static Pair<Text, Text> getErrorMessages(Text title, Text description) {
@@ -67,13 +65,13 @@ extends RealmsScreen {
 
     @Override
     public void init() {
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 52, 200, 20, new LiteralText("Ok"), button -> this.client.setScreen(this.parent)));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 52, 200, 20, Text.literal("Ok"), button -> this.client.setScreen(this.parent)));
         this.description = MultilineText.create(this.textRenderer, (StringVisitable)this.errorMessages.getSecond(), this.width * 3 / 4);
     }
 
     @Override
     public Text getNarratedTitle() {
-        return new LiteralText("").append((Text)this.errorMessages.getFirst()).append(": ").append((Text)this.errorMessages.getSecond());
+        return Text.empty().append((Text)this.errorMessages.getFirst()).append(": ").append((Text)this.errorMessages.getSecond());
     }
 
     @Override

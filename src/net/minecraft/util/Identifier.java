@@ -36,7 +36,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import java.lang.reflect.Type;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.InvalidIdentifierException;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.lang3.StringUtils;
@@ -45,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
 public class Identifier
 implements Comparable<Identifier> {
     public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(Identifier::validate, Identifier::toString).stable();
-    private static final SimpleCommandExceptionType COMMAND_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.id.invalid"));
+    private static final SimpleCommandExceptionType COMMAND_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.id.invalid"));
     public static final char NAMESPACE_SEPARATOR = ':';
     public static final String DEFAULT_NAMESPACE = "minecraft";
     public static final String REALMS_NAMESPACE = "realms";
@@ -79,6 +79,16 @@ implements Comparable<Identifier> {
     public static Identifier tryParse(String id) {
         try {
             return new Identifier(id);
+        }
+        catch (InvalidIdentifierException invalidIdentifierException) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static Identifier of(String namespace, String path) {
+        try {
+            return new Identifier(namespace, path);
         }
         catch (InvalidIdentifierException invalidIdentifierException) {
             return null;
@@ -144,6 +154,18 @@ implements Comparable<Identifier> {
 
     public String toUnderscoreSeparatedString() {
         return this.toString().replace('/', '_').replace(':', '_');
+    }
+
+    public String toTranslationKey() {
+        return this.namespace + "." + this.path;
+    }
+
+    public String toShortTranslationKey() {
+        return this.namespace.equals(DEFAULT_NAMESPACE) ? this.path : this.toTranslationKey();
+    }
+
+    public String toTranslationKey(String prefix) {
+        return prefix + "." + this.toTranslationKey();
     }
 
     public static Identifier fromCommandInput(StringReader reader) throws CommandSyntaxException {

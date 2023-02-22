@@ -2,114 +2,256 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Charsets
- *  com.google.common.collect.Maps
- *  com.google.common.collect.Sets
+ *  com.google.common.hash.HashCode
+ *  com.google.common.hash.Hashing
  *  com.mojang.logging.LogUtils
- *  org.apache.commons.io.IOUtils
+ *  org.apache.commons.lang3.mutable.MutableInt
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.data;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
 import com.mojang.logging.LogUtils;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
-import java.nio.charset.Charset;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
-import java.util.Collection;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.io.IOUtils;
+import net.minecraft.GameVersion;
+import net.minecraft.data.DataProvider;
+import net.minecraft.data.DataWriter;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class DataCache {
-    private static final Logger LOGGER = LogUtils.getLogger();
+    static final Logger LOGGER = LogUtils.getLogger();
+    private static final String HEADER = "// ";
     private final Path root;
-    private final Path recordFile;
-    private int unchanged;
-    private final Map<Path, String> oldSha1 = Maps.newHashMap();
-    private final Map<Path, String> newSha1 = Maps.newHashMap();
-    private final Set<Path> ignores = Sets.newHashSet();
+    private final Path cachePath;
+    private final String versionName;
+    private final Map<DataProvider, CachedData> cachedDatas;
+    private final Map<DataProvider, CachedDataWriter> dataWriters = new HashMap<DataProvider, CachedDataWriter>();
+    private final Set<Path> paths = new HashSet<Path>();
+    private final int totalSize;
 
-    public DataCache(Path root, String name) throws IOException {
+    private Path getPath(DataProvider dataProvider) {
+        return this.cachePath.resolve(Hashing.sha1().hashString((CharSequence)dataProvider.getName(), StandardCharsets.UTF_8).toString());
+    }
+
+    public DataCache(Path root, List<DataProvider> dataProviders, GameVersion gameVersion) throws IOException {
+        this.versionName = gameVersion.getName();
         this.root = root;
-        Path path2 = root.resolve(".cache");
-        Files.createDirectories(path2, new FileAttribute[0]);
-        this.recordFile = path2.resolve(name);
-        this.files().forEach(path -> this.oldSha1.put((Path)path, ""));
-        if (Files.isReadable(this.recordFile)) {
-            IOUtils.readLines((InputStream)Files.newInputStream(this.recordFile, new OpenOption[0]), (Charset)Charsets.UTF_8).forEach(string -> {
-                int i = string.indexOf(32);
-                this.oldSha1.put(root.resolve(string.substring(i + 1)), string.substring(0, i));
-            });
+        this.cachePath = root.resolve(".cache");
+        Files.createDirectories(this.cachePath, new FileAttribute[0]);
+        HashMap<DataProvider, CachedData> map = new HashMap<DataProvider, CachedData>();
+        int i = 0;
+        for (DataProvider dataProvider : dataProviders) {
+            Path path = this.getPath(dataProvider);
+            this.paths.add(path);
+            CachedData cachedData = DataCache.parseOrCreateCache(root, path);
+            map.put(dataProvider, cachedData);
+            i += cachedData.size();
         }
+        this.cachedDatas = map;
+        this.totalSize = i;
+    }
+
+    private static CachedData parseOrCreateCache(Path root, Path dataProviderPath) {
+        if (Files.isReadable(dataProviderPath)) {
+            try {
+                return CachedData.parseCache(root, dataProviderPath);
+            }
+            catch (Exception exception) {
+                LOGGER.warn("Failed to parse cache {}, discarding", (Object)dataProviderPath, (Object)exception);
+            }
+        }
+        return new CachedData("unknown");
+    }
+
+    public boolean isVersionDifferent(DataProvider dataProvider) {
+        CachedData cachedData = this.cachedDatas.get(dataProvider);
+        return cachedData == null || !cachedData.version.equals(this.versionName);
+    }
+
+    public DataWriter getOrCreateWriter(DataProvider dataProvider) {
+        return this.dataWriters.computeIfAbsent(dataProvider, provider -> {
+            CachedData cachedData = this.cachedDatas.get(provider);
+            if (cachedData == null) {
+                throw new IllegalStateException("Provider not registered: " + provider.getName());
+            }
+            CachedDataWriter cachedDataWriter = new CachedDataWriter(this.versionName, cachedData);
+            this.cachedDatas.put((DataProvider)provider, cachedDataWriter.newCache);
+            return cachedDataWriter;
+        });
     }
 
     public void write() throws IOException {
-        BufferedWriter writer;
-        this.deleteAll();
-        try {
-            writer = Files.newBufferedWriter(this.recordFile, new OpenOption[0]);
-        }
-        catch (IOException iOException) {
-            LOGGER.warn("Unable write cachefile {}: {}", (Object)this.recordFile, (Object)iOException.toString());
-            return;
-        }
-        IOUtils.writeLines((Collection)this.newSha1.entrySet().stream().map(entry -> (String)entry.getValue() + " " + this.root.relativize((Path)entry.getKey())).collect(Collectors.toList()), (String)System.lineSeparator(), (Writer)writer);
-        ((Writer)writer).close();
-        LOGGER.debug("Caching: cache hits: {}, created: {} removed: {}", new Object[]{this.unchanged, this.newSha1.size() - this.unchanged, this.oldSha1.size()});
-    }
-
-    @Nullable
-    public String getOldSha1(Path path) {
-        return this.oldSha1.get(path);
-    }
-
-    public void updateSha1(Path path, String sha1) {
-        this.newSha1.put(path, sha1);
-        if (Objects.equals(this.oldSha1.remove(path), sha1)) {
-            ++this.unchanged;
-        }
-    }
-
-    public boolean contains(Path path) {
-        return this.oldSha1.containsKey(path);
-    }
-
-    public void ignore(Path path) {
-        this.ignores.add(path);
-    }
-
-    private void deleteAll() throws IOException {
-        this.files().forEach(path -> {
-            if (this.contains((Path)path) && !this.ignores.contains(path)) {
+        MutableInt mutableInt = new MutableInt();
+        this.dataWriters.forEach((dataProvider, writer) -> {
+            Path path = this.getPath((DataProvider)dataProvider);
+            writer.newCache.write(this.root, path, DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now()) + "\t" + dataProvider.getName());
+            mutableInt.add(writer.cacheMissCount);
+        });
+        HashSet<Path> set = new HashSet<Path>();
+        this.cachedDatas.values().forEach(cachedData -> set.addAll(cachedData.data().keySet()));
+        set.add(this.root.resolve("version.json"));
+        MutableInt mutableInt2 = new MutableInt();
+        MutableInt mutableInt3 = new MutableInt();
+        try (Stream<Path> stream = Files.walk(this.root, new FileVisitOption[0]);){
+            stream.forEach(path -> {
+                if (Files.isDirectory(path, new LinkOption[0])) {
+                    return;
+                }
+                if (this.paths.contains(path)) {
+                    return;
+                }
+                mutableInt2.increment();
+                if (set.contains(path)) {
+                    return;
+                }
                 try {
                     Files.delete(path);
                 }
                 catch (IOException iOException) {
-                    LOGGER.debug("Unable to delete: {} ({})", path, (Object)iOException.toString());
+                    LOGGER.warn("Failed to delete file {}", path, (Object)iOException);
                 }
-            }
-        });
+                mutableInt3.increment();
+            });
+        }
+        LOGGER.info("Caching: total files: {}, old count: {}, new count: {}, removed stale: {}, written: {}", new Object[]{mutableInt2, this.totalSize, set.size(), mutableInt3, mutableInt});
     }
 
-    private Stream<Path> files() throws IOException {
-        return Files.walk(this.root, new FileVisitOption[0]).filter(path -> !Objects.equals(this.recordFile, path) && !Files.isDirectory(path, new LinkOption[0]));
+    static final class CachedData
+    extends Record {
+        final String version;
+        private final Map<Path, HashCode> data;
+
+        CachedData(String version) {
+            this(version, new HashMap<Path, HashCode>());
+        }
+
+        private CachedData(String string, Map<Path, HashCode> map) {
+            this.version = string;
+            this.data = map;
+        }
+
+        @Nullable
+        public HashCode get(Path path) {
+            return this.data.get(path);
+        }
+
+        public void put(Path path, HashCode hashCode) {
+            this.data.put(path, hashCode);
+        }
+
+        public int size() {
+            return this.data.size();
+        }
+
+        public static CachedData parseCache(Path root, Path dataProviderPath) throws IOException {
+            try (BufferedReader bufferedReader = Files.newBufferedReader(dataProviderPath, StandardCharsets.UTF_8);){
+                String string = bufferedReader.readLine();
+                if (!string.startsWith(DataCache.HEADER)) {
+                    throw new IllegalStateException("Missing cache file header");
+                }
+                String[] strings = string.substring(DataCache.HEADER.length()).split("\t", 2);
+                String string2 = strings[0];
+                HashMap map = new HashMap();
+                bufferedReader.lines().forEach(line -> {
+                    int i = line.indexOf(32);
+                    map.put(root.resolve(line.substring(i + 1)), HashCode.fromString((String)line.substring(0, i)));
+                });
+                CachedData cachedData = new CachedData(string2, Map.copyOf(map));
+                return cachedData;
+            }
+        }
+
+        public void write(Path root, Path dataProviderPath, String description) {
+            try (BufferedWriter bufferedWriter = Files.newBufferedWriter(dataProviderPath, StandardCharsets.UTF_8, new OpenOption[0]);){
+                bufferedWriter.write(DataCache.HEADER);
+                bufferedWriter.write(this.version);
+                bufferedWriter.write(9);
+                bufferedWriter.write(description);
+                bufferedWriter.newLine();
+                for (Map.Entry<Path, HashCode> entry : this.data.entrySet()) {
+                    bufferedWriter.write(entry.getValue().toString());
+                    bufferedWriter.write(32);
+                    bufferedWriter.write(root.relativize(entry.getKey()).toString());
+                    bufferedWriter.newLine();
+                }
+            }
+            catch (IOException iOException) {
+                LOGGER.warn("Unable write cachefile {}: {}", (Object)dataProviderPath, (Object)iOException);
+            }
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{CachedData.class, "version;data", "version", "data"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{CachedData.class, "version;data", "version", "data"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{CachedData.class, "version;data", "version", "data"}, this, object);
+        }
+
+        public String version() {
+            return this.version;
+        }
+
+        public Map<Path, HashCode> data() {
+            return this.data;
+        }
+    }
+
+    static class CachedDataWriter
+    implements DataWriter {
+        private final CachedData oldCache;
+        final CachedData newCache;
+        int cacheMissCount;
+
+        CachedDataWriter(String versionName, CachedData cachedData) {
+            this.oldCache = cachedData;
+            this.newCache = new CachedData(versionName);
+        }
+
+        private boolean isCacheInvalid(Path path, HashCode hashCode) {
+            return !Objects.equals(this.oldCache.get(path), hashCode) || !Files.exists(path, new LinkOption[0]);
+        }
+
+        @Override
+        public void write(Path path, byte[] data, HashCode hashCode) throws IOException {
+            if (this.isCacheInvalid(path, hashCode)) {
+                ++this.cacheMissCount;
+                Files.createDirectories(path.getParent(), new FileAttribute[0]);
+                Files.write(path, data, new OpenOption[0]);
+            }
+            this.newCache.put(path, hashCode);
+        }
     }
 }
 

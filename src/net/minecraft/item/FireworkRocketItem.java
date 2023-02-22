@@ -22,9 +22,7 @@ import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.stat.Stats;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
@@ -90,7 +88,7 @@ extends Item {
             return;
         }
         if (nbtCompound.contains(FLIGHT_KEY, 99)) {
-            tooltip.add(new TranslatableText("item.minecraft.firework_rocket.flight").append(" ").append(String.valueOf(nbtCompound.getByte(FLIGHT_KEY))).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("item.minecraft.firework_rocket.flight").append(" ").append(String.valueOf(nbtCompound.getByte(FLIGHT_KEY))).formatted(Formatting.GRAY));
         }
         if (!(nbtList = nbtCompound.getList(EXPLOSIONS_KEY, 10)).isEmpty()) {
             for (int i = 0; i < nbtList.size(); ++i) {
@@ -99,7 +97,7 @@ extends Item {
                 FireworkStarItem.appendFireworkTooltip(nbtCompound2, list);
                 if (list.isEmpty()) continue;
                 for (int j = 1; j < list.size(); ++j) {
-                    list.set(j, new LiteralText("  ").append((Text)list.get(j)).formatted(Formatting.GRAY));
+                    list.set(j, Text.literal("  ").append((Text)list.get(j)).formatted(Formatting.GRAY));
                 }
                 tooltip.addAll(list);
             }

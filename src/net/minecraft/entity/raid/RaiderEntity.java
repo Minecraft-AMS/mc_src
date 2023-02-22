@@ -49,7 +49,7 @@ import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.poi.PointOfInterestTypes;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class RaiderEntity
@@ -118,9 +118,9 @@ extends PatrolEntity {
     }
 
     @Override
-    public void onDeath(DamageSource source) {
+    public void onDeath(DamageSource damageSource) {
         if (this.world instanceof ServerWorld) {
-            Entity entity = source.getAttacker();
+            Entity entity = damageSource.getAttacker();
             Raid raid = this.getRaid();
             if (raid != null) {
                 if (this.isPatrolLeader()) {
@@ -161,7 +161,7 @@ extends PatrolEntity {
                 }
             }
         }
-        super.onDeath(source);
+        super.onDeath(damageSource);
     }
 
     @Override
@@ -350,7 +350,7 @@ extends PatrolEntity {
         private boolean tryFindHome() {
             ServerWorld serverWorld = (ServerWorld)this.raider.world;
             BlockPos blockPos = this.raider.getBlockPos();
-            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(poiType -> poiType == PointOfInterestType.HOME, this::canLootHome, PointOfInterestStorage.OccupationStatus.ANY, blockPos, 48, this.raider.random);
+            Optional<BlockPos> optional = serverWorld.getPointOfInterestStorage().getPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.HOME), this::canLootHome, PointOfInterestStorage.OccupationStatus.ANY, blockPos, 48, this.raider.random);
             if (!optional.isPresent()) {
                 return false;
             }

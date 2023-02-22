@@ -11,9 +11,9 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.util.collection.Weighted;
 import net.minecraft.util.collection.Weighting;
+import net.minecraft.util.math.random.Random;
 
 public class Pool<E extends Weighted> {
     private final int totalWeight;

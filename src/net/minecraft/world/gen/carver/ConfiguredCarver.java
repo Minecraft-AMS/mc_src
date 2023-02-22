@@ -9,12 +9,12 @@ package net.minecraft.world.gen.carver;
 import com.mojang.serialization.Codec;
 import java.lang.invoke.MethodHandle;
 import java.lang.runtime.ObjectMethods;
-import java.util.Random;
 import java.util.function.Function;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryCodecs;
 import net.minecraft.util.registry.RegistryEntry;
@@ -37,7 +37,7 @@ public record ConfiguredCarver<WC extends CarverConfig>(Carver<WC> carver, WC co
     }
 
     public boolean carve(CarverContext context, Chunk chunk, Function<BlockPos, RegistryEntry<Biome>> posToBiome, Random random, AquiferSampler aquiferSampler, ChunkPos pos, CarvingMask mask) {
-        if (SharedConstants.method_37896(chunk.getPos())) {
+        if (SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
             return false;
         }
         return this.carver.carve(context, this.config, chunk, posToBiome, random, aquiferSampler, pos, mask);

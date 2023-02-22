@@ -15,12 +15,13 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.Feature;
@@ -66,22 +67,30 @@ public abstract class TrunkPlacer {
         }
     }
 
-    protected static boolean getAndSetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos pos, TreeFeatureConfig config) {
-        return TrunkPlacer.getAndSetState(world, replacer, random, pos, config, Function.identity());
+    protected boolean getAndSetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos pos, TreeFeatureConfig config) {
+        return this.getAndSetState(world, replacer, random, pos, config, Function.identity());
     }
 
-    protected static boolean getAndSetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos pos, TreeFeatureConfig config, Function<BlockState, BlockState> stateProvider) {
-        if (TreeFeature.canReplace(world, pos)) {
-            replacer.accept(pos, stateProvider.apply(config.trunkProvider.getBlockState(random, pos)));
+    protected boolean getAndSetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos pos, TreeFeatureConfig config, Function<BlockState, BlockState> function) {
+        if (this.canReplace(world, pos)) {
+            replacer.accept(pos, function.apply(config.trunkProvider.getBlockState(random, pos)));
             return true;
         }
         return false;
     }
 
-    protected static void trySetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos.Mutable pos, TreeFeatureConfig config) {
-        if (TreeFeature.canTreeReplace(world, pos)) {
-            TrunkPlacer.getAndSetState(world, replacer, random, pos, config);
+    protected void trySetState(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, BlockPos.Mutable pos, TreeFeatureConfig config) {
+        if (this.canReplaceOrIsLog(world, pos)) {
+            this.getAndSetState(world, replacer, random, pos, config);
         }
+    }
+
+    protected boolean canReplace(TestableWorld world, BlockPos pos) {
+        return TreeFeature.canReplace(world, pos);
+    }
+
+    public boolean canReplaceOrIsLog(TestableWorld world, BlockPos pos) {
+        return this.canReplace(world, pos) || world.testBlockState(pos, state -> state.isIn(BlockTags.LOGS));
     }
 }
 

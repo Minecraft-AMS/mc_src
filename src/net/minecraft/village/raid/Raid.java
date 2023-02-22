@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -26,6 +25,7 @@ import java.util.stream.Stream;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BannerPattern;
+import net.minecraft.block.entity.BannerPatterns;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -52,13 +52,13 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.LocalDifficulty;
@@ -85,11 +85,11 @@ public class Raid {
     public static final int field_30672 = 24000;
     public static final int field_30673 = 5;
     private static final int field_30688 = 2;
-    private static final Text EVENT_TEXT = new TranslatableText("event.minecraft.raid");
-    private static final Text VICTORY_SUFFIX_TEXT = new TranslatableText("event.minecraft.raid.victory");
-    private static final Text DEFEAT_SUFFIX_TEXT = new TranslatableText("event.minecraft.raid.defeat");
-    private static final Text VICTORY_TITLE = EVENT_TEXT.shallowCopy().append(" - ").append(VICTORY_SUFFIX_TEXT);
-    private static final Text DEFEAT_TITLE = EVENT_TEXT.shallowCopy().append(" - ").append(DEFEAT_SUFFIX_TEXT);
+    private static final Text EVENT_TEXT = Text.translatable("event.minecraft.raid");
+    private static final Text VICTORY_SUFFIX_TEXT = Text.translatable("event.minecraft.raid.victory");
+    private static final Text DEFEAT_SUFFIX_TEXT = Text.translatable("event.minecraft.raid.defeat");
+    private static final Text VICTORY_TITLE = EVENT_TEXT.copy().append(" - ").append(VICTORY_SUFFIX_TEXT);
+    private static final Text DEFEAT_TITLE = EVENT_TEXT.copy().append(" - ").append(DEFEAT_SUFFIX_TEXT);
     private static final int MAX_ACTIVE_TICKS = 48000;
     public static final int field_30674 = 9216;
     public static final int field_30675 = 12544;
@@ -108,7 +108,7 @@ public class Raid {
     private final ServerBossBar bar = new ServerBossBar(EVENT_TEXT, BossBar.Color.RED, BossBar.Style.NOTCHED_10);
     private int postRaidTicks;
     private int preRaidTicks;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final int waveCount;
     private Status status;
     private int finishCooldown;
@@ -309,7 +309,7 @@ public class Raid {
                 this.removeObsoleteRaiders();
                 if (i > 0) {
                     if (i <= 2) {
-                        this.bar.setName(EVENT_TEXT.shallowCopy().append(" - ").append(new TranslatableText(RAIDERS_REMAINING_TRANSLATION_KEY, i)));
+                        this.bar.setName(EVENT_TEXT.copy().append(" - ").append(Text.translatable(RAIDERS_REMAINING_TRANSLATION_KEY, i)));
                     } else {
                         this.bar.setName(EVENT_TEXT);
                     }
@@ -441,6 +441,7 @@ public class Raid {
         float f = 13.0f;
         int i = 64;
         Collection<ServerPlayerEntity> collection = this.bar.getPlayers();
+        long l = this.random.nextLong();
         for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
             Vec3d vec3d = serverPlayerEntity.getPos();
             Vec3d vec3d2 = Vec3d.ofCenter(pos);
@@ -448,7 +449,7 @@ public class Raid {
             double e = vec3d.x + 13.0 / d * (vec3d2.x - vec3d.x);
             double g = vec3d.z + 13.0 / d * (vec3d2.z - vec3d.z);
             if (!(d <= 64.0) && !collection.contains(serverPlayerEntity)) continue;
-            serverPlayerEntity.networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, e, serverPlayerEntity.getY(), g, 64.0f, 1.0f));
+            serverPlayerEntity.networkHandler.sendPacket(new PlaySoundS2CPacket(SoundEvents.EVENT_RAID_HORN, SoundCategory.NEUTRAL, e, serverPlayerEntity.getY(), g, 64.0f, 1.0f, l));
         }
     }
 
@@ -548,11 +549,11 @@ public class Raid {
     public static ItemStack getOminousBanner() {
         ItemStack itemStack = new ItemStack(Items.WHITE_BANNER);
         NbtCompound nbtCompound = new NbtCompound();
-        NbtList nbtList = new BannerPattern.Patterns().add(BannerPattern.RHOMBUS_MIDDLE, DyeColor.CYAN).add(BannerPattern.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_CENTER, DyeColor.GRAY).add(BannerPattern.BORDER, DyeColor.LIGHT_GRAY).add(BannerPattern.STRIPE_MIDDLE, DyeColor.BLACK).add(BannerPattern.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).add(BannerPattern.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY).add(BannerPattern.BORDER, DyeColor.BLACK).toNbt();
+        NbtList nbtList = new BannerPattern.Patterns().add(BannerPatterns.RHOMBUS, DyeColor.CYAN).add(BannerPatterns.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY).add(BannerPatterns.STRIPE_CENTER, DyeColor.GRAY).add(BannerPatterns.BORDER, DyeColor.LIGHT_GRAY).add(BannerPatterns.STRIPE_MIDDLE, DyeColor.BLACK).add(BannerPatterns.HALF_HORIZONTAL, DyeColor.LIGHT_GRAY).add(BannerPatterns.CIRCLE, DyeColor.LIGHT_GRAY).add(BannerPatterns.BORDER, DyeColor.BLACK).toNbt();
         nbtCompound.put("Patterns", nbtList);
         BlockItem.setBlockEntityNbt(itemStack, BlockEntityType.BANNER, nbtCompound);
         itemStack.addHideFlag(ItemStack.TooltipSection.ADDITIONAL);
-        itemStack.setCustomName(new TranslatableText(OMINOUS_BANNER_TRANSLATION_KEY).formatted(Formatting.GOLD));
+        itemStack.setCustomName(Text.translatable(OMINOUS_BANNER_TRANSLATION_KEY).formatted(Formatting.GOLD));
         return itemStack;
     }
 

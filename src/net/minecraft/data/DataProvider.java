@@ -2,44 +2,54 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.hash.HashFunction
  *  com.google.common.hash.Hashing
- *  com.google.gson.Gson
+ *  com.google.common.hash.HashingOutputStream
  *  com.google.gson.JsonElement
+ *  com.google.gson.stream.JsonWriter
+ *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  */
 package net.minecraft.data;
 
-import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.gson.Gson;
+import com.google.common.hash.HashingOutputStream;
 import com.google.gson.JsonElement;
-import java.io.BufferedWriter;
+import com.google.gson.stream.JsonWriter;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
-import java.util.Objects;
-import net.minecraft.data.DataCache;
+import java.util.Comparator;
+import java.util.function.ToIntFunction;
+import net.minecraft.data.DataWriter;
+import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
 
 public interface DataProvider {
-    public static final HashFunction SHA1 = Hashing.sha1();
+    public static final ToIntFunction<String> JSON_KEY_SORT_ORDER = (ToIntFunction)Util.make(new Object2IntOpenHashMap(), map -> {
+        map.put((Object)"type", 0);
+        map.put((Object)"parent", 1);
+        map.defaultReturnValue(2);
+    });
+    public static final Comparator<String> JSON_KEY_SORTING_COMPARATOR = Comparator.comparingInt(JSON_KEY_SORT_ORDER).thenComparing(key -> key);
 
-    public void run(DataCache var1) throws IOException;
+    public void run(DataWriter var1) throws IOException;
 
     public String getName();
 
-    public static void writeToPath(Gson gson, DataCache cache, JsonElement output, Path path) throws IOException {
-        String string = gson.toJson(output);
-        String string2 = SHA1.hashUnencodedChars((CharSequence)string).toString();
-        if (!Objects.equals(cache.getOldSha1(path), string2) || !Files.exists(path, new LinkOption[0])) {
-            Files.createDirectories(path.getParent(), new FileAttribute[0]);
-            try (BufferedWriter bufferedWriter = Files.newBufferedWriter(path, new OpenOption[0]);){
-                bufferedWriter.write(string);
-            }
-        }
-        cache.updateSha1(path, string2);
+    public static void writeToPath(DataWriter writer, JsonElement json, Path path) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        HashingOutputStream hashingOutputStream = new HashingOutputStream(Hashing.sha1(), (OutputStream)byteArrayOutputStream);
+        OutputStreamWriter writer2 = new OutputStreamWriter((OutputStream)hashingOutputStream, StandardCharsets.UTF_8);
+        JsonWriter jsonWriter = new JsonWriter((Writer)writer2);
+        jsonWriter.setSerializeNulls(false);
+        jsonWriter.setIndent("  ");
+        JsonHelper.writeSorted(jsonWriter, json, JSON_KEY_SORTING_COMPARATOR);
+        jsonWriter.close();
+        writer.write(path, byteArrayOutputStream.toByteArray(), hashingOutputStream.hash());
     }
 }
 

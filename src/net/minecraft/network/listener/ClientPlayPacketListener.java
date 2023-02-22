@@ -10,6 +10,10 @@ import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockEventS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.BossBarS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatMessageS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatPreviewS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatPreviewStateChangeS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatSuggestionsS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkLoadDistanceS2CPacket;
@@ -47,19 +51,19 @@ import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.HideMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.ItemPickupAnimationS2CPacket;
 import net.minecraft.network.packet.s2c.play.KeepAliveS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.LookAtS2CPacket;
 import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
+import net.minecraft.network.packet.s2c.play.MessageHeaderS2CPacket;
 import net.minecraft.network.packet.s2c.play.NbtQueryResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenHorseScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenWrittenBookS2CPacket;
 import net.minecraft.network.packet.s2c.play.OverlayMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.PaintingSpawnS2CPacket;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayPingS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlaySoundFromEntityS2CPacket;
@@ -81,6 +85,7 @@ import net.minecraft.network.packet.s2c.play.ScoreboardPlayerUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerPropertyUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.SelectAdvancementTabS2CPacket;
+import net.minecraft.network.packet.s2c.play.ServerMetadataS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetCameraEntityS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetTradeOffersS2CPacket;
 import net.minecraft.network.packet.s2c.play.SignEditorOpenS2CPacket;
@@ -97,7 +102,6 @@ import net.minecraft.network.packet.s2c.play.UnloadChunkS2CPacket;
 import net.minecraft.network.packet.s2c.play.UnlockRecipesS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
-import net.minecraft.network.packet.s2c.play.VibrationS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderCenterChangedS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderInitializeS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderInterpolateSizeS2CPacket;
@@ -113,13 +117,7 @@ extends PacketListener {
 
     public void onExperienceOrbSpawn(ExperienceOrbSpawnS2CPacket var1);
 
-    public void onVibration(VibrationS2CPacket var1);
-
-    public void onMobSpawn(MobSpawnS2CPacket var1);
-
     public void onScoreboardObjectiveUpdate(ScoreboardObjectiveUpdateS2CPacket var1);
-
-    public void onPaintingSpawn(PaintingSpawnS2CPacket var1);
 
     public void onPlayerSpawn(PlayerSpawnS2CPacket var1);
 
@@ -140,6 +138,16 @@ extends PacketListener {
     public void onBlockUpdate(BlockUpdateS2CPacket var1);
 
     public void onGameMessage(GameMessageS2CPacket var1);
+
+    public void onChatMessage(ChatMessageS2CPacket var1);
+
+    public void onMessageHeader(MessageHeaderS2CPacket var1);
+
+    public void onChatPreview(ChatPreviewS2CPacket var1);
+
+    public void onChatPreviewStateChange(ChatPreviewStateChangeS2CPacket var1);
+
+    public void onHideMessage(HideMessageS2CPacket var1);
 
     public void onChunkDeltaUpdate(ChunkDeltaUpdateS2CPacket var1);
 
@@ -312,5 +320,9 @@ extends PacketListener {
     public void onTitleFade(TitleFadeS2CPacket var1);
 
     public void onTitleClear(ClearTitleS2CPacket var1);
+
+    public void onServerMetadata(ServerMetadataS2CPacket var1);
+
+    public void onChatSuggestions(ChatSuggestionsS2CPacket var1);
 }
 

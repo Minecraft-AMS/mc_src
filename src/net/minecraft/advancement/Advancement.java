@@ -37,7 +37,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.predicate.entity.AdvancementEntityPredicateDeserializer;
 import net.minecraft.text.HoverEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
@@ -71,12 +70,12 @@ public class Advancement {
             parent.addChild(this);
         }
         if (display == null) {
-            this.text = new LiteralText(id.toString());
+            this.text = Text.literal(id.toString());
         } else {
             Text text = display.getTitle();
             Formatting formatting = display.getFrame().getTitleFormat();
-            MutableText text2 = Texts.setStyleIfAbsent(text.shallowCopy(), Style.EMPTY.withColor(formatting)).append("\n").append(display.getDescription());
-            MutableText text3 = text.shallowCopy().styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text2)));
+            MutableText text2 = Texts.setStyleIfAbsent(text.copy(), Style.EMPTY.withColor(formatting)).append("\n").append(display.getDescription());
+            MutableText text3 = text.copy().styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text2)));
             this.text = Texts.bracketed(text3).formatted(formatting);
         }
     }
@@ -248,9 +247,9 @@ public class Advancement {
             return new Advancement(id2, this.parentObj, this.display, this.rewards, this.criteria, this.requirements);
         }
 
-        public Advancement build(Consumer<Advancement> consumer, String id) {
+        public Advancement build(Consumer<Advancement> exporter, String id) {
             Advancement advancement = this.build(new Identifier(id));
-            consumer.accept(advancement);
+            exporter.accept(advancement);
             return advancement;
         }
 
@@ -289,18 +288,8 @@ public class Advancement {
             if (this.requirements == null) {
                 this.requirements = this.merger.createRequirements(this.criteria.keySet());
             }
-            if (this.parentId == null) {
-                buf.writeBoolean(false);
-            } else {
-                buf.writeBoolean(true);
-                buf.writeIdentifier(this.parentId);
-            }
-            if (this.display == null) {
-                buf.writeBoolean(false);
-            } else {
-                buf.writeBoolean(true);
-                this.display.toPacket(buf);
-            }
+            buf.writeNullable(this.parentId, PacketByteBuf::writeIdentifier);
+            buf.writeNullable(this.display, (buf2, display) -> display.toPacket((PacketByteBuf)((Object)buf2)));
             AdvancementCriterion.criteriaToPacket(this.criteria, buf);
             buf.writeVarInt(this.requirements.length);
             for (String[] strings : this.requirements) {
@@ -366,8 +355,8 @@ public class Advancement {
         }
 
         public static Builder fromPacket(PacketByteBuf buf) {
-            Identifier identifier = buf.readBoolean() ? buf.readIdentifier() : null;
-            AdvancementDisplay advancementDisplay = buf.readBoolean() ? AdvancementDisplay.fromPacket(buf) : null;
+            Identifier identifier = (Identifier)buf.readNullable(PacketByteBuf::readIdentifier);
+            AdvancementDisplay advancementDisplay = (AdvancementDisplay)buf.readNullable(AdvancementDisplay::fromPacket);
             Map<String, AdvancementCriterion> map = AdvancementCriterion.criteriaFromPacket(buf);
             String[][] strings = new String[buf.readVarInt()][];
             for (int i = 0; i < strings.length; ++i) {

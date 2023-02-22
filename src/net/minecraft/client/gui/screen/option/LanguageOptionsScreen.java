@@ -11,29 +11,26 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.Option;
 import net.minecraft.client.resource.language.LanguageDefinition;
 import net.minecraft.client.resource.language.LanguageManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 
 @Environment(value=EnvType.CLIENT)
 public class LanguageOptionsScreen
 extends GameOptionsScreen {
-    private static final Text LANGUAGE_WARNING_TEXT = new LiteralText("(").append(new TranslatableText("options.languageWarning")).append(")").formatted(Formatting.GRAY);
+    private static final Text LANGUAGE_WARNING_TEXT = Text.literal("(").append(Text.translatable("options.languageWarning")).append(")").formatted(Formatting.GRAY);
     private LanguageSelectionListWidget languageSelectionList;
     final LanguageManager languageManager;
 
     public LanguageOptionsScreen(Screen parent, GameOptions options, LanguageManager languageManager) {
-        super(parent, options, new TranslatableText("options.language"));
+        super(parent, options, Text.translatable("options.language"));
         this.languageManager = languageManager;
     }
 
@@ -41,7 +38,7 @@ extends GameOptionsScreen {
     protected void init() {
         this.languageSelectionList = new LanguageSelectionListWidget(this.client);
         this.addSelectableChild(this.languageSelectionList);
-        this.addDrawableChild(Option.FORCE_UNICODE_FONT.createButton(this.gameOptions, this.width / 2 - 155, this.height - 38, 150));
+        this.addDrawableChild(this.gameOptions.getForceUnicodeFont().createButton(this.gameOptions, this.width / 2 - 155, this.height - 38, 150));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height - 38, 150, 20, ScreenTexts.DONE, button -> {
             LanguageSelectionListWidget.LanguageEntry languageEntry = (LanguageSelectionListWidget.LanguageEntry)this.languageSelectionList.getSelectedOrNull();
             if (languageEntry != null && !languageEntry.languageDefinition.getCode().equals(this.languageManager.getLanguage().getCode())) {
@@ -129,7 +126,7 @@ extends GameOptionsScreen {
 
             @Override
             public Text getNarration() {
-                return new TranslatableText("narrator.select", this.languageDefinition);
+                return Text.translatable("narrator.select", this.languageDefinition);
             }
         }
     }

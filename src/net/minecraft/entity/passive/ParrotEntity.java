@@ -15,7 +15,6 @@ import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
@@ -72,6 +71,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -126,6 +126,7 @@ implements Flutterer {
         map.put(EntityType.STRAY, SoundEvents.ENTITY_PARROT_IMITATE_STRAY);
         map.put(EntityType.VEX, SoundEvents.ENTITY_PARROT_IMITATE_VEX);
         map.put(EntityType.VINDICATOR, SoundEvents.ENTITY_PARROT_IMITATE_VINDICATOR);
+        map.put(EntityType.WARDEN, SoundEvents.ENTITY_PARROT_IMITATE_WARDEN);
         map.put(EntityType.WITCH, SoundEvents.ENTITY_PARROT_IMITATE_WITCH);
         map.put(EntityType.WITHER, SoundEvents.ENTITY_PARROT_IMITATE_WITHER);
         map.put(EntityType.WITHER_SKELETON, SoundEvents.ENTITY_PARROT_IMITATE_WITHER_SKELETON);
@@ -154,7 +155,7 @@ implements Flutterer {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.setVariant(this.random.nextInt(5));
+        this.setVariant(world.getRandom().nextInt(5));
         if (entityData == null) {
             entityData = new PassiveEntity.PassiveData(false);
         }
@@ -303,7 +304,7 @@ implements Flutterer {
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
     }
 
     @Override

@@ -7,8 +7,9 @@
 package net.minecraft.world.gen.placementmodifier;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.feature.FeaturePlacementContext;
 import net.minecraft.world.gen.feature.PlacedFeature;
@@ -29,9 +30,9 @@ extends AbstractConditionalPlacementModifier {
 
     @Override
     protected boolean shouldPlace(FeaturePlacementContext context, Random random, BlockPos pos) {
-        PlacedFeature placedFeature = context.getPlacedFeature().orElseThrow(() -> new IllegalStateException("Tried to biome check an unregistered feature"));
-        Biome biome = context.getWorld().getBiome(pos).value();
-        return biome.getGenerationSettings().isFeatureAllowed(placedFeature);
+        PlacedFeature placedFeature = context.getPlacedFeature().orElseThrow(() -> new IllegalStateException("Tried to biome check an unregistered feature, or a feature that should not restrict the biome"));
+        RegistryEntry<Biome> registryEntry = context.getWorld().getBiome(pos);
+        return context.getChunkGenerator().getGenerationSettings(registryEntry).isFeatureAllowed(placedFeature);
     }
 
     @Override

@@ -24,8 +24,8 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class HeightmapRenamingFix
 extends DataFix {
-    public HeightmapRenamingFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public HeightmapRenamingFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     protected TypeRewriteRule makeRule() {

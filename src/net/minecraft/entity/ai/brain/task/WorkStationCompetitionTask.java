@@ -14,7 +14,8 @@ import net.minecraft.entity.ai.brain.task.LookTargetUtil;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.dynamic.GlobalPos;
+import net.minecraft.util.math.GlobalPos;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.world.poi.PointOfInterestType;
 
@@ -30,7 +31,7 @@ extends Task<VillagerEntity> {
     @Override
     protected void run(ServerWorld serverWorld, VillagerEntity villagerEntity, long l) {
         GlobalPos globalPos = villagerEntity.getBrain().getOptionalMemory(MemoryModuleType.JOB_SITE).get();
-        serverWorld.getPointOfInterestStorage().getType(globalPos.getPos()).ifPresent(pointOfInterestType -> LookTargetUtil.streamSeenVillagers(villagerEntity, villagerEntity -> this.isUsingWorkStationAt(globalPos, (PointOfInterestType)pointOfInterestType, (VillagerEntity)villagerEntity)).reduce(villagerEntity, WorkStationCompetitionTask::keepJobSiteForMoreExperiencedVillager));
+        serverWorld.getPointOfInterestStorage().getType(globalPos.getPos()).ifPresent(registryEntry -> LookTargetUtil.streamSeenVillagers(villagerEntity, villagerEntity -> this.isUsingWorkStationAt(globalPos, (RegistryEntry<PointOfInterestType>)registryEntry, (VillagerEntity)villagerEntity)).reduce(villagerEntity, WorkStationCompetitionTask::keepJobSiteForMoreExperiencedVillager));
     }
 
     private static VillagerEntity keepJobSiteForMoreExperiencedVillager(VillagerEntity first, VillagerEntity second) {
@@ -47,12 +48,12 @@ extends Task<VillagerEntity> {
         return villagerEntity;
     }
 
-    private boolean isUsingWorkStationAt(GlobalPos pos, PointOfInterestType poiType, VillagerEntity villager) {
+    private boolean isUsingWorkStationAt(GlobalPos pos, RegistryEntry<PointOfInterestType> poiType, VillagerEntity villager) {
         return this.hasJobSite(villager) && pos.equals(villager.getBrain().getOptionalMemory(MemoryModuleType.JOB_SITE).get()) && this.isCompletedWorkStation(poiType, villager.getVillagerData().getProfession());
     }
 
-    private boolean isCompletedWorkStation(PointOfInterestType poiType, VillagerProfession profession) {
-        return profession.getWorkStation().getCompletionCondition().test(poiType);
+    private boolean isCompletedWorkStation(RegistryEntry<PointOfInterestType> poiType, VillagerProfession profession) {
+        return profession.heldWorkstation().test(poiType);
     }
 
     private boolean hasJobSite(VillagerEntity villager) {

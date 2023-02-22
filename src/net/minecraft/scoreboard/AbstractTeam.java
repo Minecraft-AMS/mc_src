@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,7 +71,7 @@ public abstract class AbstractTeam {
         }
 
         public Text getDisplayName() {
-            return new TranslatableText("team.collision." + this.name);
+            return Text.translatable("team.collision." + this.name);
         }
 
         private static /* synthetic */ CollisionRule[] method_36797() {
@@ -119,7 +118,7 @@ public abstract class AbstractTeam {
         }
 
         public Text getDisplayName() {
-            return new TranslatableText("team.visibility." + this.name);
+            return Text.translatable("team.visibility." + this.name);
         }
 
         private static /* synthetic */ VisibilityRule[] method_36798() {

@@ -56,7 +56,6 @@ import net.minecraft.village.VillagerType;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -152,7 +151,6 @@ implements VillagerDataContainer {
                 if (!this.world.isClient) {
                     this.setConverting(player.getUuid(), this.random.nextInt(2401) + 3600);
                 }
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             return ActionResult.CONSUME;
@@ -217,6 +215,7 @@ implements VillagerDataContainer {
         }
         villagerEntity.setExperience(this.xp);
         villagerEntity.initialize(world, world.getLocalDifficulty(villagerEntity.getBlockPos()), SpawnReason.CONVERSION, null, null);
+        villagerEntity.reinitializeBrain(world);
         if (this.converter != null && (playerEntity = world.getPlayerByUuid(this.converter)) instanceof ServerPlayerEntity) {
             Criteria.CURED_ZOMBIE_VILLAGER.trigger((ServerPlayerEntity)playerEntity, this, villagerEntity);
             world.handleInteraction(EntityInteraction.ZOMBIE_VILLAGER_CURED, playerEntity, villagerEntity);

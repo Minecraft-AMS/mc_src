@@ -25,6 +25,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class HoneycombItem
 extends Item {
@@ -48,6 +49,7 @@ extends Item {
             }
             itemStack.decrement(1);
             world.setBlockState(blockPos, (BlockState)state, 11);
+            world.emitGameEvent(GameEvent.BLOCK_CHANGE, blockPos, GameEvent.Emitter.of(playerEntity, state));
             world.syncWorldEvent(playerEntity, 3003, blockPos, 0);
             return ActionResult.success(world.isClient);
         }).orElse(ActionResult.PASS);

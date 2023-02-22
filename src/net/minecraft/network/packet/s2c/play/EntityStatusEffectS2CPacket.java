@@ -1,5 +1,8 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.network.packet.s2c.play;
 
@@ -8,23 +11,28 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.util.registry.Registry;
+import org.jetbrains.annotations.Nullable;
 
 public class EntityStatusEffectS2CPacket
 implements Packet<ClientPlayPacketListener> {
+    private static final short field_39448 = Short.MAX_VALUE;
     private static final int AMBIENT_MASK = 1;
     private static final int SHOW_PARTICLES_MASK = 2;
     private static final int SHOW_ICON_MASK = 4;
     private final int entityId;
-    private final int effectId;
+    private final StatusEffect effectId;
     private final byte amplifier;
     private final int duration;
     private final byte flags;
+    @Nullable
+    private final StatusEffectInstance.FactorCalculationData factorCalculationData;
 
     public EntityStatusEffectS2CPacket(int entityId, StatusEffectInstance effect) {
         this.entityId = entityId;
-        this.effectId = StatusEffect.getRawId(effect.getEffectType());
+        this.effectId = effect.getEffectType();
         this.amplifier = (byte)(effect.getAmplifier() & 0xFF);
-        this.duration = effect.getDuration() > Short.MAX_VALUE ? Short.MAX_VALUE : effect.getDuration();
+        this.duration = effect.getDuration();
         byte b = 0;
         if (effect.isAmbient()) {
             b = (byte)(b | 1);
@@ -36,27 +44,30 @@ implements Packet<ClientPlayPacketListener> {
             b = (byte)(b | 4);
         }
         this.flags = b;
+        this.factorCalculationData = effect.getFactorCalculationData().orElse(null);
     }
 
     public EntityStatusEffectS2CPacket(PacketByteBuf buf) {
         this.entityId = buf.readVarInt();
-        this.effectId = buf.readVarInt();
+        this.effectId = buf.readRegistryValue(Registry.STATUS_EFFECT);
         this.amplifier = buf.readByte();
         this.duration = buf.readVarInt();
         this.flags = buf.readByte();
+        this.factorCalculationData = (StatusEffectInstance.FactorCalculationData)buf.readNullable(buf2 -> buf2.decode(StatusEffectInstance.FactorCalculationData.CODEC));
     }
 
     @Override
     public void write(PacketByteBuf buf) {
         buf.writeVarInt(this.entityId);
-        buf.writeVarInt(this.effectId);
+        buf.writeRegistryValue(Registry.STATUS_EFFECT, this.effectId);
         buf.writeByte(this.amplifier);
         buf.writeVarInt(this.duration);
         buf.writeByte(this.flags);
+        buf.writeNullable(this.factorCalculationData, (buf2, factorCalculationData) -> buf2.encode(StatusEffectInstance.FactorCalculationData.CODEC, factorCalculationData));
     }
 
     public boolean isPermanent() {
-        return this.duration == Short.MAX_VALUE;
+        return this.duration >= Short.MAX_VALUE;
     }
 
     @Override
@@ -68,7 +79,7 @@ implements Packet<ClientPlayPacketListener> {
         return this.entityId;
     }
 
-    public int getEffectId() {
+    public StatusEffect getEffectId() {
         return this.effectId;
     }
 
@@ -90,6 +101,11 @@ implements Packet<ClientPlayPacketListener> {
 
     public boolean shouldShowIcon() {
         return (this.flags & 4) == 4;
+    }
+
+    @Nullable
+    public StatusEffectInstance.FactorCalculationData getFactorCalculationData() {
+        return this.factorCalculationData;
     }
 }
 

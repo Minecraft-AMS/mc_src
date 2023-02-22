@@ -27,9 +27,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSyntaxException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.ItemStack;
@@ -45,6 +44,7 @@ import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.loot.provider.number.LootNumberProvider;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 
 public class SetStewEffectLootFunction
@@ -89,7 +89,7 @@ extends ConditionalLootFunction {
 
     public static class Builder
     extends ConditionalLootFunction.Builder<Builder> {
-        private final Map<StatusEffect, LootNumberProvider> map = Maps.newHashMap();
+        private final Map<StatusEffect, LootNumberProvider> map = Maps.newLinkedHashMap();
 
         @Override
         protected Builder getThisBuilder() {
@@ -135,7 +135,7 @@ extends ConditionalLootFunction {
 
         @Override
         public SetStewEffectLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
-            HashMap map = Maps.newHashMap();
+            LinkedHashMap map = Maps.newLinkedHashMap();
             if (jsonObject.has("effects")) {
                 JsonArray jsonArray = JsonHelper.getArray(jsonObject, "effects");
                 for (JsonElement jsonElement : jsonArray) {

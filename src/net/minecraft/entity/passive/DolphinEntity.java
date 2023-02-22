@@ -55,9 +55,9 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.tag.ConfiguredStructureFeatureTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.tag.ItemTags;
+import net.minecraft.tag.StructureTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
@@ -236,7 +236,7 @@ extends WaterCreatureEntity {
         if (this.getEquippedStack(EquipmentSlot.MAINHAND).isEmpty() && this.canPickupItem(itemStack = item.getStack())) {
             this.triggerItemPickedUpByEntityCriteria(item);
             this.equipStack(EquipmentSlot.MAINHAND, itemStack);
-            this.handDropChances[EquipmentSlot.MAINHAND.getEntitySlotId()] = 2.0f;
+            this.updateDropChances(EquipmentSlot.MAINHAND);
             this.sendPickup(item, itemStack.getCount());
             item.discard();
         }
@@ -398,7 +398,7 @@ extends WaterCreatureEntity {
             this.noPathToStructure = false;
             this.dolphin.getNavigation().stop();
             BlockPos blockPos = this.dolphin.getBlockPos();
-            BlockPos blockPos2 = serverWorld.locateStructure(ConfiguredStructureFeatureTags.DOLPHIN_LOCATED, blockPos, 50, false);
+            BlockPos blockPos2 = serverWorld.locateStructure(StructureTags.DOLPHIN_LOCATED, blockPos, 50, false);
             if (blockPos2 == null) {
                 this.noPathToStructure = true;
                 return;

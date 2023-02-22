@@ -21,21 +21,22 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.entity.Entity;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.HoverEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
-import net.minecraft.text.ParsableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.TextContent;
+import net.minecraft.text.TranslatableTextContent;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Language;
 import org.jetbrains.annotations.Nullable;
 
 public class Texts {
     public static final String DEFAULT_SEPARATOR = ", ";
-    public static final Text GRAY_DEFAULT_SEPARATOR_TEXT = new LiteralText(", ").formatted(Formatting.GRAY);
-    public static final Text DEFAULT_SEPARATOR_TEXT = new LiteralText(", ");
+    public static final Text GRAY_DEFAULT_SEPARATOR_TEXT = Text.literal(", ").formatted(Formatting.GRAY);
+    public static final Text DEFAULT_SEPARATOR_TEXT = Text.literal(", ");
 
     public static MutableText setStyleIfAbsent(MutableText text, Style style) {
         if (style.isEmpty()) {
@@ -57,9 +58,9 @@ public class Texts {
 
     public static MutableText parse(@Nullable ServerCommandSource source, Text text, @Nullable Entity sender, int depth) throws CommandSyntaxException {
         if (depth > 100) {
-            return text.shallowCopy();
+            return text.copy();
         }
-        MutableText mutableText = text instanceof ParsableText ? ((ParsableText)((Object)text)).parse(source, sender, depth + 1) : text.copy();
+        MutableText mutableText = text.getContent().parse(source, sender, depth + 1);
         for (Text text2 : text.getSiblings()) {
             mutableText.append(Texts.parse(source, text2, sender, depth + 1));
         }
@@ -78,21 +79,21 @@ public class Texts {
 
     public static Text toText(GameProfile profile) {
         if (profile.getName() != null) {
-            return new LiteralText(profile.getName());
+            return Text.literal(profile.getName());
         }
         if (profile.getId() != null) {
-            return new LiteralText(profile.getId().toString());
+            return Text.literal(profile.getId().toString());
         }
-        return new LiteralText("(unknown)");
+        return Text.literal("(unknown)");
     }
 
     public static Text joinOrdered(Collection<String> strings) {
-        return Texts.joinOrdered(strings, string -> new LiteralText((String)string).formatted(Formatting.GREEN));
+        return Texts.joinOrdered(strings, string -> Text.literal(string).formatted(Formatting.GREEN));
     }
 
     public static <T extends Comparable<T>> Text joinOrdered(Collection<T> elements, Function<T, Text> transformer) {
         if (elements.isEmpty()) {
-            return LiteralText.EMPTY;
+            return ScreenTexts.EMPTY;
         }
         if (elements.size() == 1) {
             return transformer.apply((Comparable)elements.iterator().next());
@@ -116,12 +117,12 @@ public class Texts {
 
     public static <T> MutableText join(Collection<? extends T> elements, Text separator, Function<T, Text> transformer) {
         if (elements.isEmpty()) {
-            return new LiteralText("");
+            return Text.empty();
         }
         if (elements.size() == 1) {
-            return transformer.apply(elements.iterator().next()).shallowCopy();
+            return transformer.apply(elements.iterator().next()).copy();
         }
-        LiteralText mutableText = new LiteralText("");
+        MutableText mutableText = Text.empty();
         boolean bl = true;
         for (T object : elements) {
             if (!bl) {
@@ -134,14 +135,25 @@ public class Texts {
     }
 
     public static MutableText bracketed(Text text) {
-        return new TranslatableText("chat.square_brackets", text);
+        return Text.translatable("chat.square_brackets", text);
     }
 
     public static Text toText(Message message) {
         if (message instanceof Text) {
-            return (Text)message;
+            Text text = (Text)message;
+            return text;
         }
-        return new LiteralText(message.getString());
+        return Text.literal(message.getString());
+    }
+
+    public static boolean hasTranslation(@Nullable Text text) {
+        TextContent textContent;
+        if (text != null && (textContent = text.getContent()) instanceof TranslatableTextContent) {
+            TranslatableTextContent translatableTextContent = (TranslatableTextContent)textContent;
+            String string = translatableTextContent.getKey();
+            return Language.getInstance().hasTranslation(string);
+        }
+        return true;
     }
 }
 

@@ -11,7 +11,6 @@ package net.minecraft.client.sound;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.sound.Sound;
@@ -19,22 +18,22 @@ import net.minecraft.client.sound.SoundContainer;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.client.sound.SoundSystem;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class WeightedSoundSet
 implements SoundContainer<Sound> {
     private final List<SoundContainer<Sound>> sounds = Lists.newArrayList();
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final Identifier id;
     @Nullable
     private final Text subtitle;
 
     public WeightedSoundSet(Identifier id, @Nullable String subtitle) {
         this.id = id;
-        this.subtitle = subtitle == null ? null : new TranslatableText(subtitle);
+        this.subtitle = subtitle == null ? null : Text.translatable(subtitle);
     }
 
     @Override
@@ -47,15 +46,15 @@ implements SoundContainer<Sound> {
     }
 
     @Override
-    public Sound getSound() {
+    public Sound getSound(Random random) {
         int i = this.getWeight();
         if (this.sounds.isEmpty() || i == 0) {
             return SoundManager.MISSING_SOUND;
         }
-        int j = this.random.nextInt(i);
+        int j = random.nextInt(i);
         for (SoundContainer<Sound> soundContainer : this.sounds) {
             if ((j -= soundContainer.getWeight()) >= 0) continue;
-            return soundContainer.getSound();
+            return soundContainer.getSound(random);
         }
         return SoundManager.MISSING_SOUND;
     }
@@ -81,8 +80,8 @@ implements SoundContainer<Sound> {
     }
 
     @Override
-    public /* synthetic */ Object getSound() {
-        return this.getSound();
+    public /* synthetic */ Object getSound(Random random) {
+        return this.getSound(random);
     }
 }
 

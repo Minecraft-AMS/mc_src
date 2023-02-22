@@ -8,7 +8,6 @@ package net.minecraft.block;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -47,6 +46,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.PositionImpl;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 
@@ -86,10 +86,10 @@ extends BlockWithEntity {
     protected void dispense(ServerWorld world, BlockPos pos) {
         BlockPointerImpl blockPointerImpl = new BlockPointerImpl(world, pos);
         DispenserBlockEntity dispenserBlockEntity = (DispenserBlockEntity)blockPointerImpl.getBlockEntity();
-        int i = dispenserBlockEntity.chooseNonEmptySlot();
+        int i = dispenserBlockEntity.chooseNonEmptySlot(world.random);
         if (i < 0) {
             world.syncWorldEvent(1001, pos, 0);
-            world.emitGameEvent(GameEvent.DISPENSE_FAIL, pos);
+            world.emitGameEvent(null, GameEvent.DISPENSE_FAIL, pos);
             return;
         }
         ItemStack itemStack = dispenserBlockEntity.getStack(i);
@@ -104,7 +104,7 @@ extends BlockWithEntity {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         boolean bl = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos.up());
         boolean bl2 = state.get(TRIGGERED);
         if (bl && !bl2) {

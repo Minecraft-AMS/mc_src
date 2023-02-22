@@ -12,7 +12,6 @@ package net.minecraft.block;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
@@ -26,10 +25,13 @@ import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.SculkSensorBlockEntity;
 import net.minecraft.block.enums.SculkSensorPhase;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
 import net.minecraft.particle.DustColorTransitionParticleEffect;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -42,6 +44,8 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.intprovider.ConstantIntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -59,48 +63,45 @@ implements Waterloggable {
         map.put((Object)GameEvent.STEP, 1);
         map.put((Object)GameEvent.FLAP, 2);
         map.put((Object)GameEvent.SWIM, 3);
-        map.put((Object)GameEvent.ELYTRA_FREE_FALL, 4);
+        map.put((Object)GameEvent.ELYTRA_GLIDE, 4);
         map.put((Object)GameEvent.HIT_GROUND, 5);
+        map.put((Object)GameEvent.TELEPORT, 5);
         map.put((Object)GameEvent.SPLASH, 6);
-        map.put((Object)GameEvent.WOLF_SHAKING, 6);
-        map.put((Object)GameEvent.MINECART_MOVING, 6);
-        map.put((Object)GameEvent.RING_BELL, 6);
+        map.put((Object)GameEvent.ENTITY_SHAKE, 6);
         map.put((Object)GameEvent.BLOCK_CHANGE, 6);
+        map.put((Object)GameEvent.NOTE_BLOCK_PLAY, 6);
         map.put((Object)GameEvent.PROJECTILE_SHOOT, 7);
-        map.put((Object)GameEvent.DRINKING_FINISH, 7);
+        map.put((Object)GameEvent.DRINK, 7);
         map.put((Object)GameEvent.PRIME_FUSE, 7);
         map.put((Object)GameEvent.PROJECTILE_LAND, 8);
         map.put((Object)GameEvent.EAT, 8);
-        map.put((Object)GameEvent.MOB_INTERACT, 8);
-        map.put((Object)GameEvent.ENTITY_DAMAGED, 8);
+        map.put((Object)GameEvent.ENTITY_INTERACT, 8);
+        map.put((Object)GameEvent.ENTITY_DAMAGE, 8);
         map.put((Object)GameEvent.EQUIP, 9);
         map.put((Object)GameEvent.SHEAR, 9);
-        map.put((Object)GameEvent.RAVAGER_ROAR, 9);
+        map.put((Object)GameEvent.ENTITY_ROAR, 9);
         map.put((Object)GameEvent.BLOCK_CLOSE, 10);
-        map.put((Object)GameEvent.BLOCK_UNSWITCH, 10);
-        map.put((Object)GameEvent.BLOCK_UNPRESS, 10);
+        map.put((Object)GameEvent.BLOCK_DEACTIVATE, 10);
         map.put((Object)GameEvent.BLOCK_DETACH, 10);
         map.put((Object)GameEvent.DISPENSE_FAIL, 10);
         map.put((Object)GameEvent.BLOCK_OPEN, 11);
-        map.put((Object)GameEvent.BLOCK_SWITCH, 11);
-        map.put((Object)GameEvent.BLOCK_PRESS, 11);
+        map.put((Object)GameEvent.BLOCK_ACTIVATE, 11);
         map.put((Object)GameEvent.BLOCK_ATTACH, 11);
         map.put((Object)GameEvent.ENTITY_PLACE, 12);
         map.put((Object)GameEvent.BLOCK_PLACE, 12);
         map.put((Object)GameEvent.FLUID_PLACE, 12);
-        map.put((Object)GameEvent.ENTITY_KILLED, 13);
+        map.put((Object)GameEvent.ENTITY_DIE, 13);
         map.put((Object)GameEvent.BLOCK_DESTROY, 13);
         map.put((Object)GameEvent.FLUID_PICKUP, 13);
-        map.put((Object)GameEvent.FISHING_ROD_REEL_IN, 14);
+        map.put((Object)GameEvent.ITEM_INTERACT_FINISH, 14);
         map.put((Object)GameEvent.CONTAINER_CLOSE, 14);
         map.put((Object)GameEvent.PISTON_CONTRACT, 14);
-        map.put((Object)GameEvent.SHULKER_CLOSE, 14);
         map.put((Object)GameEvent.PISTON_EXTEND, 15);
         map.put((Object)GameEvent.CONTAINER_OPEN, 15);
-        map.put((Object)GameEvent.FISHING_ROD_CAST, 15);
+        map.put((Object)GameEvent.ITEM_INTERACT_START, 15);
         map.put((Object)GameEvent.EXPLODE, 15);
         map.put((Object)GameEvent.LIGHTNING_STRIKE, 15);
-        map.put((Object)GameEvent.SHULKER_OPEN, 15);
+        map.put((Object)GameEvent.INSTRUMENT_PLAY, 15);
     })));
     public static final EnumProperty<SculkSensorPhase> SCULK_SENSOR_PHASE = Properties.SCULK_SENSOR_PHASE;
     public static final IntProperty POWER = Properties.POWER;
@@ -146,6 +147,19 @@ implements Waterloggable {
     }
 
     @Override
+    public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
+        if (!world.isClient() && SculkSensorBlock.isInactive(state) && entity.getType() != EntityType.WARDEN) {
+            BlockEntity blockEntity = world.getBlockEntity(pos);
+            if (blockEntity instanceof SculkSensorBlockEntity) {
+                SculkSensorBlockEntity sculkSensorBlockEntity = (SculkSensorBlockEntity)blockEntity;
+                sculkSensorBlockEntity.setLastVibrationFrequency(FREQUENCIES.get((Object)GameEvent.STEP));
+            }
+            SculkSensorBlock.setActive(entity, world, pos, state, 15);
+        }
+        super.onSteppedOn(world, pos, state, entity);
+    }
+
+    @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         if (world.isClient() || state.isOf(oldState.getBlock())) {
             return;
@@ -188,7 +202,7 @@ implements Waterloggable {
 
     @Override
     @Nullable
-    public <T extends BlockEntity> GameEventListener getGameEventListener(World world, T blockEntity) {
+    public <T extends BlockEntity> GameEventListener getGameEventListener(ServerWorld world, T blockEntity) {
         if (blockEntity instanceof SculkSensorBlockEntity) {
             return ((SculkSensorBlockEntity)blockEntity).getEventListener();
         }
@@ -234,17 +248,18 @@ implements Waterloggable {
 
     public static void setCooldown(World world, BlockPos pos, BlockState state) {
         world.setBlockState(pos, (BlockState)((BlockState)state.with(SCULK_SENSOR_PHASE, SculkSensorPhase.COOLDOWN)).with(POWER, 0), 3);
-        world.createAndScheduleBlockTick(new BlockPos(pos), state.getBlock(), 1);
+        world.createAndScheduleBlockTick(pos, state.getBlock(), 1);
         if (!state.get(WATERLOGGED).booleanValue()) {
             world.playSound(null, pos, SoundEvents.BLOCK_SCULK_SENSOR_CLICKING_STOP, SoundCategory.BLOCKS, 1.0f, world.random.nextFloat() * 0.2f + 0.8f);
         }
         SculkSensorBlock.updateNeighbors(world, pos);
     }
 
-    public static void setActive(World world, BlockPos pos, BlockState state, int power) {
+    public static void setActive(@Nullable Entity entity, World world, BlockPos pos, BlockState state, int power) {
         world.setBlockState(pos, (BlockState)((BlockState)state.with(SCULK_SENSOR_PHASE, SculkSensorPhase.ACTIVE)).with(POWER, power), 3);
-        world.createAndScheduleBlockTick(new BlockPos(pos), state.getBlock(), 40);
+        world.createAndScheduleBlockTick(pos, state.getBlock(), 40);
         SculkSensorBlock.updateNeighbors(world, pos);
+        world.emitGameEvent(entity, GameEvent.SCULK_SENSOR_TENDRILS_CLICKING, pos);
         if (!state.get(WATERLOGGED).booleanValue()) {
             world.playSound(null, (double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, SoundEvents.BLOCK_SCULK_SENSOR_CLICKING, SoundCategory.BLOCKS, 1.0f, world.random.nextFloat() * 0.2f + 0.8f);
         }
@@ -294,6 +309,14 @@ implements Waterloggable {
     @Override
     public boolean hasSidedTransparency(BlockState state) {
         return true;
+    }
+
+    @Override
+    public void onStacksDropped(BlockState state, ServerWorld world, BlockPos pos, ItemStack stack, boolean dropExperience) {
+        super.onStacksDropped(state, world, pos, stack, dropExperience);
+        if (dropExperience) {
+            this.dropExperienceWhenMined(world, pos, stack, ConstantIntProvider.create(5));
+        }
     }
 }
 

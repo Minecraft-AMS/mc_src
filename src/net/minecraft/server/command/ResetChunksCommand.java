@@ -27,6 +27,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.datafixers.util.Unit;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import net.minecraft.block.Blocks;
@@ -34,7 +35,7 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -51,7 +52,7 @@ public class ResetChunksCommand {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("resetchunks").requires(source -> source.hasPermissionLevel(2))).executes(context -> ResetChunksCommand.executeResetChunks((ServerCommandSource)context.getSource(), 0, true))).then(((RequiredArgumentBuilder)CommandManager.argument("range", IntegerArgumentType.integer((int)0, (int)5)).executes(context -> ResetChunksCommand.executeResetChunks((ServerCommandSource)context.getSource(), IntegerArgumentType.getInteger((CommandContext)context, (String)"range"), true))).then(CommandManager.argument("skipOldChunks", BoolArgumentType.bool()).executes(commandContext -> ResetChunksCommand.executeResetChunks((ServerCommandSource)commandContext.getSource(), IntegerArgumentType.getInteger((CommandContext)commandContext, (String)"range"), BoolArgumentType.getBool((CommandContext)commandContext, (String)"skipOldChunks"))))));
+        dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("resetchunks").requires(source -> source.hasPermissionLevel(2))).executes(context -> ResetChunksCommand.executeResetChunks((ServerCommandSource)context.getSource(), 0, true))).then(((RequiredArgumentBuilder)CommandManager.argument("range", IntegerArgumentType.integer((int)0, (int)5)).executes(context -> ResetChunksCommand.executeResetChunks((ServerCommandSource)context.getSource(), IntegerArgumentType.getInteger((CommandContext)context, (String)"range"), true))).then(CommandManager.argument("skipOldChunks", BoolArgumentType.bool()).executes(context -> ResetChunksCommand.executeResetChunks((ServerCommandSource)context.getSource(), IntegerArgumentType.getInteger((CommandContext)context, (String)"range"), BoolArgumentType.getBool((CommandContext)context, (String)"skipOldChunks"))))));
     }
 
     private static int executeResetChunks(ServerCommandSource source, int radius, boolean skipOldChunks) {
@@ -94,7 +95,7 @@ public class ResetChunksCommand {
                             list.add(chunk2);
                         }
                     }
-                    completableFuture = completableFuture.thenComposeAsync(unit -> chunkStatus.runGenerationTask(taskExecutor::send, serverWorld, serverChunkManager.getChunkGenerator(), serverWorld.getStructureManager(), serverChunkManager.getLightingProvider(), chunk -> {
+                    completableFuture = completableFuture.thenComposeAsync(unit -> chunkStatus.runGenerationTask(taskExecutor::send, serverWorld, serverChunkManager.getChunkGenerator(), serverWorld.getStructureTemplateManager(), serverChunkManager.getLightingProvider(), chunk -> {
                         throw new UnsupportedOperationException("Not creating full chunks here");
                     }, list, true).thenApply(either -> {
                         if (chunkStatus == ChunkStatus.NOISE) {
@@ -120,7 +121,7 @@ public class ResetChunksCommand {
         }
         LOGGER.debug("blockChanged took " + (System.currentTimeMillis() - w) + " ms");
         long q = System.currentTimeMillis() - o;
-        source.sendFeedback(new LiteralText(String.format("%d chunks have been reset. This took %d ms for %d chunks, or %02f ms per chunk", p, q, p, Float.valueOf((float)q / (float)p))), true);
+        source.sendFeedback(Text.literal(String.format(Locale.ROOT, "%d chunks have been reset. This took %d ms for %d chunks, or %02f ms per chunk", p, q, p, Float.valueOf((float)q / (float)p))), true);
         return 1;
     }
 }

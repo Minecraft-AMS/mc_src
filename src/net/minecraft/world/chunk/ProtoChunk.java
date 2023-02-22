@@ -45,7 +45,7 @@ import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.carver.CarvingMask;
 import net.minecraft.world.gen.chunk.BlendingData;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.gen.structure.Structure;
 import net.minecraft.world.tick.BasicTickScheduler;
 import net.minecraft.world.tick.ChunkTickScheduler;
 import net.minecraft.world.tick.SimpleTickScheduler;
@@ -206,7 +206,7 @@ extends Chunk {
     }
 
     @Override
-    public void setStructureStart(ConfiguredStructureFeature<?, ?> configuredStructureFeature, StructureStart start) {
+    public void setStructureStart(Structure structure, StructureStart start) {
         BelowZeroRetrogen belowZeroRetrogen = this.getBelowZeroRetrogen();
         if (belowZeroRetrogen != null && start.hasChildren()) {
             BlockBox blockBox = start.getBoundingBox();
@@ -215,7 +215,7 @@ extends Chunk {
                 return;
             }
         }
-        super.setStructureStart(configuredStructureFeature, start);
+        super.setStructureStart(structure, start);
     }
 
     public List<NbtCompound> getEntities() {
@@ -293,16 +293,16 @@ extends Chunk {
     }
 
     @Nullable
-    public CarvingMask getCarvingMask(GenerationStep.Carver carver) {
-        return this.carvingMasks.get(carver);
+    public CarvingMask getCarvingMask(GenerationStep.Carver step) {
+        return this.carvingMasks.get(step);
     }
 
-    public CarvingMask getOrCreateCarvingMask(GenerationStep.Carver carver2) {
-        return this.carvingMasks.computeIfAbsent(carver2, carver -> new CarvingMask(this.getHeight(), this.getBottomY()));
+    public CarvingMask getOrCreateCarvingMask(GenerationStep.Carver step) {
+        return this.carvingMasks.computeIfAbsent(step, carver -> new CarvingMask(this.getHeight(), this.getBottomY()));
     }
 
-    public void setCarvingMask(GenerationStep.Carver carver, CarvingMask carvingMask) {
-        this.carvingMasks.put(carver, carvingMask);
+    public void setCarvingMask(GenerationStep.Carver step, CarvingMask carvingMask) {
+        this.carvingMasks.put(step, carvingMask);
     }
 
     public void setLightingProvider(LightingProvider lightingProvider) {

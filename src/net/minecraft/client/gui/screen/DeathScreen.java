@@ -14,16 +14,15 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.SaveLevelScreen;
+import net.minecraft.client.gui.screen.MessageScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +36,7 @@ extends Screen {
     private final List<ButtonWidget> buttons = Lists.newArrayList();
 
     public DeathScreen(@Nullable Text message, boolean isHardcore) {
-        super(new TranslatableText(isHardcore ? "deathScreen.title.hardcore" : "deathScreen.title"));
+        super(Text.translatable(isHardcore ? "deathScreen.title.hardcore" : "deathScreen.title"));
         this.message = message;
         this.isHardcore = isHardcore;
     }
@@ -46,23 +45,23 @@ extends Screen {
     protected void init() {
         this.ticksSinceDeath = 0;
         this.buttons.clear();
-        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, this.isHardcore ? new TranslatableText("deathScreen.spectate") : new TranslatableText("deathScreen.respawn"), button -> {
+        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 72, 200, 20, this.isHardcore ? Text.translatable("deathScreen.spectate") : Text.translatable("deathScreen.respawn"), button -> {
             this.client.player.requestRespawn();
             this.client.setScreen(null);
         })));
-        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96, 200, 20, new TranslatableText("deathScreen.titleScreen"), button -> {
+        this.buttons.add(this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height / 4 + 96, 200, 20, Text.translatable("deathScreen.titleScreen"), button -> {
             if (this.isHardcore) {
                 this.quitLevel();
                 return;
             }
-            ConfirmScreen confirmScreen = new ConfirmScreen(this::onConfirmQuit, new TranslatableText("deathScreen.quit.confirm"), LiteralText.EMPTY, new TranslatableText("deathScreen.titleScreen"), new TranslatableText("deathScreen.respawn"));
+            ConfirmScreen confirmScreen = new ConfirmScreen(this::onConfirmQuit, Text.translatable("deathScreen.quit.confirm"), ScreenTexts.EMPTY, Text.translatable("deathScreen.titleScreen"), Text.translatable("deathScreen.respawn"));
             this.client.setScreen(confirmScreen);
             confirmScreen.disableButtons(20);
         })));
         for (ButtonWidget buttonWidget : this.buttons) {
             buttonWidget.active = false;
         }
-        this.scoreText = new TranslatableText("deathScreen.score").append(": ").append(new LiteralText(Integer.toString(this.client.player.getScore())).formatted(Formatting.YELLOW));
+        this.scoreText = Text.translatable("deathScreen.score").append(": ").append(Text.literal(Integer.toString(this.client.player.getScore())).formatted(Formatting.YELLOW));
     }
 
     @Override
@@ -83,7 +82,7 @@ extends Screen {
         if (this.client.world != null) {
             this.client.world.disconnect();
         }
-        this.client.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel")));
+        this.client.disconnect(new MessageScreen(Text.translatable("menu.savingLevel")));
         this.client.setScreen(new TitleScreen());
     }
 

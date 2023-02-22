@@ -15,17 +15,17 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.rule.AlwaysTruePosRuleTest;
 import net.minecraft.structure.rule.PosRuleTest;
 import net.minecraft.structure.rule.RuleTest;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 public class StructureProcessorRule {
-    public static final Codec<StructureProcessorRule> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RuleTest.TYPE_CODEC.fieldOf("input_predicate").forGetter(structureProcessorRule -> structureProcessorRule.inputPredicate), (App)RuleTest.TYPE_CODEC.fieldOf("location_predicate").forGetter(structureProcessorRule -> structureProcessorRule.locationPredicate), (App)PosRuleTest.field_25007.optionalFieldOf("position_predicate", (Object)AlwaysTruePosRuleTest.INSTANCE).forGetter(structureProcessorRule -> structureProcessorRule.positionPredicate), (App)BlockState.CODEC.fieldOf("output_state").forGetter(structureProcessorRule -> structureProcessorRule.outputState), (App)NbtCompound.CODEC.optionalFieldOf("output_nbt").forGetter(structureProcessorRule -> Optional.ofNullable(structureProcessorRule.outputNbt))).apply((Applicative)instance, StructureProcessorRule::new));
+    public static final Codec<StructureProcessorRule> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)RuleTest.TYPE_CODEC.fieldOf("input_predicate").forGetter(rule -> rule.inputPredicate), (App)RuleTest.TYPE_CODEC.fieldOf("location_predicate").forGetter(rule -> rule.locationPredicate), (App)PosRuleTest.field_25007.optionalFieldOf("position_predicate", (Object)AlwaysTruePosRuleTest.INSTANCE).forGetter(rule -> rule.positionPredicate), (App)BlockState.CODEC.fieldOf("output_state").forGetter(rule -> rule.outputState), (App)NbtCompound.CODEC.optionalFieldOf("output_nbt").forGetter(rule -> Optional.ofNullable(rule.outputNbt))).apply((Applicative)instance, StructureProcessorRule::new));
     private final RuleTest inputPredicate;
     private final RuleTest locationPredicate;
     private final PosRuleTest positionPredicate;

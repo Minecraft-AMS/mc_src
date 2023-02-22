@@ -22,31 +22,35 @@ implements Packet<ClientPlayPacketListener> {
     private final int entityId;
     private final float volume;
     private final float pitch;
+    private final long seed;
 
-    public PlaySoundFromEntityS2CPacket(SoundEvent sound, SoundCategory category, Entity entity, float volume, float pitch) {
+    public PlaySoundFromEntityS2CPacket(SoundEvent sound, SoundCategory category, Entity entity, float volume, float pitch, long seed) {
         Validate.notNull((Object)sound, (String)"sound", (Object[])new Object[0]);
         this.sound = sound;
         this.category = category;
         this.entityId = entity.getId();
         this.volume = volume;
         this.pitch = pitch;
+        this.seed = seed;
     }
 
     public PlaySoundFromEntityS2CPacket(PacketByteBuf buf) {
-        this.sound = (SoundEvent)Registry.SOUND_EVENT.get(buf.readVarInt());
+        this.sound = buf.readRegistryValue(Registry.SOUND_EVENT);
         this.category = buf.readEnumConstant(SoundCategory.class);
         this.entityId = buf.readVarInt();
         this.volume = buf.readFloat();
         this.pitch = buf.readFloat();
+        this.seed = buf.readLong();
     }
 
     @Override
     public void write(PacketByteBuf buf) {
-        buf.writeVarInt(Registry.SOUND_EVENT.getRawId(this.sound));
+        buf.writeRegistryValue(Registry.SOUND_EVENT, this.sound);
         buf.writeEnumConstant(this.category);
         buf.writeVarInt(this.entityId);
         buf.writeFloat(this.volume);
         buf.writeFloat(this.pitch);
+        buf.writeLong(this.seed);
     }
 
     public SoundEvent getSound() {
@@ -67,6 +71,10 @@ implements Packet<ClientPlayPacketListener> {
 
     public float getPitch() {
         return this.pitch;
+    }
+
+    public long getSeed() {
+        return this.seed;
     }
 
     @Override

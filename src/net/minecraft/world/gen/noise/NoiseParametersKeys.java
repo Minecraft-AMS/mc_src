@@ -5,10 +5,10 @@ package net.minecraft.world.gen.noise;
 
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
+import net.minecraft.util.math.random.RandomSplitter;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
-import net.minecraft.world.gen.random.RandomDeriver;
 
 public class NoiseParametersKeys {
     public static final RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> TEMPERATURE = NoiseParametersKeys.register("temperature");
@@ -73,16 +73,12 @@ public class NoiseParametersKeys {
     public static final RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> NETHER_STATE_SELECTOR = NoiseParametersKeys.register("nether_state_selector");
 
     private static RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> register(String id) {
-        return RegistryKey.of(Registry.NOISE_WORLDGEN, new Identifier(id));
+        return RegistryKey.of(Registry.NOISE_KEY, new Identifier(id));
     }
 
-    public static DoublePerlinNoiseSampler createNoiseSampler(Registry<DoublePerlinNoiseSampler.NoiseParameters> noiseRegistry, RandomDeriver randomDeriver, RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> noise) {
-        RegistryEntry<DoublePerlinNoiseSampler.NoiseParameters> registryEntry = noiseRegistry.entryOf(noise);
-        return NoiseParametersKeys.method_41127(randomDeriver, registryEntry);
-    }
-
-    public static DoublePerlinNoiseSampler method_41127(RandomDeriver randomDeriver, RegistryEntry<DoublePerlinNoiseSampler.NoiseParameters> registryEntry) {
-        return DoublePerlinNoiseSampler.create(randomDeriver.createRandom(registryEntry.getKey().orElseThrow().getValue()), registryEntry.value());
+    public static DoublePerlinNoiseSampler createNoiseSampler(Registry<DoublePerlinNoiseSampler.NoiseParameters> registry, RandomSplitter randomSplitter, RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> registryKey) {
+        RegistryEntry<DoublePerlinNoiseSampler.NoiseParameters> registryEntry = registry.entryOf(registryKey);
+        return DoublePerlinNoiseSampler.create(randomSplitter.split(registryEntry.getKey().orElseThrow().getValue()), registryEntry.value());
     }
 }
 

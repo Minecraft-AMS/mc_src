@@ -6,7 +6,6 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world;
 
@@ -17,7 +16,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.collection.Pool;
 import net.minecraft.world.biome.SpawnSettings;
-import org.jetbrains.annotations.Nullable;
 
 public record StructureSpawns(BoundingBox boundingBox, Pool<SpawnSettings.SpawnEntry> spawns) {
     public static final Codec<StructureSpawns> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)BoundingBox.CODEC.fieldOf("bounding_box").forGetter(StructureSpawns::boundingBox), (App)Pool.createCodec(SpawnSettings.SpawnEntry.CODEC).fieldOf("spawns").forGetter(StructureSpawns::spawns)).apply((Applicative)instance, StructureSpawns::new));
@@ -27,7 +25,6 @@ public record StructureSpawns(BoundingBox boundingBox, Pool<SpawnSettings.SpawnE
     implements StringIdentifiable {
         public static final /* enum */ BoundingBox PIECE = new BoundingBox("piece");
         public static final /* enum */ BoundingBox STRUCTURE = new BoundingBox("full");
-        public static final BoundingBox[] VALUES;
         public static final Codec<BoundingBox> CODEC;
         private final String name;
         private static final /* synthetic */ BoundingBox[] field_37204;
@@ -49,26 +46,13 @@ public record StructureSpawns(BoundingBox boundingBox, Pool<SpawnSettings.SpawnE
             return this.name;
         }
 
-        @Nullable
-        public static BoundingBox byName(@Nullable String name) {
-            if (name == null) {
-                return null;
-            }
-            for (BoundingBox boundingBox : VALUES) {
-                if (!boundingBox.name.equals(name)) continue;
-                return boundingBox;
-            }
-            return null;
-        }
-
         private static /* synthetic */ BoundingBox[] method_41152() {
             return new BoundingBox[]{PIECE, STRUCTURE};
         }
 
         static {
             field_37204 = BoundingBox.method_41152();
-            VALUES = BoundingBox.values();
-            CODEC = StringIdentifiable.createCodec(() -> VALUES, BoundingBox::byName);
+            CODEC = StringIdentifiable.createCodec(BoundingBox::values);
         }
     }
 }

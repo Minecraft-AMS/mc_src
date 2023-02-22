@@ -19,7 +19,6 @@ implements StringIdentifiable {
     private final Direction direction;
     private final int offset;
     private final String name;
-    private static final VerticalSurfaceType[] VALUES;
     private static final /* synthetic */ VerticalSurfaceType[] field_29320;
 
     public static VerticalSurfaceType[] values() {
@@ -44,14 +43,6 @@ implements StringIdentifiable {
         return this.offset;
     }
 
-    public static VerticalSurfaceType byName(String name) {
-        for (VerticalSurfaceType verticalSurfaceType : VALUES) {
-            if (!verticalSurfaceType.asString().equals(name)) continue;
-            return verticalSurfaceType;
-        }
-        throw new IllegalArgumentException("Unknown Surface type: " + name);
-    }
-
     @Override
     public String asString() {
         return this.name;
@@ -63,8 +54,7 @@ implements StringIdentifiable {
 
     static {
         field_29320 = VerticalSurfaceType.method_36759();
-        CODEC = StringIdentifiable.createCodec(VerticalSurfaceType::values, VerticalSurfaceType::byName);
-        VALUES = VerticalSurfaceType.values();
+        CODEC = StringIdentifiable.createCodec(VerticalSurfaceType::values);
     }
 }
 

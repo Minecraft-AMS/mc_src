@@ -8,10 +8,9 @@ import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.network.ServerPlayerInteractionManager;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -49,7 +48,7 @@ extends ServerPlayerInteractionManager {
                 if (m == 6L) {
                     this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 104.0f));
                 } else {
-                    this.player.sendSystemMessage(new TranslatableText("demo.day." + m), Util.NIL_UUID);
+                    this.player.sendMessage(Text.translatable("demo.day." + m));
                 }
             }
         } else if (m == 1L) {
@@ -61,24 +60,24 @@ extends ServerPlayerInteractionManager {
                 this.player.networkHandler.sendPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.DEMO_MESSAGE_SHOWN, 103.0f));
             }
         } else if (m == 5L && l % 24000L == 22000L) {
-            this.player.sendSystemMessage(new TranslatableText("demo.day.warning"), Util.NIL_UUID);
+            this.player.sendMessage(Text.translatable("demo.day.warning"));
         }
     }
 
     private void sendDemoReminder() {
         if (this.reminderTicks > 100) {
-            this.player.sendSystemMessage(new TranslatableText("demo.reminder"), Util.NIL_UUID);
+            this.player.sendMessage(Text.translatable("demo.reminder"));
             this.reminderTicks = 0;
         }
     }
 
     @Override
-    public void processBlockBreakingAction(BlockPos pos, PlayerActionC2SPacket.Action action, Direction direction, int worldHeight) {
+    public void processBlockBreakingAction(BlockPos pos, PlayerActionC2SPacket.Action action, Direction direction, int worldHeight, int sequence) {
         if (this.demoEnded) {
             this.sendDemoReminder();
             return;
         }
-        super.processBlockBreakingAction(pos, action, direction, worldHeight);
+        super.processBlockBreakingAction(pos, action, direction, worldHeight, sequence);
     }
 
     @Override

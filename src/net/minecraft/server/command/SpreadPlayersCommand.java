@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Material;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -44,18 +43,19 @@ import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 
 public class SpreadPlayersCommand {
     private static final int MAX_ATTEMPTS = 10000;
-    private static final Dynamic4CommandExceptionType FAILED_TEAMS_EXCEPTION = new Dynamic4CommandExceptionType((pilesCount, x, z, maxSpreadDistance) -> new TranslatableText("commands.spreadplayers.failed.teams", pilesCount, x, z, maxSpreadDistance));
-    private static final Dynamic4CommandExceptionType FAILED_ENTITIES_EXCEPTION = new Dynamic4CommandExceptionType((pilesCount, x, z, maxSpreadDistance) -> new TranslatableText("commands.spreadplayers.failed.entities", pilesCount, x, z, maxSpreadDistance));
-    private static final Dynamic2CommandExceptionType INVALID_HEIGHT_EXCEPTION = new Dynamic2CommandExceptionType((maxY, worldBottomY) -> new TranslatableText("commands.spreadplayers.failed.invalid.height", maxY, worldBottomY));
+    private static final Dynamic4CommandExceptionType FAILED_TEAMS_EXCEPTION = new Dynamic4CommandExceptionType((pilesCount, x, z, maxSpreadDistance) -> Text.translatable("commands.spreadplayers.failed.teams", pilesCount, x, z, maxSpreadDistance));
+    private static final Dynamic4CommandExceptionType FAILED_ENTITIES_EXCEPTION = new Dynamic4CommandExceptionType((pilesCount, x, z, maxSpreadDistance) -> Text.translatable("commands.spreadplayers.failed.entities", pilesCount, x, z, maxSpreadDistance));
+    private static final Dynamic2CommandExceptionType INVALID_HEIGHT_EXCEPTION = new Dynamic2CommandExceptionType((maxY, worldBottomY) -> Text.translatable("commands.spreadplayers.failed.invalid.height", maxY, worldBottomY));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("spreadplayers").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.argument("center", Vec2ArgumentType.vec2()).then(CommandManager.argument("spreadDistance", FloatArgumentType.floatArg((float)0.0f)).then(((RequiredArgumentBuilder)CommandManager.argument("maxRange", FloatArgumentType.floatArg((float)1.0f)).then(CommandManager.argument("respectTeams", BoolArgumentType.bool()).then(CommandManager.argument("targets", EntityArgumentType.entities()).executes(context -> SpreadPlayersCommand.execute((ServerCommandSource)context.getSource(), Vec2ArgumentType.getVec2((CommandContext<ServerCommandSource>)context, "center"), FloatArgumentType.getFloat((CommandContext)context, (String)"spreadDistance"), FloatArgumentType.getFloat((CommandContext)context, (String)"maxRange"), ((ServerCommandSource)context.getSource()).getWorld().getTopY(), BoolArgumentType.getBool((CommandContext)context, (String)"respectTeams"), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)context, "targets")))))).then(CommandManager.literal("under").then(CommandManager.argument("maxHeight", IntegerArgumentType.integer()).then(CommandManager.argument("respectTeams", BoolArgumentType.bool()).then(CommandManager.argument("targets", EntityArgumentType.entities()).executes(context -> SpreadPlayersCommand.execute((ServerCommandSource)context.getSource(), Vec2ArgumentType.getVec2((CommandContext<ServerCommandSource>)context, "center"), FloatArgumentType.getFloat((CommandContext)context, (String)"spreadDistance"), FloatArgumentType.getFloat((CommandContext)context, (String)"maxRange"), IntegerArgumentType.getInteger((CommandContext)context, (String)"maxHeight"), BoolArgumentType.getBool((CommandContext)context, (String)"respectTeams"), EntityArgumentType.getEntities((CommandContext<ServerCommandSource>)context, "targets")))))))))));
@@ -67,7 +67,7 @@ public class SpreadPlayersCommand {
         if (maxY < i) {
             throw INVALID_HEIGHT_EXCEPTION.create((Object)maxY, (Object)i);
         }
-        Random random = new Random();
+        Random random = Random.create();
         double d = center.x - maxRange;
         double e = center.y - maxRange;
         double f = center.x + maxRange;
@@ -75,7 +75,7 @@ public class SpreadPlayersCommand {
         Pile[] piles = SpreadPlayersCommand.makePiles(random, respectTeams ? SpreadPlayersCommand.getPileCountRespectingTeams(players) : players.size(), d, e, f, g);
         SpreadPlayersCommand.spread(center, spreadDistance, serverWorld, random, d, e, f, g, maxY, piles, respectTeams);
         double h = SpreadPlayersCommand.getMinDistance(players, serverWorld, piles, maxY, respectTeams);
-        source.sendFeedback(new TranslatableText("commands.spreadplayers.success." + (respectTeams ? "teams" : "entities"), piles.length, Float.valueOf(center.x), Float.valueOf(center.y), String.format(Locale.ROOT, "%.2f", h)), true);
+        source.sendFeedback(Text.translatable("commands.spreadplayers.success." + (respectTeams ? "teams" : "entities"), piles.length, Float.valueOf(center.x), Float.valueOf(center.y), String.format(Locale.ROOT, "%.2f", h)), true);
         return piles.length;
     }
 

@@ -39,7 +39,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.pack.PackListWidget;
 import net.minecraft.client.gui.screen.pack.ResourcePackOrganizer;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -51,9 +50,8 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -66,8 +64,8 @@ public class PackScreen
 extends Screen {
     static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_32395 = 200;
-    private static final Text DROP_INFO = new TranslatableText("pack.dropInfo").formatted(Formatting.GRAY);
-    static final Text FOLDER_INFO = new TranslatableText("pack.folderInfo");
+    private static final Text DROP_INFO = Text.translatable("pack.dropInfo").formatted(Formatting.GRAY);
+    static final Text FOLDER_INFO = Text.translatable("pack.folderInfo");
     private static final int field_32396 = 20;
     private static final Identifier UNKNOWN_PACK = new Identifier("textures/misc/unknown_pack.png");
     private final ResourcePackOrganizer organizer;
@@ -111,7 +109,7 @@ extends Screen {
     @Override
     protected void init() {
         this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height - 48, 150, 20, ScreenTexts.DONE, button -> this.close()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, new TranslatableText("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file), new ButtonWidget.TooltipSupplier(){
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 48, 150, 20, Text.translatable("pack.openFolder"), button -> Util.getOperatingSystem().open(this.file), new ButtonWidget.TooltipSupplier(){
 
             @Override
             public void onTooltip(ButtonWidget buttonWidget, MatrixStack matrixStack, int i, int j) {
@@ -123,10 +121,10 @@ extends Screen {
                 consumer.accept(FOLDER_INFO);
             }
         }));
-        this.availablePackList = new PackListWidget(this.client, 200, this.height, new TranslatableText("pack.available.title"));
+        this.availablePackList = new PackListWidget(this.client, 200, this.height, Text.translatable("pack.available.title"));
         this.availablePackList.setLeftPos(this.width / 2 - 4 - 200);
         this.addSelectableChild(this.availablePackList);
-        this.selectedPackList = new PackListWidget(this.client, 200, this.height, new TranslatableText("pack.selected.title"));
+        this.selectedPackList = new PackListWidget(this.client, 200, this.height, Text.translatable("pack.selected.title"));
         this.selectedPackList.setLeftPos(this.width / 2 + 4);
         this.addSelectableChild(this.selectedPackList);
         this.refresh();
@@ -211,7 +209,7 @@ extends Screen {
                 this.refresh();
             }
             this.client.setScreen(this);
-        }, new TranslatableText("pack.dropConfirm"), new LiteralText(string)));
+        }, Text.translatable("pack.dropConfirm"), Text.literal(string)));
     }
 
     /*

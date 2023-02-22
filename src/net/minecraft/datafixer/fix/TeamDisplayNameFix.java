@@ -22,13 +22,12 @@ import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.datafixer.TypeReferences;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 public class TeamDisplayNameFix
 extends DataFix {
-    public TeamDisplayNameFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public TeamDisplayNameFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     protected TypeRewriteRule makeRule() {
@@ -36,7 +35,7 @@ extends DataFix {
         if (!Objects.equals(type, this.getInputSchema().getType(TypeReferences.TEAM))) {
             throw new IllegalStateException("Team type is not what was expected.");
         }
-        return this.fixTypeEverywhere("TeamDisplayNameFix", type, dynamicOps -> pair -> pair.mapSecond(dynamic -> dynamic.update("DisplayName", dynamic2 -> (Dynamic)DataFixUtils.orElse((Optional)dynamic2.asString().map(string -> Text.Serializer.toJson(new LiteralText((String)string))).map(arg_0 -> ((Dynamic)dynamic).createString(arg_0)).result(), (Object)dynamic2))));
+        return this.fixTypeEverywhere("TeamDisplayNameFix", type, dynamicOps -> pair -> pair.mapSecond(dynamic -> dynamic.update("DisplayName", dynamic2 -> (Dynamic)DataFixUtils.orElse((Optional)dynamic2.asString().map(string -> Text.Serializer.toJson(Text.literal(string))).map(arg_0 -> ((Dynamic)dynamic).createString(arg_0)).result(), (Object)dynamic2))));
     }
 }
 

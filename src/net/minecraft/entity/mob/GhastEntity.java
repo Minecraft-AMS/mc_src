@@ -4,7 +4,6 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import java.util.Random;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
@@ -32,6 +31,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
@@ -73,14 +73,23 @@ implements Monster {
         return true;
     }
 
+    private static boolean isFireballFromPlayer(DamageSource damageSource) {
+        return damageSource.getSource() instanceof FireballEntity && damageSource.getAttacker() instanceof PlayerEntity;
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource damageSource) {
+        return !GhastEntity.isFireballFromPlayer(damageSource) && super.isInvulnerableTo(damageSource);
+    }
+
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (this.isInvulnerableTo(source)) {
-            return false;
-        }
-        if (source.getSource() instanceof FireballEntity && source.getAttacker() instanceof PlayerEntity) {
+        if (GhastEntity.isFireballFromPlayer(source)) {
             super.damage(source, 1000.0f);
             return true;
+        }
+        if (this.isInvulnerableTo(source)) {
+            return false;
         }
         return super.damage(source, amount);
     }

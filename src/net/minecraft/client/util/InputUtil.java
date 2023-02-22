@@ -30,9 +30,7 @@ import java.util.OptionalInt;
 import java.util.function.BiFunction;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Language;
 import net.minecraft.util.Lazy;
 import org.jetbrains.annotations.Nullable;
@@ -190,7 +188,11 @@ public class InputUtil {
         for (Type type : Type.values()) {
             if (!translationKey.startsWith(type.name)) continue;
             String string = translationKey.substring(type.name.length() + 1);
-            return type.createFromCode(Integer.parseInt(string));
+            int i = Integer.parseInt(string);
+            if (type == Type.MOUSE) {
+                --i;
+            }
+            return type.createFromCode(i);
         }
         throw new IllegalArgumentException("Unknown key name: " + translationKey);
     }
@@ -256,13 +258,13 @@ public class InputUtil {
     extends Enum<Type> {
         public static final /* enum */ Type KEYSYM = new Type("key.keyboard", (keyCode, translationKey) -> {
             String string = GLFW.glfwGetKeyName((int)keyCode, (int)-1);
-            return string != null ? new LiteralText(string) : new TranslatableText((String)translationKey);
+            return string != null ? Text.literal(string) : Text.translatable(translationKey);
         });
         public static final /* enum */ Type SCANCODE = new Type("scancode", (scanCode, translationKey) -> {
             String string = GLFW.glfwGetKeyName((int)-1, (int)scanCode);
-            return string != null ? new LiteralText(string) : new TranslatableText((String)translationKey);
+            return string != null ? Text.literal(string) : Text.translatable(translationKey);
         });
-        public static final /* enum */ Type MOUSE = new Type("key.mouse", (buttonCode, translationKey) -> Language.getInstance().hasTranslation((String)translationKey) ? new TranslatableText((String)translationKey) : new TranslatableText("key.mouse", buttonCode + 1));
+        public static final /* enum */ Type MOUSE = new Type("key.mouse", (buttonCode, translationKey) -> Language.getInstance().hasTranslation((String)translationKey) ? Text.translatable(translationKey) : Text.translatable("key.mouse", buttonCode + 1));
         private final Int2ObjectMap<Key> map = new Int2ObjectOpenHashMap();
         final String name;
         final BiFunction<Integer, String, Text> textTranslator;

@@ -4,9 +4,7 @@
 package net.minecraft.world.gen.surfacebuilder;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -16,9 +14,10 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
+import net.minecraft.util.math.random.Random;
+import net.minecraft.util.math.random.RandomSplitter;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
@@ -30,10 +29,8 @@ import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.carver.CarverContext;
 import net.minecraft.world.gen.chunk.BlockColumn;
 import net.minecraft.world.gen.chunk.ChunkNoiseSampler;
+import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.gen.noise.NoiseParametersKeys;
-import net.minecraft.world.gen.random.AbstractRandom;
-import net.minecraft.world.gen.random.ChunkRandom;
-import net.minecraft.world.gen.random.RandomDeriver;
 import net.minecraft.world.gen.surfacebuilder.MaterialRules;
 
 public class SurfaceBuilder {
@@ -56,39 +53,27 @@ public class SurfaceBuilder {
     private final DoublePerlinNoiseSampler icebergPillarNoise;
     private final DoublePerlinNoiseSampler icebergPillarRoofNoise;
     private final DoublePerlinNoiseSampler icebergSurfaceNoise;
-    private final Registry<DoublePerlinNoiseSampler.NoiseParameters> noiseRegistry;
-    private final Map<RegistryKey<DoublePerlinNoiseSampler.NoiseParameters>, DoublePerlinNoiseSampler> noiseSamplers = new ConcurrentHashMap<RegistryKey<DoublePerlinNoiseSampler.NoiseParameters>, DoublePerlinNoiseSampler>();
-    private final Map<Identifier, RandomDeriver> randomDerivers = new ConcurrentHashMap<Identifier, RandomDeriver>();
-    private final RandomDeriver randomDeriver;
+    private final RandomSplitter randomDeriver;
     private final DoublePerlinNoiseSampler surfaceNoise;
     private final DoublePerlinNoiseSampler surfaceSecondaryNoise;
 
-    public SurfaceBuilder(Registry<DoublePerlinNoiseSampler.NoiseParameters> noiseRegistry, BlockState defaultState, int seaLevel, long seed, ChunkRandom.RandomProvider randomProvider) {
-        this.noiseRegistry = noiseRegistry;
+    public SurfaceBuilder(NoiseConfig noiseConfig, BlockState defaultState, int seaLevel, RandomSplitter randomDeriver) {
         this.defaultState = defaultState;
         this.seaLevel = seaLevel;
-        this.randomDeriver = randomProvider.create(seed).createRandomDeriver();
-        this.terracottaBandsOffsetNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.CLAY_BANDS_OFFSET);
-        this.terracottaBands = SurfaceBuilder.createTerracottaBands(this.randomDeriver.createRandom(new Identifier("clay_bands")));
-        this.surfaceNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.SURFACE);
-        this.surfaceSecondaryNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.SURFACE_SECONDARY);
-        this.badlandsPillarNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.BADLANDS_PILLAR);
-        this.badlandsPillarRoofNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.BADLANDS_PILLAR_ROOF);
-        this.badlandsSurfaceNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.BADLANDS_SURFACE);
-        this.icebergPillarNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.ICEBERG_PILLAR);
-        this.icebergPillarRoofNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.ICEBERG_PILLAR_ROOF);
-        this.icebergSurfaceNoise = NoiseParametersKeys.createNoiseSampler(noiseRegistry, this.randomDeriver, NoiseParametersKeys.ICEBERG_SURFACE);
+        this.randomDeriver = randomDeriver;
+        this.terracottaBandsOffsetNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.CLAY_BANDS_OFFSET);
+        this.terracottaBands = SurfaceBuilder.createTerracottaBands(randomDeriver.split(new Identifier("clay_bands")));
+        this.surfaceNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.SURFACE);
+        this.surfaceSecondaryNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.SURFACE_SECONDARY);
+        this.badlandsPillarNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.BADLANDS_PILLAR);
+        this.badlandsPillarRoofNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.BADLANDS_PILLAR_ROOF);
+        this.badlandsSurfaceNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.BADLANDS_SURFACE);
+        this.icebergPillarNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.ICEBERG_PILLAR);
+        this.icebergPillarRoofNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.ICEBERG_PILLAR_ROOF);
+        this.icebergSurfaceNoise = noiseConfig.getOrCreateSampler(NoiseParametersKeys.ICEBERG_SURFACE);
     }
 
-    protected DoublePerlinNoiseSampler getNoiseSampler(RegistryKey<DoublePerlinNoiseSampler.NoiseParameters> noise) {
-        return this.noiseSamplers.computeIfAbsent(noise, registryKey2 -> NoiseParametersKeys.createNoiseSampler(this.noiseRegistry, this.randomDeriver, noise));
-    }
-
-    protected RandomDeriver getRandomDeriver(Identifier id) {
-        return this.randomDerivers.computeIfAbsent(id, i -> this.randomDeriver.createRandom(id).createRandomDeriver());
-    }
-
-    public void buildSurface(BiomeAccess biomeAccess, Registry<Biome> biomeRegistry, boolean useLegacyRandom, HeightContext context, final Chunk chunk, ChunkNoiseSampler chunkNoiseSampler, MaterialRules.MaterialRule surfaceRule) {
+    public void buildSurface(NoiseConfig noiseConfig, BiomeAccess biomeAccess, Registry<Biome> biomeRegistry, boolean useLegacyRandom, HeightContext heightContext, final Chunk chunk, ChunkNoiseSampler chunkNoiseSampler, MaterialRules.MaterialRule materialRule) {
         final BlockPos.Mutable mutable = new BlockPos.Mutable();
         final ChunkPos chunkPos = chunk.getPos();
         int i = chunkPos.getStartX();
@@ -115,8 +100,8 @@ public class SurfaceBuilder {
                 return "ChunkBlockColumn " + chunkPos;
             }
         };
-        MaterialRules.MaterialRuleContext materialRuleContext = new MaterialRules.MaterialRuleContext(this, chunk, chunkNoiseSampler, biomeAccess::getBiome, biomeRegistry, context);
-        MaterialRules.BlockStateRule blockStateRule = (MaterialRules.BlockStateRule)surfaceRule.apply(materialRuleContext);
+        MaterialRules.MaterialRuleContext materialRuleContext = new MaterialRules.MaterialRuleContext(this, noiseConfig, chunk, chunkNoiseSampler, biomeAccess::getBiome, biomeRegistry, heightContext);
+        MaterialRules.BlockStateRule blockStateRule = (MaterialRules.BlockStateRule)materialRule.apply(materialRuleContext);
         BlockPos.Mutable mutable2 = new BlockPos.Mutable();
         for (int k = 0; k < 16; ++k) {
             for (int l = 0; l < 16; ++l) {
@@ -170,7 +155,7 @@ public class SurfaceBuilder {
 
     protected int method_39552(int i, int j) {
         double d = this.surfaceNoise.sample(i, 0.0, j);
-        return (int)(d * 2.75 + 3.0 + this.randomDeriver.createRandom(i, 0, j).nextDouble() * 0.25);
+        return (int)(d * 2.75 + 3.0 + this.randomDeriver.split(i, 0, j).nextDouble() * 0.25);
     }
 
     protected double method_39555(int i, int j) {
@@ -183,7 +168,7 @@ public class SurfaceBuilder {
 
     @Deprecated
     public Optional<BlockState> applyMaterialRule(MaterialRules.MaterialRule rule, CarverContext context, Function<BlockPos, RegistryEntry<Biome>> posToBiome, Chunk chunk, ChunkNoiseSampler chunkNoiseSampler, BlockPos pos, boolean hasFluid) {
-        MaterialRules.MaterialRuleContext materialRuleContext = new MaterialRules.MaterialRuleContext(this, chunk, chunkNoiseSampler, posToBiome, context.getRegistryManager().get(Registry.BIOME_KEY), context);
+        MaterialRules.MaterialRuleContext materialRuleContext = new MaterialRules.MaterialRuleContext(this, context.getNoiseConfig(), chunk, chunkNoiseSampler, posToBiome, context.getRegistryManager().get(Registry.BIOME_KEY), context);
         MaterialRules.BlockStateRule blockStateRule = (MaterialRules.BlockStateRule)rule.apply(materialRuleContext);
         int i = pos.getX();
         int j = pos.getY();
@@ -241,12 +226,12 @@ public class SurfaceBuilder {
             j = 0.0;
         }
         double k = i;
-        AbstractRandom abstractRandom = this.randomDeriver.createRandom(x, 0, z);
-        int l = 2 + abstractRandom.nextInt(4);
-        int m = this.seaLevel + 18 + abstractRandom.nextInt(10);
+        Random random = this.randomDeriver.split(x, 0, z);
+        int l = 2 + random.nextInt(4);
+        int m = this.seaLevel + 18 + random.nextInt(10);
         int n = 0;
         for (int o = Math.max(surfaceY, (int)k + 1); o >= minY; --o) {
-            if (!(column.getState(o).isAir() && o < (int)k && abstractRandom.nextDouble() > 0.01) && (column.getState(o).getMaterial() != Material.WATER || o <= (int)j || o >= this.seaLevel || j == 0.0 || !(abstractRandom.nextDouble() > 0.15))) continue;
+            if (!(column.getState(o).isAir() && o < (int)k && random.nextDouble() > 0.01) && (column.getState(o).getMaterial() != Material.WATER || o <= (int)j || o >= this.seaLevel || j == 0.0 || !(random.nextDouble() > 0.15))) continue;
             if (n <= l && o > m) {
                 column.setState(o, SNOW_BLOCK);
                 ++n;
@@ -256,7 +241,7 @@ public class SurfaceBuilder {
         }
     }
 
-    private static BlockState[] createTerracottaBands(AbstractRandom random) {
+    private static BlockState[] createTerracottaBands(Random random) {
         int i;
         Object[] blockStates = new BlockState[192];
         Arrays.fill(blockStates, TERRACOTTA);
@@ -280,7 +265,7 @@ public class SurfaceBuilder {
         return blockStates;
     }
 
-    private static void addTerracottaBands(AbstractRandom random, BlockState[] terracottaBands, int minBandSize, BlockState state) {
+    private static void addTerracottaBands(Random random, BlockState[] terracottaBands, int minBandSize, BlockState state) {
         int i = random.nextBetween(6, 15);
         for (int j = 0; j < i; ++j) {
             int k = minBandSize + random.nextInt(3);

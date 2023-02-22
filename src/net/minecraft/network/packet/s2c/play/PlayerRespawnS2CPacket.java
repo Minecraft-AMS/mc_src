@@ -6,11 +6,12 @@
  */
 package net.minecraft.network.packet.s2c.play;
 
+import java.util.Optional;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
@@ -19,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class PlayerRespawnS2CPacket
 implements Packet<ClientPlayPacketListener> {
-    private final RegistryEntry<DimensionType> dimensionType;
+    private final RegistryKey<DimensionType> dimensionType;
     private final RegistryKey<World> dimension;
     private final long sha256Seed;
     private final GameMode gameMode;
@@ -28,9 +29,10 @@ implements Packet<ClientPlayPacketListener> {
     private final boolean debugWorld;
     private final boolean flatWorld;
     private final boolean keepPlayerAttributes;
+    private final Optional<GlobalPos> lastDeathPos;
 
-    public PlayerRespawnS2CPacket(RegistryEntry<DimensionType> registryEntry, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, @Nullable GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes) {
-        this.dimensionType = registryEntry;
+    public PlayerRespawnS2CPacket(RegistryKey<DimensionType> dimensionType, RegistryKey<World> dimension, long sha256Seed, GameMode gameMode, @Nullable GameMode previousGameMode, boolean debugWorld, boolean flatWorld, boolean keepPlayerAttributes, Optional<GlobalPos> lastDeathPos) {
+        this.dimensionType = dimensionType;
         this.dimension = dimension;
         this.sha256Seed = sha256Seed;
         this.gameMode = gameMode;
@@ -38,29 +40,32 @@ implements Packet<ClientPlayPacketListener> {
         this.debugWorld = debugWorld;
         this.flatWorld = flatWorld;
         this.keepPlayerAttributes = keepPlayerAttributes;
+        this.lastDeathPos = lastDeathPos;
     }
 
     public PlayerRespawnS2CPacket(PacketByteBuf buf) {
-        this.dimensionType = buf.decode(DimensionType.REGISTRY_CODEC);
-        this.dimension = RegistryKey.of(Registry.WORLD_KEY, buf.readIdentifier());
+        this.dimensionType = buf.readRegistryKey(Registry.DIMENSION_TYPE_KEY);
+        this.dimension = buf.readRegistryKey(Registry.WORLD_KEY);
         this.sha256Seed = buf.readLong();
         this.gameMode = GameMode.byId(buf.readUnsignedByte());
         this.previousGameMode = GameMode.getOrNull(buf.readByte());
         this.debugWorld = buf.readBoolean();
         this.flatWorld = buf.readBoolean();
         this.keepPlayerAttributes = buf.readBoolean();
+        this.lastDeathPos = buf.readOptional(PacketByteBuf::readGlobalPos);
     }
 
     @Override
     public void write(PacketByteBuf buf) {
-        buf.encode(DimensionType.REGISTRY_CODEC, this.dimensionType);
-        buf.writeIdentifier(this.dimension.getValue());
+        buf.writeRegistryKey(this.dimensionType);
+        buf.writeRegistryKey(this.dimension);
         buf.writeLong(this.sha256Seed);
         buf.writeByte(this.gameMode.getId());
         buf.writeByte(GameMode.getId(this.previousGameMode));
         buf.writeBoolean(this.debugWorld);
         buf.writeBoolean(this.flatWorld);
         buf.writeBoolean(this.keepPlayerAttributes);
+        buf.writeOptional(this.lastDeathPos, PacketByteBuf::writeGlobalPos);
     }
 
     @Override
@@ -68,7 +73,7 @@ implements Packet<ClientPlayPacketListener> {
         clientPlayPacketListener.onPlayerRespawn(this);
     }
 
-    public RegistryEntry<DimensionType> getDimensionType() {
+    public RegistryKey<DimensionType> getDimensionType() {
         return this.dimensionType;
     }
 
@@ -99,6 +104,10 @@ implements Packet<ClientPlayPacketListener> {
 
     public boolean shouldKeepPlayerAttributes() {
         return this.keepPlayerAttributes;
+    }
+
+    public Optional<GlobalPos> getLastDeathPos() {
+        return this.lastDeathPos;
     }
 }
 

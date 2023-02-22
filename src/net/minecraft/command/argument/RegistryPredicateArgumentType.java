@@ -28,24 +28,20 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.tag.TagKey;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
 
 public class RegistryPredicateArgumentType<T>
 implements ArgumentType<RegistryPredicate<T>> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012", "#skeletons", "#minecraft:skeletons");
-    private static final DynamicCommandExceptionType INVALID_BIOME_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("commands.locatebiome.invalid", id));
-    private static final DynamicCommandExceptionType INVALID_CONFIGURED_STRUCTURE_FEATURE_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("commands.locate.invalid", id));
     final RegistryKey<? extends Registry<T>> registryRef;
 
     public RegistryPredicateArgumentType(RegistryKey<? extends Registry<T>> registryRef) {
@@ -56,18 +52,10 @@ implements ArgumentType<RegistryPredicate<T>> {
         return new RegistryPredicateArgumentType<T>(registryRef);
     }
 
-    private static <T> RegistryPredicate<T> getPredicate(CommandContext<ServerCommandSource> context, String name, RegistryKey<Registry<T>> registryRef, DynamicCommandExceptionType invalidException) throws CommandSyntaxException {
+    public static <T> RegistryPredicate<T> getPredicate(CommandContext<ServerCommandSource> context, String name, RegistryKey<Registry<T>> registryRef, DynamicCommandExceptionType invalidException) throws CommandSyntaxException {
         RegistryPredicate registryPredicate = (RegistryPredicate)context.getArgument(name, RegistryPredicate.class);
         Optional<RegistryPredicate<T>> optional = registryPredicate.tryCast(registryRef);
         return optional.orElseThrow(() -> invalidException.create((Object)registryPredicate));
-    }
-
-    public static RegistryPredicate<Biome> getBiomePredicate(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return RegistryPredicateArgumentType.getPredicate(context, name, Registry.BIOME_KEY, INVALID_BIOME_EXCEPTION);
-    }
-
-    public static RegistryPredicate<ConfiguredStructureFeature<?, ?>> getConfiguredStructureFeaturePredicate(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-        return RegistryPredicateArgumentType.getPredicate(context, name, Registry.CONFIGURED_STRUCTURE_FEATURE_KEY, INVALID_CONFIGURED_STRUCTURE_FEATURE_EXCEPTION);
     }
 
     public RegistryPredicate<T> parse(StringReader stringReader) throws CommandSyntaxException {
@@ -169,27 +157,56 @@ implements ArgumentType<RegistryPredicate<T>> {
         }
     }
 
-    public static class Serializer
-    implements ArgumentSerializer<RegistryPredicateArgumentType<?>> {
+    public static class Serializer<T>
+    implements ArgumentSerializer<RegistryPredicateArgumentType<T>, Properties> {
         @Override
-        public void toPacket(RegistryPredicateArgumentType<?> registryPredicateArgumentType, PacketByteBuf packetByteBuf) {
-            packetByteBuf.writeIdentifier(registryPredicateArgumentType.registryRef.getValue());
+        public void writePacket(Properties properties, PacketByteBuf packetByteBuf) {
+            packetByteBuf.writeIdentifier(properties.registryRef.getValue());
         }
 
         @Override
-        public RegistryPredicateArgumentType<?> fromPacket(PacketByteBuf packetByteBuf) {
+        public Properties fromPacket(PacketByteBuf packetByteBuf) {
             Identifier identifier = packetByteBuf.readIdentifier();
-            return new RegistryPredicateArgumentType(RegistryKey.ofRegistry(identifier));
+            return new Properties(RegistryKey.ofRegistry(identifier));
         }
 
         @Override
-        public void toJson(RegistryPredicateArgumentType<?> registryPredicateArgumentType, JsonObject jsonObject) {
-            jsonObject.addProperty("registry", registryPredicateArgumentType.registryRef.getValue().toString());
+        public void writeJson(Properties properties, JsonObject jsonObject) {
+            jsonObject.addProperty("registry", properties.registryRef.getValue().toString());
         }
 
         @Override
-        public /* synthetic */ ArgumentType fromPacket(PacketByteBuf buf) {
+        public Properties getArgumentTypeProperties(RegistryPredicateArgumentType<T> registryPredicateArgumentType) {
+            return new Properties(registryPredicateArgumentType.registryRef);
+        }
+
+        @Override
+        public /* synthetic */ ArgumentSerializer.ArgumentTypeProperties fromPacket(PacketByteBuf buf) {
             return this.fromPacket(buf);
+        }
+
+        public final class Properties
+        implements ArgumentSerializer.ArgumentTypeProperties<RegistryPredicateArgumentType<T>> {
+            final RegistryKey<? extends Registry<T>> registryRef;
+
+            Properties(RegistryKey<? extends Registry<T>> registryRef) {
+                this.registryRef = registryRef;
+            }
+
+            @Override
+            public RegistryPredicateArgumentType<T> createType(CommandRegistryAccess commandRegistryAccess) {
+                return new RegistryPredicateArgumentType(this.registryRef);
+            }
+
+            @Override
+            public ArgumentSerializer<RegistryPredicateArgumentType<T>, ?> getSerializer() {
+                return Serializer.this;
+            }
+
+            @Override
+            public /* synthetic */ ArgumentType createType(CommandRegistryAccess commandRegistryAccess) {
+                return this.createType(commandRegistryAccess);
+            }
         }
     }
 }

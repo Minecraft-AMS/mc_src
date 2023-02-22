@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -44,8 +45,8 @@ import org.slf4j.Logger;
 public class DataTracker {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Object2IntMap<Class<? extends Entity>> TRACKED_ENTITIES = new Object2IntOpenHashMap();
-    private static final int field_33377 = 255;
-    private static final int field_33378 = 254;
+    private static final int END_PACKET_WRITE = 255;
+    private static final int MAX_DATA_VALUE_ID = 254;
     private final Entity trackedEntity;
     private final Int2ObjectMap<Entry<?>> entries = new Int2ObjectOpenHashMap();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -242,7 +243,7 @@ public class DataTracker {
 
     private <T> void copyToFrom(Entry<T> to, Entry<?> from) {
         if (!Objects.equals(from.data.getType(), to.data.getType())) {
-            throw new IllegalStateException(String.format("Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", to.data.getId(), this.trackedEntity, to.value, to.value.getClass(), from.value, from.value.getClass()));
+            throw new IllegalStateException(String.format(Locale.ROOT, "Invalid entity data item type for field %d on entity %s: old=%s(%s), new=%s(%s)", to.data.getId(), this.trackedEntity, to.value, to.value.getClass(), from.value, from.value.getClass()));
         }
         to.set(from.get());
     }

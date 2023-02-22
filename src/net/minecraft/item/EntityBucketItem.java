@@ -22,8 +22,8 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -74,13 +74,13 @@ extends BucketItem {
             String string2 = "color.minecraft." + TropicalFishEntity.getPatternDyeColor(i);
             for (int j = 0; j < TropicalFishEntity.COMMON_VARIANTS.length; ++j) {
                 if (i != TropicalFishEntity.COMMON_VARIANTS[j]) continue;
-                tooltip.add(new TranslatableText(TropicalFishEntity.getToolTipForVariant(j)).formatted(formattings));
+                tooltip.add(Text.translatable(TropicalFishEntity.getToolTipForVariant(j)).formatted(formattings));
                 return;
             }
-            tooltip.add(new TranslatableText(TropicalFishEntity.getTranslationKey(i)).formatted(formattings));
-            TranslatableText mutableText = new TranslatableText(string);
+            tooltip.add(Text.translatable(TropicalFishEntity.getTranslationKey(i)).formatted(formattings));
+            MutableText mutableText = Text.translatable(string);
             if (!string.equals(string2)) {
-                mutableText.append(", ").append(new TranslatableText(string2));
+                mutableText.append(", ").append(Text.translatable(string2));
             }
             mutableText.formatted(formattings);
             tooltip.add(mutableText);

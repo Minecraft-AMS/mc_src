@@ -6,6 +6,7 @@
  */
 package net.minecraft.screen;
 
+import java.util.Optional;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.player.PlayerEntity;
@@ -137,10 +138,10 @@ extends ScreenHandler {
         return StatusEffect.byRawId(this.propertyDelegate.get(2));
     }
 
-    public void setEffects(int primaryEffectId, int secondaryEffectId) {
+    public void setEffects(Optional<StatusEffect> primary, Optional<StatusEffect> secondary) {
         if (this.paymentSlot.hasStack()) {
-            this.propertyDelegate.set(1, primaryEffectId);
-            this.propertyDelegate.set(2, secondaryEffectId);
+            this.propertyDelegate.set(1, primary.map(StatusEffect::getRawId).orElse(-1));
+            this.propertyDelegate.set(2, secondary.map(StatusEffect::getRawId).orElse(-1));
             this.paymentSlot.takeStack(1);
             this.context.run(World::markDirty);
         }

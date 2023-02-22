@@ -11,14 +11,12 @@ package net.minecraft.client.realms.gui.screen;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsLongConfirmationScreen
@@ -44,7 +42,7 @@ extends RealmsScreen {
             this.addDrawableChild(new ButtonWidget(this.width / 2 - 105, RealmsLongConfirmationScreen.row(8), 100, 20, ScreenTexts.YES, button -> this.callback.accept(true)));
             this.addDrawableChild(new ButtonWidget(this.width / 2 + 5, RealmsLongConfirmationScreen.row(8), 100, 20, ScreenTexts.NO, button -> this.callback.accept(false)));
         } else {
-            this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, RealmsLongConfirmationScreen.row(8), 100, 20, new TranslatableText("mco.gui.ok"), button -> this.callback.accept(true)));
+            this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, RealmsLongConfirmationScreen.row(8), 100, 20, Text.translatable("mco.gui.ok"), button -> this.callback.accept(true)));
         }
     }
 
@@ -89,7 +87,7 @@ extends RealmsScreen {
         }
 
         private Type(String text, int colorCode) {
-            this.text = new LiteralText(text);
+            this.text = Text.literal(text);
             this.colorCode = colorCode;
         }
 

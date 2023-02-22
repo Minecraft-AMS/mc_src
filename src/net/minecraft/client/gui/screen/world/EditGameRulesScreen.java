@@ -30,7 +30,6 @@ import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -40,11 +39,10 @@ import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.world.GameRules;
 import org.jetbrains.annotations.Nullable;
@@ -61,7 +59,7 @@ extends Screen {
     private final GameRules gameRules;
 
     public EditGameRulesScreen(GameRules gameRules, Consumer<Optional<GameRules>> ruleSaveConsumer) {
-        super(new TranslatableText("editGamerule.title"));
+        super(Text.translatable("editGamerule.title"));
         this.gameRules = gameRules;
         this.ruleSaver = ruleSaveConsumer;
     }
@@ -136,15 +134,15 @@ extends Screen {
                 private <T extends GameRules.Rule<T>> void createRuleWidget(GameRules.Key<T> key, RuleWidgetFactory<T> widgetFactory) {
                     Object string3;
                     ImmutableList list;
-                    TranslatableText text = new TranslatableText(key.getTranslationKey());
-                    MutableText text2 = new LiteralText(key.getName()).formatted(Formatting.YELLOW);
+                    MutableText text = Text.translatable(key.getTranslationKey());
+                    MutableText text2 = Text.literal(key.getName()).formatted(Formatting.YELLOW);
                     T rule = gameRules.get(key);
                     String string = ((GameRules.Rule)rule).serialize();
-                    MutableText text3 = new TranslatableText("editGamerule.default", new LiteralText(string)).formatted(Formatting.GRAY);
+                    MutableText text3 = Text.translatable("editGamerule.default", Text.literal(string)).formatted(Formatting.GRAY);
                     String string2 = key.getTranslationKey() + ".description";
                     if (I18n.hasTranslation(string2)) {
                         ImmutableList.Builder builder = ImmutableList.builder().add((Object)text2.asOrderedText());
-                        TranslatableText text4 = new TranslatableText(string2);
+                        MutableText text4 = Text.translatable(string2);
                         EditGameRulesScreen.this.textRenderer.wrapLines(text4, 150).forEach(arg_0 -> ((ImmutableList.Builder)builder).add(arg_0));
                         list = builder.add((Object)text3.asOrderedText()).build();
                         string3 = text4.getString() + "\n" + text3.getString();
@@ -156,7 +154,7 @@ extends Screen {
                 }
             });
             map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-                this.addEntry(new RuleCategoryWidget(new TranslatableText(((GameRules.Category)((Object)((Object)entry.getKey()))).getCategory()).formatted(Formatting.BOLD, Formatting.YELLOW)));
+                this.addEntry(new RuleCategoryWidget(Text.translatable(((GameRules.Category)((Object)((Object)entry.getKey()))).getCategory()).formatted(Formatting.BOLD, Formatting.YELLOW)));
                 ((Map)entry.getValue()).entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName))).forEach(e -> this.addEntry((AbstractRuleWidget)e.getValue()));
             });
         }
@@ -178,7 +176,7 @@ extends Screen {
 
         public IntRuleWidget(Text name, List<OrderedText> description, String ruleName, GameRules.IntRule rule) {
             super(description, name);
-            this.valueWidget = new TextFieldWidget(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, 10, 5, 42, 20, name.shallowCopy().append("\n").append(ruleName).append("\n"));
+            this.valueWidget = new TextFieldWidget(((EditGameRulesScreen)EditGameRulesScreen.this).client.textRenderer, 10, 5, 42, 20, name.copy().append("\n").append(ruleName).append("\n"));
             this.valueWidget.setText(Integer.toString(rule.get()));
             this.valueWidget.setChangedListener(value -> {
                 if (rule.validate((String)value)) {

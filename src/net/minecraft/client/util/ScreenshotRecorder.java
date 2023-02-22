@@ -17,19 +17,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +33,6 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class ScreenshotRecorder {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss");
     private int unitHeight;
     private final DataOutputStream stream;
     private final byte[] buffer;
@@ -66,12 +60,12 @@ public class ScreenshotRecorder {
         Util.getIoWorkerExecutor().execute(() -> {
             try {
                 nativeImage.writeTo(file2);
-                MutableText text = new LiteralText(file2.getName()).formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, file2.getAbsolutePath())));
-                messageReceiver.accept(new TranslatableText("screenshot.success", text));
+                MutableText text = Text.literal(file2.getName()).formatted(Formatting.UNDERLINE).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, file2.getAbsolutePath())));
+                messageReceiver.accept(Text.translatable("screenshot.success", text));
             }
             catch (Exception exception) {
                 LOGGER.warn("Couldn't save screenshot", (Throwable)exception);
-                messageReceiver.accept(new TranslatableText("screenshot.failure", exception.getMessage()));
+                messageReceiver.accept(Text.translatable("screenshot.failure", exception.getMessage()));
             }
             finally {
                 nativeImage.close();
@@ -90,7 +84,7 @@ public class ScreenshotRecorder {
     }
 
     private static File getScreenshotFilename(File directory) {
-        String string = DATE_FORMAT.format(new Date());
+        String string = Util.getFormattedCurrentTime();
         int i = 1;
         File file;
         while ((file = new File(directory, string + (String)(i == 1 ? "" : "_" + i) + ".png")).exists()) {
@@ -105,7 +99,7 @@ public class ScreenshotRecorder {
         this.unitHeight = unitHeight;
         File file = new File(gameDirectory, "screenshots");
         file.mkdir();
-        String string = "huge_" + DATE_FORMAT.format(new Date());
+        String string = "huge_" + Util.getFormattedCurrentTime();
         int i = 1;
         while ((this.file = new File(file, string + (String)(i == 1 ? "" : "_" + i) + ".tga")).exists()) {
             ++i;

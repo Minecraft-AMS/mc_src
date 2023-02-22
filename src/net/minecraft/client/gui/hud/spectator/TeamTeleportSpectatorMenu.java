@@ -11,11 +11,11 @@ package net.minecraft.client.gui.hud.spectator;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.hud.SpectatorHud;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenu;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
@@ -27,16 +27,16 @@ import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class TeamTeleportSpectatorMenu
 implements SpectatorMenuCommandGroup,
 SpectatorMenuCommand {
-    private static final Text TEAM_TELEPORT_TEXT = new TranslatableText("spectatorMenu.team_teleport");
-    private static final Text PROMPT_TEXT = new TranslatableText("spectatorMenu.team_teleport.prompt");
+    private static final Text TEAM_TELEPORT_TEXT = Text.translatable("spectatorMenu.team_teleport");
+    private static final Text PROMPT_TEXT = Text.translatable("spectatorMenu.team_teleport.prompt");
     private final List<SpectatorMenuCommand> commands = Lists.newArrayList();
 
     public TeamTeleportSpectatorMenu() {
@@ -99,7 +99,7 @@ SpectatorMenuCommand {
             if (this.scoreboardEntries.isEmpty()) {
                 this.skinId = DefaultSkinHelper.getTexture();
             } else {
-                String string2 = this.scoreboardEntries.get(new Random().nextInt(this.scoreboardEntries.size())).getProfile().getName();
+                String string2 = this.scoreboardEntries.get(Random.create().nextInt(this.scoreboardEntries.size())).getProfile().getName();
                 this.skinId = AbstractClientPlayerEntity.getSkinId(string2);
                 AbstractClientPlayerEntity.loadSkin(this.skinId, string2);
             }
@@ -126,8 +126,7 @@ SpectatorMenuCommand {
             }
             RenderSystem.setShaderTexture(0, this.skinId);
             RenderSystem.setShaderColor(brightness, brightness, brightness, (float)alpha / 255.0f);
-            DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 8.0f, 8.0f, 8, 8, 64, 64);
-            DrawableHelper.drawTexture(matrices, 2, 2, 12, 12, 40.0f, 8.0f, 8, 8, 64, 64);
+            PlayerSkinDrawer.draw(matrices, 2, 2, 12);
         }
 
         @Override

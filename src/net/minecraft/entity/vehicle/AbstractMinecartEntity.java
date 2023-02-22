@@ -45,6 +45,7 @@ import net.minecraft.entity.vehicle.HopperMinecartEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 import net.minecraft.entity.vehicle.SpawnerMinecartEntity;
 import net.minecraft.entity.vehicle.TntMinecartEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -75,7 +76,7 @@ extends Entity {
     private static final TrackedData<Integer> CUSTOM_BLOCK_OFFSET = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> CUSTOM_BLOCK_PRESENT = DataTracker.registerData(AbstractMinecartEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final ImmutableMap<EntityPose, ImmutableList<Integer>> DISMOUNT_FREE_Y_SPACES_NEEDED = ImmutableMap.of((Object)((Object)EntityPose.STANDING), (Object)ImmutableList.of((Object)0, (Object)1, (Object)-1), (Object)((Object)EntityPose.CROUCHING), (Object)ImmutableList.of((Object)0, (Object)1, (Object)-1), (Object)((Object)EntityPose.SWIMMING), (Object)ImmutableList.of((Object)0, (Object)1));
-    protected static final float field_30694 = 0.95f;
+    protected static final float VELOCITY_SLOWDOWN_MULTIPLIER = 0.95f;
     private boolean yawFlipped;
     private static final Map<RailShape, Pair<Vec3i, Vec3i>> ADJACENT_RAIL_POSITIONS_BY_SHAPE = Util.make(Maps.newEnumMap(RailShape.class), map -> {
         Vec3i vec3i = Direction.WEST.getVector();
@@ -230,7 +231,7 @@ extends Entity {
         this.setDamageWobbleTicks(10);
         this.scheduleVelocityUpdate();
         this.setDamageWobbleStrength(this.getDamageWobbleStrength() + amount * 10.0f);
-        this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
+        this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
         boolean bl2 = bl = source.getAttacker() instanceof PlayerEntity && ((PlayerEntity)source.getAttacker()).getAbilities().creativeMode;
         if (bl || this.getDamageWobbleStrength() > 40.0f) {
             this.removeAllPassengers();
@@ -253,15 +254,17 @@ extends Entity {
     }
 
     public void dropItems(DamageSource damageSource) {
-        this.remove(Entity.RemovalReason.KILLED);
+        this.kill();
         if (this.world.getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
-            ItemStack itemStack = new ItemStack(Items.MINECART);
+            ItemStack itemStack = new ItemStack(this.getItem());
             if (this.hasCustomName()) {
                 itemStack.setCustomName(this.getCustomName());
             }
             this.dropStack(itemStack);
         }
     }
+
+    abstract Item getItem();
 
     @Override
     public void animateDamage() {
@@ -271,7 +274,7 @@ extends Entity {
     }
 
     @Override
-    public boolean collides() {
+    public boolean canHit() {
         return !this.isRemoved();
     }
 
@@ -299,7 +302,7 @@ extends Entity {
             this.setDamageWobbleStrength(this.getDamageWobbleStrength() - 1.0f);
         }
         this.attemptTickInVoid();
-        this.tickNetherPortal();
+        this.tickPortal();
         if (this.world.isClient) {
             if (this.clientInterpolationSteps > 0) {
                 double d = this.getX() + (this.clientX - this.getX()) / (double)this.clientInterpolationSteps;

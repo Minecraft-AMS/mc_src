@@ -9,7 +9,6 @@ package net.minecraft.world;
 import java.util.Arrays;
 import java.util.Comparator;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import org.jetbrains.annotations.Nullable;
 
 public final class Difficulty
@@ -41,7 +40,7 @@ extends Enum<Difficulty> {
     }
 
     public Text getTranslatableName() {
-        return new TranslatableText("options.difficulty." + this.name);
+        return Text.translatable("options.difficulty." + this.name);
     }
 
     public static Difficulty byOrdinal(int ordinal) {

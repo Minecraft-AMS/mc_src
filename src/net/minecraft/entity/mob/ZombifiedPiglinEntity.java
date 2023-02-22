@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.mob;
 
-import java.util.Random;
 import java.util.UUID;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
@@ -38,6 +37,7 @@ import net.minecraft.util.TimeHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
@@ -208,7 +208,7 @@ implements Angerable {
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_SWORD));
     }
 

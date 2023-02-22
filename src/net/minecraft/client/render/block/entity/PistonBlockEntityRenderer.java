@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.render.block.entity;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
@@ -26,6 +25,7 @@ import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 
 @Environment(value=EnvType.CLIENT)
@@ -74,7 +74,7 @@ implements BlockEntityRenderer<PistonBlockEntity> {
     private void renderModel(BlockPos pos, BlockState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, World world, boolean cull, int overlay) {
         RenderLayer renderLayer = RenderLayers.getMovingBlockLayer(state);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(renderLayer);
-        this.manager.getModelRenderer().render(world, this.manager.getModel(state), state, pos, matrices, vertexConsumer, cull, new Random(), state.getRenderingSeed(pos), overlay);
+        this.manager.getModelRenderer().render(world, this.manager.getModel(state), state, pos, matrices, vertexConsumer, cull, Random.create(), state.getRenderingSeed(pos), overlay);
     }
 
     @Override

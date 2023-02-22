@@ -16,6 +16,7 @@ public abstract class BiomeKeys {
     public static final RegistryKey<Biome> ICE_SPIKES = BiomeKeys.register("ice_spikes");
     public static final RegistryKey<Biome> DESERT = BiomeKeys.register("desert");
     public static final RegistryKey<Biome> SWAMP = BiomeKeys.register("swamp");
+    public static final RegistryKey<Biome> MANGROVE_SWAMP = BiomeKeys.register("mangrove_swamp");
     public static final RegistryKey<Biome> FOREST = BiomeKeys.register("forest");
     public static final RegistryKey<Biome> FLOWER_FOREST = BiomeKeys.register("flower_forest");
     public static final RegistryKey<Biome> BIRCH_FOREST = BiomeKeys.register("birch_forest");
@@ -60,6 +61,7 @@ public abstract class BiomeKeys {
     public static final RegistryKey<Biome> MUSHROOM_FIELDS = BiomeKeys.register("mushroom_fields");
     public static final RegistryKey<Biome> DRIPSTONE_CAVES = BiomeKeys.register("dripstone_caves");
     public static final RegistryKey<Biome> LUSH_CAVES = BiomeKeys.register("lush_caves");
+    public static final RegistryKey<Biome> DEEP_DARK = BiomeKeys.register("deep_dark");
     public static final RegistryKey<Biome> NETHER_WASTES = BiomeKeys.register("nether_wastes");
     public static final RegistryKey<Biome> WARPED_FOREST = BiomeKeys.register("warped_forest");
     public static final RegistryKey<Biome> CRIMSON_FOREST = BiomeKeys.register("crimson_forest");

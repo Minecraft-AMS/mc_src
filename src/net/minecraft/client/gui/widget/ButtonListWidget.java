@@ -23,7 +23,7 @@ import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.Option;
+import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.util.math.MatrixStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,15 +35,15 @@ extends ElementListWidget<ButtonEntry> {
         this.centerListVertically = false;
     }
 
-    public int addSingleOptionEntry(Option option) {
+    public int addSingleOptionEntry(SimpleOption<?> option) {
         return this.addEntry(ButtonEntry.create(this.client.options, this.width, option));
     }
 
-    public void addOptionEntry(Option firstOption, @Nullable Option secondOption) {
+    public void addOptionEntry(SimpleOption<?> firstOption, @Nullable SimpleOption<?> secondOption) {
         this.addEntry(ButtonEntry.create(this.client.options, this.width, firstOption, secondOption));
     }
 
-    public void addAll(Option[] options) {
+    public void addAll(SimpleOption<?>[] options) {
         for (int i = 0; i < options.length; i += 2) {
             this.addOptionEntry(options[i], i < options.length - 1 ? options[i + 1] : null);
         }
@@ -60,7 +60,7 @@ extends ElementListWidget<ButtonEntry> {
     }
 
     @Nullable
-    public ClickableWidget getButtonFor(Option option) {
+    public ClickableWidget getButtonFor(SimpleOption<?> option) {
         for (ButtonEntry buttonEntry : this.children()) {
             ClickableWidget clickableWidget = buttonEntry.optionsToButtons.get(option);
             if (clickableWidget == null) continue;
@@ -82,24 +82,24 @@ extends ElementListWidget<ButtonEntry> {
     @Environment(value=EnvType.CLIENT)
     protected static class ButtonEntry
     extends ElementListWidget.Entry<ButtonEntry> {
-        final Map<Option, ClickableWidget> optionsToButtons;
+        final Map<SimpleOption<?>, ClickableWidget> optionsToButtons;
         final List<ClickableWidget> buttons;
 
-        private ButtonEntry(Map<Option, ClickableWidget> optionsToButtons) {
+        private ButtonEntry(Map<SimpleOption<?>, ClickableWidget> optionsToButtons) {
             this.optionsToButtons = optionsToButtons;
             this.buttons = ImmutableList.copyOf(optionsToButtons.values());
         }
 
-        public static ButtonEntry create(GameOptions options, int width, Option option) {
-            return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)option, (Object)option.createButton(options, width / 2 - 155, 0, 310)));
+        public static ButtonEntry create(GameOptions options, int width, SimpleOption<?> option) {
+            return new ButtonEntry((Map<SimpleOption<?>, ClickableWidget>)ImmutableMap.of(option, (Object)option.createButton(options, width / 2 - 155, 0, 310)));
         }
 
-        public static ButtonEntry create(GameOptions options, int width, Option firstOption, @Nullable Option secondOption) {
+        public static ButtonEntry create(GameOptions options, int width, SimpleOption<?> firstOption, @Nullable SimpleOption<?> secondOption) {
             ClickableWidget clickableWidget = firstOption.createButton(options, width / 2 - 155, 0, 150);
             if (secondOption == null) {
-                return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)firstOption, (Object)clickableWidget));
+                return new ButtonEntry((Map<SimpleOption<?>, ClickableWidget>)ImmutableMap.of(firstOption, (Object)clickableWidget));
             }
-            return new ButtonEntry((Map<Option, ClickableWidget>)ImmutableMap.of((Object)firstOption, (Object)clickableWidget, (Object)secondOption, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
+            return new ButtonEntry((Map<SimpleOption<?>, ClickableWidget>)ImmutableMap.of(firstOption, (Object)clickableWidget, secondOption, (Object)secondOption.createButton(options, width / 2 - 155 + 160, 0, 150)));
         }
 
         @Override

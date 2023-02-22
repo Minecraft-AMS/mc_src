@@ -24,13 +24,17 @@ extends Task<E> {
     private final Function<E, Optional<? extends LivingEntity>> targetGetter;
 
     public UpdateAttackTargetTask(Predicate<E> startCondition, Function<E, Optional<? extends LivingEntity>> targetGetter) {
-        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED)));
+        this(startCondition, targetGetter, 60);
+    }
+
+    public UpdateAttackTargetTask(Predicate<E> startCondition, Function<E, Optional<? extends LivingEntity>> targetGetter, int duration) {
+        super((Map<MemoryModuleType<?>, MemoryModuleState>)ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, (Object)((Object)MemoryModuleState.VALUE_ABSENT), MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, (Object)((Object)MemoryModuleState.REGISTERED)), duration);
         this.startCondition = startCondition;
         this.targetGetter = targetGetter;
     }
 
     public UpdateAttackTargetTask(Function<E, Optional<? extends LivingEntity>> targetGetter) {
-        this((E mobEntity) -> true, targetGetter);
+        this((E entity) -> true, targetGetter);
     }
 
     @Override
@@ -47,12 +51,12 @@ extends Task<E> {
 
     @Override
     protected void run(ServerWorld serverWorld, E mobEntity, long l) {
-        this.targetGetter.apply(mobEntity).ifPresent(livingEntity -> this.updateAttackTarget(mobEntity, (LivingEntity)livingEntity));
+        this.targetGetter.apply(mobEntity).ifPresent(target -> UpdateAttackTargetTask.updateAttackTarget(mobEntity, target));
     }
 
-    private void updateAttackTarget(E entity, LivingEntity target) {
-        ((LivingEntity)entity).getBrain().remember(MemoryModuleType.ATTACK_TARGET, target);
-        ((LivingEntity)entity).getBrain().forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+    public static <E extends MobEntity> void updateAttackTarget(E entity, LivingEntity target) {
+        entity.getBrain().remember(MemoryModuleType.ATTACK_TARGET, target);
+        entity.getBrain().forget(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 }
 

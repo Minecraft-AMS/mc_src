@@ -18,7 +18,6 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.WorldSaveHandler;
 
@@ -34,7 +33,7 @@ extends PlayerManager {
 
     @Override
     protected void savePlayerData(ServerPlayerEntity player) {
-        if (player.getName().getString().equals(this.getServer().getSinglePlayerName())) {
+        if (this.getServer().isHost(player.getGameProfile())) {
             this.userData = player.writeNbt(new NbtCompound());
         }
         super.savePlayerData(player);
@@ -42,8 +41,8 @@ extends PlayerManager {
 
     @Override
     public Text checkCanJoin(SocketAddress address, GameProfile profile) {
-        if (profile.getName().equalsIgnoreCase(this.getServer().getSinglePlayerName()) && this.getPlayer(profile.getName()) != null) {
-            return new TranslatableText("multiplayer.disconnect.name_taken");
+        if (this.getServer().isHost(profile) && this.getPlayer(profile.getName()) != null) {
+            return Text.translatable("multiplayer.disconnect.name_taken");
         }
         return super.checkCanJoin(address, profile);
     }

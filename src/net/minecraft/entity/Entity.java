@@ -30,10 +30,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.advancement.criterion.Criteria;
@@ -56,6 +56,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.TrackedPosition;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -74,6 +75,7 @@ import net.minecraft.nbt.NbtFloat;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.network.Packet;
+import net.minecraft.network.message.MessageSourceProfile;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -120,6 +122,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
@@ -194,7 +197,7 @@ CommandOutput {
     @Nullable
     private RemovalReason removalReason;
     public static final float DEFAULT_FRICTION = 0.6f;
-    public static final float field_29974 = 1.8f;
+    public static final float MIN_RISING_BUBBLE_COLUMN_SPEED = 1.8f;
     public float prevHorizontalSpeed;
     public float horizontalSpeed;
     public float distanceTraveled;
@@ -206,7 +209,7 @@ CommandOutput {
     public double lastRenderZ;
     public float stepHeight;
     public boolean noClip;
-    protected final Random random = new Random();
+    protected final Random random = Random.create();
     public int age;
     private int fireTicks = -this.getBurningDuration();
     protected boolean touchingWater;
@@ -232,10 +235,10 @@ CommandOutput {
     protected static final TrackedData<EntityPose> POSE = DataTracker.registerData(Entity.class, TrackedDataHandlerRegistry.ENTITY_POSE);
     private static final TrackedData<Integer> FROZEN_TICKS = DataTracker.registerData(Entity.class, TrackedDataHandlerRegistry.INTEGER);
     private EntityChangeListener changeListener = EntityChangeListener.NONE;
-    private Vec3d trackedPosition;
+    private final TrackedPosition trackedPosition = new TrackedPosition();
     public boolean ignoreCameraFrustum;
     public boolean velocityDirty;
-    private int netherPortalCooldown;
+    private int portalCooldown;
     protected boolean inNetherPortal;
     protected int netherPortalTime;
     protected BlockPos lastNetherPortalPosition;
@@ -264,7 +267,6 @@ CommandOutput {
         this.pos = Vec3d.ZERO;
         this.blockPos = BlockPos.ORIGIN;
         this.chunkPos = ChunkPos.ORIGIN;
-        this.trackedPosition = Vec3d.ZERO;
         this.dataTracker = new DataTracker(this);
         this.dataTracker.startTracking(FLAGS, (byte)0);
         this.dataTracker.startTracking(AIR, this.getMaxAir());
@@ -307,14 +309,10 @@ CommandOutput {
     }
 
     public void updateTrackedPosition(double x, double y, double z) {
-        this.updateTrackedPosition(new Vec3d(x, y, z));
+        this.trackedPosition.setPos(new Vec3d(x, y, z));
     }
 
-    public void updateTrackedPosition(Vec3d pos) {
-        this.trackedPosition = pos;
-    }
-
-    public Vec3d getTrackedPosition() {
+    public TrackedPosition getTrackedPosition() {
         return this.trackedPosition;
     }
 
@@ -348,6 +346,7 @@ CommandOutput {
 
     public void kill() {
         this.remove(RemovalReason.KILLED);
+        this.emitGameEvent(GameEvent.ENTITY_DIE);
     }
 
     public final void discard() {
@@ -373,9 +372,6 @@ CommandOutput {
 
     public void remove(RemovalReason reason) {
         this.setRemoved(reason);
-        if (reason == RemovalReason.KILLED) {
-            this.emitGameEvent(GameEvent.ENTITY_KILLED);
-        }
     }
 
     public void onRemoved() {
@@ -389,11 +385,19 @@ CommandOutput {
         return this.dataTracker.get(POSE);
     }
 
-    public boolean isInRange(Entity other, double radius) {
-        double d = other.pos.x - this.pos.x;
-        double e = other.pos.y - this.pos.y;
-        double f = other.pos.z - this.pos.z;
-        return d * d + e * e + f * f < radius * radius;
+    public boolean isInPose(EntityPose pose) {
+        return this.getPose() == pose;
+    }
+
+    public boolean isInRange(Entity entity, double radius) {
+        return this.getPos().isInRange(entity.getPos(), radius);
+    }
+
+    public boolean isInRange(Entity entity, double horizontalRadius, double verticalRadius) {
+        double d = entity.getX() - this.getX();
+        double e = entity.getY() - this.getY();
+        double f = entity.getZ() - this.getZ();
+        return MathHelper.squaredHypot(d, f) < MathHelper.square(horizontalRadius) && MathHelper.square(e) < MathHelper.square(verticalRadius);
     }
 
     protected void setRotation(float yaw, float pitch) {
@@ -448,7 +452,7 @@ CommandOutput {
         this.prevHorizontalSpeed = this.horizontalSpeed;
         this.prevPitch = this.getPitch();
         this.prevYaw = this.getYaw();
-        this.tickNetherPortal();
+        this.tickPortal();
         if (this.shouldSpawnSprintingParticles()) {
             this.spawnSprintingParticles();
         }
@@ -498,17 +502,17 @@ CommandOutput {
         }
     }
 
-    public void resetNetherPortalCooldown() {
-        this.netherPortalCooldown = this.getDefaultNetherPortalCooldown();
+    public void resetPortalCooldown() {
+        this.portalCooldown = this.getDefaultPortalCooldown();
     }
 
-    public boolean hasNetherPortalCooldown() {
-        return this.netherPortalCooldown > 0;
+    public boolean hasPortalCooldownn() {
+        return this.portalCooldown > 0;
     }
 
-    protected void tickNetherPortalCooldown() {
-        if (this.hasNetherPortalCooldown()) {
-            --this.netherPortalCooldown;
+    protected void tickPortalCooldown() {
+        if (this.hasPortalCooldownn()) {
+            --this.portalCooldown;
         }
     }
 
@@ -617,15 +621,17 @@ CommandOutput {
         if (movement.y != vec3d.y) {
             block.onEntityLand(this.world, this);
         }
-        if (this.onGround && !this.bypassesSteppingEffects()) {
+        if (this.onGround) {
             block.onSteppedOn(this.world, blockPos, blockState, this);
         }
         if ((moveEffect = this.getMoveEffect()).hasAny() && !this.hasVehicle()) {
+            boolean bl3;
             double e = vec3d.x;
             double f = vec3d.y;
             double g = vec3d.z;
             this.speed += (float)(vec3d.length() * 0.6);
-            if (!blockState.isIn(BlockTags.CLIMBABLE) && !blockState.isOf(Blocks.POWDER_SNOW)) {
+            boolean bl4 = bl3 = blockState.isIn(BlockTags.CLIMBABLE) || blockState.isOf(Blocks.POWDER_SNOW);
+            if (!bl3) {
                 f = 0.0;
             }
             this.horizontalSpeed += (float)vec3d.horizontalLength() * 0.6f;
@@ -648,8 +654,8 @@ CommandOutput {
                         this.playAmethystChimeSound(blockState);
                         this.playStepSound(blockPos, blockState);
                     }
-                    if (moveEffect.emitsGameEvents() && !blockState.isIn(BlockTags.OCCLUDES_VIBRATION_SIGNALS)) {
-                        this.emitGameEvent(GameEvent.STEP);
+                    if (moveEffect.emitsGameEvents() && (this.onGround || movement.y == 0.0 || this.inPowderSnow || bl3)) {
+                        this.world.emitGameEvent(GameEvent.STEP, this.pos, GameEvent.Emitter.of(this, this.getSteppingBlockState()));
                     }
                 }
             } else if (blockState.isAir()) {
@@ -702,13 +708,22 @@ CommandOutput {
         }
     }
 
+    @Deprecated
     public BlockPos getLandingPos() {
+        return this.getPosWithYOffset(0.2f);
+    }
+
+    public BlockPos getSteppingPos() {
+        return this.getPosWithYOffset(1.0E-5f);
+    }
+
+    private BlockPos getPosWithYOffset(float offset) {
         BlockPos blockPos2;
         BlockState blockState;
         int k;
         int j;
         int i = MathHelper.floor(this.pos.x);
-        BlockPos blockPos = new BlockPos(i, j = MathHelper.floor(this.pos.y - (double)0.2f), k = MathHelper.floor(this.pos.z));
+        BlockPos blockPos = new BlockPos(i, j = MathHelper.floor(this.pos.y - (double)offset), k = MathHelper.floor(this.pos.z));
         if (this.world.getBlockState(blockPos).isAir() && ((blockState = this.world.getBlockState(blockPos2 = blockPos.down())).isIn(BlockTags.FENCES) || blockState.isIn(BlockTags.WALLS) || blockState.getBlock() instanceof FenceGateBlock)) {
             return blockPos2;
         }
@@ -882,20 +897,12 @@ CommandOutput {
     protected void onBlockCollision(BlockState state) {
     }
 
-    public void emitGameEvent(GameEvent event, @Nullable Entity entity, BlockPos pos) {
-        this.world.emitGameEvent(entity, event, pos);
-    }
-
     public void emitGameEvent(GameEvent event, @Nullable Entity entity) {
-        this.emitGameEvent(event, entity, this.blockPos);
-    }
-
-    public void emitGameEvent(GameEvent event, BlockPos pos) {
-        this.emitGameEvent(event, this, pos);
+        this.world.emitGameEvent(entity, event, this.pos);
     }
 
     public void emitGameEvent(GameEvent event) {
-        this.emitGameEvent(event, this.blockPos);
+        this.emitGameEvent(event, this);
     }
 
     protected void playStepSound(BlockPos pos, BlockState state) {
@@ -935,6 +942,12 @@ CommandOutput {
         }
     }
 
+    public void playSoundIfNotSilent(SoundEvent event) {
+        if (!this.isSilent()) {
+            this.playSound(event, 1.0f, 1.0f);
+        }
+    }
+
     public boolean isSilent() {
         return this.dataTracker.get(SILENT);
     }
@@ -959,13 +972,11 @@ CommandOutput {
         return false;
     }
 
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
         if (onGround) {
             if (this.fallDistance > 0.0f) {
-                landedState.getBlock().onLandedUpon(this.world, landedState, landedPosition, this, this.fallDistance);
-                if (!landedState.isIn(BlockTags.OCCLUDES_VIBRATION_SIGNALS)) {
-                    this.emitGameEvent(GameEvent.HIT_GROUND);
-                }
+                state.getBlock().onLandedUpon(this.world, state, landedPosition, this, this.fallDistance);
+                this.world.emitGameEvent(GameEvent.HIT_GROUND, this.pos, GameEvent.Emitter.of(this, this.getSteppingBlockState()));
             }
             this.onLanding();
         } else if (heightDifference < 0.0) {
@@ -1015,6 +1026,10 @@ CommandOutput {
         return this.submergedInWater && this.isTouchingWater();
     }
 
+    public MessageSourceProfile getMessageSourceProfile() {
+        return MessageSourceProfile.NONE;
+    }
+
     public void updateSwimming() {
         if (this.isSwimming()) {
             this.setSwimming(this.isSprinting() && this.isTouchingWater() && !this.hasVehicle());
@@ -1026,7 +1041,7 @@ CommandOutput {
     protected boolean updateWaterState() {
         this.fluidHeight.clear();
         this.checkWaterState();
-        double d = this.world.getDimension().isUltrawarm() ? 0.007 : 0.0023333333333333335;
+        double d = this.world.getDimension().ultrawarm() ? 0.007 : 0.0023333333333333335;
         boolean bl = this.updateMovementInFluid(FluidTags.LAVA, d);
         return this.isTouchingWater() || bl;
     }
@@ -1093,8 +1108,13 @@ CommandOutput {
         this.emitGameEvent(GameEvent.SPLASH);
     }
 
+    @Deprecated
     protected BlockState getLandingBlockState() {
         return this.world.getBlockState(this.getLandingPos());
+    }
+
+    public BlockState getSteppingBlockState() {
+        return this.world.getBlockState(this.getSteppingPos());
     }
 
     public boolean shouldSpawnSprintingParticles() {
@@ -1137,6 +1157,7 @@ CommandOutput {
         return new Vec3d(vec3d.x * (double)g - vec3d.z * (double)f, vec3d.y, vec3d.z * (double)g + vec3d.x * (double)f);
     }
 
+    @Deprecated
     public float getBrightnessAtEyes() {
         if (this.world.isPosLoaded(this.getBlockX(), this.getBlockZ())) {
             return this.world.getBrightness(new BlockPos(this.getX(), this.getEyeY(), this.getZ()));
@@ -1245,10 +1266,10 @@ CommandOutput {
             e *= g;
             d *= (double)0.05f;
             e *= (double)0.05f;
-            if (!this.hasPassengers()) {
+            if (!this.hasPassengers() && this.isPushable()) {
                 this.addVelocity(-d, 0.0, -e);
             }
-            if (!entity.hasPassengers()) {
+            if (!entity.hasPassengers() && entity.isPushable()) {
                 entity.addVelocity(d, 0.0, e);
             }
         }
@@ -1336,7 +1357,7 @@ CommandOutput {
         return this.world.raycast(new RaycastContext(vec3d, vec3d3, RaycastContext.ShapeType.OUTLINE, includeFluids ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, this));
     }
 
-    public boolean collides() {
+    public boolean canHit() {
         return false;
     }
 
@@ -1403,7 +1424,7 @@ CommandOutput {
             nbt.putShort("Air", (short)this.getAir());
             nbt.putBoolean("OnGround", this.onGround);
             nbt.putBoolean("Invulnerable", this.invulnerable);
-            nbt.putInt("PortalCooldown", this.netherPortalCooldown);
+            nbt.putInt("PortalCooldown", this.portalCooldown);
             nbt.putUuid(UUID_KEY, this.getUuid());
             Text text = this.getCustomName();
             if (text != null) {
@@ -1465,7 +1486,8 @@ CommandOutput {
             double e = nbtList2.getDouble(1);
             double f = nbtList2.getDouble(2);
             this.setVelocity(Math.abs(d) > 10.0 ? 0.0 : d, Math.abs(e) > 10.0 ? 0.0 : e, Math.abs(f) > 10.0 ? 0.0 : f);
-            this.setPos(nbtList.getDouble(0), MathHelper.clamp(nbtList.getDouble(1), -2.0E7, 2.0E7), nbtList.getDouble(2));
+            double g = 3.0000512E7;
+            this.setPos(MathHelper.clamp(nbtList.getDouble(0), -3.0000512E7, 3.0000512E7), MathHelper.clamp(nbtList.getDouble(1), -2.0E7, 2.0E7), MathHelper.clamp(nbtList.getDouble(2), -3.0000512E7, 3.0000512E7));
             this.setYaw(nbtList3.getFloat(0));
             this.setPitch(nbtList3.getFloat(1));
             this.resetPosition();
@@ -1478,7 +1500,7 @@ CommandOutput {
             }
             this.onGround = nbt.getBoolean("OnGround");
             this.invulnerable = nbt.getBoolean("Invulnerable");
-            this.netherPortalCooldown = nbt.getInt("PortalCooldown");
+            this.portalCooldown = nbt.getInt("PortalCooldown");
             if (nbt.containsUuid(UUID_KEY)) {
                 this.uuid = nbt.getUuid(UUID_KEY);
                 this.uuidString = this.uuid.toString();
@@ -1771,8 +1793,8 @@ CommandOutput {
     }
 
     public void setInNetherPortal(BlockPos pos) {
-        if (this.hasNetherPortalCooldown()) {
-            this.resetNetherPortalCooldown();
+        if (this.hasPortalCooldownn()) {
+            this.resetPortalCooldown();
             return;
         }
         if (!this.world.isClient && !pos.equals(this.lastNetherPortalPosition)) {
@@ -1781,7 +1803,7 @@ CommandOutput {
         this.inNetherPortal = true;
     }
 
-    protected void tickNetherPortal() {
+    protected void tickPortal() {
         if (!(this.world instanceof ServerWorld)) {
             return;
         }
@@ -1794,7 +1816,7 @@ CommandOutput {
             if (serverWorld2 != null && minecraftServer.isNetherAllowed() && !this.hasVehicle() && this.netherPortalTime++ >= i) {
                 this.world.getProfiler().push("portal");
                 this.netherPortalTime = i;
-                this.resetNetherPortalCooldown();
+                this.resetPortalCooldown();
                 this.moveToWorld(serverWorld2);
                 this.world.getProfiler().pop();
             }
@@ -1807,10 +1829,10 @@ CommandOutput {
                 this.netherPortalTime = 0;
             }
         }
-        this.tickNetherPortalCooldown();
+        this.tickPortalCooldown();
     }
 
-    public int getDefaultNetherPortalCooldown() {
+    public int getDefaultPortalCooldown() {
         return 300;
     }
 
@@ -1829,7 +1851,7 @@ CommandOutput {
     public void animateDamage() {
     }
 
-    public Iterable<ItemStack> getItemsHand() {
+    public Iterable<ItemStack> getHandItems() {
         return EMPTY_STACK_LIST;
     }
 
@@ -1838,7 +1860,7 @@ CommandOutput {
     }
 
     public Iterable<ItemStack> getItemsEquipped() {
-        return Iterables.concat(this.getItemsHand(), this.getArmorItems());
+        return Iterables.concat(this.getHandItems(), this.getArmorItems());
     }
 
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
@@ -1886,7 +1908,7 @@ CommandOutput {
     }
 
     public boolean isInSneakingPose() {
-        return this.getPose() == EntityPose.CROUCHING;
+        return this.isInPose(EntityPose.CROUCHING);
     }
 
     public boolean isSprinting() {
@@ -1902,10 +1924,10 @@ CommandOutput {
     }
 
     public boolean isInSwimmingPose() {
-        return this.getPose() == EntityPose.SWIMMING;
+        return this.isInPose(EntityPose.SWIMMING);
     }
 
-    public boolean shouldLeaveSwimmingPose() {
+    public boolean isCrawling() {
         return this.isInSwimmingPose() && !this.isTouchingWater();
     }
 
@@ -1944,9 +1966,7 @@ CommandOutput {
         return this.isInvisible();
     }
 
-    @Nullable
-    public EntityGameEventHandler getGameEventHandler() {
-        return null;
+    public void updateEventHandler(BiConsumer<EntityGameEventHandler<?>, ServerWorld> callback) {
     }
 
     @Nullable
@@ -2036,7 +2056,8 @@ CommandOutput {
         this.onLanding();
     }
 
-    public void onKilledOther(ServerWorld world, LivingEntity other) {
+    public boolean onKilledOther(ServerWorld world, LivingEntity other) {
+        return true;
     }
 
     public void onLanding() {
@@ -2077,7 +2098,7 @@ CommandOutput {
     }
 
     private static Text removeClickEvents(Text textComponent) {
-        MutableText mutableText = textComponent.copy().setStyle(textComponent.getStyle().withClickEvent(null));
+        MutableText mutableText = textComponent.copyContentOnly().setStyle(textComponent.getStyle().withClickEvent(null));
         for (Text text : textComponent.getSiblings()) {
             mutableText.append(Entity.removeClickEvents(text));
         }
@@ -2129,7 +2150,7 @@ CommandOutput {
     }
 
     public boolean isInvulnerableTo(DamageSource damageSource) {
-        return this.isRemoved() || this.invulnerable && damageSource != DamageSource.OUT_OF_WORLD && !damageSource.isSourceCreativePlayer();
+        return this.isRemoved() || this.invulnerable && damageSource != DamageSource.OUT_OF_WORLD && !damageSource.isSourceCreativePlayer() || damageSource.isFire() && this.isFireImmune();
     }
 
     public boolean isInvulnerable() {
@@ -2148,7 +2169,7 @@ CommandOutput {
         NbtCompound nbtCompound = original.writeNbt(new NbtCompound());
         nbtCompound.remove("Dimension");
         this.readNbt(nbtCompound);
-        this.netherPortalCooldown = original.netherPortalCooldown;
+        this.portalCooldown = original.portalCooldown;
         this.lastNetherPortalPosition = original.lastNetherPortalPosition;
     }
 
@@ -2210,7 +2231,7 @@ CommandOutput {
             BlockState blockState = this.world.getBlockState(this.lastNetherPortalPosition);
             if (blockState.contains(Properties.HORIZONTAL_AXIS)) {
                 axis = blockState.get(Properties.HORIZONTAL_AXIS);
-                BlockLocating.Rectangle rectangle = BlockLocating.getLargestRectangle(this.lastNetherPortalPosition, axis, 21, Direction.Axis.Y, 21, blockPos -> this.world.getBlockState((BlockPos)blockPos) == blockState);
+                BlockLocating.Rectangle rectangle = BlockLocating.getLargestRectangle(this.lastNetherPortalPosition, axis, 21, Direction.Axis.Y, 21, pos -> this.world.getBlockState((BlockPos)pos) == blockState);
                 vec3d = this.positionInPortal(axis, rectangle);
             } else {
                 axis = Direction.Axis.X;
@@ -2434,7 +2455,7 @@ CommandOutput {
     }
 
     @Override
-    public void sendSystemMessage(Text message, UUID sender) {
+    public void sendMessage(Text message) {
     }
 
     public World getEntityWorld() {
@@ -2505,6 +2526,10 @@ CommandOutput {
         return null;
     }
 
+    public final boolean hasPrimaryPassenger() {
+        return this.getPrimaryPassenger() != null;
+    }
+
     public final List<Entity> getPassengerList() {
         return this.passengerList;
     }
@@ -2518,7 +2543,7 @@ CommandOutput {
         return this.passengerList.contains((Object)passenger);
     }
 
-    public boolean hasPassengerType(Predicate<Entity> predicate) {
+    public boolean hasPassenger(Predicate<Entity> predicate) {
         for (Entity entity : this.passengerList) {
             if (!predicate.test(entity)) continue;
             return true;
@@ -2729,6 +2754,10 @@ CommandOutput {
         return this.pos;
     }
 
+    public Vec3d getSyncedPos() {
+        return this.getPos();
+    }
+
     @Override
     public BlockPos getBlockPos() {
         return this.blockPos;
@@ -2739,10 +2768,6 @@ CommandOutput {
             this.blockStateAtPos = this.world.getBlockState(this.getBlockPos());
         }
         return this.blockStateAtPos;
-    }
-
-    public BlockPos getCameraBlockPos() {
-        return new BlockPos(this.getCameraPosVec(1.0f));
     }
 
     public ChunkPos getChunkPos() {
@@ -2827,10 +2852,6 @@ CommandOutput {
                 }
             }
             this.changeListener.updateEntityPosition();
-            EntityGameEventHandler entityGameEventHandler = this.getGameEventHandler();
-            if (entityGameEventHandler != null) {
-                entityGameEventHandler.onEntitySetPos(this.world);
-            }
         }
     }
 
@@ -2848,8 +2869,8 @@ CommandOutput {
         double f = packet.getZ();
         this.updateTrackedPosition(d, e, f);
         this.refreshPositionAfterTeleport(d, e, f);
-        this.setPitch((float)(packet.getPitch() * 360) / 256.0f);
-        this.setYaw((float)(packet.getYaw() * 360) / 256.0f);
+        this.setPitch(packet.getPitch());
+        this.setYaw(packet.getYaw());
         this.setId(i);
         this.setUuid(packet.getUuid());
     }
@@ -2873,6 +2894,10 @@ CommandOutput {
 
     public float getYaw() {
         return this.yaw;
+    }
+
+    public float getBodyYaw() {
+        return this.getYaw();
     }
 
     public void setYaw(float yaw) {

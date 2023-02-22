@@ -14,11 +14,11 @@ package net.minecraft.client.resource.language;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.logging.LogUtils;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -49,28 +49,27 @@ extends Language {
         boolean bl = false;
         for (LanguageDefinition languageDefinition : definitions) {
             bl |= languageDefinition.isRightToLeft();
-            String string = String.format("lang/%s.json", languageDefinition.getCode());
-            for (String string2 : resourceManager.getAllNamespaces()) {
+            String string = languageDefinition.getCode();
+            String string2 = String.format(Locale.ROOT, "lang/%s.json", string);
+            for (String string3 : resourceManager.getAllNamespaces()) {
                 try {
-                    Identifier identifier = new Identifier(string2, string);
-                    TranslationStorage.load(resourceManager.getAllResources(identifier), map);
-                }
-                catch (FileNotFoundException identifier) {
+                    Identifier identifier = new Identifier(string3, string2);
+                    TranslationStorage.load(string, resourceManager.getAllResources(identifier), map);
                 }
                 catch (Exception exception) {
-                    LOGGER.warn("Skipped language file: {}:{} ({})", new Object[]{string2, string, exception.toString()});
+                    LOGGER.warn("Skipped language file: {}:{} ({})", new Object[]{string3, string2, exception.toString()});
                 }
             }
         }
         return new TranslationStorage((Map<String, String>)ImmutableMap.copyOf((Map)map), bl);
     }
 
-    private static void load(List<Resource> resources, Map<String, String> translationMap) {
-        for (Resource resource : resources) {
+    private static void load(String langCode, List<Resource> resourceRefs, Map<String, String> translations) {
+        for (Resource resource : resourceRefs) {
             try {
                 InputStream inputStream = resource.getInputStream();
                 try {
-                    Language.load(inputStream, translationMap::put);
+                    Language.load(inputStream, translations::put);
                 }
                 finally {
                     if (inputStream == null) continue;
@@ -78,7 +77,7 @@ extends Language {
                 }
             }
             catch (IOException iOException) {
-                LOGGER.warn("Failed to load translations from {}", (Object)resource, (Object)iOException);
+                LOGGER.warn("Failed to load translations for {} from pack {}", new Object[]{langCode, resource.getResourcePackName(), iOException});
             }
         }
     }

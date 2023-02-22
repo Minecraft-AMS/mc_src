@@ -22,12 +22,10 @@ import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.ResourcePackCompatibility;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
@@ -36,8 +34,8 @@ import net.minecraft.util.Language;
 public class PackListWidget
 extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
     static final Identifier RESOURCE_PACKS_TEXTURE = new Identifier("textures/gui/resource_packs.png");
-    static final Text INCOMPATIBLE = new TranslatableText("pack.incompatible");
-    static final Text INCOMPATIBLE_CONFIRM = new TranslatableText("pack.incompatible.confirm.title");
+    static final Text INCOMPATIBLE = Text.translatable("pack.incompatible");
+    static final Text INCOMPATIBLE_CONFIRM = Text.translatable("pack.incompatible.confirm.title");
     private final Text title;
 
     public PackListWidget(MinecraftClient client, int width, int height, Text title) {
@@ -50,7 +48,7 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
 
     @Override
     protected void renderHeader(MatrixStack matrices, int x, int y, Tessellator tessellator) {
-        MutableText text = new LiteralText("").append(this.title).formatted(Formatting.UNDERLINE, Formatting.BOLD);
+        MutableText text = Text.empty().append(this.title).formatted(Formatting.UNDERLINE, Formatting.BOLD);
         this.client.textRenderer.draw(matrices, text, (float)(x + this.width / 2 - this.client.textRenderer.getWidth(text) / 2), (float)Math.min(this.top + 3, y), 0xFFFFFF);
     }
 
@@ -111,7 +109,7 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
 
         @Override
         public Text getNarration() {
-            return new TranslatableText("narrator.select", this.pack.getDisplayName());
+            return Text.translatable("narrator.select", this.pack.getDisplayName());
         }
 
         @Override
@@ -127,7 +125,7 @@ extends AlwaysSelectedEntryListWidget<ResourcePackEntry> {
             DrawableHelper.drawTexture(matrices, x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             OrderedText orderedText = this.displayName;
             MultilineText multilineText = this.description;
-            if (this.isSelectable() && (this.client.options.touchscreen || hovered)) {
+            if (this.isSelectable() && (this.client.options.getTouchscreen().getValue().booleanValue() || hovered)) {
                 RenderSystem.setShaderTexture(0, RESOURCE_PACKS_TEXTURE);
                 DrawableHelper.fill(matrices, x, y, x + 32, y + 32, -1601138544);
                 RenderSystem.setShader(GameRenderer::getPositionTexShader);

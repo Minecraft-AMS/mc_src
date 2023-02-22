@@ -10,7 +10,6 @@ package net.minecraft.block;
 
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -39,6 +38,7 @@ import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -77,12 +77,14 @@ implements InventoryProvider {
         ComposterBlock.registerCompostableItem(0.3f, Items.ACACIA_LEAVES);
         ComposterBlock.registerCompostableItem(0.3f, Items.BIRCH_LEAVES);
         ComposterBlock.registerCompostableItem(0.3f, Items.AZALEA_LEAVES);
+        ComposterBlock.registerCompostableItem(0.3f, Items.MANGROVE_LEAVES);
         ComposterBlock.registerCompostableItem(0.3f, Items.OAK_SAPLING);
         ComposterBlock.registerCompostableItem(0.3f, Items.SPRUCE_SAPLING);
         ComposterBlock.registerCompostableItem(0.3f, Items.BIRCH_SAPLING);
         ComposterBlock.registerCompostableItem(0.3f, Items.JUNGLE_SAPLING);
         ComposterBlock.registerCompostableItem(0.3f, Items.ACACIA_SAPLING);
         ComposterBlock.registerCompostableItem(0.3f, Items.DARK_OAK_SAPLING);
+        ComposterBlock.registerCompostableItem(0.3f, Items.MANGROVE_PROPAGULE);
         ComposterBlock.registerCompostableItem(0.3f, Items.BEETROOT_SEEDS);
         ComposterBlock.registerCompostableItem(0.3f, Items.DRIED_KELP);
         ComposterBlock.registerCompostableItem(0.3f, Items.GRASS);
@@ -96,6 +98,7 @@ implements InventoryProvider {
         ComposterBlock.registerCompostableItem(0.3f, Items.MOSS_CARPET);
         ComposterBlock.registerCompostableItem(0.3f, Items.SMALL_DRIPLEAF);
         ComposterBlock.registerCompostableItem(0.3f, Items.HANGING_ROOTS);
+        ComposterBlock.registerCompostableItem(0.3f, Items.MANGROVE_ROOTS);
         ComposterBlock.registerCompostableItem(0.5f, Items.DRIED_KELP_BLOCK);
         ComposterBlock.registerCompostableItem(0.5f, Items.TALL_GRASS);
         ComposterBlock.registerCompostableItem(0.5f, Items.FLOWERING_AZALEA_LEAVES);

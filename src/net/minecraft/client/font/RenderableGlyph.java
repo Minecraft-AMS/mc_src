@@ -9,11 +9,9 @@ package net.minecraft.client.font;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.font.Glyph;
 
 @Environment(value=EnvType.CLIENT)
-public interface RenderableGlyph
-extends Glyph {
+public interface RenderableGlyph {
     public int getWidth();
 
     public int getHeight();
@@ -40,7 +38,10 @@ extends Glyph {
         return this.getYMin() + (float)this.getHeight() / this.getOversample();
     }
 
-    @Override
+    default public float getBearingX() {
+        return 0.0f;
+    }
+
     default public float getAscent() {
         return 3.0f;
     }

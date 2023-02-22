@@ -61,6 +61,7 @@ import java.io.Writer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
@@ -100,8 +101,8 @@ import net.minecraft.server.world.LevelPrioritizedQueue;
 import net.minecraft.server.world.PlayerChunkWatchingManager;
 import net.minecraft.server.world.ServerLightingProvider;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructureStart;
+import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.CsvWriter;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
@@ -129,6 +130,9 @@ import net.minecraft.world.chunk.ReadOnlyChunk;
 import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
+import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
+import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.storage.VersionedChunkStorage;
@@ -159,6 +163,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     private final ServerLightingProvider lightingProvider;
     private final ThreadExecutor<Runnable> mainThreadExecutor;
     private ChunkGenerator chunkGenerator;
+    private NoiseConfig noiseConfig;
     private final Supplier<PersistentStateManager> persistentStateManagerFactory;
     private final PointOfInterestStorage pointOfInterestStorage;
     final LongSet unloadedChunks = new LongOpenHashSet();
@@ -170,7 +175,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     private final ChunkStatusChangeListener chunkStatusChangeListener;
     private final TicketManager ticketManager;
     private final AtomicInteger totalChunksLoadedCount = new AtomicInteger();
-    private final StructureManager structureManager;
+    private final StructureTemplateManager structureTemplateManager;
     private final String saveDir;
     private final PlayerChunkWatchingManager playerChunkWatchingManager = new PlayerChunkWatchingManager();
     private final Int2ObjectMap<EntityTracker> entityTrackers = new Int2ObjectOpenHashMap();
@@ -179,13 +184,19 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     private final Queue<Runnable> unloadTaskQueue = Queues.newConcurrentLinkedQueue();
     int watchDistance;
 
-    public ThreadedAnvilChunkStorage(ServerWorld world, LevelStorage.Session session, DataFixer dataFixer, StructureManager structureManager, Executor executor, ThreadExecutor<Runnable> mainThreadExecutor, ChunkProvider chunkProvider, ChunkGenerator chunkGenerator, WorldGenerationProgressListener worldGenerationProgressListener, ChunkStatusChangeListener chunkStatusChangeListener, Supplier<PersistentStateManager> persistentStateManagerFactory, int viewDistance, boolean dsync) {
+    public ThreadedAnvilChunkStorage(ServerWorld world, LevelStorage.Session session, DataFixer dataFixer, StructureTemplateManager structureTemplateManager, Executor executor, ThreadExecutor<Runnable> mainThreadExecutor, ChunkProvider chunkProvider, ChunkGenerator chunkGenerator, WorldGenerationProgressListener worldGenerationProgressListener, ChunkStatusChangeListener chunkStatusChangeListener, Supplier<PersistentStateManager> persistentStateManagerFactory, int viewDistance, boolean dsync) {
         super(session.getWorldDirectory(world.getRegistryKey()).resolve("region"), dataFixer, dsync);
-        this.structureManager = structureManager;
+        this.structureTemplateManager = structureTemplateManager;
         Path path = session.getWorldDirectory(world.getRegistryKey());
         this.saveDir = path.getFileName().toString();
         this.world = world;
         this.chunkGenerator = chunkGenerator;
+        if (chunkGenerator instanceof NoiseChunkGenerator) {
+            NoiseChunkGenerator noiseChunkGenerator = (NoiseChunkGenerator)chunkGenerator;
+            this.noiseConfig = NoiseConfig.create(noiseChunkGenerator.getSettings().value(), world.getRegistryManager().get(Registry.NOISE_KEY), world.getSeed());
+        } else {
+            this.noiseConfig = NoiseConfig.create(ChunkGeneratorSettings.createMissingSettings(), world.getRegistryManager().get(Registry.NOISE_KEY), world.getSeed());
+        }
         this.mainThreadExecutor = mainThreadExecutor;
         TaskExecutor<Runnable> taskExecutor = TaskExecutor.create(executor, "worldgen");
         MessageListener<Runnable> messageListener = MessageListener.create("main", mainThreadExecutor::send);
@@ -198,12 +209,16 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         this.lightingProvider = new ServerLightingProvider(chunkProvider, this, this.world.getDimension().hasSkyLight(), taskExecutor2, this.chunkTaskPrioritySystem.createExecutor(taskExecutor2, false));
         this.ticketManager = new TicketManager(executor, mainThreadExecutor);
         this.persistentStateManagerFactory = persistentStateManagerFactory;
-        this.pointOfInterestStorage = new PointOfInterestStorage(path.resolve("poi"), dataFixer, dsync, world);
+        this.pointOfInterestStorage = new PointOfInterestStorage(path.resolve("poi"), dataFixer, dsync, world.getRegistryManager(), world);
         this.setViewDistance(viewDistance);
     }
 
     protected ChunkGenerator getChunkGenerator() {
         return this.chunkGenerator;
+    }
+
+    protected NoiseConfig getNoiseConfig() {
+        return this.noiseConfig;
     }
 
     public void verifyChunkGenerator() {
@@ -293,8 +308,8 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     }
 
     private CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> getRegion(ChunkPos centerChunk, final int margin, IntFunction<ChunkStatus> distanceToStatus) {
-        ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> list2 = new ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>>();
-        ArrayList<ChunkHolder> list22 = new ArrayList<ChunkHolder>();
+        ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> list = new ArrayList<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>>();
+        ArrayList<ChunkHolder> list2 = new ArrayList<ChunkHolder>();
         final int i = centerChunk.x;
         final int j = centerChunk.z;
         for (int k = -margin; k <= margin; ++k) {
@@ -313,15 +328,15 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
                 }
                 ChunkStatus chunkStatus = distanceToStatus.apply(m);
                 CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = chunkHolder.getChunkAt(chunkStatus, this);
-                list22.add(chunkHolder);
-                list2.add(completableFuture);
+                list2.add(chunkHolder);
+                list.add(completableFuture);
             }
         }
-        CompletableFuture completableFuture2 = Util.combineSafe(list2);
-        CompletionStage completableFuture3 = completableFuture2.thenApply(list -> {
-            ArrayList list2 = Lists.newArrayList();
+        CompletableFuture completableFuture2 = Util.combineSafe(list);
+        CompletionStage completableFuture3 = completableFuture2.thenApply(chunks -> {
+            ArrayList list = Lists.newArrayList();
             int l = 0;
-            for (final Either either : list) {
+            for (final Either either : chunks) {
                 if (either == null) {
                     throw this.crash(new IllegalStateException("At least one of the chunk futures were null"), "n/a");
                 }
@@ -335,18 +350,18 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
                         }
                     });
                 }
-                list2.add((Chunk)optional.get());
+                list.add((Chunk)optional.get());
                 ++l;
             }
-            return Either.left((Object)list2);
+            return Either.left((Object)list);
         });
-        for (ChunkHolder chunkHolder2 : list22) {
+        for (ChunkHolder chunkHolder2 : list2) {
             chunkHolder2.combineSavingFuture("getChunkRangeFuture " + centerChunk + " " + margin, (CompletableFuture<?>)completableFuture3);
         }
         return completableFuture3;
     }
 
-    public CrashException crash(IllegalStateException exception, String string) {
+    public CrashException crash(IllegalStateException exception, String details) {
         StringBuilder stringBuilder = new StringBuilder();
         Consumer<ChunkHolder> consumer = chunkHolder -> chunkHolder.collectFuturesByStatus().forEach(pair -> {
             ChunkStatus chunkStatus = (ChunkStatus)pair.getFirst();
@@ -361,7 +376,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         this.chunkHolders.values().forEach(consumer);
         CrashReport crashReport = CrashReport.create(exception, "Chunk loading");
         CrashReportSection crashReportSection = crashReport.addElement("Chunk loading");
-        crashReportSection.add("Details", string);
+        crashReportSection.add("Details", details);
         crashReportSection.add("Futures", stringBuilder);
         return new CrashException(crashReport);
     }
@@ -520,7 +535,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
             this.ticketManager.addTicketWithLevel(ChunkTicketType.LIGHT, chunkPos, 33 + ChunkStatus.getDistanceFromFull(ChunkStatus.LIGHT), chunkPos);
         }
         if ((optional = holder.getChunkAt(requiredStatus.getPrevious(), this).getNow(ChunkHolder.UNLOADED_CHUNK).left()).isPresent() && ((Chunk)optional.get()).getStatus().isAtLeast(requiredStatus)) {
-            CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runLoadTask(this.world, this.structureManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (Chunk)optional.get());
+            CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runLoadTask(this.world, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (Chunk)optional.get());
             this.worldGenerationProgressListener.setChunkStatus(chunkPos, requiredStatus);
             return completableFuture;
         }
@@ -528,34 +543,49 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
     }
 
     private CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> loadChunk(ChunkPos pos) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                this.world.getProfiler().visit("chunkLoad");
-                NbtCompound nbtCompound = this.getUpdatedChunkNbt(pos);
-                if (nbtCompound != null) {
-                    boolean bl = nbtCompound.contains("Status", 8);
-                    if (bl) {
-                        ProtoChunk chunk = ChunkSerializer.deserialize(this.world, this.pointOfInterestStorage, pos, nbtCompound);
-                        this.mark(pos, ((Chunk)chunk).getStatus().getChunkType());
-                        return Either.left((Object)chunk);
-                    }
-                    LOGGER.error("Chunk file at {} is missing level data, skipping", (Object)pos);
-                }
+        return ((CompletableFuture)((CompletableFuture)this.getUpdatedChunkNbt(pos).thenApply(nbt -> nbt.filter(nbt2 -> {
+            boolean bl = ThreadedAnvilChunkStorage.containsStatus(nbt2);
+            if (!bl) {
+                LOGGER.error("Chunk file at {} is missing level data, skipping", (Object)pos);
             }
-            catch (CrashException crashException) {
-                Throwable throwable = crashException.getCause();
-                if (throwable instanceof IOException) {
-                    LOGGER.error("Couldn't load chunk {}", (Object)pos, (Object)throwable);
-                }
-                this.markAsProtoChunk(pos);
-                throw crashException;
+            return bl;
+        }))).thenApplyAsync(nbt -> {
+            this.world.getProfiler().visit("chunkLoad");
+            if (nbt.isPresent()) {
+                ProtoChunk chunk = ChunkSerializer.deserialize(this.world, this.pointOfInterestStorage, pos, (NbtCompound)nbt.get());
+                this.mark(pos, ((Chunk)chunk).getStatus().getChunkType());
+                return Either.left((Object)chunk);
             }
-            catch (Exception exception) {
-                LOGGER.error("Couldn't load chunk {}", (Object)pos, (Object)exception);
-            }
-            this.markAsProtoChunk(pos);
-            return Either.left((Object)new ProtoChunk(pos, UpgradeData.NO_UPGRADE_DATA, this.world, this.world.getRegistryManager().get(Registry.BIOME_KEY), null));
-        }, this.mainThreadExecutor);
+            return Either.left((Object)this.getProtoChunk(pos));
+        }, (Executor)this.mainThreadExecutor)).exceptionallyAsync(throwable -> this.recoverFromException((Throwable)throwable, pos), (Executor)this.mainThreadExecutor);
+    }
+
+    private static boolean containsStatus(NbtCompound nbt) {
+        return nbt.contains("Status", 8);
+    }
+
+    /*
+     * Enabled aggressive block sorting
+     */
+    private Either<Chunk, ChunkHolder.Unloaded> recoverFromException(Throwable throwable, ChunkPos chunkPos) {
+        if (!(throwable instanceof CrashException)) {
+            if (!(throwable instanceof IOException)) return Either.left((Object)this.getProtoChunk(chunkPos));
+            LOGGER.error("Couldn't load chunk {}", (Object)chunkPos, (Object)throwable);
+            return Either.left((Object)this.getProtoChunk(chunkPos));
+        }
+        CrashException crashException = (CrashException)throwable;
+        Throwable throwable2 = crashException.getCause();
+        if (throwable2 instanceof IOException) {
+            LOGGER.error("Couldn't load chunk {}", (Object)chunkPos, (Object)throwable2);
+            return Either.left((Object)this.getProtoChunk(chunkPos));
+        }
+        this.markAsProtoChunk(chunkPos);
+        throw crashException;
+    }
+
+    private Chunk getProtoChunk(ChunkPos chunkPos) {
+        this.markAsProtoChunk(chunkPos);
+        return new ProtoChunk(chunkPos, UpgradeData.NO_UPGRADE_DATA, this.world, this.world.getRegistryManager().get(Registry.BIOME_KEY), null);
     }
 
     private void markAsProtoChunk(ChunkPos pos) {
@@ -568,12 +598,12 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
 
     private CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> upgradeChunk(ChunkHolder holder, ChunkStatus requiredStatus) {
         ChunkPos chunkPos = holder.getPos();
-        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(chunkPos, requiredStatus.getTaskMargin(), i -> this.getRequiredStatusForGeneration(requiredStatus, i));
+        CompletableFuture<Either<List<Chunk>, ChunkHolder.Unloaded>> completableFuture = this.getRegion(chunkPos, requiredStatus.getTaskMargin(), distance -> this.getRequiredStatusForGeneration(requiredStatus, distance));
         this.world.getProfiler().visit(() -> "chunkGenerate " + requiredStatus.getId());
         Executor executor = task -> this.worldGenExecutor.send(ChunkTaskPrioritySystem.createMessage(holder, task));
         return completableFuture.thenComposeAsync(either -> (CompletionStage)either.map(chunks -> {
             try {
-                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runGenerationTask(executor, this.world, this.chunkGenerator, this.structureManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (List<Chunk>)chunks, false);
+                CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>> completableFuture = requiredStatus.runGenerationTask(executor, this.world, this.chunkGenerator, this.structureTemplateManager, this.lightingProvider, chunk -> this.convertToFullChunk(holder), (List<Chunk>)chunks, false);
                 this.worldGenerationProgressListener.setChunkStatus(chunkPos, requiredStatus);
                 return completableFuture;
             }
@@ -581,7 +611,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
                 exception.getStackTrace();
                 CrashReport crashReport = CrashReport.create(exception, "Exception generating new chunk");
                 CrashReportSection crashReportSection = crashReport.addElement("Chunk to be generated");
-                crashReportSection.add("Location", String.format("%d,%d", chunkPos.x, chunkPos.z));
+                crashReportSection.add("Location", String.format(Locale.ROOT, "%d,%d", chunkPos.x, chunkPos.z));
                 crashReportSection.add("Position hash", ChunkPos.toLong(chunkPos.x, chunkPos.z));
                 crashReportSection.add("Generator", this.chunkGenerator);
                 this.mainThreadExecutor.execute(() -> {
@@ -723,7 +753,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
             return b == 1;
         }
         try {
-            nbtCompound = this.getUpdatedChunkNbt(pos);
+            nbtCompound = this.getUpdatedChunkNbt(pos).join().orElse(null);
             if (nbtCompound == null) {
                 this.markAsProtoChunk(pos);
                 return false;
@@ -815,13 +845,12 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         }
     }
 
-    @Nullable
-    private NbtCompound getUpdatedChunkNbt(ChunkPos pos) throws IOException {
-        NbtCompound nbtCompound = this.getNbt(pos);
-        if (nbtCompound == null) {
-            return null;
-        }
-        return this.updateChunkNbt(this.world.getRegistryKey(), this.persistentStateManagerFactory, nbtCompound, this.chunkGenerator.getCodecKey());
+    private CompletableFuture<Optional<NbtCompound>> getUpdatedChunkNbt(ChunkPos chunkPos) {
+        return this.getNbt(chunkPos).thenApplyAsync(nbt -> nbt.map(this::updateChunkNbt), (Executor)Util.getMainWorkerExecutor());
+    }
+
+    private NbtCompound updateChunkNbt(NbtCompound nbt) {
+        return this.updateChunkNbt(this.world.getRegistryKey(), this.persistentStateManagerFactory, nbt, this.chunkGenerator.getCodecKey());
     }
 
     boolean shouldTick(ChunkPos pos) {
@@ -1065,7 +1094,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
         if (cachedDataPacket.getValue() == null) {
             cachedDataPacket.setValue((Object)new ChunkDataS2CPacket(chunk, this.lightingProvider, null, null, true));
         }
-        player.sendInitialChunkPackets(chunk.getPos(), (Packet)cachedDataPacket.getValue());
+        player.sendChunkPacket(chunk.getPos(), (Packet)cachedDataPacket.getValue());
         DebugInfoSender.sendChunkWatchingChange(this.world, chunk.getPos());
         ArrayList list = Lists.newArrayList();
         ArrayList list2 = Lists.newArrayList();
@@ -1182,7 +1211,7 @@ implements ChunkHolder.PlayersWatchingChunkProvider {
             if (player == this.entity) {
                 return;
             }
-            Vec3d vec3d = player.getPos().subtract(this.entry.getLastPos());
+            Vec3d vec3d = player.getPos().subtract(this.entity.getPos());
             double e = vec3d.x * vec3d.x + vec3d.z * vec3d.z;
             double d = Math.min(this.getMaxTrackDistance(), (ThreadedAnvilChunkStorage.this.watchDistance - 1) * 16);
             double f = d * d;

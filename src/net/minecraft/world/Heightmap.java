@@ -2,36 +2,30 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Maps
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.Codec
  *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  it.unimi.dsi.fastutil.objects.ObjectListIterator
- *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.world;
 
-import com.google.common.collect.Maps;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.Util;
 import net.minecraft.util.collection.PackedIntegerArray;
 import net.minecraft.util.collection.PaletteStorage;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.Chunk;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class Heightmap {
@@ -148,7 +142,6 @@ public class Heightmap {
         private final String name;
         private final Purpose purpose;
         private final Predicate<BlockState> blockPredicate;
-        private static final Map<String, Type> BY_NAME;
         private static final /* synthetic */ Type[] field_13199;
 
         public static Type[] values() {
@@ -177,11 +170,6 @@ public class Heightmap {
             return this.purpose != Purpose.WORLDGEN;
         }
 
-        @Nullable
-        public static Type byName(String name) {
-            return BY_NAME.get(name);
-        }
-
         public Predicate<BlockState> getBlockPredicate() {
             return this.blockPredicate;
         }
@@ -197,12 +185,7 @@ public class Heightmap {
 
         static {
             field_13199 = Type.method_36752();
-            CODEC = StringIdentifiable.createCodec(Type::values, Type::byName);
-            BY_NAME = Util.make(Maps.newHashMap(), hashMap -> {
-                for (Type type : Type.values()) {
-                    hashMap.put(type.name, type);
-                }
-            });
+            CODEC = StringIdentifiable.createCodec(Type::values);
         }
     }
 

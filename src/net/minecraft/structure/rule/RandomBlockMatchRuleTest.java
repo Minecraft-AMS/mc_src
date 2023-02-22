@@ -13,16 +13,16 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.structure.rule.RuleTest;
 import net.minecraft.structure.rule.RuleTestType;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 
 public class RandomBlockMatchRuleTest
 extends RuleTest {
-    public static final Codec<RandomBlockMatchRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.BLOCK.getCodec().fieldOf("block").forGetter(randomBlockMatchRuleTest -> randomBlockMatchRuleTest.block), (App)Codec.FLOAT.fieldOf("probability").forGetter(randomBlockMatchRuleTest -> Float.valueOf(randomBlockMatchRuleTest.probability))).apply((Applicative)instance, RandomBlockMatchRuleTest::new));
+    public static final Codec<RandomBlockMatchRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Registry.BLOCK.getCodec().fieldOf("block").forGetter(ruleTest -> ruleTest.block), (App)Codec.FLOAT.fieldOf("probability").forGetter(ruleTest -> Float.valueOf(ruleTest.probability))).apply((Applicative)instance, RandomBlockMatchRuleTest::new));
     private final Block block;
     private final float probability;
 

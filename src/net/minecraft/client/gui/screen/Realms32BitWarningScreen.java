@@ -10,23 +10,24 @@ package net.minecraft.client.gui.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.WarningScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 
 @Environment(value=EnvType.CLIENT)
 public class Realms32BitWarningScreen
 extends WarningScreen {
-    private static final Text HEADER = new TranslatableText("title.32bit.deprecation.realms.header").formatted(Formatting.BOLD);
-    private static final Text MESSAGE = new TranslatableText("title.32bit.deprecation.realms");
-    private static final Text CHECK_MESSAGE = new TranslatableText("title.32bit.deprecation.realms.check");
-    private static final Text NARRATED_TEXT = HEADER.shallowCopy().append("\n").append(MESSAGE);
+    private static final Text HEADER = Text.translatable("title.32bit.deprecation.realms.header").formatted(Formatting.BOLD);
+    private static final Text MESSAGE = Text.translatable("title.32bit.deprecation.realms");
+    private static final Text CHECK_MESSAGE = Text.translatable("title.32bit.deprecation.realms.check");
+    private static final Text NARRATED_TEXT = HEADER.copy().append("\n").append(MESSAGE);
+    private final Screen field_39353;
 
-    public Realms32BitWarningScreen(Screen parent) {
-        super(HEADER, MESSAGE, CHECK_MESSAGE, NARRATED_TEXT, parent);
+    public Realms32BitWarningScreen(Screen screen) {
+        super(HEADER, MESSAGE, CHECK_MESSAGE, NARRATED_TEXT);
+        this.field_39353 = screen;
     }
 
     @Override
@@ -36,7 +37,7 @@ extends WarningScreen {
                 this.client.options.skipRealms32BitWarning = true;
                 this.client.options.write();
             }
-            this.client.setScreen(this.parent);
+            this.client.setScreen(this.field_39353);
         }));
     }
 }

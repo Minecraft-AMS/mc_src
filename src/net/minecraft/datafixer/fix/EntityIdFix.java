@@ -102,8 +102,8 @@ extends DataFix {
         map.put("ZombieVillager", "minecraft:zombie_villager");
     });
 
-    public EntityIdFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public EntityIdFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public TypeRewriteRule makeRule() {

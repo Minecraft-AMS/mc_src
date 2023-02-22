@@ -28,12 +28,10 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import java.io.Closeable;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.io.Reader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -121,12 +119,10 @@ AutoCloseable {
         this.name = name;
         this.format = format;
         Identifier identifier = new Identifier(CORE_DIRECTORY + name + ".json");
-        Resource resource = null;
-        try {
+        try (BufferedReader reader = factory.openAsReader(identifier);){
             JsonArray jsonArray3;
             JsonArray jsonArray2;
-            resource = factory.getResource(identifier);
-            JsonObject jsonObject = JsonHelper.deserialize(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
+            JsonObject jsonObject = JsonHelper.deserialize(reader);
             String string = JsonHelper.getString(jsonObject, "vertex");
             String string2 = JsonHelper.getString(jsonObject, "fragment");
             JsonArray jsonArray = JsonHelper.getArray(jsonObject, "samplers", null);
@@ -183,7 +179,7 @@ AutoCloseable {
             this.programId = GlProgramManager.createProgram();
             if (this.attributeNames != null) {
                 int k = 0;
-                for (String string3 : format.getShaderAttributes()) {
+                for (String string3 : format.getAttributeNames()) {
                     GlUniform.bindAttribLocation(this.programId, k, string3);
                     this.loadedAttributeIds.add(k);
                     ++k;
@@ -196,9 +192,6 @@ AutoCloseable {
             ShaderParseException shaderParseException4 = ShaderParseException.wrap(exception4);
             shaderParseException4.addFaultyFile(identifier.getPath());
             throw shaderParseException4;
-        }
-        finally {
-            IOUtils.closeQuietly((Closeable)resource);
         }
         this.markUniformsDirty();
         this.modelViewMat = this.getUniform("ModelViewMat");
@@ -218,19 +211,15 @@ AutoCloseable {
         this.chunkOffset = this.getUniform("ChunkOffset");
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     private static Program loadProgram(final ResourceFactory factory, Program.Type type, String name) throws IOException {
         Program program2;
         Program program = type.getProgramCache().get(name);
         if (program == null) {
             String string = CORE_DIRECTORY + name + type.getFileExtension();
-            Identifier identifier = new Identifier(string);
-            Resource resource = factory.getResource(identifier);
-            final String string2 = FileNameUtil.getPosixFullPath(string);
-            try {
-                program2 = Program.createFromResource(type, name, resource.getInputStream(), resource.getResourcePackName(), new GLImportProcessor(){
+            Resource resource = factory.getResourceOrThrow(new Identifier(string));
+            try (InputStream inputStream = resource.getInputStream();){
+                final String string2 = FileNameUtil.getPosixFullPath(string);
+                program2 = Program.createFromResource(type, name, inputStream, resource.getResourcePackName(), new GLImportProcessor(){
                     private final Set<String> visitedImports = Sets.newHashSet();
 
                     @Override
@@ -242,16 +231,16 @@ AutoCloseable {
                                 return null;
                             }
                             Identifier identifier = new Identifier(name);
-                            Resource resource = factory.getResource(identifier);
+                            BufferedReader reader = factory.openAsReader(identifier);
                             try {
-                                string = IOUtils.toString((InputStream)resource.getInputStream(), (Charset)StandardCharsets.UTF_8);
-                                if (resource == null) break block9;
+                                string = IOUtils.toString((Reader)reader);
+                                if (reader == null) break block9;
                             }
                             catch (Throwable throwable) {
                                 try {
-                                    if (resource != null) {
+                                    if (reader != null) {
                                         try {
-                                            resource.close();
+                                            ((Reader)reader).close();
                                         }
                                         catch (Throwable throwable2) {
                                             throwable.addSuppressed(throwable2);
@@ -264,14 +253,11 @@ AutoCloseable {
                                     return "#error " + iOException.getMessage();
                                 }
                             }
-                            resource.close();
+                            ((Reader)reader).close();
                         }
                         return string;
                     }
                 });
-            }
-            finally {
-                IOUtils.closeQuietly((Closeable)resource);
             }
         } else {
             program2 = program;
@@ -290,24 +276,24 @@ AutoCloseable {
         int m = 0;
         boolean bl = true;
         boolean bl2 = false;
-        if (JsonHelper.hasString(json, "func") && (i = GlBlendState.getFuncFromString(json.get("func").getAsString())) != 32774) {
+        if (JsonHelper.hasString(json, "func") && (i = GlBlendState.getModeFromString(json.get("func").getAsString())) != 32774) {
             bl = false;
         }
-        if (JsonHelper.hasString(json, "srcrgb") && (j = GlBlendState.getComponentFromString(json.get("srcrgb").getAsString())) != 1) {
+        if (JsonHelper.hasString(json, "srcrgb") && (j = GlBlendState.getFactorFromString(json.get("srcrgb").getAsString())) != 1) {
             bl = false;
         }
-        if (JsonHelper.hasString(json, "dstrgb") && (k = GlBlendState.getComponentFromString(json.get("dstrgb").getAsString())) != 0) {
+        if (JsonHelper.hasString(json, "dstrgb") && (k = GlBlendState.getFactorFromString(json.get("dstrgb").getAsString())) != 0) {
             bl = false;
         }
         if (JsonHelper.hasString(json, "srcalpha")) {
-            l = GlBlendState.getComponentFromString(json.get("srcalpha").getAsString());
+            l = GlBlendState.getFactorFromString(json.get("srcalpha").getAsString());
             if (l != 1) {
                 bl = false;
             }
             bl2 = true;
         }
         if (JsonHelper.hasString(json, "dstalpha")) {
-            m = GlBlendState.getComponentFromString(json.get("dstalpha").getAsString());
+            m = GlBlendState.getFactorFromString(json.get("dstalpha").getAsString());
             if (m != 0) {
                 bl = false;
             }

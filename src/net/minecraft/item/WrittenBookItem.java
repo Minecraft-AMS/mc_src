@@ -22,11 +22,9 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.stat.Stats;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
@@ -84,7 +82,7 @@ extends Item {
         String string;
         NbtCompound nbtCompound = stack.getNbt();
         if (nbtCompound != null && !StringHelper.isEmpty(string = nbtCompound.getString(TITLE_KEY))) {
-            return new LiteralText(string);
+            return Text.literal(string);
         }
         return super.getName(stack);
     }
@@ -95,9 +93,9 @@ extends Item {
             NbtCompound nbtCompound = stack.getNbt();
             String string = nbtCompound.getString(AUTHOR_KEY);
             if (!StringHelper.isEmpty(string)) {
-                tooltip.add(new TranslatableText("book.byAuthor", string).formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("book.byAuthor", string).formatted(Formatting.GRAY));
             }
-            tooltip.add(new TranslatableText("book.generation." + nbtCompound.getInt(GENERATION_KEY)).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("book.generation." + nbtCompound.getInt(GENERATION_KEY)).formatted(Formatting.GRAY));
         }
     }
 
@@ -130,15 +128,27 @@ extends Item {
             return false;
         }
         NbtList nbtList = nbtCompound.getList(PAGES_KEY, 8);
+        NbtList nbtList2 = new NbtList();
         for (int i = 0; i < nbtList.size(); ++i) {
-            nbtList.set(i, NbtString.of(WrittenBookItem.textToJson(commandSource, player, nbtList.getString(i))));
+            String string = WrittenBookItem.textToJson(commandSource, player, nbtList.getString(i));
+            if (string.length() > Short.MAX_VALUE) {
+                return false;
+            }
+            nbtList2.add(i, NbtString.of(string));
         }
         if (nbtCompound.contains(FILTERED_PAGES_KEY, 10)) {
             NbtCompound nbtCompound2 = nbtCompound.getCompound(FILTERED_PAGES_KEY);
-            for (String string : nbtCompound2.getKeys()) {
-                nbtCompound2.putString(string, WrittenBookItem.textToJson(commandSource, player, nbtCompound2.getString(string)));
+            NbtCompound nbtCompound3 = new NbtCompound();
+            for (String string2 : nbtCompound2.getKeys()) {
+                String string3 = WrittenBookItem.textToJson(commandSource, player, nbtCompound2.getString(string2));
+                if (string3.length() > Short.MAX_VALUE) {
+                    return false;
+                }
+                nbtCompound3.putString(string2, string3);
             }
+            nbtCompound.put(FILTERED_PAGES_KEY, nbtCompound3);
         }
+        nbtCompound.put(PAGES_KEY, nbtList2);
         return true;
     }
 
@@ -149,7 +159,7 @@ extends Item {
             text2 = Texts.parse(commandSource, text2, (Entity)player, 0);
         }
         catch (Exception exception) {
-            text2 = new LiteralText(text);
+            text2 = Text.literal(text);
         }
         return Text.Serializer.toJson(text2);
     }

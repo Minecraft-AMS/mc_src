@@ -5,8 +5,6 @@
  *  com.google.common.base.MoreObjects
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
- *  com.mojang.authlib.GameProfileRepository
- *  com.mojang.authlib.minecraft.MinecraftSessionService
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
@@ -18,8 +16,6 @@ package net.minecraft.server.integrated;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.GameProfileRepository;
-import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.io.IOException;
@@ -30,17 +26,17 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.LanServerPinger;
 import net.minecraft.resource.ResourcePackManager;
-import net.minecraft.server.LanServerPinger;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.SaveLoader;
 import net.minecraft.server.WorldGenerationProgressListenerFactory;
 import net.minecraft.server.integrated.IntegratedPlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stats;
+import net.minecraft.util.ApiServices;
 import net.minecraft.util.ModStatus;
 import net.minecraft.util.SystemDetails;
-import net.minecraft.util.UserCache;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.world.GameMode;
@@ -64,9 +60,9 @@ extends MinecraftServer {
     private UUID localPlayerUuid;
     private int simulationDistance = 0;
 
-    public IntegratedServer(Thread serverThread, MinecraftClient client, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
-        super(serverThread, session, dataPackManager, saveLoader, client.getNetworkProxy(), client.getDataFixer(), sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
-        this.setSinglePlayerName(client.getSession().getUsername());
+    public IntegratedServer(Thread serverThread, MinecraftClient client, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, ApiServices apiServices, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+        super(serverThread, session, dataPackManager, saveLoader, client.getNetworkProxy(), client.getDataFixer(), apiServices, worldGenerationProgressListenerFactory);
+        this.setHostProfile(client.getSession().getProfile());
         this.setDemo(client.isDemo());
         this.setPlayerManager(new IntegratedPlayerManager(this, this.getRegistryManager(), this.saveHandler));
         this.client = client;
@@ -80,7 +76,9 @@ extends MinecraftServer {
         this.setFlightEnabled(true);
         this.generateKeyPair();
         this.loadWorld();
-        this.setMotd(this.getSinglePlayerName() + " - " + this.getSaveProperties().getLevelName());
+        GameProfile gameProfile = this.getHostProfile();
+        String string = this.getSaveProperties().getLevelName();
+        this.setMotd((String)(gameProfile != null ? gameProfile.getName() + " - " + string : string));
         return true;
     }
 
@@ -103,12 +101,12 @@ extends MinecraftServer {
             return;
         }
         super.tick(shouldKeepTicking);
-        int i = Math.max(2, this.client.options.viewDistance);
+        int i = Math.max(2, this.client.options.getViewDistance().getValue());
         if (i != this.getPlayerManager().getViewDistance()) {
             LOGGER.info("Changing view distance to {}, from {}", (Object)i, (Object)this.getPlayerManager().getViewDistance());
             this.getPlayerManager().setViewDistance(i);
         }
-        if ((j = Math.max(2, this.client.options.simulationDistance)) != this.simulationDistance) {
+        if ((j = Math.max(2, this.client.options.getSimulationDistance().getValue())) != this.simulationDistance) {
             LOGGER.info("Changing simulation distance to {}, from {}", (Object)j, (Object)this.simulationDistance);
             this.getPlayerManager().setSimulationDistance(j);
             this.simulationDistance = j;
@@ -153,13 +151,14 @@ extends MinecraftServer {
 
     @Override
     public void setCrashReport(CrashReport report) {
-        this.client.setCrashReportSupplier(() -> report);
+        this.client.setCrashReportSupplier(report);
     }
 
     @Override
     public SystemDetails addExtraSystemDetails(SystemDetails details) {
         details.addSection("Type", "Integrated Server (map_client.txt)");
         details.addSection("Is Modded", () -> this.getModStatus().getMessage());
+        details.addSection("Launched Version", this.client::getGameVersion);
         return details;
     }
 
@@ -253,12 +252,12 @@ extends MinecraftServer {
 
     @Override
     public boolean isHost(GameProfile profile) {
-        return profile.getName().equalsIgnoreCase(this.getSinglePlayerName());
+        return this.getHostProfile() != null && profile.getName().equalsIgnoreCase(this.getHostProfile().getName());
     }
 
     @Override
     public int adjustTrackingDistance(int initialDistance) {
-        return (int)(this.client.options.entityDistanceScaling * (float)initialDistance);
+        return (int)(this.client.options.getEntityDistanceScaling().getValue() * (double)initialDistance);
     }
 
     @Override

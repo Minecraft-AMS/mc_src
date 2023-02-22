@@ -62,6 +62,9 @@ public class Properties {
     public static final BooleanProperty WATERLOGGED = BooleanProperty.of("waterlogged");
     public static final BooleanProperty VINE_END = BooleanProperty.of("vine_end");
     public static final BooleanProperty BERRIES = BooleanProperty.of("berries");
+    public static final BooleanProperty BLOOM = BooleanProperty.of("bloom");
+    public static final BooleanProperty SHRIEKING = BooleanProperty.of("shrieking");
+    public static final BooleanProperty CAN_SUMMON = BooleanProperty.of("can_summon");
     public static final EnumProperty<Direction.Axis> HORIZONTAL_AXIS = EnumProperty.of((String)"axis", Direction.Axis.class, (Enum[])new Direction.Axis[]{Direction.Axis.X, Direction.Axis.Z});
     public static final EnumProperty<Direction.Axis> AXIS = EnumProperty.of("axis", Direction.Axis.class);
     public static final BooleanProperty UP = BooleanProperty.of("up");
@@ -91,6 +94,7 @@ public class Properties {
     public static final int AGE_1_MAX = 1;
     public static final int AGE_2_MAX = 2;
     public static final int AGE_3_MAX = 3;
+    public static final int AGE_4_MAX = 4;
     public static final int AGE_5_MAX = 5;
     public static final int AGE_7_MAX = 7;
     public static final int AGE_15_MAX = 15;
@@ -98,6 +102,7 @@ public class Properties {
     public static final IntProperty AGE_1 = IntProperty.of("age", 0, 1);
     public static final IntProperty AGE_2 = IntProperty.of("age", 0, 2);
     public static final IntProperty AGE_3 = IntProperty.of("age", 0, 3);
+    public static final IntProperty AGE_4 = IntProperty.of("age", 0, 4);
     public static final IntProperty AGE_5 = IntProperty.of("age", 0, 5);
     public static final IntProperty AGE_7 = IntProperty.of("age", 0, 7);
     public static final IntProperty AGE_15 = IntProperty.of("age", 0, 15);

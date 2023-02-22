@@ -3,7 +3,9 @@
  * 
  * Could not load the following classes:
  *  com.google.common.base.Strings
+ *  com.google.common.base.Suppliers
  *  com.google.common.collect.Lists
+ *  com.mojang.authlib.GameProfile
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
@@ -11,20 +13,28 @@
 package net.minecraft.client.gui.screen.multiplayer;
 
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
+import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsPlayerListEntry;
 import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsScreen;
 import net.minecraft.client.gui.widget.ElementListWidget;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -50,15 +60,68 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
         RenderSystem.disableScissor();
     }
 
-    public void update(Collection<UUID> uuids, double scrollAmount) {
-        this.players.clear();
-        for (UUID uUID : uuids) {
-            PlayerListEntry playerListEntry = this.client.player.networkHandler.getPlayerListEntry(uUID);
+    public void update(Collection<UUID> uuids, double scrollAmount, boolean includeOffline) {
+        HashMap<UUID, SocialInteractionsPlayerListEntry> map = new HashMap<UUID, SocialInteractionsPlayerListEntry>();
+        this.setPlayers(uuids, map);
+        this.markOfflineMembers(map, includeOffline);
+        this.refresh(map.values(), scrollAmount);
+    }
+
+    private void setPlayers(Collection<UUID> playerUuids, Map<UUID, SocialInteractionsPlayerListEntry> entriesByUuids) {
+        ClientPlayNetworkHandler clientPlayNetworkHandler = this.client.player.networkHandler;
+        for (UUID uUID : playerUuids) {
+            PlayerListEntry playerListEntry = clientPlayNetworkHandler.getPlayerListEntry(uUID);
             if (playerListEntry == null) continue;
-            this.players.add(new SocialInteractionsPlayerListEntry(this.client, this.parent, playerListEntry.getProfile().getId(), playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture));
+            UUID uUID2 = playerListEntry.getProfile().getId();
+            boolean bl = playerListEntry.getPublicKeyData() != null;
+            entriesByUuids.put(uUID2, new SocialInteractionsPlayerListEntry(this.client, this.parent, uUID2, playerListEntry.getProfile().getName(), playerListEntry::getSkinTexture, bl));
         }
+    }
+
+    private void markOfflineMembers(Map<UUID, SocialInteractionsPlayerListEntry> entries, boolean includeOffline) {
+        Collection<GameProfile> collection = this.client.getAbuseReportContext().chatLog().streamBackward().collectSenderProfiles();
+        for (GameProfile gameProfile : collection) {
+            SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry;
+            if (includeOffline) {
+                socialInteractionsPlayerListEntry = entries.computeIfAbsent(gameProfile.getId(), uuid -> {
+                    SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry = new SocialInteractionsPlayerListEntry(this.client, this.parent, gameProfile.getId(), gameProfile.getName(), (Supplier<Identifier>)Suppliers.memoize(() -> this.client.getSkinProvider().loadSkin(gameProfile)), true);
+                    socialInteractionsPlayerListEntry.setOffline(true);
+                    return socialInteractionsPlayerListEntry;
+                });
+            } else {
+                socialInteractionsPlayerListEntry = entries.get(gameProfile.getId());
+                if (socialInteractionsPlayerListEntry == null) continue;
+            }
+            socialInteractionsPlayerListEntry.setSentMessage(true);
+        }
+    }
+
+    private void sortPlayers() {
+        this.players.sort(Comparator.comparing(player -> {
+            if (player.getUuid().equals(this.client.getSession().getUuidOrNull())) {
+                return 0;
+            }
+            if (player.getUuid().version() == 2) {
+                return 3;
+            }
+            if (player.hasSentMessage()) {
+                return 1;
+            }
+            return 2;
+        }).thenComparing(player -> {
+            int i;
+            if (!player.getName().isBlank() && ((i = player.getName().codePointAt(0)) == 95 || i >= 97 && i <= 122 || i >= 65 && i <= 90 || i >= 48 && i <= 57)) {
+                return 0;
+            }
+            return 1;
+        }).thenComparing(SocialInteractionsPlayerListEntry::getName, String::compareToIgnoreCase));
+    }
+
+    private void refresh(Collection<SocialInteractionsPlayerListEntry> players, double scrollAmount) {
+        this.players.clear();
+        this.players.addAll(players);
+        this.sortPlayers();
         this.filterPlayers();
-        this.players.sort((player1, player2) -> player1.getName().compareToIgnoreCase(player2.getName()));
         this.replaceEntries(this.players);
         this.setScrollAmount(scrollAmount);
     }
@@ -86,9 +149,11 @@ extends ElementListWidget<SocialInteractionsPlayerListEntry> {
             return;
         }
         if ((tab == SocialInteractionsScreen.Tab.ALL || this.client.getSocialInteractionsManager().isPlayerMuted(uUID)) && (Strings.isNullOrEmpty((String)this.currentSearch) || player.getProfile().getName().toLowerCase(Locale.ROOT).contains(this.currentSearch))) {
-            SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry2 = new SocialInteractionsPlayerListEntry(this.client, this.parent, player.getProfile().getId(), player.getProfile().getName(), player::getSkinTexture);
-            this.addEntry(socialInteractionsPlayerListEntry2);
-            this.players.add(socialInteractionsPlayerListEntry2);
+            SocialInteractionsPlayerListEntry socialInteractionsPlayerListEntry;
+            boolean bl = player.getPublicKeyData() != null;
+            socialInteractionsPlayerListEntry = new SocialInteractionsPlayerListEntry(this.client, this.parent, player.getProfile().getId(), player.getProfile().getName(), player::getSkinTexture, bl);
+            this.addEntry(socialInteractionsPlayerListEntry);
+            this.players.add(socialInteractionsPlayerListEntry);
         }
     }
 

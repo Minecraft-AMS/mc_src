@@ -3,14 +3,15 @@
  */
 package net.minecraft.util;
 
-import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.util.TranslatableOption;
 
 public final class Arm
-extends Enum<Arm> {
-    public static final /* enum */ Arm LEFT = new Arm(new TranslatableText("options.mainHand.left"));
-    public static final /* enum */ Arm RIGHT = new Arm(new TranslatableText("options.mainHand.right"));
-    private final Text optionName;
+extends Enum<Arm>
+implements TranslatableOption {
+    public static final /* enum */ Arm LEFT = new Arm(0, "options.mainHand.left");
+    public static final /* enum */ Arm RIGHT = new Arm(1, "options.mainHand.right");
+    private final int id;
+    private final String translationKey;
     private static final /* synthetic */ Arm[] field_6180;
 
     public static Arm[] values() {
@@ -21,8 +22,9 @@ extends Enum<Arm> {
         return Enum.valueOf(Arm.class, string);
     }
 
-    private Arm(Text optionName) {
-        this.optionName = optionName;
+    private Arm(int id, String translationKey) {
+        this.id = id;
+        this.translationKey = translationKey;
     }
 
     public Arm getOpposite() {
@@ -32,12 +34,14 @@ extends Enum<Arm> {
         return LEFT;
     }
 
-    public String toString() {
-        return this.optionName.getString();
+    @Override
+    public int getId() {
+        return this.id;
     }
 
-    public Text getOptionName() {
-        return this.optionName;
+    @Override
+    public String getTranslationKey() {
+        return this.translationKey;
     }
 
     private static /* synthetic */ Arm[] method_36606() {

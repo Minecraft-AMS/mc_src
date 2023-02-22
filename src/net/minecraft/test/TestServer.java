@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.base.Stopwatch
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
  *  com.mojang.datafixers.util.Pair
@@ -12,6 +13,7 @@
  */
 package net.minecraft.test;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
@@ -20,23 +22,26 @@ import com.mojang.serialization.Lifecycle;
 import java.net.Proxy;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import net.minecraft.datafixer.Schemas;
+import net.minecraft.network.encryption.SignatureVerifier;
 import net.minecraft.resource.DataPackSettings;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.SaveLoader;
+import net.minecraft.server.SaveLoading;
 import net.minecraft.server.WorldGenerationProgressLogger;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.structure.StructureSet;
 import net.minecraft.test.GameTestBatch;
 import net.minecraft.test.GameTestState;
 import net.minecraft.test.TestFailureLogger;
 import net.minecraft.test.TestManager;
 import net.minecraft.test.TestSet;
 import net.minecraft.test.TestUtil;
+import net.minecraft.util.ApiServices;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.SystemDetails;
 import net.minecraft.util.Util;
@@ -47,11 +52,8 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.GeneratorOptions;
-import net.minecraft.world.gen.chunk.FlatChunkGenerator;
-import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
+import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import net.minecraft.world.level.storage.LevelStorage;
@@ -62,6 +64,7 @@ public class TestServer
 extends MinecraftServer {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int RESULT_STRING_LOG_INTERVAL = 20;
+    private static final ApiServices field_39441 = new ApiServices(null, SignatureVerifier.NOOP, null, null);
     private final List<GameTestBatch> batches;
     private final BlockPos pos;
     private static final GameRules GAME_RULES = Util.make(new GameRules(), gameRules -> {
@@ -76,17 +79,19 @@ extends MinecraftServer {
         if (batches.isEmpty()) {
             throw new IllegalArgumentException("No test batches were given!");
         }
-        SaveLoader.FunctionLoaderConfig functionLoaderConfig = new SaveLoader.FunctionLoaderConfig(resourcePackManager, CommandManager.RegistrationEnvironment.DEDICATED, 4, false);
+        SaveLoading.DataPacks dataPacks = new SaveLoading.DataPacks(resourcePackManager, DataPackSettings.SAFE_MODE, false);
+        SaveLoading.ServerConfig serverConfig = new SaveLoading.ServerConfig(dataPacks, CommandManager.RegistrationEnvironment.DEDICATED, 4);
         try {
-            SaveLoader saveLoader = SaveLoader.ofLoaded(functionLoaderConfig, () -> DataPackSettings.SAFE_MODE, (resourceManager, dataPackSettings) -> {
+            LOGGER.debug("Starting resource loading");
+            Stopwatch stopwatch = Stopwatch.createStarted();
+            SaveLoader saveLoader = (SaveLoader)Util.waitAndApply(executor -> SaveLoader.load(serverConfig, (resourceManager, dataPackSettings) -> {
                 DynamicRegistryManager.Immutable immutable = DynamicRegistryManager.BUILTIN.get();
-                Registry<Biome> registry = immutable.get(Registry.BIOME_KEY);
-                Registry<StructureSet> registry2 = immutable.get(Registry.STRUCTURE_SET_KEY);
-                Registry<DimensionType> registry3 = immutable.get(Registry.DIMENSION_TYPE_KEY);
-                LevelProperties saveProperties = new LevelProperties(TEST_LEVEL, new GeneratorOptions(0L, false, false, GeneratorOptions.getRegistryWithReplacedOverworldGenerator(registry3, DimensionType.createDefaultDimensionOptions(immutable, 0L), new FlatChunkGenerator(registry2, FlatChunkGeneratorConfig.getDefaultConfig(registry, registry2)))), Lifecycle.stable());
+                GeneratorOptions generatorOptions = immutable.get(Registry.WORLD_PRESET_KEY).entryOf(WorldPresets.FLAT).value().createGeneratorOptions(0L, false, false);
+                LevelProperties saveProperties = new LevelProperties(TEST_LEVEL, generatorOptions, Lifecycle.stable());
                 return Pair.of((Object)saveProperties, (Object)immutable);
-            }, Util.getMainWorkerExecutor(), Runnable::run).get();
-            saveLoader.refresh();
+            }, Util.getMainWorkerExecutor(), executor)).get();
+            stopwatch.stop();
+            LOGGER.debug("Finished resource loading after {} ms", (Object)stopwatch.elapsed(TimeUnit.MILLISECONDS));
             return new TestServer(thread, session, resourcePackManager, saveLoader, batches, pos);
         }
         catch (Exception exception) {
@@ -97,7 +102,7 @@ extends MinecraftServer {
     }
 
     private TestServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, Collection<GameTestBatch> batches, BlockPos pos) {
-        super(serverThread, session, dataPackManager, saveLoader, Proxy.NO_PROXY, Schemas.getFixer(), null, null, null, WorldGenerationProgressLogger::new);
+        super(serverThread, session, dataPackManager, saveLoader, Proxy.NO_PROXY, Schemas.getFixer(), field_39441, WorldGenerationProgressLogger::new);
         this.batches = Lists.newArrayList(batches);
         this.pos = pos;
     }
@@ -110,6 +115,7 @@ extends MinecraftServer {
         serverWorld.setSpawnPos(this.pos, 0.0f);
         int i = 20000000;
         serverWorld.setWeather(20000000, 20000000, false, false);
+        LOGGER.info("Started game test server");
         return true;
     }
 
@@ -130,13 +136,13 @@ extends MinecraftServer {
             LOGGER.info("========= {} GAME TESTS COMPLETE ======================", (Object)this.testSet.getTestCount());
             if (this.testSet.failed()) {
                 LOGGER.info("{} required tests failed :(", (Object)this.testSet.getFailedRequiredTestCount());
-                this.testSet.getRequiredTests().forEach(test -> LOGGER.info("   - {}", (Object)test.getStructurePath()));
+                this.testSet.getRequiredTests().forEach(test -> LOGGER.info("   - {}", (Object)test.getTemplatePath()));
             } else {
                 LOGGER.info("All {} required tests passed :)", (Object)this.testSet.getTestCount());
             }
             if (this.testSet.hasFailedOptionalTests()) {
                 LOGGER.info("{} optional tests failed", (Object)this.testSet.getFailedOptionalTestCount());
-                this.testSet.getOptionalTests().forEach(test -> LOGGER.info("   - {}", (Object)test.getStructurePath()));
+                this.testSet.getOptionalTests().forEach(test -> LOGGER.info("   - {}", (Object)test.getTemplatePath()));
             }
             LOGGER.info("====================================================");
         }
@@ -151,11 +157,14 @@ extends MinecraftServer {
     @Override
     public void exit() {
         super.exit();
+        LOGGER.info("Game test server shutting down");
         System.exit(this.testSet.getFailedRequiredTestCount());
     }
 
     @Override
     public void setCrashReport(CrashReport report) {
+        super.setCrashReport(report);
+        LOGGER.error("Game test server crashed\n{}", (Object)report.asString());
         System.exit(1);
     }
 

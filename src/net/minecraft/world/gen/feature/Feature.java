@@ -8,7 +8,6 @@ package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.minecraft.block.AbstractBlock;
@@ -19,6 +18,7 @@ import net.minecraft.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.ModifiableWorld;
 import net.minecraft.world.StructureWorldAccess;
@@ -45,6 +45,7 @@ import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.DeltaFeature;
 import net.minecraft.world.gen.feature.DeltaFeatureConfig;
 import net.minecraft.world.gen.feature.DesertWellFeature;
+import net.minecraft.world.gen.feature.DiskFeature;
 import net.minecraft.world.gen.feature.DiskFeatureConfig;
 import net.minecraft.world.gen.feature.DripstoneClusterFeature;
 import net.minecraft.world.gen.feature.DripstoneClusterFeatureConfig;
@@ -65,21 +66,20 @@ import net.minecraft.world.gen.feature.FossilFeatureConfig;
 import net.minecraft.world.gen.feature.FreezeTopLayerFeature;
 import net.minecraft.world.gen.feature.GeodeFeature;
 import net.minecraft.world.gen.feature.GeodeFeatureConfig;
-import net.minecraft.world.gen.feature.GlowLichenFeature;
-import net.minecraft.world.gen.feature.GlowLichenFeatureConfig;
 import net.minecraft.world.gen.feature.GlowstoneBlobFeature;
 import net.minecraft.world.gen.feature.HugeBrownMushroomFeature;
 import net.minecraft.world.gen.feature.HugeFungusFeature;
 import net.minecraft.world.gen.feature.HugeFungusFeatureConfig;
 import net.minecraft.world.gen.feature.HugeMushroomFeatureConfig;
 import net.minecraft.world.gen.feature.HugeRedMushroomFeature;
-import net.minecraft.world.gen.feature.IcePatchFeature;
 import net.minecraft.world.gen.feature.IceSpikeFeature;
 import net.minecraft.world.gen.feature.IcebergFeature;
 import net.minecraft.world.gen.feature.KelpFeature;
 import net.minecraft.world.gen.feature.LakeFeature;
 import net.minecraft.world.gen.feature.LargeDripstoneFeature;
 import net.minecraft.world.gen.feature.LargeDripstoneFeatureConfig;
+import net.minecraft.world.gen.feature.MultifaceGrowthFeature;
+import net.minecraft.world.gen.feature.MultifaceGrowthFeatureConfig;
 import net.minecraft.world.gen.feature.NetherForestVegetationFeature;
 import net.minecraft.world.gen.feature.NetherForestVegetationFeatureConfig;
 import net.minecraft.world.gen.feature.NoOpFeature;
@@ -96,6 +96,8 @@ import net.minecraft.world.gen.feature.ReplaceBlobsFeatureConfig;
 import net.minecraft.world.gen.feature.RootSystemFeature;
 import net.minecraft.world.gen.feature.RootSystemFeatureConfig;
 import net.minecraft.world.gen.feature.ScatteredOreFeature;
+import net.minecraft.world.gen.feature.SculkPatchFeature;
+import net.minecraft.world.gen.feature.SculkPatchFeatureConfig;
 import net.minecraft.world.gen.feature.SeaPickleFeature;
 import net.minecraft.world.gen.feature.SeagrassFeature;
 import net.minecraft.world.gen.feature.SimpleBlockFeature;
@@ -111,7 +113,6 @@ import net.minecraft.world.gen.feature.TreeFeature;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import net.minecraft.world.gen.feature.TwistingVinesFeature;
 import net.minecraft.world.gen.feature.TwistingVinesFeatureConfig;
-import net.minecraft.world.gen.feature.UnderwaterDiskFeature;
 import net.minecraft.world.gen.feature.UnderwaterMagmaFeature;
 import net.minecraft.world.gen.feature.UnderwaterMagmaFeatureConfig;
 import net.minecraft.world.gen.feature.VegetationPatchFeature;
@@ -145,14 +146,13 @@ public abstract class Feature<FC extends FeatureConfig> {
     public static final Feature<VegetationPatchFeatureConfig> VEGETATION_PATCH = Feature.register("vegetation_patch", new VegetationPatchFeature(VegetationPatchFeatureConfig.CODEC));
     public static final Feature<VegetationPatchFeatureConfig> WATERLOGGED_VEGETATION_PATCH = Feature.register("waterlogged_vegetation_patch", new WaterloggedVegetationPatchFeature(VegetationPatchFeatureConfig.CODEC));
     public static final Feature<RootSystemFeatureConfig> ROOT_SYSTEM = Feature.register("root_system", new RootSystemFeature(RootSystemFeatureConfig.CODEC));
-    public static final Feature<GlowLichenFeatureConfig> GLOW_LICHEN = Feature.register("glow_lichen", new GlowLichenFeature(GlowLichenFeatureConfig.CODEC));
+    public static final Feature<MultifaceGrowthFeatureConfig> MULTIFACE_GROWTH = Feature.register("multiface_growth", new MultifaceGrowthFeature(MultifaceGrowthFeatureConfig.CODEC));
     public static final Feature<UnderwaterMagmaFeatureConfig> UNDERWATER_MAGMA = Feature.register("underwater_magma", new UnderwaterMagmaFeature(UnderwaterMagmaFeatureConfig.CODEC));
     public static final Feature<DefaultFeatureConfig> MONSTER_ROOM = Feature.register("monster_room", new DungeonFeature(DefaultFeatureConfig.CODEC));
     public static final Feature<DefaultFeatureConfig> BLUE_ICE = Feature.register("blue_ice", new BlueIceFeature(DefaultFeatureConfig.CODEC));
     public static final Feature<SingleStateFeatureConfig> ICEBERG = Feature.register("iceberg", new IcebergFeature(SingleStateFeatureConfig.CODEC));
     public static final Feature<SingleStateFeatureConfig> FOREST_ROCK = Feature.register("forest_rock", new ForestRockFeature(SingleStateFeatureConfig.CODEC));
-    public static final Feature<DiskFeatureConfig> DISK = Feature.register("disk", new UnderwaterDiskFeature(DiskFeatureConfig.CODEC));
-    public static final Feature<DiskFeatureConfig> ICE_PATCH = Feature.register("ice_patch", new IcePatchFeature(DiskFeatureConfig.CODEC));
+    public static final Feature<DiskFeatureConfig> DISK = Feature.register("disk", new DiskFeature(DiskFeatureConfig.CODEC));
     public static final Feature<LakeFeature.Config> LAKE = Feature.register("lake", new LakeFeature(LakeFeature.Config.CODEC));
     public static final Feature<OreFeatureConfig> ORE = Feature.register("ore", new OreFeature(OreFeatureConfig.CODEC));
     public static final Feature<EndSpikeFeatureConfig> END_SPIKE = Feature.register("end_spike", new EndSpikeFeature(EndSpikeFeatureConfig.CODEC));
@@ -184,6 +184,7 @@ public abstract class Feature<FC extends FeatureConfig> {
     public static final Feature<DripstoneClusterFeatureConfig> DRIPSTONE_CLUSTER = Feature.register("dripstone_cluster", new DripstoneClusterFeature(DripstoneClusterFeatureConfig.CODEC));
     public static final Feature<LargeDripstoneFeatureConfig> LARGE_DRIPSTONE = Feature.register("large_dripstone", new LargeDripstoneFeature(LargeDripstoneFeatureConfig.CODEC));
     public static final Feature<SmallDripstoneFeatureConfig> POINTED_DRIPSTONE = Feature.register("pointed_dripstone", new SmallDripstoneFeature(SmallDripstoneFeatureConfig.CODEC));
+    public static final Feature<SculkPatchFeatureConfig> SCULK_PATCH = Feature.register("sculk_patch", new SculkPatchFeature(SculkPatchFeatureConfig.CODEC));
     private final Codec<ConfiguredFeature<FC, Feature<FC>>> codec;
 
     private static <C extends FeatureConfig, F extends Feature<C>> F register(String name, F feature) {
@@ -231,10 +232,6 @@ public abstract class Feature<FC extends FeatureConfig> {
 
     public static boolean isSoil(TestableWorld world, BlockPos pos) {
         return world.testBlockState(pos, Feature::isSoil);
-    }
-
-    public static boolean isAir(TestableWorld world, BlockPos pos) {
-        return world.testBlockState(pos, AbstractBlock.AbstractBlockState::isAir);
     }
 
     public static boolean testAdjacentStates(Function<BlockPos, BlockState> posToState, BlockPos pos, Predicate<BlockState> predicate) {

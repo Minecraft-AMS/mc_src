@@ -18,7 +18,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
@@ -40,6 +39,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 public class EnchantmentHelper {
     private static final String ID_KEY = "id";
     private static final String LEVEL_KEY = "lvl";
+    private static final float field_38222 = 0.15f;
 
     public static NbtCompound createNbt(@Nullable Identifier id, int lvl) {
         NbtCompound nbtCompound = new NbtCompound();
@@ -189,6 +190,10 @@ public class EnchantmentHelper {
             i = j;
         }
         return i;
+    }
+
+    public static float getSwiftSneakSpeedBoost(LivingEntity livingEntity) {
+        return (float)EnchantmentHelper.getEquipmentLevel(Enchantments.SWIFT_SNEAK, livingEntity) * 0.15f;
     }
 
     public static int getKnockback(LivingEntity entity) {

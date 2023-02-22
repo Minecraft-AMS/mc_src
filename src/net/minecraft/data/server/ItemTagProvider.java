@@ -12,13 +12,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.ItemTags;
-import net.minecraft.tag.Tag;
+import net.minecraft.tag.TagBuilder;
 import net.minecraft.tag.TagKey;
 import net.minecraft.util.registry.Registry;
 
 public class ItemTagProvider
 extends AbstractTagProvider<Item> {
-    private final Function<TagKey<Block>, Tag.Builder> blockTags = blockTagsProvider::getTagBuilder;
+    private final Function<TagKey<Block>, TagBuilder> blockTags = blockTagsProvider::getTagBuilder;
 
     public ItemTagProvider(DataGenerator root, BlockTagProvider blockTagsProvider) {
         super(root, Registry.ITEM);
@@ -31,7 +31,7 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.STONE_BRICKS, ItemTags.STONE_BRICKS);
         this.copy(BlockTags.WOODEN_BUTTONS, ItemTags.WOODEN_BUTTONS);
         this.copy(BlockTags.BUTTONS, ItemTags.BUTTONS);
-        this.copy(BlockTags.CARPETS, ItemTags.CARPETS);
+        this.copy(BlockTags.WOOL_CARPETS, ItemTags.WOOL_CARPETS);
         this.copy(BlockTags.WOODEN_DOORS, ItemTags.WOODEN_DOORS);
         this.copy(BlockTags.WOODEN_STAIRS, ItemTags.WOODEN_STAIRS);
         this.copy(BlockTags.WOODEN_SLABS, ItemTags.WOODEN_SLABS);
@@ -44,10 +44,13 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.BIRCH_LOGS, ItemTags.BIRCH_LOGS);
         this.copy(BlockTags.ACACIA_LOGS, ItemTags.ACACIA_LOGS);
         this.copy(BlockTags.SPRUCE_LOGS, ItemTags.SPRUCE_LOGS);
+        this.copy(BlockTags.MANGROVE_LOGS, ItemTags.MANGROVE_LOGS);
         this.copy(BlockTags.JUNGLE_LOGS, ItemTags.JUNGLE_LOGS);
         this.copy(BlockTags.CRIMSON_STEMS, ItemTags.CRIMSON_STEMS);
         this.copy(BlockTags.WARPED_STEMS, ItemTags.WARPED_STEMS);
+        this.copy(BlockTags.WART_BLOCKS, ItemTags.WART_BLOCKS);
         this.copy(BlockTags.LOGS_THAT_BURN, ItemTags.LOGS_THAT_BURN);
+        this.copy(BlockTags.OVERWORLD_NATURAL_LOGS, ItemTags.OVERWORLD_NATURAL_LOGS);
         this.copy(BlockTags.LOGS, ItemTags.LOGS);
         this.copy(BlockTags.SAND, ItemTags.SAND);
         this.copy(BlockTags.SLABS, ItemTags.SLABS);
@@ -65,7 +68,7 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.FLOWERS, ItemTags.FLOWERS);
         this.copy(BlockTags.SOUL_FIRE_BASE_BLOCKS, ItemTags.SOUL_FIRE_BASE_BLOCKS);
         this.copy(BlockTags.CANDLES, ItemTags.CANDLES);
-        this.copy(BlockTags.OCCLUDES_VIBRATION_SIGNALS, ItemTags.OCCLUDES_VIBRATION_SIGNALS);
+        this.copy(BlockTags.DAMPENS_VIBRATIONS, ItemTags.DAMPENS_VIBRATIONS);
         this.copy(BlockTags.GOLD_ORES, ItemTags.GOLD_ORES);
         this.copy(BlockTags.IRON_ORES, ItemTags.IRON_ORES);
         this.copy(BlockTags.DIAMOND_ORES, ItemTags.DIAMOND_ORES);
@@ -76,12 +79,14 @@ extends AbstractTagProvider<Item> {
         this.copy(BlockTags.COPPER_ORES, ItemTags.COPPER_ORES);
         this.copy(BlockTags.DIRT, ItemTags.DIRT);
         this.copy(BlockTags.TERRACOTTA, ItemTags.TERRACOTTA);
+        this.copy(BlockTags.COMPLETES_FIND_TREE_TUTORIAL, ItemTags.COMPLETES_FIND_TREE_TUTORIAL);
         this.getOrCreateTagBuilder(ItemTags.BANNERS).add((Item[])new Item[]{Items.WHITE_BANNER, Items.ORANGE_BANNER, Items.MAGENTA_BANNER, Items.LIGHT_BLUE_BANNER, Items.YELLOW_BANNER, Items.LIME_BANNER, Items.PINK_BANNER, Items.GRAY_BANNER, Items.LIGHT_GRAY_BANNER, Items.CYAN_BANNER, Items.PURPLE_BANNER, Items.BLUE_BANNER, Items.BROWN_BANNER, Items.GREEN_BANNER, Items.RED_BANNER, Items.BLACK_BANNER});
-        this.getOrCreateTagBuilder(ItemTags.BOATS).add((Item[])new Item[]{Items.OAK_BOAT, Items.SPRUCE_BOAT, Items.BIRCH_BOAT, Items.JUNGLE_BOAT, Items.ACACIA_BOAT, Items.DARK_OAK_BOAT});
+        this.getOrCreateTagBuilder(ItemTags.BOATS).add((Item[])new Item[]{Items.OAK_BOAT, Items.SPRUCE_BOAT, Items.BIRCH_BOAT, Items.JUNGLE_BOAT, Items.ACACIA_BOAT, Items.DARK_OAK_BOAT, Items.MANGROVE_BOAT}).addTag(ItemTags.CHEST_BOATS);
+        this.getOrCreateTagBuilder(ItemTags.CHEST_BOATS).add((Item[])new Item[]{Items.OAK_CHEST_BOAT, Items.SPRUCE_CHEST_BOAT, Items.BIRCH_CHEST_BOAT, Items.JUNGLE_CHEST_BOAT, Items.ACACIA_CHEST_BOAT, Items.DARK_OAK_CHEST_BOAT, Items.MANGROVE_CHEST_BOAT});
         this.getOrCreateTagBuilder(ItemTags.FISHES).add((Item[])new Item[]{Items.COD, Items.COOKED_COD, Items.SALMON, Items.COOKED_SALMON, Items.PUFFERFISH, Items.TROPICAL_FISH});
         this.copy(BlockTags.STANDING_SIGNS, ItemTags.SIGNS);
         this.getOrCreateTagBuilder(ItemTags.CREEPER_DROP_MUSIC_DISCS).add((Item[])new Item[]{Items.MUSIC_DISC_13, Items.MUSIC_DISC_CAT, Items.MUSIC_DISC_BLOCKS, Items.MUSIC_DISC_CHIRP, Items.MUSIC_DISC_FAR, Items.MUSIC_DISC_MALL, Items.MUSIC_DISC_MELLOHI, Items.MUSIC_DISC_STAL, Items.MUSIC_DISC_STRAD, Items.MUSIC_DISC_WARD, Items.MUSIC_DISC_11, Items.MUSIC_DISC_WAIT});
-        this.getOrCreateTagBuilder(ItemTags.MUSIC_DISCS).addTag(ItemTags.CREEPER_DROP_MUSIC_DISCS).add(Items.MUSIC_DISC_PIGSTEP).add(Items.MUSIC_DISC_OTHERSIDE);
+        this.getOrCreateTagBuilder(ItemTags.MUSIC_DISCS).addTag(ItemTags.CREEPER_DROP_MUSIC_DISCS).add(Items.MUSIC_DISC_PIGSTEP).add(Items.MUSIC_DISC_OTHERSIDE).add(Items.MUSIC_DISC_5);
         this.getOrCreateTagBuilder(ItemTags.COALS).add((Item[])new Item[]{Items.COAL, Items.CHARCOAL});
         this.getOrCreateTagBuilder(ItemTags.ARROWS).add((Item[])new Item[]{Items.ARROW, Items.TIPPED_ARROW, Items.SPECTRAL_ARROW});
         this.getOrCreateTagBuilder(ItemTags.LECTERN_BOOKS).add((Item[])new Item[]{Items.WRITTEN_BOOK, Items.WRITABLE_BOOK});
@@ -97,17 +102,13 @@ extends AbstractTagProvider<Item> {
         this.getOrCreateTagBuilder(ItemTags.FREEZE_IMMUNE_WEARABLES).add((Item[])new Item[]{Items.LEATHER_BOOTS, Items.LEATHER_LEGGINGS, Items.LEATHER_CHESTPLATE, Items.LEATHER_HELMET, Items.LEATHER_HORSE_ARMOR});
         this.getOrCreateTagBuilder(ItemTags.AXOLOTL_TEMPT_ITEMS).add(Items.TROPICAL_FISH_BUCKET);
         this.getOrCreateTagBuilder(ItemTags.CLUSTER_MAX_HARVESTABLES).add((Item[])new Item[]{Items.DIAMOND_PICKAXE, Items.GOLDEN_PICKAXE, Items.IRON_PICKAXE, Items.NETHERITE_PICKAXE, Items.STONE_PICKAXE, Items.WOODEN_PICKAXE});
+        this.getOrCreateTagBuilder(ItemTags.COMPASSES).add(Items.COMPASS).add(Items.RECOVERY_COMPASS);
     }
 
     protected void copy(TagKey<Block> blockTag, TagKey<Item> itemTag) {
-        Tag.Builder builder = this.getTagBuilder(itemTag);
-        Tag.Builder builder2 = this.blockTags.apply(blockTag);
-        builder2.streamEntries().forEach(builder::add);
-    }
-
-    @Override
-    public String getName() {
-        return "Item Tags";
+        TagBuilder tagBuilder = this.getTagBuilder(itemTag);
+        TagBuilder tagBuilder2 = this.blockTags.apply(blockTag);
+        tagBuilder2.build().forEach(tagBuilder::add);
     }
 }
 

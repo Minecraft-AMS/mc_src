@@ -39,10 +39,10 @@ implements SoundInstanceListener {
     }
 
     public void render(MatrixStack matrices) {
-        if (!this.enabled && this.client.options.showSubtitles) {
+        if (!this.enabled && this.client.options.getShowSubtitles().getValue().booleanValue()) {
             this.client.getSoundManager().registerListener(this);
             this.enabled = true;
-        } else if (this.enabled && !this.client.options.showSubtitles) {
+        } else if (this.enabled && !this.client.options.getShowSubtitles().getValue().booleanValue()) {
             this.client.getSoundManager().unregisterListener(this);
             this.enabled = false;
         }
@@ -82,7 +82,7 @@ implements SoundInstanceListener {
             int p = MathHelper.floor(MathHelper.clampedLerp(255.0f, 75.0f, (float)(Util.getMeasuringTimeMs() - subtitleEntry.getTime()) / 3000.0f));
             int q = p << 16 | p << 8 | p;
             matrices.push();
-            matrices.translate((float)this.client.getWindow().getScaledWidth() - (float)l * 1.0f - 2.0f, (float)(this.client.getWindow().getScaledHeight() - 30) - (float)(i * (m + 1)) * 1.0f, 0.0);
+            matrices.translate((float)this.client.getWindow().getScaledWidth() - (float)l * 1.0f - 2.0f, (float)(this.client.getWindow().getScaledHeight() - 35) - (float)(i * (m + 1)) * 1.0f, 0.0);
             matrices.scale(1.0f, 1.0f, 1.0f);
             SubtitlesHud.fill(matrices, -l - 1, -n - 1, l + 1, n + 1, this.client.options.getTextBackgroundColor(0.8f));
             RenderSystem.enableBlend();

@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsLabel;
@@ -30,10 +29,10 @@ import net.minecraft.client.realms.gui.screen.RealmsResetWorldScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.gui.screen.RealmsUploadScreen;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
+import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.level.storage.LevelSummary;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -42,9 +41,9 @@ import org.slf4j.Logger;
 public class RealmsSelectFileToUploadScreen
 extends RealmsScreen {
     private static final Logger LOGGER = LogUtils.getLogger();
-    static final Text WORLD_LANG = new TranslatableText("selectWorld.world");
-    static final Text HARDCORE_TEXT = new TranslatableText("mco.upload.hardcore").formatted(Formatting.DARK_RED);
-    static final Text CHEATS_TEXT = new TranslatableText("selectWorld.cheats");
+    static final Text WORLD_LANG = Text.translatable("selectWorld.world");
+    static final Text HARDCORE_TEXT = Text.translatable("mco.upload.hardcore").formatted(Formatting.DARK_RED);
+    static final Text CHEATS_TEXT = Text.translatable("selectWorld.cheats");
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat();
     private final RealmsResetWorldScreen parent;
     private final long worldId;
@@ -56,7 +55,7 @@ extends RealmsScreen {
     private final Runnable onBack;
 
     public RealmsSelectFileToUploadScreen(long worldId, int slotId, RealmsResetWorldScreen parent, Runnable onBack) {
-        super(new TranslatableText("mco.upload.select.world.title"));
+        super(Text.translatable("mco.upload.select.world.title"));
         this.parent = parent;
         this.worldId = worldId;
         this.slotId = slotId;
@@ -64,15 +63,8 @@ extends RealmsScreen {
     }
 
     private void loadLevelList() throws Exception {
-        this.levelList = this.client.getLevelStorage().getLevelList().stream().filter(a -> !a.requiresConversion() && !a.isLocked()).sorted((a, b) -> {
-            if (a.getLastPlayed() < b.getLastPlayed()) {
-                return 1;
-            }
-            if (a.getLastPlayed() > b.getLastPlayed()) {
-                return -1;
-            }
-            return a.getName().compareTo(b.getName());
-        }).collect(Collectors.toList());
+        LevelStorage.LevelList levelList = this.client.getLevelStorage().getLevelList();
+        this.levelList = this.client.getLevelStorage().loadSummaries(levelList).join().stream().filter(a -> !a.requiresConversion() && !a.isLocked()).collect(Collectors.toList());
         for (LevelSummary levelSummary : this.levelList) {
             this.worldSelectionList.addEntry(levelSummary);
         }
@@ -87,16 +79,16 @@ extends RealmsScreen {
         }
         catch (Exception exception) {
             LOGGER.error("Couldn't load level list", (Throwable)exception);
-            this.client.setScreen(new RealmsGenericErrorScreen(new LiteralText("Unable to load worlds"), Text.of(exception.getMessage()), this.parent));
+            this.client.setScreen(new RealmsGenericErrorScreen(Text.literal("Unable to load worlds"), Text.of(exception.getMessage()), this.parent));
             return;
         }
         this.addSelectableChild(this.worldSelectionList);
-        this.uploadButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 32, 153, 20, new TranslatableText("mco.upload.button.name"), button -> this.upload()));
+        this.uploadButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 154, this.height - 32, 153, 20, Text.translatable("mco.upload.button.name"), button -> this.upload()));
         this.uploadButton.active = this.selectedWorld >= 0 && this.selectedWorld < this.levelList.size();
         this.addDrawableChild(new ButtonWidget(this.width / 2 + 6, this.height - 32, 153, 20, ScreenTexts.BACK, button -> this.client.setScreen(this.parent)));
-        this.addLabel(new RealmsLabel(new TranslatableText("mco.upload.select.world.subtitle"), this.width / 2, RealmsSelectFileToUploadScreen.row(-1), 0xA0A0A0));
+        this.addLabel(new RealmsLabel(Text.translatable("mco.upload.select.world.subtitle"), this.width / 2, RealmsSelectFileToUploadScreen.row(-1), 0xA0A0A0));
         if (this.levelList.isEmpty()) {
-            this.addLabel(new RealmsLabel(new TranslatableText("mco.upload.select.world.none"), this.width / 2, this.height / 2 - 20, 0xFFFFFF));
+            this.addLabel(new RealmsLabel(Text.translatable("mco.upload.select.world.none"), this.width / 2, this.height / 2 - 20, 0xFFFFFF));
         }
     }
 
@@ -190,7 +182,7 @@ extends RealmsScreen {
             this.nameAndLastPlayed = summary.getName() + " (" + RealmsSelectFileToUploadScreen.getLastPlayed(summary) + ")";
             Text text = summary.isHardcore() ? HARDCORE_TEXT : RealmsSelectFileToUploadScreen.getGameModeName(summary);
             if (summary.hasCheats()) {
-                text = text.shallowCopy().append(", ").append(CHEATS_TEXT);
+                text = text.copy().append(", ").append(CHEATS_TEXT);
             }
             this.details = text;
         }
@@ -215,8 +207,8 @@ extends RealmsScreen {
 
         @Override
         public Text getNarration() {
-            Text text = ScreenTexts.joinLines(new LiteralText(this.summary.getDisplayName()), new LiteralText(RealmsSelectFileToUploadScreen.getLastPlayed(this.summary)), RealmsSelectFileToUploadScreen.getGameModeName(this.summary));
-            return new TranslatableText("narrator.select", text);
+            Text text = ScreenTexts.joinLines(Text.literal(this.summary.getDisplayName()), Text.literal(RealmsSelectFileToUploadScreen.getLastPlayed(this.summary)), RealmsSelectFileToUploadScreen.getGameModeName(this.summary));
+            return Text.translatable("narrator.select", text);
         }
     }
 }

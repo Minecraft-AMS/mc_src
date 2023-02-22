@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+ *  org.jetbrains.annotations.Contract
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.util;
@@ -13,6 +14,7 @@ import java.util.Comparator;
 import java.util.stream.Collectors;
 import net.minecraft.block.MapColor;
 import net.minecraft.util.StringIdentifiable;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 public final class DyeColor
@@ -95,7 +97,9 @@ implements StringIdentifiable {
         return VALUES[id];
     }
 
-    public static DyeColor byName(String name, DyeColor defaultColor) {
+    @Nullable
+    @Contract(value="_,!null->!null;_,null->_")
+    public static DyeColor byName(String name, @Nullable DyeColor defaultColor) {
         for (DyeColor dyeColor : DyeColor.values()) {
             if (!dyeColor.name.equals(name)) continue;
             return dyeColor;

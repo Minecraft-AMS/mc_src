@@ -24,7 +24,7 @@ implements TestCompletionListener {
 
     @Override
     public void onTestFailed(GameTestState test) {
-        String string = ESCAPER.escape(test.getStructurePath());
+        String string = ESCAPER.escape(test.getTemplatePath());
         String string2 = ESCAPER.escape(test.getThrowable().getMessage());
         String string3 = ESCAPER.escape(Util.getInnermostMessage(test.getThrowable()));
         LOGGER.info("##teamcity[testStarted name='{}']", (Object)string);
@@ -38,7 +38,7 @@ implements TestCompletionListener {
 
     @Override
     public void onTestPassed(GameTestState test) {
-        String string = ESCAPER.escape(test.getStructurePath());
+        String string = ESCAPER.escape(test.getTemplatePath());
         LOGGER.info("##teamcity[testStarted name='{}']", (Object)string);
         LOGGER.info("##teamcity[testFinished name='{}' duration='{}']", (Object)string, (Object)test.getElapsedMilliseconds());
     }

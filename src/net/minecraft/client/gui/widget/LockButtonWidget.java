@@ -10,12 +10,12 @@ package net.minecraft.client.gui.widget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 @Environment(value=EnvType.CLIENT)
 public class LockButtonWidget
@@ -23,12 +23,12 @@ extends ButtonWidget {
     private boolean locked;
 
     public LockButtonWidget(int x, int y, ButtonWidget.PressAction action) {
-        super(x, y, 20, 20, new TranslatableText("narrator.button.difficulty_lock"), action);
+        super(x, y, 20, 20, Text.translatable("narrator.button.difficulty_lock"), action);
     }
 
     @Override
     protected MutableText getNarrationMessage() {
-        return ScreenTexts.joinSentences(super.getNarrationMessage(), this.isLocked() ? new TranslatableText("narrator.button.difficulty_lock.locked") : new TranslatableText("narrator.button.difficulty_lock.unlocked"));
+        return ScreenTexts.joinSentences(super.getNarrationMessage(), this.isLocked() ? Text.translatable("narrator.button.difficulty_lock.locked") : Text.translatable("narrator.button.difficulty_lock.unlocked"));
     }
 
     public boolean isLocked() {

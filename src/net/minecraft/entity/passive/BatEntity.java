@@ -8,7 +8,6 @@ package net.minecraft.entity.passive;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
@@ -30,6 +29,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
@@ -187,7 +187,7 @@ extends AmbientEntity {
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
     }
 
     @Override

@@ -27,9 +27,9 @@ import java.util.List;
 import net.minecraft.util.Util;
 import net.minecraft.util.dynamic.RegistryElementCodec;
 import net.minecraft.util.math.noise.OctavePerlinNoiseSampler;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.world.gen.random.AbstractRandom;
 
 public class DoublePerlinNoiseSampler {
     private static final double DOMAIN_SCALE = 1.0181268882175227;
@@ -41,19 +41,19 @@ public class DoublePerlinNoiseSampler {
     private final NoiseParameters field_37207;
 
     @Deprecated
-    public static DoublePerlinNoiseSampler createLegacy(AbstractRandom random, NoiseParameters parameters) {
+    public static DoublePerlinNoiseSampler createLegacy(Random random, NoiseParameters parameters) {
         return new DoublePerlinNoiseSampler(random, parameters, false);
     }
 
-    public static DoublePerlinNoiseSampler create(AbstractRandom random, int offset, double ... octaves) {
+    public static DoublePerlinNoiseSampler create(Random random, int offset, double ... octaves) {
         return DoublePerlinNoiseSampler.create(random, new NoiseParameters(offset, (DoubleList)new DoubleArrayList(octaves)));
     }
 
-    public static DoublePerlinNoiseSampler create(AbstractRandom random, NoiseParameters parameters) {
+    public static DoublePerlinNoiseSampler create(Random random, NoiseParameters parameters) {
         return new DoublePerlinNoiseSampler(random, parameters, true);
     }
 
-    private DoublePerlinNoiseSampler(AbstractRandom random, NoiseParameters noiseParameters, boolean bl) {
+    private DoublePerlinNoiseSampler(Random random, NoiseParameters noiseParameters, boolean bl) {
         int i = noiseParameters.firstOctave;
         DoubleList doubleList = noiseParameters.amplitudes;
         this.field_37207 = noiseParameters;
@@ -111,8 +111,8 @@ public class DoublePerlinNoiseSampler {
     extends Record {
         final int firstOctave;
         final DoubleList amplitudes;
-        public static final Codec<NoiseParameters> field_35424 = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("firstOctave").forGetter(NoiseParameters::firstOctave), (App)Codec.DOUBLE.listOf().fieldOf("amplitudes").forGetter(NoiseParameters::amplitudes)).apply((Applicative)instance, NoiseParameters::new));
-        public static final Codec<RegistryEntry<NoiseParameters>> CODEC = RegistryElementCodec.of(Registry.NOISE_WORLDGEN, field_35424);
+        public static final Codec<NoiseParameters> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.INT.fieldOf("firstOctave").forGetter(NoiseParameters::firstOctave), (App)Codec.DOUBLE.listOf().fieldOf("amplitudes").forGetter(NoiseParameters::amplitudes)).apply((Applicative)instance, NoiseParameters::new));
+        public static final Codec<RegistryEntry<NoiseParameters>> REGISTRY_ENTRY_CODEC = RegistryElementCodec.of(Registry.NOISE_KEY, CODEC);
 
         public NoiseParameters(int firstOctave, List<Double> amplitudes) {
             this(firstOctave, (DoubleList)new DoubleArrayList(amplitudes));

@@ -18,6 +18,7 @@ import net.minecraft.world.biome.BiomeEffects;
 import net.minecraft.world.biome.GenerationSettings;
 import net.minecraft.world.biome.SpawnSettings;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.carver.ConfiguredCarvers;
 import net.minecraft.world.gen.feature.DefaultBiomeFeatures;
 import net.minecraft.world.gen.feature.MiscPlacedFeatures;
 import net.minecraft.world.gen.feature.OceanPlacedFeatures;
@@ -38,12 +39,12 @@ public class OverworldBiomeCreator {
         return MathHelper.hsvToRgb(0.62222224f - f * 0.05f, 0.5f + f * 0.1f, 1.0f);
     }
 
-    private static Biome createBiome(Biome.Precipitation precipitation, Biome.Category category, float temperature, float downfall, SpawnSettings.Builder spawnSettings, GenerationSettings.Builder generationSettings, @Nullable MusicSound music) {
-        return OverworldBiomeCreator.createBiome(precipitation, category, temperature, downfall, 4159204, 329011, spawnSettings, generationSettings, music);
+    private static Biome createBiome(Biome.Precipitation precipitation, float temperature, float downfall, SpawnSettings.Builder spawnSettings, GenerationSettings.Builder generationSettings, @Nullable MusicSound music) {
+        return OverworldBiomeCreator.createBiome(precipitation, temperature, downfall, 4159204, 329011, spawnSettings, generationSettings, music);
     }
 
-    private static Biome createBiome(Biome.Precipitation precipitation, Biome.Category category, float temperature, float downfall, int waterColor, int waterFogColor, SpawnSettings.Builder spawnSettings, GenerationSettings.Builder generationSettings, @Nullable MusicSound music) {
-        return new Biome.Builder().precipitation(precipitation).category(category).temperature(temperature).downfall(downfall).effects(new BiomeEffects.Builder().waterColor(waterColor).waterFogColor(waterFogColor).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(temperature)).moodSound(BiomeMoodSound.CAVE).music(music).build()).spawnSettings(spawnSettings.build()).generationSettings(generationSettings.build()).build();
+    private static Biome createBiome(Biome.Precipitation precipitation, float temperature, float downfall, int waterColor, int waterFogColor, SpawnSettings.Builder spawnSettings, GenerationSettings.Builder generationSettings, @Nullable MusicSound music) {
+        return new Biome.Builder().precipitation(precipitation).temperature(temperature).downfall(downfall).effects(new BiomeEffects.Builder().waterColor(waterColor).waterFogColor(waterFogColor).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(temperature)).moodSound(BiomeMoodSound.CAVE).music(music).build()).spawnSettings(spawnSettings.build()).generationSettings(generationSettings.build()).build();
     }
 
     private static void addBasicFeatures(GenerationSettings.Builder generationSettings) {
@@ -79,7 +80,8 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
         DefaultBiomeFeatures.addSweetBerryBushes(builder2);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.TAIGA, spruce ? 0.25f : 0.3f, 0.8f, builder, builder2, DEFAULT_MUSIC);
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_OLD_GROWTH_TAIGA);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, spruce ? 0.25f : 0.3f, 0.8f, builder, builder2, musicSound);
     }
 
     public static Biome createSparseJungle() {
@@ -129,7 +131,8 @@ public class OverworldBiomeCreator {
         } else {
             DefaultBiomeFeatures.addMelons(builder);
         }
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.JUNGLE, 0.95f, depth, spawnSettings, builder, DEFAULT_MUSIC);
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_JUNGLE_AND_FOREST);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.95f, depth, spawnSettings, builder, musicSound);
     }
 
     public static Biome createWindsweptHills(boolean forest) {
@@ -152,7 +155,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
         DefaultBiomeFeatures.addEmeraldOre(builder2);
         DefaultBiomeFeatures.addInfestedStone(builder2);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.EXTREME_HILLS, 0.2f, 0.3f, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.2f, 0.3f, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createDesert() {
@@ -169,7 +172,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addDesertVegetation(builder2);
         DefaultBiomeFeatures.addDesertFeatures(builder2);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, Biome.Category.DESERT, 2.0f, 0.0f, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, 2.0f, 0.0f, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createPlains(boolean sunflower, boolean snowy, boolean iceSpikes) {
@@ -207,7 +210,7 @@ public class OverworldBiomeCreator {
             DefaultBiomeFeatures.addDefaultVegetation(builder2);
         }
         float f = snowy ? 0.0f : 0.8f;
-        return OverworldBiomeCreator.createBiome(snowy ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, snowy ? Biome.Category.ICY : Biome.Category.PLAINS, f, snowy ? 0.5f : 0.4f, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(snowy ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, f, snowy ? 0.5f : 0.4f, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createMushroomFields() {
@@ -219,7 +222,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultDisks(builder2);
         DefaultBiomeFeatures.addMushroomFieldsFeatures(builder2);
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.MUSHROOM, 0.9f, 1.0f, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.9f, 1.0f, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createSavanna(boolean windswept, boolean plateau) {
@@ -248,7 +251,7 @@ public class OverworldBiomeCreator {
         if (plateau) {
             builder2.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.LLAMA, 8, 4, 4));
         }
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, Biome.Category.SAVANNA, 2.0f, 0.0f, builder2, builder, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, 2.0f, 0.0f, builder2, builder, DEFAULT_MUSIC);
     }
 
     public static Biome createBadlands(boolean plateau) {
@@ -265,11 +268,11 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addBadlandsGrass(builder2);
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addBadlandsVegetation(builder2);
-        return new Biome.Builder().precipitation(Biome.Precipitation.NONE).category(Biome.Category.MESA).temperature(2.0f).downfall(0.0f).effects(new BiomeEffects.Builder().waterColor(4159204).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(2.0f)).foliageColor(10387789).grassColor(9470285).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
+        return new Biome.Builder().precipitation(Biome.Precipitation.NONE).temperature(2.0f).downfall(0.0f).effects(new BiomeEffects.Builder().waterColor(4159204).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(2.0f)).foliageColor(10387789).grassColor(9470285).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
     }
 
     private static Biome createOcean(SpawnSettings.Builder spawnSettings, int waterColor, int waterFogColor, GenerationSettings.Builder builder) {
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.OCEAN, 0.5f, 0.5f, waterColor, waterFogColor, spawnSettings, builder, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.5f, 0.5f, waterColor, waterFogColor, spawnSettings, builder, DEFAULT_MUSIC);
     }
 
     private static GenerationSettings.Builder createOceanGenerationSettings() {
@@ -347,7 +350,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultGrass(builder2);
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
-        return new Biome.Builder().precipitation(monument ? Biome.Precipitation.RAIN : Biome.Precipitation.SNOW).category(Biome.Category.OCEAN).temperature(f).temperatureModifier(Biome.TemperatureModifier.FROZEN).downfall(0.5f).effects(new BiomeEffects.Builder().waterColor(3750089).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(f)).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
+        return new Biome.Builder().precipitation(monument ? Biome.Precipitation.RAIN : Biome.Precipitation.SNOW).temperature(f).temperatureModifier(Biome.TemperatureModifier.FROZEN).downfall(0.5f).effects(new BiomeEffects.Builder().waterColor(3750089).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(f)).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
     }
 
     public static Biome createNormalForest(boolean birch, boolean oldGrowth, boolean flower) {
@@ -388,7 +391,8 @@ public class OverworldBiomeCreator {
             builder2.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.WOLF, 5, 4, 4));
         }
         float f = birch ? 0.6f : 0.7f;
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.FOREST, f, birch ? 0.6f : 0.8f, builder2, builder, DEFAULT_MUSIC);
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_JUNGLE_AND_FOREST);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, f, birch ? 0.6f : 0.8f, builder2, builder, musicSound);
     }
 
     public static Biome createTaiga(boolean cold) {
@@ -411,7 +415,7 @@ public class OverworldBiomeCreator {
         } else {
             DefaultBiomeFeatures.addSweetBerryBushes(builder2);
         }
-        return OverworldBiomeCreator.createBiome(cold ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, Biome.Category.TAIGA, f, cold ? 0.4f : 0.8f, cold ? 4020182 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(cold ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, f, cold ? 0.4f : 0.8f, cold ? 4020182 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createDarkForest() {
@@ -428,7 +432,8 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addForestGrass(builder2);
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
-        return new Biome.Builder().precipitation(Biome.Precipitation.RAIN).category(Biome.Category.FOREST).temperature(0.7f).downfall(0.8f).effects(new BiomeEffects.Builder().waterColor(4159204).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(0.7f)).grassColorModifier(BiomeEffects.GrassColorModifier.DARK_FOREST).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_JUNGLE_AND_FOREST);
+        return new Biome.Builder().precipitation(Biome.Precipitation.RAIN).temperature(0.7f).downfall(0.8f).effects(new BiomeEffects.Builder().waterColor(4159204).waterFogColor(329011).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(0.7f)).grassColorModifier(BiomeEffects.GrassColorModifier.DARK_FOREST).moodSound(BiomeMoodSound.CAVE).music(musicSound).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
     }
 
     public static Biome createSwamp() {
@@ -436,6 +441,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addFarmAnimals(builder);
         DefaultBiomeFeatures.addBatsAndMonsters(builder);
         builder.spawn(SpawnGroup.MONSTER, new SpawnSettings.SpawnEntry(EntityType.SLIME, 1, 1, 1));
+        builder.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.FROG, 10, 2, 5));
         GenerationSettings.Builder builder2 = new GenerationSettings.Builder();
         DefaultBiomeFeatures.addFossils(builder2);
         OverworldBiomeCreator.addBasicFeatures(builder2);
@@ -445,7 +451,25 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addSwampVegetation(builder2);
         builder2.feature(GenerationStep.Feature.VEGETAL_DECORATION, OceanPlacedFeatures.SEAGRASS_SWAMP);
-        return new Biome.Builder().precipitation(Biome.Precipitation.RAIN).category(Biome.Category.SWAMP).temperature(0.8f).downfall(0.9f).effects(new BiomeEffects.Builder().waterColor(6388580).waterFogColor(2302743).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(0.8f)).foliageColor(6975545).grassColorModifier(BiomeEffects.GrassColorModifier.SWAMP).moodSound(BiomeMoodSound.CAVE).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_SWAMP);
+        return new Biome.Builder().precipitation(Biome.Precipitation.RAIN).temperature(0.8f).downfall(0.9f).effects(new BiomeEffects.Builder().waterColor(6388580).waterFogColor(2302743).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(0.8f)).foliageColor(6975545).grassColorModifier(BiomeEffects.GrassColorModifier.SWAMP).moodSound(BiomeMoodSound.CAVE).music(musicSound).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
+    }
+
+    public static Biome createMangroveSwamp() {
+        SpawnSettings.Builder builder = new SpawnSettings.Builder();
+        DefaultBiomeFeatures.addBatsAndMonsters(builder);
+        builder.spawn(SpawnGroup.MONSTER, new SpawnSettings.SpawnEntry(EntityType.SLIME, 1, 1, 1));
+        builder.spawn(SpawnGroup.CREATURE, new SpawnSettings.SpawnEntry(EntityType.FROG, 10, 2, 5));
+        builder.spawn(SpawnGroup.WATER_AMBIENT, new SpawnSettings.SpawnEntry(EntityType.TROPICAL_FISH, 25, 8, 8));
+        GenerationSettings.Builder builder2 = new GenerationSettings.Builder();
+        DefaultBiomeFeatures.addFossils(builder2);
+        OverworldBiomeCreator.addBasicFeatures(builder2);
+        DefaultBiomeFeatures.addDefaultOres(builder2);
+        DefaultBiomeFeatures.addGrassAndClayDisks(builder2);
+        DefaultBiomeFeatures.addMangroveSwampFeatures(builder2);
+        builder2.feature(GenerationStep.Feature.VEGETAL_DECORATION, OceanPlacedFeatures.SEAGRASS_SWAMP);
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_SWAMP);
+        return new Biome.Builder().precipitation(Biome.Precipitation.RAIN).temperature(0.8f).downfall(0.9f).effects(new BiomeEffects.Builder().waterColor(3832426).waterFogColor(5077600).fogColor(12638463).skyColor(OverworldBiomeCreator.getSkyColor(0.8f)).foliageColor(9285927).grassColorModifier(BiomeEffects.GrassColorModifier.SWAMP).moodSound(BiomeMoodSound.CAVE).music(musicSound).build()).spawnSettings(builder.build()).generationSettings(builder2.build()).build();
     }
 
     public static Biome createRiver(boolean frozen) {
@@ -465,7 +489,7 @@ public class OverworldBiomeCreator {
             builder2.feature(GenerationStep.Feature.VEGETAL_DECORATION, OceanPlacedFeatures.SEAGRASS_RIVER);
         }
         float f = frozen ? 0.0f : 0.5f;
-        return OverworldBiomeCreator.createBiome(frozen ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, Biome.Category.RIVER, f, 0.5f, frozen ? 3750089 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(frozen ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, f, 0.5f, frozen ? 3750089 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createBeach(boolean snowy, boolean stony) {
@@ -485,13 +509,13 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultMushrooms(builder2);
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
         float f = snowy ? 0.05f : (stony ? 0.2f : 0.8f);
-        return OverworldBiomeCreator.createBiome(snowy ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, Biome.Category.BEACH, f, bl ? 0.4f : 0.3f, snowy ? 4020182 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(snowy ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN, f, bl ? 0.4f : 0.3f, snowy ? 4020182 : 4159204, 329011, builder, builder2, DEFAULT_MUSIC);
     }
 
     public static Biome createTheVoid() {
         GenerationSettings.Builder builder = new GenerationSettings.Builder();
         builder.feature(GenerationStep.Feature.TOP_LAYER_MODIFICATION, MiscPlacedFeatures.VOID_START_PLATFORM);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, Biome.Category.NONE, 0.5f, 0.5f, new SpawnSettings.Builder(), builder, DEFAULT_MUSIC);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.NONE, 0.5f, 0.5f, new SpawnSettings.Builder(), builder, DEFAULT_MUSIC);
     }
 
     public static Biome createMeadow() {
@@ -507,7 +531,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_MEADOW);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.MOUNTAIN, 0.5f, 0.8f, 937679, 329011, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.5f, 0.8f, 937679, 329011, builder2, builder, musicSound);
     }
 
     public static Biome createFrozenPeaks() {
@@ -522,7 +546,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_FROZEN_PEAKS);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, Biome.Category.MOUNTAIN, -0.7f, 0.9f, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, -0.7f, 0.9f, builder2, builder, musicSound);
     }
 
     public static Biome createJaggedPeaks() {
@@ -537,7 +561,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_JAGGED_PEAKS);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, Biome.Category.MOUNTAIN, -0.7f, 0.9f, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, -0.7f, 0.9f, builder2, builder, musicSound);
     }
 
     public static Biome createStonyPeaks() {
@@ -550,7 +574,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_STONY_PEAKS);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.MOUNTAIN, 1.0f, 0.3f, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 1.0f, 0.3f, builder2, builder, musicSound);
     }
 
     public static Biome createSnowySlopes() {
@@ -566,7 +590,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_SNOWY_SLOPES);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, Biome.Category.MOUNTAIN, -0.3f, 0.9f, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, -0.3f, 0.9f, builder2, builder, musicSound);
     }
 
     public static Biome createGrove() {
@@ -584,7 +608,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addEmeraldOre(builder);
         DefaultBiomeFeatures.addInfestedStone(builder);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_GROVE);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, Biome.Category.FOREST, -0.2f, 0.8f, builder2, builder, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.SNOW, -0.2f, 0.8f, builder2, builder, musicSound);
     }
 
     public static Biome createLushCaves() {
@@ -600,7 +624,7 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultDisks(builder2);
         DefaultBiomeFeatures.addLushCavesDecoration(builder2);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_LUSH_CAVES);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.UNDERGROUND, 0.5f, 0.5f, builder, builder2, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.5f, 0.5f, builder, builder2, musicSound);
     }
 
     public static Biome createDripstoneCaves() {
@@ -616,7 +640,28 @@ public class OverworldBiomeCreator {
         DefaultBiomeFeatures.addDefaultVegetation(builder2);
         DefaultBiomeFeatures.addDripstone(builder2);
         MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_DRIPSTONE_CAVES);
-        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, Biome.Category.UNDERGROUND, 0.8f, 0.4f, builder, builder2, musicSound);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.8f, 0.4f, builder, builder2, musicSound);
+    }
+
+    public static Biome createDeepDark() {
+        SpawnSettings.Builder builder = new SpawnSettings.Builder();
+        GenerationSettings.Builder builder2 = new GenerationSettings.Builder();
+        builder2.carver(GenerationStep.Carver.AIR, ConfiguredCarvers.CAVE);
+        builder2.carver(GenerationStep.Carver.AIR, ConfiguredCarvers.CAVE_EXTRA_UNDERGROUND);
+        builder2.carver(GenerationStep.Carver.AIR, ConfiguredCarvers.CANYON);
+        DefaultBiomeFeatures.addAmethystGeodes(builder2);
+        DefaultBiomeFeatures.addDungeons(builder2);
+        DefaultBiomeFeatures.addMineables(builder2);
+        DefaultBiomeFeatures.addFrozenTopLayer(builder2);
+        DefaultBiomeFeatures.addPlainsTallGrass(builder2);
+        DefaultBiomeFeatures.addDefaultOres(builder2, true);
+        DefaultBiomeFeatures.addDefaultDisks(builder2);
+        DefaultBiomeFeatures.addPlainsFeatures(builder2);
+        DefaultBiomeFeatures.addDefaultMushrooms(builder2);
+        DefaultBiomeFeatures.addDefaultVegetation(builder2);
+        DefaultBiomeFeatures.addSculk(builder2);
+        MusicSound musicSound = MusicType.createIngameMusic(SoundEvents.MUSIC_OVERWORLD_DEEP_DARK);
+        return OverworldBiomeCreator.createBiome(Biome.Precipitation.RAIN, 0.8f, 0.4f, builder, builder2, musicSound);
     }
 }
 

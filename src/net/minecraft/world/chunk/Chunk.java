@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
@@ -50,6 +51,7 @@ import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.StructureHolder;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.GenerationSettings;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.BiomeSupplier;
@@ -60,14 +62,9 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.UpgradeData;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.event.listener.GameEventDispatcher;
-import net.minecraft.world.gen.chunk.AquiferSampler;
-import net.minecraft.world.gen.chunk.Blender;
 import net.minecraft.world.gen.chunk.BlendingData;
-import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
 import net.minecraft.world.gen.chunk.ChunkNoiseSampler;
-import net.minecraft.world.gen.densityfunction.DensityFunctionTypes;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
-import net.minecraft.world.gen.noise.NoiseRouter;
+import net.minecraft.world.gen.structure.Structure;
 import net.minecraft.world.tick.BasicTickScheduler;
 import net.minecraft.world.tick.SerializableTickScheduler;
 import org.jetbrains.annotations.Nullable;
@@ -86,15 +83,15 @@ StructureHolder {
     private long inhabitedTime;
     @Nullable
     @Deprecated
-    private RegistryEntry<Biome> biome;
+    private GenerationSettings generationSettings;
     @Nullable
     protected ChunkNoiseSampler chunkNoiseSampler;
     protected final UpgradeData upgradeData;
     @Nullable
     protected BlendingData blendingData;
     protected final Map<Heightmap.Type, Heightmap> heightmaps = Maps.newEnumMap(Heightmap.Type.class);
-    private final Map<ConfiguredStructureFeature<?, ?>, StructureStart> structureStarts = Maps.newHashMap();
-    private final Map<ConfiguredStructureFeature<?, ?>, LongSet> structureReferences = Maps.newHashMap();
+    private final Map<Structure, StructureStart> structureStarts = Maps.newHashMap();
+    private final Map<Structure, LongSet> structureReferences = Maps.newHashMap();
     protected final Map<BlockPos, NbtCompound> blockEntityNbts = Maps.newHashMap();
     protected final Map<BlockPos, BlockEntity> blockEntities = Maps.newHashMap();
     protected final HeightLimitView heightLimitView;
@@ -174,8 +171,8 @@ StructureHolder {
         this.getHeightmap(type).setTo(this, type, heightmap);
     }
 
-    public Heightmap getHeightmap(Heightmap.Type type2) {
-        return this.heightmaps.computeIfAbsent(type2, type -> new Heightmap(this, (Heightmap.Type)type));
+    public Heightmap getHeightmap(Heightmap.Type type) {
+        return this.heightmaps.computeIfAbsent(type, type2 -> new Heightmap(this, (Heightmap.Type)type2));
     }
 
     public boolean hasHeightmap(Heightmap.Type type) {
@@ -200,44 +197,44 @@ StructureHolder {
 
     @Override
     @Nullable
-    public StructureStart getStructureStart(ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        return this.structureStarts.get(configuredStructureFeature);
+    public StructureStart getStructureStart(Structure structure) {
+        return this.structureStarts.get(structure);
     }
 
     @Override
-    public void setStructureStart(ConfiguredStructureFeature<?, ?> configuredStructureFeature, StructureStart start) {
-        this.structureStarts.put(configuredStructureFeature, start);
+    public void setStructureStart(Structure structure, StructureStart start) {
+        this.structureStarts.put(structure, start);
         this.needsSaving = true;
     }
 
-    public Map<ConfiguredStructureFeature<?, ?>, StructureStart> getStructureStarts() {
+    public Map<Structure, StructureStart> getStructureStarts() {
         return Collections.unmodifiableMap(this.structureStarts);
     }
 
-    public void setStructureStarts(Map<ConfiguredStructureFeature<?, ?>, StructureStart> structureStarts) {
+    public void setStructureStarts(Map<Structure, StructureStart> structureStarts) {
         this.structureStarts.clear();
         this.structureStarts.putAll(structureStarts);
         this.needsSaving = true;
     }
 
     @Override
-    public LongSet getStructureReferences(ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        return this.structureReferences.getOrDefault(configuredStructureFeature, EMPTY_STRUCTURE_REFERENCES);
+    public LongSet getStructureReferences(Structure structure) {
+        return this.structureReferences.getOrDefault(structure, EMPTY_STRUCTURE_REFERENCES);
     }
 
     @Override
-    public void addStructureReference(ConfiguredStructureFeature<?, ?> configuredStructureFeature2, long reference) {
-        this.structureReferences.computeIfAbsent(configuredStructureFeature2, configuredStructureFeature -> new LongOpenHashSet()).add(reference);
+    public void addStructureReference(Structure structure, long reference) {
+        this.structureReferences.computeIfAbsent(structure, type2 -> new LongOpenHashSet()).add(reference);
         this.needsSaving = true;
     }
 
     @Override
-    public Map<ConfiguredStructureFeature<?, ?>, LongSet> getStructureReferences() {
+    public Map<Structure, LongSet> getStructureReferences() {
         return Collections.unmodifiableMap(this.structureReferences);
     }
 
     @Override
-    public void setStructureReferences(Map<ConfiguredStructureFeature<?, ?>, LongSet> structureReferences) {
+    public void setStructureReferences(Map<Structure, LongSet> structureReferences) {
         this.structureReferences.clear();
         this.structureReferences.putAll(structureReferences);
         this.needsSaving = true;
@@ -306,7 +303,7 @@ StructureHolder {
     }
 
     public boolean usesOldNoise() {
-        return this.blendingData != null && this.blendingData.usesOldNoise();
+        return this.blendingData != null;
     }
 
     @Nullable
@@ -356,19 +353,19 @@ StructureHolder {
         return this.heightLimitView.getHeight();
     }
 
-    public ChunkNoiseSampler getOrCreateChunkNoiseSampler(NoiseRouter noiseColumnSampler, Supplier<DensityFunctionTypes.class_7050> columnSampler, ChunkGeneratorSettings chunkGeneratorSettings, AquiferSampler.FluidLevelSampler fluidLevelSampler, Blender blender) {
+    public ChunkNoiseSampler getOrCreateChunkNoiseSampler(Function<Chunk, ChunkNoiseSampler> chunkNoiseSamplerCreator) {
         if (this.chunkNoiseSampler == null) {
-            this.chunkNoiseSampler = ChunkNoiseSampler.create(this, noiseColumnSampler, columnSampler, chunkGeneratorSettings, fluidLevelSampler, blender);
+            this.chunkNoiseSampler = chunkNoiseSamplerCreator.apply(this);
         }
         return this.chunkNoiseSampler;
     }
 
     @Deprecated
-    public RegistryEntry<Biome> setBiomeIfAbsent(Supplier<RegistryEntry<Biome>> biomeSupplier) {
-        if (this.biome == null) {
-            this.biome = biomeSupplier.get();
+    public GenerationSettings getOrCreateGenerationSettings(Supplier<GenerationSettings> generationSettingsCreator) {
+        if (this.generationSettings == null) {
+            this.generationSettings = generationSettingsCreator.get();
         }
-        return this.biome;
+        return this.generationSettings;
     }
 
     @Override

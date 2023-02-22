@@ -5,10 +5,12 @@ package net.minecraft.client.option;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
 
 public final class ChatVisibility
-extends Enum<ChatVisibility> {
+extends Enum<ChatVisibility>
+implements TranslatableOption {
     public static final /* enum */ ChatVisibility FULL = new ChatVisibility(0, "options.chat.visibility.full");
     public static final /* enum */ ChatVisibility SYSTEM = new ChatVisibility(1, "options.chat.visibility.system");
     public static final /* enum */ ChatVisibility HIDDEN = new ChatVisibility(2, "options.chat.visibility.hidden");
@@ -30,10 +32,12 @@ extends Enum<ChatVisibility> {
         this.translationKey = translationKey;
     }
 
+    @Override
     public int getId() {
         return this.id;
     }
 
+    @Override
     public String getTranslationKey() {
         return this.translationKey;
     }

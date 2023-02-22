@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BeehiveBlockEntity;
-import net.minecraft.client.render.debug.NameGenerator;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.BlockPosLookTarget;
@@ -42,22 +42,27 @@ import net.minecraft.entity.ai.goal.PrioritizedGoal;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.damage.EntityDamageSource;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.WardenEntity;
 import net.minecraft.entity.passive.BeeEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.NameGenerator;
 import net.minecraft.util.Nameable;
 import net.minecraft.util.StringHelper;
-import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.GlobalPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.village.VillageGossipType;
 import net.minecraft.village.raid.Raid;
 import net.minecraft.world.StructureWorldAccess;
@@ -65,7 +70,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.GameEventListener;
 import net.minecraft.world.poi.PointOfInterest;
-import net.minecraft.world.poi.PointOfInterestType;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -128,7 +132,7 @@ public class DebugInfoSender {
     public static void sendBeeDebugData(BeeEntity bee) {
     }
 
-    public static void sendGameEvent(World world, GameEvent event, BlockPos pos) {
+    public static void sendGameEvent(World world, GameEvent event, Vec3d pos) {
     }
 
     public static void sendGameEventListener(World world, GameEventListener eventListener) {
@@ -137,47 +141,47 @@ public class DebugInfoSender {
     public static void sendBeehiveDebugData(World world, BlockPos pos, BlockState state, BeehiveBlockEntity blockEntity) {
     }
 
-    private static void writeBrain(LivingEntity entity, PacketByteBuf buf2) {
+    private static void writeBrain(LivingEntity entity, PacketByteBuf buf) {
         Brain<Path> brain = entity.getBrain();
         long l = entity.world.getTime();
         if (entity instanceof InventoryOwner) {
-            Inventory inventory = ((InventoryOwner)((Object)entity)).getInventory();
-            buf2.writeString(inventory.isEmpty() ? "" : inventory.toString());
+            SimpleInventory inventory = ((InventoryOwner)((Object)entity)).getInventory();
+            buf.writeString(inventory.isEmpty() ? "" : ((Object)inventory).toString());
         } else {
-            buf2.writeString("");
+            buf.writeString("");
         }
-        if (brain.hasMemoryModule(MemoryModuleType.PATH)) {
-            buf2.writeBoolean(true);
-            Path path = brain.getOptionalMemory(MemoryModuleType.PATH).get();
-            path.toBuffer(buf2);
-        } else {
-            buf2.writeBoolean(false);
-        }
+        buf.writeOptional(brain.hasMemoryModule(MemoryModuleType.PATH) ? brain.getOptionalMemory(MemoryModuleType.PATH) : Optional.empty(), (packetByteBuf, path) -> path.toBuffer((PacketByteBuf)((Object)packetByteBuf)));
         if (entity instanceof VillagerEntity) {
             VillagerEntity villagerEntity = (VillagerEntity)entity;
             boolean bl = villagerEntity.canSummonGolem(l);
-            buf2.writeBoolean(bl);
+            buf.writeBoolean(bl);
         } else {
-            buf2.writeBoolean(false);
+            buf.writeBoolean(false);
         }
-        buf2.writeCollection(brain.getPossibleActivities(), (buf, activity) -> buf.writeString(activity.getId()));
+        if (entity.getType() == EntityType.WARDEN) {
+            WardenEntity wardenEntity = (WardenEntity)entity;
+            buf.writeInt(wardenEntity.getAnger());
+        } else {
+            buf.writeInt(-1);
+        }
+        buf.writeCollection(brain.getPossibleActivities(), (buf2, activity) -> buf2.writeString(activity.getId()));
         Set set = brain.getRunningTasks().stream().map(Task::toString).collect(Collectors.toSet());
-        buf2.writeCollection(set, PacketByteBuf::writeString);
-        buf2.writeCollection(DebugInfoSender.listMemories(entity, l), (buf, memory) -> {
+        buf.writeCollection(set, PacketByteBuf::writeString);
+        buf.writeCollection(DebugInfoSender.listMemories(entity, l), (buf2, memory) -> {
             String string = StringHelper.truncate(memory, 255, true);
-            buf.writeString(string);
+            buf2.writeString(string);
         });
         if (entity instanceof VillagerEntity) {
             Set set2 = Stream.of(MemoryModuleType.JOB_SITE, MemoryModuleType.HOME, MemoryModuleType.MEETING_POINT).map(brain::getOptionalMemory).flatMap(Optional::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
-            buf2.writeCollection(set2, PacketByteBuf::writeBlockPos);
+            buf.writeCollection(set2, PacketByteBuf::writeBlockPos);
         } else {
-            buf2.writeVarInt(0);
+            buf.writeVarInt(0);
         }
         if (entity instanceof VillagerEntity) {
             Set set2 = Stream.of(MemoryModuleType.POTENTIAL_JOB_SITE).map(brain::getOptionalMemory).flatMap(Optional::stream).map(GlobalPos::getPos).collect(Collectors.toSet());
-            buf2.writeCollection(set2, PacketByteBuf::writeBlockPos);
+            buf.writeCollection(set2, PacketByteBuf::writeBlockPos);
         } else {
-            buf2.writeVarInt(0);
+            buf.writeVarInt(0);
         }
         if (entity instanceof VillagerEntity) {
             Map<UUID, Object2IntMap<VillageGossipType>> map = ((VillagerEntity)entity).getGossip().getEntityReputationAssociatedGossips();
@@ -186,9 +190,9 @@ public class DebugInfoSender {
                 String string = NameGenerator.name(uuid);
                 gossips.forEach((type, value) -> list.add(string + ": " + type + ": " + value));
             });
-            buf2.writeCollection(list, PacketByteBuf::writeString);
+            buf.writeCollection(list, PacketByteBuf::writeString);
         } else {
-            buf2.writeVarInt(0);
+            buf.writeVarInt(0);
         }
     }
 
@@ -259,9 +263,13 @@ public class DebugInfoSender {
 
     private static void sendToAll(ServerWorld world, PacketByteBuf buf, Identifier channel) {
         CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(channel, buf);
-        for (PlayerEntity playerEntity : world.toServerWorld().getPlayers()) {
+        for (PlayerEntity playerEntity : world.getPlayers()) {
             ((ServerPlayerEntity)playerEntity).networkHandler.sendPacket(packet);
         }
+    }
+
+    private static /* synthetic */ void method_43894(PacketByteBuf packetByteBuf, Path path) {
+        path.toBuffer(packetByteBuf);
     }
 
     private static /* synthetic */ void method_36163(PacketByteBuf buf, Raid raid) {
@@ -274,11 +282,15 @@ public class DebugInfoSender {
         buf.writeString(goal.getGoal().getClass().getSimpleName());
     }
 
+    private static /* synthetic */ String method_44135(RegistryKey registryKey) {
+        return registryKey.getValue().toString();
+    }
+
     private static /* synthetic */ void method_36155(ServerWorld world, PointOfInterest poi) {
         DebugInfoSender.sendPoiAddition(world, poi.getPos());
     }
 
-    private static /* synthetic */ boolean method_36159(PointOfInterestType poiType) {
+    private static /* synthetic */ boolean method_36159(RegistryEntry registryEntry) {
         return true;
     }
 }

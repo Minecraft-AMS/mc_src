@@ -14,27 +14,25 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.dto.Backup;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.gui.screen.RealmsSlotOptionsScreen;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsBackupInfoScreen
 extends RealmsScreen {
-    private static final Text UNKNOWN = new LiteralText("UNKNOWN");
+    private static final Text UNKNOWN = Text.literal("UNKNOWN");
     private final Screen parent;
     final Backup backup;
     private BackupInfoList backupInfoList;
 
     public RealmsBackupInfoScreen(Screen parent, Backup backup) {
-        super(new LiteralText("Changes from last backup"));
+        super(Text.literal("Changes from last backup"));
         this.parent = parent;
         this.backup = backup;
     }
@@ -82,7 +80,7 @@ extends RealmsScreen {
         if (string.contains("game") && string.contains("difficulty")) {
             return this.gameDifficultyMetadata(value);
         }
-        return new LiteralText(value);
+        return Text.literal(value);
     }
 
     private Text gameDifficultyMetadata(String value) {
@@ -135,7 +133,7 @@ extends RealmsScreen {
 
         @Override
         public Text getNarration() {
-            return new TranslatableText("narrator.select", this.key + " " + this.value);
+            return Text.translatable("narrator.select", this.key + " " + this.value);
         }
     }
 }

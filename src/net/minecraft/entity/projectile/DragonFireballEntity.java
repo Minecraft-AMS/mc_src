@@ -20,7 +20,7 @@ import net.minecraft.world.World;
 
 public class DragonFireballEntity
 extends ExplosiveProjectileEntity {
-    public static final float field_30661 = 4.0f;
+    public static final float DAMAGE_RANGE = 4.0f;
 
     public DragonFireballEntity(EntityType<? extends DragonFireballEntity> entityType, World world) {
         super((EntityType<? extends ExplosiveProjectileEntity>)entityType, world);
@@ -63,7 +63,7 @@ extends ExplosiveProjectileEntity {
     }
 
     @Override
-    public boolean collides() {
+    public boolean canHit() {
         return false;
     }
 

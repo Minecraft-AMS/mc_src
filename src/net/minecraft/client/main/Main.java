@@ -49,7 +49,6 @@ import net.minecraft.client.WindowSettings;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.util.GlException;
 import net.minecraft.client.util.Session;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.JsonHelper;
@@ -57,6 +56,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.WinNativeModuleUtil;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
 import net.minecraft.util.profiling.jfr.InstanceType;
@@ -67,14 +67,21 @@ import org.slf4j.Logger;
 public class Main {
     static final Logger LOGGER = LogUtils.getLogger();
 
+    @DontObfuscate
+    public static void main(String[] args) {
+        Main.main(args, true);
+    }
+
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
-    @DontObfuscate
-    public static void main(String[] args) {
+    public static void main(String[] args, boolean optimizeDataFixer) {
         Thread thread2;
         MinecraftClient minecraftClient;
         SharedConstants.createGameVersion();
+        if (optimizeDataFixer) {
+            SharedConstants.enableDataFixerOptimization();
+        }
         OptionParser optionParser = new OptionParser();
         optionParser.allowsUnrecognizedOptions();
         optionParser.accepts("demo");
@@ -150,7 +157,7 @@ public class Main {
         File file = (File)Main.getOption(optionSet, optionSpec4);
         File file2 = optionSet.has((OptionSpec)optionSpec5) ? (File)Main.getOption(optionSet, optionSpec5) : new File(file, "assets/");
         File file3 = optionSet.has((OptionSpec)optionSpec6) ? (File)Main.getOption(optionSet, optionSpec6) : new File(file, "resourcepacks/");
-        String string6 = optionSet.has((OptionSpec)optionSpec12) ? (String)optionSpec12.value(optionSet) : PlayerEntity.getOfflinePlayerUuid((String)optionSpec11.value(optionSet)).toString();
+        String string6 = optionSet.has((OptionSpec)optionSpec12) ? (String)optionSpec12.value(optionSet) : DynamicSerializableUuid.getOfflinePlayerUuid((String)optionSpec11.value(optionSet)).toString();
         String string7 = optionSet.has((OptionSpec)optionSpec23) ? (String)optionSpec23.value(optionSet) : null;
         String string8 = (String)optionSet.valueOf((OptionSpec)optionSpec13);
         String string9 = (String)optionSet.valueOf((OptionSpec)optionSpec14);

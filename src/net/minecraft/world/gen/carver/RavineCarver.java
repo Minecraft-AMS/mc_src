@@ -7,11 +7,11 @@
 package net.minecraft.world.gen.carver;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import java.util.function.Function;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
@@ -49,7 +49,7 @@ extends Carver<RavineCarverConfig> {
     }
 
     private void carveRavine(CarverContext context2, RavineCarverConfig config, Chunk chunk, Function<BlockPos, RegistryEntry<Biome>> posToBiome, long seed, AquiferSampler aquiferSampler, double x, double y2, double z, float width, float yaw, float pitch, int branchStartIndex, int branchCount, double yawPitchRatio, CarvingMask mask) {
-        Random random = new Random(seed);
+        Random random = Random.create(seed);
         float[] fs = this.createHorizontalStretchFactors(context2, config, random);
         float f = 0.0f;
         float g = 0.0f;

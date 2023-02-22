@@ -23,6 +23,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.OptionSpecBuilder;
+import net.minecraft.GameVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.SnbtProvider;
@@ -33,15 +34,23 @@ import net.minecraft.data.report.CommandSyntaxProvider;
 import net.minecraft.data.report.RegistryDumpProvider;
 import net.minecraft.data.report.WorldgenProvider;
 import net.minecraft.data.server.AdvancementProvider;
+import net.minecraft.data.server.BannerPatternTagProvider;
+import net.minecraft.data.server.BiomeParametersProvider;
 import net.minecraft.data.server.BiomeTagProvider;
 import net.minecraft.data.server.BlockTagProvider;
-import net.minecraft.data.server.ConfiguredStructureFeatureTagProvider;
+import net.minecraft.data.server.CatVariantTagProvider;
 import net.minecraft.data.server.EntityTypeTagProvider;
+import net.minecraft.data.server.FlatLevelGeneratorPresetTagProvider;
 import net.minecraft.data.server.FluidTagProvider;
 import net.minecraft.data.server.GameEventTagProvider;
+import net.minecraft.data.server.InstrumentTagProvider;
 import net.minecraft.data.server.ItemTagProvider;
 import net.minecraft.data.server.LootTableProvider;
+import net.minecraft.data.server.PaintingVariantTagProvider;
+import net.minecraft.data.server.PointOfInterestTypeTagProvider;
 import net.minecraft.data.server.RecipeProvider;
+import net.minecraft.data.server.StructureTagProvider;
+import net.minecraft.data.server.WorldPresetTagProvider;
 import net.minecraft.data.validate.StructureValidatorProvider;
 import net.minecraft.obfuscate.DontObfuscate;
 
@@ -71,40 +80,38 @@ public class Main {
         boolean bl4 = bl || optionSet.has((OptionSpec)optionSpec4);
         boolean bl5 = bl || optionSet.has((OptionSpec)optionSpec5);
         boolean bl6 = bl || optionSet.has((OptionSpec)optionSpec6);
-        DataGenerator dataGenerator = Main.create(path, optionSet.valuesOf((OptionSpec)optionSpec9).stream().map(string -> Paths.get(string, new String[0])).collect(Collectors.toList()), bl2, bl3, bl4, bl5, bl6);
+        DataGenerator dataGenerator = Main.create(path, optionSet.valuesOf((OptionSpec)optionSpec9).stream().map(input -> Paths.get(input, new String[0])).collect(Collectors.toList()), bl2, bl3, bl4, bl5, bl6, SharedConstants.getGameVersion(), true);
         dataGenerator.run();
     }
 
-    public static DataGenerator create(Path output, Collection<Path> inputs, boolean includeClient, boolean includeServer, boolean includeDev, boolean includeReports, boolean validate) {
-        DataGenerator dataGenerator = new DataGenerator(output, inputs);
-        if (includeClient || includeServer) {
-            dataGenerator.addProvider(new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
-        }
-        if (includeClient) {
-            dataGenerator.addProvider(new ModelProvider(dataGenerator));
-        }
-        if (includeServer) {
-            dataGenerator.addProvider(new FluidTagProvider(dataGenerator));
-            BlockTagProvider blockTagProvider = new BlockTagProvider(dataGenerator);
-            dataGenerator.addProvider(blockTagProvider);
-            dataGenerator.addProvider(new ItemTagProvider(dataGenerator, blockTagProvider));
-            dataGenerator.addProvider(new EntityTypeTagProvider(dataGenerator));
-            dataGenerator.addProvider(new RecipeProvider(dataGenerator));
-            dataGenerator.addProvider(new AdvancementProvider(dataGenerator));
-            dataGenerator.addProvider(new LootTableProvider(dataGenerator));
-            dataGenerator.addProvider(new GameEventTagProvider(dataGenerator));
-            dataGenerator.addProvider(new BiomeTagProvider(dataGenerator));
-            dataGenerator.addProvider(new ConfiguredStructureFeatureTagProvider(dataGenerator));
-        }
-        if (includeDev) {
-            dataGenerator.addProvider(new NbtProvider(dataGenerator));
-        }
-        if (includeReports) {
-            dataGenerator.addProvider(new BlockListProvider(dataGenerator));
-            dataGenerator.addProvider(new RegistryDumpProvider(dataGenerator));
-            dataGenerator.addProvider(new CommandSyntaxProvider(dataGenerator));
-            dataGenerator.addProvider(new WorldgenProvider(dataGenerator));
-        }
+    public static DataGenerator create(Path output, Collection<Path> inputs, boolean includeClient, boolean includeServer, boolean includeDev, boolean includeReports, boolean validate, GameVersion gameVersion, boolean ignoreCache) {
+        DataGenerator dataGenerator = new DataGenerator(output, inputs, gameVersion, ignoreCache);
+        dataGenerator.addProvider(includeClient || includeServer, new SnbtProvider(dataGenerator).addWriter(new StructureValidatorProvider()));
+        dataGenerator.addProvider(includeClient, new ModelProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new AdvancementProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new LootTableProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new RecipeProvider(dataGenerator));
+        BlockTagProvider blockTagProvider = new BlockTagProvider(dataGenerator);
+        dataGenerator.addProvider(includeServer, blockTagProvider);
+        dataGenerator.addProvider(includeServer, new ItemTagProvider(dataGenerator, blockTagProvider));
+        dataGenerator.addProvider(includeServer, new BannerPatternTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new BiomeTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new CatVariantTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new EntityTypeTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new FlatLevelGeneratorPresetTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new FluidTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new GameEventTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new InstrumentTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new PaintingVariantTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new PointOfInterestTypeTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new StructureTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeServer, new WorldPresetTagProvider(dataGenerator));
+        dataGenerator.addProvider(includeDev, new NbtProvider(dataGenerator));
+        dataGenerator.addProvider(includeReports, new BiomeParametersProvider(dataGenerator));
+        dataGenerator.addProvider(includeReports, new BlockListProvider(dataGenerator));
+        dataGenerator.addProvider(includeReports, new CommandSyntaxProvider(dataGenerator));
+        dataGenerator.addProvider(includeReports, new RegistryDumpProvider(dataGenerator));
+        dataGenerator.addProvider(includeReports, new WorldgenProvider(dataGenerator));
         return dataGenerator;
     }
 }

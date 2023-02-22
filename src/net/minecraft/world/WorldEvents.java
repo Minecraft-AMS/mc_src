@@ -75,5 +75,7 @@ public class WorldEvents {
     public static final int BLOCK_WAXED = 3003;
     public static final int WAX_REMOVED = 3004;
     public static final int BLOCK_SCRAPED = 3005;
+    public static final int SCULK_CHARGE = 3006;
+    public static final int SCULK_SHRIEKS = 3007;
 }
 

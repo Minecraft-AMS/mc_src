@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.TrackedPosition;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.decoration.ItemFrameEntity;
@@ -43,7 +44,6 @@ import net.minecraft.network.packet.s2c.play.EntitySetHeadYawS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityStatusEffectS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.MathHelper;
@@ -58,9 +58,7 @@ public class EntityTrackerEntry {
     private final int tickInterval;
     private final boolean alwaysUpdateVelocity;
     private final Consumer<Packet<?>> receiver;
-    private long lastX;
-    private long lastY;
-    private long lastZ;
+    private final TrackedPosition field_39019 = new TrackedPosition();
     private int lastYaw;
     private int lastPitch;
     private int lastHeadPitch;
@@ -77,7 +75,7 @@ public class EntityTrackerEntry {
         this.entity = entity;
         this.tickInterval = tickInterval;
         this.alwaysUpdateVelocity = alwaysUpdateVelocity;
-        this.storeEncodedCoordinates();
+        this.field_39019.setPos(entity.getSyncedPos());
         this.lastYaw = MathHelper.floor(entity.getYaw() * 256.0f / 360.0f);
         this.lastPitch = MathHelper.floor(entity.getPitch() * 256.0f / 360.0f);
         this.lastHeadPitch = MathHelper.floor(entity.getHeadYaw() * 256.0f / 360.0f);
@@ -85,25 +83,28 @@ public class EntityTrackerEntry {
     }
 
     public void tick() {
+        Entity entity;
         List<Entity> list = this.entity.getPassengerList();
         if (!list.equals(this.lastPassengers)) {
             this.lastPassengers = list;
             this.receiver.accept(new EntityPassengersSetS2CPacket(this.entity));
         }
-        if (this.entity instanceof ItemFrameEntity && this.trackingTick % 10 == 0) {
-            Integer integer;
-            MapState mapState;
-            ItemFrameEntity itemFrameEntity = (ItemFrameEntity)this.entity;
-            ItemStack itemStack = itemFrameEntity.getHeldItemStack();
-            if (itemStack.getItem() instanceof FilledMapItem && (mapState = FilledMapItem.getMapState(integer = FilledMapItem.getMapId(itemStack), this.world)) != null) {
-                for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
-                    mapState.update(serverPlayerEntity, itemStack);
-                    Packet<?> packet = mapState.getPlayerMarkerPacket(integer, serverPlayerEntity);
-                    if (packet == null) continue;
-                    serverPlayerEntity.networkHandler.sendPacket(packet);
+        if ((entity = this.entity) instanceof ItemFrameEntity) {
+            ItemFrameEntity itemFrameEntity = (ItemFrameEntity)entity;
+            if (this.trackingTick % 10 == 0) {
+                Integer integer;
+                MapState mapState;
+                ItemStack itemStack = itemFrameEntity.getHeldItemStack();
+                if (itemStack.getItem() instanceof FilledMapItem && (mapState = FilledMapItem.getMapState(integer = FilledMapItem.getMapId(itemStack), this.world)) != null) {
+                    for (ServerPlayerEntity serverPlayerEntity : this.world.getPlayers()) {
+                        mapState.update(serverPlayerEntity, itemStack);
+                        Packet<?> packet = mapState.getPlayerMarkerPacket(integer, serverPlayerEntity);
+                        if (packet == null) continue;
+                        serverPlayerEntity.networkHandler.sendPacket(packet);
+                    }
                 }
+                this.syncEntityData();
             }
-            this.syncEntityData();
         }
         if (this.trackingTick % this.tickInterval == 0 || this.entity.velocityDirty || this.entity.getDataTracker().isDirty()) {
             int i;
@@ -117,7 +118,7 @@ public class EntityTrackerEntry {
                     this.lastYaw = i;
                     this.lastPitch = j;
                 }
-                this.storeEncodedCoordinates();
+                this.field_39019.setPos(this.entity.getSyncedPos());
                 this.syncEntityData();
                 this.hadVehicle = true;
             } else {
@@ -127,16 +128,16 @@ public class EntityTrackerEntry {
                 ++this.updatesWithoutVehicle;
                 i = MathHelper.floor(this.entity.getYaw() * 256.0f / 360.0f);
                 int j = MathHelper.floor(this.entity.getPitch() * 256.0f / 360.0f);
-                Vec3d vec3d = this.entity.getPos().subtract(EntityS2CPacket.decodePacketCoordinates(this.lastX, this.lastY, this.lastZ));
-                boolean bl2 = vec3d.lengthSquared() >= 7.62939453125E-6;
+                Vec3d vec3d = this.entity.getSyncedPos();
+                boolean bl2 = this.field_39019.subtract(vec3d).lengthSquared() >= 7.62939453125E-6;
                 Packet<ClientPlayPacketListener> packet2 = null;
                 boolean bl3 = bl2 || this.trackingTick % 60 == 0;
                 boolean bl = bl4 = Math.abs(i - this.lastYaw) >= 1 || Math.abs(j - this.lastPitch) >= 1;
                 if (this.trackingTick > 0 || this.entity instanceof PersistentProjectileEntity) {
                     boolean bl5;
-                    long l = EntityS2CPacket.encodePacketCoordinate(vec3d.x);
-                    long m = EntityS2CPacket.encodePacketCoordinate(vec3d.y);
-                    long n = EntityS2CPacket.encodePacketCoordinate(vec3d.z);
+                    long l = this.field_39019.getDeltaX(vec3d);
+                    long m = this.field_39019.getDeltaY(vec3d);
+                    long n = this.field_39019.getDeltaZ(vec3d);
                     boolean bl6 = bl5 = l < -32768L || l > 32767L || m < -32768L || m > 32767L || n < -32768L || n > 32767L;
                     if (bl5 || this.updatesWithoutVehicle > 400 || this.hadVehicle || this.lastOnGround != this.entity.isOnGround()) {
                         this.lastOnGround = this.entity.isOnGround();
@@ -159,7 +160,7 @@ public class EntityTrackerEntry {
                 }
                 this.syncEntityData();
                 if (bl3) {
-                    this.storeEncodedCoordinates();
+                    this.field_39019.setPos(vec3d);
                 }
                 if (bl4) {
                     this.lastYaw = i;
@@ -213,7 +214,7 @@ public class EntityTrackerEntry {
             }
         }
         this.velocity = this.entity.getVelocity();
-        if (bl && !(packet instanceof MobSpawnS2CPacket)) {
+        if (bl && !(this.entity instanceof LivingEntity)) {
             sender.accept(new EntityVelocityUpdateS2CPacket(this.entity.getId(), this.velocity));
         }
         if (this.entity instanceof LivingEntity) {
@@ -256,16 +257,6 @@ public class EntityTrackerEntry {
             }
             set.clear();
         }
-    }
-
-    private void storeEncodedCoordinates() {
-        this.lastX = EntityS2CPacket.encodePacketCoordinate(this.entity.getX());
-        this.lastY = EntityS2CPacket.encodePacketCoordinate(this.entity.getY());
-        this.lastZ = EntityS2CPacket.encodePacketCoordinate(this.entity.getZ());
-    }
-
-    public Vec3d getLastPos() {
-        return EntityS2CPacket.decodePacketCoordinates(this.lastX, this.lastY, this.lastZ);
     }
 
     private void sendSyncPacket(Packet<?> packet) {

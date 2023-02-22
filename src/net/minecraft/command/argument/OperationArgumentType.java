@@ -27,14 +27,14 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.command.CommandSource;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 public class OperationArgumentType
 implements ArgumentType<Operation> {
     private static final Collection<String> EXAMPLES = Arrays.asList("=", ">", "<");
-    private static final SimpleCommandExceptionType INVALID_OPERATION = new SimpleCommandExceptionType((Message)new TranslatableText("arguments.operation.invalid"));
-    private static final SimpleCommandExceptionType DIVISION_ZERO_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("arguments.operation.div0"));
+    private static final SimpleCommandExceptionType INVALID_OPERATION = new SimpleCommandExceptionType((Message)Text.translatable("arguments.operation.invalid"));
+    private static final SimpleCommandExceptionType DIVISION_ZERO_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("arguments.operation.div0"));
 
     public static OperationArgumentType operation() {
         return new OperationArgumentType();

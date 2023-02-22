@@ -30,7 +30,7 @@ public class LivingTargetCache {
         this.entities = entities;
         Object2BooleanOpenHashMap object2BooleanOpenHashMap = new Object2BooleanOpenHashMap(entities.size());
         Predicate<LivingEntity> predicate = entity -> Sensor.testTargetPredicate(owner, entity);
-        this.targetPredicate = entity -> object2BooleanOpenHashMap.computeBooleanIfAbsent(entity, predicate);
+        this.targetPredicate = entity -> object2BooleanOpenHashMap.computeIfAbsent(entity, predicate);
     }
 
     public static LivingTargetCache empty() {

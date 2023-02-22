@@ -25,12 +25,12 @@ import net.minecraft.command.argument.CoordinateArgument;
 import net.minecraft.command.argument.DefaultPosArgument;
 import net.minecraft.command.argument.PosArgument;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class RotationArgumentType
 implements ArgumentType<PosArgument> {
     private static final Collection<String> EXAMPLES = Arrays.asList("0 0", "~ ~", "~-5 ~5");
-    public static final SimpleCommandExceptionType INCOMPLETE_ROTATION_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.rotation.incomplete"));
+    public static final SimpleCommandExceptionType INCOMPLETE_ROTATION_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.rotation.incomplete"));
 
     public static RotationArgumentType rotation() {
         return new RotationArgumentType();

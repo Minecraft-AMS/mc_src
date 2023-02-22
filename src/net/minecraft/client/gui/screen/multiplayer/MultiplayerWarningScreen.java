@@ -10,24 +10,25 @@ package net.minecraft.client.gui.screen.multiplayer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.WarningScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 
 @Environment(value=EnvType.CLIENT)
 public class MultiplayerWarningScreen
 extends WarningScreen {
-    private static final Text HEADER = new TranslatableText("multiplayerWarning.header").formatted(Formatting.BOLD);
-    private static final Text MESSAGE = new TranslatableText("multiplayerWarning.message");
-    private static final Text CHECK_MESSAGE = new TranslatableText("multiplayerWarning.check");
-    private static final Text NARRATED_TEXT = HEADER.shallowCopy().append("\n").append(MESSAGE);
+    private static final Text HEADER = Text.translatable("multiplayerWarning.header").formatted(Formatting.BOLD);
+    private static final Text MESSAGE = Text.translatable("multiplayerWarning.message");
+    private static final Text CHECK_MESSAGE = Text.translatable("multiplayerWarning.check");
+    private static final Text NARRATED_TEXT = HEADER.copy().append("\n").append(MESSAGE);
+    private final Screen parent;
 
     public MultiplayerWarningScreen(Screen parent) {
-        super(HEADER, MESSAGE, CHECK_MESSAGE, NARRATED_TEXT, parent);
+        super(HEADER, MESSAGE, CHECK_MESSAGE, NARRATED_TEXT);
+        this.parent = parent;
     }
 
     @Override

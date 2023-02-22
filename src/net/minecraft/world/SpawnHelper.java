@@ -17,7 +17,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
@@ -33,6 +32,7 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.BiomeTags;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.annotation.Debug;
@@ -44,6 +44,7 @@ import net.minecraft.util.math.GravityField;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.BlockView;
@@ -59,9 +60,9 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeatureKeys;
-import net.minecraft.world.gen.feature.NetherFortressFeature;
+import net.minecraft.world.gen.structure.NetherFortressStructure;
+import net.minecraft.world.gen.structure.Structure;
+import net.minecraft.world.gen.structure.StructureKeys;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -231,7 +232,7 @@ public final class SpawnHelper {
 
     private static Optional<SpawnSettings.SpawnEntry> pickRandomSpawnEntry(ServerWorld world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, SpawnGroup spawnGroup, Random random, BlockPos pos) {
         RegistryEntry<Biome> registryEntry = world.getBiome(pos);
-        if (spawnGroup == SpawnGroup.WATER_AMBIENT && Biome.getCategory(registryEntry) == Biome.Category.RIVER && random.nextFloat() < 0.98f) {
+        if (spawnGroup == SpawnGroup.WATER_AMBIENT && registryEntry.isIn(BiomeTags.REDUCE_WATER_AMBIENT_SPAWNS) && random.nextFloat() < 0.98f) {
             return Optional.empty();
         }
         return SpawnHelper.getSpawnEntries(world, structureAccessor, chunkGenerator, spawnGroup, pos, registryEntry).getOrEmpty(random);
@@ -243,7 +244,7 @@ public final class SpawnHelper {
 
     private static Pool<SpawnSettings.SpawnEntry> getSpawnEntries(ServerWorld world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, SpawnGroup spawnGroup, BlockPos pos, @Nullable RegistryEntry<Biome> biomeEntry) {
         if (SpawnHelper.shouldUseNetherFortressSpawns(pos, world, spawnGroup, structureAccessor)) {
-            return NetherFortressFeature.MONSTER_SPAWNS;
+            return NetherFortressStructure.MONSTER_SPAWNS;
         }
         return chunkGenerator.getEntitySpawnList(biomeEntry != null ? biomeEntry : world.getBiome(pos), structureAccessor, spawnGroup, pos);
     }
@@ -252,11 +253,11 @@ public final class SpawnHelper {
         if (spawnGroup != SpawnGroup.MONSTER || !world.getBlockState(pos.down()).isOf(Blocks.NETHER_BRICKS)) {
             return false;
         }
-        ConfiguredStructureFeature<?, ?> configuredStructureFeature = structureAccessor.method_41036().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY).get(ConfiguredStructureFeatureKeys.FORTRESS);
-        if (configuredStructureFeature == null) {
+        Structure structure = structureAccessor.getRegistryManager().get(Registry.STRUCTURE_KEY).get(StructureKeys.FORTRESS);
+        if (structure == null) {
             return false;
         }
-        return structureAccessor.getStructureAt(pos, configuredStructureFeature).hasChildren();
+        return structureAccessor.getStructureAt(pos, structure).hasChildren();
     }
 
     private static BlockPos getRandomPosInChunkSection(World world, WorldChunk chunk) {

@@ -19,11 +19,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.logging.LogUtils;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +30,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.render.Camera;
-import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.sound.Sound;
 import net.minecraft.client.sound.SoundContainer;
 import net.minecraft.client.sound.SoundEntry;
@@ -47,9 +44,12 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Texts;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.math.floatprovider.ConstantFloatProvider;
+import net.minecraft.util.math.floatprovider.MultipliedFloatSupplier;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
@@ -58,7 +58,7 @@ import org.slf4j.Logger;
 @Environment(value=EnvType.CLIENT)
 public class SoundManager
 extends SinglePreparationResourceReloader<SoundList> {
-    public static final Sound MISSING_SOUND = new Sound("meta:missing_sound", 1.0f, 1.0f, 1, Sound.RegistrationType.FILE, false, false, 16);
+    public static final Sound MISSING_SOUND = new Sound("meta:missing_sound", ConstantFloatProvider.create(1.0f), ConstantFloatProvider.create(1.0f), 1, Sound.RegistrationType.FILE, false, false, 16);
     static final Logger LOGGER = LogUtils.getLogger();
     private static final String SOUNDS_JSON = "sounds.json";
     private static final Gson GSON = new GsonBuilder().registerTypeHierarchyAdapter(Text.class, (Object)new Text.Serializer()).registerTypeAdapter(SoundEntry.class, (Object)new SoundEntryDeserializer()).create();
@@ -80,8 +80,7 @@ extends SinglePreparationResourceReloader<SoundList> {
                 List<Resource> list = resourceManager.getAllResources(new Identifier(string, SOUNDS_JSON));
                 for (Resource resource : list) {
                     profiler.push(resource.getResourcePackName());
-                    try (InputStream inputStream = resource.getInputStream();
-                         InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);){
+                    try (BufferedReader reader = resource.getReader();){
                         profiler.push("parse");
                         Map<String, SoundEntry> map = JsonHelper.deserialize(GSON, (Reader)reader, TYPE);
                         profiler.swap("register");
@@ -110,10 +109,9 @@ extends SinglePreparationResourceReloader<SoundList> {
         soundList.reload(this.sounds, this.soundSystem);
         if (SharedConstants.isDevelopment) {
             for (Identifier identifier : this.sounds.keySet()) {
-                String string;
                 WeightedSoundSet weightedSoundSet = this.sounds.get(identifier);
-                if (!(weightedSoundSet.getSubtitle() instanceof TranslatableText) || I18n.hasTranslation(string = ((TranslatableText)weightedSoundSet.getSubtitle()).getKey()) || !Registry.SOUND_EVENT.containsId(identifier)) continue;
-                LOGGER.error("Missing subtitle {} for sound event: {}", (Object)string, (Object)identifier);
+                if (Texts.hasTranslation(weightedSoundSet.getSubtitle()) || !Registry.SOUND_EVENT.containsId(identifier)) continue;
+                LOGGER.error("Missing subtitle {} for sound event: {}", (Object)weightedSoundSet.getSubtitle(), (Object)identifier);
             }
         }
         if (LOGGER.isDebugEnabled()) {
@@ -131,7 +129,7 @@ extends SinglePreparationResourceReloader<SoundList> {
 
     static boolean isSoundResourcePresent(Sound sound, Identifier id, ResourceManager resourceManager) {
         Identifier identifier = sound.getLocation();
-        if (!resourceManager.containsResource(identifier)) {
+        if (resourceManager.getResource(identifier).isEmpty()) {
             LOGGER.warn("File {} does not exist, cannot add it to event {}", (Object)identifier, (Object)id);
             return false;
         }
@@ -257,13 +255,13 @@ extends SinglePreparationResourceReloader<SoundList> {
                         }
 
                         @Override
-                        public Sound getSound() {
+                        public Sound getSound(Random random) {
                             WeightedSoundSet weightedSoundSet = loadedSounds.get(identifier);
                             if (weightedSoundSet == null) {
                                 return MISSING_SOUND;
                             }
-                            Sound sound2 = weightedSoundSet.getSound();
-                            return new Sound(sound2.getIdentifier().toString(), sound2.getVolume() * sound.getVolume(), sound2.getPitch() * sound.getPitch(), sound.getWeight(), Sound.RegistrationType.FILE, sound2.isStreamed() || sound.isStreamed(), sound2.isPreloaded(), sound2.getAttenuation());
+                            Sound sound2 = weightedSoundSet.getSound(random);
+                            return new Sound(sound2.getIdentifier().toString(), new MultipliedFloatSupplier(sound2.getVolume(), sound.getVolume()), new MultipliedFloatSupplier(sound2.getPitch(), sound.getPitch()), sound.getWeight(), Sound.RegistrationType.FILE, sound2.isStreamed() || sound.isStreamed(), sound2.isPreloaded(), sound2.getAttenuation());
                         }
 
                         @Override
@@ -276,8 +274,8 @@ extends SinglePreparationResourceReloader<SoundList> {
                         }
 
                         @Override
-                        public /* synthetic */ Object getSound() {
-                            return this.getSound();
+                        public /* synthetic */ Object getSound(Random random) {
+                            return this.getSound(random);
                         }
                     };
                     default -> throw new IllegalStateException("Unknown SoundEventRegistration type: " + sound.getRegistrationType());

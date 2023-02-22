@@ -10,15 +10,17 @@ package net.minecraft.client.realms.gui.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.gen.WorldPreset;
+import net.minecraft.world.gen.WorldPresets;
 
 @Environment(value=EnvType.CLIENT)
 public final class RealmsWorldGeneratorType
 extends Enum<RealmsWorldGeneratorType> {
-    public static final /* enum */ RealmsWorldGeneratorType DEFAULT = new RealmsWorldGeneratorType(0, new TranslatableText("generator.default"));
-    public static final /* enum */ RealmsWorldGeneratorType FLAT = new RealmsWorldGeneratorType(1, new TranslatableText("generator.flat"));
-    public static final /* enum */ RealmsWorldGeneratorType LARGE_BIOMES = new RealmsWorldGeneratorType(2, new TranslatableText("generator.large_biomes"));
-    public static final /* enum */ RealmsWorldGeneratorType AMPLIFIED = new RealmsWorldGeneratorType(3, new TranslatableText("generator.amplified"));
+    public static final /* enum */ RealmsWorldGeneratorType DEFAULT = new RealmsWorldGeneratorType(0, WorldPresets.DEFAULT);
+    public static final /* enum */ RealmsWorldGeneratorType FLAT = new RealmsWorldGeneratorType(1, WorldPresets.FLAT);
+    public static final /* enum */ RealmsWorldGeneratorType LARGE_BIOMES = new RealmsWorldGeneratorType(2, WorldPresets.LARGE_BIOMES);
+    public static final /* enum */ RealmsWorldGeneratorType AMPLIFIED = new RealmsWorldGeneratorType(3, WorldPresets.AMPLIFIED);
     private final int id;
     private final Text text;
     private static final /* synthetic */ RealmsWorldGeneratorType[] field_27950;
@@ -31,9 +33,9 @@ extends Enum<RealmsWorldGeneratorType> {
         return Enum.valueOf(RealmsWorldGeneratorType.class, string);
     }
 
-    private RealmsWorldGeneratorType(int id, Text text) {
+    private RealmsWorldGeneratorType(int id, RegistryKey<WorldPreset> presetKey) {
         this.id = id;
-        this.text = text;
+        this.text = Text.translatable(presetKey.getValue().toTranslationKey("generator"));
     }
 
     public Text getText() {

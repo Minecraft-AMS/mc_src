@@ -14,10 +14,10 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import net.minecraft.world.gen.foliage.FoliagePlacer;
@@ -41,7 +41,7 @@ extends TrunkPlacer {
     public List<FoliagePlacer.TreeNode> generate(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, int height, BlockPos startPos, TreeFeatureConfig config) {
         StraightTrunkPlacer.setToDirt(world, replacer, random, startPos.down(), config);
         for (int i = 0; i < height; ++i) {
-            StraightTrunkPlacer.getAndSetState(world, replacer, random, startPos.up(i), config);
+            this.getAndSetState(world, replacer, random, startPos.up(i), config);
         }
         return ImmutableList.of((Object)new FoliagePlacer.TreeNode(startPos.up(height), 0, false));
     }

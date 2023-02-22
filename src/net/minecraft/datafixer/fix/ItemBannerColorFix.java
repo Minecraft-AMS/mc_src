@@ -34,8 +34,8 @@ import net.minecraft.datafixer.schema.IdentifierNormalizingSchema;
 
 public class ItemBannerColorFix
 extends DataFix {
-    public ItemBannerColorFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public ItemBannerColorFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public TypeRewriteRule makeRule() {

@@ -10,19 +10,21 @@ package net.minecraft.client.gui.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.gui.screen.ConfirmChatLinkScreen;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
+import net.minecraft.client.gui.screen.MessageScreen;
 import net.minecraft.client.gui.screen.OpenToLanScreen;
-import net.minecraft.client.gui.screen.SaveLevelScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.StatsScreen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.advancement.AdvancementsScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsScreen;
 import net.minecraft.client.gui.screen.option.OptionsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 
 @Environment(value=EnvType.CLIENT)
@@ -34,7 +36,7 @@ extends Screen {
     private final boolean showMenu;
 
     public GameMenuScreen(boolean showMenu) {
-        super(showMenu ? new TranslatableText("menu.game") : new TranslatableText("menu.paused"));
+        super(showMenu ? Text.translatable("menu.game") : Text.translatable("menu.paused"));
         this.showMenu = showMenu;
     }
 
@@ -48,36 +50,40 @@ extends Screen {
     private void initWidgets() {
         int i = -16;
         int j = 98;
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, new TranslatableText("menu.returnToGame"), button -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 24 + -16, 204, 20, Text.translatable("menu.returnToGame"), button -> {
             this.client.setScreen(null);
             this.client.mouse.lockCursor();
         }));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.advancements"), button -> this.client.setScreen(new AdvancementsScreen(this.client.player.networkHandler.getAdvancementHandler()))));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, new TranslatableText("gui.stats"), button -> this.client.setScreen(new StatsScreen(this, this.client.player.getStatHandler()))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 48 + -16, 98, 20, Text.translatable("gui.advancements"), button -> this.client.setScreen(new AdvancementsScreen(this.client.player.networkHandler.getAdvancementHandler()))));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 48 + -16, 98, 20, Text.translatable("gui.stats"), button -> this.client.setScreen(new StatsScreen(this, this.client.player.getStatHandler()))));
         String string = SharedConstants.getGameVersion().isStable() ? JAVA_FEEDBACK_URL : SNAPSHOT_FEEDBACK_URL;
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.sendFeedback"), button -> this.client.setScreen(new ConfirmChatLinkScreen(confirmed -> {
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 72 + -16, 98, 20, Text.translatable("menu.sendFeedback"), button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
                 Util.getOperatingSystem().open(string);
             }
             this.client.setScreen(this);
         }, string, true))));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, new TranslatableText("menu.reportBugs"), button -> this.client.setScreen(new ConfirmChatLinkScreen(confirmed -> {
+        ButtonWidget buttonWidget2 = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 72 + -16, 98, 20, Text.translatable("menu.reportBugs"), button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
                 Util.getOperatingSystem().open(SNAPSHOT_BUGS_URL);
             }
             this.client.setScreen(this);
         }, SNAPSHOT_BUGS_URL, true))));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.options"), button -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
-        ButtonWidget buttonWidget = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, new TranslatableText("menu.shareToLan"), button -> this.client.setScreen(new OpenToLanScreen(this))));
-        buttonWidget.active = this.client.isIntegratedServerRunning() && !this.client.getServer().isRemote();
-        TranslatableText text = this.client.isInSingleplayer() ? new TranslatableText("menu.returnToMenu") : new TranslatableText("menu.disconnect");
+        buttonWidget2.active = !SharedConstants.getGameVersion().getSaveVersion().isNotMainSeries();
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 96 + -16, 98, 20, Text.translatable("menu.options"), button -> this.client.setScreen(new OptionsScreen(this, this.client.options))));
+        if (this.client.isIntegratedServerRunning() && !this.client.getServer().isRemote()) {
+            this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, Text.translatable("menu.shareToLan"), button -> this.client.setScreen(new OpenToLanScreen(this))));
+        } else {
+            this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 96 + -16, 98, 20, Text.translatable("menu.playerReporting"), buttonWidget -> this.client.setScreen(new SocialInteractionsScreen())));
+        }
+        MutableText text = this.client.isInSingleplayer() ? Text.translatable("menu.returnToMenu") : Text.translatable("menu.disconnect");
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 120 + -16, 204, 20, text, button -> {
             boolean bl = this.client.isInSingleplayer();
             boolean bl2 = this.client.isConnectedToRealms();
             button.active = false;
             this.client.world.disconnect();
             if (bl) {
-                this.client.disconnect(new SaveLevelScreen(new TranslatableText("menu.savingLevel")));
+                this.client.disconnect(new MessageScreen(Text.translatable("menu.savingLevel")));
             } else {
                 this.client.disconnect();
             }

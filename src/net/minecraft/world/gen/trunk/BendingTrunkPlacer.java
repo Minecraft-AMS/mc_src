@@ -17,7 +17,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.dynamic.Codecs;
@@ -25,6 +24,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.intprovider.IntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.TreeFeature;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
@@ -63,7 +63,7 @@ extends TrunkPlacer {
                 mutable.move(direction);
             }
             if (TreeFeature.canReplace(world, mutable)) {
-                BendingTrunkPlacer.getAndSetState(world, replacer, random, mutable, config);
+                this.getAndSetState(world, replacer, random, mutable, config);
             }
             if (j >= this.minHeightForLeaves) {
                 list.add(new FoliagePlacer.TreeNode(mutable.toImmutable(), 0, false));
@@ -73,7 +73,7 @@ extends TrunkPlacer {
         j = this.bendLength.get(random);
         for (int k = 0; k <= j; ++k) {
             if (TreeFeature.canReplace(world, mutable)) {
-                BendingTrunkPlacer.getAndSetState(world, replacer, random, mutable, config);
+                this.getAndSetState(world, replacer, random, mutable, config);
             }
             list.add(new FoliagePlacer.TreeNode(mutable.toImmutable(), 0, false));
             mutable.move(direction);

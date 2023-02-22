@@ -131,7 +131,7 @@ extends LivingEntity {
     }
 
     @Override
-    public Iterable<ItemStack> getItemsHand() {
+    public Iterable<ItemStack> getHandItems() {
         return this.heldItems;
     }
 
@@ -158,13 +158,11 @@ extends LivingEntity {
         this.processEquippedStack(stack);
         switch (slot.getType()) {
             case HAND: {
-                this.onEquipStack(stack);
-                this.heldItems.set(slot.getEntitySlotId(), stack);
+                this.onEquipStack(slot, this.heldItems.set(slot.getEntitySlotId(), stack), stack);
                 break;
             }
             case ARMOR: {
-                this.onEquipStack(stack);
-                this.armorItems.set(slot.getEntitySlotId(), stack);
+                this.onEquipStack(slot, this.armorItems.set(slot.getEntitySlotId(), stack), stack);
             }
         }
     }
@@ -307,7 +305,7 @@ extends LivingEntity {
         EquipmentSlot equipmentSlot = MobEntity.getPreferredEquipmentSlot(itemStack);
         if (itemStack.isEmpty()) {
             EquipmentSlot equipmentSlot3;
-            EquipmentSlot equipmentSlot2 = this.slotFromPosition(hitPos);
+            EquipmentSlot equipmentSlot2 = this.getSlotFromPosition(hitPos);
             EquipmentSlot equipmentSlot4 = equipmentSlot3 = this.isSlotDisabled(equipmentSlot2) ? equipmentSlot : equipmentSlot2;
             if (this.hasStackEquipped(equipmentSlot3) && this.equip(player, equipmentSlot3, itemStack, hand)) {
                 return ActionResult.SUCCESS;
@@ -330,7 +328,7 @@ extends LivingEntity {
      * Enabled force condition propagation
      * Lifted jumps to return sites
      */
-    private EquipmentSlot slotFromPosition(Vec3d hitPos) {
+    private EquipmentSlot getSlotFromPosition(Vec3d hitPos) {
         EquipmentSlot equipmentSlot = EquipmentSlot.MAINHAND;
         boolean bl = this.isSmall();
         double d = bl ? hitPos.y * 2.0 : hitPos.y;
@@ -446,7 +444,7 @@ extends LivingEntity {
             this.kill();
         } else {
             this.world.sendEntityStatus(this, (byte)32);
-            this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
+            this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
             this.lastHitTime = l;
         }
         return true;
@@ -486,7 +484,7 @@ extends LivingEntity {
             this.kill();
         } else {
             this.setHealth(f);
-            this.emitGameEvent(GameEvent.ENTITY_DAMAGED, damageSource.getAttacker());
+            this.emitGameEvent(GameEvent.ENTITY_DAMAGE, damageSource.getAttacker());
         }
     }
 
@@ -603,6 +601,7 @@ extends LivingEntity {
     @Override
     public void kill() {
         this.remove(Entity.RemovalReason.KILLED);
+        this.emitGameEvent(GameEvent.ENTITY_DIE);
     }
 
     @Override
@@ -710,8 +709,8 @@ extends LivingEntity {
     }
 
     @Override
-    public boolean collides() {
-        return super.collides() && !this.isMarker();
+    public boolean canHit() {
+        return super.canHit() && !this.isMarker();
     }
 
     @Override

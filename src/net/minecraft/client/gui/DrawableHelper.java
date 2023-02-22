@@ -12,6 +12,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.function.BiConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
@@ -20,6 +21,7 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
@@ -49,6 +51,21 @@ public abstract class DrawableHelper {
             y2 = i;
         }
         DrawableHelper.fill(matrices, x, y1 + 1, x + 1, y2, color);
+    }
+
+    public static void enableScissor(int x1, int y1, int x2, int y2) {
+        Window window = MinecraftClient.getInstance().getWindow();
+        int i = window.getFramebufferHeight();
+        double d = window.getScaleFactor();
+        double e = (double)x1 * d;
+        double f = (double)i - (double)y2 * d;
+        double g = (double)(x2 - x1) * d;
+        double h = (double)(y2 - y1) * d;
+        RenderSystem.enableScissor((int)e, (int)f, Math.max(0, (int)g), Math.max(0, (int)h));
+    }
+
+    public static void disableScissor() {
+        RenderSystem.disableScissor();
     }
 
     public static void fill(MatrixStack matrices, int x1, int y1, int x2, int y2, int color) {
@@ -81,8 +98,7 @@ public abstract class DrawableHelper {
         bufferBuilder.vertex(matrix, x2, y2, 0.0f).color(g, h, j, f).next();
         bufferBuilder.vertex(matrix, x2, y1, 0.0f).color(g, h, j, f).next();
         bufferBuilder.vertex(matrix, x1, y1, 0.0f).color(g, h, j, f).next();
-        bufferBuilder.end();
-        BufferRenderer.draw(bufferBuilder);
+        BufferRenderer.drawWithShader(bufferBuilder.end());
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
     }
@@ -187,8 +203,7 @@ public abstract class DrawableHelper {
         bufferBuilder.vertex(matrix, x1, y1, z).texture(u1, v1).next();
         bufferBuilder.vertex(matrix, x1, y0, z).texture(u1, v0).next();
         bufferBuilder.vertex(matrix, x0, y0, z).texture(u0, v0).next();
-        bufferBuilder.end();
-        BufferRenderer.draw(bufferBuilder);
+        BufferRenderer.drawWithShader(bufferBuilder.end());
     }
 
     public int getZOffset() {

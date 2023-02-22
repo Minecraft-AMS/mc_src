@@ -10,32 +10,30 @@ package net.minecraft.client.gui.screen.ingame;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.CommandSuggestor;
+import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.world.CommandBlockExecutor;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class AbstractCommandBlockScreen
 extends Screen {
-    private static final Text SET_COMMAND_TEXT = new TranslatableText("advMode.setCommand");
-    private static final Text COMMAND_TEXT = new TranslatableText("advMode.command");
-    private static final Text PREVIOUS_OUTPUT_TEXT = new TranslatableText("advMode.previousOutput");
+    private static final Text SET_COMMAND_TEXT = Text.translatable("advMode.setCommand");
+    private static final Text COMMAND_TEXT = Text.translatable("advMode.command");
+    private static final Text PREVIOUS_OUTPUT_TEXT = Text.translatable("advMode.previousOutput");
     protected TextFieldWidget consoleCommandTextField;
     protected TextFieldWidget previousOutputTextField;
     protected ButtonWidget doneButton;
     protected ButtonWidget cancelButton;
     protected CyclingButtonWidget<Boolean> toggleTrackingOutputButton;
-    CommandSuggestor commandSuggestor;
+    ChatInputSuggestor commandSuggestor;
 
     public AbstractCommandBlockScreen() {
         super(NarratorManager.EMPTY);
@@ -56,12 +54,12 @@ extends Screen {
         this.doneButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 4 - 150, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.DONE, button -> this.commitAndClose()));
         this.cancelButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 4, this.height / 4 + 120 + 12, 150, 20, ScreenTexts.CANCEL, button -> this.close()));
         boolean bl = this.getCommandExecutor().isTrackingOutput();
-        this.toggleTrackingOutputButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(new LiteralText("O"), new LiteralText("X")).initially(bl).omitKeyText().build(this.width / 2 + 150 - 20, this.getTrackOutputButtonHeight(), 20, 20, new TranslatableText("advMode.trackOutput"), (button, trackOutput) -> {
+        this.toggleTrackingOutputButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(Text.literal("O"), Text.literal("X")).initially(bl).omitKeyText().build(this.width / 2 + 150 - 20, this.getTrackOutputButtonHeight(), 20, 20, Text.translatable("advMode.trackOutput"), (button, trackOutput) -> {
             CommandBlockExecutor commandBlockExecutor = this.getCommandExecutor();
             commandBlockExecutor.setTrackOutput((boolean)trackOutput);
             this.setPreviousOutputText((boolean)trackOutput);
         }));
-        this.consoleCommandTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, 50, 300, 20, (Text)new TranslatableText("advMode.command")){
+        this.consoleCommandTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, 50, 300, 20, (Text)Text.translatable("advMode.command")){
 
             @Override
             protected MutableText getNarrationMessage() {
@@ -71,14 +69,14 @@ extends Screen {
         this.consoleCommandTextField.setMaxLength(32500);
         this.consoleCommandTextField.setChangedListener(this::onCommandChanged);
         this.addSelectableChild(this.consoleCommandTextField);
-        this.previousOutputTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, this.getTrackOutputButtonHeight(), 276, 20, new TranslatableText("advMode.previousOutput"));
+        this.previousOutputTextField = new TextFieldWidget(this.textRenderer, this.width / 2 - 150, this.getTrackOutputButtonHeight(), 276, 20, Text.translatable("advMode.previousOutput"));
         this.previousOutputTextField.setMaxLength(32500);
         this.previousOutputTextField.setEditable(false);
         this.previousOutputTextField.setText("-");
         this.addSelectableChild(this.previousOutputTextField);
         this.setInitialFocus(this.consoleCommandTextField);
         this.consoleCommandTextField.setTextFieldFocused(true);
-        this.commandSuggestor = new CommandSuggestor(this.client, this, this.consoleCommandTextField, this.textRenderer, true, true, 0, 7, false, Integer.MIN_VALUE);
+        this.commandSuggestor = new ChatInputSuggestor(this.client, this, this.consoleCommandTextField, this.textRenderer, true, true, 0, 7, false, Integer.MIN_VALUE);
         this.commandSuggestor.setWindowActive(true);
         this.commandSuggestor.refresh();
         this.setPreviousOutputText(bl);

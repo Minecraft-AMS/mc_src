@@ -29,7 +29,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.GameMode;
@@ -45,7 +44,7 @@ extends Screen {
     private static final int field_32314 = 31;
     private static final int field_32315 = 5;
     private static final int UI_WIDTH = GameModeSelection.values().length * 31 - 5;
-    private static final Text SELECT_NEXT_TEXT = new TranslatableText("debug.gamemodes.select_next", new TranslatableText("debug.gamemodes.press_f4").formatted(Formatting.AQUA));
+    private static final Text SELECT_NEXT_TEXT = Text.translatable("debug.gamemodes.select_next", Text.translatable("debug.gamemodes.press_f4").formatted(Formatting.AQUA));
     private final Optional<GameModeSelection> currentGameMode;
     private Optional<GameModeSelection> gameMode = Optional.empty();
     private int lastMouseX;
@@ -118,7 +117,7 @@ extends Screen {
         Optional<GameModeSelection> optional = GameModeSelection.of(client.interactionManager.getCurrentGameMode());
         GameModeSelection gameModeSelection = gameMode.get();
         if (optional.isPresent() && client.player.hasPermissionLevel(2) && gameModeSelection != optional.get()) {
-            client.player.sendChatMessage(gameModeSelection.getCommand());
+            client.player.sendCommand(gameModeSelection.getCommand());
         }
     }
 
@@ -149,10 +148,10 @@ extends Screen {
     @Environment(value=EnvType.CLIENT)
     static final class GameModeSelection
     extends Enum<GameModeSelection> {
-        public static final /* enum */ GameModeSelection CREATIVE = new GameModeSelection(new TranslatableText("gameMode.creative"), "/gamemode creative", new ItemStack(Blocks.GRASS_BLOCK));
-        public static final /* enum */ GameModeSelection SURVIVAL = new GameModeSelection(new TranslatableText("gameMode.survival"), "/gamemode survival", new ItemStack(Items.IRON_SWORD));
-        public static final /* enum */ GameModeSelection ADVENTURE = new GameModeSelection(new TranslatableText("gameMode.adventure"), "/gamemode adventure", new ItemStack(Items.MAP));
-        public static final /* enum */ GameModeSelection SPECTATOR = new GameModeSelection(new TranslatableText("gameMode.spectator"), "/gamemode spectator", new ItemStack(Items.ENDER_EYE));
+        public static final /* enum */ GameModeSelection CREATIVE = new GameModeSelection(Text.translatable("gameMode.creative"), "gamemode creative", new ItemStack(Blocks.GRASS_BLOCK));
+        public static final /* enum */ GameModeSelection SURVIVAL = new GameModeSelection(Text.translatable("gameMode.survival"), "gamemode survival", new ItemStack(Items.IRON_SWORD));
+        public static final /* enum */ GameModeSelection ADVENTURE = new GameModeSelection(Text.translatable("gameMode.adventure"), "gamemode adventure", new ItemStack(Items.MAP));
+        public static final /* enum */ GameModeSelection SPECTATOR = new GameModeSelection(Text.translatable("gameMode.spectator"), "gamemode spectator", new ItemStack(Items.ENDER_EYE));
         protected static final GameModeSelection[] VALUES;
         private static final int field_32317 = 16;
         protected static final int field_32316 = 5;

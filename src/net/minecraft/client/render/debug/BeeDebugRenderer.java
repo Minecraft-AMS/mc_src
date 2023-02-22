@@ -30,10 +30,10 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.debug.DebugRenderer;
-import net.minecraft.client.render.debug.NameGenerator;
 import net.minecraft.client.render.debug.PathfindingDebugRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.ai.pathing.Path;
+import net.minecraft.util.NameGenerator;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Position;
 import net.minecraft.util.math.Vec3i;
@@ -148,13 +148,13 @@ implements DebugRenderer.Renderer {
 
     private Map<BlockPos, Set<UUID>> getBlacklistingBees() {
         HashMap map = Maps.newHashMap();
-        this.bees.values().forEach(bee -> bee.blacklist.forEach(blockPos2 -> map.computeIfAbsent(blockPos2, blockPos -> Sets.newHashSet()).add(bee.getUuid())));
+        this.bees.values().forEach(bee -> bee.blacklist.forEach(pos -> map.computeIfAbsent(pos, blockPos -> Sets.newHashSet()).add(bee.getUuid())));
         return map;
     }
 
     private void drawFlowers() {
         HashMap map = Maps.newHashMap();
-        this.bees.values().stream().filter(Bee::hasFlower).forEach(bee -> map.computeIfAbsent(bee.flower, blockPos -> Sets.newHashSet()).add(bee.getUuid()));
+        this.bees.values().stream().filter(Bee::hasFlower).forEach(bee -> map.computeIfAbsent(bee.flower, flower -> Sets.newHashSet()).add(bee.getUuid()));
         map.entrySet().forEach(entry -> {
             BlockPos blockPos = (BlockPos)entry.getKey();
             Set set = (Set)entry.getValue();
@@ -302,7 +302,7 @@ implements DebugRenderer.Renderer {
         HashMap map = Maps.newHashMap();
         for (Bee bee : this.bees.values()) {
             if (bee.hive == null || this.hives.containsKey(bee.hive)) continue;
-            map.computeIfAbsent(bee.hive, blockPos -> Lists.newArrayList()).add(bee.getName());
+            map.computeIfAbsent(bee.hive, hive -> Lists.newArrayList()).add(bee.getName());
         }
         return map;
     }
@@ -347,7 +347,7 @@ implements DebugRenderer.Renderer {
         public final List<String> labels = Lists.newArrayList();
         public final Set<BlockPos> blacklist = Sets.newHashSet();
 
-        public Bee(UUID uuid, int entityId, Position position, Path path, BlockPos hive, BlockPos flower, int travelTicks) {
+        public Bee(UUID uuid, int entityId, Position position, @Nullable Path path, @Nullable BlockPos hive, @Nullable BlockPos flower, int travelTicks) {
             this.uuid = uuid;
             this.entityId = entityId;
             this.position = position;

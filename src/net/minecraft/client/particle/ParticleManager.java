@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Charsets
  *  com.google.common.collect.EvictingQueue
  *  com.google.common.collect.ImmutableList
  *  com.google.common.collect.Lists
@@ -17,7 +16,6 @@
  */
 package net.minecraft.client.particle;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -27,8 +25,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -36,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -84,7 +81,11 @@ import net.minecraft.client.particle.PortalParticle;
 import net.minecraft.client.particle.RainSplashParticle;
 import net.minecraft.client.particle.RedDustParticle;
 import net.minecraft.client.particle.ReversePortalParticle;
+import net.minecraft.client.particle.SculkChargeParticle;
+import net.minecraft.client.particle.SculkChargePopParticle;
+import net.minecraft.client.particle.ShriekParticle;
 import net.minecraft.client.particle.SnowflakeParticle;
+import net.minecraft.client.particle.SonicBoomParticle;
 import net.minecraft.client.particle.SoulParticle;
 import net.minecraft.client.particle.SpellParticle;
 import net.minecraft.client.particle.SpitParticle;
@@ -114,7 +115,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
@@ -126,6 +126,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.shape.VoxelShape;
@@ -140,7 +141,7 @@ implements ResourceReloader {
     private final Map<ParticleTextureSheet, Queue<Particle>> particles = Maps.newIdentityHashMap();
     private final Queue<EmitterParticle> newEmitterParticles = Queues.newArrayDeque();
     private final TextureManager textureManager;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final Int2ObjectMap<ParticleFactory<?>> factories = new Int2ObjectOpenHashMap();
     private final Queue<Particle> newParticles = Queues.newArrayDeque();
     private final Map<Identifier, SimpleSpriteProvider> spriteAwareFactories = Maps.newHashMap();
@@ -187,10 +188,14 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.ENTITY_EFFECT, SpellParticle.EntityFactory::new);
         this.registerFactory(ParticleTypes.EXPLOSION_EMITTER, new ExplosionEmitterParticle.Factory());
         this.registerFactory(ParticleTypes.EXPLOSION, ExplosionLargeParticle.Factory::new);
+        this.registerFactory(ParticleTypes.SONIC_BOOM, SonicBoomParticle.Factory::new);
         this.registerFactory(ParticleTypes.FALLING_DUST, BlockFallingDustParticle.Factory::new);
         this.registerFactory(ParticleTypes.FIREWORK, FireworksSparkParticle.ExplosionFactory::new);
         this.registerFactory(ParticleTypes.FISHING, FishingParticle.Factory::new);
         this.registerFactory(ParticleTypes.FLAME, FlameParticle.Factory::new);
+        this.registerFactory(ParticleTypes.SCULK_SOUL, SoulParticle.SculkSoulFactory::new);
+        this.registerFactory(ParticleTypes.SCULK_CHARGE, SculkChargeParticle.Factory::new);
+        this.registerFactory(ParticleTypes.SCULK_CHARGE_POP, SculkChargePopParticle.Factory::new);
         this.registerFactory(ParticleTypes.SOUL, SoulParticle.Factory::new);
         this.registerFactory(ParticleTypes.SOUL_FIRE_FLAME, FlameParticle.Factory::new);
         this.registerFactory(ParticleTypes.FLASH, FireworksSparkParticle.FlashFactory::new);
@@ -244,6 +249,7 @@ implements ResourceReloader {
         this.registerFactory(ParticleTypes.WAX_OFF, GlowParticle.WaxOffFactory::new);
         this.registerFactory(ParticleTypes.ELECTRIC_SPARK, GlowParticle.ElectricSparkFactory::new);
         this.registerFactory(ParticleTypes.SCRAPE, GlowParticle.ScrapeFactory::new);
+        this.registerFactory(ParticleTypes.SHRIEK, ShriekParticle.Factory::new);
     }
 
     private <T extends ParticleEffect> void registerFactory(ParticleType<T> type, ParticleFactory<T> factory) {
@@ -289,8 +295,7 @@ implements ResourceReloader {
 
     private void loadTextureList(ResourceManager resourceManager, Identifier id, Map<Identifier, List<Identifier>> result) {
         Identifier identifier2 = new Identifier(id.getNamespace(), "particles/" + id.getPath() + ".json");
-        try (Resource resource = resourceManager.getResource(identifier2);
-             InputStreamReader reader = new InputStreamReader(resource.getInputStream(), Charsets.UTF_8);){
+        try (BufferedReader reader = resourceManager.openAsReader(identifier2);){
             ParticleTextureData particleTextureData = ParticleTextureData.load(JsonHelper.deserialize(reader));
             List<Identifier> list = particleTextureData.getTextureList();
             boolean bl = this.spriteAwareFactories.containsKey(id);

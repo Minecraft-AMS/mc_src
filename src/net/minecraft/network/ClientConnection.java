@@ -27,7 +27,6 @@
  *  io.netty.handler.timeout.ReadTimeoutHandler
  *  io.netty.handler.timeout.TimeoutException
  *  io.netty.util.AttributeKey
- *  io.netty.util.concurrent.Future
  *  io.netty.util.concurrent.GenericFutureListener
  *  org.apache.commons.lang3.Validate
  *  org.jetbrains.annotations.Nullable
@@ -62,7 +61,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.TimeoutException;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -74,6 +72,7 @@ import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
 import net.minecraft.network.OffThreadException;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.PacketDeflater;
 import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.PacketEncoderException;
@@ -84,12 +83,11 @@ import net.minecraft.network.encryption.PacketDecryptor;
 import net.minecraft.network.encryption.PacketEncryptor;
 import net.minecraft.network.listener.ClientLoginPacketListener;
 import net.minecraft.network.listener.PacketListener;
+import net.minecraft.network.listener.TickablePacketListener;
 import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
-import net.minecraft.server.network.ServerLoginNetworkHandler;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Lazy;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -149,7 +147,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
     }
 
     public void channelInactive(ChannelHandlerContext context) {
-        this.disconnect(new TranslatableText("disconnect.endOfStream"));
+        this.disconnect(Text.translatable("disconnect.endOfStream"));
     }
 
     public void exceptionCaught(ChannelHandlerContext context, Throwable ex) {
@@ -164,14 +162,14 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         }
         if (ex instanceof TimeoutException) {
             LOGGER.debug("Timeout", ex);
-            this.disconnect(new TranslatableText("disconnect.timeout"));
+            this.disconnect(Text.translatable("disconnect.timeout"));
         } else {
-            TranslatableText text = new TranslatableText("disconnect.genericReason", "Internal Exception: " + ex);
+            MutableText text = Text.translatable("disconnect.genericReason", "Internal Exception: " + ex);
             if (bl) {
                 LOGGER.debug("Failed to sent packet", ex);
                 NetworkState networkState = this.getState();
                 Packet<ClientLoginPacketListener> packet = networkState == NetworkState.LOGIN ? new LoginDisconnectS2CPacket(text) : new DisconnectS2CPacket(text);
-                this.send(packet, (GenericFutureListener<? extends Future<? super Void>>)((GenericFutureListener)future -> this.disconnect(text)));
+                this.send(packet, PacketCallbacks.always(() -> this.disconnect(text)));
                 this.disableAutoRead();
             } else {
                 LOGGER.debug("Double fault", ex);
@@ -188,11 +186,11 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             catch (OffThreadException offThreadException) {
             }
             catch (RejectedExecutionException rejectedExecutionException) {
-                this.disconnect(new TranslatableText("multiplayer.disconnect.server_shutdown"));
+                this.disconnect(Text.translatable("multiplayer.disconnect.server_shutdown"));
             }
             catch (ClassCastException classCastException) {
                 LOGGER.error("Received {} that couldn't be processed", packet.getClass(), (Object)classCastException);
-                this.disconnect(new TranslatableText("multiplayer.disconnect.invalid_packet"));
+                this.disconnect(Text.translatable("multiplayer.disconnect.invalid_packet"));
             }
             ++this.packetsReceivedCounter;
         }
@@ -211,16 +209,16 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         this.send(packet, null);
     }
 
-    public void send(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback) {
+    public void send(Packet<?> packet, @Nullable PacketCallbacks callbacks) {
         if (this.isOpen()) {
             this.sendQueuedPackets();
-            this.sendImmediately(packet, callback);
+            this.sendImmediately(packet, callbacks);
         } else {
-            this.packetQueue.add(new QueuedPacket(packet, callback));
+            this.packetQueue.add(new QueuedPacket(packet, callbacks));
         }
     }
 
-    private void sendImmediately(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback) {
+    private void sendImmediately(Packet<?> packet, @Nullable PacketCallbacks callbacks) {
         NetworkState networkState = NetworkState.getPacketHandlerState(packet);
         NetworkState networkState2 = this.getState();
         ++this.packetsSentCounter;
@@ -229,19 +227,29 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             this.channel.config().setAutoRead(false);
         }
         if (this.channel.eventLoop().inEventLoop()) {
-            this.sendInternal(packet, callback, networkState, networkState2);
+            this.sendInternal(packet, callbacks, networkState, networkState2);
         } else {
-            this.channel.eventLoop().execute(() -> this.sendInternal(packet, callback, networkState, networkState2));
+            this.channel.eventLoop().execute(() -> this.sendInternal(packet, callbacks, networkState, networkState2));
         }
     }
 
-    private void sendInternal(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback, NetworkState packetState, NetworkState currentState) {
+    private void sendInternal(Packet<?> packet, @Nullable PacketCallbacks callbacks, NetworkState packetState, NetworkState currentState) {
         if (packetState != currentState) {
             this.setState(packetState);
         }
         ChannelFuture channelFuture = this.channel.writeAndFlush(packet);
-        if (callback != null) {
-            channelFuture.addListener(callback);
+        if (callbacks != null) {
+            channelFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    callbacks.onSuccess();
+                } else {
+                    Packet<?> packet = callbacks.getFailurePacket();
+                    if (packet != null) {
+                        ChannelFuture channelFuture = this.channel.writeAndFlush(packet);
+                        channelFuture.addListener((GenericFutureListener)ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+                    }
+                }
+            });
         }
         channelFuture.addListener((GenericFutureListener)ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
     }
@@ -261,18 +269,17 @@ extends SimpleChannelInboundHandler<Packet<?>> {
         synchronized (queue) {
             QueuedPacket queuedPacket;
             while ((queuedPacket = this.packetQueue.poll()) != null) {
-                this.sendImmediately(queuedPacket.packet, queuedPacket.callback);
+                this.sendImmediately(queuedPacket.packet, queuedPacket.callbacks);
             }
         }
     }
 
     public void tick() {
         this.sendQueuedPackets();
-        if (this.packetListener instanceof ServerLoginNetworkHandler) {
-            ((ServerLoginNetworkHandler)this.packetListener).tick();
-        }
-        if (this.packetListener instanceof ServerPlayNetworkHandler) {
-            ((ServerPlayNetworkHandler)this.packetListener).tick();
+        PacketListener packetListener = this.packetListener;
+        if (packetListener instanceof TickablePacketListener) {
+            TickablePacketListener tickablePacketListener = (TickablePacketListener)packetListener;
+            tickablePacketListener.tick();
         }
         if (!this.isOpen() && !this.disconnected) {
             this.handleDisconnection();
@@ -416,7 +423,7 @@ extends SimpleChannelInboundHandler<Packet<?>> {
             if (this.getDisconnectReason() != null) {
                 this.getPacketListener().onDisconnected(this.getDisconnectReason());
             } else if (this.getPacketListener() != null) {
-                this.getPacketListener().onDisconnected(new TranslatableText("multiplayer.disconnect.generic"));
+                this.getPacketListener().onDisconnected(Text.translatable("multiplayer.disconnect.generic"));
             }
         }
     }
@@ -436,11 +443,11 @@ extends SimpleChannelInboundHandler<Packet<?>> {
     static class QueuedPacket {
         final Packet<?> packet;
         @Nullable
-        final GenericFutureListener<? extends Future<? super Void>> callback;
+        final PacketCallbacks callbacks;
 
-        public QueuedPacket(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback) {
+        public QueuedPacket(Packet<?> packet, @Nullable PacketCallbacks callbacks) {
             this.packet = packet;
-            this.callback = callback;
+            this.callbacks = callbacks;
         }
     }
 }

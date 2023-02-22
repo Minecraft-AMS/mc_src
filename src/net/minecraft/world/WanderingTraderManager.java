@@ -7,7 +7,6 @@
 package net.minecraft.world;
 
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.SpawnRestriction;
@@ -15,17 +14,18 @@ import net.minecraft.entity.passive.TraderLlamaEntity;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.BiomeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.WorldView;
-import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.level.ServerWorldProperties;
 import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.poi.PointOfInterestTypes;
 import net.minecraft.world.spawner.Spawner;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +38,7 @@ implements Spawner {
     private static final int DEFAULT_SPAWN_CHANCE = 25;
     private static final int field_30635 = 10;
     private static final int field_30636 = 10;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final ServerWorldProperties properties;
     private int spawnTimer;
     private int spawnDelay;
@@ -99,11 +99,11 @@ implements Spawner {
         BlockPos blockPos = playerEntity.getBlockPos();
         int i = 48;
         PointOfInterestStorage pointOfInterestStorage = world.getPointOfInterestStorage();
-        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(PointOfInterestType.MEETING.getCompletionCondition(), pos -> true, blockPos, 48, PointOfInterestStorage.OccupationStatus.ANY);
+        Optional<BlockPos> optional = pointOfInterestStorage.getPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.MEETING), pos -> true, blockPos, 48, PointOfInterestStorage.OccupationStatus.ANY);
         BlockPos blockPos2 = optional.orElse(blockPos);
         BlockPos blockPos3 = this.getNearbySpawnPos(world, blockPos2, 48);
         if (blockPos3 != null && this.doesNotSuffocateAt(world, blockPos3)) {
-            if (world.getBiome(blockPos3).matchesKey(BiomeKeys.THE_VOID)) {
+            if (world.getBiome(blockPos3).isIn(BiomeTags.WITHOUT_WANDERING_TRADER_SPAWNS)) {
                 return false;
             }
             WanderingTraderEntity wanderingTraderEntity = EntityType.WANDERING_TRADER.spawn(world, null, null, null, blockPos3, SpawnReason.EVENT, false, false);

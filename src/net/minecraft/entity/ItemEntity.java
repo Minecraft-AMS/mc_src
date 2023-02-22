@@ -29,7 +29,7 @@ import net.minecraft.stat.Stats;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.tag.ItemTags;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -79,7 +79,11 @@ extends Entity {
 
     @Override
     public boolean occludeVibrationSignals() {
-        return this.getStack().isIn(ItemTags.OCCLUDES_VIBRATION_SIGNALS);
+        return this.getStack().isIn(ItemTags.DAMPENS_VIBRATIONS);
+    }
+
+    public Entity getEventSource() {
+        return Util.map(this.getThrower(), this.world::getPlayerByUuid);
     }
 
     @Override
@@ -252,7 +256,7 @@ extends Entity {
         }
         this.scheduleVelocityUpdate();
         this.health = (int)((float)this.health - amount);
-        this.emitGameEvent(GameEvent.ENTITY_DAMAGED, source.getAttacker());
+        this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
         if (this.health <= 0) {
             this.getStack().onItemEntityDestroyed(this);
             this.discard();
@@ -321,7 +325,7 @@ extends Entity {
         if (text != null) {
             return text;
         }
-        return new TranslatableText(this.getStack().getTranslationKey());
+        return Text.translatable(this.getStack().getTranslationKey());
     }
 
     @Override
@@ -426,6 +430,11 @@ extends Entity {
     @Override
     public SoundCategory getSoundCategory() {
         return SoundCategory.AMBIENT;
+    }
+
+    @Override
+    public float getBodyYaw() {
+        return 180.0f - this.getRotation(0.5f) / ((float)Math.PI * 2) * 360.0f;
     }
 }
 

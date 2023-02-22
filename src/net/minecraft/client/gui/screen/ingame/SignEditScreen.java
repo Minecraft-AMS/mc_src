@@ -16,7 +16,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.SignBlock;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.render.BufferBuilder;
@@ -35,9 +34,8 @@ import net.minecraft.client.util.SelectionManager;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.SignType;
 import net.minecraft.util.math.Matrix4f;
 
@@ -53,7 +51,7 @@ extends Screen {
     private final String[] text = (String[])IntStream.range(0, 4).mapToObj(row -> sign.getTextOnRow(row, filtered)).map(Text::getString).toArray(String[]::new);
 
     public SignEditScreen(SignBlockEntity sign, boolean filtered) {
-        super(new TranslatableText("sign.edit"));
+        super(Text.translatable("sign.edit"));
         this.sign = sign;
     }
 
@@ -64,7 +62,7 @@ extends Screen {
         this.sign.setEditable(false);
         this.selectionManager = new SelectionManager(() -> this.text[this.currentRow], text -> {
             this.text[this.currentRow] = text;
-            this.sign.setTextOnRow(this.currentRow, new LiteralText((String)text));
+            this.sign.setTextOnRow(this.currentRow, Text.literal(text));
         }, SelectionManager.makeClipboardGetter(this.client), SelectionManager.makeClipboardSetter(this.client), text -> this.client.textRenderer.getWidth((String)text) <= 90);
         BlockState blockState = this.sign.getCachedState();
         this.signType = SignBlockEntityRenderer.getSignType(blockState.getBlock());
@@ -201,8 +199,7 @@ extends Screen {
             bufferBuilder.vertex(matrix4f, v, l + this.client.textRenderer.fontHeight, 0.0f).color(0, 0, 255, 255).next();
             bufferBuilder.vertex(matrix4f, v, l, 0.0f).color(0, 0, 255, 255).next();
             bufferBuilder.vertex(matrix4f, u, l, 0.0f).color(0, 0, 255, 255).next();
-            bufferBuilder.end();
-            BufferRenderer.draw(bufferBuilder);
+            BufferRenderer.drawWithShader(bufferBuilder.end());
             RenderSystem.disableColorLogicOp();
             RenderSystem.enableTexture();
         }

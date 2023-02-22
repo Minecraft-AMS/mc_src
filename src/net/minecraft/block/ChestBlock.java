@@ -10,7 +10,6 @@ package net.minecraft.block;
 import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 import net.minecraft.block.AbstractBlock;
@@ -26,8 +25,8 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.block.entity.LidOpenable;
 import net.minecraft.block.enums.ChestType;
-import net.minecraft.client.block.ChestAnimationProgress;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.mob.PiglinBrain;
@@ -52,7 +51,6 @@ import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -63,6 +61,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -131,7 +130,7 @@ implements Waterloggable {
                     if (chestBlockEntity2.hasCustomName()) {
                         return chestBlockEntity2.getDisplayName();
                     }
-                    return new TranslatableText("container.chestDouble");
+                    return Text.translatable("container.chestDouble");
                 }
             });
         }
@@ -310,7 +309,7 @@ implements Waterloggable {
         return this.getBlockEntitySource(state, world, pos, false).apply(NAME_RETRIEVER).orElse(null);
     }
 
-    public static DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction> getAnimationProgressRetriever(final ChestAnimationProgress progress) {
+    public static DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction> getAnimationProgressRetriever(final LidOpenable progress) {
         return new DoubleBlockProperties.PropertyRetriever<ChestBlockEntity, Float2FloatFunction>(){
 
             @Override
@@ -347,7 +346,7 @@ implements Waterloggable {
     }
 
     public static boolean isChestBlocked(WorldAccess world, BlockPos pos) {
-        return ChestBlock.hasBlockOnTop(world, pos) || ChestBlock.hasOcelotOnTop(world, pos);
+        return ChestBlock.hasBlockOnTop(world, pos) || ChestBlock.hasCatOnTop(world, pos);
     }
 
     private static boolean hasBlockOnTop(BlockView world, BlockPos pos) {
@@ -355,7 +354,7 @@ implements Waterloggable {
         return world.getBlockState(blockPos).isSolidBlock(world, blockPos);
     }
 
-    private static boolean hasOcelotOnTop(WorldAccess world, BlockPos pos) {
+    private static boolean hasCatOnTop(WorldAccess world, BlockPos pos) {
         List<CatEntity> list = world.getNonSpectatingEntities(CatEntity.class, new Box(pos.getX(), pos.getY() + 1, pos.getZ(), pos.getX() + 1, pos.getY() + 2, pos.getZ() + 1));
         if (!list.isEmpty()) {
             for (CatEntity catEntity : list) {

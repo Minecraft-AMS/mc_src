@@ -22,6 +22,7 @@ import net.minecraft.util.SignType;
 public class EntityModelLayers {
     private static final String MAIN = "main";
     private static final Set<EntityModelLayer> LAYERS = Sets.newHashSet();
+    public static final EntityModelLayer ALLAY = EntityModelLayers.registerMain("allay");
     public static final EntityModelLayer ARMOR_STAND = EntityModelLayers.registerMain("armor_stand");
     public static final EntityModelLayer ARMOR_STAND_INNER_ARMOR = EntityModelLayers.createInnerArmor("armor_stand");
     public static final EntityModelLayer ARMOR_STAND_OUTER_ARMOR = EntityModelLayers.createOuterArmor("armor_stand");
@@ -68,6 +69,7 @@ public class EntityModelLayers {
     public static final EntityModelLayer EVOKER = EntityModelLayers.registerMain("evoker");
     public static final EntityModelLayer EVOKER_FANGS = EntityModelLayers.registerMain("evoker_fangs");
     public static final EntityModelLayer FOX = EntityModelLayers.registerMain("fox");
+    public static final EntityModelLayer FROG = EntityModelLayers.registerMain("frog");
     public static final EntityModelLayer FURNACE_MINECART = EntityModelLayers.registerMain("furnace_minecart");
     public static final EntityModelLayer GHAST = EntityModelLayers.registerMain("ghast");
     public static final EntityModelLayer GIANT = EntityModelLayers.registerMain("giant");
@@ -144,6 +146,7 @@ public class EntityModelLayers {
     public static final EntityModelLayer STRAY_OUTER = EntityModelLayers.register("stray", "outer");
     public static final EntityModelLayer STRIDER = EntityModelLayers.registerMain("strider");
     public static final EntityModelLayer STRIDER_SADDLE = EntityModelLayers.register("strider", "saddle");
+    public static final EntityModelLayer TADPOLE = EntityModelLayers.registerMain("tadpole");
     public static final EntityModelLayer TNT_MINECART = EntityModelLayers.registerMain("tnt_minecart");
     public static final EntityModelLayer TRADER_LLAMA = EntityModelLayers.registerMain("trader_llama");
     public static final EntityModelLayer TRIDENT = EntityModelLayers.registerMain("trident");
@@ -155,6 +158,7 @@ public class EntityModelLayers {
     public static final EntityModelLayer VEX = EntityModelLayers.registerMain("vex");
     public static final EntityModelLayer VILLAGER = EntityModelLayers.registerMain("villager");
     public static final EntityModelLayer VINDICATOR = EntityModelLayers.registerMain("vindicator");
+    public static final EntityModelLayer WARDEN = EntityModelLayers.registerMain("warden");
     public static final EntityModelLayer WANDERING_TRADER = EntityModelLayers.registerMain("wandering_trader");
     public static final EntityModelLayer WITCH = EntityModelLayers.registerMain("witch");
     public static final EntityModelLayer WITHER = EntityModelLayers.registerMain("wither");
@@ -204,6 +208,10 @@ public class EntityModelLayers {
 
     public static EntityModelLayer createBoat(BoatEntity.Type type) {
         return EntityModelLayers.create("boat/" + type.getName(), MAIN);
+    }
+
+    public static EntityModelLayer createChestBoat(BoatEntity.Type type) {
+        return EntityModelLayers.create("chest_boat/" + type.getName(), MAIN);
     }
 
     public static EntityModelLayer createSign(SignType type) {

@@ -16,7 +16,7 @@ import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.dynamic.GlobalPos;
+import net.minecraft.util.math.GlobalPos;
 
 public class GoToNearbyPositionTask
 extends Task<PathAwareEntity> {
@@ -45,7 +45,7 @@ extends Task<PathAwareEntity> {
         if (l > this.nextRunTime) {
             Brain<?> brain = pathAwareEntity.getBrain();
             Optional<GlobalPos> optional = brain.getOptionalMemory(this.memoryModuleType);
-            optional.ifPresent(globalPos -> brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(globalPos.getPos(), this.walkSpeed, this.completionRange)));
+            optional.ifPresent(pos -> brain.remember(MemoryModuleType.WALK_TARGET, new WalkTarget(pos.getPos(), this.walkSpeed, this.completionRange)));
             this.nextRunTime = l + 80L;
         }
     }

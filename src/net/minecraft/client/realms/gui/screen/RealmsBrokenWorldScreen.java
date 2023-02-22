@@ -22,7 +22,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
 import net.minecraft.client.realms.dto.RealmsServer;
@@ -41,10 +40,10 @@ import net.minecraft.client.realms.task.OpenServerTask;
 import net.minecraft.client.realms.task.SwitchSlotTask;
 import net.minecraft.client.realms.util.RealmsTextureManager;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -59,14 +58,14 @@ extends RealmsScreen {
     @Nullable
     private RealmsServer serverData;
     private final long serverId;
-    private final Text[] message = new Text[]{new TranslatableText("mco.brokenworld.message.line1"), new TranslatableText("mco.brokenworld.message.line2")};
+    private final Text[] message = new Text[]{Text.translatable("mco.brokenworld.message.line1"), Text.translatable("mco.brokenworld.message.line2")};
     private int left_x;
     private int right_x;
     private final List<Integer> slotsThatHasBeenDownloaded = Lists.newArrayList();
     private int animTick;
 
     public RealmsBrokenWorldScreen(Screen parent, RealmsMainScreen mainScreen, long serverId, boolean minigame) {
-        super(minigame ? new TranslatableText("mco.brokenworld.minigame.title") : new TranslatableText("mco.brokenworld.title"));
+        super(minigame ? Text.translatable("mco.brokenworld.minigame.title") : Text.translatable("mco.brokenworld.title"));
         this.parent = parent;
         this.mainScreen = mainScreen;
         this.serverId = serverId;
@@ -87,28 +86,28 @@ extends RealmsScreen {
 
     @Override
     public Text getNarratedTitle() {
-        return Texts.join(Stream.concat(Stream.of(this.title), Stream.of(this.message)).collect(Collectors.toList()), new LiteralText(" "));
+        return Texts.join(Stream.concat(Stream.of(this.title), Stream.of(this.message)).collect(Collectors.toList()), Text.literal(" "));
     }
 
     private void addButtons() {
         for (Map.Entry<Integer, RealmsWorldOptions> entry : this.serverData.slots.entrySet()) {
             int i = entry.getKey();
             boolean bl = i != this.serverData.activeSlot || this.serverData.worldType == RealmsServer.WorldType.MINIGAME;
-            ButtonWidget buttonWidget = bl ? new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, new TranslatableText("mco.brokenworld.play"), button -> {
+            ButtonWidget buttonWidget = bl ? new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, Text.translatable("mco.brokenworld.play"), button -> {
                 if (this.serverData.slots.get((Object)Integer.valueOf((int)i)).empty) {
-                    RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, this.serverData, new TranslatableText("mco.configure.world.switch.slot"), new TranslatableText("mco.configure.world.switch.slot.subtitle"), 0xA0A0A0, ScreenTexts.CANCEL, this::play, () -> {
+                    RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, this.serverData, Text.translatable("mco.configure.world.switch.slot"), Text.translatable("mco.configure.world.switch.slot.subtitle"), 0xA0A0A0, ScreenTexts.CANCEL, this::play, () -> {
                         this.client.setScreen(this);
                         this.play();
                     });
                     realmsResetWorldScreen.setSlot(i);
-                    realmsResetWorldScreen.setResetTitle(new TranslatableText("mco.create.world.reset.title"));
+                    realmsResetWorldScreen.setResetTitle(Text.translatable("mco.create.world.reset.title"));
                     this.client.setScreen(realmsResetWorldScreen);
                 } else {
                     this.client.setScreen(new RealmsLongRunningMcoTaskScreen(this.parent, new SwitchSlotTask(this.serverData.id, i, this::play)));
                 }
-            }) : new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, new TranslatableText("mco.brokenworld.download"), button -> {
-                TranslatableText text = new TranslatableText("mco.configure.world.restore.download.question.line1");
-                TranslatableText text2 = new TranslatableText("mco.configure.world.restore.download.question.line2");
+            }) : new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(8), 80, 20, Text.translatable("mco.brokenworld.download"), button -> {
+                MutableText text = Text.translatable("mco.configure.world.restore.download.question.line1");
+                MutableText text2 = Text.translatable("mco.configure.world.restore.download.question.line2");
                 this.client.setScreen(new RealmsLongConfirmationScreen(confirmed -> {
                     if (confirmed) {
                         this.downloadWorld(i);
@@ -119,10 +118,10 @@ extends RealmsScreen {
             });
             if (this.slotsThatHasBeenDownloaded.contains(i)) {
                 buttonWidget.active = false;
-                buttonWidget.setMessage(new TranslatableText("mco.brokenworld.downloaded"));
+                buttonWidget.setMessage(Text.translatable("mco.brokenworld.downloaded"));
             }
             this.addDrawableChild(buttonWidget);
-            this.addDrawableChild(new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(10), 80, 20, new TranslatableText("mco.brokenworld.reset"), button -> {
+            this.addDrawableChild(new ButtonWidget(this.getFramePositionX(i), RealmsBrokenWorldScreen.row(10), 80, 20, Text.translatable("mco.brokenworld.reset"), button -> {
                 RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, this.serverData, this::play, () -> {
                     this.client.setScreen(this);
                     this.play();
@@ -184,7 +183,7 @@ extends RealmsScreen {
 
     private void fetchServerData(long worldId) {
         new Thread(() -> {
-            RealmsClient realmsClient = RealmsClient.createRealmsClient();
+            RealmsClient realmsClient = RealmsClient.create();
             try {
                 this.serverData = realmsClient.getOwnWorld(worldId);
                 this.addButtons();
@@ -198,7 +197,7 @@ extends RealmsScreen {
 
     public void play() {
         new Thread(() -> {
-            RealmsClient realmsClient = RealmsClient.createRealmsClient();
+            RealmsClient realmsClient = RealmsClient.create();
             if (this.serverData.state == RealmsServer.State.CLOSED) {
                 this.client.execute(() -> this.client.setScreen(new RealmsLongRunningMcoTaskScreen(this, new OpenServerTask(this.serverData, this, this.mainScreen, true, this.client))));
             } else {
@@ -215,7 +214,7 @@ extends RealmsScreen {
     }
 
     private void downloadWorld(int slotId) {
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         try {
             WorldDownload worldDownload = realmsClient.download(this.serverData.id, slotId);
             RealmsDownloadLatestWorldScreen realmsDownloadLatestWorldScreen = new RealmsDownloadLatestWorldScreen(this, worldDownload, this.serverData.getWorldName(slotId), successful -> {

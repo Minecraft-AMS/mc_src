@@ -5,11 +5,11 @@ package net.minecraft.block;
 
 import java.util.Iterator;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 
 public interface Degradable<T extends Enum<T>> {
     public static final int field_31056 = 4;

@@ -19,7 +19,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
-import net.minecraft.tag.ConfiguredStructureFeatureTags;
+import net.minecraft.tag.StructureTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
@@ -28,6 +28,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class EnderEyeItem
 extends Item {
@@ -75,10 +76,11 @@ extends Item {
             return TypedActionResult.pass(itemStack);
         }
         user.setCurrentHand(hand);
-        if (world instanceof ServerWorld && (blockPos = (serverWorld = (ServerWorld)world).locateStructure(ConfiguredStructureFeatureTags.EYE_OF_ENDER_LOCATED, user.getBlockPos(), 100, false)) != null) {
+        if (world instanceof ServerWorld && (blockPos = (serverWorld = (ServerWorld)world).locateStructure(StructureTags.EYE_OF_ENDER_LOCATED, user.getBlockPos(), 100, false)) != null) {
             EyeOfEnderEntity eyeOfEnderEntity = new EyeOfEnderEntity(world, user.getX(), user.getBodyY(0.5), user.getZ());
             eyeOfEnderEntity.setItem(itemStack);
             eyeOfEnderEntity.initTargetPos(blockPos);
+            world.emitGameEvent(GameEvent.PROJECTILE_SHOOT, eyeOfEnderEntity.getPos(), GameEvent.Emitter.of(user));
             world.spawnEntity(eyeOfEnderEntity);
             if (user instanceof ServerPlayerEntity) {
                 Criteria.USED_ENDER_EYE.trigger((ServerPlayerEntity)user, blockPos);

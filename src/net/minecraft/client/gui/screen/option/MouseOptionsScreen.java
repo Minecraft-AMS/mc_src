@@ -12,33 +12,36 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.Option;
+import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.Text;
 
 @Environment(value=EnvType.CLIENT)
 public class MouseOptionsScreen
 extends GameOptionsScreen {
     private ButtonListWidget buttonList;
-    private static final Option[] OPTIONS = new Option[]{Option.SENSITIVITY, Option.INVERT_MOUSE, Option.MOUSE_WHEEL_SENSITIVITY, Option.DISCRETE_MOUSE_SCROLL, Option.TOUCHSCREEN};
+
+    private static SimpleOption<?>[] getOptions(GameOptions gameOptions) {
+        return new SimpleOption[]{gameOptions.getMouseSensitivity(), gameOptions.getInvertYMouse(), gameOptions.getMouseWheelSensitivity(), gameOptions.getDiscreteMouseScroll(), gameOptions.getTouchscreen()};
+    }
 
     public MouseOptionsScreen(Screen parent, GameOptions gameOptions) {
-        super(parent, gameOptions, new TranslatableText("options.mouse_settings.title"));
+        super(parent, gameOptions, Text.translatable("options.mouse_settings.title"));
     }
 
     @Override
     protected void init() {
         this.buttonList = new ButtonListWidget(this.client, this.width, this.height, 32, this.height - 32, 25);
         if (InputUtil.isRawMouseMotionSupported()) {
-            this.buttonList.addAll((Option[])Stream.concat(Arrays.stream(OPTIONS), Stream.of(Option.RAW_MOUSE_INPUT)).toArray(Option[]::new));
+            this.buttonList.addAll((SimpleOption[])Stream.concat(Arrays.stream(MouseOptionsScreen.getOptions(this.gameOptions)), Stream.of(this.gameOptions.getRawMouseInput())).toArray(SimpleOption[]::new));
         } else {
-            this.buttonList.addAll(OPTIONS);
+            this.buttonList.addAll(MouseOptionsScreen.getOptions(this.gameOptions));
         }
         this.addSelectableChild(this.buttonList);
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 27, 200, 20, ScreenTexts.DONE, button -> {

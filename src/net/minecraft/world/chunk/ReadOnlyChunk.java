@@ -36,7 +36,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.carver.CarvingMask;
 import net.minecraft.world.gen.chunk.BlendingData;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.gen.structure.Structure;
 import net.minecraft.world.tick.BasicTickScheduler;
 import net.minecraft.world.tick.EmptyTickSchedulers;
 import org.jetbrains.annotations.Nullable;
@@ -152,43 +152,44 @@ extends ProtoChunk {
 
     @Override
     @Nullable
-    public StructureStart getStructureStart(ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        return this.wrapped.getStructureStart(configuredStructureFeature);
+    public StructureStart getStructureStart(Structure structure) {
+        return this.wrapped.getStructureStart(structure);
     }
 
     @Override
-    public void setStructureStart(ConfiguredStructureFeature<?, ?> configuredStructureFeature, StructureStart start) {
+    public void setStructureStart(Structure structure, StructureStart start) {
     }
 
     @Override
-    public Map<ConfiguredStructureFeature<?, ?>, StructureStart> getStructureStarts() {
+    public Map<Structure, StructureStart> getStructureStarts() {
         return this.wrapped.getStructureStarts();
     }
 
     @Override
-    public void setStructureStarts(Map<ConfiguredStructureFeature<?, ?>, StructureStart> structureStarts) {
+    public void setStructureStarts(Map<Structure, StructureStart> structureStarts) {
     }
 
     @Override
-    public LongSet getStructureReferences(ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        return this.wrapped.getStructureReferences(configuredStructureFeature);
+    public LongSet getStructureReferences(Structure structure) {
+        return this.wrapped.getStructureReferences(structure);
     }
 
     @Override
-    public void addStructureReference(ConfiguredStructureFeature<?, ?> configuredStructureFeature, long reference) {
+    public void addStructureReference(Structure structure, long reference) {
     }
 
     @Override
-    public Map<ConfiguredStructureFeature<?, ?>, LongSet> getStructureReferences() {
+    public Map<Structure, LongSet> getStructureReferences() {
         return this.wrapped.getStructureReferences();
     }
 
     @Override
-    public void setStructureReferences(Map<ConfiguredStructureFeature<?, ?>, LongSet> structureReferences) {
+    public void setStructureReferences(Map<Structure, LongSet> structureReferences) {
     }
 
     @Override
     public void setNeedsSaving(boolean needsSaving) {
+        this.wrapped.setNeedsSaving(needsSaving);
     }
 
     @Override
@@ -263,17 +264,17 @@ extends ProtoChunk {
     }
 
     @Override
-    public CarvingMask getCarvingMask(GenerationStep.Carver carver) {
+    public CarvingMask getCarvingMask(GenerationStep.Carver step) {
         if (this.field_34554) {
-            return super.getCarvingMask(carver);
+            return super.getCarvingMask(step);
         }
         throw Util.throwOrPause(new UnsupportedOperationException("Meaningless in this context"));
     }
 
     @Override
-    public CarvingMask getOrCreateCarvingMask(GenerationStep.Carver carver) {
+    public CarvingMask getOrCreateCarvingMask(GenerationStep.Carver step) {
         if (this.field_34554) {
-            return super.getOrCreateCarvingMask(carver);
+            return super.getOrCreateCarvingMask(step);
         }
         throw Util.throwOrPause(new UnsupportedOperationException("Meaningless in this context"));
     }

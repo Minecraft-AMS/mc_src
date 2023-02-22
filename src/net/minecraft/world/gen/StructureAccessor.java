@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructureStart;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -32,7 +33,7 @@ import net.minecraft.world.StructurePresence;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.gen.GeneratorOptions;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.gen.structure.Structure;
 import org.jetbrains.annotations.Nullable;
 
 public class StructureAccessor {
@@ -48,84 +49,93 @@ public class StructureAccessor {
 
     public StructureAccessor forRegion(ChunkRegion region) {
         if (region.toServerWorld() != this.world) {
-            throw new IllegalStateException("Using invalid feature manager (source level: " + region.toServerWorld() + ", region: " + region);
+            throw new IllegalStateException("Using invalid structure manager (source level: " + region.toServerWorld() + ", region: " + region);
         }
         return new StructureAccessor(region, this.options, this.locator);
     }
 
-    public List<StructureStart> method_41035(ChunkSectionPos chunkSectionPos, Predicate<ConfiguredStructureFeature<?, ?>> predicate) {
-        Map<ConfiguredStructureFeature<?, ?>, LongSet> map = this.world.getChunk(chunkSectionPos.getSectionX(), chunkSectionPos.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences();
+    public List<StructureStart> getStructureStarts(ChunkPos pos, Predicate<Structure> predicate) {
+        Map<Structure, LongSet> map = this.world.getChunk(pos.x, pos.z, ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences();
         ImmutableList.Builder builder = ImmutableList.builder();
-        for (Map.Entry<ConfiguredStructureFeature<?, ?>, LongSet> entry : map.entrySet()) {
-            ConfiguredStructureFeature<?, ?> configuredStructureFeature = entry.getKey();
-            if (!predicate.test(configuredStructureFeature)) continue;
-            this.method_41032(configuredStructureFeature, entry.getValue(), arg_0 -> ((ImmutableList.Builder)builder).add(arg_0));
+        for (Map.Entry<Structure, LongSet> entry : map.entrySet()) {
+            Structure structure = entry.getKey();
+            if (!predicate.test(structure)) continue;
+            this.acceptStructureStarts(structure, entry.getValue(), arg_0 -> ((ImmutableList.Builder)builder).add(arg_0));
         }
         return builder.build();
     }
 
-    public List<StructureStart> getStructureStarts(ChunkSectionPos sectionPos, ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        LongSet longSet = this.world.getChunk(sectionPos.getSectionX(), sectionPos.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences(configuredStructureFeature);
+    public List<StructureStart> getStructureStarts(ChunkSectionPos sectionPos, Structure structure) {
+        LongSet longSet = this.world.getChunk(sectionPos.getSectionX(), sectionPos.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences(structure);
         ImmutableList.Builder builder = ImmutableList.builder();
-        this.method_41032(configuredStructureFeature, longSet, arg_0 -> ((ImmutableList.Builder)builder).add(arg_0));
+        this.acceptStructureStarts(structure, longSet, arg_0 -> ((ImmutableList.Builder)builder).add(arg_0));
         return builder.build();
     }
 
-    public void method_41032(ConfiguredStructureFeature<?, ?> configuredStructureFeature, LongSet longSet, Consumer<StructureStart> consumer) {
-        LongIterator longIterator = longSet.iterator();
+    public void acceptStructureStarts(Structure structure, LongSet structureStartPositions, Consumer<StructureStart> consumer) {
+        LongIterator longIterator = structureStartPositions.iterator();
         while (longIterator.hasNext()) {
             long l = (Long)longIterator.next();
             ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(new ChunkPos(l), this.world.getBottomSectionCoord());
-            StructureStart structureStart = this.getStructureStart(chunkSectionPos, configuredStructureFeature, this.world.getChunk(chunkSectionPos.getSectionX(), chunkSectionPos.getSectionZ(), ChunkStatus.STRUCTURE_STARTS));
+            StructureStart structureStart = this.getStructureStart(chunkSectionPos, structure, this.world.getChunk(chunkSectionPos.getSectionX(), chunkSectionPos.getSectionZ(), ChunkStatus.STRUCTURE_STARTS));
             if (structureStart == null || !structureStart.hasChildren()) continue;
             consumer.accept(structureStart);
         }
     }
 
     @Nullable
-    public StructureStart getStructureStart(ChunkSectionPos pos, ConfiguredStructureFeature<?, ?> configuredStructureFeature, StructureHolder holder) {
-        return holder.getStructureStart(configuredStructureFeature);
+    public StructureStart getStructureStart(ChunkSectionPos pos, Structure structure, StructureHolder holder) {
+        return holder.getStructureStart(structure);
     }
 
-    public void setStructureStart(ChunkSectionPos pos, ConfiguredStructureFeature<?, ?> configuredStructureFeature, StructureStart structureStart, StructureHolder holder) {
-        holder.setStructureStart(configuredStructureFeature, structureStart);
+    public void setStructureStart(ChunkSectionPos pos, Structure structure, StructureStart structureStart, StructureHolder holder) {
+        holder.setStructureStart(structure, structureStart);
     }
 
-    public void addStructureReference(ChunkSectionPos pos, ConfiguredStructureFeature<?, ?> configuredStructureFeature, long reference, StructureHolder holder) {
-        holder.addStructureReference(configuredStructureFeature, reference);
+    public void addStructureReference(ChunkSectionPos pos, Structure structure, long reference, StructureHolder holder) {
+        holder.addStructureReference(structure, reference);
     }
 
     public boolean shouldGenerateStructures() {
         return this.options.shouldGenerateStructures();
     }
 
-    public StructureStart getStructureAt(BlockPos pos, ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        for (StructureStart structureStart : this.getStructureStarts(ChunkSectionPos.from(pos), configuredStructureFeature)) {
+    public StructureStart getStructureAt(BlockPos pos, Structure structure) {
+        for (StructureStart structureStart : this.getStructureStarts(ChunkSectionPos.from(pos), structure)) {
             if (!structureStart.getBoundingBox().contains(pos)) continue;
             return structureStart;
         }
         return StructureStart.DEFAULT;
     }
 
-    public StructureStart method_41034(BlockPos blockPos, RegistryKey<ConfiguredStructureFeature<?, ?>> registryKey) {
-        ConfiguredStructureFeature<?, ?> configuredStructureFeature = this.method_41036().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY).get(registryKey);
-        if (configuredStructureFeature == null) {
+    public StructureStart getStructureContaining(BlockPos pos, RegistryKey<Structure> structure) {
+        Structure structure2 = this.getRegistryManager().get(Registry.STRUCTURE_KEY).get(structure);
+        if (structure2 == null) {
             return StructureStart.DEFAULT;
         }
-        return this.getStructureContaining(blockPos, configuredStructureFeature);
+        return this.getStructureContaining(pos, structure2);
     }
 
-    public StructureStart getStructureContaining(BlockPos pos, ConfiguredStructureFeature<?, ?> configuredStructureFeature) {
-        for (StructureStart structureStart : this.getStructureStarts(ChunkSectionPos.from(pos), configuredStructureFeature)) {
-            if (!this.method_41033(pos, structureStart)) continue;
+    public StructureStart getStructureContaining(BlockPos pos, TagKey<Structure> structureTag) {
+        Registry<Structure> registry = this.getRegistryManager().get(Registry.STRUCTURE_KEY);
+        for (StructureStart structureStart : this.getStructureStarts(new ChunkPos(pos), (Structure structure) -> registry.getEntry(registry.getRawId((Structure)structure)).map(registryEntry -> registryEntry.isIn(structureTag)).orElse(false))) {
+            if (!this.structureContains(pos, structureStart)) continue;
             return structureStart;
         }
         return StructureStart.DEFAULT;
     }
 
-    public boolean method_41033(BlockPos blockPos, StructureStart structureStart) {
+    public StructureStart getStructureContaining(BlockPos pos, Structure structure) {
+        for (StructureStart structureStart : this.getStructureStarts(ChunkSectionPos.from(pos), structure)) {
+            if (!this.structureContains(pos, structureStart)) continue;
+            return structureStart;
+        }
+        return StructureStart.DEFAULT;
+    }
+
+    public boolean structureContains(BlockPos pos, StructureStart structureStart) {
         for (StructurePiece structurePiece : structureStart.getChildren()) {
-            if (!structurePiece.getBoundingBox().contains(blockPos)) continue;
+            if (!structurePiece.getBoundingBox().contains(pos)) continue;
             return true;
         }
         return false;
@@ -136,21 +146,21 @@ public class StructureAccessor {
         return this.world.getChunk(chunkSectionPos.getSectionX(), chunkSectionPos.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).hasStructureReferences();
     }
 
-    public Map<ConfiguredStructureFeature<?, ?>, LongSet> method_41037(BlockPos blockPos) {
-        ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(blockPos);
+    public Map<Structure, LongSet> getStructureReferences(BlockPos pos) {
+        ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(pos);
         return this.world.getChunk(chunkSectionPos.getSectionX(), chunkSectionPos.getSectionZ(), ChunkStatus.STRUCTURE_REFERENCES).getStructureReferences();
     }
 
-    public StructurePresence getStructurePresence(ChunkPos chunkPos, ConfiguredStructureFeature<?, ?> configuredStructureFeature, boolean skipExistingChunk) {
-        return this.locator.getStructurePresence(chunkPos, configuredStructureFeature, skipExistingChunk);
+    public StructurePresence getStructurePresence(ChunkPos chunkPos, Structure structure, boolean skipExistingChunk) {
+        return this.locator.getStructurePresence(chunkPos, structure, skipExistingChunk);
     }
 
     public void incrementReferences(StructureStart structureStart) {
         structureStart.incrementReferences();
-        this.locator.incrementReferences(structureStart.getPos(), structureStart.getFeature());
+        this.locator.incrementReferences(structureStart.getPos(), structureStart.getStructure());
     }
 
-    public DynamicRegistryManager method_41036() {
+    public DynamicRegistryManager getRegistryManager() {
         return this.world.getRegistryManager();
     }
 }

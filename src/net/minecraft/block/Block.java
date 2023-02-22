@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
@@ -31,6 +30,8 @@ import net.minecraft.block.LeavesBlock;
 import net.minecraft.block.SideShapeType;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
@@ -55,7 +56,6 @@ import net.minecraft.state.property.Property;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.collection.IdList;
@@ -65,6 +65,8 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.intprovider.IntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.shape.VoxelShape;
@@ -147,7 +149,7 @@ implements ItemConvertible {
         return Blocks.AIR;
     }
 
-    public static BlockState pushEntitiesUpBeforeBlockChange(BlockState from, BlockState to, World world, BlockPos pos) {
+    public static BlockState pushEntitiesUpBeforeBlockChange(BlockState from, BlockState to, WorldAccess world, BlockPos pos) {
         VoxelShape voxelShape = VoxelShapes.combine(from.getCollisionShape(world, pos), to.getCollisionShape(world, pos), BooleanBiFunction.ONLY_SECOND).offset(pos.getX(), pos.getY(), pos.getZ());
         if (voxelShape.isEmpty()) {
             return to;
@@ -282,27 +284,27 @@ implements ItemConvertible {
         ServerWorld serverWorld = lootContext.getWorld();
         BlockPos blockPos = new BlockPos(lootContext.get(LootContextParameters.ORIGIN));
         state.getDroppedStacks(lootContext).forEach(stack -> Block.dropStack((World)serverWorld, blockPos, stack));
-        state.onStacksDropped(serverWorld, blockPos, ItemStack.EMPTY);
+        state.onStacksDropped(serverWorld, blockPos, ItemStack.EMPTY, true);
     }
 
     public static void dropStacks(BlockState state, World world, BlockPos pos) {
         if (world instanceof ServerWorld) {
             Block.getDroppedStacks(state, (ServerWorld)world, pos, null).forEach(stack -> Block.dropStack(world, pos, stack));
-            state.onStacksDropped((ServerWorld)world, pos, ItemStack.EMPTY);
+            state.onStacksDropped((ServerWorld)world, pos, ItemStack.EMPTY, true);
         }
     }
 
     public static void dropStacks(BlockState state, WorldAccess world, BlockPos pos, @Nullable BlockEntity blockEntity) {
         if (world instanceof ServerWorld) {
             Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity).forEach(stack -> Block.dropStack((World)((ServerWorld)world), pos, stack));
-            state.onStacksDropped((ServerWorld)world, pos, ItemStack.EMPTY);
+            state.onStacksDropped((ServerWorld)world, pos, ItemStack.EMPTY, true);
         }
     }
 
     public static void dropStacks(BlockState state, World world, BlockPos pos, @Nullable BlockEntity blockEntity, Entity entity, ItemStack stack2) {
         if (world instanceof ServerWorld) {
             Block.getDroppedStacks(state, (ServerWorld)world, pos, blockEntity, entity, stack2).forEach(stack -> Block.dropStack(world, pos, stack));
-            state.onStacksDropped((ServerWorld)world, pos, stack2);
+            state.onStacksDropped((ServerWorld)world, pos, stack2, true);
         }
     }
 
@@ -373,7 +375,7 @@ implements ItemConvertible {
     }
 
     public MutableText getName() {
-        return new TranslatableText(this.getTranslationKey());
+        return Text.translatable(this.getTranslationKey());
     }
 
     public String getTranslationKey() {
@@ -420,7 +422,7 @@ implements ItemConvertible {
         if (state.isIn(BlockTags.GUARDED_BY_PIGLINS)) {
             PiglinBrain.onGuardedBlockInteracted(player, false);
         }
-        world.emitGameEvent((Entity)player, GameEvent.BLOCK_DESTROY, pos);
+        world.emitGameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Emitter.of(player, state));
     }
 
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
@@ -493,6 +495,13 @@ implements ItemConvertible {
     @Deprecated
     public RegistryEntry.Reference<Block> getRegistryEntry() {
         return this.registryEntry;
+    }
+
+    protected void dropExperienceWhenMined(ServerWorld world, BlockPos pos, ItemStack tool, IntProvider experience) {
+        int i;
+        if (EnchantmentHelper.getLevel(Enchantments.SILK_TOUCH, tool) == 0 && (i = experience.get(world.random)) > 0) {
+            this.dropExperience(world, pos, i);
+        }
     }
 
     public static final class NeighborGroup {

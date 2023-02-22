@@ -12,7 +12,6 @@
  *  it.unimi.dsi.fastutil.ints.IntOpenHashSet
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.font;
 
@@ -24,39 +23,35 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntCollection;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.font.BlankGlyph;
-import net.minecraft.client.font.EmptyGlyphRenderer;
+import net.minecraft.client.font.BuiltinEmptyGlyph;
 import net.minecraft.client.font.Font;
 import net.minecraft.client.font.Glyph;
 import net.minecraft.client.font.GlyphAtlasTexture;
 import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
-import net.minecraft.client.font.WhiteRectangleGlyph;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class FontStorage
 implements AutoCloseable {
-    private static final EmptyGlyphRenderer EMPTY_GLYPH_RENDERER = new EmptyGlyphRenderer();
-    private static final Glyph SPACE = () -> 4.0f;
-    private static final Glyph ZERO_WIDTH_NON_JOINER = () -> 0.0f;
-    private static final int ZERO_WIDTH_NON_JOINER_CODE_POINT = 8204;
-    private static final Random RANDOM = new Random();
+    private static final Random RANDOM = Random.create();
+    private static final float MAX_ADVANCE = 32.0f;
     private final TextureManager textureManager;
     private final Identifier id;
     private GlyphRenderer blankGlyphRenderer;
     private GlyphRenderer whiteRectangleGlyphRenderer;
     private final List<Font> fonts = Lists.newArrayList();
     private final Int2ObjectMap<GlyphRenderer> glyphRendererCache = new Int2ObjectOpenHashMap();
-    private final Int2ObjectMap<Glyph> glyphCache = new Int2ObjectOpenHashMap();
+    private final Int2ObjectMap<GlyphPair> glyphCache = new Int2ObjectOpenHashMap();
     private final Int2ObjectMap<IntList> charactersByWidth = new Int2ObjectOpenHashMap();
     private final List<GlyphAtlasTexture> glyphAtlases = Lists.newArrayList();
 
@@ -71,8 +66,8 @@ implements AutoCloseable {
         this.glyphRendererCache.clear();
         this.glyphCache.clear();
         this.charactersByWidth.clear();
-        this.blankGlyphRenderer = this.getGlyphRenderer(BlankGlyph.INSTANCE);
-        this.whiteRectangleGlyphRenderer = this.getGlyphRenderer(WhiteRectangleGlyph.INSTANCE);
+        this.blankGlyphRenderer = BuiltinEmptyGlyph.MISSING.bake(this::getGlyphRenderer);
+        this.whiteRectangleGlyphRenderer = BuiltinEmptyGlyph.WHITE.bake(this::getGlyphRenderer);
         IntOpenHashSet intSet = new IntOpenHashSet();
         for (Font font : fonts) {
             intSet.addAll((IntCollection)font.getProvidedGlyphs());
@@ -80,14 +75,11 @@ implements AutoCloseable {
         HashSet set = Sets.newHashSet();
         intSet.forEach(codePoint -> {
             for (Font font : fonts) {
-                Glyph glyph = this.getEmptyGlyph(codePoint);
-                if (glyph == null) {
-                    glyph = font.getGlyph(codePoint);
-                }
+                Glyph glyph = font.getGlyph(codePoint);
                 if (glyph == null) continue;
                 set.add(font);
-                if (glyph == BlankGlyph.INSTANCE) break;
-                ((IntList)this.charactersByWidth.computeIfAbsent(MathHelper.ceil(glyph.getAdvance(false)), i -> new IntArrayList())).add(codePoint);
+                if (glyph == BuiltinEmptyGlyph.MISSING) break;
+                ((IntList)this.charactersByWidth.computeIfAbsent(MathHelper.ceil(glyph.getAdvance(false)), advance -> new IntArrayList())).add(codePoint);
                 break;
             }
         });
@@ -114,36 +106,47 @@ implements AutoCloseable {
         this.glyphAtlases.clear();
     }
 
-    @Nullable
-    private Glyph getEmptyGlyph(int codePoint) {
-        return switch (codePoint) {
-            case 32 -> SPACE;
-            case 8204 -> ZERO_WIDTH_NON_JOINER;
-            default -> null;
-        };
-    }
-
-    public Glyph getGlyph(int codePoint2) {
-        return (Glyph)this.glyphCache.computeIfAbsent(codePoint2, codePoint -> {
-            Glyph glyph = this.getEmptyGlyph(codePoint);
-            return glyph == null ? this.getRenderableGlyph(codePoint) : glyph;
-        });
-    }
-
-    private RenderableGlyph getRenderableGlyph(int codePoint) {
-        for (Font font : this.fonts) {
-            RenderableGlyph renderableGlyph = font.getGlyph(codePoint);
-            if (renderableGlyph == null) continue;
-            return renderableGlyph;
+    private static boolean isAdvanceInvalid(Glyph glyph) {
+        float f = glyph.getAdvance(false);
+        if (f < 0.0f || f > 32.0f) {
+            return true;
         }
-        return BlankGlyph.INSTANCE;
+        float g = glyph.getAdvance(true);
+        return g < 0.0f || g > 32.0f;
     }
 
-    public GlyphRenderer getGlyphRenderer(int codePoint2) {
-        return (GlyphRenderer)this.glyphRendererCache.computeIfAbsent(codePoint2, codePoint -> switch (codePoint) {
-            case 32, 8204 -> EMPTY_GLYPH_RENDERER;
-            default -> this.getGlyphRenderer(this.getRenderableGlyph(codePoint));
-        });
+    private GlyphPair findGlyph(int codePoint) {
+        Glyph glyph = null;
+        for (Font font : this.fonts) {
+            Glyph glyph2 = font.getGlyph(codePoint);
+            if (glyph2 == null) continue;
+            if (glyph == null) {
+                glyph = glyph2;
+            }
+            if (FontStorage.isAdvanceInvalid(glyph2)) continue;
+            return new GlyphPair(glyph, glyph2);
+        }
+        if (glyph != null) {
+            return new GlyphPair(glyph, BuiltinEmptyGlyph.MISSING);
+        }
+        return GlyphPair.MISSING;
+    }
+
+    public Glyph getGlyph(int codePoint, boolean validateAdvance) {
+        return ((GlyphPair)this.glyphCache.computeIfAbsent(codePoint, this::findGlyph)).getGlyph(validateAdvance);
+    }
+
+    private GlyphRenderer findGlyphRenderer(int codePoint) {
+        for (Font font : this.fonts) {
+            Glyph glyph = font.getGlyph(codePoint);
+            if (glyph == null) continue;
+            return glyph.bake(this::getGlyphRenderer);
+        }
+        return this.blankGlyphRenderer;
+    }
+
+    public GlyphRenderer getGlyphRenderer(int codePoint) {
+        return (GlyphRenderer)this.glyphRendererCache.computeIfAbsent(codePoint, this::findGlyphRenderer);
     }
 
     private GlyphRenderer getGlyphRenderer(RenderableGlyph c) {
@@ -169,6 +172,30 @@ implements AutoCloseable {
 
     public GlyphRenderer getRectangleRenderer() {
         return this.whiteRectangleGlyphRenderer;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    record GlyphPair(Glyph glyph, Glyph advanceValidatedGlyph) {
+        static final GlyphPair MISSING = new GlyphPair(BuiltinEmptyGlyph.MISSING, BuiltinEmptyGlyph.MISSING);
+
+        Glyph getGlyph(boolean validateAdvance) {
+            return validateAdvance ? this.advanceValidatedGlyph : this.glyph;
+        }
+
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{GlyphPair.class, "glyphInfo;glyphInfoNotFishy", "glyph", "advanceValidatedGlyph"}, this);
+        }
+
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{GlyphPair.class, "glyphInfo;glyphInfoNotFishy", "glyph", "advanceValidatedGlyph"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{GlyphPair.class, "glyphInfo;glyphInfoNotFishy", "glyph", "advanceValidatedGlyph"}, this, object);
+        }
     }
 }
 

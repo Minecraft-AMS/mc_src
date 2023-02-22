@@ -6,6 +6,7 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.client.option;
@@ -22,13 +23,18 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.util.Util;
+import net.minecraft.util.thread.TaskExecutor;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ServerList {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final TaskExecutor<Runnable> IO_EXECUTOR = TaskExecutor.create(Util.getMainWorkerExecutor(), "server-list-io");
+    private static final int MAX_HIDDEN_ENTRIES = 16;
     private final MinecraftClient client;
     private final List<ServerInfo> servers = Lists.newArrayList();
+    private final List<ServerInfo> hiddenServers = Lists.newArrayList();
 
     public ServerList(MinecraftClient client) {
         this.client = client;
@@ -38,13 +44,20 @@ public class ServerList {
     public void loadFile() {
         try {
             this.servers.clear();
+            this.hiddenServers.clear();
             NbtCompound nbtCompound = NbtIo.read(new File(this.client.runDirectory, "servers.dat"));
             if (nbtCompound == null) {
                 return;
             }
             NbtList nbtList = nbtCompound.getList("servers", 10);
             for (int i = 0; i < nbtList.size(); ++i) {
-                this.servers.add(ServerInfo.fromNbt(nbtList.getCompound(i)));
+                NbtCompound nbtCompound2 = nbtList.getCompound(i);
+                ServerInfo serverInfo = ServerInfo.fromNbt(nbtCompound2);
+                if (nbtCompound2.getBoolean("hidden")) {
+                    this.hiddenServers.add(serverInfo);
+                    continue;
+                }
+                this.servers.add(serverInfo);
             }
         }
         catch (Exception exception) {
@@ -54,14 +67,22 @@ public class ServerList {
 
     public void saveFile() {
         try {
+            NbtCompound nbtCompound;
             NbtList nbtList = new NbtList();
             for (ServerInfo serverInfo : this.servers) {
-                nbtList.add(serverInfo.toNbt());
+                nbtCompound = serverInfo.toNbt();
+                nbtCompound.putBoolean("hidden", false);
+                nbtList.add(nbtCompound);
             }
-            NbtCompound nbtCompound = new NbtCompound();
-            nbtCompound.put("servers", nbtList);
+            for (ServerInfo serverInfo : this.hiddenServers) {
+                nbtCompound = serverInfo.toNbt();
+                nbtCompound.putBoolean("hidden", true);
+                nbtList.add(nbtCompound);
+            }
+            NbtCompound nbtCompound2 = new NbtCompound();
+            nbtCompound2.put("servers", nbtList);
             File file = File.createTempFile("servers", ".dat", this.client.runDirectory);
-            NbtIo.write(nbtCompound, file);
+            NbtIo.write(nbtCompound2, file);
             File file2 = new File(this.client.runDirectory, "servers.dat_old");
             File file3 = new File(this.client.runDirectory, "servers.dat");
             Util.backupAndReplace(file3, file, file2);
@@ -75,12 +96,46 @@ public class ServerList {
         return this.servers.get(index);
     }
 
-    public void remove(ServerInfo serverInfo) {
-        this.servers.remove(serverInfo);
+    @Nullable
+    public ServerInfo get(String address) {
+        for (ServerInfo serverInfo : this.servers) {
+            if (!serverInfo.address.equals(address)) continue;
+            return serverInfo;
+        }
+        for (ServerInfo serverInfo : this.hiddenServers) {
+            if (!serverInfo.address.equals(address)) continue;
+            return serverInfo;
+        }
+        return null;
     }
 
-    public void add(ServerInfo serverInfo) {
-        this.servers.add(serverInfo);
+    @Nullable
+    public ServerInfo tryUnhide(String address) {
+        for (int i = 0; i < this.hiddenServers.size(); ++i) {
+            ServerInfo serverInfo = this.hiddenServers.get(i);
+            if (!serverInfo.address.equals(address)) continue;
+            this.hiddenServers.remove(i);
+            this.servers.add(serverInfo);
+            return serverInfo;
+        }
+        return null;
+    }
+
+    public void remove(ServerInfo serverInfo) {
+        if (!this.servers.remove(serverInfo)) {
+            this.hiddenServers.remove(serverInfo);
+        }
+    }
+
+    public void add(ServerInfo serverInfo, boolean hidden) {
+        if (hidden) {
+            this.hiddenServers.add(0, serverInfo);
+            while (this.hiddenServers.size() > 16) {
+                this.hiddenServers.remove(this.hiddenServers.size() - 1);
+            }
+        } else {
+            this.servers.add(serverInfo);
+        }
     }
 
     public int size() {
@@ -98,16 +153,25 @@ public class ServerList {
         this.servers.set(index, serverInfo);
     }
 
-    public static void updateServerListEntry(ServerInfo e) {
-        ServerList serverList = new ServerList(MinecraftClient.getInstance());
-        serverList.loadFile();
-        for (int i = 0; i < serverList.size(); ++i) {
-            ServerInfo serverInfo = serverList.get(i);
-            if (!serverInfo.name.equals(e.name) || !serverInfo.address.equals(e.address)) continue;
-            serverList.set(i, e);
-            break;
+    private static boolean replace(ServerInfo serverInfo, List<ServerInfo> serverInfos) {
+        for (int i = 0; i < serverInfos.size(); ++i) {
+            ServerInfo serverInfo2 = serverInfos.get(i);
+            if (!serverInfo2.name.equals(serverInfo.name) || !serverInfo2.address.equals(serverInfo.address)) continue;
+            serverInfos.set(i, serverInfo);
+            return true;
         }
-        serverList.saveFile();
+        return false;
+    }
+
+    public static void updateServerListEntry(ServerInfo serverInfo) {
+        IO_EXECUTOR.send(() -> {
+            ServerList serverList = new ServerList(MinecraftClient.getInstance());
+            serverList.loadFile();
+            if (!ServerList.replace(serverInfo, serverList.servers)) {
+                ServerList.replace(serverInfo, serverList.hiddenServers);
+            }
+            serverList.saveFile();
+        });
     }
 }
 

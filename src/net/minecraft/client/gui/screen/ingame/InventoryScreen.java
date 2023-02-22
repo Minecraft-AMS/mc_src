@@ -27,7 +27,7 @@ import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3f;
@@ -45,7 +45,7 @@ implements RecipeBookProvider {
     private boolean mouseDown;
 
     public InventoryScreen(PlayerEntity player) {
-        super(player.playerScreenHandler, player.getInventory(), new TranslatableText("container.crafting"));
+        super(player.playerScreenHandler, player.getInventory(), Text.translatable("container.crafting"));
         this.passEvents = true;
         this.titleX = 97;
     }

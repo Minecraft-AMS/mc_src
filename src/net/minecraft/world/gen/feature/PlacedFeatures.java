@@ -4,16 +4,16 @@
 package net.minecraft.world.gen.feature;
 
 import java.util.List;
-import java.util.Random;
 import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.DataPool;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.intprovider.ConstantIntProvider;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.util.math.intprovider.WeightedListIntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.BuiltinRegistries;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.gen.YOffset;
@@ -49,9 +49,9 @@ public class PlacedFeatures {
     public static final PlacementModifier FOUR_ABOVE_AND_BELOW_RANGE = HeightRangePlacementModifier.uniform(YOffset.aboveBottom(4), YOffset.belowTop(4));
     public static final PlacementModifier BOTTOM_TO_120_RANGE = HeightRangePlacementModifier.uniform(YOffset.getBottom(), YOffset.fixed(256));
 
-    public static RegistryEntry<PlacedFeature> getDefaultPlacedFeature() {
+    public static RegistryEntry<PlacedFeature> getDefaultPlacedFeature(Registry<PlacedFeature> registry) {
         List<RegistryEntry<PlacedFeature>> list = List.of(OceanPlacedFeatures.KELP_COLD, UndergroundPlacedFeatures.CAVE_VINES, EndPlacedFeatures.CHORUS_PLANT, MiscPlacedFeatures.BLUE_ICE, NetherPlacedFeatures.BASALT_BLOBS, OrePlacedFeatures.ORE_ANCIENT_DEBRIS_LARGE, TreePlacedFeatures.ACACIA_CHECKED, VegetationPlacedFeatures.BAMBOO_VEGETATION, VillagePlacedFeatures.PILE_HAY);
-        return Util.getRandom(list, new Random());
+        return Util.getRandom(list, Random.create());
     }
 
     public static RegistryEntry<PlacedFeature> register(String id, RegistryEntry<? extends ConfiguredFeature<?, ?>> registryEntry, List<PlacementModifier> modifiers) {
@@ -72,7 +72,7 @@ public class PlacedFeatures {
     }
 
     public static AbstractConditionalPlacementModifier isAir() {
-        return BlockFilterPlacementModifier.of(BlockPredicate.matchingBlock(Blocks.AIR, BlockPos.ORIGIN));
+        return BlockFilterPlacementModifier.of(BlockPredicate.IS_AIR);
     }
 
     public static BlockFilterPlacementModifier wouldSurvive(Block block) {
@@ -88,7 +88,7 @@ public class PlacedFeatures {
     }
 
     public static <FC extends FeatureConfig, F extends Feature<FC>> RegistryEntry<PlacedFeature> createEntry(F feature, FC featureConfig) {
-        return PlacedFeatures.createEntry(feature, featureConfig, BlockPredicate.matchingBlock(Blocks.AIR, BlockPos.ORIGIN));
+        return PlacedFeatures.createEntry(feature, featureConfig, BlockPredicate.IS_AIR);
     }
 
     public static <FC extends FeatureConfig, F extends Feature<FC>> RegistryEntry<PlacedFeature> createEntry(F feature, FC featureConfig, BlockPredicate predicate) {

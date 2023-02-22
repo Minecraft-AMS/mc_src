@@ -86,12 +86,12 @@ BiomeAccess.Storage {
 
     @Override
     default public int getBottomY() {
-        return this.getDimension().getMinimumY();
+        return this.getDimension().minY();
     }
 
     @Override
     default public int getHeight() {
-        return this.getDimension().getHeight();
+        return this.getDimension().height();
     }
 
     default public BlockPos getTopPosition(Heightmap.Type heightmap, BlockPos pos) {
@@ -121,9 +121,15 @@ BiomeAccess.Storage {
         return true;
     }
 
+    default public float getPhototaxisFavor(BlockPos pos) {
+        return this.getBrightness(pos) - 0.5f;
+    }
+
     @Deprecated
     default public float getBrightness(BlockPos pos) {
-        return this.getDimension().getBrightness(this.getLightLevel(pos));
+        float f = (float)this.getLightLevel(pos) / 15.0f;
+        float g = f / (4.0f - 3.0f * f);
+        return MathHelper.lerp(this.getDimension().ambientLight(), g, 1.0f);
     }
 
     default public int getStrongRedstonePower(BlockPos pos, Direction direction) {

@@ -11,10 +11,8 @@ package net.minecraft.world.gen.carver;
 
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.fluid.Fluid;
@@ -26,6 +24,7 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
@@ -52,7 +51,6 @@ public abstract class Carver<C extends CarverConfig> {
     protected static final BlockState CAVE_AIR = Blocks.CAVE_AIR.getDefaultState();
     protected static final FluidState WATER = Fluids.WATER.getDefaultState();
     protected static final FluidState LAVA = Fluids.LAVA.getDefaultState();
-    protected Set<Block> alwaysCarvableBlocks = ImmutableSet.of((Object)Blocks.WATER, (Object)Blocks.STONE, (Object)Blocks.GRANITE, (Object)Blocks.DIORITE, (Object)Blocks.ANDESITE, (Object)Blocks.DIRT, (Object[])new Block[]{Blocks.COARSE_DIRT, Blocks.PODZOL, Blocks.GRASS_BLOCK, Blocks.TERRACOTTA, Blocks.WHITE_TERRACOTTA, Blocks.ORANGE_TERRACOTTA, Blocks.MAGENTA_TERRACOTTA, Blocks.LIGHT_BLUE_TERRACOTTA, Blocks.YELLOW_TERRACOTTA, Blocks.LIME_TERRACOTTA, Blocks.PINK_TERRACOTTA, Blocks.GRAY_TERRACOTTA, Blocks.LIGHT_GRAY_TERRACOTTA, Blocks.CYAN_TERRACOTTA, Blocks.PURPLE_TERRACOTTA, Blocks.BLUE_TERRACOTTA, Blocks.BROWN_TERRACOTTA, Blocks.GREEN_TERRACOTTA, Blocks.RED_TERRACOTTA, Blocks.BLACK_TERRACOTTA, Blocks.SANDSTONE, Blocks.RED_SANDSTONE, Blocks.MYCELIUM, Blocks.SNOW, Blocks.PACKED_ICE, Blocks.DEEPSLATE, Blocks.CALCITE, Blocks.SAND, Blocks.RED_SAND, Blocks.GRAVEL, Blocks.TUFF, Blocks.GRANITE, Blocks.IRON_ORE, Blocks.DEEPSLATE_IRON_ORE, Blocks.RAW_IRON_BLOCK, Blocks.COPPER_ORE, Blocks.DEEPSLATE_COPPER_ORE, Blocks.RAW_COPPER_BLOCK});
     protected Set<Fluid> carvableFluids = ImmutableSet.of((Object)Fluids.WATER);
     private final Codec<ConfiguredCarver<C>> codec;
 
@@ -121,7 +119,7 @@ public abstract class Carver<C extends CarverConfig> {
         if (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isOf(Blocks.MYCELIUM)) {
             mutableBoolean.setTrue();
         }
-        if (!this.canAlwaysCarveBlock(blockState) && !Carver.isDebug(config)) {
+        if (!this.canAlwaysCarveBlock(config, blockState) && !Carver.isDebug(config)) {
             return false;
         }
         BlockState blockState2 = this.getState(context, config, mutable, aquiferSampler);
@@ -179,8 +177,8 @@ public abstract class Carver<C extends CarverConfig> {
 
     public abstract boolean shouldCarve(C var1, Random var2);
 
-    protected boolean canAlwaysCarveBlock(BlockState state) {
-        return this.alwaysCarvableBlocks.contains(state.getBlock());
+    protected boolean canAlwaysCarveBlock(C config, BlockState state) {
+        return state.isIn(((CarverConfig)config).replaceable);
     }
 
     protected static boolean canCarveBranch(ChunkPos pos, double x, double z, int branchIndex, int branchCount, float baseWidth) {

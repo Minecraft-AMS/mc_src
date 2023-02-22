@@ -30,6 +30,7 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -80,12 +81,12 @@ extends AbstractSkeletonEntity {
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SWORD));
     }
 
     @Override
-    protected void updateEnchantments(LocalDifficulty difficulty) {
+    protected void updateEnchantments(Random random, LocalDifficulty localDifficulty) {
     }
 
     @Override

@@ -14,7 +14,6 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -24,8 +23,8 @@ import net.minecraft.client.realms.gui.screen.RealmsPlayerScreen;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -33,8 +32,8 @@ import org.slf4j.Logger;
 public class RealmsInviteScreen
 extends RealmsScreen {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Text INVITE_PROFILE_NAME_TEXT = new TranslatableText("mco.configure.world.invite.profile.name");
-    private static final Text PLAYER_ERROR_TEXT = new TranslatableText("mco.configure.world.players.error");
+    private static final Text INVITE_PROFILE_NAME_TEXT = Text.translatable("mco.configure.world.invite.profile.name");
+    private static final Text PLAYER_ERROR_TEXT = Text.translatable("mco.configure.world.players.error");
     private TextFieldWidget nameWidget;
     private final RealmsServer serverData;
     private final RealmsConfigureWorldScreen configureScreen;
@@ -57,10 +56,10 @@ extends RealmsScreen {
     @Override
     public void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.nameWidget = new TextFieldWidget(this.client.textRenderer, this.width / 2 - 100, RealmsInviteScreen.row(2), 200, 20, null, new TranslatableText("mco.configure.world.invite.profile.name"));
+        this.nameWidget = new TextFieldWidget(this.client.textRenderer, this.width / 2 - 100, RealmsInviteScreen.row(2), 200, 20, null, Text.translatable("mco.configure.world.invite.profile.name"));
         this.addSelectableChild(this.nameWidget);
         this.setInitialFocus(this.nameWidget);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, RealmsInviteScreen.row(10), 200, 20, new TranslatableText("mco.configure.world.buttons.invite"), button -> this.onInvite()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, RealmsInviteScreen.row(10), 200, 20, Text.translatable("mco.configure.world.buttons.invite"), button -> this.onInvite()));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, RealmsInviteScreen.row(12), 200, 20, ScreenTexts.CANCEL, button -> this.client.setScreen(this.parent)));
     }
 
@@ -70,7 +69,7 @@ extends RealmsScreen {
     }
 
     private void onInvite() {
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         if (this.nameWidget.getText() == null || this.nameWidget.getText().isEmpty()) {
             this.showError(PLAYER_ERROR_TEXT);
             return;
@@ -92,7 +91,7 @@ extends RealmsScreen {
 
     private void showError(Text errorMessage) {
         this.errorMessage = errorMessage;
-        NarratorManager.INSTANCE.narrate(errorMessage);
+        this.client.getNarratorManager().narrate(errorMessage);
     }
 
     @Override

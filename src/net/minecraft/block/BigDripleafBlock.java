@@ -13,7 +13,6 @@ import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.Map;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BigDripleafStemBlock;
 import net.minecraft.block.Block;
@@ -44,6 +43,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -198,7 +198,7 @@ Waterloggable {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         if (world.isReceivingRedstonePower(pos)) {
             BigDripleafBlock.resetTilt(state, world, pos);
         }
@@ -232,9 +232,10 @@ Waterloggable {
     }
 
     private static void changeTilt(BlockState state, World world, BlockPos pos, Tilt tilt) {
+        Tilt tilt2 = state.get(TILT);
         world.setBlockState(pos, (BlockState)state.with(TILT, tilt), 2);
-        if (tilt.isStable()) {
-            world.emitGameEvent(GameEvent.BLOCK_CHANGE, pos);
+        if (tilt.isStable() && tilt != tilt2) {
+            world.emitGameEvent(null, GameEvent.BLOCK_CHANGE, pos);
         }
     }
 

@@ -32,32 +32,32 @@ import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.tag.ConfiguredStructureFeatureTags;
+import net.minecraft.tag.StructureTags;
 import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.gen.structure.Structure;
 import org.slf4j.Logger;
 
 public class ExplorationMapLootFunction
 extends ConditionalLootFunction {
     static final Logger LOGGER = LogUtils.getLogger();
-    public static final TagKey<ConfiguredStructureFeature<?, ?>> DEFAULT_DESTINATION = ConfiguredStructureFeatureTags.ON_TREASURE_MAPS;
+    public static final TagKey<Structure> DEFAULT_DESTINATION = StructureTags.ON_TREASURE_MAPS;
     public static final String MANSION = "mansion";
     public static final MapIcon.Type DEFAULT_DECORATION = MapIcon.Type.MANSION;
     public static final byte field_31851 = 2;
     public static final int field_31852 = 50;
     public static final boolean field_31853 = true;
-    final TagKey<ConfiguredStructureFeature<?, ?>> destination;
+    final TagKey<Structure> destination;
     final MapIcon.Type decoration;
     final byte zoom;
     final int searchRadius;
     final boolean skipExistingChunks;
 
-    ExplorationMapLootFunction(LootCondition[] conditions, TagKey<ConfiguredStructureFeature<?, ?>> destination, MapIcon.Type decoration, byte zoom, int searchRadius, boolean skipExistingChunks) {
+    ExplorationMapLootFunction(LootCondition[] conditions, TagKey<Structure> destination, MapIcon.Type decoration, byte zoom, int searchRadius, boolean skipExistingChunks) {
         super(conditions);
         this.destination = destination;
         this.decoration = decoration;
@@ -99,7 +99,7 @@ extends ConditionalLootFunction {
 
     public static class Builder
     extends ConditionalLootFunction.Builder<Builder> {
-        private TagKey<ConfiguredStructureFeature<?, ?>> destination = DEFAULT_DESTINATION;
+        private TagKey<Structure> destination = DEFAULT_DESTINATION;
         private MapIcon.Type decoration = DEFAULT_DECORATION;
         private byte zoom = (byte)2;
         private int searchRadius = 50;
@@ -110,7 +110,7 @@ extends ConditionalLootFunction {
             return this;
         }
 
-        public Builder withDestination(TagKey<ConfiguredStructureFeature<?, ?>> destination) {
+        public Builder withDestination(TagKey<Structure> destination) {
             this.destination = destination;
             return this;
         }
@@ -170,7 +170,7 @@ extends ConditionalLootFunction {
 
         @Override
         public ExplorationMapLootFunction fromJson(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext, LootCondition[] lootConditions) {
-            TagKey<ConfiguredStructureFeature<?, ?>> tagKey = Serializer.getDestination(jsonObject);
+            TagKey<Structure> tagKey = Serializer.getDestination(jsonObject);
             String string = jsonObject.has("decoration") ? JsonHelper.getString(jsonObject, "decoration") : ExplorationMapLootFunction.MANSION;
             MapIcon.Type type = DEFAULT_DECORATION;
             try {
@@ -185,10 +185,10 @@ extends ConditionalLootFunction {
             return new ExplorationMapLootFunction(lootConditions, tagKey, type, b, i, bl);
         }
 
-        private static TagKey<ConfiguredStructureFeature<?, ?>> getDestination(JsonObject json) {
+        private static TagKey<Structure> getDestination(JsonObject json) {
             if (json.has("destination")) {
                 String string = JsonHelper.getString(json, "destination");
-                return TagKey.of(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY, new Identifier(string));
+                return TagKey.of(Registry.STRUCTURE_KEY, new Identifier(string));
             }
             return DEFAULT_DESTINATION;
         }

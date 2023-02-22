@@ -3,7 +3,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import java.util.stream.IntStream;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -34,6 +33,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -131,7 +131,7 @@ implements Waterloggable {
         if (state.isOf(state.getBlock())) {
             return;
         }
-        this.baseBlockState.neighborUpdate(world, pos, Blocks.AIR, pos, false);
+        world.updateNeighbor(this.baseBlockState, pos, Blocks.AIR, pos, false);
         this.baseBlock.onBlockAdded(this.baseBlockState, world, pos, oldState, false);
     }
 

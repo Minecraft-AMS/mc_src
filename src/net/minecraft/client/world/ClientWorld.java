@@ -6,10 +6,12 @@
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Queues
+ *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.world;
 
@@ -17,11 +19,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -33,6 +35,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.color.world.BiomeColors;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
+import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.network.PendingUpdateManager;
 import net.minecraft.client.particle.FireworksSparkParticle;
 import net.minecraft.client.render.DimensionEffects;
 import net.minecraft.client.render.WorldRenderer;
@@ -60,7 +64,7 @@ import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.CubicSampler;
 import net.minecraft.util.CuboidBlockIterator;
 import net.minecraft.util.Util;
@@ -73,6 +77,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
@@ -84,7 +89,6 @@ import net.minecraft.world.EntityList;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.MutableWorldProperties;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProperties;
@@ -101,10 +105,12 @@ import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.tick.EmptyTickSchedulers;
 import net.minecraft.world.tick.QueryableTickScheduler;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class ClientWorld
 extends World {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final double PARTICLE_Y_OFFSET = 0.05;
     private static final int field_34805 = 10;
     private static final int field_34806 = 1000;
@@ -128,15 +134,54 @@ extends World {
     private final ClientChunkManager chunkManager;
     private final Deque<Runnable> chunkUpdaters = Queues.newArrayDeque();
     private int simulationDistance;
+    private final PendingUpdateManager pendingUpdateManager = new PendingUpdateManager();
     private static final Set<Item> BLOCK_MARKER_ITEMS = Set.of(Items.BARRIER, Items.LIGHT);
 
-    public ClientWorld(ClientPlayNetworkHandler netHandler, Properties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, int loadDistance, int simulationDistance, Supplier<Profiler> profiler, WorldRenderer worldRenderer, boolean debugWorld, long seed) {
-        super(properties, registryRef, registryEntry, profiler, true, debugWorld, seed);
-        this.networkHandler = netHandler;
+    public void handlePlayerActionResponse(int sequence) {
+        this.pendingUpdateManager.processPendingUpdates(sequence, this);
+    }
+
+    public void handleBlockUpdate(BlockPos pos, BlockState state, int flags) {
+        if (!this.pendingUpdateManager.hasPendingUpdate(pos, state)) {
+            super.setBlockState(pos, state, flags, 512);
+        }
+    }
+
+    public void processPendingUpdate(BlockPos pos, BlockState state, Vec3d playerPos) {
+        BlockState blockState = this.getBlockState(pos);
+        if (blockState != state) {
+            this.setBlockState(pos, state, 19);
+            ClientPlayerEntity playerEntity = this.client.player;
+            if (this == playerEntity.world && playerEntity.collidesWithStateAtPos(pos, state)) {
+                playerEntity.updatePosition(playerPos.x, playerPos.y, playerPos.z);
+            }
+        }
+    }
+
+    PendingUpdateManager getPendingUpdateManager() {
+        return this.pendingUpdateManager;
+    }
+
+    @Override
+    public boolean setBlockState(BlockPos pos, BlockState state, int flags, int maxUpdateDepth) {
+        if (this.pendingUpdateManager.hasPendingSequence()) {
+            BlockState blockState = this.getBlockState(pos);
+            boolean bl = super.setBlockState(pos, state, flags, maxUpdateDepth);
+            if (bl) {
+                this.pendingUpdateManager.addPendingUpdate(pos, blockState, this.client.player);
+            }
+            return bl;
+        }
+        return super.setBlockState(pos, state, flags, maxUpdateDepth);
+    }
+
+    public ClientWorld(ClientPlayNetworkHandler networkHandler, Properties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> dimensionTypeEntry, int loadDistance, int simulationDistance, Supplier<Profiler> profiler, WorldRenderer worldRenderer, boolean debugWorld, long seed) {
+        super(properties, registryRef, dimensionTypeEntry, profiler, true, debugWorld, seed, 1000000);
+        this.networkHandler = networkHandler;
         this.chunkManager = new ClientChunkManager(this, loadDistance);
         this.clientWorldProperties = properties;
         this.worldRenderer = worldRenderer;
-        this.dimensionEffects = DimensionEffects.byDimensionType(registryEntry.value());
+        this.dimensionEffects = DimensionEffects.byDimensionType(dimensionTypeEntry.value());
         this.setSpawnPos(new BlockPos(8, 64, 8), 0.0f);
         this.simulationDistance = simulationDistance;
         this.calculateAmbientDarkness();
@@ -293,18 +338,14 @@ extends World {
         return this.getEntityLookup().get(id);
     }
 
-    public void setBlockStateWithoutNeighborUpdates(BlockPos pos, BlockState state) {
-        this.setBlockState(pos, state, 19);
-    }
-
     @Override
     public void disconnect() {
-        this.networkHandler.getConnection().disconnect(new TranslatableText("multiplayer.status.quitting"));
+        this.networkHandler.getConnection().disconnect(Text.translatable("multiplayer.status.quitting"));
     }
 
     public void doRandomBlockDisplayTicks(int centerX, int centerY, int centerZ) {
         int i = 32;
-        Random random = new Random();
+        Random random = Random.create();
         Block block = this.getBlockParticle();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int j = 0; j < 667; ++j) {
@@ -396,16 +437,16 @@ extends World {
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
         if (except == this.client.player) {
-            this.playSound(x, y, z, sound, category, volume, pitch, false);
+            this.playSound(x, y, z, sound, category, volume, pitch, false, seed);
         }
     }
 
     @Override
-    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch) {
+    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
         if (except == this.client.player) {
-            this.client.getSoundManager().play(new EntityTrackingSoundInstance(sound, category, volume, pitch, entity));
+            this.client.getSoundManager().play(new EntityTrackingSoundInstance(sound, category, volume, pitch, entity, seed));
         }
     }
 
@@ -415,8 +456,12 @@ extends World {
 
     @Override
     public void playSound(double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, boolean useDistance) {
+        this.playSound(x, y, z, sound, category, volume, pitch, useDistance, this.random.nextLong());
+    }
+
+    private void playSound(double x, double y, double z, SoundEvent event, SoundCategory category, float volume, float pitch, boolean useDistance, long seed) {
         double d = this.client.gameRenderer.getCamera().getPos().squaredDistanceTo(x, y, z);
-        PositionedSoundInstance positionedSoundInstance = new PositionedSoundInstance(sound, category, volume, pitch, x, y, z);
+        PositionedSoundInstance positionedSoundInstance = new PositionedSoundInstance(event, category, volume, pitch, Random.create(seed), x, y, z);
         if (useDistance && d > 100.0) {
             double e = Math.sqrt(d) / 40.0;
             this.client.getSoundManager().play(positionedSoundInstance, (int)(e * 20.0));
@@ -519,7 +564,7 @@ extends World {
     @Override
     public void syncWorldEvent(@Nullable PlayerEntity player, int eventId, BlockPos pos, int data) {
         try {
-            this.worldRenderer.processWorldEvent(player, eventId, pos, data);
+            this.worldRenderer.processWorldEvent(eventId, pos, data);
         }
         catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.create(throwable, "Playing level event");
@@ -597,7 +642,7 @@ extends World {
             i = i * n + m * (1.0f - n);
             j = j * n + m * (1.0f - n);
         }
-        if (!this.client.options.hideLightningFlashes && this.lightningTicksLeft > 0) {
+        if (!this.client.options.getHideLightningFlashes().getValue().booleanValue() && this.lightningTicksLeft > 0) {
             m = (float)this.lightningTicksLeft - tickDelta;
             if (m > 1.0f) {
                 m = 1.0f;
@@ -688,7 +733,7 @@ extends World {
     }
 
     public int calculateColor(BlockPos pos, ColorResolver colorResolver) {
-        int i = MinecraftClient.getInstance().options.biomeBlendRadius;
+        int i = MinecraftClient.getInstance().options.getBiomeBlendRadius().getValue();
         if (i == 0) {
             return colorResolver.getColor(this.getBiome(pos).value(), pos.getX(), pos.getZ());
         }
@@ -708,18 +753,6 @@ extends World {
         return (k / j & 0xFF) << 16 | (l / j & 0xFF) << 8 | m / j & 0xFF;
     }
 
-    public BlockPos getSpawnPos() {
-        BlockPos blockPos = new BlockPos(this.properties.getSpawnX(), this.properties.getSpawnY(), this.properties.getSpawnZ());
-        if (!this.getWorldBorder().contains(blockPos)) {
-            blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, new BlockPos(this.getWorldBorder().getCenterX(), 0.0, this.getWorldBorder().getCenterZ()));
-        }
-        return blockPos;
-    }
-
-    public float getSpawnAngle() {
-        return this.properties.getSpawnAngle();
-    }
-
     public void setSpawnPos(BlockPos pos, float angle) {
         this.properties.setSpawnPos(pos, angle);
     }
@@ -734,7 +767,7 @@ extends World {
     }
 
     @Override
-    public void emitGameEvent(@Nullable Entity entity, GameEvent event, BlockPos pos) {
+    public void emitGameEvent(GameEvent event, Vec3d emitterPos, GameEvent.Emitter emitter) {
     }
 
     protected Map<String, MapState> getMapStates() {
@@ -816,6 +849,15 @@ extends World {
         }
 
         @Override
+        public void updateLoadStatus(Entity entity) {
+        }
+
+        @Override
+        public /* synthetic */ void updateLoadStatus(Object entity) {
+            this.updateLoadStatus((Entity)entity);
+        }
+
+        @Override
         public /* synthetic */ void stopTracking(Object entity) {
             this.stopTracking((Entity)entity);
         }
@@ -823,11 +865,6 @@ extends World {
         @Override
         public /* synthetic */ void startTracking(Object entity) {
             this.startTracking((Entity)entity);
-        }
-
-        @Override
-        public /* synthetic */ void stopTicking(Object entity) {
-            this.stopTicking((Entity)entity);
         }
 
         @Override

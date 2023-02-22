@@ -9,11 +9,11 @@ package net.minecraft.structure;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import java.util.Random;
 import net.minecraft.structure.StructurePiece;
 import net.minecraft.structure.StructurePiecesHolder;
 import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.util.math.BlockBox;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 public class StructurePiecesCollector
@@ -39,7 +39,7 @@ implements StructurePiecesHolder {
     }
 
     @Deprecated
-    public void shiftInto(int topY, int bottomY, Random random, int topPenalty) {
+    public int shiftInto(int topY, int bottomY, Random random, int topPenalty) {
         int i = topY - topPenalty;
         BlockBox blockBox = this.getBoundingBox();
         int j = blockBox.getBlockCountY() + bottomY + 1;
@@ -48,6 +48,7 @@ implements StructurePiecesHolder {
         }
         int k = j - blockBox.getMaxY();
         this.shift(k);
+        return k;
     }
 
     public void shiftInto(Random random, int baseY, int topY) {

@@ -10,6 +10,10 @@
  *  com.google.gson.JsonSerializationContext
  *  com.google.gson.JsonSerializer
  *  com.google.gson.JsonSyntaxException
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.text;
@@ -22,8 +26,13 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.lang.reflect.Type;
 import java.util.Objects;
+import java.util.Optional;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.TextColor;
@@ -35,6 +44,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class Style {
     public static final Style EMPTY = new Style(null, null, null, null, null, null, null, null, null, null);
+    public static final Codec<Style> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)TextColor.CODEC.optionalFieldOf("color").forGetter(style -> Optional.ofNullable(style.color)), (App)Codec.BOOL.optionalFieldOf("bold").forGetter(style -> Optional.ofNullable(style.bold)), (App)Codec.BOOL.optionalFieldOf("italic").forGetter(style -> Optional.ofNullable(style.italic)), (App)Codec.BOOL.optionalFieldOf("underlined").forGetter(style -> Optional.ofNullable(style.underlined)), (App)Codec.BOOL.optionalFieldOf("strikethrough").forGetter(style -> Optional.ofNullable(style.strikethrough)), (App)Codec.BOOL.optionalFieldOf("obfuscated").forGetter(style -> Optional.ofNullable(style.obfuscated)), (App)Codec.STRING.optionalFieldOf("insertion").forGetter(style -> Optional.ofNullable(style.insertion)), (App)Identifier.CODEC.optionalFieldOf("font").forGetter(style -> Optional.ofNullable(style.font))).apply((Applicative)instance, Style::of));
     public static final Identifier DEFAULT_FONT_ID = new Identifier("minecraft", "default");
     @Nullable
     final TextColor color;
@@ -56,6 +66,10 @@ public class Style {
     final String insertion;
     @Nullable
     final Identifier font;
+
+    private static Style of(Optional<TextColor> color, Optional<Boolean> bold, Optional<Boolean> italic, Optional<Boolean> underlined, Optional<Boolean> strikethrough, Optional<Boolean> obfuscated, Optional<String> insertion, Optional<Identifier> font) {
+        return new Style(color.orElse(null), bold.orElse(null), italic.orElse(null), underlined.orElse(null), strikethrough.orElse(null), obfuscated.orElse(null), null, null, insertion.orElse(null), font.orElse(null));
+    }
 
     Style(@Nullable TextColor color, @Nullable Boolean bold, @Nullable Boolean italic, @Nullable Boolean underlined, @Nullable Boolean strikethrough, @Nullable Boolean obfuscated, @Nullable ClickEvent clickEvent, @Nullable HoverEvent hoverEvent, @Nullable String insertion, @Nullable Identifier font) {
         this.color = color;
@@ -298,7 +312,52 @@ public class Style {
     }
 
     public String toString() {
-        return "Style{ color=" + this.color + ", bold=" + this.bold + ", italic=" + this.italic + ", underlined=" + this.underlined + ", strikethrough=" + this.strikethrough + ", obfuscated=" + this.obfuscated + ", clickEvent=" + this.getClickEvent() + ", hoverEvent=" + this.getHoverEvent() + ", insertion=" + this.getInsertion() + ", font=" + this.getFont() + "}";
+        final StringBuilder stringBuilder = new StringBuilder("{");
+        class Writer {
+            private boolean shouldAppendComma;
+
+            Writer() {
+            }
+
+            private void appendComma() {
+                if (this.shouldAppendComma) {
+                    stringBuilder.append(',');
+                }
+                this.shouldAppendComma = true;
+            }
+
+            void append(String key, @Nullable Boolean value) {
+                if (value != null) {
+                    this.appendComma();
+                    if (!value.booleanValue()) {
+                        stringBuilder.append('!');
+                    }
+                    stringBuilder.append(key);
+                }
+            }
+
+            void append(String key, @Nullable Object value) {
+                if (value != null) {
+                    this.appendComma();
+                    stringBuilder.append(key);
+                    stringBuilder.append('=');
+                    stringBuilder.append(value);
+                }
+            }
+        }
+        Writer writer = new Writer();
+        writer.append("color", this.color);
+        writer.append("bold", this.bold);
+        writer.append("italic", this.italic);
+        writer.append("underlined", this.underlined);
+        writer.append("strikethrough", this.strikethrough);
+        writer.append("obfuscated", this.obfuscated);
+        writer.append("clickEvent", this.clickEvent);
+        writer.append("hoverEvent", this.hoverEvent);
+        writer.append("insertion", this.insertion);
+        writer.append("font", this.font);
+        stringBuilder.append("}");
+        return stringBuilder.toString();
     }
 
     public boolean equals(Object o) {

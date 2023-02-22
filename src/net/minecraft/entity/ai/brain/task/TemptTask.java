@@ -38,6 +38,7 @@ extends Task<PathAwareEntity> {
             builder.put(MemoryModuleType.IS_TEMPTED, (Object)MemoryModuleState.REGISTERED);
             builder.put(MemoryModuleType.TEMPTING_PLAYER, (Object)MemoryModuleState.VALUE_PRESENT);
             builder.put(MemoryModuleType.BREED_TARGET, (Object)MemoryModuleState.VALUE_ABSENT);
+            builder.put(MemoryModuleType.IS_PANICKING, (Object)MemoryModuleState.VALUE_ABSENT);
             return builder.build();
         }));
         this.speed = speed;
@@ -58,7 +59,7 @@ extends Task<PathAwareEntity> {
 
     @Override
     protected boolean shouldKeepRunning(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
-        return this.getTemptingPlayer(pathAwareEntity).isPresent() && !pathAwareEntity.getBrain().hasMemoryModule(MemoryModuleType.BREED_TARGET);
+        return this.getTemptingPlayer(pathAwareEntity).isPresent() && !pathAwareEntity.getBrain().hasMemoryModule(MemoryModuleType.BREED_TARGET) && !pathAwareEntity.getBrain().hasMemoryModule(MemoryModuleType.IS_PANICKING);
     }
 
     @Override

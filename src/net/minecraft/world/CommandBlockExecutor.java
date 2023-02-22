@@ -10,14 +10,13 @@ package net.minecraft.world;
 import com.mojang.brigadier.ResultConsumer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.UUID;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.StringHelper;
@@ -32,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 public abstract class CommandBlockExecutor
 implements CommandOutput {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss");
-    private static final Text DEFAULT_NAME = new LiteralText("@");
+    private static final Text DEFAULT_NAME = Text.literal("@");
     private long lastExecution = -1L;
     private boolean updateLastExecution = true;
     private int successCount;
@@ -51,7 +50,7 @@ implements CommandOutput {
     }
 
     public Text getLastOutput() {
-        return this.lastOutput == null ? LiteralText.EMPTY : this.lastOutput;
+        return this.lastOutput == null ? ScreenTexts.EMPTY : this.lastOutput;
     }
 
     public NbtCompound writeNbt(NbtCompound nbt) {
@@ -83,7 +82,7 @@ implements CommandOutput {
                 this.lastOutput = Text.Serializer.fromJson(nbt.getString("LastOutput"));
             }
             catch (Throwable throwable) {
-                this.lastOutput = new LiteralText(throwable.getMessage());
+                this.lastOutput = Text.literal(throwable.getMessage());
             }
         } else {
             this.lastOutput = null;
@@ -108,7 +107,7 @@ implements CommandOutput {
             return false;
         }
         if ("Searge".equalsIgnoreCase(this.command)) {
-            this.lastOutput = new LiteralText("#itzlipofutzli");
+            this.lastOutput = Text.literal("#itzlipofutzli");
             this.successCount = 1;
             return true;
         }
@@ -122,7 +121,7 @@ implements CommandOutput {
                         ++this.successCount;
                     }
                 }));
-                minecraftServer.getCommandManager().execute(serverCommandSource, this.command);
+                minecraftServer.getCommandManager().executeWithPrefix(serverCommandSource, this.command);
             }
             catch (Throwable throwable) {
                 CrashReport crashReport = CrashReport.create(throwable, "Executing command block");
@@ -145,9 +144,9 @@ implements CommandOutput {
     }
 
     @Override
-    public void sendSystemMessage(Text message, UUID sender) {
+    public void sendMessage(Text message) {
         if (this.trackOutput) {
-            this.lastOutput = new LiteralText("[" + DATE_FORMAT.format(new Date()) + "] ").append(message);
+            this.lastOutput = Text.literal("[" + DATE_FORMAT.format(new Date()) + "] ").append(message);
             this.markDirty();
         }
     }

@@ -7,7 +7,6 @@
 package net.minecraft.world.gen.feature;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -15,6 +14,7 @@ import net.minecraft.block.Material;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
@@ -127,24 +127,24 @@ extends Feature<HugeFungusFeatureConfig> {
                     }
                     if (bl6) {
                         if (bl4) continue;
-                        this.tryGenerateVines(world, random, mutable, config.hatState, bl);
+                        this.placeWithOptionalVines(world, random, mutable, config.hatState, bl);
                         continue;
                     }
                     if (bl4) {
-                        this.generateHatBlock(world, random, config, mutable, 0.1f, 0.2f, bl ? 0.1f : 0.0f);
+                        this.placeHatBlock(world, random, config, mutable, 0.1f, 0.2f, bl ? 0.1f : 0.0f);
                         continue;
                     }
                     if (bl5) {
-                        this.generateHatBlock(world, random, config, mutable, 0.01f, 0.7f, bl ? 0.083f : 0.0f);
+                        this.placeHatBlock(world, random, config, mutable, 0.01f, 0.7f, bl ? 0.083f : 0.0f);
                         continue;
                     }
-                    this.generateHatBlock(world, random, config, mutable, 5.0E-4f, 0.98f, bl ? 0.07f : 0.0f);
+                    this.placeHatBlock(world, random, config, mutable, 5.0E-4f, 0.98f, bl ? 0.07f : 0.0f);
                 }
             }
         }
     }
 
-    private void generateHatBlock(WorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos.Mutable pos, float decorationChance, float generationChance, float vineChance) {
+    private void placeHatBlock(WorldAccess world, Random random, HugeFungusFeatureConfig config, BlockPos.Mutable pos, float decorationChance, float generationChance, float vineChance) {
         if (random.nextFloat() < decorationChance) {
             this.setBlockState(world, pos, config.decorationState);
         } else if (random.nextFloat() < generationChance) {
@@ -155,12 +155,12 @@ extends Feature<HugeFungusFeatureConfig> {
         }
     }
 
-    private void tryGenerateVines(WorldAccess world, Random random, BlockPos pos, BlockState state, boolean bl) {
+    private void placeWithOptionalVines(WorldAccess world, Random random, BlockPos pos, BlockState state, boolean vines) {
         if (world.getBlockState(pos.down()).isOf(state.getBlock())) {
             this.setBlockState(world, pos, state);
         } else if ((double)random.nextFloat() < 0.15) {
             this.setBlockState(world, pos, state);
-            if (bl && random.nextInt(11) == 0) {
+            if (vines && random.nextInt(11) == 0) {
                 HugeFungusFeature.generateVines(pos, world, random);
             }
         }

@@ -52,7 +52,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.level.storage.LevelStorage;
-import net.minecraft.world.level.storage.LevelSummary;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -237,7 +236,7 @@ public class FileDownload {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     void untarGzipArchive(String name, @Nullable File archive, LevelStorage storage) throws IOException {
-        Object string;
+        Object string2;
         Pattern pattern = Pattern.compile(".*-([0-9]+)$");
         int i = 1;
         for (char c : SharedConstants.INVALID_CHARS_LEVEL_NAME) {
@@ -250,9 +249,10 @@ public class FileDownload {
         try {
             Object object = storage.getLevelList().iterator();
             while (object.hasNext()) {
-                LevelSummary levelSummary = (LevelSummary)object.next();
-                if (!levelSummary.getName().toLowerCase(Locale.ROOT).startsWith(name.toLowerCase(Locale.ROOT))) continue;
-                Matcher matcher = pattern.matcher(levelSummary.getName());
+                LevelStorage.LevelSave levelSave = (LevelStorage.LevelSave)object.next();
+                String string = levelSave.getRootPath();
+                if (!string.toLowerCase(Locale.ROOT).startsWith(name.toLowerCase(Locale.ROOT))) continue;
+                Matcher matcher = pattern.matcher(string);
                 if (matcher.matches()) {
                     int j = Integer.parseInt(matcher.group(1));
                     if (j <= i) continue;
@@ -268,16 +268,16 @@ public class FileDownload {
             return;
         }
         if (!storage.isLevelNameValid(name) || i > 1) {
-            string = name + (String)(i == 1 ? "" : "-" + i);
-            if (!storage.isLevelNameValid((String)string)) {
+            string2 = name + (String)(i == 1 ? "" : "-" + i);
+            if (!storage.isLevelNameValid((String)string2)) {
                 boolean bl = false;
                 while (!bl) {
-                    if (!storage.isLevelNameValid((String)(string = name + (String)(++i == 1 ? "" : "-" + i)))) continue;
+                    if (!storage.isLevelNameValid((String)(string2 = name + (String)(++i == 1 ? "" : "-" + i)))) continue;
                     bl = true;
                 }
             }
         } else {
-            string = name;
+            string2 = name;
         }
         TarArchiveInputStream tarArchiveInputStream = null;
         File file = new File(MinecraftClient.getInstance().runDirectory.getAbsolutePath(), "saves");
@@ -286,7 +286,7 @@ public class FileDownload {
             tarArchiveInputStream = new TarArchiveInputStream((InputStream)new GzipCompressorInputStream((InputStream)new BufferedInputStream(new FileInputStream(archive))));
             TarArchiveEntry tarArchiveEntry = tarArchiveInputStream.getNextTarEntry();
             while (tarArchiveEntry != null) {
-                File file2 = new File(file, tarArchiveEntry.getName().replace("world", (CharSequence)string));
+                File file2 = new File(file, tarArchiveEntry.getName().replace("world", (CharSequence)string2));
                 if (tarArchiveEntry.isDirectory()) {
                     file2.mkdirs();
                 } else {
@@ -309,15 +309,15 @@ public class FileDownload {
             if (archive != null) {
                 archive.delete();
             }
-            try (LevelStorage.Session session = storage.createSession((String)string);){
-                session.save(((String)string).trim());
+            try (LevelStorage.Session session = storage.createSession((String)string2);){
+                session.save(((String)string2).trim());
                 Path path = session.getDirectory(WorldSavePath.LEVEL_DAT);
                 FileDownload.readNbtFile(path.toFile());
             }
             catch (IOException iOException) {
-                LOGGER.error("Failed to rename unpacked realms level {}", string, (Object)iOException);
+                LOGGER.error("Failed to rename unpacked realms level {}", string2, (Object)iOException);
             }
-            this.resourcePackPath = new File(file, (String)string + File.separator + "resources.zip");
+            this.resourcePackPath = new File(file, (String)string2 + File.separator + "resources.zip");
         }
     }
 
@@ -377,8 +377,8 @@ public class FileDownload {
         @Nullable
         private ActionListener listener;
 
-        public DownloadCountingOutputStream(OutputStream outputStream) {
-            super(outputStream);
+        public DownloadCountingOutputStream(OutputStream stream) {
+            super(stream);
         }
 
         public void setListener(ActionListener listener) {

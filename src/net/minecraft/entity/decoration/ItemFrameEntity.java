@@ -10,6 +10,7 @@
 package net.minecraft.entity.decoration;
 
 import com.mojang.logging.LogUtils;
+import java.util.OptionalInt;
 import net.minecraft.block.AbstractRedstoneGateBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -39,6 +40,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -256,17 +258,32 @@ extends AbstractDecorationEntity {
         }
     }
 
-    private void removeFromFrame(ItemStack map) {
-        MapState mapState;
-        if (map.isOf(Items.FILLED_MAP) && (mapState = FilledMapItem.getOrCreateMapState(map, this.world)) != null) {
-            mapState.removeFrame(this.attachmentPos, this.getId());
-            mapState.setDirty(true);
-        }
-        map.setHolder(null);
+    private void removeFromFrame(ItemStack itemStack) {
+        this.getMapId().ifPresent(i -> {
+            MapState mapState = FilledMapItem.getMapState(i, this.world);
+            if (mapState != null) {
+                mapState.removeFrame(this.attachmentPos, this.getId());
+                mapState.setDirty(true);
+            }
+        });
+        itemStack.setHolder(null);
     }
 
     public ItemStack getHeldItemStack() {
         return this.getDataTracker().get(ITEM_STACK);
+    }
+
+    public OptionalInt getMapId() {
+        Integer integer;
+        ItemStack itemStack = this.getHeldItemStack();
+        if (itemStack.isOf(Items.FILLED_MAP) && (integer = FilledMapItem.getMapId(itemStack)) != null) {
+            return OptionalInt.of(integer);
+        }
+        return OptionalInt.empty();
+    }
+
+    public boolean containsMap() {
+        return this.getMapId().isPresent();
     }
 
     public void setHeldItemStack(ItemStack stack) {
@@ -277,8 +294,8 @@ extends AbstractDecorationEntity {
         if (!value.isEmpty()) {
             value = value.copy();
             value.setCount(1);
-            value.setHolder(this);
         }
+        this.setAsStackHolder(value);
         this.getDataTracker().set(ITEM_STACK, value);
         if (!value.isEmpty()) {
             this.playSound(this.getAddItemSound(), 1.0f, 1.0f);
@@ -314,10 +331,16 @@ extends AbstractDecorationEntity {
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        ItemStack itemStack;
-        if (data.equals(ITEM_STACK) && !(itemStack = this.getHeldItemStack()).isEmpty() && itemStack.getFrame() != this) {
-            itemStack.setHolder(this);
+        if (data.equals(ITEM_STACK)) {
+            this.setAsStackHolder(this.getHeldItemStack());
         }
+    }
+
+    private void setAsStackHolder(ItemStack stack) {
+        if (!stack.isEmpty() && stack.getFrame() != this) {
+            stack.setHolder(this);
+        }
+        this.updateAttachmentPosition();
     }
 
     public int getRotation() {
@@ -415,7 +438,7 @@ extends AbstractDecorationEntity {
 
     @Override
     public Packet<?> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this, this.getType(), this.facing.getId(), this.getDecorationBlockPos());
+        return new EntitySpawnS2CPacket(this, this.facing.getId(), this.getDecorationBlockPos());
     }
 
     @Override
@@ -435,6 +458,13 @@ extends AbstractDecorationEntity {
 
     protected ItemStack getAsItemStack() {
         return new ItemStack(Items.ITEM_FRAME);
+    }
+
+    @Override
+    public float getBodyYaw() {
+        Direction direction = this.getHorizontalFacing();
+        int i = direction.getAxis().isVertical() ? 90 * direction.getDirection().offset() : 0;
+        return MathHelper.wrapDegrees(180 + direction.getHorizontal() * 90 + this.getRotation() * 45 + i);
     }
 }
 

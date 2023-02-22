@@ -8,29 +8,30 @@
  *  it.unimi.dsi.fastutil.ints.IntList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.render;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.VertexFormatElement;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexFormat {
     private final ImmutableList<VertexFormatElement> elements;
     private final ImmutableMap<String, VertexFormatElement> elementMap;
     private final IntList offsets = new IntArrayList();
-    private final int size;
-    private int vertexArray;
-    private int vertexBuffer;
-    private int elementBuffer;
+    private final int vertexSizeByte;
+    @Nullable
+    private VertexBuffer buffer;
 
     public VertexFormat(ImmutableMap<String, VertexFormatElement> elementMap) {
         this.elementMap = elementMap;
@@ -40,7 +41,7 @@ public class VertexFormat {
             this.offsets.add(i);
             i += vertexFormatElement.getByteLength();
         }
-        this.size = i;
+        this.vertexSizeByte = i;
     }
 
     public String toString() {
@@ -48,18 +49,18 @@ public class VertexFormat {
     }
 
     public int getVertexSizeInteger() {
-        return this.getVertexSize() / 4;
+        return this.getVertexSizeByte() / 4;
     }
 
-    public int getVertexSize() {
-        return this.size;
+    public int getVertexSizeByte() {
+        return this.vertexSizeByte;
     }
 
     public ImmutableList<VertexFormatElement> getElements() {
         return this.elements;
     }
 
-    public ImmutableList<String> getShaderAttributes() {
+    public ImmutableList<String> getAttributeNames() {
         return this.elementMap.keySet().asList();
     }
 
@@ -71,7 +72,7 @@ public class VertexFormat {
             return false;
         }
         VertexFormat vertexFormat = (VertexFormat)o;
-        if (this.size != vertexFormat.size) {
+        if (this.vertexSizeByte != vertexFormat.vertexSizeByte) {
             return false;
         }
         return this.elementMap.equals(vertexFormat.elementMap);
@@ -81,73 +82,61 @@ public class VertexFormat {
         return this.elementMap.hashCode();
     }
 
-    public void startDrawing() {
+    public void setupState() {
         if (!RenderSystem.isOnRenderThread()) {
-            RenderSystem.recordRenderCall(this::innerStartDrawing);
+            RenderSystem.recordRenderCall(this::setupStateInternal);
             return;
         }
-        this.innerStartDrawing();
+        this.setupStateInternal();
     }
 
-    private void innerStartDrawing() {
-        int i = this.getVertexSize();
+    private void setupStateInternal() {
+        int i = this.getVertexSizeByte();
         ImmutableList<VertexFormatElement> list = this.getElements();
         for (int j = 0; j < list.size(); ++j) {
-            ((VertexFormatElement)list.get(j)).startDrawing(j, this.offsets.getInt(j), i);
+            ((VertexFormatElement)list.get(j)).setupState(j, this.offsets.getInt(j), i);
         }
     }
 
-    public void endDrawing() {
+    public void clearState() {
         if (!RenderSystem.isOnRenderThread()) {
-            RenderSystem.recordRenderCall(this::innerEndDrawing);
+            RenderSystem.recordRenderCall(this::clearStateInternal);
             return;
         }
-        this.innerEndDrawing();
+        this.clearStateInternal();
     }
 
-    private void innerEndDrawing() {
+    private void clearStateInternal() {
         ImmutableList<VertexFormatElement> immutableList = this.getElements();
         for (int i = 0; i < immutableList.size(); ++i) {
             VertexFormatElement vertexFormatElement = (VertexFormatElement)immutableList.get(i);
-            vertexFormatElement.endDrawing(i);
+            vertexFormatElement.clearState(i);
         }
     }
 
-    public int getVertexArray() {
-        if (this.vertexArray == 0) {
-            this.vertexArray = GlStateManager._glGenVertexArrays();
+    public VertexBuffer getBuffer() {
+        VertexBuffer vertexBuffer = this.buffer;
+        if (vertexBuffer == null) {
+            this.buffer = vertexBuffer = new VertexBuffer();
         }
-        return this.vertexArray;
-    }
-
-    public int getVertexBuffer() {
-        if (this.vertexBuffer == 0) {
-            this.vertexBuffer = GlStateManager._glGenBuffers();
-        }
-        return this.vertexBuffer;
-    }
-
-    public int getElementBuffer() {
-        if (this.elementBuffer == 0) {
-            this.elementBuffer = GlStateManager._glGenBuffers();
-        }
-        return this.elementBuffer;
+        return vertexBuffer;
     }
 
     @Environment(value=EnvType.CLIENT)
     public static final class DrawMode
     extends Enum<DrawMode> {
-        public static final /* enum */ DrawMode LINES = new DrawMode(4, 2, 2);
-        public static final /* enum */ DrawMode LINE_STRIP = new DrawMode(5, 2, 1);
-        public static final /* enum */ DrawMode DEBUG_LINES = new DrawMode(1, 2, 2);
-        public static final /* enum */ DrawMode DEBUG_LINE_STRIP = new DrawMode(3, 2, 1);
-        public static final /* enum */ DrawMode TRIANGLES = new DrawMode(4, 3, 3);
-        public static final /* enum */ DrawMode TRIANGLE_STRIP = new DrawMode(5, 3, 1);
-        public static final /* enum */ DrawMode TRIANGLE_FAN = new DrawMode(6, 3, 1);
-        public static final /* enum */ DrawMode QUADS = new DrawMode(4, 4, 4);
-        public final int mode;
-        public final int vertexCount;
-        public final int size;
+        public static final /* enum */ DrawMode LINES = new DrawMode(4, 2, 2, false);
+        public static final /* enum */ DrawMode LINE_STRIP = new DrawMode(5, 2, 1, true);
+        public static final /* enum */ DrawMode DEBUG_LINES = new DrawMode(1, 2, 2, false);
+        public static final /* enum */ DrawMode DEBUG_LINE_STRIP = new DrawMode(3, 2, 1, true);
+        public static final /* enum */ DrawMode TRIANGLES = new DrawMode(4, 3, 3, false);
+        public static final /* enum */ DrawMode TRIANGLE_STRIP = new DrawMode(5, 3, 1, true);
+        public static final /* enum */ DrawMode TRIANGLE_FAN = new DrawMode(6, 3, 1, true);
+        public static final /* enum */ DrawMode QUADS = new DrawMode(4, 4, 4, false);
+        public final int glMode;
+        public final int firstVertexCount;
+        public final int additionalVertexCount;
+        public final boolean shareVertices;
         private static final /* synthetic */ DrawMode[] field_27386;
 
         public static DrawMode[] values() {
@@ -158,13 +147,14 @@ public class VertexFormat {
             return Enum.valueOf(DrawMode.class, string);
         }
 
-        private DrawMode(int mode, int vertexCount, int size) {
-            this.mode = mode;
-            this.vertexCount = vertexCount;
-            this.size = size;
+        private DrawMode(int glMode, int firstVertexCount, int additionalVertexCount, boolean shareVertices) {
+            this.glMode = glMode;
+            this.firstVertexCount = firstVertexCount;
+            this.additionalVertexCount = additionalVertexCount;
+            this.shareVertices = shareVertices;
         }
 
-        public int getSize(int vertexCount) {
+        public int getIndexCount(int vertexCount) {
             return switch (this) {
                 case LINE_STRIP, DEBUG_LINES, DEBUG_LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN -> vertexCount;
                 case LINES, QUADS -> vertexCount / 4 * 6;
@@ -182,44 +172,44 @@ public class VertexFormat {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static final class IntType
-    extends Enum<IntType> {
-        public static final /* enum */ IntType BYTE = new IntType(5121, 1);
-        public static final /* enum */ IntType SHORT = new IntType(5123, 2);
-        public static final /* enum */ IntType INT = new IntType(5125, 4);
-        public final int type;
+    public static final class IndexType
+    extends Enum<IndexType> {
+        public static final /* enum */ IndexType BYTE = new IndexType(5121, 1);
+        public static final /* enum */ IndexType SHORT = new IndexType(5123, 2);
+        public static final /* enum */ IndexType INT = new IndexType(5125, 4);
+        public final int glType;
         public final int size;
-        private static final /* synthetic */ IntType[] field_27376;
+        private static final /* synthetic */ IndexType[] field_27376;
 
-        public static IntType[] values() {
-            return (IntType[])field_27376.clone();
+        public static IndexType[] values() {
+            return (IndexType[])field_27376.clone();
         }
 
-        public static IntType valueOf(String string) {
-            return Enum.valueOf(IntType.class, string);
+        public static IndexType valueOf(String string) {
+            return Enum.valueOf(IndexType.class, string);
         }
 
-        private IntType(int type, int size) {
-            this.type = type;
+        private IndexType(int glType, int size) {
+            this.glType = glType;
             this.size = size;
         }
 
-        public static IntType getSmallestTypeFor(int number) {
-            if ((number & 0xFFFF0000) != 0) {
+        public static IndexType smallestFor(int indexCount) {
+            if ((indexCount & 0xFFFF0000) != 0) {
                 return INT;
             }
-            if ((number & 0xFF00) != 0) {
+            if ((indexCount & 0xFF00) != 0) {
                 return SHORT;
             }
             return BYTE;
         }
 
-        private static /* synthetic */ IntType[] method_36816() {
-            return new IntType[]{BYTE, SHORT, INT};
+        private static /* synthetic */ IndexType[] method_36816() {
+            return new IndexType[]{BYTE, SHORT, INT};
         }
 
         static {
-            field_27376 = IntType.method_36816();
+            field_27376 = IndexType.method_36816();
         }
     }
 }

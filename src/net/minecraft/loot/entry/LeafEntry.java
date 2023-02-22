@@ -165,7 +165,12 @@ extends LootPoolEntry {
         }
 
         @Override
-        public /* synthetic */ Object apply(LootFunction.Builder function) {
+        public /* synthetic */ LootFunctionConsumingBuilder getThisFunctionConsumingBuilder() {
+            return (LootFunctionConsumingBuilder)((Object)super.getThisConditionConsumingBuilder());
+        }
+
+        @Override
+        public /* synthetic */ LootFunctionConsumingBuilder apply(LootFunction.Builder function) {
             return this.apply(function);
         }
     }

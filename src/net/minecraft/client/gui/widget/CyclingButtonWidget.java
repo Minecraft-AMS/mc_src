@@ -10,21 +10,22 @@
 package net.minecraft.client.gui.widget;
 
 import com.google.common.collect.ImmutableList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.PressableWidget;
+import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.util.OrderableTooltip;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,10 +42,10 @@ implements OrderableTooltip {
     private final Function<T, Text> valueToText;
     private final Function<CyclingButtonWidget<T>, MutableText> narrationMessageFactory;
     private final UpdateCallback<T> callback;
-    private final TooltipFactory<T> tooltipFactory;
+    private final SimpleOption.TooltipFactory<T> tooltipFactory;
     private final boolean optionTextOmitted;
 
-    CyclingButtonWidget(int x, int y, int width, int height, Text message, Text optionText, int index, T value, Values<T> values, Function<T, Text> valueToText, Function<CyclingButtonWidget<T>, MutableText> narrationMessageFactory, UpdateCallback<T> callback, TooltipFactory<T> tooltipFactory, boolean optionTextOmitted) {
+    CyclingButtonWidget(int x, int y, int width, int height, Text message, Text optionText, int index, T value, Values<T> values, Function<T, Text> valueToText, Function<CyclingButtonWidget<T>, MutableText> narrationMessageFactory, UpdateCallback<T> callback, SimpleOption.TooltipFactory<T> tooltipFactory, boolean optionTextOmitted) {
         super(x, y, width, height, message);
         this.optionText = optionText;
         this.index = index;
@@ -128,9 +129,9 @@ implements OrderableTooltip {
             T object = this.getValue(1);
             Text text = this.composeText(object);
             if (this.isFocused()) {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.cycle_button.usage.focused", text));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.cycle_button.usage.focused", text));
             } else {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.cycle_button.usage.hovered", text));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.cycle_button.usage.hovered", text));
             }
         }
     }
@@ -149,11 +150,11 @@ implements OrderableTooltip {
     }
 
     public static Builder<Boolean> onOffBuilder(Text on, Text off) {
-        return new Builder<Boolean>(value -> value != false ? on : off).values(BOOLEAN_VALUES);
+        return new Builder<Boolean>(value -> value != false ? on : off).values((Collection<Boolean>)BOOLEAN_VALUES);
     }
 
     public static Builder<Boolean> onOffBuilder() {
-        return new Builder<Boolean>(value -> value != false ? ScreenTexts.ON : ScreenTexts.OFF).values(BOOLEAN_VALUES);
+        return new Builder<Boolean>(value -> value != false ? ScreenTexts.ON : ScreenTexts.OFF).values((Collection<Boolean>)BOOLEAN_VALUES);
     }
 
     public static Builder<Boolean> onOffBuilder(boolean initialValue) {
@@ -161,12 +162,12 @@ implements OrderableTooltip {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static interface Values<T> {
+    public static interface Values<T> {
         public List<T> getCurrent();
 
         public List<T> getDefaults();
 
-        public static <T> Values<T> of(List<T> values) {
+        public static <T> Values<T> of(Collection<T> values) {
             ImmutableList list = ImmutableList.copyOf(values);
             return new Values<T>((List)list){
                 final /* synthetic */ List field_27979;
@@ -189,7 +190,7 @@ implements OrderableTooltip {
         public static <T> Values<T> of(final BooleanSupplier alternativeToggle, List<T> defaults, List<T> alternatives) {
             ImmutableList list = ImmutableList.copyOf(defaults);
             ImmutableList list2 = ImmutableList.copyOf(alternatives);
-            return new Values<T>(){
+            return new Values<T>((List)list2, (List)list){
                 final /* synthetic */ List field_27981;
                 final /* synthetic */ List field_27982;
                 {
@@ -212,13 +213,7 @@ implements OrderableTooltip {
 
     @Environment(value=EnvType.CLIENT)
     public static interface UpdateCallback<T> {
-        public void onValueChange(CyclingButtonWidget var1, T var2);
-    }
-
-    @FunctionalInterface
-    @Environment(value=EnvType.CLIENT)
-    public static interface TooltipFactory<T>
-    extends Function<T, List<OrderedText>> {
+        public void onValueChange(CyclingButtonWidget<T> var1, T var2);
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -227,7 +222,7 @@ implements OrderableTooltip {
         @Nullable
         private T value;
         private final Function<T, Text> valueToText;
-        private TooltipFactory<T> tooltipFactory = value -> ImmutableList.of();
+        private SimpleOption.TooltipFactory<T> tooltipFactory = value -> ImmutableList.of();
         private Function<CyclingButtonWidget<T>, MutableText> narrationMessageFactory = CyclingButtonWidget::getGenericNarrationMessage;
         private Values<T> values = Values.of(ImmutableList.of());
         private boolean optionTextOmitted;
@@ -236,27 +231,29 @@ implements OrderableTooltip {
             this.valueToText = valueToText;
         }
 
-        public Builder<T> values(List<T> values) {
-            this.values = Values.of(values);
-            return this;
+        public Builder<T> values(Collection<T> values) {
+            return this.values(Values.of(values));
         }
 
         @SafeVarargs
         public final Builder<T> values(T ... values) {
-            return this.values((List<T>)ImmutableList.copyOf((Object[])values));
+            return this.values((Collection<T>)ImmutableList.copyOf((Object[])values));
         }
 
         public Builder<T> values(List<T> defaults, List<T> alternatives) {
-            this.values = Values.of(HAS_ALT_DOWN, defaults, alternatives);
-            return this;
+            return this.values(Values.of(HAS_ALT_DOWN, defaults, alternatives));
         }
 
         public Builder<T> values(BooleanSupplier alternativeToggle, List<T> defaults, List<T> alternatives) {
-            this.values = Values.of(alternativeToggle, defaults, alternatives);
+            return this.values(Values.of(alternativeToggle, defaults, alternatives));
+        }
+
+        public Builder<T> values(Values<T> values) {
+            this.values = values;
             return this;
         }
 
-        public Builder<T> tooltip(TooltipFactory<T> tooltipFactory) {
+        public Builder<T> tooltip(SimpleOption.TooltipFactory<T> tooltipFactory) {
             this.tooltipFactory = tooltipFactory;
             return this;
         }

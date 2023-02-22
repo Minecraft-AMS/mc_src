@@ -44,14 +44,14 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public class NbtPathArgumentType
 implements ArgumentType<NbtPath> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo.bar", "foo[0]", "[0]", "[]", "{foo=bar}");
-    public static final SimpleCommandExceptionType INVALID_PATH_NODE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("arguments.nbtpath.node.invalid"));
-    public static final DynamicCommandExceptionType NOTHING_FOUND_EXCEPTION = new DynamicCommandExceptionType(path -> new TranslatableText("arguments.nbtpath.nothing_found", path));
+    public static final SimpleCommandExceptionType INVALID_PATH_NODE_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("arguments.nbtpath.node.invalid"));
+    public static final DynamicCommandExceptionType NOTHING_FOUND_EXCEPTION = new DynamicCommandExceptionType(path -> Text.translatable("arguments.nbtpath.nothing_found", path));
     private static final char LEFT_SQUARE_BRACKET = '[';
     private static final char RIGHT_SQUARE_BRACKET = ']';
     private static final char LEFT_CURLY_BRACKET = '{';
@@ -145,7 +145,7 @@ implements ArgumentType<NbtPath> {
     }
 
     static Predicate<NbtElement> getPredicate(NbtCompound filter) {
-        return nbtElement -> NbtHelper.matches(filter, nbtElement, true);
+        return nbt -> NbtHelper.matches(filter, nbt, true);
     }
 
     public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {

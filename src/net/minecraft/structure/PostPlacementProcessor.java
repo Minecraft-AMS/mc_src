@@ -3,10 +3,10 @@
  */
 package net.minecraft.structure;
 
-import java.util.Random;
 import net.minecraft.structure.StructurePiecesList;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;

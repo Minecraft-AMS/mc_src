@@ -3,29 +3,28 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
- *  com.google.common.collect.Lists
  *  com.google.common.primitives.Floats
- *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
  *  it.unimi.dsi.fastutil.ints.IntArrays
  *  it.unimi.dsi.fastutil.ints.IntConsumer
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.apache.commons.lang3.mutable.MutableInt
  *  org.jetbrains.annotations.Nullable
+ *  org.lwjgl.system.MemoryUtil
  *  org.slf4j.Logger
  */
 package net.minecraft.client.render;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Floats;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntConsumer;
+import java.lang.invoke.MethodHandle;
+import java.lang.runtime.ObjectMethods;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.BufferVertexConsumer;
@@ -37,7 +36,9 @@ import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.GlAllocationUtils;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3f;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
@@ -47,11 +48,9 @@ implements BufferVertexConsumer {
     private static final int MAX_BUFFER_SIZE = 0x200000;
     private static final Logger LOGGER = LogUtils.getLogger();
     private ByteBuffer buffer;
-    private final List<DrawArrayParameters> parameters = Lists.newArrayList();
-    private int lastParameterIndex;
-    private int buildStart;
+    private int builtBufferCount;
+    private int batchOffset;
     private int elementOffset;
-    private int nextDrawStart;
     private int vertexCount;
     @Nullable
     private VertexFormatElement currentElement;
@@ -73,7 +72,7 @@ implements BufferVertexConsumer {
     }
 
     private void grow() {
-        this.grow(this.format.getVertexSize());
+        this.grow(this.format.getVertexSizeByte());
     }
 
     private void grow(int size) {
@@ -122,10 +121,10 @@ implements BufferVertexConsumer {
     }
 
     public void restoreState(State state) {
-        this.buffer.clear();
+        this.buffer.rewind();
         this.drawMode = state.drawMode;
         this.vertexCount = state.vertexCount;
-        this.elementOffset = this.buildStart;
+        this.elementOffset = this.batchOffset;
         this.sortingPrimitiveCenters = state.sortingPrimitiveCenters;
         this.sortingCameraX = state.sortingCameraX;
         this.sortingCameraY = state.sortingCameraY;
@@ -142,7 +141,7 @@ implements BufferVertexConsumer {
         this.setFormat(format);
         this.currentElement = (VertexFormatElement)format.getElements().get(0);
         this.currentElementId = 0;
-        this.buffer.clear();
+        this.buffer.rewind();
     }
 
     private void setFormat(VertexFormat format) {
@@ -156,24 +155,22 @@ implements BufferVertexConsumer {
         this.hasOverlay = bl;
     }
 
-    private IntConsumer createIndexWriter(VertexFormat.IntType elementFormat) {
-        switch (elementFormat) {
-            case BYTE: {
-                return value -> this.buffer.put((byte)value);
-            }
-            case SHORT: {
-                return value -> this.buffer.putShort((short)value);
-            }
-        }
-        return value -> this.buffer.putInt(value);
+    private IntConsumer createIndexWriter(int offset, VertexFormat.IndexType indexType) {
+        MutableInt mutableInt = new MutableInt(offset);
+        return switch (indexType) {
+            default -> throw new IncompatibleClassChangeError();
+            case VertexFormat.IndexType.BYTE -> index -> this.buffer.put(mutableInt.getAndIncrement(), (byte)index);
+            case VertexFormat.IndexType.SHORT -> index -> this.buffer.putShort(mutableInt.getAndAdd(2), (short)index);
+            case VertexFormat.IndexType.INT -> index -> this.buffer.putInt(mutableInt.getAndAdd(4), index);
+        };
     }
 
     private Vec3f[] buildPrimitiveCenters() {
         FloatBuffer floatBuffer = this.buffer.asFloatBuffer();
-        int i = this.buildStart / 4;
+        int i = this.batchOffset / 4;
         int j = this.format.getVertexSizeInteger();
-        int k = j * this.drawMode.size;
-        int l = this.vertexCount / this.drawMode.size;
+        int k = j * this.drawMode.additionalVertexCount;
+        int l = this.vertexCount / this.drawMode.additionalVertexCount;
         Vec3f[] vec3fs = new Vec3f[l];
         for (int m = 0; m < l; ++m) {
             float f = floatBuffer.get(i + m * k + 0);
@@ -190,49 +187,84 @@ implements BufferVertexConsumer {
         return vec3fs;
     }
 
-    private void writeSortedIndices(VertexFormat.IntType elementFormat) {
+    private void writeSortedIndices(VertexFormat.IndexType indexType) {
         float[] fs = new float[this.sortingPrimitiveCenters.length];
         int[] is = new int[this.sortingPrimitiveCenters.length];
-        for (int i2 = 0; i2 < this.sortingPrimitiveCenters.length; ++i2) {
-            float f = this.sortingPrimitiveCenters[i2].getX() - this.sortingCameraX;
-            float g = this.sortingPrimitiveCenters[i2].getY() - this.sortingCameraY;
-            float h = this.sortingPrimitiveCenters[i2].getZ() - this.sortingCameraZ;
-            fs[i2] = f * f + g * g + h * h;
-            is[i2] = i2;
+        for (int i = 0; i < this.sortingPrimitiveCenters.length; ++i) {
+            float f = this.sortingPrimitiveCenters[i].getX() - this.sortingCameraX;
+            float g = this.sortingPrimitiveCenters[i].getY() - this.sortingCameraY;
+            float h = this.sortingPrimitiveCenters[i].getZ() - this.sortingCameraZ;
+            fs[i] = f * f + g * g + h * h;
+            is[i] = i;
         }
-        IntArrays.mergeSort((int[])is, (i, j) -> Floats.compare((float)fs[j], (float)fs[i]));
-        IntConsumer intConsumer = this.createIndexWriter(elementFormat);
-        this.buffer.position(this.elementOffset);
-        for (int j2 : is) {
-            intConsumer.accept(j2 * this.drawMode.size + 0);
-            intConsumer.accept(j2 * this.drawMode.size + 1);
-            intConsumer.accept(j2 * this.drawMode.size + 2);
-            intConsumer.accept(j2 * this.drawMode.size + 2);
-            intConsumer.accept(j2 * this.drawMode.size + 3);
-            intConsumer.accept(j2 * this.drawMode.size + 0);
+        IntArrays.mergeSort((int[])is, (a, b) -> Floats.compare((float)fs[b], (float)fs[a]));
+        IntConsumer intConsumer = this.createIndexWriter(this.elementOffset, indexType);
+        for (int j : is) {
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 0);
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 1);
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 2);
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 2);
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 3);
+            intConsumer.accept(j * this.drawMode.additionalVertexCount + 0);
         }
     }
 
-    public void end() {
-        boolean bl;
+    public boolean isBatchEmpty() {
+        return this.vertexCount == 0;
+    }
+
+    @Nullable
+    public BuiltBuffer endNullable() {
+        this.ensureBuilding();
+        if (this.isBatchEmpty()) {
+            this.resetBuilding();
+            return null;
+        }
+        BuiltBuffer builtBuffer = this.build();
+        this.resetBuilding();
+        return builtBuffer;
+    }
+
+    public BuiltBuffer end() {
+        this.ensureBuilding();
+        BuiltBuffer builtBuffer = this.build();
+        this.resetBuilding();
+        return builtBuffer;
+    }
+
+    private void ensureBuilding() {
         if (!this.building) {
             throw new IllegalStateException("Not building!");
         }
-        int i = this.drawMode.getSize(this.vertexCount);
-        VertexFormat.IntType intType = VertexFormat.IntType.getSmallestTypeFor(i);
+    }
+
+    private BuiltBuffer build() {
+        int l;
+        boolean bl;
+        int k;
+        int i = this.drawMode.getIndexCount(this.vertexCount);
+        int j = !this.hasNoVertexBuffer ? this.vertexCount * this.format.getVertexSizeByte() : 0;
+        VertexFormat.IndexType indexType = VertexFormat.IndexType.smallestFor(i);
         if (this.sortingPrimitiveCenters != null) {
-            int j = MathHelper.roundUpToMultiple(i * intType.size, 4);
-            this.grow(j);
-            this.writeSortedIndices(intType);
+            k = MathHelper.roundUpToMultiple(i * indexType.size, 4);
+            this.grow(k);
+            this.writeSortedIndices(indexType);
             bl = false;
-            this.elementOffset += j;
-            this.buildStart += this.vertexCount * this.format.getVertexSize() + j;
+            this.elementOffset += k;
+            l = j + k;
         } else {
             bl = true;
-            this.buildStart += this.vertexCount * this.format.getVertexSize();
+            l = j;
         }
+        k = this.batchOffset;
+        this.batchOffset += l;
+        ++this.builtBufferCount;
+        DrawArrayParameters drawArrayParameters = new DrawArrayParameters(this.format, this.vertexCount, i, this.drawMode, indexType, this.hasNoVertexBuffer, bl);
+        return new BuiltBuffer(k, drawArrayParameters);
+    }
+
+    private void resetBuilding() {
         this.building = false;
-        this.parameters.add(new DrawArrayParameters(this.format, this.vertexCount, i, this.drawMode, intType, this.hasNoVertexBuffer, bl));
         this.vertexCount = 0;
         this.currentElement = null;
         this.currentElementId = 0;
@@ -266,11 +298,8 @@ implements BufferVertexConsumer {
         ++this.vertexCount;
         this.grow();
         if (this.drawMode == VertexFormat.DrawMode.LINES || this.drawMode == VertexFormat.DrawMode.LINE_STRIP) {
-            int i = this.format.getVertexSize();
-            this.buffer.position(this.elementOffset);
-            ByteBuffer byteBuffer = this.buffer.duplicate();
-            byteBuffer.position(this.elementOffset - i).limit(this.elementOffset);
-            this.buffer.put(byteBuffer);
+            int i = this.format.getVertexSizeByte();
+            this.buffer.put(this.elementOffset, this.buffer, this.elementOffset - i, i);
             this.elementOffset += i;
             ++this.vertexCount;
             this.grow();
@@ -335,32 +364,23 @@ implements BufferVertexConsumer {
         super.vertex(x, y, z, red, green, blue, alpha, u, v, overlay, light, normalX, normalY, normalZ);
     }
 
-    public Pair<DrawArrayParameters, ByteBuffer> popData() {
-        DrawArrayParameters drawArrayParameters = this.parameters.get(this.lastParameterIndex++);
-        this.buffer.position(this.nextDrawStart);
-        this.nextDrawStart += MathHelper.roundUpToMultiple(drawArrayParameters.getIndexBufferEnd(), 4);
-        this.buffer.limit(this.nextDrawStart);
-        if (this.lastParameterIndex == this.parameters.size() && this.vertexCount == 0) {
+    void releaseBuiltBuffer() {
+        if (this.builtBufferCount > 0 && --this.builtBufferCount == 0) {
             this.clear();
         }
-        ByteBuffer byteBuffer = this.buffer.slice();
-        this.buffer.clear();
-        return Pair.of((Object)drawArrayParameters, (Object)byteBuffer);
     }
 
     public void clear() {
-        if (this.buildStart != this.nextDrawStart) {
-            LOGGER.warn("Bytes mismatch {} {}", (Object)this.buildStart, (Object)this.nextDrawStart);
+        if (this.builtBufferCount > 0) {
+            LOGGER.warn("Clearing BufferBuilder with unused batches");
         }
         this.reset();
     }
 
     public void reset() {
-        this.buildStart = 0;
-        this.nextDrawStart = 0;
+        this.builtBufferCount = 0;
+        this.batchOffset = 0;
         this.elementOffset = 0;
-        this.parameters.clear();
-        this.lastParameterIndex = 0;
     }
 
     @Override
@@ -373,6 +393,10 @@ implements BufferVertexConsumer {
 
     public boolean isBuilding() {
         return this.building;
+    }
+
+    ByteBuffer slice(int start, int end) {
+        return MemoryUtil.memSlice((ByteBuffer)this.buffer, (int)start, (int)(end - start));
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -396,63 +420,135 @@ implements BufferVertexConsumer {
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static final class DrawArrayParameters {
-        private final VertexFormat vertexFormat;
-        private final int count;
-        private final int vertexCount;
+    public class BuiltBuffer {
+        private final int batchOffset;
+        private final DrawArrayParameters parameters;
+        private boolean released;
+
+        BuiltBuffer(int batchOffset, DrawArrayParameters parameters) {
+            this.batchOffset = batchOffset;
+            this.parameters = parameters;
+        }
+
+        public ByteBuffer getVertexBuffer() {
+            int i = this.batchOffset + this.parameters.getVertexBufferPosition();
+            int j = this.batchOffset + this.parameters.getVertexBufferLimit();
+            return BufferBuilder.this.slice(i, j);
+        }
+
+        public ByteBuffer getIndexBuffer() {
+            int i = this.batchOffset + this.parameters.getIndexBufferPosition();
+            int j = this.batchOffset + this.parameters.getIndexBufferLimit();
+            return BufferBuilder.this.slice(i, j);
+        }
+
+        public DrawArrayParameters getParameters() {
+            return this.parameters;
+        }
+
+        public boolean isEmpty() {
+            return this.parameters.vertexCount == 0;
+        }
+
+        public void release() {
+            if (this.released) {
+                throw new IllegalStateException("Buffer has already been released!");
+            }
+            BufferBuilder.this.releaseBuiltBuffer();
+            this.released = true;
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static final class DrawArrayParameters
+    extends Record {
+        private final VertexFormat format;
+        final int vertexCount;
+        private final int indexCount;
         private final VertexFormat.DrawMode mode;
-        private final VertexFormat.IntType elementFormat;
-        private final boolean hasNoVertexBuffer;
-        private final boolean hasNoIndexBuffer;
+        private final VertexFormat.IndexType indexType;
+        private final boolean indexOnly;
+        private final boolean sequentialIndex;
 
-        DrawArrayParameters(VertexFormat vertexFormat, int count, int vertexCount, VertexFormat.DrawMode mode, VertexFormat.IntType elementFormat, boolean hasNoVertexBuffer, boolean hasNoIndexBuffer) {
-            this.vertexFormat = vertexFormat;
-            this.count = count;
-            this.vertexCount = vertexCount;
-            this.mode = mode;
-            this.elementFormat = elementFormat;
-            this.hasNoVertexBuffer = hasNoVertexBuffer;
-            this.hasNoIndexBuffer = hasNoIndexBuffer;
-        }
-
-        public VertexFormat getVertexFormat() {
-            return this.vertexFormat;
-        }
-
-        public int getCount() {
-            return this.count;
-        }
-
-        public int getVertexCount() {
-            return this.vertexCount;
-        }
-
-        public VertexFormat.DrawMode getMode() {
-            return this.mode;
-        }
-
-        public VertexFormat.IntType getElementFormat() {
-            return this.elementFormat;
+        public DrawArrayParameters(VertexFormat vertexFormat, int i, int j, VertexFormat.DrawMode drawMode, VertexFormat.IndexType indexType, boolean bl, boolean bl2) {
+            this.format = vertexFormat;
+            this.vertexCount = i;
+            this.indexCount = j;
+            this.mode = drawMode;
+            this.indexType = indexType;
+            this.indexOnly = bl;
+            this.sequentialIndex = bl2;
         }
 
         public int getIndexBufferStart() {
-            return this.count * this.vertexFormat.getVertexSize();
+            return this.vertexCount * this.format.getVertexSizeByte();
+        }
+
+        public int getVertexBufferPosition() {
+            return 0;
+        }
+
+        public int getVertexBufferLimit() {
+            return this.getIndexBufferStart();
+        }
+
+        public int getIndexBufferPosition() {
+            return this.indexOnly ? 0 : this.getVertexBufferLimit();
+        }
+
+        public int getIndexBufferLimit() {
+            return this.getIndexBufferPosition() + this.getIndexBufferLength();
         }
 
         private int getIndexBufferLength() {
-            return this.hasNoIndexBuffer ? 0 : this.vertexCount * this.elementFormat.size;
+            return this.sequentialIndex ? 0 : this.indexCount * this.indexType.size;
         }
 
         public int getIndexBufferEnd() {
-            return this.getIndexBufferStart() + this.getIndexBufferLength();
+            return this.getIndexBufferLimit();
         }
 
-        public boolean hasNoVertexBuffer() {
-            return this.hasNoVertexBuffer;
+        @Override
+        public final String toString() {
+            return ObjectMethods.bootstrap("toString", new MethodHandle[]{DrawArrayParameters.class, "format;vertexCount;indexCount;mode;indexType;indexOnly;sequentialIndex", "format", "vertexCount", "indexCount", "mode", "indexType", "indexOnly", "sequentialIndex"}, this);
         }
 
-        public boolean hasNoIndexBuffer() {
-            return this.hasNoIndexBuffer;
+        @Override
+        public final int hashCode() {
+            return (int)ObjectMethods.bootstrap("hashCode", new MethodHandle[]{DrawArrayParameters.class, "format;vertexCount;indexCount;mode;indexType;indexOnly;sequentialIndex", "format", "vertexCount", "indexCount", "mode", "indexType", "indexOnly", "sequentialIndex"}, this);
+        }
+
+        @Override
+        public final boolean equals(Object object) {
+            return (boolean)ObjectMethods.bootstrap("equals", new MethodHandle[]{DrawArrayParameters.class, "format;vertexCount;indexCount;mode;indexType;indexOnly;sequentialIndex", "format", "vertexCount", "indexCount", "mode", "indexType", "indexOnly", "sequentialIndex"}, this, object);
+        }
+
+        public VertexFormat format() {
+            return this.format;
+        }
+
+        public int vertexCount() {
+            return this.vertexCount;
+        }
+
+        public int indexCount() {
+            return this.indexCount;
+        }
+
+        public VertexFormat.DrawMode mode() {
+            return this.mode;
+        }
+
+        public VertexFormat.IndexType indexType() {
+            return this.indexType;
+        }
+
+        public boolean indexOnly() {
+            return this.indexOnly;
+        }
+
+        public boolean sequentialIndex() {
+            return this.sequentialIndex;
         }
     }
 }

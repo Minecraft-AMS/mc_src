@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.render.entity;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.RenderLayer;
@@ -20,6 +19,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Matrix4f;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class LightningEntityRenderer
@@ -34,7 +34,7 @@ extends EntityRenderer<LightningEntity> {
         float[] gs = new float[8];
         float h = 0.0f;
         float j = 0.0f;
-        Random random = new Random(lightningEntity.seed);
+        Random random = Random.create(lightningEntity.seed);
         for (int k = 7; k >= 0; --k) {
             fs[k] = h;
             gs[k] = j;
@@ -44,7 +44,7 @@ extends EntityRenderer<LightningEntity> {
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(RenderLayer.getLightning());
         Matrix4f matrix4f = matrixStack.peek().getPositionMatrix();
         for (int l = 0; l < 4; ++l) {
-            Random random2 = new Random(lightningEntity.seed);
+            Random random2 = Random.create(lightningEntity.seed);
             for (int m = 0; m < 3; ++m) {
                 int n = 7;
                 int o = 0;

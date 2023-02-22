@@ -349,8 +349,8 @@ extends DataFix {
         map.defaultReturnValue((Object)"minecraft:air");
     });
 
-    public ItemIdFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public ItemIdFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public static String fromId(int id) {

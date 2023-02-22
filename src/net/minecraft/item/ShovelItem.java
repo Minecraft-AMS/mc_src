@@ -26,6 +26,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class ShovelItem
 extends MiningToolItem {
@@ -57,6 +58,7 @@ extends MiningToolItem {
             if (blockState3 != null) {
                 if (!world.isClient) {
                     world.setBlockState(blockPos, blockState3, 11);
+                    world.emitGameEvent(GameEvent.BLOCK_CHANGE, blockPos, GameEvent.Emitter.of(playerEntity, blockState3));
                     if (playerEntity != null) {
                         context.getStack().damage(1, playerEntity, p -> p.sendToolBreakStatus(context.getHand()));
                     }

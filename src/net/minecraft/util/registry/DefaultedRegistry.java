@@ -10,9 +10,9 @@ package net.minecraft.util.registry;
 
 import com.mojang.serialization.Lifecycle;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.Function;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;

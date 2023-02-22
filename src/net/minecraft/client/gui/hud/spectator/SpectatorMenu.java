@@ -24,9 +24,8 @@ import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommand;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuCommandGroup;
 import net.minecraft.client.gui.hud.spectator.SpectatorMenuState;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class SpectatorMenu {
@@ -35,9 +34,9 @@ public class SpectatorMenu {
     private static final SpectatorMenuCommand NEXT_PAGE_COMMAND = new ChangePageSpectatorMenuCommand(1, true);
     private static final SpectatorMenuCommand DISABLED_NEXT_PAGE_COMMAND = new ChangePageSpectatorMenuCommand(1, false);
     private static final int field_32443 = 8;
-    static final Text CLOSE_TEXT = new TranslatableText("spectatorMenu.close");
-    static final Text PREVIOUS_PAGE_TEXT = new TranslatableText("spectatorMenu.previous_page");
-    static final Text NEXT_PAGE_TEXT = new TranslatableText("spectatorMenu.next_page");
+    static final Text CLOSE_TEXT = Text.translatable("spectatorMenu.close");
+    static final Text PREVIOUS_PAGE_TEXT = Text.translatable("spectatorMenu.previous_page");
+    static final Text NEXT_PAGE_TEXT = Text.translatable("spectatorMenu.next_page");
     public static final SpectatorMenuCommand BLANK_COMMAND = new SpectatorMenuCommand(){
 
         @Override
@@ -46,7 +45,7 @@ public class SpectatorMenu {
 
         @Override
         public Text getName() {
-            return LiteralText.EMPTY;
+            return ScreenTexts.EMPTY;
         }
 
         @Override

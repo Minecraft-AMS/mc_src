@@ -6,7 +6,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -30,10 +29,12 @@ import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class TurtleEggBlock
@@ -53,7 +54,9 @@ extends Block {
 
     @Override
     public void onSteppedOn(World world, BlockPos pos, BlockState state, Entity entity) {
-        this.tryBreakEgg(world, state, pos, entity, 100);
+        if (!entity.bypassesSteppingEffects()) {
+            this.tryBreakEgg(world, state, pos, entity, 100);
+        }
         super.onSteppedOn(world, pos, state, entity);
     }
 
@@ -81,6 +84,7 @@ extends Block {
             world.breakBlock(pos, false);
         } else {
             world.setBlockState(pos, (BlockState)state.with(EGGS, i - 1), 2);
+            world.emitGameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Emitter.of(state));
             world.syncWorldEvent(2001, pos, Block.getRawIdFromState(state));
         }
     }

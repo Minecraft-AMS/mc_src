@@ -29,8 +29,8 @@ public class ChunkToProtoChunkFix
 extends DataFix {
     private static final int field_29881 = 16;
 
-    public ChunkToProtoChunkFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public ChunkToProtoChunkFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public TypeRewriteRule makeRule() {

@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -38,7 +37,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -56,8 +57,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class DefaultResourcePack
-implements ResourcePack,
-ResourceFactory {
+implements ResourcePack {
     @Nullable
     public static Path resourcePath;
     private static final Logger LOGGER;
@@ -111,11 +111,11 @@ ResourceFactory {
     }
 
     @Override
-    public Collection<Identifier> findResources(ResourceType type, String namespace, String prefix, int maxDepth, Predicate<String> pathFilter) {
+    public Collection<Identifier> findResources(ResourceType type, String namespace, String prefix, Predicate<Identifier> allowedPathPredicate) {
         HashSet set = Sets.newHashSet();
         if (resourcePath != null) {
             try {
-                DefaultResourcePack.getIdentifiers(set, maxDepth, namespace, resourcePath.resolve(type.getDirectory()), prefix, pathFilter);
+                DefaultResourcePack.collectIdentifiers(set, namespace, resourcePath.resolve(type.getDirectory()), prefix, allowedPathPredicate);
             }
             catch (IOException iOException) {
                 // empty catch block
@@ -132,7 +132,7 @@ ResourceFactory {
                     try {
                         URI uRI = enumeration.nextElement().toURI();
                         if (!"file".equals(uRI.getScheme())) continue;
-                        DefaultResourcePack.getIdentifiers(set, maxDepth, namespace, Paths.get(uRI), prefix, pathFilter);
+                        DefaultResourcePack.collectIdentifiers(set, namespace, Paths.get(uRI), prefix, allowedPathPredicate);
                     }
                     catch (IOException | URISyntaxException exception) {}
                 }
@@ -141,7 +141,7 @@ ResourceFactory {
         try {
             Path path = TYPE_TO_FILE_SYSTEM.get((Object)type);
             if (path != null) {
-                DefaultResourcePack.getIdentifiers(set, maxDepth, namespace, path, prefix, pathFilter);
+                DefaultResourcePack.collectIdentifiers(set, namespace, path, prefix, allowedPathPredicate);
             } else {
                 LOGGER.error("Can't access assets root for type: {}", (Object)type);
             }
@@ -154,10 +154,18 @@ ResourceFactory {
         return set;
     }
 
-    private static void getIdentifiers(Collection<Identifier> results, int maxDepth, String namespace, Path root, String prefix, Predicate<String> pathFilter) throws IOException {
+    private static void collectIdentifiers(Collection<Identifier> results, String namespace, Path root, String prefix, Predicate<Identifier> allowedPathPredicate) throws IOException {
         Path path2 = root.resolve(namespace);
-        try (Stream<Path> stream = Files.walk(path2.resolve(prefix), maxDepth, new FileVisitOption[0]);){
-            stream.filter(path -> !path.endsWith(".mcmeta") && Files.isRegularFile(path, new LinkOption[0]) && pathFilter.test(path.getFileName().toString())).map(path -> new Identifier(namespace, path2.relativize((Path)path).toString().replaceAll("\\\\", "/"))).forEach(results::add);
+        try (Stream<Path> stream = Files.walk(path2.resolve(prefix), new FileVisitOption[0]);){
+            stream.filter(path -> !path.endsWith(".mcmeta") && Files.isRegularFile(path, new LinkOption[0])).mapMulti((path, consumer) -> {
+                String string2 = path2.relativize((Path)path).toString().replaceAll("\\\\", "/");
+                Identifier identifier = Identifier.of(namespace, string2);
+                if (identifier == null) {
+                    Util.error(String.format(Locale.ROOT, "Invalid path in datapack: %s:%s, ignoring", namespace, string2));
+                } else {
+                    consumer.accept(identifier);
+                }
+            }).filter(allowedPathPredicate).forEach(results::add);
         }
     }
 
@@ -250,51 +258,8 @@ ResourceFactory {
     public void close() {
     }
 
-    @Override
-    public Resource getResource(final Identifier identifier) throws IOException {
-        return new Resource(){
-            @Nullable
-            InputStream stream;
-
-            @Override
-            public void close() throws IOException {
-                if (this.stream != null) {
-                    this.stream.close();
-                }
-            }
-
-            @Override
-            public Identifier getId() {
-                return identifier;
-            }
-
-            @Override
-            public InputStream getInputStream() {
-                try {
-                    this.stream = DefaultResourcePack.this.open(ResourceType.CLIENT_RESOURCES, identifier);
-                }
-                catch (IOException iOException) {
-                    throw new UncheckedIOException("Could not get client resource from vanilla pack", iOException);
-                }
-                return this.stream;
-            }
-
-            @Override
-            public boolean hasMetadata() {
-                return false;
-            }
-
-            @Override
-            @Nullable
-            public <T> T getMetadata(ResourceMetadataReader<T> metaReader) {
-                return null;
-            }
-
-            @Override
-            public String getResourcePackName() {
-                return identifier.toString();
-            }
-        };
+    public ResourceFactory getFactory() {
+        return id -> Optional.of(new Resource(this.getName(), () -> this.open(ResourceType.CLIENT_RESOURCES, id)));
     }
 
     static {

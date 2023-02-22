@@ -11,11 +11,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public final class GraphicsMode
-extends Enum<GraphicsMode> {
+extends Enum<GraphicsMode>
+implements TranslatableOption {
     public static final /* enum */ GraphicsMode FAST = new GraphicsMode(0, "options.graphics.fast");
     public static final /* enum */ GraphicsMode FANCY = new GraphicsMode(1, "options.graphics.fancy");
     public static final /* enum */ GraphicsMode FABULOUS = new GraphicsMode(2, "options.graphics.fabulous");
@@ -37,10 +39,12 @@ extends Enum<GraphicsMode> {
         this.translationKey = translationKey;
     }
 
+    @Override
     public int getId() {
         return this.id;
     }
 
+    @Override
     public String getTranslationKey() {
         return this.translationKey;
     }

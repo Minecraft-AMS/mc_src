@@ -8,7 +8,6 @@ package net.minecraft.world;
 
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import org.jetbrains.annotations.Nullable;
 
 public final class GameMode
@@ -36,8 +35,8 @@ extends Enum<GameMode> {
     private GameMode(int id, String name) {
         this.id = id;
         this.name = name;
-        this.simpleTranslatableName = new TranslatableText("selectWorld.gameMode." + name);
-        this.translatableName = new TranslatableText("gameMode." + name);
+        this.simpleTranslatableName = Text.translatable("selectWorld.gameMode." + name);
+        this.translatableName = Text.translatable("gameMode." + name);
     }
 
     public int getId() {

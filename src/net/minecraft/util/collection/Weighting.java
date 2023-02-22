@@ -5,9 +5,9 @@ package net.minecraft.util.collection;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighted;
+import net.minecraft.util.math.random.Random;
 
 public class Weighting {
     private Weighting() {

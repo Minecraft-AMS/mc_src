@@ -64,22 +64,22 @@ public class NbtIo {
         }
     }
 
-    public static void writeCompressed(NbtCompound compound, File file) throws IOException {
+    public static void writeCompressed(NbtCompound nbt, File file) throws IOException {
         try (FileOutputStream outputStream = new FileOutputStream(file);){
-            NbtIo.writeCompressed(compound, outputStream);
+            NbtIo.writeCompressed(nbt, outputStream);
         }
     }
 
-    public static void writeCompressed(NbtCompound compound, OutputStream stream) throws IOException {
+    public static void writeCompressed(NbtCompound nbt, OutputStream stream) throws IOException {
         try (DataOutputStream dataOutputStream = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(stream)));){
-            NbtIo.write(compound, (DataOutput)dataOutputStream);
+            NbtIo.write(nbt, (DataOutput)dataOutputStream);
         }
     }
 
-    public static void write(NbtCompound compound, File file) throws IOException {
+    public static void write(NbtCompound nbt, File file) throws IOException {
         try (FileOutputStream fileOutputStream = new FileOutputStream(file);
              DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream);){
-            NbtIo.write(compound, (DataOutput)dataOutputStream);
+            NbtIo.write(nbt, (DataOutput)dataOutputStream);
         }
     }
 
@@ -109,8 +109,8 @@ public class NbtIo {
         throw new IOException("Root tag must be a named compound tag");
     }
 
-    public static void write(NbtCompound compound, DataOutput output) throws IOException {
-        NbtIo.write((NbtElement)compound, output);
+    public static void write(NbtCompound nbt, DataOutput output) throws IOException {
+        NbtIo.write((NbtElement)nbt, output);
     }
 
     public static void scan(DataInput input, NbtScanner scanner) throws IOException {
@@ -137,13 +137,13 @@ public class NbtIo {
         }
     }
 
-    public static void write(NbtElement element, DataOutput output) throws IOException {
-        output.writeByte(element.getType());
-        if (element.getType() == 0) {
+    public static void write(NbtElement nbt, DataOutput output) throws IOException {
+        output.writeByte(nbt.getType());
+        if (nbt.getType() == 0) {
             return;
         }
         output.writeUTF("");
-        element.write(output);
+        nbt.write(output);
     }
 
     private static NbtElement read(DataInput input, int depth, NbtTagSizeTracker tracker) throws IOException {

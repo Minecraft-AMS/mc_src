@@ -19,6 +19,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.dimension.DimensionTypes;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -26,9 +27,9 @@ public abstract class DimensionEffects {
     private static final Object2ObjectMap<Identifier, DimensionEffects> BY_IDENTIFIER = (Object2ObjectMap)Util.make(new Object2ObjectArrayMap(), map -> {
         Overworld overworld = new Overworld();
         map.defaultReturnValue((Object)overworld);
-        map.put((Object)DimensionType.OVERWORLD_ID, (Object)overworld);
-        map.put((Object)DimensionType.THE_NETHER_ID, (Object)new Nether());
-        map.put((Object)DimensionType.THE_END_ID, (Object)new End());
+        map.put((Object)DimensionTypes.OVERWORLD_ID, (Object)overworld);
+        map.put((Object)DimensionTypes.THE_NETHER_ID, (Object)new Nether());
+        map.put((Object)DimensionTypes.THE_END_ID, (Object)new End());
     });
     private final float[] rgba = new float[4];
     private final float cloudsHeight;
@@ -46,7 +47,7 @@ public abstract class DimensionEffects {
     }
 
     public static DimensionEffects byDimensionType(DimensionType dimensionType) {
-        return (DimensionEffects)BY_IDENTIFIER.get((Object)dimensionType.getEffects());
+        return (DimensionEffects)BY_IDENTIFIER.get((Object)dimensionType.effects());
     }
 
     @Nullable

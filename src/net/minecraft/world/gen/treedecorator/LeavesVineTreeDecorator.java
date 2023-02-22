@@ -7,52 +7,52 @@
 package net.minecraft.world.gen.treedecorator;
 
 import com.mojang.serialization.Codec;
-import java.util.List;
-import java.util.Random;
-import java.util.function.BiConsumer;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.VineBlock;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.TestableWorld;
-import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.gen.treedecorator.TreeDecorator;
 import net.minecraft.world.gen.treedecorator.TreeDecoratorType;
 
 public class LeavesVineTreeDecorator
 extends TreeDecorator {
-    public static final Codec<LeavesVineTreeDecorator> CODEC = Codec.unit(() -> INSTANCE);
-    public static final LeavesVineTreeDecorator INSTANCE = new LeavesVineTreeDecorator();
+    public static final Codec<LeavesVineTreeDecorator> CODEC = Codec.floatRange((float)0.0f, (float)1.0f).fieldOf("probability").xmap(LeavesVineTreeDecorator::new, treeDecorator -> Float.valueOf(treeDecorator.probability)).codec();
+    private final float probability;
 
     @Override
     protected TreeDecoratorType<?> getType() {
         return TreeDecoratorType.LEAVE_VINE;
     }
 
+    public LeavesVineTreeDecorator(float probability) {
+        this.probability = probability;
+    }
+
     @Override
-    public void generate(TestableWorld world, BiConsumer<BlockPos, BlockState> replacer, Random random, List<BlockPos> logPositions, List<BlockPos> leavesPositions) {
-        leavesPositions.forEach(pos -> {
+    public void generate(TreeDecorator.Generator generator) {
+        Random random = generator.getRandom();
+        generator.getLeavesPositions().forEach(pos -> {
             BlockPos blockPos;
-            if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.west())) {
-                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.EAST, replacer);
+            if (random.nextFloat() < this.probability && generator.isAir(blockPos = pos.west())) {
+                LeavesVineTreeDecorator.placeVines(blockPos, VineBlock.EAST, generator);
             }
-            if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.east())) {
-                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.WEST, replacer);
+            if (random.nextFloat() < this.probability && generator.isAir(blockPos = pos.east())) {
+                LeavesVineTreeDecorator.placeVines(blockPos, VineBlock.WEST, generator);
             }
-            if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.north())) {
-                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.SOUTH, replacer);
+            if (random.nextFloat() < this.probability && generator.isAir(blockPos = pos.north())) {
+                LeavesVineTreeDecorator.placeVines(blockPos, VineBlock.SOUTH, generator);
             }
-            if (random.nextInt(4) == 0 && Feature.isAir(world, blockPos = pos.south())) {
-                LeavesVineTreeDecorator.placeVines(world, blockPos, VineBlock.NORTH, replacer);
+            if (random.nextFloat() < this.probability && generator.isAir(blockPos = pos.south())) {
+                LeavesVineTreeDecorator.placeVines(blockPos, VineBlock.NORTH, generator);
             }
         });
     }
 
-    private static void placeVines(TestableWorld world, BlockPos pos, BooleanProperty facing, BiConsumer<BlockPos, BlockState> replacer) {
-        LeavesVineTreeDecorator.placeVine(replacer, pos, facing);
+    private static void placeVines(BlockPos pos, BooleanProperty faceProperty, TreeDecorator.Generator generator) {
+        generator.replaceWithVine(pos, faceProperty);
         pos = pos.down();
-        for (int i = 4; Feature.isAir(world, pos) && i > 0; --i) {
-            LeavesVineTreeDecorator.placeVine(replacer, pos, facing);
+        for (int i = 4; generator.isAir(pos) && i > 0; --i) {
+            generator.replaceWithVine(pos, faceProperty);
             pos = pos.down();
         }
     }

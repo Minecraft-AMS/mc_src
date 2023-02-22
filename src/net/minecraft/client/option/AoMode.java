@@ -11,11 +11,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public final class AoMode
-extends Enum<AoMode> {
+extends Enum<AoMode>
+implements TranslatableOption {
     public static final /* enum */ AoMode OFF = new AoMode(0, "options.ao.off");
     public static final /* enum */ AoMode MIN = new AoMode(1, "options.ao.min");
     public static final /* enum */ AoMode MAX = new AoMode(2, "options.ao.max");
@@ -37,10 +39,12 @@ extends Enum<AoMode> {
         this.translationKey = translationKey;
     }
 
+    @Override
     public int getId() {
         return this.id;
     }
 
+    @Override
     public String getTranslationKey() {
         return this.translationKey;
     }

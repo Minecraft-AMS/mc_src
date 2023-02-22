@@ -3,14 +3,18 @@
  * 
  * Could not load the following classes:
  *  com.google.gson.annotations.SerializedName
+ *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.io.FileUtils
+ *  org.slf4j.Logger
  */
 package net.minecraft.client.realms.util;
 
 import com.google.gson.annotations.SerializedName;
+import com.mojang.logging.LogUtils;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -20,11 +24,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.realms.CheckedGson;
 import net.minecraft.client.realms.RealmsSerializable;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsPersistence {
     private static final String FILE_NAME = "realms_persistence.json";
     private static final CheckedGson CHECKED_GSON = new CheckedGson();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public RealmsPersistenceData load() {
         return RealmsPersistence.readFile();
@@ -39,11 +45,16 @@ public class RealmsPersistence {
         try {
             String string = FileUtils.readFileToString((File)file, (Charset)StandardCharsets.UTF_8);
             RealmsPersistenceData realmsPersistenceData = CHECKED_GSON.fromJson(string, RealmsPersistenceData.class);
-            return realmsPersistenceData != null ? realmsPersistenceData : new RealmsPersistenceData();
+            if (realmsPersistenceData != null) {
+                return realmsPersistenceData;
+            }
         }
-        catch (IOException iOException) {
-            return new RealmsPersistenceData();
+        catch (FileNotFoundException string) {
         }
+        catch (Exception exception) {
+            LOGGER.warn("Failed to read Realms storage {}", (Object)file, (Object)exception);
+        }
+        return new RealmsPersistenceData();
     }
 
     public static void writeFile(RealmsPersistenceData data) {

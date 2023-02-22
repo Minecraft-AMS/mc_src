@@ -11,11 +11,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public final class ChunkBuilderMode
-extends Enum<ChunkBuilderMode> {
+extends Enum<ChunkBuilderMode>
+implements TranslatableOption {
     public static final /* enum */ ChunkBuilderMode NONE = new ChunkBuilderMode(0, "options.prioritizeChunkUpdates.none");
     public static final /* enum */ ChunkBuilderMode PLAYER_AFFECTED = new ChunkBuilderMode(1, "options.prioritizeChunkUpdates.byPlayer");
     public static final /* enum */ ChunkBuilderMode NEARBY = new ChunkBuilderMode(2, "options.prioritizeChunkUpdates.nearby");
@@ -37,11 +39,13 @@ extends Enum<ChunkBuilderMode> {
         this.name = name;
     }
 
+    @Override
     public int getId() {
         return this.id;
     }
 
-    public String getName() {
+    @Override
+    public String getTranslationKey() {
         return this.name;
     }
 

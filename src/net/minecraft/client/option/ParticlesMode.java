@@ -11,11 +11,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.TranslatableOption;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
 public final class ParticlesMode
-extends Enum<ParticlesMode> {
+extends Enum<ParticlesMode>
+implements TranslatableOption {
     public static final /* enum */ ParticlesMode ALL = new ParticlesMode(0, "options.particles.all");
     public static final /* enum */ ParticlesMode DECREASED = new ParticlesMode(1, "options.particles.decreased");
     public static final /* enum */ ParticlesMode MINIMAL = new ParticlesMode(2, "options.particles.minimal");
@@ -37,10 +39,12 @@ extends Enum<ParticlesMode> {
         this.translationKey = translationKey;
     }
 
+    @Override
     public String getTranslationKey() {
         return this.translationKey;
     }
 
+    @Override
     public int getId() {
         return this.id;
     }

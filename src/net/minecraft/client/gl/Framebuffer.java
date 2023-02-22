@@ -131,12 +131,12 @@ public abstract class Framebuffer {
         this.endRead();
     }
 
-    public void setTexFilter(int i) {
+    public void setTexFilter(int texFilter) {
         RenderSystem.assertOnRenderThreadOrInit();
-        this.texFilter = i;
+        this.texFilter = texFilter;
         GlStateManager._bindTexture(this.colorAttachment);
-        GlStateManager._texParameter(3553, 10241, i);
-        GlStateManager._texParameter(3553, 10240, i);
+        GlStateManager._texParameter(3553, 10241, texFilter);
+        GlStateManager._texParameter(3553, 10240, texFilter);
         GlStateManager._bindTexture(0);
     }
 
@@ -253,8 +253,7 @@ public abstract class Framebuffer {
         bufferBuilder.vertex(f, g, 0.0).texture(h, 0.0f).color(255, 255, 255, 255).next();
         bufferBuilder.vertex(f, 0.0, 0.0).texture(h, i).color(255, 255, 255, 255).next();
         bufferBuilder.vertex(0.0, 0.0, 0.0).texture(0.0f, i).color(255, 255, 255, 255).next();
-        bufferBuilder.end();
-        BufferRenderer.postDraw(bufferBuilder);
+        BufferRenderer.drawWithoutShader(bufferBuilder.end());
         shader.unbind();
         GlStateManager._depthMask(true);
         GlStateManager._colorMask(true, true, true, true);

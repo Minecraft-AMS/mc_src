@@ -9,8 +9,7 @@ package net.minecraft.structure;
 
 import com.google.common.collect.Lists;
 import java.util.List;
-import java.util.Random;
-import net.minecraft.structure.Structure;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -18,6 +17,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 public class StructurePlacementData {
@@ -123,9 +123,9 @@ public class StructurePlacementData {
             return this.random;
         }
         if (pos == null) {
-            return new Random(Util.getMeasuringTimeMs());
+            return Random.create(Util.getMeasuringTimeMs());
         }
-        return new Random(MathHelper.hashCode(pos));
+        return Random.create(MathHelper.hashCode(pos));
     }
 
     public boolean shouldIgnoreEntities() {
@@ -149,7 +149,7 @@ public class StructurePlacementData {
         return this.placeFluids;
     }
 
-    public Structure.PalettedBlockInfoList getRandomBlockInfos(List<Structure.PalettedBlockInfoList> list, @Nullable BlockPos pos) {
+    public StructureTemplate.PalettedBlockInfoList getRandomBlockInfos(List<StructureTemplate.PalettedBlockInfoList> list, @Nullable BlockPos pos) {
         int i = list.size();
         if (i == 0) {
             throw new IllegalStateException("No palettes");

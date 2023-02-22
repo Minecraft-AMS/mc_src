@@ -13,6 +13,12 @@ extends Enum<EntityPose> {
     public static final /* enum */ EntityPose CROUCHING = new EntityPose();
     public static final /* enum */ EntityPose LONG_JUMPING = new EntityPose();
     public static final /* enum */ EntityPose DYING = new EntityPose();
+    public static final /* enum */ EntityPose CROAKING = new EntityPose();
+    public static final /* enum */ EntityPose USING_TONGUE = new EntityPose();
+    public static final /* enum */ EntityPose ROARING = new EntityPose();
+    public static final /* enum */ EntityPose SNIFFING = new EntityPose();
+    public static final /* enum */ EntityPose EMERGING = new EntityPose();
+    public static final /* enum */ EntityPose DIGGING = new EntityPose();
     private static final /* synthetic */ EntityPose[] field_18083;
 
     public static EntityPose[] values() {
@@ -24,7 +30,7 @@ extends Enum<EntityPose> {
     }
 
     private static /* synthetic */ EntityPose[] method_36612() {
-        return new EntityPose[]{STANDING, FALL_FLYING, SLEEPING, SWIMMING, SPIN_ATTACK, CROUCHING, LONG_JUMPING, DYING};
+        return new EntityPose[]{STANDING, FALL_FLYING, SLEEPING, SWIMMING, SPIN_ATTACK, CROUCHING, LONG_JUMPING, DYING, CROAKING, USING_TONGUE, ROARING, SNIFFING, EMERGING, DIGGING};
     }
 
     static {

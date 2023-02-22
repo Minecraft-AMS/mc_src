@@ -15,7 +15,7 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.screen.ScreenTexts;
+import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -35,9 +35,8 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -50,10 +49,10 @@ extends RealmsScreen {
     private static final Identifier USER_ICON = new Identifier("realms", "textures/gui/realms/user_icon.png");
     private static final Identifier CROSS_PLAYER_ICON = new Identifier("realms", "textures/gui/realms/cross_player_icon.png");
     private static final Identifier OPTIONS_BACKGROUND = new Identifier("minecraft", "textures/gui/options_background.png");
-    private static final Text NORMAL_TOOLTIP = new TranslatableText("mco.configure.world.invites.normal.tooltip");
-    private static final Text OPERATOR_TOOLTIP = new TranslatableText("mco.configure.world.invites.ops.tooltip");
-    private static final Text REMOVE_TOOLTIP = new TranslatableText("mco.configure.world.invites.remove.tooltip");
-    private static final Text INVITED_TEXT = new TranslatableText("mco.configure.world.invited");
+    private static final Text NORMAL_TOOLTIP = Text.translatable("mco.configure.world.invites.normal.tooltip");
+    private static final Text OPERATOR_TOOLTIP = Text.translatable("mco.configure.world.invites.ops.tooltip");
+    private static final Text REMOVE_TOOLTIP = Text.translatable("mco.configure.world.invites.remove.tooltip");
+    private static final Text INVITED_TEXT = Text.translatable("mco.configure.world.invited");
     @Nullable
     private Text tooltip;
     private final RealmsConfigureWorldScreen parent;
@@ -71,7 +70,7 @@ extends RealmsScreen {
     PlayerOperation operation = PlayerOperation.NONE;
 
     public RealmsPlayerScreen(RealmsConfigureWorldScreen parent, RealmsServer serverData) {
-        super(new TranslatableText("mco.configure.world.players.title"));
+        super(Text.translatable("mco.configure.world.players.title"));
         this.parent = parent;
         this.serverData = serverData;
     }
@@ -88,9 +87,9 @@ extends RealmsScreen {
         for (PlayerInfo playerInfo : this.serverData.players) {
             this.invitedObjectSelectionList.addEntry(playerInfo);
         }
-        this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(1), this.column_width + 10, 20, new TranslatableText("mco.configure.world.buttons.invite"), button -> this.client.setScreen(new RealmsInviteScreen(this.parent, this, this.serverData))));
-        this.removeButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(7), this.column_width + 10, 20, new TranslatableText("mco.configure.world.invites.remove.tooltip"), button -> this.uninvite(this.player)));
-        this.opdeopButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(9), this.column_width + 10, 20, new TranslatableText("mco.configure.world.invites.ops.tooltip"), button -> {
+        this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(1), this.column_width + 10, 20, Text.translatable("mco.configure.world.buttons.invite"), button -> this.client.setScreen(new RealmsInviteScreen(this.parent, this, this.serverData))));
+        this.removeButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(7), this.column_width + 10, 20, Text.translatable("mco.configure.world.invites.remove.tooltip"), button -> this.uninvite(this.player)));
+        this.opdeopButton = this.addDrawableChild(new ButtonWidget(this.column2_x, RealmsPlayerScreen.row(9), this.column_width + 10, 20, Text.translatable("mco.configure.world.invites.ops.tooltip"), button -> {
             if (this.serverData.players.get(this.player).isOperator()) {
                 this.deop(this.player);
             } else {
@@ -134,7 +133,7 @@ extends RealmsScreen {
 
     void op(int index) {
         this.updateButtonStates();
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         String string = this.serverData.players.get(index).getUuid();
         try {
             this.updateOps(realmsClient.op(this.serverData.id, string));
@@ -146,7 +145,7 @@ extends RealmsScreen {
 
     void deop(int index) {
         this.updateButtonStates();
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         String string = this.serverData.players.get(index).getUuid();
         try {
             this.updateOps(realmsClient.deop(this.serverData.id, string));
@@ -170,7 +169,7 @@ extends RealmsScreen {
             this.selectedInvitedIndex = index;
             RealmsConfirmScreen realmsConfirmScreen = new RealmsConfirmScreen(confirmed -> {
                 if (confirmed) {
-                    RealmsClient realmsClient = RealmsClient.createRealmsClient();
+                    RealmsClient realmsClient = RealmsClient.create();
                     try {
                         realmsClient.uninvite(this.serverData.id, this.selectedInvited);
                     }
@@ -183,7 +182,7 @@ extends RealmsScreen {
                 }
                 this.stateChanged = true;
                 this.client.setScreen(this);
-            }, new LiteralText("Question"), new TranslatableText("mco.configure.world.uninvite.question").append(" '").append(playerInfo.getName()).append("' ?"));
+            }, Text.literal("Question"), Text.translatable("mco.configure.world.uninvite.question").append(" '").append(playerInfo.getName()).append("' ?"));
             this.client.setScreen(realmsConfirmScreen);
         }
     }
@@ -215,7 +214,7 @@ extends RealmsScreen {
         bufferBuilder.vertex(0.0, i, 0.0).texture(0.0f, 0.0f).color(64, 64, 64, 255).next();
         tessellator.draw();
         if (this.serverData != null && this.serverData.players != null) {
-            this.textRenderer.draw(matrices, new LiteralText("").append(INVITED_TEXT).append(" (").append(Integer.toString(this.serverData.players.size())).append(")"), (float)this.column1_x, (float)RealmsPlayerScreen.row(0), 0xA0A0A0);
+            this.textRenderer.draw(matrices, Text.empty().append(INVITED_TEXT).append(" (").append(Integer.toString(this.serverData.players.size())).append(")"), (float)this.column1_x, (float)RealmsPlayerScreen.row(0), 0xA0A0A0);
         } else {
             this.textRenderer.draw(matrices, INVITED_TEXT, (float)this.column1_x, (float)RealmsPlayerScreen.row(0), 0xA0A0A0);
         }
@@ -410,14 +409,13 @@ extends RealmsScreen {
             RealmsPlayerScreen.this.drawRemoveIcon(matrices, RealmsPlayerScreen.this.column1_x + RealmsPlayerScreen.this.column_width - 22, y + 2, mouseX, mouseY);
             RealmsTextureManager.withBoundFace(playerInfo.getUuid(), () -> {
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-                DrawableHelper.drawTexture(matrices, RealmsPlayerScreen.this.column1_x + 2 + 2, y + 1, 8, 8, 8.0f, 8.0f, 8, 8, 64, 64);
-                DrawableHelper.drawTexture(matrices, RealmsPlayerScreen.this.column1_x + 2 + 2, y + 1, 8, 8, 40.0f, 8.0f, 8, 8, 64, 64);
+                PlayerSkinDrawer.draw(matrices, RealmsPlayerScreen.this.column1_x + 2 + 2, y + 1, 8);
             });
         }
 
         @Override
         public Text getNarration() {
-            return new TranslatableText("narrator.select", this.playerInfo.getName());
+            return Text.translatable("narrator.select", this.playerInfo.getName());
         }
     }
 }

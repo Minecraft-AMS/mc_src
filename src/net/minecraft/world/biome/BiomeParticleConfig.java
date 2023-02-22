@@ -13,9 +13,9 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Random;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.util.math.random.Random;
 
 public class BiomeParticleConfig {
     public static final Codec<BiomeParticleConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)ParticleTypes.TYPE_CODEC.fieldOf("options").forGetter(biomeParticleConfig -> biomeParticleConfig.particle), (App)Codec.FLOAT.fieldOf("probability").forGetter(biomeParticleConfig -> Float.valueOf(biomeParticleConfig.probability))).apply((Applicative)instance, BiomeParticleConfig::new));

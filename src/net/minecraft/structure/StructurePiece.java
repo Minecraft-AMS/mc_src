@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DynamicOps;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
 import net.minecraft.block.Block;
@@ -39,6 +38,7 @@ import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.Heightmap;
@@ -46,7 +46,6 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.StructureWeightType;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -99,10 +98,6 @@ public abstract class StructurePiece {
 
     protected abstract void writeNbt(StructureContext var1, NbtCompound var2);
 
-    public StructureWeightType getWeightType() {
-        return StructureWeightType.BEARD;
-    }
-
     public void fillOpenings(StructurePiece start, StructurePiecesHolder holder, Random random) {
     }
 
@@ -114,6 +109,10 @@ public abstract class StructurePiece {
 
     public int getChainLength() {
         return this.chainLength;
+    }
+
+    public void setChainLength(int chainLength) {
+        this.chainLength = chainLength;
     }
 
     public boolean intersectsChunk(ChunkPos pos, int offset) {
@@ -454,11 +453,8 @@ public abstract class StructurePiece {
         return this.type;
     }
 
-    protected static abstract class BlockRandomizer {
+    public static abstract class BlockRandomizer {
         protected BlockState block = Blocks.AIR.getDefaultState();
-
-        protected BlockRandomizer() {
-        }
 
         public abstract void setBlock(Random var1, int var2, int var3, int var4, boolean var5);
 

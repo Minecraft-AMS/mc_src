@@ -55,10 +55,10 @@ import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class LlamaEntity
@@ -88,9 +88,9 @@ implements RangedAttackMob {
         this.dataTracker.set(STRENGTH, Math.max(1, Math.min(5, strength)));
     }
 
-    private void initializeStrength() {
-        int i = this.random.nextFloat() < 0.04f ? 5 : 3;
-        this.setStrength(1 + this.random.nextInt(i));
+    private void initializeStrength(Random random) {
+        int i = random.nextFloat() < 0.04f ? 5 : 3;
+        this.setStrength(1 + random.nextInt(i));
     }
 
     public int getStrength() {
@@ -180,8 +180,9 @@ implements RangedAttackMob {
     }
 
     @Override
-    public boolean canBeControlledByRider() {
-        return false;
+    @Nullable
+    public LivingEntity getPrimaryPassenger() {
+        return null;
     }
 
     @Override
@@ -191,6 +192,7 @@ implements RangedAttackMob {
 
     @Override
     protected boolean receiveFood(PlayerEntity player, ItemStack item) {
+        SoundEvent soundEvent;
         int i = 0;
         int j = 0;
         float f = 0.0f;
@@ -225,12 +227,8 @@ implements RangedAttackMob {
                 this.addTemper(j);
             }
         }
-        if (bl) {
-            SoundEvent soundEvent;
-            this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
-            if (!this.isSilent() && (soundEvent = this.getEatSound()) != null) {
-                this.world.playSound(null, this.getX(), this.getY(), this.getZ(), this.getEatSound(), this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
-            }
+        if (bl && !this.isSilent() && (soundEvent = this.getEatSound()) != null) {
+            this.world.playSound(null, this.getX(), this.getY(), this.getZ(), this.getEatSound(), this.getSoundCategory(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
         }
         return bl;
     }
@@ -244,11 +242,12 @@ implements RangedAttackMob {
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         int i;
-        this.initializeStrength();
+        Random random = world.getRandom();
+        this.initializeStrength(random);
         if (entityData instanceof LlamaData) {
             i = ((LlamaData)entityData).variant;
         } else {
-            i = this.random.nextInt(4);
+            i = random.nextInt(4);
             entityData = new LlamaData(i);
         }
         this.setVariant(i);
@@ -316,7 +315,7 @@ implements RangedAttackMob {
 
     @Override
     public boolean isHorseArmor(ItemStack item) {
-        return item.isIn(ItemTags.CARPETS);
+        return item.isIn(ItemTags.WOOL_CARPETS);
     }
 
     @Override
@@ -452,7 +451,7 @@ implements RangedAttackMob {
     }
 
     @Override
-    protected double getRunFromLeashSpeed() {
+    protected double getFollowLeashSpeed() {
         return 2.0;
     }
 
@@ -481,6 +480,12 @@ implements RangedAttackMob {
     @Override
     public /* synthetic */ PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
         return this.createChild(world, entity);
+    }
+
+    @Override
+    @Nullable
+    public /* synthetic */ Entity getPrimaryPassenger() {
+        return this.getPrimaryPassenger();
     }
 
     static class SpitRevengeGoal

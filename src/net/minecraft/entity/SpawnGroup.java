@@ -7,9 +7,6 @@
 package net.minecraft.entity;
 
 import com.mojang.serialization.Codec;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collectors;
 import net.minecraft.util.StringIdentifiable;
 
 public final class SpawnGroup
@@ -24,7 +21,6 @@ implements StringIdentifiable {
     public static final /* enum */ SpawnGroup WATER_AMBIENT = new SpawnGroup("water_ambient", 20, true, false, 64);
     public static final /* enum */ SpawnGroup MISC = new SpawnGroup("misc", -1, true, true, 128);
     public static final Codec<SpawnGroup> CODEC;
-    private static final Map<String, SpawnGroup> BY_NAME;
     private final int capacity;
     private final boolean peaceful;
     private final boolean rare;
@@ -58,10 +54,6 @@ implements StringIdentifiable {
         return this.name;
     }
 
-    public static SpawnGroup byName(String name) {
-        return BY_NAME.get(name);
-    }
-
     public int getCapacity() {
         return this.capacity;
     }
@@ -88,8 +80,7 @@ implements StringIdentifiable {
 
     static {
         field_6301 = SpawnGroup.method_36609();
-        CODEC = StringIdentifiable.createCodec(SpawnGroup::values, SpawnGroup::byName);
-        BY_NAME = Arrays.stream(SpawnGroup.values()).collect(Collectors.toMap(SpawnGroup::getName, spawnGroup -> spawnGroup));
+        CODEC = StringIdentifiable.createCodec(SpawnGroup::values);
     }
 }
 

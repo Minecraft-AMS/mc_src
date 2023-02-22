@@ -3,7 +3,6 @@
  */
 package net.minecraft.entity.mob;
 
-import java.util.Random;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityGroup;
 import net.minecraft.entity.EntityType;
@@ -14,6 +13,7 @@ import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
@@ -46,7 +46,7 @@ extends PathAwareEntity {
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         return 1 + this.world.random.nextInt(3);
     }
 

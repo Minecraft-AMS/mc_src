@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -89,19 +90,19 @@ public final class NbtHelper {
     }
 
     @Nullable
-    public static GameProfile toGameProfile(NbtCompound compound) {
+    public static GameProfile toGameProfile(NbtCompound nbt) {
         String string = null;
         UUID uUID = null;
-        if (compound.contains("Name", 8)) {
-            string = compound.getString("Name");
+        if (nbt.contains("Name", 8)) {
+            string = nbt.getString("Name");
         }
-        if (compound.containsUuid("Id")) {
-            uUID = compound.getUuid("Id");
+        if (nbt.containsUuid("Id")) {
+            uUID = nbt.getUuid("Id");
         }
         try {
             GameProfile gameProfile = new GameProfile(uUID, string);
-            if (compound.contains("Properties", 10)) {
-                NbtCompound nbtCompound = compound.getCompound("Properties");
+            if (nbt.contains("Properties", 10)) {
+                NbtCompound nbtCompound = nbt.getCompound("Properties");
                 for (String string2 : nbtCompound.getKeys()) {
                     NbtList nbtList = nbtCompound.getList(string2, 10);
                     for (int i = 0; i < nbtList.size(); ++i) {
@@ -122,12 +123,12 @@ public final class NbtHelper {
         }
     }
 
-    public static NbtCompound writeGameProfile(NbtCompound compound, GameProfile profile) {
+    public static NbtCompound writeGameProfile(NbtCompound nbt, GameProfile profile) {
         if (!StringHelper.isEmpty(profile.getName())) {
-            compound.putString("Name", profile.getName());
+            nbt.putString("Name", profile.getName());
         }
         if (profile.getId() != null) {
-            compound.putUuid("Id", profile.getId());
+            nbt.putUuid("Id", profile.getId());
         }
         if (!profile.getProperties().isEmpty()) {
             NbtCompound nbtCompound = new NbtCompound();
@@ -143,13 +144,13 @@ public final class NbtHelper {
                 }
                 nbtCompound.put(string, nbtList);
             }
-            compound.put("Properties", nbtCompound);
+            nbt.put("Properties", nbtCompound);
         }
-        return compound;
+        return nbt;
     }
 
     @VisibleForTesting
-    public static boolean matches(@Nullable NbtElement standard, @Nullable NbtElement subject, boolean equalValue) {
+    public static boolean matches(@Nullable NbtElement standard, @Nullable NbtElement subject, boolean ignoreListOrder) {
         if (standard == subject) {
             return true;
         }
@@ -167,12 +168,12 @@ public final class NbtHelper {
             NbtCompound nbtCompound2 = (NbtCompound)subject;
             for (String string : nbtCompound.getKeys()) {
                 NbtElement nbtElement = nbtCompound.get(string);
-                if (NbtHelper.matches(nbtElement, nbtCompound2.get(string), equalValue)) continue;
+                if (NbtHelper.matches(nbtElement, nbtCompound2.get(string), ignoreListOrder)) continue;
                 return false;
             }
             return true;
         }
-        if (standard instanceof NbtList && equalValue) {
+        if (standard instanceof NbtList && ignoreListOrder) {
             NbtList nbtList = (NbtList)standard;
             NbtList nbtList2 = (NbtList)subject;
             if (nbtList.isEmpty()) {
@@ -182,7 +183,7 @@ public final class NbtHelper {
                 NbtElement nbtElement2 = nbtList.get(i);
                 boolean bl = false;
                 for (int j = 0; j < nbtList2.size(); ++j) {
-                    if (!NbtHelper.matches(nbtElement2, nbtList2.get(j), equalValue)) continue;
+                    if (!NbtHelper.matches(nbtElement2, nbtList2.get(j), ignoreListOrder)) continue;
                     bl = true;
                     break;
                 }
@@ -209,8 +210,8 @@ public final class NbtHelper {
         return DynamicSerializableUuid.toUuid(is);
     }
 
-    public static BlockPos toBlockPos(NbtCompound compound) {
-        return new BlockPos(compound.getInt("X"), compound.getInt("Y"), compound.getInt("Z"));
+    public static BlockPos toBlockPos(NbtCompound nbt) {
+        return new BlockPos(nbt.getInt("X"), nbt.getInt("Y"), nbt.getInt("Z"));
     }
 
     public static NbtCompound fromBlockPos(BlockPos pos) {
@@ -221,19 +222,19 @@ public final class NbtHelper {
         return nbtCompound;
     }
 
-    public static BlockState toBlockState(NbtCompound compound) {
-        if (!compound.contains("Name", 8)) {
+    public static BlockState toBlockState(NbtCompound nbt) {
+        if (!nbt.contains("Name", 8)) {
             return Blocks.AIR.getDefaultState();
         }
-        Block block = Registry.BLOCK.get(new Identifier(compound.getString("Name")));
+        Block block = Registry.BLOCK.get(new Identifier(nbt.getString("Name")));
         BlockState blockState = block.getDefaultState();
-        if (compound.contains("Properties", 10)) {
-            NbtCompound nbtCompound = compound.getCompound("Properties");
+        if (nbt.contains("Properties", 10)) {
+            NbtCompound nbtCompound = nbt.getCompound("Properties");
             StateManager<Block, BlockState> stateManager = block.getStateManager();
             for (String string : nbtCompound.getKeys()) {
                 net.minecraft.state.property.Property<?> property = stateManager.getProperty(string);
                 if (property == null) continue;
-                blockState = NbtHelper.withProperty(blockState, property, string, nbtCompound, compound);
+                blockState = NbtHelper.withProperty(blockState, property, string, nbtCompound, nbt);
             }
         }
         return blockState;
@@ -324,7 +325,7 @@ public final class NbtHelper {
                         } else if (j != 0) {
                             stringBuilder.append(' ');
                         }
-                        stringBuilder.append(String.format("0x%02X", bs[j] & 0xFF));
+                        stringBuilder.append(String.format(Locale.ROOT, "0x%02X", bs[j] & 0xFF));
                     }
                 } else {
                     NbtHelper.appendIndent(depth + 1, stringBuilder).append(" // Skipped, supply withBinaryBlobs true");
@@ -363,7 +364,7 @@ public final class NbtHelper {
                 int l = string.length;
                 for (int j = 0; j < l; ++j) {
                     int m = string[j];
-                    i = Math.max(i, String.format("%X", m).length());
+                    i = Math.max(i, String.format(Locale.ROOT, "%X", m).length());
                 }
                 int j = is.length;
                 NbtHelper.appendIndent(depth, stringBuilder).append("int[").append(j).append("] {\n");
@@ -381,7 +382,7 @@ public final class NbtHelper {
                         } else if (l != 0) {
                             stringBuilder.append(' ');
                         }
-                        stringBuilder.append(String.format("0x%0" + i + "X", is[l]));
+                        stringBuilder.append(String.format(Locale.ROOT, "0x%0" + i + "X", is[l]));
                     }
                 } else {
                     NbtHelper.appendIndent(depth + 1, stringBuilder).append(" // Skipped, supply withBinaryBlobs true");
@@ -424,7 +425,7 @@ public final class NbtHelper {
                 int n2 = l.length;
                 for (m = 0; m < n2; ++m) {
                     long o = l[m];
-                    n = Math.max(n, (long)String.format("%X", o).length());
+                    n = Math.max(n, (long)String.format(Locale.ROOT, "%X", o).length());
                 }
                 long p = ls.length;
                 NbtHelper.appendIndent(depth, stringBuilder).append("long[").append(p).append("] {\n");
@@ -442,7 +443,7 @@ public final class NbtHelper {
                         } else if (m != 0) {
                             stringBuilder.append(' ');
                         }
-                        stringBuilder.append(String.format("0x%0" + n + "X", ls[m]));
+                        stringBuilder.append(String.format(Locale.ROOT, "0x%0" + n + "X", ls[m]));
                     }
                 } else {
                     NbtHelper.appendIndent(depth + 1, stringBuilder).append(" // Skipped, supply withBinaryBlobs true");

@@ -96,7 +96,7 @@ implements EntryCombiner {
         }
 
         @Override
-        public final T getThis() {
+        public final T getThisConditionConsumingBuilder() {
             return this.getThisBuilder();
         }
 
@@ -108,23 +108,23 @@ implements EntryCombiner {
             return new AlternativeEntry.Builder(this, builder);
         }
 
-        public SequenceEntry.Builder sequenceEntry(Builder<?> entry) {
-            return new SequenceEntry.Builder(this, entry);
+        public GroupEntry.Builder sequenceEntry(Builder<?> entry) {
+            return new GroupEntry.Builder(this, entry);
         }
 
-        public GroupEntry.Builder groupEntry(Builder<?> entry) {
-            return new GroupEntry.Builder(this, entry);
+        public SequenceEntry.Builder groupEntry(Builder<?> entry) {
+            return new SequenceEntry.Builder(this, entry);
         }
 
         public abstract LootPoolEntry build();
 
         @Override
-        public /* synthetic */ Object getThis() {
-            return this.getThis();
+        public /* synthetic */ LootConditionConsumingBuilder getThisConditionConsumingBuilder() {
+            return this.getThisConditionConsumingBuilder();
         }
 
         @Override
-        public /* synthetic */ Object conditionally(LootCondition.Builder condition) {
+        public /* synthetic */ LootConditionConsumingBuilder conditionally(LootCondition.Builder condition) {
             return this.conditionally(condition);
         }
     }

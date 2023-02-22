@@ -18,7 +18,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 
 public class ListCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -30,14 +29,14 @@ public class ListCommand {
     }
 
     private static int executeUuids(ServerCommandSource source) {
-        return ListCommand.execute(source, player -> new TranslatableText("commands.list.nameAndId", player.getName(), player.getGameProfile().getId()));
+        return ListCommand.execute(source, player -> Text.translatable("commands.list.nameAndId", player.getName(), player.getGameProfile().getId()));
     }
 
     private static int execute(ServerCommandSource source, Function<ServerPlayerEntity, Text> nameProvider) {
         PlayerManager playerManager = source.getServer().getPlayerManager();
         List<ServerPlayerEntity> list = playerManager.getPlayerList();
         Text text = Texts.join(list, nameProvider);
-        source.sendFeedback(new TranslatableText("commands.list.players", list.size(), playerManager.getMaxPlayerCount(), text), false);
+        source.sendFeedback(Text.translatable("commands.list.players", list.size(), playerManager.getMaxPlayerCount(), text), false);
         return list.size();
     }
 }

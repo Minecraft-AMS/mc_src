@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.function.Function;
+import net.minecraft.structure.AncientCityGenerator;
 import net.minecraft.structure.BastionRemnantGenerator;
 import net.minecraft.structure.PillagerOutpostGenerator;
 import net.minecraft.structure.VillageGenerator;
@@ -30,15 +31,17 @@ public class StructurePools {
         return BuiltinRegistries.add(BuiltinRegistries.STRUCTURE_POOL, templatePool.getId(), templatePool);
     }
 
-    public static RegistryEntry<StructurePool> initDefaultPools() {
+    @Deprecated
+    public static void method_44111() {
+        StructurePools.initDefaultPools(BuiltinRegistries.STRUCTURE_POOL);
+    }
+
+    public static RegistryEntry<StructurePool> initDefaultPools(Registry<StructurePool> registry) {
         BastionRemnantGenerator.init();
         PillagerOutpostGenerator.init();
         VillageGenerator.init();
+        AncientCityGenerator.init();
         return INVALID;
-    }
-
-    static {
-        StructurePools.initDefaultPools();
     }
 }
 

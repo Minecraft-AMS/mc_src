@@ -31,6 +31,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
+import java.util.Collection;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.CommandFunctionArgumentType;
 import net.minecraft.command.argument.TimeArgumentType;
@@ -39,23 +40,22 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.FunctionCommand;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
-import net.minecraft.tag.Tag;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.timer.FunctionTagTimerCallback;
 import net.minecraft.world.timer.FunctionTimerCallback;
 import net.minecraft.world.timer.Timer;
 
 public class ScheduleCommand {
-    private static final SimpleCommandExceptionType SAME_TICK_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.schedule.same_tick"));
-    private static final DynamicCommandExceptionType CLEARED_FAILURE_EXCEPTION = new DynamicCommandExceptionType(eventName -> new TranslatableText("commands.schedule.cleared.failure", eventName));
+    private static final SimpleCommandExceptionType SAME_TICK_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.schedule.same_tick"));
+    private static final DynamicCommandExceptionType CLEARED_FAILURE_EXCEPTION = new DynamicCommandExceptionType(eventName -> Text.translatable("commands.schedule.cleared.failure", eventName));
     private static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getSaveProperties().getMainWorldProperties().getScheduledEvents().getEventNames(), builder);
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("schedule").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.literal("function").then(CommandManager.argument("function", CommandFunctionArgumentType.commandFunction()).suggests(FunctionCommand.SUGGESTION_PROVIDER).then(((RequiredArgumentBuilder)((RequiredArgumentBuilder)CommandManager.argument("time", TimeArgumentType.time()).executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), true))).then(CommandManager.literal("append").executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), false)))).then(CommandManager.literal("replace").executes(context -> ScheduleCommand.execute((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctionOrTag((CommandContext<ServerCommandSource>)context, "function"), IntegerArgumentType.getInteger((CommandContext)context, (String)"time"), true))))))).then(CommandManager.literal("clear").then(CommandManager.argument("function", StringArgumentType.greedyString()).suggests(SUGGESTION_PROVIDER).executes(context -> ScheduleCommand.clearEvent((ServerCommandSource)context.getSource(), StringArgumentType.getString((CommandContext)context, (String)"function"))))));
     }
 
-    private static int execute(ServerCommandSource source, Pair<Identifier, Either<CommandFunction, Tag<CommandFunction>>> function2, int time, boolean replace) throws CommandSyntaxException {
+    private static int execute(ServerCommandSource source, Pair<Identifier, Either<CommandFunction, Collection<CommandFunction>>> function2, int time, boolean replace) throws CommandSyntaxException {
         if (time == 0) {
             throw SAME_TICK_EXCEPTION.create();
         }
@@ -68,14 +68,14 @@ public class ScheduleCommand {
                 timer.remove(string);
             }
             timer.setEvent(string, l, new FunctionTimerCallback(identifier));
-            source.sendFeedback(new TranslatableText("commands.schedule.created.function", identifier, time, l), true);
-        }).ifRight(tag -> {
+            source.sendFeedback(Text.translatable("commands.schedule.created.function", identifier, time, l), true);
+        }).ifRight(collection -> {
             String string = "#" + identifier;
             if (replace) {
                 timer.remove(string);
             }
             timer.setEvent(string, l, new FunctionTagTimerCallback(identifier));
-            source.sendFeedback(new TranslatableText("commands.schedule.created.tag", identifier, time, l), true);
+            source.sendFeedback(Text.translatable("commands.schedule.created.tag", identifier, time, l), true);
         });
         return Math.floorMod(l, Integer.MAX_VALUE);
     }
@@ -85,7 +85,7 @@ public class ScheduleCommand {
         if (i == 0) {
             throw CLEARED_FAILURE_EXCEPTION.create((Object)eventName);
         }
-        source.sendFeedback(new TranslatableText("commands.schedule.cleared.success", i, eventName), true);
+        source.sendFeedback(Text.translatable("commands.schedule.cleared.success", i, eventName), true);
         return i;
     }
 }

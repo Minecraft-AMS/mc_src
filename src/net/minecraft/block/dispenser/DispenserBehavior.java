@@ -10,7 +10,6 @@ package net.minecraft.block.dispenser;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BeehiveBlock;
 import net.minecraft.block.Block;
@@ -45,7 +44,7 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.TntEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.passive.AbstractDonkeyEntity;
-import net.minecraft.entity.passive.HorseBaseEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
@@ -65,6 +64,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.SpawnEggItem;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
 import net.minecraft.server.world.ServerWorld;
@@ -80,6 +80,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Position;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 import org.slf4j.Logger;
@@ -210,7 +211,7 @@ public interface DispenserBehavior {
                     return ItemStack.EMPTY;
                 }
                 stack.decrement(1);
-                pointer.getWorld().emitGameEvent(GameEvent.ENTITY_PLACE, pointer.getPos());
+                pointer.getWorld().emitGameEvent(null, GameEvent.ENTITY_PLACE, pointer.getPos());
                 return stack;
             }
         };
@@ -258,10 +259,10 @@ public interface DispenserBehavior {
             @Override
             protected ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
                 BlockPos blockPos = pointer.getPos().offset(pointer.getBlockState().get(DispenserBlock.FACING));
-                List<HorseBaseEntity> list = pointer.getWorld().getEntitiesByClass(HorseBaseEntity.class, new Box(blockPos), entity -> entity.isAlive() && entity.hasArmorSlot());
-                for (HorseBaseEntity horseBaseEntity : list) {
-                    if (!horseBaseEntity.isHorseArmor(stack) || horseBaseEntity.hasArmorInSlot() || !horseBaseEntity.isTame()) continue;
-                    horseBaseEntity.getStackReference(401).set(stack.split(1));
+                List<AbstractHorseEntity> list = pointer.getWorld().getEntitiesByClass(AbstractHorseEntity.class, new Box(blockPos), entity -> entity.isAlive() && entity.hasArmorSlot());
+                for (AbstractHorseEntity abstractHorseEntity : list) {
+                    if (!abstractHorseEntity.isHorseArmor(stack) || abstractHorseEntity.hasArmorInSlot() || !abstractHorseEntity.isTame()) continue;
+                    abstractHorseEntity.getStackReference(401).set(stack.split(1));
                     this.setSuccess(true);
                     return stack;
                 }
@@ -332,9 +333,9 @@ public interface DispenserBehavior {
                 double f = position.getZ() + (double)((float)direction.getOffsetZ() * 0.3f);
                 ServerWorld world = pointer.getWorld();
                 Random random = world.random;
-                double g = random.nextGaussian() * 0.05 + (double)direction.getOffsetX();
-                double h = random.nextGaussian() * 0.05 + (double)direction.getOffsetY();
-                double i = random.nextGaussian() * 0.05 + (double)direction.getOffsetZ();
+                double g = random.nextTriangular(direction.getOffsetX(), 0.11485000000000001);
+                double h = random.nextTriangular(direction.getOffsetY(), 0.11485000000000001);
+                double i = random.nextTriangular(direction.getOffsetZ(), 0.11485000000000001);
                 SmallFireballEntity smallFireballEntity = new SmallFireballEntity(world, d, e, f, g, h, i);
                 world.spawnEntity(Util.make(smallFireballEntity, entity -> entity.setItem(stack)));
                 stack.decrement(1);
@@ -352,6 +353,14 @@ public interface DispenserBehavior {
         DispenserBlock.registerBehavior(Items.JUNGLE_BOAT, new BoatDispenserBehavior(BoatEntity.Type.JUNGLE));
         DispenserBlock.registerBehavior(Items.DARK_OAK_BOAT, new BoatDispenserBehavior(BoatEntity.Type.DARK_OAK));
         DispenserBlock.registerBehavior(Items.ACACIA_BOAT, new BoatDispenserBehavior(BoatEntity.Type.ACACIA));
+        DispenserBlock.registerBehavior(Items.MANGROVE_BOAT, new BoatDispenserBehavior(BoatEntity.Type.MANGROVE));
+        DispenserBlock.registerBehavior(Items.OAK_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.OAK, true));
+        DispenserBlock.registerBehavior(Items.SPRUCE_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.SPRUCE, true));
+        DispenserBlock.registerBehavior(Items.BIRCH_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.BIRCH, true));
+        DispenserBlock.registerBehavior(Items.JUNGLE_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.JUNGLE, true));
+        DispenserBlock.registerBehavior(Items.DARK_OAK_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.DARK_OAK, true));
+        DispenserBlock.registerBehavior(Items.ACACIA_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.ACACIA, true));
+        DispenserBlock.registerBehavior(Items.MANGROVE_CHEST_BOAT, new BoatDispenserBehavior(BoatEntity.Type.MANGROVE, true));
         ItemDispenserBehavior dispenserBehavior = new ItemDispenserBehavior(){
             private final ItemDispenserBehavior fallbackBehavior = new ItemDispenserBehavior();
 
@@ -375,6 +384,7 @@ public interface DispenserBehavior {
         DispenserBlock.registerBehavior(Items.PUFFERFISH_BUCKET, dispenserBehavior);
         DispenserBlock.registerBehavior(Items.TROPICAL_FISH_BUCKET, dispenserBehavior);
         DispenserBlock.registerBehavior(Items.AXOLOTL_BUCKET, dispenserBehavior);
+        DispenserBlock.registerBehavior(Items.TADPOLE_BUCKET, dispenserBehavior);
         DispenserBlock.registerBehavior(Items.BUCKET, new ItemDispenserBehavior(){
             private final ItemDispenserBehavior fallbackBehavior = new ItemDispenserBehavior();
 
@@ -457,7 +467,7 @@ public interface DispenserBehavior {
                 BlockPos blockPos = pointer.getPos().offset(pointer.getBlockState().get(DispenserBlock.FACING));
                 TntEntity tntEntity = new TntEntity(world, (double)blockPos.getX() + 0.5, blockPos.getY(), (double)blockPos.getZ() + 0.5, null);
                 world.spawnEntity(tntEntity);
-                ((World)world).playSound(null, tntEntity.getX(), tntEntity.getY(), tntEntity.getZ(), SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                world.playSound(null, tntEntity.getX(), tntEntity.getY(), tntEntity.getZ(), SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0f, 1.0f);
                 world.emitGameEvent(null, GameEvent.ENTITY_PLACE, blockPos);
                 stack.decrement(1);
                 return stack;
@@ -593,6 +603,31 @@ public interface DispenserBehavior {
                     return stack;
                 }
                 return super.dispenseSilently(pointer, stack);
+            }
+        });
+        DispenserBlock.registerBehavior(Items.POTION, new ItemDispenserBehavior(){
+            private final ItemDispenserBehavior fallback = new ItemDispenserBehavior();
+
+            @Override
+            public ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
+                if (PotionUtil.getPotion(stack) != Potions.WATER) {
+                    return this.fallback.dispense(pointer, stack);
+                }
+                ServerWorld serverWorld = pointer.getWorld();
+                BlockPos blockPos = pointer.getPos();
+                BlockPos blockPos2 = pointer.getPos().offset(pointer.getBlockState().get(DispenserBlock.FACING));
+                if (serverWorld.getBlockState(blockPos2).isIn(BlockTags.CONVERTABLE_TO_MUD)) {
+                    if (!serverWorld.isClient) {
+                        for (int i = 0; i < 5; ++i) {
+                            serverWorld.spawnParticles(ParticleTypes.SPLASH, (double)blockPos.getX() + serverWorld.random.nextDouble(), blockPos.getY() + 1, (double)blockPos.getZ() + serverWorld.random.nextDouble(), 1, 0.0, 0.0, 0.0, 1.0);
+                        }
+                    }
+                    serverWorld.playSound(null, blockPos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                    serverWorld.emitGameEvent(null, GameEvent.FLUID_PLACE, blockPos);
+                    serverWorld.setBlockState(blockPos2, Blocks.MUD.getDefaultState());
+                    return new ItemStack(Items.GLASS_BOTTLE);
+                }
+                return this.fallback.dispense(pointer, stack);
             }
         });
     }

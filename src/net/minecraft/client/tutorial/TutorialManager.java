@@ -23,7 +23,6 @@ import net.minecraft.client.tutorial.TutorialStep;
 import net.minecraft.client.tutorial.TutorialStepHandler;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.item.ItemStack;
-import net.minecraft.text.KeybindText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.Formatting;
@@ -140,7 +139,7 @@ public class TutorialManager {
     }
 
     public static Text keyToText(String name) {
-        return new KeybindText("key." + name).formatted(Formatting.BOLD);
+        return Text.keybind("key." + name).formatted(Formatting.BOLD);
     }
 
     public void onPickupSlotClick(ItemStack cursorStack, ItemStack slotStack, ClickType clickType) {

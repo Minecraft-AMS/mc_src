@@ -16,10 +16,10 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class SaveOnCommand {
-    private static final SimpleCommandExceptionType ALREADY_ON_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.save.alreadyOn"));
+    private static final SimpleCommandExceptionType ALREADY_ON_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.save.alreadyOn"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("save-on").requires(source -> source.hasPermissionLevel(4))).executes(context -> {
@@ -33,7 +33,7 @@ public class SaveOnCommand {
             if (!bl) {
                 throw ALREADY_ON_EXCEPTION.create();
             }
-            serverCommandSource.sendFeedback(new TranslatableText("commands.save.enabled"), true);
+            serverCommandSource.sendFeedback(Text.translatable("commands.save.enabled"), true);
             return 1;
         }));
     }

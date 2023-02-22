@@ -29,7 +29,7 @@ public interface Bucketable {
 
     public ItemStack getBucketItem();
 
-    public SoundEvent getBucketedSound();
+    public SoundEvent getBucketFillSound();
 
     @Deprecated
     public static void copyDataToStack(MobEntity entity, ItemStack stack) {
@@ -80,7 +80,7 @@ public interface Bucketable {
     public static <T extends LivingEntity> Optional<ActionResult> tryBucket(PlayerEntity player, Hand hand, T entity) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.getItem() == Items.WATER_BUCKET && entity.isAlive()) {
-            entity.playSound(((Bucketable)((Object)entity)).getBucketedSound(), 1.0f, 1.0f);
+            entity.playSound(((Bucketable)((Object)entity)).getBucketFillSound(), 1.0f, 1.0f);
             ItemStack itemStack2 = ((Bucketable)((Object)entity)).getBucketItem();
             ((Bucketable)((Object)entity)).copyDataToStack(itemStack2);
             ItemStack itemStack3 = ItemUsage.exchangeStack(itemStack, player, itemStack2, false);

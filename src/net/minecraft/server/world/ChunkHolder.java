@@ -179,13 +179,17 @@ public class ChunkHolder {
     }
 
     public void markForLightUpdate(LightType lightType, int y) {
-        WorldChunk worldChunk = this.method_41205();
-        if (worldChunk == null) {
+        Either either = this.getValidFutureFor(ChunkStatus.FEATURES).getNow(null);
+        if (either == null) {
             return;
         }
-        worldChunk.setNeedsSaving(true);
-        WorldChunk worldChunk2 = this.getWorldChunk();
-        if (worldChunk2 == null) {
+        Chunk chunk = either.left().orElse(null);
+        if (chunk == null) {
+            return;
+        }
+        chunk.setNeedsSaving(true);
+        WorldChunk worldChunk = this.getWorldChunk();
+        if (worldChunk == null) {
             return;
         }
         int i = this.lightingProvider.getBottomY();

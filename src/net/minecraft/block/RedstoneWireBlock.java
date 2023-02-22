@@ -14,7 +14,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -42,6 +41,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -183,17 +183,15 @@ extends Block {
             if (wireConnection == WireConnection.NONE || world.getBlockState(mutable.set((Vec3i)pos, direction)).isOf(this)) continue;
             mutable.move(Direction.DOWN);
             BlockState blockState = world.getBlockState(mutable);
-            if (!blockState.isOf(Blocks.OBSERVER)) {
+            if (blockState.isOf(this)) {
                 Vec3i blockPos = mutable.offset(direction.getOpposite());
-                BlockState blockState2 = blockState.getStateForNeighborUpdate(direction.getOpposite(), world.getBlockState((BlockPos)blockPos), world, mutable, (BlockPos)blockPos);
-                RedstoneWireBlock.replace(blockState, blockState2, world, mutable, flags, maxUpdateDepth);
+                world.replaceWithStateForNeighborUpdate(direction.getOpposite(), world.getBlockState((BlockPos)blockPos), mutable, (BlockPos)blockPos, flags, maxUpdateDepth);
             }
             mutable.set((Vec3i)pos, direction).move(Direction.UP);
-            BlockState blockState3 = world.getBlockState(mutable);
-            if (blockState3.isOf(Blocks.OBSERVER)) continue;
+            BlockState blockState2 = world.getBlockState(mutable);
+            if (!blockState2.isOf(this)) continue;
             Vec3i blockPos2 = mutable.offset(direction.getOpposite());
-            BlockState blockState4 = blockState3.getStateForNeighborUpdate(direction.getOpposite(), world.getBlockState((BlockPos)blockPos2), world, mutable, (BlockPos)blockPos2);
-            RedstoneWireBlock.replace(blockState3, blockState4, world, mutable, flags, maxUpdateDepth);
+            world.replaceWithStateForNeighborUpdate(direction.getOpposite(), world.getBlockState((BlockPos)blockPos2), mutable, (BlockPos)blockPos2, flags, maxUpdateDepth);
         }
     }
 
@@ -324,7 +322,7 @@ extends Block {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         if (world.isClient) {
             return;
         }

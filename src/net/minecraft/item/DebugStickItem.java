@@ -14,12 +14,10 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.MessageType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
@@ -68,7 +66,7 @@ extends Item {
         Collection<Property<?>> collection = stateManager.getProperties();
         String string = Registry.BLOCK.getId(block).toString();
         if (collection.isEmpty()) {
-            DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".empty", string));
+            DebugStickItem.sendMessage(player, Text.translatable(this.getTranslationKey() + ".empty", string));
             return false;
         }
         NbtCompound nbtCompound = stack.getOrCreateSubNbt("DebugProperty");
@@ -80,12 +78,12 @@ extends Item {
             }
             BlockState blockState = DebugStickItem.cycle(state, property, player.shouldCancelInteraction());
             world.setBlockState(pos, blockState, 18);
-            DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".update", property.getName(), DebugStickItem.getValueString(blockState, property)));
+            DebugStickItem.sendMessage(player, Text.translatable(this.getTranslationKey() + ".update", property.getName(), DebugStickItem.getValueString(blockState, property)));
         } else {
             property = DebugStickItem.cycle(collection, property, player.shouldCancelInteraction());
             String string3 = property.getName();
             nbtCompound.putString(string, string3);
-            DebugStickItem.sendMessage(player, new TranslatableText(this.getTranslationKey() + ".select", string3, DebugStickItem.getValueString(state, property)));
+            DebugStickItem.sendMessage(player, Text.translatable(this.getTranslationKey() + ".select", string3, DebugStickItem.getValueString(state, property)));
         }
         return true;
     }
@@ -99,7 +97,7 @@ extends Item {
     }
 
     private static void sendMessage(PlayerEntity player, Text message) {
-        ((ServerPlayerEntity)player).sendMessage(message, MessageType.GAME_INFO, Util.NIL_UUID);
+        ((ServerPlayerEntity)player).sendMessageToClient(message, true);
     }
 
     private static <T extends Comparable<T>> String getValueString(BlockState state, Property<T> property) {

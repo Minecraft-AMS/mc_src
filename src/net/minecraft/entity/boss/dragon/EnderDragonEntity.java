@@ -14,7 +14,6 @@ import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
@@ -32,7 +31,6 @@ import net.minecraft.entity.boss.dragon.phase.Phase;
 import net.minecraft.entity.boss.dragon.phase.PhaseManager;
 import net.minecraft.entity.boss.dragon.phase.PhaseType;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.EntityDamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
@@ -42,7 +40,7 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
@@ -57,6 +55,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.gen.feature.EndPortalFeature;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -393,7 +392,7 @@ implements Monster {
                 for (int q = k; q <= n; ++q) {
                     BlockPos blockPos = new BlockPos(o, p, q);
                     BlockState blockState = this.world.getBlockState(blockPos);
-                    if (blockState.isAir() || blockState.getMaterial() == Material.FIRE) continue;
+                    if (blockState.isAir() || blockState.isIn(BlockTags.DRAGON_TRANSPARENT)) continue;
                     if (!this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) || blockState.isIn(BlockTags.DRAGON_IMMUNE)) {
                         bl = true;
                         continue;
@@ -440,8 +439,8 @@ implements Monster {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (source instanceof EntityDamageSource && ((EntityDamageSource)source).isThorns() && !this.world.isClient) {
-            this.damagePart(this.body, source, amount);
+        if (!this.world.isClient) {
+            return this.damagePart(this.body, source, amount);
         }
         return false;
     }
@@ -453,6 +452,7 @@ implements Monster {
     @Override
     public void kill() {
         this.remove(Entity.RemovalReason.KILLED);
+        this.emitGameEvent(GameEvent.ENTITY_DIE);
         if (this.fight != null) {
             this.fight.updateFight(this);
             this.fight.dragonKilled(this);
@@ -495,6 +495,7 @@ implements Monster {
                 this.fight.dragonKilled(this);
             }
             this.remove(Entity.RemovalReason.KILLED);
+            this.emitGameEvent(GameEvent.ENTITY_DIE);
         }
     }
 
@@ -673,7 +674,7 @@ implements Monster {
     }
 
     @Override
-    public boolean collides() {
+    public boolean canHit() {
         return false;
     }
 
@@ -777,8 +778,8 @@ implements Monster {
     }
 
     @Override
-    public void readFromPacket(MobSpawnS2CPacket packet) {
-        super.readFromPacket(packet);
+    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
+        super.onSpawnPacket(packet);
         EnderDragonPart[] enderDragonParts = this.getBodyParts();
         for (int i = 0; i < enderDragonParts.length; ++i) {
             enderDragonParts[i].setId(i + packet.getId());

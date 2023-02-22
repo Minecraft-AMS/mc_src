@@ -40,6 +40,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -199,13 +200,14 @@ extends HostileEntity {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.initEquipment(difficulty);
-        this.updateEnchantments(difficulty);
+        Random random = world.getRandom();
+        this.initEquipment(random, difficulty);
+        this.updateEnchantments(random, difficulty);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
         this.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0.0f);
     }
@@ -250,8 +252,9 @@ extends HostileEntity {
 
         @Override
         public boolean canStart() {
-            if (VexEntity.this.getTarget() != null && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(ChargeTargetGoal.toGoalTicks(7)) == 0) {
-                return VexEntity.this.squaredDistanceTo(VexEntity.this.getTarget()) > 4.0;
+            LivingEntity livingEntity = VexEntity.this.getTarget();
+            if (livingEntity != null && livingEntity.isAlive() && !VexEntity.this.getMoveControl().isMoving() && VexEntity.this.random.nextInt(ChargeTargetGoal.toGoalTicks(7)) == 0) {
+                return VexEntity.this.squaredDistanceTo(livingEntity) > 4.0;
             }
             return false;
         }

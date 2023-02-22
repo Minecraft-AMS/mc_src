@@ -8,7 +8,6 @@
  */
 package net.minecraft.client.render.entity;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelData;
@@ -33,6 +32,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -82,7 +82,7 @@ extends EntityRenderer<EnderDragonEntity> {
         if (enderDragonEntity.ticksSinceDeath > 0) {
             float l = ((float)enderDragonEntity.ticksSinceDeath + g) / 200.0f;
             float m = Math.min(l > 0.8f ? (l - 0.8f) / 0.2f : 0.0f, 1.0f);
-            Random random = new Random(432L);
+            Random random = Random.create(432L);
             VertexConsumer vertexConsumer4 = vertexConsumerProvider.getBuffer(RenderLayer.getLightning());
             matrixStack.push();
             matrixStack.translate(0.0, -1.0, -2.0);

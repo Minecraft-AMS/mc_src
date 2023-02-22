@@ -21,15 +21,13 @@ import net.minecraft.resource.ResourcePackSource;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.metadata.PackResourceMetadata;
 import net.minecraft.text.HoverEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-public class ResourcePackProfile
-implements AutoCloseable {
+public class ResourcePackProfile {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final String name;
     private final Supplier<ResourcePack> packFactory;
@@ -51,7 +49,7 @@ implements AutoCloseable {
         try (ResourcePack resourcePack = packFactory.get();){
             PackResourceMetadata packResourceMetadata = resourcePack.parseMetadata(PackResourceMetadata.READER);
             if (packResourceMetadata != null) {
-                ResourcePackProfile resourcePackProfile = profileFactory.create(name, new LiteralText(resourcePack.getName()), alwaysEnabled, packFactory, packResourceMetadata, insertionPosition, packSource);
+                ResourcePackProfile resourcePackProfile = profileFactory.create(name, Text.literal(resourcePack.getName()), alwaysEnabled, packFactory, packResourceMetadata, insertionPosition, packSource);
                 return resourcePackProfile;
             }
             LOGGER.warn("Couldn't find pack meta for pack {}", (Object)name);
@@ -88,7 +86,7 @@ implements AutoCloseable {
     }
 
     public Text getInformationText(boolean enabled) {
-        return Texts.bracketed(this.source.decorate(new LiteralText(this.name))).styled(style -> style.withColor(enabled ? Formatting.GREEN : Formatting.RED).withInsertion(StringArgumentType.escapeIfRequired((String)this.name)).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new LiteralText("").append(this.displayName).append("\n").append(this.description))));
+        return Texts.bracketed(this.source.decorate(Text.literal(this.name))).styled(style -> style.withColor(enabled ? Formatting.GREEN : Formatting.RED).withInsertion(StringArgumentType.escapeIfRequired((String)this.name)).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.empty().append(this.displayName).append("\n").append(this.description))));
     }
 
     public ResourcePackCompatibility getCompatibility() {
@@ -132,10 +130,6 @@ implements AutoCloseable {
 
     public int hashCode() {
         return this.name.hashCode();
-    }
-
-    @Override
-    public void close() {
     }
 
     @FunctionalInterface

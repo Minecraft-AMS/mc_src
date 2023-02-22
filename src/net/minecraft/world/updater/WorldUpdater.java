@@ -33,13 +33,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.math.ChunkPos;
@@ -68,7 +69,7 @@ public class WorldUpdater {
     private volatile int upgradedChunkCount;
     private volatile int skippedChunkCount;
     private final Object2FloatMap<RegistryKey<World>> dimensionProgress = Object2FloatMaps.synchronize((Object2FloatMap)new Object2FloatOpenCustomHashMap(Util.identityHashStrategy()));
-    private volatile Text status = new TranslatableText("optimizeWorld.stage.counting");
+    private volatile Text status = Text.translatable("optimizeWorld.stage.counting");
     private static final Pattern REGION_FILE_PATTERN = Pattern.compile("^r\\.(-?[0-9]+)\\.(-?[0-9]+)\\.mca$");
     private final PersistentStateManager persistentStateManager;
 
@@ -81,7 +82,7 @@ public class WorldUpdater {
         this.updateThread = UPDATE_THREAD_FACTORY.newThread(this::updateWorld);
         this.updateThread.setUncaughtExceptionHandler((thread, throwable) -> {
             LOGGER.error("Error upgrading world", throwable);
-            this.status = new TranslatableText("optimizeWorld.stage.failed");
+            this.status = Text.translatable("optimizeWorld.stage.failed");
             this.done = true;
         });
         this.updateThread.start();
@@ -119,7 +120,7 @@ public class WorldUpdater {
         }
         ImmutableMap immutableMap2 = builder2.build();
         long l = Util.getMeasuringTimeMs();
-        this.status = new TranslatableText("optimizeWorld.stage.upgrading");
+        this.status = Text.translatable("optimizeWorld.stage.upgrading");
         while (this.keepUpgradingChunks) {
             boolean bl = false;
             float g = 0.0f;
@@ -130,7 +131,7 @@ public class WorldUpdater {
                     ChunkPos chunkPos = (ChunkPos)listIterator.next();
                     boolean bl2 = false;
                     try {
-                        NbtCompound nbtCompound = versionedChunkStorage.getNbt(chunkPos);
+                        NbtCompound nbtCompound = versionedChunkStorage.getNbt(chunkPos).join().orElse(null);
                         if (nbtCompound != null) {
                             boolean bl3;
                             int i = VersionedChunkStorage.getDataVersion(nbtCompound);
@@ -146,6 +147,14 @@ public class WorldUpdater {
                                 nbtCompound2.remove("Heightmaps");
                                 bl3 = bl3 || nbtCompound2.contains("isLightOn");
                                 nbtCompound2.remove("isLightOn");
+                                NbtList nbtList = nbtCompound2.getList("sections", 10);
+                                for (int j = 0; j < nbtList.size(); ++j) {
+                                    NbtCompound nbtCompound3 = nbtList.getCompound(j);
+                                    bl3 = bl3 || nbtCompound3.contains("BlockLight");
+                                    nbtCompound3.remove("BlockLight");
+                                    bl3 = bl3 || nbtCompound3.contains("SkyLight");
+                                    nbtCompound3.remove("SkyLight");
+                                }
                             }
                             if (bl3) {
                                 versionedChunkStorage.setNbt(chunkPos, nbtCompound2);
@@ -153,15 +162,12 @@ public class WorldUpdater {
                             }
                         }
                     }
-                    catch (CrashException crashException) {
-                        Throwable throwable = crashException.getCause();
+                    catch (CompletionException | CrashException runtimeException) {
+                        Throwable throwable = runtimeException.getCause();
                         if (throwable instanceof IOException) {
                             LOGGER.error("Error upgrading chunk {}", (Object)chunkPos, (Object)throwable);
                         }
-                        throw crashException;
-                    }
-                    catch (IOException iOException) {
-                        LOGGER.error("Error upgrading chunk {}", (Object)chunkPos, (Object)iOException);
+                        throw runtimeException;
                     }
                     if (bl2) {
                         ++this.upgradedChunkCount;
@@ -178,13 +184,13 @@ public class WorldUpdater {
             if (bl) continue;
             this.keepUpgradingChunks = false;
         }
-        this.status = new TranslatableText("optimizeWorld.stage.finished");
+        this.status = Text.translatable("optimizeWorld.stage.finished");
         for (VersionedChunkStorage versionedChunkStorage2 : immutableMap2.values()) {
             try {
                 versionedChunkStorage2.close();
             }
-            catch (IOException iOException2) {
-                LOGGER.error("Error upgrading chunk", (Throwable)iOException2);
+            catch (IOException iOException) {
+                LOGGER.error("Error upgrading chunk", (Throwable)iOException);
             }
         }
         this.persistentStateManager.save();

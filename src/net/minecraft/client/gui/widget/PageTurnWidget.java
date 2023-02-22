@@ -16,8 +16,8 @@ import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.LiteralText;
 
 @Environment(value=EnvType.CLIENT)
 public class PageTurnWidget
@@ -26,7 +26,7 @@ extends ButtonWidget {
     private final boolean playPageTurnSound;
 
     public PageTurnWidget(int x, int y, boolean isNextPageButton, ButtonWidget.PressAction action, boolean playPageTurnSound) {
-        super(x, y, 23, 13, LiteralText.EMPTY, action);
+        super(x, y, 23, 13, ScreenTexts.EMPTY, action);
         this.isNextPageButton = isNextPageButton;
         this.playPageTurnSound = playPageTurnSound;
     }

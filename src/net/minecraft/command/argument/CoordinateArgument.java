@@ -16,12 +16,12 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.command.argument.Vec3ArgumentType;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class CoordinateArgument {
     private static final char TILDE = '~';
-    public static final SimpleCommandExceptionType MISSING_COORDINATE = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.missing.double"));
-    public static final SimpleCommandExceptionType MISSING_BLOCK_POSITION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.pos.missing.int"));
+    public static final SimpleCommandExceptionType MISSING_COORDINATE = new SimpleCommandExceptionType((Message)Text.translatable("argument.pos.missing.double"));
+    public static final SimpleCommandExceptionType MISSING_BLOCK_POSITION = new SimpleCommandExceptionType((Message)Text.translatable("argument.pos.missing.int"));
     private final boolean relative;
     private final double value;
 

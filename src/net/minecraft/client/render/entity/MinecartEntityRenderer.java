@@ -11,10 +11,10 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.EntityModel;
@@ -33,11 +33,13 @@ public class MinecartEntityRenderer<T extends AbstractMinecartEntity>
 extends EntityRenderer<T> {
     private static final Identifier TEXTURE = new Identifier("textures/entity/minecart.png");
     protected final EntityModel<T> model;
+    private final BlockRenderManager blockRenderManager;
 
     public MinecartEntityRenderer(EntityRendererFactory.Context ctx, EntityModelLayer layer) {
         super(ctx);
         this.shadowRadius = 0.7f;
         this.model = new MinecartEntityModel(ctx.getPart(layer));
+        this.blockRenderManager = ctx.getBlockRenderManager();
     }
 
     @Override
@@ -108,7 +110,7 @@ extends EntityRenderer<T> {
     }
 
     protected void renderBlock(T entity, float delta, BlockState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
-        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
+        this.blockRenderManager.renderBlockAsEntity(state, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
     }
 }
 

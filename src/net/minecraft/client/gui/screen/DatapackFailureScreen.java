@@ -14,7 +14,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.StringVisitable;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 @Environment(value=EnvType.CLIENT)
 public class DatapackFailureScreen
@@ -23,7 +23,7 @@ extends Screen {
     private final Runnable runServerInSafeMode;
 
     public DatapackFailureScreen(Runnable runServerInSafeMode) {
-        super(new TranslatableText("datapackFailure.title"));
+        super(Text.translatable("datapackFailure.title"));
         this.runServerInSafeMode = runServerInSafeMode;
     }
 
@@ -31,8 +31,8 @@ extends Screen {
     protected void init() {
         super.init();
         this.wrappedText = MultilineText.create(this.textRenderer, (StringVisitable)this.getTitle(), this.width - 50);
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height / 6 + 96, 150, 20, new TranslatableText("datapackFailure.safeMode"), button -> this.runServerInSafeMode.run()));
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height / 6 + 96, 150, 20, new TranslatableText("gui.toTitle"), button -> this.client.setScreen(null)));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height / 6 + 96, 150, 20, Text.translatable("datapackFailure.safeMode"), button -> this.runServerInSafeMode.run()));
+        this.addDrawableChild(new ButtonWidget(this.width / 2 - 155 + 160, this.height / 6 + 96, 150, 20, Text.translatable("gui.toTitle"), button -> this.client.setScreen(null)));
     }
 
     @Override

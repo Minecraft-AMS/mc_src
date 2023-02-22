@@ -7,7 +7,6 @@
  */
 package net.minecraft.client.render.entity.model;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.model.ModelData;
@@ -19,6 +18,7 @@ import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.render.entity.model.SinglePartEntityModel;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class GhastEntityModel<T extends Entity>
@@ -41,7 +41,7 @@ extends SinglePartEntityModel<T> {
         ModelData modelData = new ModelData();
         ModelPartData modelPartData = modelData.getRoot();
         modelPartData.addChild("body", ModelPartBuilder.create().uv(0, 0).cuboid(-8.0f, -8.0f, -8.0f, 16.0f, 16.0f, 16.0f), ModelTransform.pivot(0.0f, 17.6f, 0.0f));
-        Random random = new Random(1660L);
+        Random random = Random.create(1660L);
         for (int i = 0; i < 9; ++i) {
             float f = (((float)(i % 3) - (float)(i / 3 % 2) * 0.5f + 0.25f) / 2.0f * 2.0f - 1.0f) * 5.0f;
             float g = ((float)(i / 3) / 2.0f * 2.0f - 1.0f) * 5.0f;

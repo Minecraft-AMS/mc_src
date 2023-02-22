@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Block;
@@ -30,11 +29,8 @@ import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.ai.goal.TemptGoal;
 import net.minecraft.entity.ai.goal.WanderAroundGoal;
-import net.minecraft.entity.ai.pathing.AmphibiousPathNodeMaker;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
-import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.ai.pathing.PathNodeType;
-import net.minecraft.entity.ai.pathing.SwimNavigation;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
@@ -43,6 +39,7 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.passive.AxolotlSwimNavigation;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -59,6 +56,7 @@ import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -74,7 +72,7 @@ extends AnimalEntity {
     private static final TrackedData<Boolean> DIGGING_SAND = DataTracker.registerData(TurtleEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<BlockPos> TRAVEL_POS = DataTracker.registerData(TurtleEntity.class, TrackedDataHandlerRegistry.BLOCK_POS);
     private static final TrackedData<Boolean> LAND_BOUND = DataTracker.registerData(TurtleEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Boolean> ACTIVELY_TRAVELLING = DataTracker.registerData(TurtleEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> ACTIVELY_TRAVELING = DataTracker.registerData(TurtleEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     public static final Ingredient BREEDING_ITEM = Ingredient.ofItems(Blocks.SEAGRASS.asItem());
     int sandDiggingCounter;
     public static final Predicate<LivingEntity> BABY_TURTLE_ON_LAND_FILTER = entity -> entity.isBaby() && !entity.isTouchingWater();
@@ -130,12 +128,12 @@ extends AnimalEntity {
         this.dataTracker.set(LAND_BOUND, landBound);
     }
 
-    boolean isActivelyTravelling() {
-        return this.dataTracker.get(ACTIVELY_TRAVELLING);
+    boolean isActivelyTraveling() {
+        return this.dataTracker.get(ACTIVELY_TRAVELING);
     }
 
-    void setActivelyTravelling(boolean travelling) {
-        this.dataTracker.set(ACTIVELY_TRAVELLING, travelling);
+    void setActivelyTraveling(boolean traveling) {
+        this.dataTracker.set(ACTIVELY_TRAVELING, traveling);
     }
 
     @Override
@@ -145,7 +143,7 @@ extends AnimalEntity {
         this.dataTracker.startTracking(HAS_EGG, false);
         this.dataTracker.startTracking(TRAVEL_POS, BlockPos.ORIGIN);
         this.dataTracker.startTracking(LAND_BOUND, false);
-        this.dataTracker.startTracking(ACTIVELY_TRAVELLING, false);
+        this.dataTracker.startTracking(ACTIVELY_TRAVELING, false);
         this.dataTracker.startTracking(DIGGING_SAND, false);
     }
 
@@ -306,7 +304,7 @@ extends AnimalEntity {
         if (TurtleEggBlock.isSandBelow(world, pos)) {
             return 10.0f;
         }
-        return world.getBrightness(pos) - 0.5f;
+        return world.getPhototaxisFavor(pos);
     }
 
     @Override
@@ -638,7 +636,7 @@ extends AnimalEntity {
             }
             BlockPos blockPos = new BlockPos((double)k + this.turtle.getX(), (double)l + this.turtle.getY(), (double)m + this.turtle.getZ());
             this.turtle.setTravelPos(blockPos);
-            this.turtle.setActivelyTravelling(true);
+            this.turtle.setActivelyTraveling(true);
             this.noPath = false;
         }
 
@@ -673,7 +671,7 @@ extends AnimalEntity {
 
         @Override
         public void stop() {
-            this.turtle.setActivelyTravelling(false);
+            this.turtle.setActivelyTraveling(false);
             super.stop();
         }
     }
@@ -697,26 +695,16 @@ extends AnimalEntity {
     }
 
     static class TurtleSwimNavigation
-    extends SwimNavigation {
+    extends AxolotlSwimNavigation {
         TurtleSwimNavigation(TurtleEntity owner, World world) {
             super(owner, world);
         }
 
         @Override
-        protected boolean isAtValidPosition() {
-            return true;
-        }
-
-        @Override
-        protected PathNodeNavigator createPathNodeNavigator(int range) {
-            this.nodeMaker = new AmphibiousPathNodeMaker(true);
-            return new PathNodeNavigator(this.nodeMaker, range);
-        }
-
-        @Override
         public boolean isValidPosition(BlockPos pos) {
             TurtleEntity turtleEntity;
-            if (this.entity instanceof TurtleEntity && (turtleEntity = (TurtleEntity)this.entity).isActivelyTravelling()) {
+            MobEntity mobEntity = this.entity;
+            if (mobEntity instanceof TurtleEntity && (turtleEntity = (TurtleEntity)mobEntity).isActivelyTraveling()) {
                 return this.world.getBlockState(pos).isOf(Blocks.WATER);
             }
             return !this.world.getBlockState(pos.down()).isAir();

@@ -29,11 +29,8 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Locale;
-import java.util.UUID;
 import net.minecraft.command.argument.CommandFunctionArgumentType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
@@ -43,7 +40,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.server.function.CommandFunctionManager;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.Util;
@@ -52,8 +48,8 @@ import org.slf4j.Logger;
 
 public class DebugCommand {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final SimpleCommandExceptionType NOT_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.debug.notRunning"));
-    private static final SimpleCommandExceptionType ALREADY_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.debug.alreadyRunning"));
+    private static final SimpleCommandExceptionType NOT_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.debug.notRunning"));
+    private static final SimpleCommandExceptionType ALREADY_RUNNING_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.debug.alreadyRunning"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("debug").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.literal("start").executes(context -> DebugCommand.executeStart((ServerCommandSource)context.getSource())))).then(CommandManager.literal("stop").executes(context -> DebugCommand.executeStop((ServerCommandSource)context.getSource())))).then(((LiteralArgumentBuilder)CommandManager.literal("function").requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(3))).then(CommandManager.argument("name", CommandFunctionArgumentType.commandFunction()).suggests(FunctionCommand.SUGGESTION_PROVIDER).executes(context -> DebugCommand.executeFunction((ServerCommandSource)context.getSource(), CommandFunctionArgumentType.getFunctions((CommandContext<ServerCommandSource>)context, "name"))))));
@@ -65,7 +61,7 @@ public class DebugCommand {
             throw ALREADY_RUNNING_EXCEPTION.create();
         }
         minecraftServer.startDebug();
-        source.sendFeedback(new TranslatableText("commands.debug.started"), true);
+        source.sendFeedback(Text.translatable("commands.debug.started"), true);
         return 0;
     }
 
@@ -77,14 +73,14 @@ public class DebugCommand {
         ProfileResult profileResult = minecraftServer.stopDebug();
         double d = (double)profileResult.getTimeSpan() / (double)TimeHelper.SECOND_IN_NANOS;
         double e = (double)profileResult.getTickSpan() / d;
-        source.sendFeedback(new TranslatableText("commands.debug.stopped", String.format(Locale.ROOT, "%.2f", d), profileResult.getTickSpan(), String.format("%.2f", e)), true);
+        source.sendFeedback(Text.translatable("commands.debug.stopped", String.format(Locale.ROOT, "%.2f", d), profileResult.getTickSpan(), String.format(Locale.ROOT, "%.2f", e)), true);
         return (int)e;
     }
 
     private static int executeFunction(ServerCommandSource source, Collection<CommandFunction> functions) {
         int i = 0;
         MinecraftServer minecraftServer = source.getServer();
-        String string = "debug-trace-" + new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date()) + ".txt";
+        String string = "debug-trace-" + Util.getFormattedCurrentTime() + ".txt";
         try {
             Path path = minecraftServer.getFile("debug").toPath();
             Files.createDirectories(path, new FileAttribute[0]);
@@ -99,19 +95,19 @@ public class DebugCommand {
         }
         catch (IOException | UncheckedIOException exception) {
             LOGGER.warn("Tracing failed", (Throwable)exception);
-            source.sendError(new TranslatableText("commands.debug.function.traceFailed"));
+            source.sendError(Text.translatable("commands.debug.function.traceFailed"));
         }
         if (functions.size() == 1) {
-            source.sendFeedback(new TranslatableText("commands.debug.function.success.single", i, functions.iterator().next().getId(), string), true);
+            source.sendFeedback(Text.translatable("commands.debug.function.success.single", i, functions.iterator().next().getId(), string), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.debug.function.success.multiple", i, functions.size(), string), true);
+            source.sendFeedback(Text.translatable("commands.debug.function.success.multiple", i, functions.size(), string), true);
         }
         return i;
     }
 
     static class Tracer
-    implements CommandOutput,
-    CommandFunctionManager.Tracer {
+    implements CommandFunctionManager.Tracer,
+    CommandOutput {
         public static final int MARGIN = 1;
         private final PrintWriter writer;
         private int lastIndentWidth;
@@ -182,14 +178,10 @@ public class DebugCommand {
         }
 
         @Override
-        public void sendSystemMessage(Text message, UUID sender) {
+        public void sendMessage(Text message) {
             this.writeNewLine();
             this.writeIndentWithoutRememberingWidth(this.lastIndentWidth + 1);
             this.writer.print("[M] ");
-            if (sender != Util.NIL_UUID) {
-                this.writer.print(sender);
-                this.writer.print(": ");
-            }
             this.writer.println(message.getString());
         }
 

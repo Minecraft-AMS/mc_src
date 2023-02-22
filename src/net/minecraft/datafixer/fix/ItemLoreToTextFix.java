@@ -24,13 +24,12 @@ import com.mojang.serialization.Dynamic;
 import java.util.Optional;
 import java.util.stream.Stream;
 import net.minecraft.datafixer.TypeReferences;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 public class ItemLoreToTextFix
 extends DataFix {
-    public ItemLoreToTextFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public ItemLoreToTextFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     protected TypeRewriteRule makeRule() {
@@ -44,7 +43,7 @@ extends DataFix {
     }
 
     private static String componentize(String string) {
-        return Text.Serializer.toJson(new LiteralText(string));
+        return Text.Serializer.toJson(Text.literal(string));
     }
 }
 

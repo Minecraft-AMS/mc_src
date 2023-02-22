@@ -17,11 +17,10 @@ import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +34,7 @@ import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3f;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.Vector4f;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 public final class Direction
@@ -46,7 +46,7 @@ implements StringIdentifiable {
     public static final /* enum */ Direction SOUTH = new Direction(3, 2, 0, "south", AxisDirection.POSITIVE, Axis.Z, new Vec3i(0, 0, 1));
     public static final /* enum */ Direction WEST = new Direction(4, 5, 1, "west", AxisDirection.NEGATIVE, Axis.X, new Vec3i(-1, 0, 0));
     public static final /* enum */ Direction EAST = new Direction(5, 4, 3, "east", AxisDirection.POSITIVE, Axis.X, new Vec3i(1, 0, 0));
-    public static final Codec<Direction> CODEC;
+    public static final StringIdentifiable.Codec<Direction> CODEC;
     public static final Codec<Direction> VERTICAL_CODEC;
     private final int id;
     private final int idOpposite;
@@ -56,7 +56,6 @@ implements StringIdentifiable {
     private final AxisDirection direction;
     private final Vec3i vector;
     private static final Direction[] ALL;
-    private static final Map<String, Direction> NAME_MAP;
     private static final Direction[] VALUES;
     private static final Direction[] HORIZONTAL;
     private static final Long2ObjectMap<Direction> VECTOR_TO_DIRECTION;
@@ -126,6 +125,14 @@ implements StringIdentifiable {
         Vector4f vector4f = new Vector4f(vec3i.getX(), vec3i.getY(), vec3i.getZ(), 0.0f);
         vector4f.transform(matrix);
         return Direction.getFacing(vector4f.getX(), vector4f.getY(), vector4f.getZ());
+    }
+
+    public static Collection<Direction> shuffle(Random random) {
+        return Util.copyShuffled(Direction.values(), random);
+    }
+
+    public static Stream<Direction> stream() {
+        return Stream.of(ALL);
     }
 
     public Quaternion getRotationQuaternion() {
@@ -309,10 +316,7 @@ implements StringIdentifiable {
 
     @Nullable
     public static Direction byName(@Nullable String name) {
-        if (name == null) {
-            return null;
-        }
-        return NAME_MAP.get(name.toLowerCase(Locale.ROOT));
+        return CODEC.byId(name);
     }
 
     public static Direction byId(int id) {
@@ -418,10 +422,9 @@ implements StringIdentifiable {
 
     static {
         field_11037 = Direction.method_36931();
-        CODEC = StringIdentifiable.createCodec(Direction::values, Direction::byName);
+        CODEC = StringIdentifiable.createCodec(Direction::values);
         VERTICAL_CODEC = CODEC.flatXmap(Direction::validateVertical, Direction::validateVertical);
         ALL = Direction.values();
-        NAME_MAP = Arrays.stream(ALL).collect(Collectors.toMap(Direction::getName, direction -> direction));
         VALUES = (Direction[])Arrays.stream(ALL).sorted(Comparator.comparingInt(direction -> direction.id)).toArray(Direction[]::new);
         HORIZONTAL = (Direction[])Arrays.stream(ALL).filter(direction -> direction.getAxis().isHorizontal()).sorted(Comparator.comparingInt(direction -> direction.idHorizontal)).toArray(Direction[]::new);
         VECTOR_TO_DIRECTION = (Long2ObjectMap)Arrays.stream(ALL).collect(Collectors.toMap(direction -> new BlockPos(direction.getVector()).asLong(), direction -> direction, (direction1, direction2) -> {
@@ -488,8 +491,7 @@ implements StringIdentifiable {
             }
         };
         public static final Axis[] VALUES;
-        public static final Codec<Axis> CODEC;
-        private static final Map<String, Axis> BY_NAME;
+        public static final StringIdentifiable.Codec<Axis> CODEC;
         private final String name;
         private static final /* synthetic */ Axis[] field_11049;
 
@@ -507,7 +509,7 @@ implements StringIdentifiable {
 
         @Nullable
         public static Axis fromName(String name) {
-            return BY_NAME.get(name.toLowerCase(Locale.ROOT));
+            return CODEC.byId(name);
         }
 
         public String getName() {
@@ -564,8 +566,7 @@ implements StringIdentifiable {
         static {
             field_11049 = Axis.method_36932();
             VALUES = Axis.values();
-            CODEC = StringIdentifiable.createCodec(Axis::values, Axis::fromName);
-            BY_NAME = Arrays.stream(VALUES).collect(Collectors.toMap(Axis::getName, axis -> axis));
+            CODEC = StringIdentifiable.createCodec(Axis::values);
         }
     }
 
@@ -658,6 +659,10 @@ implements StringIdentifiable {
 
         public Stream<Direction> stream() {
             return Arrays.stream(this.facingArray);
+        }
+
+        public List<Direction> getShuffled(Random random) {
+            return Util.copyShuffled(this.facingArray, random);
         }
 
         @Override

@@ -31,7 +31,6 @@ import net.minecraft.client.font.TextHandler;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.PageTurnWidget;
@@ -50,11 +49,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.network.packet.c2s.play.BookUpdateC2SPacket;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
@@ -70,8 +68,8 @@ extends Screen {
     private static final int MAX_TEXT_HEIGHT = 128;
     private static final int WIDTH = 192;
     private static final int HEIGHT = 192;
-    private static final Text EDIT_TITLE_TEXT = new TranslatableText("book.editTitle");
-    private static final Text FINALIZE_WARNING_TEXT = new TranslatableText("book.finalizeWarning");
+    private static final Text EDIT_TITLE_TEXT = Text.translatable("book.editTitle");
+    private static final Text FINALIZE_WARNING_TEXT = Text.translatable("book.finalizeWarning");
     private static final OrderedText BLACK_CURSOR_TEXT = OrderedText.styledForwardsVisitedString("_", Style.EMPTY.withColor(Formatting.BLACK));
     private static final OrderedText GRAY_CURSOR_TEXT = OrderedText.styledForwardsVisitedString("_", Style.EMPTY.withColor(Formatting.GRAY));
     private final PlayerEntity player;
@@ -97,7 +95,7 @@ extends Screen {
     private final Hand hand;
     @Nullable
     private PageContent pageContent = PageContent.EMPTY;
-    private Text pageIndicatorText = LiteralText.EMPTY;
+    private Text pageIndicatorText = ScreenTexts.EMPTY;
     private final Text signedByText;
 
     public BookEditScreen(PlayerEntity player, ItemStack itemStack, Hand hand) {
@@ -112,7 +110,7 @@ extends Screen {
         if (this.pages.isEmpty()) {
             this.pages.add("");
         }
-        this.signedByText = new TranslatableText("book.byAuthor", player.getName()).formatted(Formatting.DARK_GRAY);
+        this.signedByText = Text.translatable("book.byAuthor", player.getName()).formatted(Formatting.DARK_GRAY);
     }
 
     private void setClipboard(String clipboard) {
@@ -139,7 +137,7 @@ extends Screen {
     protected void init() {
         this.invalidatePageContent();
         this.client.keyboard.setRepeatEvents(true);
-        this.signButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, new TranslatableText("book.signButton"), button -> {
+        this.signButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, Text.translatable("book.signButton"), button -> {
             this.signing = true;
             this.updateButtons();
         }));
@@ -147,7 +145,7 @@ extends Screen {
             this.client.setScreen(null);
             this.finalizeBook(false);
         }));
-        this.finalizeButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, new TranslatableText("book.finalizeButton"), button -> {
+        this.finalizeButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, 196, 98, 20, Text.translatable("book.finalizeButton"), button -> {
             if (this.signing) {
                 this.finalizeBook(true);
                 this.client.setScreen(null);
@@ -294,13 +292,14 @@ extends Screen {
             this.currentPageSelectionManager.cut();
             return true;
         }
+        SelectionManager.SelectionType selectionType = Screen.hasControlDown() ? SelectionManager.SelectionType.WORD : SelectionManager.SelectionType.CHARACTER;
         switch (keyCode) {
             case 259: {
-                this.currentPageSelectionManager.delete(-1);
+                this.currentPageSelectionManager.delete(-1, selectionType);
                 return true;
             }
             case 261: {
-                this.currentPageSelectionManager.delete(1);
+                this.currentPageSelectionManager.delete(1, selectionType);
                 return true;
             }
             case 257: 
@@ -309,11 +308,11 @@ extends Screen {
                 return true;
             }
             case 263: {
-                this.currentPageSelectionManager.moveCursor(-1, Screen.hasShiftDown());
+                this.currentPageSelectionManager.moveCursor(-1, Screen.hasShiftDown(), selectionType);
                 return true;
             }
             case 262: {
-                this.currentPageSelectionManager.moveCursor(1, Screen.hasShiftDown());
+                this.currentPageSelectionManager.moveCursor(1, Screen.hasShiftDown(), selectionType);
                 return true;
             }
             case 265: {
@@ -359,16 +358,24 @@ extends Screen {
     }
 
     private void moveToLineStart() {
-        int i = this.currentPageSelectionManager.getSelectionStart();
-        int j = this.getPageContent().getLineStart(i);
-        this.currentPageSelectionManager.moveCursorTo(j, Screen.hasShiftDown());
+        if (Screen.hasControlDown()) {
+            this.currentPageSelectionManager.moveCursorToStart(Screen.hasShiftDown());
+        } else {
+            int i = this.currentPageSelectionManager.getSelectionStart();
+            int j = this.getPageContent().getLineStart(i);
+            this.currentPageSelectionManager.moveCursorTo(j, Screen.hasShiftDown());
+        }
     }
 
     private void moveToLineEnd() {
-        PageContent pageContent = this.getPageContent();
-        int i = this.currentPageSelectionManager.getSelectionStart();
-        int j = pageContent.getLineEnd(i);
-        this.currentPageSelectionManager.moveCursorTo(j, Screen.hasShiftDown());
+        if (Screen.hasControlDown()) {
+            this.currentPageSelectionManager.moveCursorToEnd(Screen.hasShiftDown());
+        } else {
+            PageContent pageContent = this.getPageContent();
+            int i = this.currentPageSelectionManager.getSelectionStart();
+            int j = pageContent.getLineEnd(i);
+            this.currentPageSelectionManager.moveCursorTo(j, Screen.hasShiftDown());
+        }
     }
 
     private boolean keyPressedSignMode(int keyCode, int scanCode, int modifiers) {
@@ -531,7 +538,7 @@ extends Screen {
     private PageContent getPageContent() {
         if (this.pageContent == null) {
             this.pageContent = this.createPageContent();
-            this.pageIndicatorText = new TranslatableText("book.pageIndicator", this.currentPage + 1, this.countPages());
+            this.pageIndicatorText = Text.translatable("book.pageIndicator", this.currentPage + 1, this.countPages());
         }
         return this.pageContent;
     }
@@ -701,7 +708,7 @@ extends Screen {
             this.content = content;
             this.x = x;
             this.y = y;
-            this.text = new LiteralText(content).setStyle(style);
+            this.text = Text.literal(content).setStyle(style);
         }
     }
 

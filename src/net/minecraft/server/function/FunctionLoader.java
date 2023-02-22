@@ -8,7 +8,6 @@
  *  com.mojang.brigadier.CommandDispatcher
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
- *  org.apache.commons.io.IOUtils
  *  org.slf4j.Logger
  */
 package net.minecraft.server.function;
@@ -18,10 +17,9 @@ import com.google.common.collect.Maps;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,17 +31,15 @@ import java.util.concurrent.Executor;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.CommandOutput;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
-import net.minecraft.tag.Tag;
 import net.minecraft.tag.TagGroupLoader;
-import net.minecraft.text.LiteralText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 
 public class FunctionLoader
@@ -54,7 +50,7 @@ implements ResourceReloader {
     private static final int EXTENSION_LENGTH = ".mcfunction".length();
     private volatile Map<Identifier, CommandFunction> functions = ImmutableMap.of();
     private final TagGroupLoader<CommandFunction> tagLoader = new TagGroupLoader(this::get, "tags/functions");
-    private volatile Map<Identifier, Tag<CommandFunction>> tags = Map.of();
+    private volatile Map<Identifier, Collection<CommandFunction>> tags = Map.of();
     private final int level;
     private final CommandDispatcher<ServerCommandSource> commandDispatcher;
 
@@ -66,8 +62,8 @@ implements ResourceReloader {
         return this.functions;
     }
 
-    public Tag<CommandFunction> getTagOrEmpty(Identifier id) {
-        return this.tags.getOrDefault(id, Tag.empty());
+    public Collection<CommandFunction> getTagOrEmpty(Identifier id) {
+        return this.tags.getOrDefault(id, List.of());
     }
 
     public Iterable<Identifier> getTags() {
@@ -82,19 +78,20 @@ implements ResourceReloader {
     @Override
     public CompletableFuture<Void> reload(ResourceReloader.Synchronizer synchronizer, ResourceManager manager, Profiler prepareProfiler, Profiler applyProfiler, Executor prepareExecutor, Executor applyExecutor) {
         CompletableFuture<Map> completableFuture = CompletableFuture.supplyAsync(() -> this.tagLoader.loadTags(manager), prepareExecutor);
-        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> manager.findResources("functions", path -> path.endsWith(EXTENSION)), prepareExecutor).thenCompose(ids -> {
-            HashMap map = Maps.newHashMap();
-            ServerCommandSource serverCommandSource = new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.level, "", LiteralText.EMPTY, null, null);
-            for (Identifier identifier : ids) {
+        CompletionStage completableFuture2 = CompletableFuture.supplyAsync(() -> manager.findResources("functions", identifier -> identifier.getPath().endsWith(EXTENSION)), prepareExecutor).thenCompose(map -> {
+            HashMap map2 = Maps.newHashMap();
+            ServerCommandSource serverCommandSource = new ServerCommandSource(CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, this.level, "", ScreenTexts.EMPTY, null, null);
+            for (Map.Entry entry : map.entrySet()) {
+                Identifier identifier = (Identifier)entry.getKey();
                 String string = identifier.getPath();
                 Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(PATH_PREFIX_LENGTH, string.length() - EXTENSION_LENGTH));
-                map.put(identifier2, CompletableFuture.supplyAsync(() -> {
-                    List<String> list = FunctionLoader.readLines(manager, identifier);
+                map2.put(identifier2, CompletableFuture.supplyAsync(() -> {
+                    List<String> list = FunctionLoader.readLines((Resource)entry.getValue());
                     return CommandFunction.create(identifier2, this.commandDispatcher, serverCommandSource, list);
                 }, prepareExecutor));
             }
-            CompletableFuture[] completableFutures = map.values().toArray(new CompletableFuture[0]);
-            return CompletableFuture.allOf(completableFutures).handle((unused, ex) -> map);
+            CompletableFuture[] completableFutures = map2.values().toArray(new CompletableFuture[0]);
+            return CompletableFuture.allOf(completableFutures).handle((unused, ex) -> map2);
         });
         return ((CompletableFuture)((CompletableFuture)completableFuture.thenCombine(completableFuture2, Pair::of)).thenCompose(synchronizer::whenPrepared)).thenAcceptAsync(intermediate -> {
             Map map = (Map)intermediate.getSecond();
@@ -112,19 +109,19 @@ implements ResourceReloader {
         }, applyExecutor);
     }
 
-    private static List<String> readLines(ResourceManager resourceManager, Identifier id) {
-        List list;
+    private static List<String> readLines(Resource resource) {
+        List<String> list;
         block8: {
-            Resource resource = resourceManager.getResource(id);
+            BufferedReader bufferedReader = resource.getReader();
             try {
-                list = IOUtils.readLines((InputStream)resource.getInputStream(), (Charset)StandardCharsets.UTF_8);
-                if (resource == null) break block8;
+                list = bufferedReader.lines().toList();
+                if (bufferedReader == null) break block8;
             }
             catch (Throwable throwable) {
                 try {
-                    if (resource != null) {
+                    if (bufferedReader != null) {
                         try {
-                            resource.close();
+                            bufferedReader.close();
                         }
                         catch (Throwable throwable2) {
                             throwable.addSuppressed(throwable2);
@@ -136,7 +133,7 @@ implements ResourceReloader {
                     throw new CompletionException(iOException);
                 }
             }
-            resource.close();
+            bufferedReader.close();
         }
         return list;
     }

@@ -42,7 +42,6 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.Heightmap;
@@ -75,18 +74,12 @@ implements NamedScreenHandlerFactory {
 
         @Override
         public int get(int index) {
-            switch (index) {
-                case 0: {
-                    return BeaconBlockEntity.this.level;
-                }
-                case 1: {
-                    return StatusEffect.getRawId(BeaconBlockEntity.this.primary);
-                }
-                case 2: {
-                    return StatusEffect.getRawId(BeaconBlockEntity.this.secondary);
-                }
-            }
-            return 0;
+            return switch (index) {
+                case 0 -> BeaconBlockEntity.this.level;
+                case 1 -> StatusEffect.method_43257(BeaconBlockEntity.this.primary);
+                case 2 -> StatusEffect.method_43257(BeaconBlockEntity.this.secondary);
+                default -> 0;
+            };
         }
 
         @Override
@@ -282,8 +275,8 @@ implements NamedScreenHandlerFactory {
     @Override
     protected void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
-        nbt.putInt("Primary", StatusEffect.getRawId(this.primary));
-        nbt.putInt("Secondary", StatusEffect.getRawId(this.secondary));
+        nbt.putInt("Primary", StatusEffect.method_43257(this.primary));
+        nbt.putInt("Secondary", StatusEffect.method_43257(this.secondary));
         nbt.putInt("Levels", this.level);
         if (this.customName != null) {
             nbt.putString("CustomName", Text.Serializer.toJson(this.customName));
@@ -306,7 +299,7 @@ implements NamedScreenHandlerFactory {
 
     @Override
     public Text getDisplayName() {
-        return this.customName != null ? this.customName : new TranslatableText("container.beacon");
+        return this.customName != null ? this.customName : Text.translatable("container.beacon");
     }
 
     @Override

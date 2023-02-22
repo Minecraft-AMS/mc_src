@@ -80,8 +80,10 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.property.IntProperty;
+import net.minecraft.state.property.Properties;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.tag.ItemTags;
+import net.minecraft.tag.PointOfInterestTypeTags;
 import net.minecraft.tag.TagKey;
 import net.minecraft.util.TimeHelper;
 import net.minecraft.util.annotation.Debug;
@@ -94,7 +96,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestType;
 import org.jetbrains.annotations.Nullable;
 
 public class BeeEntity
@@ -597,7 +598,7 @@ Flutterer {
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
     }
 
     @Override
@@ -671,6 +672,9 @@ Flutterer {
 
         PollinateGoal() {
             this.flowerPredicate = state -> {
+                if (state.contains(Properties.WATERLOGGED) && state.get(Properties.WATERLOGGED).booleanValue()) {
+                    return false;
+                }
                 if (state.isIn(BlockTags.FLOWERS)) {
                     if (state.isOf(Blocks.SUNFLOWER)) {
                         return state.get(TallPlantBlock.HALF) == DoubleBlockHalf.UPPER;
@@ -948,7 +952,7 @@ Flutterer {
         private List<BlockPos> getNearbyFreeHives() {
             BlockPos blockPos = BeeEntity.this.getBlockPos();
             PointOfInterestStorage pointOfInterestStorage = ((ServerWorld)BeeEntity.this.world).getPointOfInterestStorage();
-            Stream<PointOfInterest> stream = pointOfInterestStorage.getInCircle(poiType -> poiType == PointOfInterestType.BEEHIVE || poiType == PointOfInterestType.BEE_NEST, blockPos, 20, PointOfInterestStorage.OccupationStatus.ANY);
+            Stream<PointOfInterest> stream = pointOfInterestStorage.getInCircle(poiType -> poiType.isIn(PointOfInterestTypeTags.BEE_HOME), blockPos, 20, PointOfInterestStorage.OccupationStatus.ANY);
             return stream.map(PointOfInterest::getPos).filter(BeeEntity.this::doesHiveHaveSpace).sorted(Comparator.comparingDouble(blockPos2 -> blockPos2.getSquaredDistance(blockPos))).collect(Collectors.toList());
         }
     }

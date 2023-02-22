@@ -65,14 +65,18 @@ public class Session {
         return this.xuid;
     }
 
-    public GameProfile getProfile() {
+    @Nullable
+    public UUID getUuidOrNull() {
         try {
-            UUID uUID = UUIDTypeAdapter.fromString((String)this.getUuid());
-            return new GameProfile(uUID, this.getUsername());
+            return UUIDTypeAdapter.fromString((String)this.getUuid());
         }
         catch (IllegalArgumentException illegalArgumentException) {
-            return new GameProfile(null, this.getUsername());
+            return null;
         }
+    }
+
+    public GameProfile getProfile() {
+        return new GameProfile(this.getUuidOrNull(), this.getUsername());
     }
 
     public AccountType getAccountType() {

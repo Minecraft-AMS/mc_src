@@ -25,7 +25,7 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,14 +45,14 @@ public class StopSoundCommand {
         }
         if (category != null) {
             if (sound != null) {
-                source.sendFeedback(new TranslatableText("commands.stopsound.success.source.sound", sound, category.getName()), true);
+                source.sendFeedback(Text.translatable("commands.stopsound.success.source.sound", sound, category.getName()), true);
             } else {
-                source.sendFeedback(new TranslatableText("commands.stopsound.success.source.any", category.getName()), true);
+                source.sendFeedback(Text.translatable("commands.stopsound.success.source.any", category.getName()), true);
             }
         } else if (sound != null) {
-            source.sendFeedback(new TranslatableText("commands.stopsound.success.sourceless.sound", sound), true);
+            source.sendFeedback(Text.translatable("commands.stopsound.success.sourceless.sound", sound), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.stopsound.success.sourceless.any"), true);
+            source.sendFeedback(Text.translatable("commands.stopsound.success.sourceless.any"), true);
         }
         return targets.size();
     }

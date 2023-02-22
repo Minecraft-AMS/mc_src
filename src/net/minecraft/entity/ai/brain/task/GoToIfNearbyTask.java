@@ -16,7 +16,7 @@ import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.brain.task.Task;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.dynamic.GlobalPos;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.Vec3d;
 
 public class GoToIfNearbyTask
@@ -46,7 +46,7 @@ extends Task<PathAwareEntity> {
     protected void run(ServerWorld serverWorld, PathAwareEntity pathAwareEntity, long l) {
         if (l > this.nextUpdateTime) {
             Optional<Vec3d> optional = Optional.ofNullable(FuzzyTargeting.find(pathAwareEntity, 8, 6));
-            pathAwareEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(vec3d -> new WalkTarget((Vec3d)vec3d, this.walkSpeed, 1)));
+            pathAwareEntity.getBrain().remember(MemoryModuleType.WALK_TARGET, optional.map(pos -> new WalkTarget((Vec3d)pos, this.walkSpeed, 1)));
             this.nextUpdateTime = l + 180L;
         }
     }

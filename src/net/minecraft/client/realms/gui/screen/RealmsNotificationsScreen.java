@@ -4,23 +4,26 @@
  * Could not load the following classes:
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.realms.gui.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.realms.RealmsClient;
+import net.minecraft.client.realms.RealmsPeriodicCheckers;
+import net.minecraft.client.realms.dto.RealmsNews;
 import net.minecraft.client.realms.exception.RealmsServiceException;
-import net.minecraft.client.realms.gui.RealmsDataFetcher;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
+import net.minecraft.client.realms.util.PeriodicRunnerFactory;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class RealmsNotificationsScreen
@@ -28,8 +31,9 @@ extends RealmsScreen {
     private static final Identifier INVITE_ICON = new Identifier("realms", "textures/gui/realms/invite_icon.png");
     private static final Identifier TRIAL_ICON = new Identifier("realms", "textures/gui/realms/trial_icon.png");
     private static final Identifier NEWS_NOTIFICATION = new Identifier("realms", "textures/gui/realms/news_notification_mainscreen.png");
-    private static final RealmsDataFetcher REALMS_DATA_FETCHER = new RealmsDataFetcher(MinecraftClient.getInstance(), RealmsClient.createRealmsClient());
-    private volatile int numberOfPendingInvites;
+    @Nullable
+    private PeriodicRunnerFactory.RunnersManager periodicRunnersManager;
+    private volatile int pendingInvitesCount;
     static boolean checkedMcoAvailability;
     private static boolean trialAvailable;
     static boolean validClient;
@@ -43,32 +47,42 @@ extends RealmsScreen {
     public void init() {
         this.checkIfMcoEnabled();
         this.client.keyboard.setRepeatEvents(true);
+        if (this.periodicRunnersManager != null) {
+            this.periodicRunnersManager.forceRunListeners();
+        }
     }
 
     @Override
     public void tick() {
-        if (!(this.shouldShowNotifications() && this.isTitleScreen() && validClient || REALMS_DATA_FETCHER.isStopped())) {
-            REALMS_DATA_FETCHER.stop();
-            return;
+        boolean bl;
+        boolean bl2 = bl = this.shouldShowNotifications() && this.isTitleScreen() && validClient;
+        if (this.periodicRunnersManager == null && bl) {
+            this.periodicRunnersManager = this.createPeriodicRunnersManager(this.client.getRealmsPeriodicCheckers());
+        } else if (this.periodicRunnersManager != null && !bl) {
+            this.periodicRunnersManager = null;
         }
-        if (!validClient || !this.shouldShowNotifications()) {
-            return;
+        if (this.periodicRunnersManager != null) {
+            this.periodicRunnersManager.runAll();
         }
-        REALMS_DATA_FETCHER.initWithSpecificTaskList();
-        if (REALMS_DATA_FETCHER.isFetchedSinceLastTry(RealmsDataFetcher.Task.PENDING_INVITE)) {
-            this.numberOfPendingInvites = REALMS_DATA_FETCHER.getPendingInvitesCount();
-        }
-        if (REALMS_DATA_FETCHER.isFetchedSinceLastTry(RealmsDataFetcher.Task.TRIAL_AVAILABLE)) {
-            trialAvailable = REALMS_DATA_FETCHER.isTrialAvailable();
-        }
-        if (REALMS_DATA_FETCHER.isFetchedSinceLastTry(RealmsDataFetcher.Task.UNREAD_NEWS)) {
-            hasUnreadNews = REALMS_DATA_FETCHER.hasUnreadNews();
-        }
-        REALMS_DATA_FETCHER.markClean();
+    }
+
+    private PeriodicRunnerFactory.RunnersManager createPeriodicRunnersManager(RealmsPeriodicCheckers periodicCheckers) {
+        PeriodicRunnerFactory.RunnersManager runnersManager = periodicCheckers.runnerFactory.create();
+        runnersManager.add(periodicCheckers.pendingInvitesCount, pendingInvitesCount -> {
+            this.pendingInvitesCount = pendingInvitesCount;
+        });
+        runnersManager.add(periodicCheckers.trialAvailability, trialAvailable -> {
+            RealmsNotificationsScreen.trialAvailable = trialAvailable;
+        });
+        runnersManager.add(periodicCheckers.news, news -> {
+            realmsPeriodicCheckers.newsUpdater.updateNews((RealmsNews)news);
+            hasUnreadNews = realmsPeriodicCheckers.newsUpdater.hasUnreadNews();
+        });
+        return runnersManager;
     }
 
     private boolean shouldShowNotifications() {
-        return this.client.options.realmsNotifications;
+        return this.client.options.getRealmsNotifications().getValue();
     }
 
     private boolean isTitleScreen() {
@@ -82,7 +96,7 @@ extends RealmsScreen {
 
                 @Override
                 public void run() {
-                    RealmsClient realmsClient = RealmsClient.createRealmsClient();
+                    RealmsClient realmsClient = RealmsClient.create();
                     try {
                         RealmsClient.CompatibleVersionResponse compatibleVersionResponse = realmsClient.clientCompatible();
                         if (compatibleVersionResponse != RealmsClient.CompatibleVersionResponse.COMPATIBLE) {
@@ -110,7 +124,7 @@ extends RealmsScreen {
     }
 
     private void drawIcons(MatrixStack matrices, int mouseX, int mouseY) {
-        int i = this.numberOfPendingInvites;
+        int i = this.pendingInvitesCount;
         int j = 24;
         int k = this.height / 4 + 48;
         int l = this.width / 2 + 80;
@@ -140,11 +154,6 @@ extends RealmsScreen {
             }
             DrawableHelper.drawTexture(matrices, l + 4 - n, m + 4, 0.0f, o, 8, 8, 8, 16);
         }
-    }
-
-    @Override
-    public void removed() {
-        REALMS_DATA_FETCHER.stop();
     }
 }
 

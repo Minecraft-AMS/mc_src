@@ -12,7 +12,6 @@ package net.minecraft.client.render.model;
 import com.google.common.collect.Lists;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
@@ -24,6 +23,7 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.util.collection.Weighted;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)

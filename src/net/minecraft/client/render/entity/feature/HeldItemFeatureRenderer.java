@@ -9,12 +9,12 @@ package net.minecraft.client.render.entity.feature;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.ModelWithArms;
+import net.minecraft.client.render.item.HeldItemRenderer;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -25,8 +25,11 @@ import net.minecraft.util.math.Vec3f;
 @Environment(value=EnvType.CLIENT)
 public class HeldItemFeatureRenderer<T extends LivingEntity, M extends EntityModel<T>>
 extends FeatureRenderer<T, M> {
-    public HeldItemFeatureRenderer(FeatureRendererContext<T, M> featureRendererContext) {
-        super(featureRendererContext);
+    private final HeldItemRenderer heldItemRenderer;
+
+    public HeldItemFeatureRenderer(FeatureRendererContext<T, M> context, HeldItemRenderer heldItemRenderer) {
+        super(context);
+        this.heldItemRenderer = heldItemRenderer;
     }
 
     @Override
@@ -59,7 +62,7 @@ extends FeatureRenderer<T, M> {
         matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180.0f));
         boolean bl = arm == Arm.LEFT;
         matrices.translate((float)(bl ? -1 : 1) / 16.0f, 0.125, -0.625);
-        MinecraftClient.getInstance().getHeldItemRenderer().renderItem(entity, stack, transformationMode, bl, matrices, vertexConsumers, light);
+        this.heldItemRenderer.renderItem(entity, stack, transformationMode, bl, matrices, vertexConsumers, light);
         matrices.pop();
     }
 }

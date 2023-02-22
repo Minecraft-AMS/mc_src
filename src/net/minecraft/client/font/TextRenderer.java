@@ -17,7 +17,6 @@ import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -43,6 +42,7 @@ import net.minecraft.util.math.AffineTransformation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -51,13 +51,15 @@ public class TextRenderer {
     private static final Vec3f FORWARD_SHIFT = new Vec3f(0.0f, 0.0f, 0.03f);
     public static final int ARABIC_SHAPING_LETTERS_SHAPE = 8;
     public final int fontHeight = 9;
-    public final Random random = new Random();
+    public final Random random = Random.create();
     private final Function<Identifier, FontStorage> fontStorageAccessor;
+    final boolean validateAdvance;
     private final TextHandler handler;
 
-    public TextRenderer(Function<Identifier, FontStorage> fontStorageAccessor) {
+    public TextRenderer(Function<Identifier, FontStorage> fontStorageAccessor, boolean validateAdvance) {
         this.fontStorageAccessor = fontStorageAccessor;
-        this.handler = new TextHandler((codePoint, style) -> this.getFontStorage(style.getFont()).getGlyph(codePoint).getAdvance(style.isBold()));
+        this.validateAdvance = validateAdvance;
+        this.handler = new TextHandler((codePoint, style) -> this.getFontStorage(style.getFont()).getGlyph(codePoint, this.validateAdvance).getAdvance(style.isBold()));
     }
 
     FontStorage getFontStorage(Identifier id) {
@@ -148,7 +150,7 @@ public class TextRenderer {
                 text.accept((index, style, codePoint) -> {
                     boolean bl = style.isBold();
                     FontStorage fontStorage = this.getFontStorage(style.getFont());
-                    Glyph glyph = fontStorage.getGlyph(codePoint);
+                    Glyph glyph = fontStorage.getGlyph(codePoint, this.validateAdvance);
                     drawer.x = fs[0] + (float)l * glyph.getShadowOffset();
                     drawer.y = y + (float)m * glyph.getShadowOffset();
                     fs[0] = fs[0] + glyph.getAdvance(bl);
@@ -248,6 +250,10 @@ public class TextRenderer {
         return 9 * this.handler.wrapLines(text, maxWidth, Style.EMPTY).size();
     }
 
+    public int getWrappedLinesHeight(StringVisitable text, int maxWidth) {
+        return 9 * this.handler.wrapLines(text, maxWidth, Style.EMPTY).size();
+    }
+
     public List<OrderedText> wrapLines(StringVisitable text, int width) {
         return Language.getInstance().reorder(this.handler.wrapLines(text, width, Style.EMPTY));
     }
@@ -311,7 +317,7 @@ public class TextRenderer {
             float h;
             float g;
             FontStorage fontStorage = TextRenderer.this.getFontStorage(style.getFont());
-            Glyph glyph = fontStorage.getGlyph(j);
+            Glyph glyph = fontStorage.getGlyph(j, TextRenderer.this.validateAdvance);
             GlyphRenderer glyphRenderer = style.isObfuscated() && j != 32 ? fontStorage.getObfuscatedGlyphRenderer(glyph) : fontStorage.getGlyphRenderer(j);
             boolean bl = style.isBold();
             float f = this.alpha;

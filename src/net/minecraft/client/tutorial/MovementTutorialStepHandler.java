@@ -15,7 +15,6 @@ import net.minecraft.client.tutorial.TutorialManager;
 import net.minecraft.client.tutorial.TutorialStep;
 import net.minecraft.client.tutorial.TutorialStepHandler;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 @Environment(value=EnvType.CLIENT)
 public class MovementTutorialStepHandler
@@ -25,10 +24,10 @@ implements TutorialStepHandler {
     private static final int field_33031 = 100;
     private static final int field_33032 = 20;
     private static final int field_33033 = -1;
-    private static final Text MOVE_TITLE = new TranslatableText("tutorial.move.title", TutorialManager.keyToText("forward"), TutorialManager.keyToText("left"), TutorialManager.keyToText("back"), TutorialManager.keyToText("right"));
-    private static final Text MOVE_DESCRIPTION = new TranslatableText("tutorial.move.description", TutorialManager.keyToText("jump"));
-    private static final Text LOOK_TITLE = new TranslatableText("tutorial.look.title");
-    private static final Text LOOK_DESCRIPTION = new TranslatableText("tutorial.look.description");
+    private static final Text MOVE_TITLE = Text.translatable("tutorial.move.title", TutorialManager.keyToText("forward"), TutorialManager.keyToText("left"), TutorialManager.keyToText("back"), TutorialManager.keyToText("right"));
+    private static final Text MOVE_DESCRIPTION = Text.translatable("tutorial.move.description", TutorialManager.keyToText("jump"));
+    private static final Text LOOK_TITLE = Text.translatable("tutorial.look.title");
+    private static final Text LOOK_DESCRIPTION = Text.translatable("tutorial.look.description");
     private final TutorialManager manager;
     private TutorialToast moveToast;
     private TutorialToast lookAroundToast;

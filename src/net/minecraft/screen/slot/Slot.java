@@ -66,6 +66,11 @@ public class Slot {
         this.markDirty();
     }
 
+    public void setStackNoCallbacks(ItemStack stack) {
+        this.inventory.setStack(this.index, stack);
+        this.markDirty();
+    }
+
     public void markDirty() {
         this.inventory.markDirty();
     }

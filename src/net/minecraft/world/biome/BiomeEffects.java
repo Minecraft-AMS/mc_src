@@ -14,11 +14,8 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.stream.Collectors;
 import net.minecraft.sound.BiomeAdditionsSound;
 import net.minecraft.sound.BiomeMoodSound;
 import net.minecraft.sound.MusicSound;
@@ -139,7 +136,6 @@ public class BiomeEffects {
         };
         private final String name;
         public static final Codec<GrassColorModifier> CODEC;
-        private static final Map<String, GrassColorModifier> BY_NAME;
         private static final /* synthetic */ GrassColorModifier[] field_26432;
 
         public static GrassColorModifier[] values() {
@@ -165,18 +161,13 @@ public class BiomeEffects {
             return this.name;
         }
 
-        public static GrassColorModifier byName(String name) {
-            return BY_NAME.get(name);
-        }
-
         private static /* synthetic */ GrassColorModifier[] method_36701() {
             return new GrassColorModifier[]{NONE, DARK_FOREST, SWAMP};
         }
 
         static {
             field_26432 = GrassColorModifier.method_36701();
-            CODEC = StringIdentifiable.createCodec(GrassColorModifier::values, GrassColorModifier::byName);
-            BY_NAME = Arrays.stream(GrassColorModifier.values()).collect(Collectors.toMap(GrassColorModifier::getName, grassColorModifier -> grassColorModifier));
+            CODEC = StringIdentifiable.createCodec(GrassColorModifier::values);
         }
     }
 

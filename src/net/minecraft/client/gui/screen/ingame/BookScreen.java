@@ -20,7 +20,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.PageTurnWidget;
 import net.minecraft.client.render.GameRenderer;
@@ -31,14 +30,13 @@ import net.minecraft.item.Items;
 import net.minecraft.item.WrittenBookItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -71,7 +69,7 @@ extends Screen {
     private int pageIndex;
     private List<OrderedText> cachedPage = Collections.emptyList();
     private int cachedPageIndex = -1;
-    private Text pageIndexText = LiteralText.EMPTY;
+    private Text pageIndexText = ScreenTexts.EMPTY;
     private PageTurnWidget nextPageButton;
     private PageTurnWidget previousPageButton;
     private final boolean pageTurnSound;
@@ -183,7 +181,7 @@ extends Screen {
         if (this.cachedPageIndex != this.pageIndex) {
             StringVisitable stringVisitable = this.contents.getPage(this.pageIndex);
             this.cachedPage = this.textRenderer.wrapLines(stringVisitable, 114);
-            this.pageIndexText = new TranslatableText("book.pageIndicator", this.pageIndex + 1, Math.max(this.getPageCount(), 1));
+            this.pageIndexText = Text.translatable("book.pageIndicator", this.pageIndex + 1, Math.max(this.getPageCount(), 1));
         }
         this.cachedPageIndex = this.pageIndex;
         int k = this.textRenderer.getWidth(this.pageIndexText);
@@ -344,7 +342,7 @@ extends Screen {
             if (nbtCompound != null && WrittenBookItem.isValid(nbtCompound)) {
                 return BookScreen.readPages(nbtCompound);
             }
-            return ImmutableList.of((Object)Text.Serializer.toJson(new TranslatableText("book.invalid.tag").formatted(Formatting.DARK_RED)));
+            return ImmutableList.of((Object)Text.Serializer.toJson(Text.translatable("book.invalid.tag").formatted(Formatting.DARK_RED)));
         }
 
         @Override

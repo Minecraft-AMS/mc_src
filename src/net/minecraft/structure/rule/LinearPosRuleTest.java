@@ -13,15 +13,15 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Random;
 import net.minecraft.structure.rule.PosRuleTest;
 import net.minecraft.structure.rule.PosRuleTestType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 
 public class LinearPosRuleTest
 extends PosRuleTest {
-    public static final Codec<LinearPosRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("min_chance").orElse((Object)Float.valueOf(0.0f)).forGetter(linearPosRuleTest -> Float.valueOf(linearPosRuleTest.minChance)), (App)Codec.FLOAT.fieldOf("max_chance").orElse((Object)Float.valueOf(0.0f)).forGetter(linearPosRuleTest -> Float.valueOf(linearPosRuleTest.maxChance)), (App)Codec.INT.fieldOf("min_dist").orElse((Object)0).forGetter(linearPosRuleTest -> linearPosRuleTest.minDistance), (App)Codec.INT.fieldOf("max_dist").orElse((Object)0).forGetter(linearPosRuleTest -> linearPosRuleTest.maxDistance)).apply((Applicative)instance, LinearPosRuleTest::new));
+    public static final Codec<LinearPosRuleTest> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.FLOAT.fieldOf("min_chance").orElse((Object)Float.valueOf(0.0f)).forGetter(ruleTest -> Float.valueOf(ruleTest.minChance)), (App)Codec.FLOAT.fieldOf("max_chance").orElse((Object)Float.valueOf(0.0f)).forGetter(ruleTest -> Float.valueOf(ruleTest.maxChance)), (App)Codec.INT.fieldOf("min_dist").orElse((Object)0).forGetter(ruleTest -> ruleTest.minDistance), (App)Codec.INT.fieldOf("max_dist").orElse((Object)0).forGetter(ruleTest -> ruleTest.maxDistance)).apply((Applicative)instance, LinearPosRuleTest::new));
     private final float minChance;
     private final float maxChance;
     private final int minDistance;

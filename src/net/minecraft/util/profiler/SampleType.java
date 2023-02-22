@@ -13,6 +13,7 @@ extends Enum<SampleType> {
     public static final /* enum */ SampleType CHUNK_RENDERING = new SampleType("chunk rendering");
     public static final /* enum */ SampleType CHUNK_RENDERING_DISPATCHING = new SampleType("chunk rendering dispatching");
     public static final /* enum */ SampleType CPU = new SampleType("cpu");
+    public static final /* enum */ SampleType GPU = new SampleType("gpu");
     private final String name;
     private static final /* synthetic */ SampleType[] field_29554;
 
@@ -33,7 +34,7 @@ extends Enum<SampleType> {
     }
 
     private static /* synthetic */ SampleType[] method_36594() {
-        return new SampleType[]{PATH_FINDING, EVENT_LOOPS, MAIL_BOXES, TICK_LOOP, JVM, CHUNK_RENDERING, CHUNK_RENDERING_DISPATCHING, CPU};
+        return new SampleType[]{PATH_FINDING, EVENT_LOOPS, MAIL_BOXES, TICK_LOOP, JVM, CHUNK_RENDERING, CHUNK_RENDERING_DISPATCHING, CPU, GPU};
     }
 
     static {

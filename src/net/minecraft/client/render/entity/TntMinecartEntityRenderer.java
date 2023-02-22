@@ -10,9 +10,9 @@ package net.minecraft.client.render.entity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MinecartEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
@@ -23,8 +23,11 @@ import net.minecraft.util.math.MathHelper;
 @Environment(value=EnvType.CLIENT)
 public class TntMinecartEntityRenderer
 extends MinecartEntityRenderer<TntMinecartEntity> {
+    private final BlockRenderManager tntBlockRenderManager;
+
     public TntMinecartEntityRenderer(EntityRendererFactory.Context context) {
         super(context, EntityModelLayers.TNT_MINECART);
+        this.tntBlockRenderManager = context.getBlockRenderManager();
     }
 
     @Override
@@ -38,12 +41,12 @@ extends MinecartEntityRenderer<TntMinecartEntity> {
             float h = 1.0f + g * 0.3f;
             matrixStack.scale(h, h, h);
         }
-        TntMinecartEntityRenderer.renderFlashingBlock(blockState, matrixStack, vertexConsumerProvider, i, j > -1 && j / 5 % 2 == 0);
+        TntMinecartEntityRenderer.renderFlashingBlock(this.tntBlockRenderManager, blockState, matrixStack, vertexConsumerProvider, i, j > -1 && j / 5 % 2 == 0);
     }
 
-    public static void renderFlashingBlock(BlockState blockState, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, boolean drawFlash) {
+    public static void renderFlashingBlock(BlockRenderManager blockRenderManager, BlockState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, boolean drawFlash) {
         int i = drawFlash ? OverlayTexture.packUv(OverlayTexture.getU(1.0f), 10) : OverlayTexture.DEFAULT_UV;
-        MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(blockState, matrices, vertexConsumers, light, i);
+        blockRenderManager.renderBlockAsEntity(state, matrices, vertexConsumers, light, i);
     }
 }
 

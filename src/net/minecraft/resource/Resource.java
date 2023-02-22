@@ -6,23 +6,56 @@
  */
 package net.minecraft.resource;
 
-import java.io.Closeable;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
-import net.minecraft.resource.metadata.ResourceMetadataReader;
-import net.minecraft.util.Identifier;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import net.minecraft.resource.metadata.ResourceMetadata;
 import org.jetbrains.annotations.Nullable;
 
-public interface Resource
-extends Closeable {
-    public Identifier getId();
-
-    public InputStream getInputStream();
-
-    public boolean hasMetadata();
-
+public class Resource {
+    private final String resourcePackName;
+    private final InputSupplier<InputStream> inputSupplier;
+    private final InputSupplier<ResourceMetadata> metadataSupplier;
     @Nullable
-    public <T> T getMetadata(ResourceMetadataReader<T> var1);
+    private ResourceMetadata metadata;
 
-    public String getResourcePackName();
+    public Resource(String resourcePackName, InputSupplier<InputStream> inputSupplier, InputSupplier<ResourceMetadata> metadataSupplier) {
+        this.resourcePackName = resourcePackName;
+        this.inputSupplier = inputSupplier;
+        this.metadataSupplier = metadataSupplier;
+    }
+
+    public Resource(String resourcePackName, InputSupplier<InputStream> inputSupplier) {
+        this.resourcePackName = resourcePackName;
+        this.inputSupplier = inputSupplier;
+        this.metadataSupplier = () -> ResourceMetadata.NONE;
+        this.metadata = ResourceMetadata.NONE;
+    }
+
+    public String getResourcePackName() {
+        return this.resourcePackName;
+    }
+
+    public InputStream getInputStream() throws IOException {
+        return this.inputSupplier.get();
+    }
+
+    public BufferedReader getReader() throws IOException {
+        return new BufferedReader(new InputStreamReader(this.getInputStream(), StandardCharsets.UTF_8));
+    }
+
+    public ResourceMetadata getMetadata() throws IOException {
+        if (this.metadata == null) {
+            this.metadata = this.metadataSupplier.get();
+        }
+        return this.metadata;
+    }
+
+    @FunctionalInterface
+    public static interface InputSupplier<T> {
+        public T get() throws IOException;
+    }
 }
 

@@ -2,14 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableSet
  *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
  *  it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.ai.pathing;
 
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.EnumSet;
@@ -45,6 +43,7 @@ extends LandPathNodeMaker {
     }
 
     @Override
+    @Nullable
     public PathNode getStart() {
         BlockPos blockPos;
         PathNodeType pathNodeType;
@@ -61,19 +60,18 @@ extends LandPathNodeMaker {
             i = MathHelper.floor(this.entity.getY() + 0.5);
         }
         if (this.entity.getPathfindingPenalty(pathNodeType = this.getNodeType((blockPos = this.entity.getBlockPos()).getX(), i, blockPos.getZ())) < 0.0f) {
-            ImmutableSet set = ImmutableSet.of((Object)new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().minZ), (Object)new BlockPos(this.entity.getBoundingBox().minX, (double)i, this.entity.getBoundingBox().maxZ), (Object)new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().minZ), (Object)new BlockPos(this.entity.getBoundingBox().maxX, (double)i, this.entity.getBoundingBox().maxZ));
-            for (BlockPos blockPos2 : set) {
-                PathNodeType pathNodeType2 = this.getNodeType(blockPos.getX(), i, blockPos.getZ());
+            for (BlockPos blockPos2 : this.entity.getPotentialEscapePositions()) {
+                PathNodeType pathNodeType2 = this.getNodeType(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
                 if (!(this.entity.getPathfindingPenalty(pathNodeType2) >= 0.0f)) continue;
-                return super.getNode(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ());
+                return super.getStart(blockPos2);
             }
         }
-        return super.getNode(blockPos.getX(), i, blockPos.getZ());
+        return super.getStart(new BlockPos(blockPos.getX(), i, blockPos.getZ()));
     }
 
     @Override
     public TargetPathNode getNode(double x, double y, double z) {
-        return new TargetPathNode(super.getNode(MathHelper.floor(x), MathHelper.floor(y), MathHelper.floor(z)));
+        return this.asTargetPathNode(super.getNode(MathHelper.floor(x), MathHelper.floor(y), MathHelper.floor(z)));
     }
 
     @Override
@@ -200,8 +198,7 @@ extends LandPathNodeMaker {
         PathNode pathNode = null;
         PathNodeType pathNodeType = this.getNodeType(x, y, z);
         float f = this.entity.getPathfindingPenalty(pathNodeType);
-        if (f >= 0.0f) {
-            pathNode = super.getNode(x, y, z);
+        if (f >= 0.0f && (pathNode = super.getNode(x, y, z)) != null) {
             pathNode.type = pathNodeType;
             pathNode.penalty = Math.max(pathNode.penalty, f);
             if (pathNodeType == PathNodeType.WALKABLE) {
@@ -253,7 +250,9 @@ extends LandPathNodeMaker {
             } else if (pathNodeType2 == PathNodeType.COCOA) {
                 pathNodeType = PathNodeType.COCOA;
             } else if (pathNodeType2 == PathNodeType.FENCE) {
-                pathNodeType = PathNodeType.FENCE;
+                if (!mutable.equals(this.entity.getBlockPos())) {
+                    pathNodeType = PathNodeType.FENCE;
+                }
             } else {
                 PathNodeType pathNodeType3 = pathNodeType = pathNodeType2 == PathNodeType.WALKABLE || pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WATER ? PathNodeType.OPEN : PathNodeType.WALKABLE;
             }

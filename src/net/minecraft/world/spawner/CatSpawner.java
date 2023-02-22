@@ -4,23 +4,20 @@
 package net.minecraft.world.spawner;
 
 import java.util.List;
-import java.util.Random;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.SpawnRestriction;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.StructureTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.SpawnHelper;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
-import net.minecraft.world.gen.feature.StructureFeature;
 import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.poi.PointOfInterestTypes;
 import net.minecraft.world.spawner.Spawner;
 
 public class CatSpawner
@@ -54,8 +51,7 @@ implements Spawner {
             if (world.isNearOccupiedPointOfInterest(blockPos, 2)) {
                 return this.spawnInHouse(world, blockPos);
             }
-            Registry<ConfiguredStructureFeature<?, ?>> registry = world.getRegistryManager().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY);
-            if (ChunkGenerator.method_41049(registry, StructureFeature.SWAMP_HUT).anyMatch(configuredStructureFeature -> world.getStructureAccessor().getStructureContaining(blockPos, (ConfiguredStructureFeature<?, ?>)configuredStructureFeature).hasChildren())) {
+            if (world.getStructureAccessor().getStructureContaining(blockPos, StructureTags.CATS_SPAWN_IN).hasChildren()) {
                 return this.spawnInSwampHut(world, blockPos);
             }
         }
@@ -65,7 +61,7 @@ implements Spawner {
     private int spawnInHouse(ServerWorld world, BlockPos pos) {
         List<CatEntity> list;
         int i = 48;
-        if (world.getPointOfInterestStorage().count(PointOfInterestType.HOME.getCompletionCondition(), pos, 48, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED) > 4L && (list = world.getNonSpectatingEntities(CatEntity.class, new Box(pos).expand(48.0, 8.0, 48.0))).size() < 5) {
+        if (world.getPointOfInterestStorage().count(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.HOME), pos, 48, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED) > 4L && (list = world.getNonSpectatingEntities(CatEntity.class, new Box(pos).expand(48.0, 8.0, 48.0))).size() < 5) {
             return this.spawn(pos, world);
         }
         return 0;

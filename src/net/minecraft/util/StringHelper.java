@@ -59,5 +59,9 @@ public class StringHelper {
     public static boolean endsWithLineBreak(String text) {
         return ENDS_WITH_LINE_BREAK.matcher(text).find();
     }
+
+    public static String truncateChat(String text) {
+        return StringHelper.truncate(text, 256, false);
+    }
 }
 

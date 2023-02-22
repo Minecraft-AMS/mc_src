@@ -18,10 +18,7 @@ import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.resource.Resource;
@@ -49,30 +46,24 @@ extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, Profiler profiler) {
         HashMap map = Maps.newHashMap();
         int i = this.dataType.length() + 1;
-        for (Identifier identifier : resourceManager.findResources(this.dataType, path -> path.endsWith(FILE_SUFFIX))) {
+        for (Map.Entry<Identifier, Resource> entry : resourceManager.findResources(this.dataType, id -> id.getPath().endsWith(FILE_SUFFIX)).entrySet()) {
+            Identifier identifier = entry.getKey();
             String string = identifier.getPath();
             Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
             try {
-                Resource resource = resourceManager.getResource(identifier);
+                BufferedReader reader = entry.getValue().getReader();
                 try {
-                    InputStream inputStream = resource.getInputStream();
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));){
-                        JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
-                        if (jsonElement != null) {
-                            JsonElement jsonElement2 = map.put(identifier2, jsonElement);
-                            if (jsonElement2 == null) continue;
-                            throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
-                        }
-                        LOGGER.error("Couldn't load data file {} from {} as it's null or empty", (Object)identifier2, (Object)identifier);
+                    JsonElement jsonElement = JsonHelper.deserialize(this.gson, (Reader)reader, JsonElement.class);
+                    if (jsonElement != null) {
+                        JsonElement jsonElement2 = map.put(identifier2, jsonElement);
+                        if (jsonElement2 == null) continue;
+                        throw new IllegalStateException("Duplicate data file ignored with ID " + identifier2);
                     }
-                    finally {
-                        if (inputStream == null) continue;
-                        inputStream.close();
-                    }
+                    LOGGER.error("Couldn't load data file {} from {} as it's null or empty", (Object)identifier2, (Object)identifier);
                 }
                 finally {
-                    if (resource == null) continue;
-                    resource.close();
+                    if (reader == null) continue;
+                    ((Reader)reader).close();
                 }
             }
             catch (JsonParseException | IOException | IllegalArgumentException exception) {

@@ -31,7 +31,7 @@ import com.mojang.serialization.Dynamic;
 import java.lang.reflect.Type;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.datafixer.fix.ChoiceFix;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.JsonHelper;
@@ -43,7 +43,7 @@ extends ChoiceFix {
 
         public MutableText deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             if (jsonElement.isJsonPrimitive()) {
-                return new LiteralText(jsonElement.getAsString());
+                return Text.literal(jsonElement.getAsString());
             }
             if (jsonElement.isJsonArray()) {
                 JsonArray jsonArray = jsonElement.getAsJsonArray();
@@ -66,20 +66,20 @@ extends ChoiceFix {
         }
     }).create();
 
-    public BlockEntitySignTextStrictJsonFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType, "BlockEntitySignTextStrictJsonFix", TypeReferences.BLOCK_ENTITY, "Sign");
+    public BlockEntitySignTextStrictJsonFix(Schema schema, boolean bl) {
+        super(schema, bl, "BlockEntitySignTextStrictJsonFix", TypeReferences.BLOCK_ENTITY, "Sign");
     }
 
     private Dynamic<?> fix(Dynamic<?> dynamic, String lineName) {
         String string = dynamic.get(lineName).asString("");
         Text text = null;
         if ("null".equals(string) || StringUtils.isEmpty((CharSequence)string)) {
-            text = LiteralText.EMPTY;
+            text = ScreenTexts.EMPTY;
         } else if (string.charAt(0) == '\"' && string.charAt(string.length() - 1) == '\"' || string.charAt(0) == '{' && string.charAt(string.length() - 1) == '}') {
             try {
                 text = JsonHelper.deserialize(GSON, string, Text.class, true);
                 if (text == null) {
-                    text = LiteralText.EMPTY;
+                    text = ScreenTexts.EMPTY;
                 }
             }
             catch (Exception exception) {
@@ -102,10 +102,10 @@ extends ChoiceFix {
                 }
             }
             if (text == null) {
-                text = new LiteralText(string);
+                text = Text.literal(string);
             }
         } else {
-            text = new LiteralText(string);
+            text = Text.literal(string);
         }
         return dynamic.set(lineName, dynamic.createString(Text.Serializer.toJson(text)));
     }

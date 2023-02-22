@@ -10,9 +10,9 @@ package net.minecraft.resource;
 
 import com.google.common.collect.Lists;
 import com.mojang.logging.LogUtils;
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -62,7 +62,7 @@ AutoCloseable {
     }
 
     @Override
-    public Resource getResource(Identifier identifier) throws IOException {
+    public Optional<Resource> getResource(Identifier identifier) {
         return this.activeManager.getResource(identifier);
     }
 
@@ -72,18 +72,18 @@ AutoCloseable {
     }
 
     @Override
-    public boolean containsResource(Identifier id) {
-        return this.activeManager.containsResource(id);
-    }
-
-    @Override
-    public List<Resource> getAllResources(Identifier id) throws IOException {
+    public List<Resource> getAllResources(Identifier id) {
         return this.activeManager.getAllResources(id);
     }
 
     @Override
-    public Collection<Identifier> findResources(String startingPath, Predicate<String> pathPredicate) {
-        return this.activeManager.findResources(startingPath, pathPredicate);
+    public Map<Identifier, Resource> findResources(String startingPath, Predicate<Identifier> allowedPathPredicate) {
+        return this.activeManager.findResources(startingPath, allowedPathPredicate);
+    }
+
+    @Override
+    public Map<Identifier, List<Resource>> findAllResources(String startingPath, Predicate<Identifier> allowedPathPredicate) {
+        return this.activeManager.findAllResources(startingPath, allowedPathPredicate);
     }
 
     @Override

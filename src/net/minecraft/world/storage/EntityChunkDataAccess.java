@@ -61,13 +61,13 @@ implements ChunkDataAccess<Entity> {
         if (this.emptyChunks.contains(pos.toLong())) {
             return CompletableFuture.completedFuture(EntityChunkDataAccess.emptyDataList(pos));
         }
-        return this.dataLoadWorker.readChunkData(pos).thenApplyAsync(compound -> {
-            if (compound == null) {
+        return this.dataLoadWorker.readChunkData(pos).thenApplyAsync(nbt -> {
+            if (nbt.isEmpty()) {
                 this.emptyChunks.add(pos.toLong());
                 return EntityChunkDataAccess.emptyDataList(pos);
             }
             try {
-                ChunkPos chunkPos2 = EntityChunkDataAccess.getChunkPos(compound);
+                ChunkPos chunkPos2 = EntityChunkDataAccess.getChunkPos((NbtCompound)nbt.get());
                 if (!Objects.equals(pos, chunkPos2)) {
                     LOGGER.error("Chunk file at {} is in the wrong location. (Expected {}, got {})", new Object[]{pos, pos, chunkPos2});
                 }
@@ -75,7 +75,7 @@ implements ChunkDataAccess<Entity> {
             catch (Exception exception) {
                 LOGGER.warn("Failed to parse chunk {} position info", (Object)pos, (Object)exception);
             }
-            NbtCompound nbtCompound = this.fixChunkData((NbtCompound)compound);
+            NbtCompound nbtCompound = this.fixChunkData((NbtCompound)nbt.get());
             NbtList nbtList = nbtCompound.getList(ENTITIES_KEY, 10);
             List list = (List)EntityType.streamFromNbt(nbtList, this.world).collect(ImmutableList.toImmutableList());
             return new ChunkDataList(pos, list);

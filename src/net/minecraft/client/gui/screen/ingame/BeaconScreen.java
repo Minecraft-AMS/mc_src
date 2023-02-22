@@ -12,11 +12,11 @@ package net.minecraft.client.gui.screen.ingame;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.List;
+import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.entity.BeaconBlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
@@ -32,10 +32,9 @@ import net.minecraft.network.packet.c2s.play.UpdateBeaconC2SPacket;
 import net.minecraft.screen.BeaconScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerListener;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,8 +42,8 @@ import org.jetbrains.annotations.Nullable;
 public class BeaconScreen
 extends HandledScreen<BeaconScreenHandler> {
     static final Identifier TEXTURE = new Identifier("textures/gui/container/beacon.png");
-    private static final Text PRIMARY_POWER_TEXT = new TranslatableText("block.minecraft.beacon.primary");
-    private static final Text SECONDARY_POWER_TEXT = new TranslatableText("block.minecraft.beacon.secondary");
+    private static final Text PRIMARY_POWER_TEXT = Text.translatable("block.minecraft.beacon.primary");
+    private static final Text SECONDARY_POWER_TEXT = Text.translatable("block.minecraft.beacon.secondary");
     private final List<BeaconButtonWidget> buttons = Lists.newArrayList();
     @Nullable
     StatusEffect primaryEffect;
@@ -174,7 +173,7 @@ extends HandledScreen<BeaconScreenHandler> {
 
         @Override
         public void onPress() {
-            BeaconScreen.this.client.getNetworkHandler().sendPacket(new UpdateBeaconC2SPacket(StatusEffect.getRawId(BeaconScreen.this.primaryEffect), StatusEffect.getRawId(BeaconScreen.this.secondaryEffect)));
+            BeaconScreen.this.client.getNetworkHandler().sendPacket(new UpdateBeaconC2SPacket(Optional.ofNullable(BeaconScreen.this.primaryEffect), Optional.ofNullable(BeaconScreen.this.secondaryEffect)));
             ((BeaconScreen)BeaconScreen.this).client.player.closeHandledScreen();
         }
 
@@ -224,7 +223,7 @@ extends HandledScreen<BeaconScreenHandler> {
         }
 
         protected MutableText getEffectName(StatusEffect statusEffect) {
-            return new TranslatableText(statusEffect.getTranslationKey());
+            return Text.translatable(statusEffect.getTranslationKey());
         }
 
         @Override
@@ -272,7 +271,7 @@ extends HandledScreen<BeaconScreenHandler> {
 
         @Override
         protected MutableText getEffectName(StatusEffect statusEffect) {
-            return new TranslatableText(statusEffect.getTranslationKey()).append(" II");
+            return Text.translatable(statusEffect.getTranslationKey()).append(" II");
         }
 
         @Override
@@ -317,7 +316,7 @@ extends HandledScreen<BeaconScreenHandler> {
         private boolean disabled;
 
         protected BaseButtonWidget(int x, int y) {
-            super(x, y, 22, 22, LiteralText.EMPTY);
+            super(x, y, 22, 22, ScreenTexts.EMPTY);
         }
 
         protected BaseButtonWidget(int x, int y, Text message) {

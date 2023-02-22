@@ -2,40 +2,38 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.primitives.Ints
  *  com.mojang.authlib.GameProfile
  *  com.mojang.authlib.exceptions.AuthenticationUnavailableException
  *  com.mojang.logging.LogUtils
- *  io.netty.channel.ChannelFutureListener
- *  io.netty.util.concurrent.Future
- *  io.netty.util.concurrent.GenericFutureListener
  *  org.apache.commons.lang3.Validate
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.server.network;
 
+import com.google.common.primitives.Ints;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
 import com.mojang.logging.LogUtils;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.PrivateKey;
-import java.util.Arrays;
-import java.util.Random;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
+import net.minecraft.network.encryption.PlayerPublicKey;
+import net.minecraft.network.encryption.SignatureVerifier;
 import net.minecraft.network.listener.ServerLoginPacketListener;
+import net.minecraft.network.listener.TickablePacketListener;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginKeyC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginQueryResponseC2SPacket;
@@ -46,20 +44,23 @@ import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
+import net.minecraft.util.math.random.Random;
 import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class ServerLoginNetworkHandler
-implements ServerLoginPacketListener {
+implements TickablePacketListener,
+ServerLoginPacketListener {
     private static final AtomicInteger NEXT_AUTHENTICATOR_THREAD_ID = new AtomicInteger(0);
     static final Logger LOGGER = LogUtils.getLogger();
     private static final int TIMEOUT_TICKS = 600;
-    private static final Random RANDOM = new Random();
-    private final byte[] nonce = new byte[4];
+    private static final Random RANDOM = Random.create();
+    private final byte[] nonce;
     final MinecraftServer server;
     public final ClientConnection connection;
     State state = State.HELLO;
@@ -69,13 +70,16 @@ implements ServerLoginPacketListener {
     private final String serverId = "";
     @Nullable
     private ServerPlayerEntity delayedPlayer;
+    @Nullable
+    private PlayerPublicKey.PublicKeyData publicKeyData;
 
     public ServerLoginNetworkHandler(MinecraftServer server, ClientConnection connection) {
         this.server = server;
         this.connection = connection;
-        RANDOM.nextBytes(this.nonce);
+        this.nonce = Ints.toByteArray((int)RANDOM.nextInt());
     }
 
+    @Override
     public void tick() {
         ServerPlayerEntity serverPlayerEntity;
         if (this.state == State.READY_TO_ACCEPT) {
@@ -86,7 +90,7 @@ implements ServerLoginPacketListener {
             this.delayedPlayer = null;
         }
         if (this.loginTicks++ == 600) {
-            this.disconnect(new TranslatableText("multiplayer.disconnect.slow_login"));
+            this.disconnect(Text.translatable("multiplayer.disconnect.slow_login"));
         }
     }
 
@@ -107,21 +111,36 @@ implements ServerLoginPacketListener {
     }
 
     public void acceptPlayer() {
-        Text text;
-        if (!this.profile.isComplete()) {
-            this.profile = this.toOfflineProfile(this.profile);
+        PlayerPublicKey playerPublicKey;
+        block11: {
+            playerPublicKey = null;
+            if (!this.profile.isComplete()) {
+                this.profile = this.toOfflineProfile(this.profile);
+            } else {
+                try {
+                    SignatureVerifier signatureVerifier = this.server.getServicesSignatureVerifier();
+                    playerPublicKey = ServerLoginNetworkHandler.getVerifiedPublicKey(this.publicKeyData, this.profile.getId(), signatureVerifier, this.server.shouldEnforceSecureProfile());
+                }
+                catch (PlayerPublicKey.class_7652 lv) {
+                    LOGGER.error("Failed to validate profile key: {}", (Object)lv.getMessage());
+                    if (this.connection.isLocal()) break block11;
+                    this.disconnect(lv.getMessageText());
+                    return;
+                }
+            }
         }
-        if ((text = this.server.getPlayerManager().checkCanJoin(this.connection.getAddress(), this.profile)) != null) {
+        Text text = this.server.getPlayerManager().checkCanJoin(this.connection.getAddress(), this.profile);
+        if (text != null) {
             this.disconnect(text);
         } else {
             this.state = State.ACCEPTED;
             if (this.server.getNetworkCompressionThreshold() >= 0 && !this.connection.isLocal()) {
-                this.connection.send(new LoginCompressionS2CPacket(this.server.getNetworkCompressionThreshold()), (GenericFutureListener<? extends Future<? super Void>>)((ChannelFutureListener)channelFuture -> this.connection.setCompressionThreshold(this.server.getNetworkCompressionThreshold(), true)));
+                this.connection.send(new LoginCompressionS2CPacket(this.server.getNetworkCompressionThreshold()), PacketCallbacks.always(() -> this.connection.setCompressionThreshold(this.server.getNetworkCompressionThreshold(), true)));
             }
             this.connection.send(new LoginSuccessS2CPacket(this.profile));
             ServerPlayerEntity serverPlayerEntity = this.server.getPlayerManager().getPlayer(this.profile.getId());
             try {
-                ServerPlayerEntity serverPlayerEntity2 = this.server.getPlayerManager().createPlayer(this.profile);
+                ServerPlayerEntity serverPlayerEntity2 = this.server.getPlayerManager().createPlayer(this.profile, playerPublicKey);
                 if (serverPlayerEntity != null) {
                     this.state = State.DELAY_ACCEPT;
                     this.delayedPlayer = serverPlayerEntity2;
@@ -131,7 +150,7 @@ implements ServerLoginPacketListener {
             }
             catch (Exception exception) {
                 LOGGER.error("Couldn't place player in world", (Throwable)exception);
-                TranslatableText text2 = new TranslatableText("multiplayer.disconnect.invalid_player_data");
+                MutableText text2 = Text.translatable("multiplayer.disconnect.invalid_player_data");
                 this.connection.send(new DisconnectS2CPacket(text2));
                 this.connection.disconnect(text2);
             }
@@ -154,11 +173,29 @@ implements ServerLoginPacketListener {
         return String.valueOf(this.connection.getAddress());
     }
 
+    @Nullable
+    private static PlayerPublicKey getVerifiedPublicKey(@Nullable PlayerPublicKey.PublicKeyData publicKeyData, UUID playerUuid, SignatureVerifier servicesSignatureVerifier, boolean shouldThrowOnMissingKey) throws PlayerPublicKey.class_7652 {
+        if (publicKeyData == null) {
+            if (shouldThrowOnMissingKey) {
+                throw new PlayerPublicKey.class_7652(PlayerPublicKey.field_39953);
+            }
+            return null;
+        }
+        return PlayerPublicKey.verifyAndDecode(servicesSignatureVerifier, playerUuid, publicKeyData, Duration.ZERO);
+    }
+
     @Override
     public void onHello(LoginHelloC2SPacket packet) {
         Validate.validState((this.state == State.HELLO ? 1 : 0) != 0, (String)"Unexpected hello packet", (Object[])new Object[0]);
-        this.profile = packet.getProfile();
-        Validate.validState((boolean)ServerLoginNetworkHandler.isValidName(this.profile.getName()), (String)"Invalid characters in username", (Object[])new Object[0]);
+        Validate.validState((boolean)ServerLoginNetworkHandler.isValidName(packet.name()), (String)"Invalid characters in username", (Object[])new Object[0]);
+        this.publicKeyData = packet.publicKey().orElse(null);
+        GameProfile gameProfile = this.server.getHostProfile();
+        if (gameProfile != null && packet.name().equalsIgnoreCase(gameProfile.getName())) {
+            this.profile = gameProfile;
+            this.state = State.READY_TO_ACCEPT;
+            return;
+        }
+        this.profile = new GameProfile(null, packet.name());
         if (this.server.isOnlineMode() && !this.connection.isLocal()) {
             this.state = State.KEY;
             this.connection.send(new LoginHelloS2CPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.nonce));
@@ -175,15 +212,16 @@ implements ServerLoginPacketListener {
     public void onKey(LoginKeyC2SPacket packet) {
         String string;
         Validate.validState((this.state == State.KEY ? 1 : 0) != 0, (String)"Unexpected key packet", (Object[])new Object[0]);
-        PrivateKey privateKey = this.server.getKeyPair().getPrivate();
         try {
-            if (!Arrays.equals(this.nonce, packet.decryptNonce(privateKey))) {
+            PlayerPublicKey playerPublicKey;
+            PrivateKey privateKey = this.server.getKeyPair().getPrivate();
+            if (this.publicKeyData != null ? !packet.verifySignedNonce(this.nonce, playerPublicKey = new PlayerPublicKey(this.publicKeyData)) : !packet.verifyEncryptedNonce(this.nonce, privateKey)) {
                 throw new IllegalStateException("Protocol error");
             }
             SecretKey secretKey = packet.decryptSecretKey(privateKey);
             Cipher cipher = NetworkEncryptionUtils.cipherFromKey(2, secretKey);
             Cipher cipher2 = NetworkEncryptionUtils.cipherFromKey(1, secretKey);
-            string = new BigInteger(NetworkEncryptionUtils.generateServerId("", this.server.getKeyPair().getPublic(), secretKey)).toString(16);
+            string = new BigInteger(NetworkEncryptionUtils.computeServerId("", this.server.getKeyPair().getPublic(), secretKey)).toString(16);
             this.state = State.AUTHENTICATING;
             this.connection.setupEncryption(cipher, cipher2);
         }
@@ -202,20 +240,20 @@ implements ServerLoginPacketListener {
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
                     } else if (ServerLoginNetworkHandler.this.server.isSingleplayer()) {
                         LOGGER.warn("Failed to verify username but will let them in anyway!");
-                        ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
+                        ServerLoginNetworkHandler.this.profile = gameProfile;
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
                     } else {
-                        ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.unverified_username"));
+                        ServerLoginNetworkHandler.this.disconnect(Text.translatable("multiplayer.disconnect.unverified_username"));
                         LOGGER.error("Username '{}' tried to join with an invalid session", (Object)gameProfile.getName());
                     }
                 }
                 catch (AuthenticationUnavailableException authenticationUnavailableException) {
                     if (ServerLoginNetworkHandler.this.server.isSingleplayer()) {
                         LOGGER.warn("Authentication servers are down but will let them in anyway!");
-                        ServerLoginNetworkHandler.this.profile = ServerLoginNetworkHandler.this.toOfflineProfile(gameProfile);
+                        ServerLoginNetworkHandler.this.profile = gameProfile;
                         ServerLoginNetworkHandler.this.state = State.READY_TO_ACCEPT;
                     }
-                    ServerLoginNetworkHandler.this.disconnect(new TranslatableText("multiplayer.disconnect.authservers_down"));
+                    ServerLoginNetworkHandler.this.disconnect(Text.translatable("multiplayer.disconnect.authservers_down"));
                     LOGGER.error("Couldn't verify username because servers are unavailable");
                 }
             }
@@ -232,11 +270,11 @@ implements ServerLoginPacketListener {
 
     @Override
     public void onQueryResponse(LoginQueryResponseC2SPacket packet) {
-        this.disconnect(new TranslatableText("multiplayer.disconnect.unexpected_query_response"));
+        this.disconnect(Text.translatable("multiplayer.disconnect.unexpected_query_response"));
     }
 
     protected GameProfile toOfflineProfile(GameProfile profile) {
-        UUID uUID = PlayerEntity.getOfflinePlayerUuid(profile.getName());
+        UUID uUID = DynamicSerializableUuid.getOfflinePlayerUuid(profile.getName());
         return new GameProfile(uUID, profile.getName());
     }
 

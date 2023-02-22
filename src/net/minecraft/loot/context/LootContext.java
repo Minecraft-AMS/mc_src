@@ -22,7 +22,6 @@ import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -36,6 +35,7 @@ import net.minecraft.loot.context.LootContextType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 public class LootContext {
@@ -103,6 +103,7 @@ public class LootContext {
         return this.tableGetter.apply(id);
     }
 
+    @Nullable
     public LootCondition getCondition(Identifier id) {
         return this.conditionGetter.apply(id);
     }
@@ -205,13 +206,13 @@ public class LootContext {
 
         public Builder random(long seed) {
             if (seed != 0L) {
-                this.random = new Random(seed);
+                this.random = Random.create(seed);
             }
             return this;
         }
 
         public Builder random(long seed, Random random) {
-            this.random = seed == 0L ? random : new Random(seed);
+            this.random = seed == 0L ? random : Random.create(seed);
             return this;
         }
 
@@ -270,7 +271,7 @@ public class LootContext {
             }
             Random random = this.random;
             if (random == null) {
-                random = new Random();
+                random = Random.create();
             }
             MinecraftServer minecraftServer = this.world.getServer();
             return new LootContext(random, this.luck, this.world, minecraftServer.getLootManager()::getTable, minecraftServer.getPredicateManager()::get, this.parameters, this.drops);

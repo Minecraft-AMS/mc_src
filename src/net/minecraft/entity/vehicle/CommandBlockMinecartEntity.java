@@ -11,10 +11,12 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -27,7 +29,7 @@ extends AbstractMinecartEntity {
     static final TrackedData<String> COMMAND = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.STRING);
     static final TrackedData<Text> LAST_OUTPUT = DataTracker.registerData(CommandBlockMinecartEntity.class, TrackedDataHandlerRegistry.TEXT_COMPONENT);
     private final CommandBlockExecutor commandExecutor = new CommandExecutor();
-    private static final int field_30701 = 4;
+    private static final int EXECUTE_TICK_COOLDOWN = 4;
     private int lastExecuted;
 
     public CommandBlockMinecartEntity(EntityType<? extends CommandBlockMinecartEntity> entityType, World world) {
@@ -39,10 +41,15 @@ extends AbstractMinecartEntity {
     }
 
     @Override
+    protected Item getItem() {
+        return Items.MINECART;
+    }
+
+    @Override
     protected void initDataTracker() {
         super.initDataTracker();
         this.getDataTracker().startTracking(COMMAND, "");
-        this.getDataTracker().startTracking(LAST_OUTPUT, LiteralText.EMPTY);
+        this.getDataTracker().startTracking(LAST_OUTPUT, ScreenTexts.EMPTY);
     }
 
     @Override

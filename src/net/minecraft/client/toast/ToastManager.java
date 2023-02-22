@@ -11,8 +11,10 @@ package net.minecraft.client.toast;
 
 import com.google.common.collect.Queues;
 import com.mojang.blaze3d.systems.RenderSystem;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Deque;
+import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -26,9 +28,11 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public class ToastManager
 extends DrawableHelper {
-    private static final int MAX_VISIBLE_ENTRIES = 5;
+    private static final int SPACES = 5;
+    private static final int ALL_OCCUPIED = -1;
     final MinecraftClient client;
-    private final Entry<?>[] visibleEntries = new Entry[5];
+    private final List<Entry<?>> visibleEntries = new ArrayList();
+    private final BitSet occupiedSpaces = new BitSet(5);
     private final Deque<Toast> toastQueue = Queues.newArrayDeque();
 
     public ToastManager(MinecraftClient client) {
@@ -39,14 +43,45 @@ extends DrawableHelper {
         if (this.client.options.hudHidden) {
             return;
         }
-        for (int i = 0; i < this.visibleEntries.length; ++i) {
-            Entry<?> entry = this.visibleEntries[i];
-            if (entry != null && entry.draw(this.client.getWindow().getScaledWidth(), i, matrices)) {
-                this.visibleEntries[i] = null;
+        int i = this.client.getWindow().getScaledWidth();
+        this.visibleEntries.removeIf(visibleEntry -> {
+            if (visibleEntry != null && visibleEntry.draw(i, matrices)) {
+                this.occupiedSpaces.clear(visibleEntry.topIndex, visibleEntry.topIndex + visibleEntry.requiredSpaceCount);
+                return true;
             }
-            if (this.visibleEntries[i] != null || this.toastQueue.isEmpty()) continue;
-            this.visibleEntries[i] = new Entry(this, this.toastQueue.removeFirst());
+            return false;
+        });
+        if (!this.toastQueue.isEmpty() && this.getEmptySpaceCount() > 0) {
+            this.toastQueue.removeIf(toast -> {
+                int i = toast.getRequiredSpaceCount();
+                int j = this.getTopIndex(i);
+                if (j != -1) {
+                    this.visibleEntries.add(new Entry(this, toast, j, i));
+                    this.occupiedSpaces.set(j, j + i);
+                    return true;
+                }
+                return false;
+            });
         }
+    }
+
+    private int getTopIndex(int requiredSpaces) {
+        if (this.getEmptySpaceCount() >= requiredSpaces) {
+            int i = 0;
+            for (int j = 0; j < 5; ++j) {
+                if (this.occupiedSpaces.get(j)) {
+                    i = 0;
+                    continue;
+                }
+                if (++i != requiredSpaces) continue;
+                return j + 1 - i;
+            }
+        }
+        return -1;
+    }
+
+    private int getEmptySpaceCount() {
+        return 5 - this.occupiedSpaces.cardinality();
     }
 
     @Nullable
@@ -63,7 +98,8 @@ extends DrawableHelper {
     }
 
     public void clear() {
-        Arrays.fill(this.visibleEntries, null);
+        this.occupiedSpaces.clear();
+        this.visibleEntries.clear();
         this.toastQueue.clear();
     }
 
@@ -76,17 +112,24 @@ extends DrawableHelper {
     }
 
     @Environment(value=EnvType.CLIENT)
-    static class Entry<T extends Toast> {
-        private static final long field_32221 = 600L;
+    class Entry<T extends Toast> {
+        private static final long DISAPPEAR_TIME = 600L;
         private final T instance;
+        final int topIndex;
+        final int requiredSpaceCount;
         private long startTime = -1L;
         private long showTime = -1L;
         private Toast.Visibility visibility = Toast.Visibility.SHOW;
         final /* synthetic */ ToastManager field_2245;
 
-        Entry(T instance) {
-            this.field_2245 = toastManager;
+        /*
+         * WARNING - Possible parameter corruption
+         */
+        Entry(T instance, int topIndex, int requiredSpaceCount) {
+            this.field_2245 = (ToastManager)toastManager;
             this.instance = instance;
+            this.topIndex = topIndex;
+            this.requiredSpaceCount = requiredSpaceCount;
         }
 
         public T getInstance() {
@@ -102,7 +145,7 @@ extends DrawableHelper {
             return f;
         }
 
-        public boolean draw(int x, int y, MatrixStack matrices) {
+        public boolean draw(int x, MatrixStack matrices) {
             long l = Util.getMeasuringTimeMs();
             if (this.startTime == -1L) {
                 this.startTime = l;
@@ -113,7 +156,7 @@ extends DrawableHelper {
             }
             MatrixStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.push();
-            matrixStack.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), y * this.instance.getHeight(), 800 + y);
+            matrixStack.translate((float)x - (float)this.instance.getWidth() * this.getDisappearProgress(l), this.topIndex * 32, 800.0);
             RenderSystem.applyModelViewMatrix();
             Toast.Visibility visibility = this.instance.draw(matrices, this.field_2245, l - this.showTime);
             matrixStack.pop();

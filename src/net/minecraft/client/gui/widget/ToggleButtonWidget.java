@@ -14,7 +14,7 @@ import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.util.Identifier;
 
 @Environment(value=EnvType.CLIENT)
@@ -28,7 +28,7 @@ extends ClickableWidget {
     protected int hoverVOffset;
 
     public ToggleButtonWidget(int x, int y, int width, int height, boolean toggled) {
-        super(x, y, width, height, LiteralText.EMPTY);
+        super(x, y, width, height, ScreenTexts.EMPTY);
         this.toggled = toggled;
     }
 

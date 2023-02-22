@@ -25,11 +25,11 @@ import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.server.BannedPlayerList;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 
 public class PardonCommand {
-    private static final SimpleCommandExceptionType ALREADY_UNBANNED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.pardon.failed"));
+    private static final SimpleCommandExceptionType ALREADY_UNBANNED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.pardon.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("pardon").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((context, builder) -> CommandSource.suggestMatching(((ServerCommandSource)context.getSource()).getServer().getPlayerManager().getUserBanList().getNames(), builder)).executes(context -> PardonCommand.pardon((ServerCommandSource)context.getSource(), GameProfileArgumentType.getProfileArgument((CommandContext<ServerCommandSource>)context, "targets")))));
@@ -42,7 +42,7 @@ public class PardonCommand {
             if (!bannedPlayerList.contains(gameProfile)) continue;
             bannedPlayerList.remove(gameProfile);
             ++i;
-            source.sendFeedback(new TranslatableText("commands.pardon.success", Texts.toText(gameProfile)), true);
+            source.sendFeedback(Text.translatable("commands.pardon.success", Texts.toText(gameProfile)), true);
         }
         if (i == 0) {
             throw ALREADY_UNBANNED_EXCEPTION.create();

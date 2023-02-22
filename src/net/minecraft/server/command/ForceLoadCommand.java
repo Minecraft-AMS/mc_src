@@ -30,7 +30,7 @@ import net.minecraft.command.argument.ColumnPosArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.ColumnPos;
@@ -39,22 +39,22 @@ import net.minecraft.world.World;
 
 public class ForceLoadCommand {
     private static final int MAX_CHUNKS = 256;
-    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((maxCount, count) -> new TranslatableText("commands.forceload.toobig", maxCount, count));
-    private static final Dynamic2CommandExceptionType QUERY_FAILURE_EXCEPTION = new Dynamic2CommandExceptionType((chunkPos, registryKey) -> new TranslatableText("commands.forceload.query.failure", chunkPos, registryKey));
-    private static final SimpleCommandExceptionType ADDED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.forceload.added.failure"));
-    private static final SimpleCommandExceptionType REMOVED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.forceload.removed.failure"));
+    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((maxCount, count) -> Text.translatable("commands.forceload.toobig", maxCount, count));
+    private static final Dynamic2CommandExceptionType QUERY_FAILURE_EXCEPTION = new Dynamic2CommandExceptionType((chunkPos, registryKey) -> Text.translatable("commands.forceload.query.failure", chunkPos, registryKey));
+    private static final SimpleCommandExceptionType ADDED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.forceload.added.failure"));
+    private static final SimpleCommandExceptionType REMOVED_FAILURE_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.forceload.removed.failure"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("forceload").requires(source -> source.hasPermissionLevel(2))).then(CommandManager.literal("add").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), true))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "to"), true)))))).then(((LiteralArgumentBuilder)CommandManager.literal("remove").then(((RequiredArgumentBuilder)CommandManager.argument("from", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), false))).then(CommandManager.argument("to", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeChange((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "from"), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "to"), false))))).then(CommandManager.literal("all").executes(context -> ForceLoadCommand.executeRemoveAll((ServerCommandSource)context.getSource()))))).then(((LiteralArgumentBuilder)CommandManager.literal("query").executes(context -> ForceLoadCommand.executeQuery((ServerCommandSource)context.getSource()))).then(CommandManager.argument("pos", ColumnPosArgumentType.columnPos()).executes(context -> ForceLoadCommand.executeQuery((ServerCommandSource)context.getSource(), ColumnPosArgumentType.getColumnPos((CommandContext<ServerCommandSource>)context, "pos"))))));
     }
 
     private static int executeQuery(ServerCommandSource source, ColumnPos pos) throws CommandSyntaxException {
-        ChunkPos chunkPos = new ChunkPos(ChunkSectionPos.getSectionCoord(pos.x), ChunkSectionPos.getSectionCoord(pos.z));
+        ChunkPos chunkPos = pos.toChunkPos();
         ServerWorld serverWorld = source.getWorld();
         RegistryKey<World> registryKey = serverWorld.getRegistryKey();
         boolean bl = serverWorld.getForcedChunks().contains(chunkPos.toLong());
         if (bl) {
-            source.sendFeedback(new TranslatableText("commands.forceload.query.success", chunkPos, registryKey.getValue()), false);
+            source.sendFeedback(Text.translatable("commands.forceload.query.success", chunkPos, registryKey.getValue()), false);
             return 1;
         }
         throw QUERY_FAILURE_EXCEPTION.create((Object)chunkPos, (Object)registryKey.getValue());
@@ -68,12 +68,12 @@ public class ForceLoadCommand {
         if (i > 0) {
             String string = Joiner.on((String)", ").join(longSet.stream().sorted().map(ChunkPos::new).map(ChunkPos::toString).iterator());
             if (i == 1) {
-                source.sendFeedback(new TranslatableText("commands.forceload.list.single", registryKey.getValue(), string), false);
+                source.sendFeedback(Text.translatable("commands.forceload.list.single", registryKey.getValue(), string), false);
             } else {
-                source.sendFeedback(new TranslatableText("commands.forceload.list.multiple", i, registryKey.getValue(), string), false);
+                source.sendFeedback(Text.translatable("commands.forceload.list.multiple", i, registryKey.getValue(), string), false);
             }
         } else {
-            source.sendError(new TranslatableText("commands.forceload.added.none", registryKey.getValue()));
+            source.sendError(Text.translatable("commands.forceload.added.none", registryKey.getValue()));
         }
         return i;
     }
@@ -82,17 +82,17 @@ public class ForceLoadCommand {
         ServerWorld serverWorld = source.getWorld();
         RegistryKey<World> registryKey = serverWorld.getRegistryKey();
         LongSet longSet = serverWorld.getForcedChunks();
-        longSet.forEach(l -> serverWorld.setChunkForced(ChunkPos.getPackedX(l), ChunkPos.getPackedZ(l), false));
-        source.sendFeedback(new TranslatableText("commands.forceload.removed.all", registryKey.getValue()), true);
+        longSet.forEach(chunkPos -> serverWorld.setChunkForced(ChunkPos.getPackedX(chunkPos), ChunkPos.getPackedZ(chunkPos), false));
+        source.sendFeedback(Text.translatable("commands.forceload.removed.all", registryKey.getValue()), true);
         return 0;
     }
 
     private static int executeChange(ServerCommandSource source, ColumnPos from, ColumnPos to, boolean forceLoaded) throws CommandSyntaxException {
         int p;
-        int i = Math.min(from.x, to.x);
-        int j = Math.min(from.z, to.z);
-        int k = Math.max(from.x, to.x);
-        int l = Math.max(from.z, to.z);
+        int i = Math.min(from.x(), to.x());
+        int j = Math.min(from.z(), to.z());
+        int k = Math.max(from.x(), to.x());
+        int l = Math.max(from.z(), to.z());
         if (i < -30000000 || j < -30000000 || k >= 30000000 || l >= 30000000) {
             throw BlockPosArgumentType.OUT_OF_WORLD_EXCEPTION.create();
         }
@@ -120,11 +120,11 @@ public class ForceLoadCommand {
             throw (forceLoaded ? ADDED_FAILURE_EXCEPTION : REMOVED_FAILURE_EXCEPTION).create();
         }
         if (r == 1) {
-            source.sendFeedback(new TranslatableText("commands.forceload." + (forceLoaded ? "added" : "removed") + ".single", chunkPos, registryKey.getValue()), true);
+            source.sendFeedback(Text.translatable("commands.forceload." + (forceLoaded ? "added" : "removed") + ".single", chunkPos, registryKey.getValue()), true);
         } else {
             ChunkPos chunkPos2 = new ChunkPos(m, n);
             ChunkPos chunkPos3 = new ChunkPos(o, p);
-            source.sendFeedback(new TranslatableText("commands.forceload." + (forceLoaded ? "added" : "removed") + ".multiple", r, registryKey.getValue(), chunkPos2, chunkPos3), true);
+            source.sendFeedback(Text.translatable("commands.forceload." + (forceLoaded ? "added" : "removed") + ".multiple", r, registryKey.getValue(), chunkPos2, chunkPos3), true);
         }
         return r;
     }

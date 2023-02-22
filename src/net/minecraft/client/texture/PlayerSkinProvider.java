@@ -52,6 +52,7 @@ import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -79,8 +80,8 @@ public class PlayerSkinProvider {
                 }
             }
 
-            public /* synthetic */ Object load(Object object) throws Exception {
-                return this.load((String)object);
+            public /* synthetic */ Object load(Object value) throws Exception {
+                return this.load((String)value);
             }
         });
     }
@@ -91,7 +92,7 @@ public class PlayerSkinProvider {
 
     private Identifier loadSkin(MinecraftProfileTexture profileTexture, MinecraftProfileTexture.Type type, @Nullable SkinTextureAvailableCallback callback) {
         String string = Hashing.sha1().hashUnencodedChars((CharSequence)profileTexture.getHash()).toString();
-        Identifier identifier = new Identifier("skins/" + string);
+        Identifier identifier = PlayerSkinProvider.getSkinId(type, string);
         AbstractTexture abstractTexture = this.textureManager.getOrDefault(identifier, MissingSprite.getMissingSpriteTexture());
         if (abstractTexture == MissingSprite.getMissingSpriteTexture()) {
             File file = new File(this.skinCacheDir, string.length() > 2 ? string.substring(0, 2) : "xx");
@@ -106,6 +107,16 @@ public class PlayerSkinProvider {
             callback.onSkinTextureAvailable(type, identifier, profileTexture);
         }
         return identifier;
+    }
+
+    private static Identifier getSkinId(MinecraftProfileTexture.Type skinType, String hash) {
+        String string = switch (skinType) {
+            default -> throw new IncompatibleClassChangeError();
+            case MinecraftProfileTexture.Type.SKIN -> "skins";
+            case MinecraftProfileTexture.Type.CAPE -> "capes";
+            case MinecraftProfileTexture.Type.ELYTRA -> "elytra";
+        };
+        return new Identifier(string + "/" + hash);
     }
 
     public void loadSkin(GameProfile profile, SkinTextureAvailableCallback callback, boolean requireSecure) {
@@ -147,6 +158,14 @@ public class PlayerSkinProvider {
             return ImmutableMap.of();
         }
         return (Map)this.skinCache.getUnchecked((Object)property.getValue());
+    }
+
+    public Identifier loadSkin(GameProfile profile) {
+        MinecraftProfileTexture minecraftProfileTexture = this.getTextures(profile).get(MinecraftProfileTexture.Type.SKIN);
+        if (minecraftProfileTexture != null) {
+            return this.loadSkin(minecraftProfileTexture, MinecraftProfileTexture.Type.SKIN);
+        }
+        return DefaultSkinHelper.getTexture(DynamicSerializableUuid.getUuidFromProfile(profile));
     }
 
     @Environment(value=EnvType.CLIENT)

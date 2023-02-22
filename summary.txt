@@ -1,12 +1,5 @@
-Summary for ./1.18.2.jar
+Summary for ./1.19.2.jar
 Decompiled with CFR 0.152
-
-
-net.minecraft.nbt.NbtList
-----------------------------
-
-doAccept(java.io.DataInput net.minecraft.nbt.scanner.NbtScanner )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]
 
 
 net.minecraft.client.resource.Format4ResourcePack
@@ -14,3 +7,10 @@ net.minecraft.client.resource.Format4ResourcePack
 
 openCroppedStream(java.io.InputStream java.io.InputStream int int int int int )
   Loose catch block
+
+
+net.minecraft.nbt.NbtList
+----------------------------
+
+doAccept(java.io.DataInput net.minecraft.nbt.scanner.NbtScanner )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [8[CASE], 4[SWITCH]], but top level block is 9[SWITCH]

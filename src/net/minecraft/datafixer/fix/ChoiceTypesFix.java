@@ -17,6 +17,7 @@ import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.TaggedChoice;
+import java.util.Locale;
 
 public class ChoiceTypesFix
 extends DataFix {
@@ -42,7 +43,7 @@ extends DataFix {
         TaggedChoice.TaggedChoiceType<?> taggedChoiceType = outputChoiceType;
         return this.fixTypeEverywhere(name, (Type)inputChoiceType, (Type)taggedChoiceType, dynamicOps -> pair -> {
             if (!taggedChoiceType.hasType(pair.getFirst())) {
-                throw new IllegalArgumentException(String.format("Unknown type %s in %s ", pair.getFirst(), this.types));
+                throw new IllegalArgumentException(String.format(Locale.ROOT, "Unknown type %s in %s ", pair.getFirst(), this.types));
             }
             return pair;
         });

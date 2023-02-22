@@ -29,13 +29,13 @@ extends Framebuffer {
         super(true);
         RenderSystem.assertOnRenderThreadOrInit();
         if (!RenderSystem.isOnRenderThread()) {
-            RenderSystem.recordRenderCall(() -> this.initSize(width, height));
+            RenderSystem.recordRenderCall(() -> this.init(width, height));
         } else {
-            this.initSize(width, height);
+            this.init(width, height);
         }
     }
 
-    private void initSize(int width, int height) {
+    private void init(int width, int height) {
         RenderSystem.assertOnRenderThreadOrInit();
         Size size = this.findSuitableSize(width, height);
         this.fbo = GlStateManager.glGenFramebuffers();
@@ -69,7 +69,7 @@ extends Framebuffer {
         Attachment attachment = Attachment.NONE;
         for (Size size : Size.findCompatible(width, height)) {
             attachment = Attachment.NONE;
-            if (this.supportColor(size)) {
+            if (this.supportsColor(size)) {
                 attachment = attachment.with(Attachment.COLOR);
             }
             if (this.supportsDepth(size)) {
@@ -81,7 +81,7 @@ extends Framebuffer {
         throw new RuntimeException("Unrecoverable GL_OUT_OF_MEMORY (allocated attachments = " + attachment.name() + ")");
     }
 
-    private boolean supportColor(Size size) {
+    private boolean supportsColor(Size size) {
         RenderSystem.assertOnRenderThreadOrInit();
         GlStateManager._getError();
         GlStateManager._bindTexture(this.colorAttachment);

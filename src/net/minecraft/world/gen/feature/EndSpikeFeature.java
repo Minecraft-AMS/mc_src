@@ -10,6 +10,7 @@
  *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.codecs.RecordCodecBuilder
+ *  it.unimi.dsi.fastutil.ints.IntArrayList
  */
 package net.minecraft.world.gen.feature;
 
@@ -21,22 +22,22 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.PaneBlock;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.dimension.DimensionType;
@@ -55,7 +56,7 @@ extends Feature<EndSpikeFeatureConfig> {
     }
 
     public static List<Spike> getSpikes(StructureWorldAccess world) {
-        Random random = new Random(world.getSeed());
+        Random random = Random.create(world.getSeed());
         long l = random.nextLong() & 0xFFFFL;
         return (List)CACHE.getUnchecked((Object)l);
     }
@@ -169,19 +170,18 @@ extends Feature<EndSpikeFeatureConfig> {
         }
 
         public List<Spike> load(Long long_) {
-            List list = IntStream.range(0, 10).boxed().collect(Collectors.toList());
-            Collections.shuffle(list, new Random(long_));
-            ArrayList list2 = Lists.newArrayList();
+            IntArrayList intArrayList = Util.shuffle(IntStream.range(0, 10), Random.create(long_));
+            ArrayList list = Lists.newArrayList();
             for (int i = 0; i < 10; ++i) {
                 int j = MathHelper.floor(42.0 * Math.cos(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
                 int k = MathHelper.floor(42.0 * Math.sin(2.0 * (-Math.PI + 0.3141592653589793 * (double)i)));
-                int l = (Integer)list.get(i);
+                int l = intArrayList.get(i);
                 int m = 2 + l / 3;
                 int n = 76 + l * 3;
                 boolean bl = l == 1 || l == 2;
-                list2.add(new Spike(j, k, m, n, bl));
+                list.add(new Spike(j, k, m, n, bl));
             }
-            return list2;
+            return list;
         }
 
         public /* synthetic */ Object load(Object seed) throws Exception {

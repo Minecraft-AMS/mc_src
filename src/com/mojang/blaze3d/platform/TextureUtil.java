@@ -5,7 +5,6 @@
  *  com.mojang.logging.LogUtils
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.jetbrains.annotations.Nullable
  *  org.lwjgl.opengl.GL11
  *  org.lwjgl.system.MemoryUtil
  *  org.slf4j.Logger
@@ -19,7 +18,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.channels.Channels;
@@ -31,7 +29,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.annotation.DeobfuscateClass;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
@@ -110,41 +107,17 @@ public class TextureUtil {
         return byteBuffer;
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @Nullable
-    public static String readResourceAsString(InputStream inputStream) {
+    public static void writeAsPNG(String filename, int id, int scales, int width, int height) {
         RenderSystem.assertOnRenderThread();
-        ByteBuffer byteBuffer = null;
-        try {
-            byteBuffer = TextureUtil.readResource(inputStream);
-            int i = byteBuffer.position();
-            byteBuffer.rewind();
-            String string = MemoryUtil.memASCII((ByteBuffer)byteBuffer, (int)i);
-            return string;
-        }
-        catch (IOException iOException) {
-        }
-        finally {
-            if (byteBuffer != null) {
-                MemoryUtil.memFree((Buffer)byteBuffer);
-            }
-        }
-        return null;
-    }
-
-    public static void writeAsPNG(String string, int i, int j, int k, int l) {
-        RenderSystem.assertOnRenderThread();
-        TextureUtil.bind(i);
-        for (int m = 0; m <= j; ++m) {
-            String string2 = string + "_" + m + ".png";
-            int n = k >> m;
-            int o = l >> m;
-            try (NativeImage nativeImage = new NativeImage(n, o, false);){
-                nativeImage.loadFromTextureImage(m, false);
-                nativeImage.writeTo(string2);
-                LOGGER.debug("Exported png to: {}", (Object)new File(string2).getAbsolutePath());
+        TextureUtil.bind(id);
+        for (int i = 0; i <= scales; ++i) {
+            String string = filename + "_" + i + ".png";
+            int j = width >> i;
+            int k = height >> i;
+            try (NativeImage nativeImage = new NativeImage(j, k, false);){
+                nativeImage.loadFromTextureImage(i, false);
+                nativeImage.writeTo(string);
+                LOGGER.debug("Exported png to: {}", (Object)new File(string).getAbsolutePath());
                 continue;
             }
             catch (IOException iOException) {

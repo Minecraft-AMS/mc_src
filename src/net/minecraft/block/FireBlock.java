@@ -12,7 +12,6 @@ import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.minecraft.block.AbstractBlock;
@@ -32,6 +31,7 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -143,7 +143,7 @@ extends AbstractFireBlock {
             world.removeBlock(pos, false);
         }
         BlockState blockState = world.getBlockState(pos.down());
-        boolean bl = blockState.isIn(world.getDimension().getInfiniburnBlocks());
+        boolean bl = blockState.isIn(world.getDimension().infiniburn());
         int i = state.get(AGE);
         if (!bl && world.isRaining() && this.isRainingAround(world, pos) && random.nextFloat() < 0.2f + (float)i * 0.03f) {
             world.removeBlock(pos, false);
@@ -216,19 +216,18 @@ extends AbstractFireBlock {
         return this.burnChances.getInt((Object)state.getBlock());
     }
 
-    private void trySpreadingFire(World world, BlockPos pos, int spreadFactor, Random rand, int currentAge) {
+    private void trySpreadingFire(World world, BlockPos pos, int spreadFactor, Random random, int currentAge) {
         int i = this.getSpreadChance(world.getBlockState(pos));
-        if (rand.nextInt(spreadFactor) < i) {
+        if (random.nextInt(spreadFactor) < i) {
             BlockState blockState = world.getBlockState(pos);
-            if (rand.nextInt(currentAge + 10) < 5 && !world.hasRain(pos)) {
-                int j = Math.min(currentAge + rand.nextInt(5) / 4, 15);
+            if (random.nextInt(currentAge + 10) < 5 && !world.hasRain(pos)) {
+                int j = Math.min(currentAge + random.nextInt(5) / 4, 15);
                 world.setBlockState(pos, this.getStateWithAge(world, pos, j), 3);
             } else {
                 world.removeBlock(pos, false);
             }
             Block block = blockState.getBlock();
             if (block instanceof TntBlock) {
-                TntBlock cfr_ignored_0 = (TntBlock)block;
                 TntBlock.primeTnt(world, pos);
             }
         }
@@ -295,60 +294,71 @@ extends AbstractFireBlock {
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_PLANKS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_PLANKS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_PLANKS, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_PLANKS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_SLAB, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_SLAB, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_FENCE_GATE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_FENCE_GATE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_FENCE_GATE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_FENCE_GATE, 5, 20);
-        fireBlock.registerFlammableBlock(Blocks.DARK_OAK_FENCE_GATE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_FENCE_GATE, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.DARK_OAK_FENCE_GATE, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_FENCE_GATE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_FENCE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_FENCE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_FENCE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_FENCE, 5, 20);
-        fireBlock.registerFlammableBlock(Blocks.DARK_OAK_FENCE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_FENCE, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.DARK_OAK_FENCE, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_FENCE, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_STAIRS, 5, 20);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_STAIRS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_LOG, 5, 5);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_OAK_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_SPRUCE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_BIRCH_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_JUNGLE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_ACACIA_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_DARK_OAK_LOG, 5, 5);
+        fireBlock.registerFlammableBlock(Blocks.STRIPPED_MANGROVE_LOG, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_OAK_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_SPRUCE_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_BIRCH_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_JUNGLE_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_ACACIA_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.STRIPPED_DARK_OAK_WOOD, 5, 5);
+        fireBlock.registerFlammableBlock(Blocks.STRIPPED_MANGROVE_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.OAK_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_WOOD, 5, 5);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_WOOD, 5, 5);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_WOOD, 5, 5);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_ROOTS, 5, 20);
         fireBlock.registerFlammableBlock(Blocks.OAK_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.SPRUCE_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.BIRCH_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.JUNGLE_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.ACACIA_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.DARK_OAK_LEAVES, 30, 60);
+        fireBlock.registerFlammableBlock(Blocks.MANGROVE_LEAVES, 30, 60);
         fireBlock.registerFlammableBlock(Blocks.BOOKSHELF, 30, 20);
         fireBlock.registerFlammableBlock(Blocks.TNT, 15, 100);
         fireBlock.registerFlammableBlock(Blocks.GRASS, 60, 100);

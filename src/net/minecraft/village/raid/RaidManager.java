@@ -11,7 +11,6 @@ import com.google.common.collect.Maps;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.raid.RaiderEntity;
@@ -22,6 +21,7 @@ import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
+import net.minecraft.tag.PointOfInterestTypeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.RegistryEntry;
@@ -29,9 +29,9 @@ import net.minecraft.village.raid.Raid;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.dimension.DimensionTypes;
 import net.minecraft.world.poi.PointOfInterest;
 import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestType;
 import org.jetbrains.annotations.Nullable;
 
 public class RaidManager
@@ -94,7 +94,7 @@ extends PersistentState {
             return null;
         }
         BlockPos blockPos = player.getBlockPos();
-        List list = this.world.getPointOfInterestStorage().getInCircle(PointOfInterestType.ALWAYS_TRUE, blockPos, 64, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED).collect(Collectors.toList());
+        List<PointOfInterest> list = this.world.getPointOfInterestStorage().getInCircle(poiType -> poiType.isIn(PointOfInterestTypeTags.VILLAGE), blockPos, 64, PointOfInterestStorage.OccupationStatus.IS_OCCUPIED).toList();
         int i = 0;
         Vec3d vec3d = Vec3d.ZERO;
         for (PointOfInterest pointOfInterest : list) {
@@ -166,7 +166,7 @@ extends PersistentState {
     }
 
     public static String nameFor(RegistryEntry<DimensionType> dimensionTypeEntry) {
-        if (dimensionTypeEntry.matchesKey(DimensionType.THE_END_REGISTRY_KEY)) {
+        if (dimensionTypeEntry.matchesKey(DimensionTypes.THE_END)) {
             return "raids_end";
         }
         return RAIDS;

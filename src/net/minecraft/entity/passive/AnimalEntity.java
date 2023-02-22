@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Random;
 import java.util.UUID;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.block.Blocks;
@@ -28,17 +27,17 @@ import net.minecraft.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class AnimalEntity
 extends PassiveEntity {
-    static final int BREEDING_COOLDOWN = 6000;
+    protected static final int BREEDING_COOLDOWN = 6000;
     private int loveTicks;
     @Nullable
     private UUID lovingPlayer;
@@ -88,7 +87,7 @@ extends PassiveEntity {
         if (world.getBlockState(pos.down()).isOf(Blocks.GRASS_BLOCK)) {
             return 10.0f;
         }
-        return world.getBrightness(pos) - 0.5f;
+        return world.getPhototaxisFavor(pos);
     }
 
     @Override
@@ -131,7 +130,7 @@ extends PassiveEntity {
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         return 1 + this.world.random.nextInt(3);
     }
 
@@ -147,13 +146,11 @@ extends PassiveEntity {
             if (!this.world.isClient && i == 0 && this.canEat()) {
                 this.eat(player, hand, itemStack);
                 this.lovePlayer(player);
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             if (this.isBaby()) {
                 this.eat(player, hand, itemStack);
-                this.growUp((int)((float)(-i / 20) * 0.1f), true);
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
+                this.growUp(AnimalEntity.toGrowUpAge(-i), true);
                 return ActionResult.success(this.world.isClient);
             }
             if (this.world.isClient) {

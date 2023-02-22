@@ -40,7 +40,7 @@ extends PathAwareEntity {
         if (entityData == null) {
             entityData = new PassiveData(true);
         }
-        if ((passiveData = (PassiveData)entityData).canSpawnBaby() && passiveData.getSpawnedCount() > 0 && this.random.nextFloat() <= passiveData.getBabyChance()) {
+        if ((passiveData = (PassiveData)entityData).canSpawnBaby() && passiveData.getSpawnedCount() > 0 && world.getRandom().nextFloat() <= passiveData.getBabyChance()) {
             this.setBreedingAge(-24000);
         }
         passiveData.countSpawned();
@@ -91,7 +91,7 @@ extends PathAwareEntity {
     }
 
     public void setBreedingAge(int age) {
-        int i = this.breedingAge;
+        int i = this.getBreedingAge();
         this.breedingAge = age;
         if (i < 0 && age >= 0 || i >= 0 && age < 0) {
             this.dataTracker.set(CHILD, age < 0);
@@ -152,6 +152,10 @@ extends PathAwareEntity {
     @Override
     public void setBaby(boolean baby) {
         this.setBreedingAge(baby ? -24000 : 0);
+    }
+
+    public static int toGrowUpAge(int breedingAge) {
+        return (int)((float)(breedingAge / 20) * 0.1f);
     }
 
     public static class PassiveData

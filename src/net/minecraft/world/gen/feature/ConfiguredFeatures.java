@@ -4,11 +4,12 @@
 package net.minecraft.world.gen.feature;
 
 import java.util.List;
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.BuiltinRegistries;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.gen.blockpredicate.BlockPredicate;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
@@ -30,13 +31,13 @@ import net.minecraft.world.gen.feature.UndergroundConfiguredFeatures;
 import net.minecraft.world.gen.feature.VegetationConfiguredFeatures;
 
 public class ConfiguredFeatures {
-    public static RegistryEntry<? extends ConfiguredFeature<?, ?>> getDefaultConfiguredFeature() {
+    public static RegistryEntry<? extends ConfiguredFeature<?, ?>> getDefaultConfiguredFeature(Registry<ConfiguredFeature<?, ?>> registry) {
         List<RegistryEntry<ConfiguredFeature<RandomFeatureConfig, ?>>> list = List.of(OceanConfiguredFeatures.KELP, UndergroundConfiguredFeatures.MOSS_PATCH_BONEMEAL, EndConfiguredFeatures.CHORUS_PLANT, MiscConfiguredFeatures.SPRING_LAVA_OVERWORLD, NetherConfiguredFeatures.BASALT_BLOBS, OreConfiguredFeatures.ORE_ANCIENT_DEBRIS_LARGE, PileConfiguredFeatures.PILE_HAY, TreeConfiguredFeatures.AZALEA_TREE, VegetationConfiguredFeatures.TREES_OLD_GROWTH_PINE_TAIGA);
-        return Util.getRandom(list, new Random());
+        return Util.getRandom(list, Random.create());
     }
 
     private static BlockPredicate createBlockPredicate(List<Block> validGround) {
-        BlockPredicate blockPredicate = !validGround.isEmpty() ? BlockPredicate.bothOf(BlockPredicate.IS_AIR, BlockPredicate.matchingBlocks(validGround, new BlockPos(0, -1, 0))) : BlockPredicate.IS_AIR;
+        BlockPredicate blockPredicate = !validGround.isEmpty() ? BlockPredicate.bothOf(BlockPredicate.IS_AIR, BlockPredicate.matchingBlocks(Direction.DOWN.getVector(), validGround)) : BlockPredicate.IS_AIR;
         return blockPredicate;
     }
 
@@ -61,7 +62,7 @@ public class ConfiguredFeatures {
     }
 
     public static <FC extends FeatureConfig, F extends Feature<FC>> RegistryEntry<ConfiguredFeature<FC, ?>> register(String id, F feature, FC config) {
-        return BuiltinRegistries.method_40360(BuiltinRegistries.CONFIGURED_FEATURE, id, new ConfiguredFeature<FC, F>(feature, config));
+        return BuiltinRegistries.addCasted(BuiltinRegistries.CONFIGURED_FEATURE, id, new ConfiguredFeature<FC, F>(feature, config));
     }
 }
 

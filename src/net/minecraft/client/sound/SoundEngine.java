@@ -15,6 +15,7 @@
  *  org.lwjgl.openal.ALCCapabilities
  *  org.lwjgl.openal.ALCapabilities
  *  org.lwjgl.openal.ALUtil
+ *  org.lwjgl.openal.SOFTHRTF
  *  org.lwjgl.system.MemoryStack
  *  org.slf4j.Logger
  */
@@ -25,6 +26,7 @@ import com.mojang.logging.LogUtils;
 import java.nio.IntBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -44,6 +46,7 @@ import org.lwjgl.openal.ALC11;
 import org.lwjgl.openal.ALCCapabilities;
 import org.lwjgl.openal.ALCapabilities;
 import org.lwjgl.openal.ALUtil;
+import org.lwjgl.openal.SOFTHRTF;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 
@@ -92,7 +95,7 @@ public class SoundEngine {
         this.deviceSpecifier = SoundEngine.findAvailableDeviceSpecifier();
     }
 
-    public void init(@Nullable String deviceSpecifier) {
+    public void init(@Nullable String deviceSpecifier, boolean directionalAudio) {
         this.devicePointer = SoundEngine.openDeviceOrFallback(deviceSpecifier);
         this.disconnectExtensionPresent = ALC10.alcIsExtensionPresent((long)this.devicePointer, (CharSequence)"ALC_EXT_disconnect");
         ALCCapabilities aLCCapabilities = ALC.createCapabilities((long)this.devicePointer);
@@ -102,6 +105,7 @@ public class SoundEngine {
         if (!aLCCapabilities.OpenALC11) {
             throw new IllegalStateException("OpenAL 1.1 not supported");
         }
+        this.setDirectionalAudio(aLCCapabilities.ALC_SOFT_HRTF && directionalAudio);
         this.contextPointer = ALC10.alcCreateContext((long)this.devicePointer, (IntBuffer)null);
         ALC10.alcMakeContextCurrent((long)this.contextPointer);
         int i = this.getMonoSourceCount();
@@ -120,6 +124,18 @@ public class SoundEngine {
         }
         AlUtil.checkErrors("Enable per-source distance models");
         LOGGER.info("OpenAL initialized on device {}", (Object)this.getCurrentDeviceName());
+    }
+
+    private void setDirectionalAudio(boolean enabled) {
+        int i = ALC10.alcGetInteger((long)this.devicePointer, (int)6548);
+        if (i > 0) {
+            try (MemoryStack memoryStack = MemoryStack.stackPush();){
+                IntBuffer intBuffer = memoryStack.callocInt(10).put(6546).put(enabled ? 1 : 0).put(6550).put(0).put(0).flip();
+                if (!SOFTHRTF.alcResetDeviceSOFT((long)this.devicePointer, (IntBuffer)intBuffer)) {
+                    LOGGER.warn("Failed to reset device: {}", (Object)ALC10.alcGetString((long)this.devicePointer, (int)ALC10.alcGetError((long)this.devicePointer)));
+                }
+            }
+        }
     }
 
     private int getMonoSourceCount() {
@@ -227,7 +243,7 @@ public class SoundEngine {
     }
 
     public String getDebugString() {
-        return String.format("Sounds: %d/%d + %d/%d", this.streamingSources.getSourceCount(), this.streamingSources.getMaxSourceCount(), this.staticSources.getSourceCount(), this.staticSources.getMaxSourceCount());
+        return String.format(Locale.ROOT, "Sounds: %d/%d + %d/%d", this.streamingSources.getSourceCount(), this.streamingSources.getMaxSourceCount(), this.staticSources.getSourceCount(), this.staticSources.getMaxSourceCount());
     }
 
     public List<String> getSoundDevices() {

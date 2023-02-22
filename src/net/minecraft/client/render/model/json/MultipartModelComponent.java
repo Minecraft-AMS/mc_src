@@ -94,11 +94,11 @@ public class MultipartModelComponent {
             }
             if (set.size() == 1) {
                 if (object.has("OR")) {
-                    List list = Streams.stream((Iterable)JsonHelper.getArray(object, "OR")).map(jsonElement -> Deserializer.deserializeSelector(jsonElement.getAsJsonObject())).collect(Collectors.toList());
+                    List list = Streams.stream((Iterable)JsonHelper.getArray(object, "OR")).map(json -> Deserializer.deserializeSelector(json.getAsJsonObject())).collect(Collectors.toList());
                     return new OrMultipartModelSelector(list);
                 }
                 if (object.has("AND")) {
-                    List list = Streams.stream((Iterable)JsonHelper.getArray(object, "AND")).map(jsonElement -> Deserializer.deserializeSelector(jsonElement.getAsJsonObject())).collect(Collectors.toList());
+                    List list = Streams.stream((Iterable)JsonHelper.getArray(object, "AND")).map(json -> Deserializer.deserializeSelector(json.getAsJsonObject())).collect(Collectors.toList());
                     return new AndMultipartModelSelector(list);
                 }
                 return Deserializer.createStatePropertySelector((Map.Entry)set.iterator().next());
@@ -110,8 +110,8 @@ public class MultipartModelComponent {
             return new SimpleMultipartModelSelector(entry.getKey(), entry.getValue().getAsString());
         }
 
-        public /* synthetic */ Object deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            return this.deserialize(jsonElement, type, jsonDeserializationContext);
+        public /* synthetic */ Object deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+            return this.deserialize(json, type, context);
         }
     }
 }

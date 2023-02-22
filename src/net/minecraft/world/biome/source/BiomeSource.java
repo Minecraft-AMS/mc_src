@@ -2,70 +2,43 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Suppliers
- *  com.google.common.collect.ImmutableList
- *  com.google.common.collect.ImmutableList$Builder
- *  com.google.common.collect.Lists
  *  com.google.common.collect.Sets
  *  com.mojang.datafixers.util.Pair
  *  com.mojang.serialization.Codec
- *  it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
- *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
  *  it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet
- *  org.apache.commons.lang3.mutable.MutableInt
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.biome.source;
 
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
-import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
-import net.minecraft.util.TopologicalSorts;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryEntryList;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.BiomeSupplier;
-import net.minecraft.world.biome.source.CheckerboardBiomeSource;
-import net.minecraft.world.biome.source.FixedBiomeSource;
-import net.minecraft.world.biome.source.MultiNoiseBiomeSource;
-import net.minecraft.world.biome.source.TheEndBiomeSource;
 import net.minecraft.world.biome.source.util.MultiNoiseUtil;
-import net.minecraft.world.gen.feature.PlacedFeature;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class BiomeSource
 implements BiomeSupplier {
-    public static final Codec<BiomeSource> CODEC;
+    public static final Codec<BiomeSource> CODEC = Registry.BIOME_SOURCE.getCodec().dispatchStable(BiomeSource::getCodec, Function.identity());
     private final Set<RegistryEntry<Biome>> biomes;
-    private final Supplier<List<IndexedFeatures>> indexedFeaturesSupplier;
 
     protected BiomeSource(Stream<RegistryEntry<Biome>> biomeStream) {
         this(biomeStream.distinct().toList());
@@ -73,89 +46,15 @@ implements BiomeSupplier {
 
     protected BiomeSource(List<RegistryEntry<Biome>> biomes) {
         this.biomes = new ObjectLinkedOpenHashSet(biomes);
-        this.indexedFeaturesSupplier = Suppliers.memoize(() -> this.method_39525(biomes, true));
-    }
-
-    private List<IndexedFeatures> method_39525(List<RegistryEntry<Biome>> biomes, boolean bl) {
-        int j;
-        Object2IntOpenHashMap object2IntMap = new Object2IntOpenHashMap();
-        MutableInt mutableInt = new MutableInt(0);
-        record Class_6543(int featureIndex, int step, PlacedFeature feature) {
-        }
-        Comparator<Class_6543> comparator = Comparator.comparingInt(Class_6543::step).thenComparingInt(Class_6543::featureIndex);
-        TreeMap<Class_6543, Set> map = new TreeMap<Class_6543, Set>(comparator);
-        int i = 0;
-        for (RegistryEntry<Biome> registryEntry : biomes) {
-            Biome biome = registryEntry.value();
-            ArrayList list = Lists.newArrayList();
-            List<RegistryEntryList<PlacedFeature>> list2 = biome.getGenerationSettings().getFeatures();
-            i = Math.max(i, list2.size());
-            for (j = 0; j < list2.size(); ++j) {
-                for (RegistryEntry registryEntry2 : list2.get(j)) {
-                    PlacedFeature placedFeature = (PlacedFeature)registryEntry2.value();
-                    list.add(new Class_6543(object2IntMap.computeIfAbsent((Object)placedFeature, object -> mutableInt.getAndIncrement()), j, placedFeature));
-                }
-            }
-            for (j = 0; j < list.size(); ++j) {
-                Set set = map.computeIfAbsent((Class_6543)list.get(j), arg -> new TreeSet(comparator));
-                if (j >= list.size() - 1) continue;
-                set.add((Class_6543)list.get(j + 1));
-            }
-        }
-        TreeSet<Class_6543> set2 = new TreeSet<Class_6543>(comparator);
-        TreeSet<Class_6543> set3 = new TreeSet<Class_6543>(comparator);
-        ArrayList list3 = Lists.newArrayList();
-        for (Class_6543 lv : map.keySet()) {
-            if (!set3.isEmpty()) {
-                throw new IllegalStateException("You somehow broke the universe; DFS bork (iteration finished with non-empty in-progress vertex set");
-            }
-            if (set2.contains(lv) || !TopologicalSorts.sort(map, set2, set3, list3::add, lv)) continue;
-            if (bl) {
-                int k;
-                ArrayList<RegistryEntry<Biome>> list4 = new ArrayList<RegistryEntry<Biome>>(biomes);
-                do {
-                    k = list4.size();
-                    ListIterator<RegistryEntry> listIterator = list4.listIterator();
-                    while (listIterator.hasNext()) {
-                        RegistryEntry registryEntry3 = (RegistryEntry)listIterator.next();
-                        listIterator.remove();
-                        try {
-                            this.method_39525(list4, false);
-                        }
-                        catch (IllegalStateException illegalStateException) {
-                            continue;
-                        }
-                        listIterator.add(registryEntry3);
-                    }
-                } while (k != list4.size());
-                throw new IllegalStateException("Feature order cycle found, involved biomes: " + list4);
-            }
-            throw new IllegalStateException("Feature order cycle found");
-        }
-        Collections.reverse(list3);
-        ImmutableList.Builder builder = ImmutableList.builder();
-        for (int l = 0; l < i; ++l) {
-            j = l;
-            List<PlacedFeature> list5 = list3.stream().filter(arg -> arg.step() == j).map(Class_6543::feature).collect(Collectors.toList());
-            int n = list5.size();
-            Object2IntOpenCustomHashMap object2IntMap2 = new Object2IntOpenCustomHashMap(n, Util.identityHashStrategy());
-            for (int n2 = 0; n2 < n; ++n2) {
-                object2IntMap2.put((Object)((PlacedFeature)list5.get(n2)), n2);
-            }
-            builder.add((Object)new IndexedFeatures(list5, (ToIntFunction<PlacedFeature>)object2IntMap2));
-        }
-        return builder.build();
     }
 
     protected abstract Codec<? extends BiomeSource> getCodec();
-
-    public abstract BiomeSource withSeed(long var1);
 
     public Set<RegistryEntry<Biome>> getBiomes() {
         return this.biomes;
     }
 
-    public Set<RegistryEntry<Biome>> getBiomesInArea(int x, int y, int z, int radius, MultiNoiseUtil.MultiNoiseSampler multiNoiseSampler) {
+    public Set<RegistryEntry<Biome>> getBiomesInArea(int x, int y, int z, int radius, MultiNoiseUtil.MultiNoiseSampler sampler) {
         int i = BiomeCoords.fromBlock(x - radius);
         int j = BiomeCoords.fromBlock(y - radius);
         int k = BiomeCoords.fromBlock(z - radius);
@@ -172,7 +71,7 @@ implements BiomeSupplier {
                     int u = i + s;
                     int v = j + t;
                     int w = k + r;
-                    set.add(this.getBiome(u, v, w, multiNoiseSampler));
+                    set.add(this.getBiome(u, v, w, sampler));
                 }
             }
         }
@@ -182,6 +81,29 @@ implements BiomeSupplier {
     @Nullable
     public Pair<BlockPos, RegistryEntry<Biome>> locateBiome(int x, int y, int z, int radius, Predicate<RegistryEntry<Biome>> predicate, Random random, MultiNoiseUtil.MultiNoiseSampler noiseSampler) {
         return this.locateBiome(x, y, z, radius, 1, predicate, random, false, noiseSampler);
+    }
+
+    @Nullable
+    public Pair<BlockPos, RegistryEntry<Biome>> locateBiome(BlockPos origin, int radius, int horizontalBlockCheckInterval, int verticalBlockCheckInterval, Predicate<RegistryEntry<Biome>> predicate, MultiNoiseUtil.MultiNoiseSampler noiseSampler, WorldView world) {
+        Set set = this.getBiomes().stream().filter(predicate).collect(Collectors.toUnmodifiableSet());
+        if (set.isEmpty()) {
+            return null;
+        }
+        int i = Math.floorDiv(radius, horizontalBlockCheckInterval);
+        int[] is = MathHelper.stream(origin.getY(), world.getBottomY() + 1, world.getTopY(), verticalBlockCheckInterval).toArray();
+        for (BlockPos.Mutable mutable : BlockPos.iterateInSquare(BlockPos.ORIGIN, i, Direction.EAST, Direction.SOUTH)) {
+            int j = origin.getX() + mutable.getX() * horizontalBlockCheckInterval;
+            int k = origin.getZ() + mutable.getZ() * horizontalBlockCheckInterval;
+            int l = BiomeCoords.fromBlock(j);
+            int m = BiomeCoords.fromBlock(k);
+            for (int n : is) {
+                int o = BiomeCoords.fromBlock(n);
+                RegistryEntry<Biome> registryEntry = this.getBiome(l, o, m, noiseSampler);
+                if (!set.contains(registryEntry)) continue;
+                return Pair.of((Object)new BlockPos(j, n, k), registryEntry);
+            }
+        }
+        return null;
     }
 
     @Nullable
@@ -227,21 +149,6 @@ implements BiomeSupplier {
     public abstract RegistryEntry<Biome> getBiome(int var1, int var2, int var3, MultiNoiseUtil.MultiNoiseSampler var4);
 
     public void addDebugInfo(List<String> info, BlockPos pos, MultiNoiseUtil.MultiNoiseSampler noiseSampler) {
-    }
-
-    public List<IndexedFeatures> getIndexedFeatures() {
-        return this.indexedFeaturesSupplier.get();
-    }
-
-    static {
-        Registry.register(Registry.BIOME_SOURCE, "fixed", FixedBiomeSource.CODEC);
-        Registry.register(Registry.BIOME_SOURCE, "multi_noise", MultiNoiseBiomeSource.CODEC);
-        Registry.register(Registry.BIOME_SOURCE, "checkerboard", CheckerboardBiomeSource.CODEC);
-        Registry.register(Registry.BIOME_SOURCE, "the_end", TheEndBiomeSource.CODEC);
-        CODEC = Registry.BIOME_SOURCE.getCodec().dispatchStable(BiomeSource::getCodec, Function.identity());
-    }
-
-    public record IndexedFeatures(List<PlacedFeature> features, ToIntFunction<PlacedFeature> indexMapping) {
     }
 }
 

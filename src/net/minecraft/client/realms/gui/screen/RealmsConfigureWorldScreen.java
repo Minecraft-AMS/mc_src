@@ -19,7 +19,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
 import net.minecraft.client.realms.dto.RealmsServer;
@@ -44,8 +43,9 @@ import net.minecraft.client.realms.task.OpenServerTask;
 import net.minecraft.client.realms.task.SwitchMinigameTask;
 import net.minecraft.client.realms.task.SwitchSlotTask;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -58,14 +58,14 @@ extends RealmsScreen {
     private static final Identifier OFF_ICON = new Identifier("realms", "textures/gui/realms/off_icon.png");
     private static final Identifier EXPIRED_ICON = new Identifier("realms", "textures/gui/realms/expired_icon.png");
     private static final Identifier EXPIRES_SOON_ICON = new Identifier("realms", "textures/gui/realms/expires_soon_icon.png");
-    private static final Text WORLDS_TITLE = new TranslatableText("mco.configure.worlds.title");
-    private static final Text CONFIGURE_REALM_TITLE = new TranslatableText("mco.configure.world.title");
-    private static final Text CURRENT_MINIGAME_TEXT = new TranslatableText("mco.configure.current.minigame").append(": ");
-    private static final Text EXPIRED_TEXT = new TranslatableText("mco.selectServer.expired");
-    private static final Text EXPIRES_SOON_TEXT = new TranslatableText("mco.selectServer.expires.soon");
-    private static final Text EXPIRES_IN_A_DAY_TEXT = new TranslatableText("mco.selectServer.expires.day");
-    private static final Text OPEN_TEXT = new TranslatableText("mco.selectServer.open");
-    private static final Text CLOSED_TEXT = new TranslatableText("mco.selectServer.closed");
+    private static final Text WORLDS_TITLE = Text.translatable("mco.configure.worlds.title");
+    private static final Text CONFIGURE_REALM_TITLE = Text.translatable("mco.configure.world.title");
+    private static final Text CURRENT_MINIGAME_TEXT = Text.translatable("mco.configure.current.minigame").append(": ");
+    private static final Text EXPIRED_TEXT = Text.translatable("mco.selectServer.expired");
+    private static final Text EXPIRES_SOON_TEXT = Text.translatable("mco.selectServer.expires.soon");
+    private static final Text EXPIRES_IN_A_DAY_TEXT = Text.translatable("mco.selectServer.expires.day");
+    private static final Text OPEN_TEXT = Text.translatable("mco.selectServer.open");
+    private static final Text CLOSED_TEXT = Text.translatable("mco.selectServer.closed");
     private static final int field_32121 = 80;
     private static final int field_32122 = 5;
     @Nullable
@@ -102,17 +102,17 @@ extends RealmsScreen {
         this.left_x = this.width / 2 - 187;
         this.right_x = this.width / 2 + 190;
         this.client.keyboard.setRepeatEvents(true);
-        this.playersButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(0, 3), RealmsConfigureWorldScreen.row(0), 100, 20, new TranslatableText("mco.configure.world.buttons.players"), button -> this.client.setScreen(new RealmsPlayerScreen(this, this.server))));
-        this.settingsButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(1, 3), RealmsConfigureWorldScreen.row(0), 100, 20, new TranslatableText("mco.configure.world.buttons.settings"), button -> this.client.setScreen(new RealmsSettingsScreen(this, this.server.clone()))));
-        this.subscriptionButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(2, 3), RealmsConfigureWorldScreen.row(0), 100, 20, new TranslatableText("mco.configure.world.buttons.subscription"), button -> this.client.setScreen(new RealmsSubscriptionInfoScreen(this, this.server.clone(), this.parent))));
+        this.playersButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(0, 3), RealmsConfigureWorldScreen.row(0), 100, 20, Text.translatable("mco.configure.world.buttons.players"), button -> this.client.setScreen(new RealmsPlayerScreen(this, this.server))));
+        this.settingsButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(1, 3), RealmsConfigureWorldScreen.row(0), 100, 20, Text.translatable("mco.configure.world.buttons.settings"), button -> this.client.setScreen(new RealmsSettingsScreen(this, this.server.clone()))));
+        this.subscriptionButton = this.addDrawableChild(new ButtonWidget(this.buttonCenter(2, 3), RealmsConfigureWorldScreen.row(0), 100, 20, Text.translatable("mco.configure.world.buttons.subscription"), button -> this.client.setScreen(new RealmsSubscriptionInfoScreen(this, this.server.clone(), this.parent))));
         this.slotButtons.clear();
         for (int i = 1; i < 5; ++i) {
             this.slotButtons.add(this.addSlotButton(i));
         }
-        this.switchMinigameButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(0), RealmsConfigureWorldScreen.row(13) - 5, 100, 20, new TranslatableText("mco.configure.world.buttons.switchminigame"), button -> this.client.setScreen(new RealmsSelectWorldTemplateScreen(new TranslatableText("mco.template.title.minigame"), this::switchMinigame, RealmsServer.WorldType.MINIGAME))));
-        this.optionsButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(0), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, new TranslatableText("mco.configure.world.buttons.options"), button -> this.client.setScreen(new RealmsSlotOptionsScreen(this, this.server.slots.get(this.server.activeSlot).clone(), this.server.worldType, this.server.activeSlot))));
-        this.backupButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(1), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, new TranslatableText("mco.configure.world.backup"), button -> this.client.setScreen(new RealmsBackupScreen(this, this.server.clone(), this.server.activeSlot))));
-        this.resetWorldButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(2), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, new TranslatableText("mco.configure.world.buttons.resetworld"), button -> this.client.setScreen(new RealmsResetWorldScreen(this, this.server.clone(), () -> this.client.execute(() -> this.client.setScreen(this.getNewScreen())), () -> this.client.setScreen(this.getNewScreen())))));
+        this.switchMinigameButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(0), RealmsConfigureWorldScreen.row(13) - 5, 100, 20, Text.translatable("mco.configure.world.buttons.switchminigame"), button -> this.client.setScreen(new RealmsSelectWorldTemplateScreen(Text.translatable("mco.template.title.minigame"), this::switchMinigame, RealmsServer.WorldType.MINIGAME))));
+        this.optionsButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(0), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, Text.translatable("mco.configure.world.buttons.options"), button -> this.client.setScreen(new RealmsSlotOptionsScreen(this, this.server.slots.get(this.server.activeSlot).clone(), this.server.worldType, this.server.activeSlot))));
+        this.backupButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(1), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, Text.translatable("mco.configure.world.backup"), button -> this.client.setScreen(new RealmsBackupScreen(this, this.server.clone(), this.server.activeSlot))));
+        this.resetWorldButton = this.addDrawableChild(new ButtonWidget(this.buttonLeft(2), RealmsConfigureWorldScreen.row(13) - 5, 90, 20, Text.translatable("mco.configure.world.buttons.resetworld"), button -> this.client.setScreen(new RealmsResetWorldScreen(this, this.server.clone(), () -> this.client.execute(() -> this.client.setScreen(this.getNewScreen())), () -> this.client.setScreen(this.getNewScreen())))));
         this.addDrawableChild(new ButtonWidget(this.right_x - 80 + 8, RealmsConfigureWorldScreen.row(13) - 5, 70, 20, ScreenTexts.BACK, button -> this.backButtonClicked()));
         this.backupButton.active = true;
         if (this.server == null) {
@@ -206,7 +206,7 @@ extends RealmsScreen {
         int l = Math.min(this.buttonCenter(2, 3) + 80 - 11, this.width / 2 + i / 2 + k / 2 + 10);
         this.drawServerStatus(matrices, l, 7, mouseX, mouseY);
         if (this.isMinigame()) {
-            this.textRenderer.draw(matrices, CURRENT_MINIGAME_TEXT.shallowCopy().append(this.server.getMinigameName()), (float)(this.left_x + 80 + 20 + 10), (float)RealmsConfigureWorldScreen.row(13), 0xFFFFFF);
+            this.textRenderer.draw(matrices, CURRENT_MINIGAME_TEXT.copy().append(this.server.getMinigameName()), (float)(this.left_x + 80 + 20 + 10), (float)RealmsConfigureWorldScreen.row(13), 0xFFFFFF);
         }
         if (this.tooltip != null) {
             this.renderMousehoverTooltip(matrices, this.tooltip, mouseX, mouseY);
@@ -240,7 +240,7 @@ extends RealmsScreen {
 
     private void fetchServerData(long worldId) {
         new Thread(() -> {
-            RealmsClient realmsClient = RealmsClient.createRealmsClient();
+            RealmsClient realmsClient = RealmsClient.create();
             try {
                 RealmsServer realmsServer = realmsClient.getOwnWorld(worldId);
                 this.client.execute(() -> {
@@ -280,14 +280,14 @@ extends RealmsScreen {
     }
 
     private void switchToMinigame() {
-        RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(new TranslatableText("mco.template.title.minigame"), this::switchMinigame, RealmsServer.WorldType.MINIGAME);
-        realmsSelectWorldTemplateScreen.setWarning(new TranslatableText("mco.minigame.world.info.line1"), new TranslatableText("mco.minigame.world.info.line2"));
+        RealmsSelectWorldTemplateScreen realmsSelectWorldTemplateScreen = new RealmsSelectWorldTemplateScreen(Text.translatable("mco.template.title.minigame"), this::switchMinigame, RealmsServer.WorldType.MINIGAME);
+        realmsSelectWorldTemplateScreen.setWarning(Text.translatable("mco.minigame.world.info.line1"), Text.translatable("mco.minigame.world.info.line2"));
         this.client.setScreen(realmsSelectWorldTemplateScreen);
     }
 
     private void switchToFullSlot(int selectedSlot, RealmsServer serverData) {
-        TranslatableText text = new TranslatableText("mco.configure.world.slot.switch.question.line1");
-        TranslatableText text2 = new TranslatableText("mco.configure.world.slot.switch.question.line2");
+        MutableText text = Text.translatable("mco.configure.world.slot.switch.question.line1");
+        MutableText text2 = Text.translatable("mco.configure.world.slot.switch.question.line2");
         this.client.setScreen(new RealmsLongConfirmationScreen(confirmed -> {
             if (confirmed) {
                 this.client.setScreen(new RealmsLongRunningMcoTaskScreen(this.parent, new SwitchSlotTask(realmsServer.id, selectedSlot, () -> this.client.execute(() -> this.client.setScreen(this.getNewScreen())))));
@@ -298,13 +298,13 @@ extends RealmsScreen {
     }
 
     private void switchToEmptySlot(int selectedSlot, RealmsServer serverData) {
-        TranslatableText text = new TranslatableText("mco.configure.world.slot.switch.question.line1");
-        TranslatableText text2 = new TranslatableText("mco.configure.world.slot.switch.question.line2");
+        MutableText text = Text.translatable("mco.configure.world.slot.switch.question.line1");
+        MutableText text2 = Text.translatable("mco.configure.world.slot.switch.question.line2");
         this.client.setScreen(new RealmsLongConfirmationScreen(confirmed -> {
             if (confirmed) {
-                RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, serverData, new TranslatableText("mco.configure.world.switch.slot"), new TranslatableText("mco.configure.world.switch.slot.subtitle"), 0xA0A0A0, ScreenTexts.CANCEL, () -> this.client.execute(() -> this.client.setScreen(this.getNewScreen())), () -> this.client.setScreen(this.getNewScreen()));
+                RealmsResetWorldScreen realmsResetWorldScreen = new RealmsResetWorldScreen(this, serverData, Text.translatable("mco.configure.world.switch.slot"), Text.translatable("mco.configure.world.switch.slot.subtitle"), 0xA0A0A0, ScreenTexts.CANCEL, () -> this.client.execute(() -> this.client.setScreen(this.getNewScreen())), () -> this.client.setScreen(this.getNewScreen()));
                 realmsResetWorldScreen.setSlot(selectedSlot);
-                realmsResetWorldScreen.setResetTitle(new TranslatableText("mco.create.world.reset.title"));
+                realmsResetWorldScreen.setResetTitle(Text.translatable("mco.create.world.reset.title"));
                 this.client.setScreen(realmsResetWorldScreen);
             } else {
                 this.client.setScreen(this);
@@ -355,7 +355,7 @@ extends RealmsScreen {
             DrawableHelper.drawTexture(matrices, x, y, 10.0f, 0.0f, 10, 28, 20, 28);
         }
         if (mouseX >= x && mouseX <= x + 9 && mouseY >= y && mouseY <= y + 27) {
-            this.tooltip = remainingDays <= 0 ? EXPIRES_SOON_TEXT : (remainingDays == 1 ? EXPIRES_IN_A_DAY_TEXT : new TranslatableText("mco.selectServer.expires.days", remainingDays));
+            this.tooltip = remainingDays <= 0 ? EXPIRES_SOON_TEXT : (remainingDays == 1 ? EXPIRES_IN_A_DAY_TEXT : Text.translatable("mco.selectServer.expires.days", remainingDays));
         }
     }
 
@@ -405,7 +405,7 @@ extends RealmsScreen {
         RealmsWorldOptions realmsWorldOptions = this.server.slots.get(this.server.activeSlot);
         options.templateId = realmsWorldOptions.templateId;
         options.templateImage = realmsWorldOptions.templateImage;
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         try {
             realmsClient.updateSlot(this.server.id, this.server.activeSlot, options);
             this.server.slots.put(this.server.activeSlot, options);
@@ -420,7 +420,7 @@ extends RealmsScreen {
 
     public void saveSettings(String name, String desc) {
         String string = desc.trim().isEmpty() ? null : desc;
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         try {
             realmsClient.update(this.server.id, name, string);
             this.server.setName(name);

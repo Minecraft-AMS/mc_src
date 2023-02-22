@@ -23,10 +23,13 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.Font;
+import net.minecraft.client.font.Glyph;
+import net.minecraft.client.font.GlyphRenderer;
 import net.minecraft.client.font.RenderableGlyph;
 import net.minecraft.client.texture.NativeImage;
 import org.jetbrains.annotations.Nullable;
@@ -47,14 +50,14 @@ implements Font {
     final float scaleFactor;
     final float ascent;
 
-    public TrueTypeFont(ByteBuffer buffer, STBTTFontinfo info, float f, float oversample, float g, float h, String excludedCharacters) {
+    public TrueTypeFont(ByteBuffer buffer, STBTTFontinfo info, float size, float oversample, float shiftX, float shiftY, String excludedCharacters) {
         this.buffer = buffer;
         this.info = info;
         this.oversample = oversample;
         excludedCharacters.codePoints().forEach(arg_0 -> ((IntSet)this.excludedCharacters).add(arg_0));
-        this.shiftX = g * oversample;
-        this.shiftY = h * oversample;
-        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)info, (float)(f * oversample));
+        this.shiftX = shiftX * oversample;
+        this.shiftY = shiftY * oversample;
+        this.scaleFactor = STBTruetype.stbtt_ScaleForPixelHeight((STBTTFontinfo)info, (float)(size * oversample));
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
             IntBuffer intBuffer = memoryStack.mallocInt(1);
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
@@ -66,31 +69,32 @@ implements Font {
 
     @Override
     @Nullable
-    public TtfGlyph getGlyph(int i) {
-        if (this.excludedCharacters.contains(i)) {
+    public Glyph getGlyph(int codePoint) {
+        if (this.excludedCharacters.contains(codePoint)) {
             return null;
         }
         try (MemoryStack memoryStack = MemoryStack.stackPush();){
+            int i = STBTruetype.stbtt_FindGlyphIndex((STBTTFontinfo)this.info, (int)codePoint);
+            if (i == 0) {
+                Glyph glyph = null;
+                return glyph;
+            }
             IntBuffer intBuffer = memoryStack.mallocInt(1);
             IntBuffer intBuffer2 = memoryStack.mallocInt(1);
             IntBuffer intBuffer3 = memoryStack.mallocInt(1);
             IntBuffer intBuffer4 = memoryStack.mallocInt(1);
-            int j = STBTruetype.stbtt_FindGlyphIndex((STBTTFontinfo)this.info, (int)i);
-            if (j == 0) {
-                TtfGlyph ttfGlyph = null;
-                return ttfGlyph;
-            }
-            STBTruetype.stbtt_GetGlyphBitmapBoxSubpixel((STBTTFontinfo)this.info, (int)j, (float)this.scaleFactor, (float)this.scaleFactor, (float)this.shiftX, (float)this.shiftY, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3, (IntBuffer)intBuffer4);
-            int k = intBuffer3.get(0) - intBuffer.get(0);
-            int l = intBuffer4.get(0) - intBuffer2.get(0);
-            if (k <= 0 || l <= 0) {
-                TtfGlyph ttfGlyph = null;
-                return ttfGlyph;
-            }
             IntBuffer intBuffer5 = memoryStack.mallocInt(1);
             IntBuffer intBuffer6 = memoryStack.mallocInt(1);
-            STBTruetype.stbtt_GetGlyphHMetrics((STBTTFontinfo)this.info, (int)j, (IntBuffer)intBuffer5, (IntBuffer)intBuffer6);
-            TtfGlyph ttfGlyph = new TtfGlyph(intBuffer.get(0), intBuffer3.get(0), -intBuffer2.get(0), -intBuffer4.get(0), (float)intBuffer5.get(0) * this.scaleFactor, (float)intBuffer6.get(0) * this.scaleFactor, j);
+            STBTruetype.stbtt_GetGlyphHMetrics((STBTTFontinfo)this.info, (int)i, (IntBuffer)intBuffer5, (IntBuffer)intBuffer6);
+            STBTruetype.stbtt_GetGlyphBitmapBoxSubpixel((STBTTFontinfo)this.info, (int)i, (float)this.scaleFactor, (float)this.scaleFactor, (float)this.shiftX, (float)this.shiftY, (IntBuffer)intBuffer, (IntBuffer)intBuffer2, (IntBuffer)intBuffer3, (IntBuffer)intBuffer4);
+            float f = (float)intBuffer5.get(0) * this.scaleFactor;
+            int j = intBuffer3.get(0) - intBuffer.get(0);
+            int k = intBuffer4.get(0) - intBuffer2.get(0);
+            if (j <= 0 || k <= 0) {
+                Glyph.EmptyGlyph emptyGlyph = () -> f / this.oversample;
+                return emptyGlyph;
+            }
+            TtfGlyph ttfGlyph = new TtfGlyph(intBuffer.get(0), intBuffer3.get(0), -intBuffer2.get(0), -intBuffer4.get(0), f, (float)intBuffer6.get(0) * this.scaleFactor, i);
             return ttfGlyph;
         }
     }
@@ -106,21 +110,15 @@ implements Font {
         return (IntSet)IntStream.range(0, 65535).filter(codePoint -> !this.excludedCharacters.contains(codePoint)).collect(IntOpenHashSet::new, IntCollection::add, IntCollection::addAll);
     }
 
-    @Override
-    @Nullable
-    public /* synthetic */ RenderableGlyph getGlyph(int codePoint) {
-        return this.getGlyph(codePoint);
-    }
-
     @Environment(value=EnvType.CLIENT)
     class TtfGlyph
-    implements RenderableGlyph {
-        private final int width;
-        private final int height;
-        private final float bearingX;
-        private final float ascent;
+    implements Glyph {
+        final int width;
+        final int height;
+        final float bearingX;
+        final float ascent;
         private final float advance;
-        private final int glyphIndex;
+        final int glyphIndex;
 
         TtfGlyph(int x1, int x2, int y2, int y1, float f, float g, int glyphIndex) {
             this.width = x2 - x1;
@@ -132,45 +130,51 @@ implements Font {
         }
 
         @Override
-        public int getWidth() {
-            return this.width;
-        }
-
-        @Override
-        public int getHeight() {
-            return this.height;
-        }
-
-        @Override
-        public float getOversample() {
-            return TrueTypeFont.this.oversample;
-        }
-
-        @Override
         public float getAdvance() {
             return this.advance;
         }
 
         @Override
-        public float getBearingX() {
-            return this.bearingX;
-        }
+        public GlyphRenderer bake(Function<RenderableGlyph, GlyphRenderer> function) {
+            return function.apply(new RenderableGlyph(){
 
-        @Override
-        public float getAscent() {
-            return this.ascent;
-        }
+                @Override
+                public int getWidth() {
+                    return TtfGlyph.this.width;
+                }
 
-        @Override
-        public void upload(int x, int y) {
-            NativeImage nativeImage = new NativeImage(NativeImage.Format.LUMINANCE, this.width, this.height, false);
-            nativeImage.makeGlyphBitmapSubpixel(TrueTypeFont.this.info, this.glyphIndex, this.width, this.height, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.shiftX, TrueTypeFont.this.shiftY, 0, 0);
-            nativeImage.upload(0, x, y, 0, 0, this.width, this.height, false, true);
-        }
+                @Override
+                public int getHeight() {
+                    return TtfGlyph.this.height;
+                }
 
-        @Override
-        public boolean hasColor() {
-            return false;
+                @Override
+                public float getOversample() {
+                    return TrueTypeFont.this.oversample;
+                }
+
+                @Override
+                public float getBearingX() {
+                    return TtfGlyph.this.bearingX;
+                }
+
+                @Override
+                public float getAscent() {
+                    return TtfGlyph.this.ascent;
+                }
+
+                @Override
+                public void upload(int x, int y) {
+                    NativeImage nativeImage = new NativeImage(NativeImage.Format.LUMINANCE, TtfGlyph.this.width, TtfGlyph.this.height, false);
+                    nativeImage.makeGlyphBitmapSubpixel(TrueTypeFont.this.info, TtfGlyph.this.glyphIndex, TtfGlyph.this.width, TtfGlyph.this.height, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.scaleFactor, TrueTypeFont.this.shiftX, TrueTypeFont.this.shiftY, 0, 0);
+                    nativeImage.upload(0, x, y, 0, 0, TtfGlyph.this.width, TtfGlyph.this.height, false, true);
+                }
+
+                @Override
+                public boolean hasColor() {
+                    return false;
+                }
+            });
         }
     }
 }

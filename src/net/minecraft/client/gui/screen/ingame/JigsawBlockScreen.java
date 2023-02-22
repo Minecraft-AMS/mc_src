@@ -13,7 +13,6 @@ import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.entity.JigsawBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
@@ -22,9 +21,8 @@ import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.JigsawGeneratingC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateJigsawC2SPacket;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -32,11 +30,11 @@ import net.minecraft.util.math.MathHelper;
 public class JigsawBlockScreen
 extends Screen {
     private static final int MAX_GENERATION_DEPTH = 7;
-    private static final Text JOINT_LABEL_TEXT = new TranslatableText("jigsaw_block.joint_label");
-    private static final Text POOL_TEXT = new TranslatableText("jigsaw_block.pool");
-    private static final Text NAME_TEXT = new TranslatableText("jigsaw_block.name");
-    private static final Text TARGET_TEXT = new TranslatableText("jigsaw_block.target");
-    private static final Text FINAL_STATE_TEXT = new TranslatableText("jigsaw_block.final_state");
+    private static final Text JOINT_LABEL_TEXT = Text.translatable("jigsaw_block.joint_label");
+    private static final Text POOL_TEXT = Text.translatable("jigsaw_block.pool");
+    private static final Text NAME_TEXT = Text.translatable("jigsaw_block.name");
+    private static final Text TARGET_TEXT = Text.translatable("jigsaw_block.target");
+    private static final Text FINAL_STATE_TEXT = Text.translatable("jigsaw_block.final_state");
     private final JigsawBlockEntity jigsaw;
     private TextFieldWidget nameField;
     private TextFieldWidget targetField;
@@ -88,22 +86,22 @@ extends Screen {
     protected void init() {
         boolean bl;
         this.client.keyboard.setRepeatEvents(true);
-        this.poolField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 20, 300, 20, new TranslatableText("jigsaw_block.pool"));
+        this.poolField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 20, 300, 20, Text.translatable("jigsaw_block.pool"));
         this.poolField.setMaxLength(128);
-        this.poolField.setText(this.jigsaw.getPool().toString());
+        this.poolField.setText(this.jigsaw.getPool().getValue().toString());
         this.poolField.setChangedListener(pool -> this.updateDoneButtonState());
         this.addSelectableChild(this.poolField);
-        this.nameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 55, 300, 20, new TranslatableText("jigsaw_block.name"));
+        this.nameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 55, 300, 20, Text.translatable("jigsaw_block.name"));
         this.nameField.setMaxLength(128);
         this.nameField.setText(this.jigsaw.getName().toString());
         this.nameField.setChangedListener(name -> this.updateDoneButtonState());
         this.addSelectableChild(this.nameField);
-        this.targetField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 90, 300, 20, new TranslatableText("jigsaw_block.target"));
+        this.targetField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 90, 300, 20, Text.translatable("jigsaw_block.target"));
         this.targetField.setMaxLength(128);
         this.targetField.setText(this.jigsaw.getTarget().toString());
         this.targetField.setChangedListener(target -> this.updateDoneButtonState());
         this.addSelectableChild(this.targetField);
-        this.finalStateField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 125, 300, 20, new TranslatableText("jigsaw_block.final_state"));
+        this.finalStateField = new TextFieldWidget(this.textRenderer, this.width / 2 - 152, 125, 300, 20, Text.translatable("jigsaw_block.final_state"));
         this.finalStateField.setMaxLength(256);
         this.finalStateField.setText(this.jigsaw.getFinalState());
         this.addSelectableChild(this.finalStateField);
@@ -114,14 +112,14 @@ extends Screen {
         }));
         this.jointRotationButton.active = bl = JigsawBlock.getFacing(this.jigsaw.getCachedState()).getAxis().isVertical();
         this.jointRotationButton.visible = bl;
-        this.addDrawableChild(new SliderWidget(this.width / 2 - 154, 180, 100, 20, LiteralText.EMPTY, 0.0){
+        this.addDrawableChild(new SliderWidget(this.width / 2 - 154, 180, 100, 20, ScreenTexts.EMPTY, 0.0){
             {
                 this.updateMessage();
             }
 
             @Override
             protected void updateMessage() {
-                this.setMessage(new TranslatableText("jigsaw_block.levels", JigsawBlockScreen.this.generationDepth));
+                this.setMessage(Text.translatable("jigsaw_block.levels", JigsawBlockScreen.this.generationDepth));
             }
 
             @Override
@@ -129,10 +127,10 @@ extends Screen {
                 JigsawBlockScreen.this.generationDepth = MathHelper.floor(MathHelper.clampedLerp(0.0, 7.0, this.value));
             }
         });
-        this.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.keepJigsaws).build(this.width / 2 - 50, 180, 100, 20, new TranslatableText("jigsaw_block.keep_jigsaws"), (button, keepJigsaws) -> {
+        this.addDrawableChild(CyclingButtonWidget.onOffBuilder(this.keepJigsaws).build(this.width / 2 - 50, 180, 100, 20, Text.translatable("jigsaw_block.keep_jigsaws"), (button, keepJigsaws) -> {
             this.keepJigsaws = keepJigsaws;
         }));
-        this.generateButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 54, 180, 100, 20, new TranslatableText("jigsaw_block.generate"), button -> {
+        this.generateButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 54, 180, 100, 20, Text.translatable("jigsaw_block.generate"), button -> {
             this.onDone();
             this.generate();
         }));

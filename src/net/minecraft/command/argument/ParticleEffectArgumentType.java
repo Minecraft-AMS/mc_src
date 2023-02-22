@@ -26,14 +26,14 @@ import net.minecraft.command.CommandSource;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 
 public class ParticleEffectArgumentType
 implements ArgumentType<ParticleEffect> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "particle with options");
-    public static final DynamicCommandExceptionType UNKNOWN_PARTICLE_EXCEPTION = new DynamicCommandExceptionType(id -> new TranslatableText("particle.notFound", id));
+    public static final DynamicCommandExceptionType UNKNOWN_PARTICLE_EXCEPTION = new DynamicCommandExceptionType(id -> Text.translatable("particle.notFound", id));
 
     public static ParticleEffectArgumentType particleEffect() {
         return new ParticleEffectArgumentType();

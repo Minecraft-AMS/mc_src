@@ -50,7 +50,7 @@ public interface VertexConsumerProvider {
         public VertexConsumer getBuffer(RenderLayer renderLayer) {
             Optional<RenderLayer> optional = renderLayer.asOptional();
             BufferBuilder bufferBuilder = this.getBufferInternal(renderLayer);
-            if (!Objects.equals(this.currentLayer, optional)) {
+            if (!Objects.equals(this.currentLayer, optional) || !renderLayer.areVerticesNotShared()) {
                 RenderLayer renderLayer2;
                 if (this.currentLayer.isPresent() && !this.layerBuffers.containsKey(renderLayer2 = this.currentLayer.get())) {
                     this.draw(renderLayer2);

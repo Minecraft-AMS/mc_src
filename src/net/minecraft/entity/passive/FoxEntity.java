@@ -15,7 +15,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -92,6 +91,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
@@ -173,7 +173,7 @@ extends AnimalEntity {
         this.goalSelector.add(7, new DelayedCalmDownGoal());
         this.goalSelector.add(8, new FollowParentGoal(this, 1.25));
         this.goalSelector.add(9, new GoToVillageGoal(32, 200));
-        this.goalSelector.add(10, new EatSweetBerriesGoal((double)1.2f, 12, 1));
+        this.goalSelector.add(10, new EatBerriesGoal((double)1.2f, 12, 1));
         this.goalSelector.add(10, new PounceAtTargetGoal(this, 0.4f));
         this.goalSelector.add(11, new WanderAroundFarGoal(this, 1.0));
         this.goalSelector.add(11, new PickupItemGoal());
@@ -231,10 +231,10 @@ extends AnimalEntity {
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
-        if (this.random.nextFloat() < 0.2f) {
-            float f = this.random.nextFloat();
-            ItemStack itemStack = f < 0.05f ? new ItemStack(Items.EMERALD) : (f < 0.2f ? new ItemStack(Items.EGG) : (f < 0.4f ? (this.random.nextBoolean() ? new ItemStack(Items.RABBIT_FOOT) : new ItemStack(Items.RABBIT_HIDE)) : (f < 0.6f ? new ItemStack(Items.WHEAT) : (f < 0.8f ? new ItemStack(Items.LEATHER) : new ItemStack(Items.FEATHER)))));
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
+        if (random.nextFloat() < 0.2f) {
+            float f = random.nextFloat();
+            ItemStack itemStack = f < 0.05f ? new ItemStack(Items.EMERALD) : (f < 0.2f ? new ItemStack(Items.EGG) : (f < 0.4f ? (random.nextBoolean() ? new ItemStack(Items.RABBIT_FOOT) : new ItemStack(Items.RABBIT_HIDE)) : (f < 0.6f ? new ItemStack(Items.WHEAT) : (f < 0.8f ? new ItemStack(Items.LEATHER) : new ItemStack(Items.FEATHER)))));
             this.equipStack(EquipmentSlot.MAINHAND, itemStack);
         }
     }
@@ -276,8 +276,9 @@ extends AnimalEntity {
         Type type = Type.fromBiome(registryEntry);
         boolean bl = false;
         if (entityData instanceof FoxData) {
-            type = ((FoxData)entityData).type;
-            if (((FoxData)entityData).getSpawnedCount() >= 2) {
+            FoxData foxData = (FoxData)entityData;
+            type = foxData.type;
+            if (foxData.getSpawnedCount() >= 2) {
                 bl = true;
             }
         } else {
@@ -290,7 +291,7 @@ extends AnimalEntity {
         if (world instanceof ServerWorld) {
             this.addTypeSpecificGoals();
         }
-        this.initEquipment(difficulty);
+        this.initEquipment(world.getRandom(), difficulty);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
@@ -465,7 +466,7 @@ extends AnimalEntity {
             this.spit(this.getEquippedStack(EquipmentSlot.MAINHAND));
             this.triggerItemPickedUpByEntityCriteria(item);
             this.equipStack(EquipmentSlot.MAINHAND, itemStack.split(1));
-            this.handDropChances[EquipmentSlot.MAINHAND.getEntitySlotId()] = 2.0f;
+            this.updateDropChances(EquipmentSlot.MAINHAND);
             this.sendPickup(item, itemStack.getCount());
             item.discard();
             this.eatingTime = 0;
@@ -957,8 +958,8 @@ extends AnimalEntity {
             if (FoxEntity.this.isSleeping() || this.mob.getTarget() != null) {
                 return false;
             }
-            if (FoxEntity.this.world.isThundering()) {
-                return true;
+            if (FoxEntity.this.world.isThundering() && FoxEntity.this.world.isSkyVisible(this.mob.getBlockPos())) {
+                return this.targetShadedPos();
             }
             if (this.timer > 0) {
                 --this.timer;
@@ -1106,12 +1107,12 @@ extends AnimalEntity {
         }
     }
 
-    public class EatSweetBerriesGoal
+    public class EatBerriesGoal
     extends MoveToTargetPosGoal {
         private static final int EATING_TIME = 40;
         protected int timer;
 
-        public EatSweetBerriesGoal(double speed, int range, int maxYDifference) {
+        public EatBerriesGoal(double speed, int range, int maxYDifference) {
             super(FoxEntity.this, speed, range, maxYDifference);
         }
 
@@ -1135,7 +1136,7 @@ extends AnimalEntity {
         public void tick() {
             if (this.hasReached()) {
                 if (this.timer >= 40) {
-                    this.eatSweetBerry();
+                    this.eatBerries();
                 } else {
                     ++this.timer;
                 }
@@ -1145,7 +1146,7 @@ extends AnimalEntity {
             super.tick();
         }
 
-        protected void eatSweetBerry() {
+        protected void eatBerries() {
             if (!FoxEntity.this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
                 return;
             }

@@ -10,7 +10,6 @@ package net.minecraft.entity.mob;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Dynamic;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -49,6 +48,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -228,12 +228,12 @@ Hoglin {
     }
 
     @Override
-    protected boolean shouldDropXp() {
+    public boolean shouldDropXp() {
         return true;
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         return this.experiencePoints;
     }
 
@@ -288,7 +288,7 @@ Hoglin {
     }
 
     public boolean canConvert() {
-        return !this.world.getDimension().isPiglinSafe() && !this.isImmuneToZombification() && !this.isAiDisabled();
+        return !this.world.getDimension().piglinSafe() && !this.isImmuneToZombification() && !this.isAiDisabled();
     }
 
     private void setCannotBeHunted(boolean cannotBeHunted) {

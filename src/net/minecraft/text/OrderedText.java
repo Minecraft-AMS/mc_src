@@ -16,7 +16,7 @@ import net.minecraft.text.Style;
 
 @FunctionalInterface
 public interface OrderedText {
-    public static final OrderedText EMPTY = characterVisitor -> true;
+    public static final OrderedText EMPTY = visitor -> true;
 
     public boolean accept(CharacterVisitor var1);
 

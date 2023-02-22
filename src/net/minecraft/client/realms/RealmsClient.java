@@ -13,6 +13,7 @@ package net.minecraft.client.realms;
 import com.mojang.logging.LogUtils;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.minecraft.SharedConstants;
@@ -96,10 +97,14 @@ public class RealmsClient {
     private static final String STAGE_AVAILABLE_ENDPOINT = "/stageAvailable";
     private static final CheckedGson JSON;
 
-    public static RealmsClient createRealmsClient() {
+    public static RealmsClient create() {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        String string = minecraftClient.getSession().getUsername();
-        String string2 = minecraftClient.getSession().getSessionId();
+        return RealmsClient.createRealmsClient(minecraftClient);
+    }
+
+    public static RealmsClient createRealmsClient(MinecraftClient client) {
+        String string = client.getSession().getUsername();
+        String string2 = client.getSession().getSessionId();
         if (!initialized) {
             initialized = true;
             String string3 = System.getenv("realms.environment");
@@ -114,7 +119,7 @@ public class RealmsClient {
                 }
             }
         }
-        return new RealmsClient(string2, string, minecraftClient);
+        return new RealmsClient(string2, string, client);
     }
 
     public static void switchToStage() {
@@ -246,7 +251,7 @@ public class RealmsClient {
     }
 
     public WorldTemplatePaginatedList fetchWorldTemplates(int page, int pageSize, RealmsServer.WorldType type) throws RealmsServiceException {
-        String string = this.url(WORLDS_ENDPOINT + TEMPLATES_ENDPOINT.replace("$WORLD_TYPE", type.toString()), String.format("page=%d&pageSize=%d", page, pageSize));
+        String string = this.url(WORLDS_ENDPOINT + TEMPLATES_ENDPOINT.replace("$WORLD_TYPE", type.toString()), String.format(Locale.ROOT, "page=%d&pageSize=%d", page, pageSize));
         String string2 = this.execute(Request.get(string));
         return WorldTemplatePaginatedList.parse(string2);
     }

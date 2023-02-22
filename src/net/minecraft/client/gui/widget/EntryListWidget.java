@@ -34,7 +34,6 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -136,6 +135,19 @@ Selectable {
         return this.children.size() - 1;
     }
 
+    protected void addEntryToTop(E entry) {
+        double d = (double)this.getMaxScroll() - this.getScrollAmount();
+        this.children.add(0, entry);
+        this.setScrollAmount((double)this.getMaxScroll() - d);
+    }
+
+    protected boolean removeEntryWithoutScrolling(E entry) {
+        double d = (double)this.getMaxScroll() - this.getScrollAmount();
+        boolean bl = this.removeEntry(entry);
+        this.setScrollAmount((double)this.getMaxScroll() - d);
+        return bl;
+    }
+
     protected int getEntryCount() {
         return this.children().size();
     }
@@ -217,7 +229,7 @@ Selectable {
         if (this.renderHeader) {
             this.renderHeader(matrices, k, l, tessellator);
         }
-        this.renderList(matrices, k, l, mouseX, mouseY, delta);
+        this.renderList(matrices, mouseX, mouseY, delta);
         if (this.renderHorizontalShadows) {
             RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
             RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
@@ -410,7 +422,7 @@ Selectable {
         }
     }
 
-    protected void moveSelectionIf(MoveDirection direction, Predicate<E> predicate) {
+    protected boolean moveSelectionIf(MoveDirection direction, Predicate<E> predicate) {
         int i;
         int n = i = direction == MoveDirection.UP ? -1 : 1;
         if (!this.children().isEmpty()) {
@@ -421,11 +433,12 @@ Selectable {
                 if (predicate.test(entry)) {
                     this.setSelected(entry);
                     this.ensureVisible(entry);
-                    break;
+                    return true;
                 }
                 j = k;
             }
         }
+        return false;
     }
 
     @Override
@@ -433,44 +446,33 @@ Selectable {
         return mouseY >= (double)this.top && mouseY <= (double)this.bottom && mouseX >= (double)this.left && mouseX <= (double)this.right;
     }
 
-    protected void renderList(MatrixStack matrices, int x, int y, int mouseX, int mouseY, float delta) {
-        int i = this.getEntryCount();
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferBuilder = tessellator.getBuffer();
-        for (int j = 0; j < i; ++j) {
-            int p;
-            int k = this.getRowTop(j);
-            int l = this.getRowBottom(j);
-            if (l < this.top || k > this.bottom) continue;
-            int m = y + j * this.itemHeight + this.headerHeight;
-            int n = this.itemHeight - 4;
-            E entry = this.getEntry(j);
-            int o = this.getRowWidth();
-            if (this.renderSelection && this.isSelectedEntry(j)) {
-                p = this.left + this.width / 2 - o / 2;
-                int q = this.left + this.width / 2 + o / 2;
-                RenderSystem.disableTexture();
-                RenderSystem.setShader(GameRenderer::getPositionShader);
-                float f = this.isFocused() ? 1.0f : 0.5f;
-                RenderSystem.setShaderColor(f, f, f, 1.0f);
-                bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
-                bufferBuilder.vertex(p, m + n + 2, 0.0).next();
-                bufferBuilder.vertex(q, m + n + 2, 0.0).next();
-                bufferBuilder.vertex(q, m - 2, 0.0).next();
-                bufferBuilder.vertex(p, m - 2, 0.0).next();
-                tessellator.draw();
-                RenderSystem.setShaderColor(0.0f, 0.0f, 0.0f, 1.0f);
-                bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
-                bufferBuilder.vertex(p + 1, m + n + 1, 0.0).next();
-                bufferBuilder.vertex(q - 1, m + n + 1, 0.0).next();
-                bufferBuilder.vertex(q - 1, m - 1, 0.0).next();
-                bufferBuilder.vertex(p + 1, m - 1, 0.0).next();
-                tessellator.draw();
-                RenderSystem.enableTexture();
-            }
-            p = this.getRowLeft();
-            ((Entry)entry).render(matrices, j, k, p, o, n, mouseX, mouseY, Objects.equals(this.hoveredEntry, entry), delta);
+    protected void renderList(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        int i = this.getRowLeft();
+        int j = this.getRowWidth();
+        int k = this.itemHeight - 4;
+        int l = this.getEntryCount();
+        for (int m = 0; m < l; ++m) {
+            int n = this.getRowTop(m);
+            int o = this.getRowBottom(m);
+            if (o < this.top || n > this.bottom) continue;
+            this.renderEntry(matrices, mouseX, mouseY, delta, m, i, n, j, k);
         }
+    }
+
+    protected void renderEntry(MatrixStack matrices, int mouseX, int mouseY, float delta, int index, int x, int y, int entryWidth, int entryHeight) {
+        E entry = this.getEntry(index);
+        if (this.renderSelection && this.isSelectedEntry(index)) {
+            int i = this.isFocused() ? -1 : -8355712;
+            this.drawSelectionHighlight(matrices, y, entryWidth, entryHeight, i, -16777216);
+        }
+        ((Entry)entry).render(matrices, index, y, x, entryWidth, entryHeight, mouseX, mouseY, Objects.equals(this.hoveredEntry, entry), delta);
+    }
+
+    protected void drawSelectionHighlight(MatrixStack matrices, int y, int entryWidth, int entryHeight, int borderColor, int fillColor) {
+        int i = this.left + (this.width - entryWidth) / 2;
+        int j = this.left + (this.width + entryWidth) / 2;
+        EntryListWidget.fill(matrices, i, y - 2, j, y + entryHeight + 2, borderColor);
+        EntryListWidget.fill(matrices, i + 1, y - 1, j - 1, y + entryHeight + 1, fillColor);
     }
 
     public int getRowLeft() {
@@ -534,7 +536,7 @@ Selectable {
         int i;
         List<E> list = this.children();
         if (list.size() > 1 && (i = list.indexOf(entry)) != -1) {
-            builder.put(NarrationPart.POSITION, (Text)new TranslatableText("narrator.position.list", i + 1, list.size()));
+            builder.put(NarrationPart.POSITION, (Text)Text.translatable("narrator.position.list", i + 1, list.size()));
         }
     }
 

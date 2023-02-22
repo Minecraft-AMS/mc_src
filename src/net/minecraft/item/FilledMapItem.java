@@ -31,15 +31,16 @@ import net.minecraft.item.map.MapState;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.BiomeTags;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
@@ -216,8 +217,8 @@ extends NetworkSyncedItem {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (n = 0; n < 128; ++n) {
             for (o = 0; o < 128; ++o) {
-                Biome.Category category = Biome.getCategory(world.getBiome(mutable.set((l + o) * i, 0, (m + n) * i)));
-                bls[n * 128 + o] = category == Biome.Category.OCEAN || category == Biome.Category.RIVER || category == Biome.Category.SWAMP;
+                RegistryEntry<Biome> registryEntry = world.getBiome(mutable.set((l + o) * i, 0, (m + n) * i));
+                bls[n * 128 + o] = registryEntry.isIn(BiomeTags.WATER_ON_MAP_OUTLINES);
             }
         }
         for (n = 1; n < 127; ++n) {
@@ -335,15 +336,15 @@ extends NetworkSyncedItem {
         Integer integer = FilledMapItem.getMapId(stack);
         MapState mapState2 = mapState = world == null ? null : FilledMapItem.getMapState(integer, world);
         if (mapState != null && mapState.locked) {
-            tooltip.add(new TranslatableText("filled_map.locked", integer).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("filled_map.locked", integer).formatted(Formatting.GRAY));
         }
         if (context.isAdvanced()) {
             if (mapState != null) {
-                tooltip.add(new TranslatableText("filled_map.id", integer).formatted(Formatting.GRAY));
-                tooltip.add(new TranslatableText("filled_map.scale", 1 << mapState.scale).formatted(Formatting.GRAY));
-                tooltip.add(new TranslatableText("filled_map.level", mapState.scale, 4).formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("filled_map.id", integer).formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("filled_map.scale", 1 << mapState.scale).formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("filled_map.level", mapState.scale, 4).formatted(Formatting.GRAY));
             } else {
-                tooltip.add(new TranslatableText("filled_map.unknown").formatted(Formatting.GRAY));
+                tooltip.add(Text.translatable("filled_map.unknown").formatted(Formatting.GRAY));
             }
         }
     }

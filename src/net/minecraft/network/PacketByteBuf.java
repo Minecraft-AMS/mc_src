@@ -5,6 +5,10 @@
  *  com.google.common.annotations.VisibleForTesting
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Maps
+ *  com.mojang.authlib.GameProfile
+ *  com.mojang.authlib.properties.Property
+ *  com.mojang.authlib.properties.PropertyMap
+ *  com.mojang.datafixers.util.Either
  *  com.mojang.serialization.Codec
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.DynamicOps
@@ -24,6 +28,10 @@ package net.minecraft.network;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
@@ -48,6 +56,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.time.Instant;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Date;
@@ -65,14 +75,22 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtTagSizeTracker;
+import net.minecraft.network.encryption.NetworkEncryptionException;
+import net.minecraft.network.encryption.NetworkEncryptionUtils;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.collection.IndexedIterable;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class PacketByteBuf
@@ -83,6 +101,9 @@ extends ByteBuf {
     private final ByteBuf parent;
     public static final short DEFAULT_MAX_STRING_LENGTH = Short.MAX_VALUE;
     public static final int MAX_TEXT_LENGTH = 262144;
+    private static final int field_39381 = 256;
+    private static final int field_39382 = 256;
+    private static final int field_39383 = 512;
 
     public PacketByteBuf(ByteBuf parent) {
         this.parent = parent;
@@ -121,6 +142,20 @@ extends ByteBuf {
         this.writeNbt((NbtCompound)dataResult.result().get());
     }
 
+    public <T> void writeRegistryValue(IndexedIterable<T> registry, T value) {
+        int i = registry.getRawId(value);
+        if (i == -1) {
+            throw new IllegalArgumentException("Can't find id for '" + value + "' in map " + registry);
+        }
+        this.writeVarInt(i);
+    }
+
+    @Nullable
+    public <T> T readRegistryValue(IndexedIterable<T> registry) {
+        int i = this.readVarInt();
+        return registry.get(i);
+    }
+
     public static <T> IntFunction<T> getMaxValidator(IntFunction<T> applier, int max) {
         return value -> {
             if (value > max) {
@@ -130,24 +165,24 @@ extends ByteBuf {
         };
     }
 
-    public <T, C extends Collection<T>> C readCollection(IntFunction<C> collectionFactory, Function<PacketByteBuf, T> entryParser) {
+    public <T, C extends Collection<T>> C readCollection(IntFunction<C> collectionFactory, PacketReader<T> reader) {
         int i = this.readVarInt();
         Collection collection = (Collection)collectionFactory.apply(i);
         for (int j = 0; j < i; ++j) {
-            collection.add(entryParser.apply(this));
+            collection.add(reader.apply(this));
         }
         return (C)collection;
     }
 
-    public <T> void writeCollection(Collection<T> collection, BiConsumer<PacketByteBuf, T> entrySerializer) {
+    public <T> void writeCollection(Collection<T> collection, PacketWriter<T> writer) {
         this.writeVarInt(collection.size());
         for (T object : collection) {
-            entrySerializer.accept(this, (PacketByteBuf)((Object)object));
+            writer.accept(this, object);
         }
     }
 
-    public <T> List<T> readList(Function<PacketByteBuf, T> entryParser) {
-        return this.readCollection(Lists::newArrayListWithCapacity, entryParser);
+    public <T> List<T> readList(PacketReader<T> reader) {
+        return this.readCollection(Lists::newArrayListWithCapacity, reader);
     }
 
     public IntList readIntList() {
@@ -164,26 +199,26 @@ extends ByteBuf {
         list.forEach(this::writeVarInt);
     }
 
-    public <K, V, M extends Map<K, V>> M readMap(IntFunction<M> mapFactory, Function<PacketByteBuf, K> keyParser, Function<PacketByteBuf, V> valueParser) {
+    public <K, V, M extends Map<K, V>> M readMap(IntFunction<M> mapFactory, PacketReader<K> keyReader, PacketReader<V> valueReader) {
         int i = this.readVarInt();
         Map map = (Map)mapFactory.apply(i);
         for (int j = 0; j < i; ++j) {
-            K object = keyParser.apply(this);
-            V object2 = valueParser.apply(this);
+            Object object = keyReader.apply((K)((Object)this));
+            Object object2 = valueReader.apply((V)((Object)this));
             map.put(object, object2);
         }
         return (M)map;
     }
 
-    public <K, V> Map<K, V> readMap(Function<PacketByteBuf, K> keyParser, Function<PacketByteBuf, V> valueParser) {
-        return this.readMap(Maps::newHashMapWithExpectedSize, keyParser, valueParser);
+    public <K, V> Map<K, V> readMap(PacketReader<K> keyReader, PacketReader<V> valueReader) {
+        return this.readMap(Maps::newHashMapWithExpectedSize, keyReader, valueReader);
     }
 
-    public <K, V> void writeMap(Map<K, V> map, BiConsumer<PacketByteBuf, K> keySerializer, BiConsumer<PacketByteBuf, V> valueSerializer) {
+    public <K, V> void writeMap(Map<K, V> map, PacketWriter<K> keyWriter, PacketWriter<V> valueWriter) {
         this.writeVarInt(map.size());
         map.forEach((key, value) -> {
-            keySerializer.accept(this, key);
-            valueSerializer.accept(this, value);
+            keyWriter.accept((Object)((Object)this), key);
+            valueWriter.accept((Object)((Object)this), value);
         });
     }
 
@@ -194,20 +229,54 @@ extends ByteBuf {
         }
     }
 
-    public <T> void writeOptional(Optional<T> value, BiConsumer<PacketByteBuf, T> serializer) {
+    public <T> void writeOptional(Optional<T> value, PacketWriter<T> writer) {
         if (value.isPresent()) {
             this.writeBoolean(true);
-            serializer.accept(this, (PacketByteBuf)((Object)value.get()));
+            writer.accept(this, value.get());
         } else {
             this.writeBoolean(false);
         }
     }
 
-    public <T> Optional<T> readOptional(Function<PacketByteBuf, T> parser) {
+    public <T> Optional<T> readOptional(PacketReader<T> reader) {
         if (this.readBoolean()) {
-            return Optional.of(parser.apply(this));
+            return Optional.of(reader.apply(this));
         }
         return Optional.empty();
+    }
+
+    @Nullable
+    public <T> T readNullable(PacketReader<T> reader) {
+        if (this.readBoolean()) {
+            return (T)reader.apply(this);
+        }
+        return null;
+    }
+
+    public <T> void writeNullable(@Nullable T value, PacketWriter<T> writer) {
+        if (value != null) {
+            this.writeBoolean(true);
+            writer.accept(this, value);
+        } else {
+            this.writeBoolean(false);
+        }
+    }
+
+    public <L, R> void writeEither(Either<L, R> either, PacketWriter<L> leftWriter, PacketWriter<R> rightWriter) {
+        either.ifLeft(object -> {
+            this.writeBoolean(true);
+            leftWriter.accept((Object)((Object)this), object);
+        }).ifRight(object -> {
+            this.writeBoolean(false);
+            rightWriter.accept((Object)((Object)this), object);
+        });
+    }
+
+    public <L, R> Either<L, R> readEither(PacketReader<L> leftReader, PacketReader<R> rightReader) {
+        if (this.readBoolean()) {
+            return Either.left(leftReader.apply((L)((Object)this)));
+        }
+        return Either.right(rightReader.apply((R)((Object)this)));
     }
 
     public byte[] readByteArray() {
@@ -319,8 +388,23 @@ extends ByteBuf {
         return this;
     }
 
+    public GlobalPos readGlobalPos() {
+        RegistryKey<World> registryKey = this.readRegistryKey(Registry.WORLD_KEY);
+        BlockPos blockPos = this.readBlockPos();
+        return GlobalPos.create(registryKey, blockPos);
+    }
+
+    public void writeGlobalPos(GlobalPos pos) {
+        this.writeRegistryKey(pos.getDimension());
+        this.writeBlockPos(pos.getPos());
+    }
+
     public Text readText() {
-        return Text.Serializer.fromJson(this.readString(262144));
+        MutableText text = Text.Serializer.fromJson(this.readString(262144));
+        if (text == null) {
+            throw new DecoderException("Received unexpected null component");
+        }
+        return text;
     }
 
     public PacketByteBuf writeText(Text text) {
@@ -439,7 +523,7 @@ extends ByteBuf {
         } else {
             this.writeBoolean(true);
             Item item = stack.getItem();
-            this.writeVarInt(Item.getRawId(item));
+            this.writeRegistryValue(Registry.ITEM, item);
             this.writeByte(stack.getCount());
             NbtCompound nbtCompound = null;
             if (item.isDamageable() || item.isNbtSynced()) {
@@ -454,9 +538,9 @@ extends ByteBuf {
         if (!this.readBoolean()) {
             return ItemStack.EMPTY;
         }
-        int i = this.readVarInt();
-        byte j = this.readByte();
-        ItemStack itemStack = new ItemStack(Item.byRawId(i), j);
+        Item item = this.readRegistryValue(Registry.ITEM);
+        byte i = this.readByte();
+        ItemStack itemStack = new ItemStack(item, (int)i);
         itemStack.setNbt(this.readNbt());
         return itemStack;
     }
@@ -466,17 +550,18 @@ extends ByteBuf {
     }
 
     public String readString(int maxLength) {
-        int i = this.readVarInt();
-        if (i > maxLength * 4) {
-            throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + i + " > " + maxLength * 4 + ")");
+        int i = PacketByteBuf.toEncodedStringLength(maxLength);
+        int j = this.readVarInt();
+        if (j > i) {
+            throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + j + " > " + i + ")");
         }
-        if (i < 0) {
+        if (j < 0) {
             throw new DecoderException("The received encoded string buffer length is less than zero! Weird string!");
         }
-        String string = this.toString(this.readerIndex(), i, StandardCharsets.UTF_8);
-        this.readerIndex(this.readerIndex() + i);
+        String string = this.toString(this.readerIndex(), j, StandardCharsets.UTF_8);
+        this.readerIndex(this.readerIndex() + j);
         if (string.length() > maxLength) {
-            throw new DecoderException("The received string length is longer than maximum allowed (" + i + " > " + maxLength + ")");
+            throw new DecoderException("The received string length is longer than maximum allowed (" + string.length() + " > " + maxLength + ")");
         }
         return string;
     }
@@ -486,13 +571,21 @@ extends ByteBuf {
     }
 
     public PacketByteBuf writeString(String string, int maxLength) {
+        int i;
+        if (string.length() > maxLength) {
+            throw new EncoderException("String too big (was " + string.length() + " characters, max " + maxLength + ")");
+        }
         byte[] bs = string.getBytes(StandardCharsets.UTF_8);
-        if (bs.length > maxLength) {
-            throw new EncoderException("String too big (was " + bs.length + " bytes encoded, max " + maxLength + ")");
+        if (bs.length > (i = PacketByteBuf.toEncodedStringLength(maxLength))) {
+            throw new EncoderException("String too big (was " + bs.length + " bytes encoded, max " + i + ")");
         }
         this.writeVarInt(bs.length);
         this.writeBytes(bs);
         return this;
+    }
+
+    private static int toEncodedStringLength(int decodedLength) {
+        return decodedLength * 3;
     }
 
     public Identifier readIdentifier() {
@@ -504,12 +597,43 @@ extends ByteBuf {
         return this;
     }
 
+    public <T> RegistryKey<T> readRegistryKey(RegistryKey<? extends Registry<T>> registryRef) {
+        Identifier identifier = this.readIdentifier();
+        return RegistryKey.of(registryRef, identifier);
+    }
+
+    public void writeRegistryKey(RegistryKey<?> key) {
+        this.writeIdentifier(key.getValue());
+    }
+
     public Date readDate() {
         return new Date(this.readLong());
     }
 
     public PacketByteBuf writeDate(Date date) {
         this.writeLong(date.getTime());
+        return this;
+    }
+
+    public Instant readInstant() {
+        return Instant.ofEpochMilli(this.readLong());
+    }
+
+    public void writeInstant(Instant instant) {
+        this.writeLong(instant.toEpochMilli());
+    }
+
+    public PublicKey readPublicKey() {
+        try {
+            return NetworkEncryptionUtils.decodeEncodedRsaPublicKey(this.readByteArray(512));
+        }
+        catch (NetworkEncryptionException networkEncryptionException) {
+            throw new DecoderException("Malformed public key bytes", (Throwable)networkEncryptionException);
+        }
+    }
+
+    public PacketByteBuf writePublicKey(PublicKey publicKey) {
+        this.writeByteArray(publicKey.getEncoded());
         return this;
     }
 
@@ -540,6 +664,45 @@ extends ByteBuf {
 
     public void writeBitSet(BitSet bitSet) {
         this.writeLongArray(bitSet.toLongArray());
+    }
+
+    public GameProfile readGameProfile() {
+        UUID uUID = this.readUuid();
+        String string = this.readString(16);
+        GameProfile gameProfile = new GameProfile(uUID, string);
+        PropertyMap propertyMap = gameProfile.getProperties();
+        this.forEachInCollection(buf -> {
+            Property property = this.readProperty();
+            propertyMap.put((Object)property.getName(), (Object)property);
+        });
+        return gameProfile;
+    }
+
+    public void writeGameProfile(GameProfile gameProfile) {
+        this.writeUuid(gameProfile.getId());
+        this.writeString(gameProfile.getName());
+        this.writeCollection(gameProfile.getProperties().values(), PacketByteBuf::writeProperty);
+    }
+
+    public Property readProperty() {
+        String string = this.readString();
+        String string2 = this.readString();
+        if (this.readBoolean()) {
+            String string3 = this.readString();
+            return new Property(string, string2, string3);
+        }
+        return new Property(string, string2);
+    }
+
+    public void writeProperty(Property property) {
+        this.writeString(property.getName());
+        this.writeString(property.getValue());
+        if (property.hasSignature()) {
+            this.writeBoolean(true);
+            this.writeString(property.getSignature());
+        } else {
+            this.writeBoolean(false);
+        }
     }
 
     public int capacity() {
@@ -1272,6 +1435,22 @@ extends ByteBuf {
 
     public boolean release(int decrement) {
         return this.parent.release(decrement);
+    }
+
+    @FunctionalInterface
+    public static interface PacketReader<T>
+    extends Function<PacketByteBuf, T> {
+        default public PacketReader<Optional<T>> asOptional() {
+            return buf -> buf.readOptional(this);
+        }
+    }
+
+    @FunctionalInterface
+    public static interface PacketWriter<T>
+    extends BiConsumer<PacketByteBuf, T> {
+        default public PacketWriter<Optional<T>> asOptional() {
+            return (buf, value) -> buf.writeOptional(value, this);
+        }
     }
 }
 

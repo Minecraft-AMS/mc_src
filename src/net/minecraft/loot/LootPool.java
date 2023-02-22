@@ -26,7 +26,6 @@ import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -45,6 +44,7 @@ import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
 import net.minecraft.loot.provider.number.LootNumberProvider;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -141,7 +141,7 @@ public class LootPool {
         }
 
         @Override
-        public Builder getThis() {
+        public Builder getThisFunctionConsumingBuilder() {
             return this;
         }
 
@@ -175,17 +175,22 @@ public class LootPool {
         }
 
         @Override
-        public /* synthetic */ Object getThis() {
-            return this.getThis();
+        public /* synthetic */ LootFunctionConsumingBuilder getThisFunctionConsumingBuilder() {
+            return this.getThisFunctionConsumingBuilder();
         }
 
         @Override
-        public /* synthetic */ Object apply(LootFunction.Builder function) {
+        public /* synthetic */ LootFunctionConsumingBuilder apply(LootFunction.Builder function) {
             return this.apply(function);
         }
 
         @Override
-        public /* synthetic */ Object conditionally(LootCondition.Builder condition) {
+        public /* synthetic */ LootConditionConsumingBuilder getThisConditionConsumingBuilder() {
+            return this.getThisFunctionConsumingBuilder();
+        }
+
+        @Override
+        public /* synthetic */ LootConditionConsumingBuilder conditionally(LootCondition.Builder condition) {
             return this.conditionally(condition);
         }
     }

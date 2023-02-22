@@ -11,7 +11,6 @@
  *  it.unimi.dsi.fastutil.ints.IntArrayList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.io.IOUtils
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -26,11 +25,10 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import java.io.Closeable;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.InvalidClassException;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +47,6 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
-import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -81,12 +78,11 @@ AutoCloseable {
     public JsonEffectGlShader(ResourceManager resource, String name) throws IOException {
         Identifier identifier = new Identifier(PROGRAM_DIRECTORY + name + ".json");
         this.name = name;
-        Resource resource2 = null;
-        try {
+        Resource resource2 = resource.getResourceOrThrow(identifier);
+        try (BufferedReader reader = resource2.getReader();){
             JsonArray jsonArray3;
             JsonArray jsonArray2;
-            resource2 = resource.getResource(identifier);
-            JsonObject jsonObject = JsonHelper.deserialize(new InputStreamReader(resource2.getInputStream(), StandardCharsets.UTF_8));
+            JsonObject jsonObject = JsonHelper.deserialize(reader);
             String string = JsonHelper.getString(jsonObject, "vertex");
             String string2 = JsonHelper.getString(jsonObject, "fragment");
             JsonArray jsonArray = JsonHelper.getArray(jsonObject, "samplers", null);
@@ -151,20 +147,13 @@ AutoCloseable {
             }
         }
         catch (Exception exception4) {
-            Object string2 = resource2 != null ? " (" + resource2.getResourcePackName() + ")" : "";
             ShaderParseException shaderParseException4 = ShaderParseException.wrap(exception4);
-            shaderParseException4.addFaultyFile(identifier.getPath() + (String)string2);
+            shaderParseException4.addFaultyFile(identifier.getPath() + " (" + resource2.getResourcePackName() + ")");
             throw shaderParseException4;
-        }
-        finally {
-            IOUtils.closeQuietly((Closeable)resource2);
         }
         this.markUniformsDirty();
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     public static EffectProgram loadEffect(ResourceManager resourceManager, Program.Type type, String name) throws IOException {
         EffectProgram effectProgram;
         Program program = type.getProgramCache().get(name);
@@ -173,12 +162,9 @@ AutoCloseable {
         }
         if (program == null) {
             Identifier identifier = new Identifier(PROGRAM_DIRECTORY + name + type.getFileExtension());
-            Resource resource = resourceManager.getResource(identifier);
-            try {
-                effectProgram = EffectProgram.createFromResource(type, name, resource.getInputStream(), resource.getResourcePackName());
-            }
-            finally {
-                IOUtils.closeQuietly((Closeable)resource);
+            Resource resource = resourceManager.getResourceOrThrow(identifier);
+            try (InputStream inputStream = resource.getInputStream();){
+                effectProgram = EffectProgram.createFromResource(type, name, inputStream, resource.getResourcePackName());
             }
         } else {
             effectProgram = (EffectProgram)program;
@@ -197,24 +183,24 @@ AutoCloseable {
         int m = 0;
         boolean bl = true;
         boolean bl2 = false;
-        if (JsonHelper.hasString(json, "func") && (i = GlBlendState.getFuncFromString(json.get("func").getAsString())) != 32774) {
+        if (JsonHelper.hasString(json, "func") && (i = GlBlendState.getModeFromString(json.get("func").getAsString())) != 32774) {
             bl = false;
         }
-        if (JsonHelper.hasString(json, "srcrgb") && (j = GlBlendState.getComponentFromString(json.get("srcrgb").getAsString())) != 1) {
+        if (JsonHelper.hasString(json, "srcrgb") && (j = GlBlendState.getFactorFromString(json.get("srcrgb").getAsString())) != 1) {
             bl = false;
         }
-        if (JsonHelper.hasString(json, "dstrgb") && (k = GlBlendState.getComponentFromString(json.get("dstrgb").getAsString())) != 0) {
+        if (JsonHelper.hasString(json, "dstrgb") && (k = GlBlendState.getFactorFromString(json.get("dstrgb").getAsString())) != 0) {
             bl = false;
         }
         if (JsonHelper.hasString(json, "srcalpha")) {
-            l = GlBlendState.getComponentFromString(json.get("srcalpha").getAsString());
+            l = GlBlendState.getFactorFromString(json.get("srcalpha").getAsString());
             if (l != 1) {
                 bl = false;
             }
             bl2 = true;
         }
         if (JsonHelper.hasString(json, "dstalpha")) {
-            m = GlBlendState.getComponentFromString(json.get("dstalpha").getAsString());
+            m = GlBlendState.getFactorFromString(json.get("dstalpha").getAsString());
             if (m != 0) {
                 bl = false;
             }

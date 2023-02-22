@@ -12,7 +12,6 @@ import com.mojang.serialization.Codec;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 
@@ -59,12 +58,8 @@ public class RegistryKey<T> {
         return this.value;
     }
 
-    public Identifier method_41185() {
+    public Identifier getRegistry() {
         return this.registry;
-    }
-
-    public static <T> Function<Identifier, RegistryKey<T>> createKeyFactory(RegistryKey<? extends Registry<T>> registry) {
-        return id -> RegistryKey.of(registry, id);
     }
 }
 

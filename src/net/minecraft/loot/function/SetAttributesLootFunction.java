@@ -29,7 +29,6 @@ import com.google.gson.JsonSyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.entity.EquipmentSlot;
@@ -47,6 +46,7 @@ import net.minecraft.loot.provider.number.LootNumberProvider;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 

@@ -11,7 +11,6 @@ package net.minecraft.client.gui.screen.option;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -19,7 +18,8 @@ import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,14 +33,14 @@ extends GameOptionsScreen {
     private ButtonWidget resetAllButton;
 
     public KeybindsScreen(Screen parent, GameOptions gameOptions) {
-        super(parent, gameOptions, new TranslatableText("controls.keybinds.title"));
+        super(parent, gameOptions, Text.translatable("controls.keybinds.title"));
     }
 
     @Override
     protected void init() {
         this.controlsList = new ControlsListWidget(this, this.client);
         this.addSelectableChild(this.controlsList);
-        this.resetAllButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, new TranslatableText("controls.resetAll"), button -> {
+        this.resetAllButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 155, this.height - 29, 150, 20, Text.translatable("controls.resetAll"), button -> {
             for (KeyBinding keyBinding : this.gameOptions.allKeys) {
                 keyBinding.setBoundKey(keyBinding.getDefaultKey());
             }

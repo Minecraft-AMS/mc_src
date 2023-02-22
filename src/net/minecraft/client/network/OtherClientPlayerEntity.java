@@ -5,25 +5,27 @@
  *  com.mojang.authlib.GameProfile
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
+ *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.network;
 
 import com.mojang.authlib.GameProfile;
-import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class OtherClientPlayerEntity
 extends AbstractClientPlayerEntity {
-    public OtherClientPlayerEntity(ClientWorld clientWorld, GameProfile gameProfile) {
-        super(clientWorld, gameProfile);
+    public OtherClientPlayerEntity(ClientWorld clientWorld, GameProfile gameProfile, @Nullable PlayerPublicKey playerPublicKey) {
+        super(clientWorld, gameProfile, playerPublicKey);
         this.stepHeight = 1.0f;
         this.noClip = true;
     }
@@ -78,11 +80,9 @@ extends AbstractClientPlayerEntity {
     }
 
     @Override
-    public void sendSystemMessage(Text message, UUID sender) {
+    public void sendMessage(Text message) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
-        if (!minecraftClient.shouldBlockMessages(sender)) {
-            minecraftClient.inGameHud.getChatHud().addMessage(message);
-        }
+        minecraftClient.inGameHud.getChatHud().addMessage(message);
     }
 }
 

@@ -29,11 +29,7 @@ import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntCollection;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,51 +64,51 @@ implements AutoCloseable {
     private Map<Identifier, Identifier> idOverrides = ImmutableMap.of();
     private final ResourceReloader resourceReloadListener = new SinglePreparationResourceReloader<Map<Identifier, List<Font>>>(){
 
+        /*
+         * WARNING - Removed try catching itself - possible behaviour change.
+         */
         @Override
         protected Map<Identifier, List<Font>> prepare(ResourceManager resourceManager, Profiler profiler) {
             profiler.startTick();
             Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
             HashMap map = Maps.newHashMap();
-            for (Identifier identifier : resourceManager.findResources("font", fileName -> fileName.endsWith(".json"))) {
+            for (Map.Entry<Identifier, List<Resource>> entry : resourceManager.findAllResources("font", id -> id.getPath().endsWith(".json")).entrySet()) {
+                Identifier identifier = entry.getKey();
                 String string = identifier.getPath();
                 Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring("font/".length(), string.length() - ".json".length()));
                 List list = map.computeIfAbsent(identifier2, id -> Lists.newArrayList((Object[])new Font[]{new BlankFont()}));
                 profiler.push(identifier2::toString);
-                try {
-                    for (Resource resource : resourceManager.getAllResources(identifier)) {
-                        profiler.push(resource::getResourcePackName);
-                        try (InputStream inputStream = resource.getInputStream();
-                             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));){
+                for (Resource resource : entry.getValue()) {
+                    profiler.push(resource.getResourcePackName());
+                    try (BufferedReader reader = resource.getReader();){
+                        try {
                             profiler.push("reading");
                             JsonArray jsonArray = JsonHelper.getArray(JsonHelper.deserialize(gson, (Reader)reader, JsonObject.class), "providers");
                             profiler.swap("parsing");
                             for (int i = jsonArray.size() - 1; i >= 0; --i) {
                                 JsonObject jsonObject = JsonHelper.asObject(jsonArray.get(i), "providers[" + i + "]");
+                                String string2 = JsonHelper.getString(jsonObject, "type");
+                                FontType fontType = FontType.byId(string2);
                                 try {
-                                    String string2 = JsonHelper.getString(jsonObject, "type");
-                                    FontType fontType = FontType.byId(string2);
                                     profiler.push(string2);
                                     Font font = fontType.createLoader(jsonObject).load(resourceManager);
-                                    if (font != null) {
-                                        list.add(font);
-                                    }
-                                    profiler.pop();
+                                    if (font == null) continue;
+                                    list.add(font);
                                     continue;
                                 }
-                                catch (RuntimeException runtimeException) {
-                                    LOGGER.warn("Unable to read definition '{}' in {} in resourcepack: '{}': {}", new Object[]{identifier2, FontManager.FONTS_JSON, resource.getResourcePackName(), runtimeException.getMessage()});
+                                finally {
+                                    profiler.pop();
                                 }
                             }
+                        }
+                        finally {
                             profiler.pop();
                         }
-                        catch (RuntimeException runtimeException2) {
-                            LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}': {}", new Object[]{identifier2, FontManager.FONTS_JSON, resource.getResourcePackName(), runtimeException2.getMessage()});
-                        }
-                        profiler.pop();
                     }
-                }
-                catch (IOException iOException) {
-                    LOGGER.warn("Unable to load font '{}' in {}: {}", new Object[]{identifier2, FontManager.FONTS_JSON, iOException.getMessage()});
+                    catch (Exception exception) {
+                        LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}'", new Object[]{identifier2, FontManager.FONTS_JSON, resource.getResourcePackName(), exception});
+                    }
+                    profiler.pop();
                 }
                 profiler.push("caching");
                 IntOpenHashSet intSet = new IntOpenHashSet();
@@ -172,7 +168,11 @@ implements AutoCloseable {
     }
 
     public TextRenderer createTextRenderer() {
-        return new TextRenderer(id -> this.fontStorages.getOrDefault(this.idOverrides.getOrDefault(id, (Identifier)id), this.missingStorage));
+        return new TextRenderer(id -> this.fontStorages.getOrDefault(this.idOverrides.getOrDefault(id, (Identifier)id), this.missingStorage), false);
+    }
+
+    public TextRenderer createAdvanceValidatingTextRenderer() {
+        return new TextRenderer(id -> this.fontStorages.getOrDefault(this.idOverrides.getOrDefault(id, (Identifier)id), this.missingStorage), true);
     }
 
     public ResourceReloader getResourceReloadListener() {

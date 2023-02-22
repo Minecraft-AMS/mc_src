@@ -25,15 +25,15 @@ import com.mojang.serialization.Dynamic;
 import java.util.Optional;
 import net.minecraft.datafixer.TypeReferences;
 import net.minecraft.datafixer.fix.BlockEntitySignTextStrictJsonFix;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.JsonHelper;
 import org.apache.commons.lang3.StringUtils;
 
 public class ItemWrittenBookPagesStrictJsonFix
 extends DataFix {
-    public ItemWrittenBookPagesStrictJsonFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public ItemWrittenBookPagesStrictJsonFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     public Dynamic<?> fixBookPages(Dynamic<?> dynamic) {
@@ -44,12 +44,12 @@ extends DataFix {
             String string = dynamic.asString("");
             Text text = null;
             if ("null".equals(string) || StringUtils.isEmpty((CharSequence)string)) {
-                text = LiteralText.EMPTY;
+                text = ScreenTexts.EMPTY;
             } else if (string.charAt(0) == '\"' && string.charAt(string.length() - 1) == '\"' || string.charAt(0) == '{' && string.charAt(string.length() - 1) == '}') {
                 try {
                     text = JsonHelper.deserialize(BlockEntitySignTextStrictJsonFix.GSON, string, Text.class, true);
                     if (text == null) {
-                        text = LiteralText.EMPTY;
+                        text = ScreenTexts.EMPTY;
                     }
                 }
                 catch (Exception exception) {
@@ -72,10 +72,10 @@ extends DataFix {
                     }
                 }
                 if (text == null) {
-                    text = new LiteralText(string);
+                    text = Text.literal(string);
                 }
             } else {
-                text = new LiteralText(string);
+                text = Text.literal(string);
             }
             return dynamic.createString(Text.Serializer.toJson(text));
         })).map(arg_0 -> ((Dynamic)dynamic).createList(arg_0)).result(), (Object)dynamic.emptyList()));

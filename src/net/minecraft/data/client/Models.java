@@ -14,6 +14,7 @@ public class Models {
     public static final Model CUBE_DIRECTIONAL = Models.block("cube_directional", TextureKey.PARTICLE, TextureKey.NORTH, TextureKey.SOUTH, TextureKey.EAST, TextureKey.WEST, TextureKey.UP, TextureKey.DOWN);
     public static final Model CUBE_ALL = Models.block("cube_all", TextureKey.ALL);
     public static final Model CUBE_MIRRORED_ALL = Models.block("cube_mirrored_all", "_mirrored", TextureKey.ALL);
+    public static final Model CUBE_NORTH_WEST_MIRRORED_ALL = Models.block("cube_north_west_mirrored_all", "_north_west_mirrored", TextureKey.ALL);
     public static final Model CUBE_COLUMN = Models.block("cube_column", TextureKey.END, TextureKey.SIDE);
     public static final Model CUBE_COLUMN_HORIZONTAL = Models.block("cube_column_horizontal", "_horizontal", TextureKey.END, TextureKey.SIDE);
     public static final Model CUBE_COLUMN_MIRRORED = Models.block("cube_column_mirrored", "_mirrored", TextureKey.END, TextureKey.SIDE);
@@ -25,10 +26,14 @@ public class Models {
     public static final Model BUTTON = Models.block("button", TextureKey.TEXTURE);
     public static final Model BUTTON_PRESSED = Models.block("button_pressed", "_pressed", TextureKey.TEXTURE);
     public static final Model BUTTON_INVENTORY = Models.block("button_inventory", "_inventory", TextureKey.TEXTURE);
-    public static final Model DOOR_BOTTOM = Models.block("door_bottom", "_bottom", TextureKey.TOP, TextureKey.BOTTOM);
-    public static final Model DOOR_BOTTOM_RH = Models.block("door_bottom_rh", "_bottom_hinge", TextureKey.TOP, TextureKey.BOTTOM);
-    public static final Model DOOR_TOP = Models.block("door_top", "_top", TextureKey.TOP, TextureKey.BOTTOM);
-    public static final Model DOOR_TOP_RH = Models.block("door_top_rh", "_top_hinge", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_BOTTOM_LEFT = Models.block("door_bottom_left", "_bottom_left", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_BOTTOM_LEFT_OPEN = Models.block("door_bottom_left_open", "_bottom_left_open", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_BOTTOM_RIGHT = Models.block("door_bottom_right", "_bottom_right", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_BOTTOM_RIGHT_OPEN = Models.block("door_bottom_right_open", "_bottom_right_open", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_TOP_LEFT = Models.block("door_top_left", "_top_left", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_TOP_LEFT_OPEN = Models.block("door_top_left_open", "_top_left_open", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_TOP_RIGHT = Models.block("door_top_right", "_top_right", TextureKey.TOP, TextureKey.BOTTOM);
+    public static final Model DOOR_TOP_RIGHT_OPEN = Models.block("door_top_right_open", "_top_right_open", TextureKey.TOP, TextureKey.BOTTOM);
     public static final Model FENCE_POST = Models.block("fence_post", "_post", TextureKey.TEXTURE);
     public static final Model FENCE_SIDE = Models.block("fence_side", "_side", TextureKey.TEXTURE);
     public static final Model FENCE_INVENTORY = Models.block("fence_inventory", "_inventory", TextureKey.TEXTURE);
@@ -77,7 +82,7 @@ public class Models {
     public static final Model TEMPLATE_GLASS_PANE_SIDE_ALT = Models.block("template_glass_pane_side_alt", "_side_alt", TextureKey.PANE, TextureKey.EDGE);
     public static final Model TEMPLATE_COMMAND_BLOCK = Models.block("template_command_block", TextureKey.FRONT, TextureKey.BACK, TextureKey.SIDE);
     public static final Model TEMPLATE_ANVIL = Models.block("template_anvil", TextureKey.TOP);
-    public static final Model[] STEM_GROWTH_STAGES = (Model[])IntStream.range(0, 8).mapToObj(i -> Models.block("stem_growth" + i, "_stage" + i, TextureKey.STEM)).toArray(Model[]::new);
+    public static final Model[] STEM_GROWTH_STAGES = (Model[])IntStream.range(0, 8).mapToObj(stage -> Models.block("stem_growth" + stage, "_stage" + stage, TextureKey.STEM)).toArray(Model[]::new);
     public static final Model STEM_FRUIT = Models.block("stem_fruit", TextureKey.STEM, TextureKey.UPPERSTEM);
     public static final Model CROP = Models.block("crop", TextureKey.CROP);
     public static final Model TEMPLATE_FARMLAND = Models.block("template_farmland", TextureKey.DIRT, TextureKey.TOP);
@@ -117,6 +122,7 @@ public class Models {
     public static final Model TEMPLATE_THREE_CANDLES = Models.block("template_three_candles", TextureKey.ALL, TextureKey.PARTICLE);
     public static final Model TEMPLATE_FOUR_CANDLES = Models.block("template_four_candles", TextureKey.ALL, TextureKey.PARTICLE);
     public static final Model TEMPLATE_CAKE_WITH_CANDLE = Models.block("template_cake_with_candle", TextureKey.CANDLE, TextureKey.BOTTOM, TextureKey.SIDE, TextureKey.TOP, TextureKey.PARTICLE);
+    public static final Model TEMPLATE_SCULK_SHRIEKER = Models.block("template_sculk_shrieker", TextureKey.BOTTOM, TextureKey.SIDE, TextureKey.TOP, TextureKey.PARTICLE, TextureKey.INNER_TOP);
 
     private static Model make(TextureKey ... requiredTextureKeys) {
         return new Model(Optional.empty(), Optional.empty(), requiredTextureKeys);

@@ -3,7 +3,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -17,6 +16,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
@@ -63,11 +63,11 @@ extends IceBlock {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
-        if (block.getDefaultState().isOf(this) && this.canMelt(world, pos, 2)) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
+        if (sourceBlock.getDefaultState().isOf(this) && this.canMelt(world, pos, 2)) {
             this.melt(state, world, pos);
         }
-        super.neighborUpdate(state, world, pos, block, fromPos, notify);
+        super.neighborUpdate(state, world, pos, sourceBlock, sourcePos, notify);
     }
 
     private boolean canMelt(BlockView world, BlockPos pos, int maxNeighbors) {

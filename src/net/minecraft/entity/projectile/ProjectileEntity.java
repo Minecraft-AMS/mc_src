@@ -91,7 +91,7 @@ extends Entity {
     @Override
     public void tick() {
         if (!this.shot) {
-            this.emitGameEvent(GameEvent.PROJECTILE_SHOOT, this.getOwner(), this.getBlockPos());
+            this.emitGameEvent(GameEvent.PROJECTILE_SHOOT, this.getOwner());
             this.shot = true;
         }
         if (!this.leftOwner) {
@@ -103,7 +103,7 @@ extends Entity {
     private boolean shouldLeaveOwner() {
         Entity entity2 = this.getOwner();
         if (entity2 != null) {
-            for (Entity entity22 : this.world.getOtherEntities(this, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), entity -> !entity.isSpectator() && entity.collides())) {
+            for (Entity entity22 : this.world.getOtherEntities(this, this.getBoundingBox().stretch(this.getVelocity()).expand(1.0), entity -> !entity.isSpectator() && entity.canHit())) {
                 if (entity22.getRootVehicle() != entity2.getRootVehicle()) continue;
                 return false;
             }
@@ -112,7 +112,7 @@ extends Entity {
     }
 
     public void setVelocity(double x, double y, double z, float speed, float divergence) {
-        Vec3d vec3d = new Vec3d(x, y, z).normalize().add(this.random.nextGaussian() * (double)0.0075f * (double)divergence, this.random.nextGaussian() * (double)0.0075f * (double)divergence, this.random.nextGaussian() * (double)0.0075f * (double)divergence).multiply(speed);
+        Vec3d vec3d = new Vec3d(x, y, z).normalize().add(this.random.nextTriangular(0.0, 0.0172275 * (double)divergence), this.random.nextTriangular(0.0, 0.0172275 * (double)divergence), this.random.nextTriangular(0.0, 0.0172275 * (double)divergence)).multiply(speed);
         this.setVelocity(vec3d);
         double d = vec3d.horizontalLength();
         this.setYaw((float)(MathHelper.atan2(vec3d.x, vec3d.z) * 57.2957763671875));
@@ -134,11 +134,12 @@ extends Entity {
         HitResult.Type type = hitResult.getType();
         if (type == HitResult.Type.ENTITY) {
             this.onEntityHit((EntityHitResult)hitResult);
+            this.world.emitGameEvent(GameEvent.PROJECTILE_LAND, hitResult.getPos(), GameEvent.Emitter.of(this, null));
         } else if (type == HitResult.Type.BLOCK) {
-            this.onBlockHit((BlockHitResult)hitResult);
-        }
-        if (type != HitResult.Type.MISS) {
-            this.emitGameEvent(GameEvent.PROJECTILE_LAND, this.getOwner());
+            BlockHitResult blockHitResult = (BlockHitResult)hitResult;
+            this.onBlockHit(blockHitResult);
+            BlockPos blockPos = blockHitResult.getBlockPos();
+            this.world.emitGameEvent(GameEvent.PROJECTILE_LAND, blockPos, GameEvent.Emitter.of(this, this.world.getBlockState(blockPos)));
         }
     }
 
@@ -164,7 +165,7 @@ extends Entity {
     }
 
     protected boolean canHit(Entity entity) {
-        if (entity.isSpectator() || !entity.isAlive() || !entity.collides()) {
+        if (entity.isSpectator() || !entity.isAlive() || !entity.canHit()) {
             return false;
         }
         Entity entity2 = this.getOwner();

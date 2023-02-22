@@ -9,13 +9,16 @@ package net.minecraft.client.option;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.util.TranslatableOption;
 
 @Environment(value=EnvType.CLIENT)
 public final class CloudRenderMode
-extends Enum<CloudRenderMode> {
-    public static final /* enum */ CloudRenderMode OFF = new CloudRenderMode("options.off");
-    public static final /* enum */ CloudRenderMode FAST = new CloudRenderMode("options.clouds.fast");
-    public static final /* enum */ CloudRenderMode FANCY = new CloudRenderMode("options.clouds.fancy");
+extends Enum<CloudRenderMode>
+implements TranslatableOption {
+    public static final /* enum */ CloudRenderMode OFF = new CloudRenderMode(0, "options.off");
+    public static final /* enum */ CloudRenderMode FAST = new CloudRenderMode(1, "options.clouds.fast");
+    public static final /* enum */ CloudRenderMode FANCY = new CloudRenderMode(2, "options.clouds.fancy");
+    private final int id;
     private final String translationKey;
     private static final /* synthetic */ CloudRenderMode[] field_18168;
 
@@ -27,10 +30,17 @@ extends Enum<CloudRenderMode> {
         return Enum.valueOf(CloudRenderMode.class, string);
     }
 
-    private CloudRenderMode(String translationKey) {
+    private CloudRenderMode(int id, String translationKey) {
+        this.id = id;
         this.translationKey = translationKey;
     }
 
+    @Override
+    public int getId() {
+        return this.id;
+    }
+
+    @Override
     public String getTranslationKey() {
         return this.translationKey;
     }

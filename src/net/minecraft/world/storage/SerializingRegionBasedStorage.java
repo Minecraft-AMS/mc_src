@@ -36,6 +36,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import net.minecraft.SharedConstants;
@@ -44,8 +46,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.storage.StorageIoWorker;
 import org.jetbrains.annotations.Nullable;
@@ -62,13 +66,15 @@ implements AutoCloseable {
     private final Function<Runnable, R> factory;
     private final DataFixer dataFixer;
     private final DataFixTypes dataFixTypes;
+    private final DynamicRegistryManager dynamicRegistryManager;
     protected final HeightLimitView world;
 
-    public SerializingRegionBasedStorage(Path path, Function<Runnable, Codec<R>> codecFactory, Function<Runnable, R> factory, DataFixer dataFixer, DataFixTypes dataFixTypes, boolean dsync, HeightLimitView world) {
+    public SerializingRegionBasedStorage(Path path, Function<Runnable, Codec<R>> codecFactory, Function<Runnable, R> factory, DataFixer dataFixer, DataFixTypes dataFixTypes, boolean dsync, DynamicRegistryManager dynamicRegistryManager, HeightLimitView world) {
         this.codecFactory = codecFactory;
         this.factory = factory;
         this.dataFixer = dataFixer;
         this.dataFixTypes = dataFixTypes;
+        this.dynamicRegistryManager = dynamicRegistryManager;
         this.world = world;
         this.worker = new StorageIoWorker(path, dsync, path.getFileName().toString());
     }
@@ -123,19 +129,21 @@ implements AutoCloseable {
         return object;
     }
 
-    private void loadDataAt(ChunkPos chunkPos) {
-        this.update(chunkPos, NbtOps.INSTANCE, this.loadNbt(chunkPos));
+    private void loadDataAt(ChunkPos pos) {
+        Optional<NbtCompound> optional = this.loadNbt(pos).join();
+        RegistryOps<NbtElement> registryOps = RegistryOps.of(NbtOps.INSTANCE, this.dynamicRegistryManager);
+        this.update(pos, registryOps, optional.orElse(null));
     }
 
-    @Nullable
-    private NbtCompound loadNbt(ChunkPos pos) {
-        try {
-            return this.worker.getNbt(pos);
-        }
-        catch (IOException iOException) {
-            LOGGER.error("Error reading chunk {} data from disk", (Object)pos, (Object)iOException);
-            return null;
-        }
+    private CompletableFuture<Optional<NbtCompound>> loadNbt(ChunkPos pos) {
+        return this.worker.readChunkData(pos).exceptionally(throwable -> {
+            if (throwable instanceof IOException) {
+                IOException iOException = (IOException)throwable;
+                LOGGER.error("Error reading chunk {} data from disk", (Object)pos, (Object)iOException);
+                return Optional.empty();
+            }
+            throw new CompletionException((Throwable)throwable);
+        });
     }
 
     private <T> void update(ChunkPos pos, DynamicOps<T> ops, @Nullable T data) {
@@ -164,28 +172,29 @@ implements AutoCloseable {
         }
     }
 
-    private void save(ChunkPos chunkPos) {
-        Dynamic<NbtElement> dynamic = this.method_20367(chunkPos, NbtOps.INSTANCE);
+    private void save(ChunkPos pos) {
+        RegistryOps<NbtElement> registryOps = RegistryOps.of(NbtOps.INSTANCE, this.dynamicRegistryManager);
+        Dynamic<NbtElement> dynamic = this.serialize(pos, registryOps);
         NbtElement nbtElement = (NbtElement)dynamic.getValue();
         if (nbtElement instanceof NbtCompound) {
-            this.worker.setResult(chunkPos, (NbtCompound)nbtElement);
+            this.worker.setResult(pos, (NbtCompound)nbtElement);
         } else {
             LOGGER.error("Expected compound tag, got {}", (Object)nbtElement);
         }
     }
 
-    private <T> Dynamic<T> method_20367(ChunkPos chunkPos, DynamicOps<T> dynamicOps) {
+    private <T> Dynamic<T> serialize(ChunkPos chunkPos, DynamicOps<T> ops) {
         HashMap map = Maps.newHashMap();
         for (int i = this.world.getBottomSectionCoord(); i < this.world.getTopSectionCoord(); ++i) {
             long l = SerializingRegionBasedStorage.chunkSectionPosAsLong(chunkPos, i);
             this.unsavedElements.remove(l);
             Optional optional = (Optional)this.loadedElements.get(l);
             if (optional == null || !optional.isPresent()) continue;
-            DataResult dataResult = this.codecFactory.apply(() -> this.onUpdate(l)).encodeStart(dynamicOps, optional.get());
+            DataResult dataResult = this.codecFactory.apply(() -> this.onUpdate(l)).encodeStart(ops, optional.get());
             String string = Integer.toString(i);
-            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(object -> map.put(dynamicOps.createString(string), object));
+            dataResult.resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(object -> map.put(ops.createString(string), object));
         }
-        return new Dynamic(dynamicOps, dynamicOps.createMap((Map)ImmutableMap.of((Object)dynamicOps.createString(SECTIONS_KEY), (Object)dynamicOps.createMap((Map)map), (Object)dynamicOps.createString("DataVersion"), (Object)dynamicOps.createInt(SharedConstants.getGameVersion().getWorldVersion()))));
+        return new Dynamic(ops, ops.createMap((Map)ImmutableMap.of((Object)ops.createString(SECTIONS_KEY), (Object)ops.createMap((Map)map), (Object)ops.createString("DataVersion"), (Object)ops.createInt(SharedConstants.getGameVersion().getWorldVersion()))));
     }
 
     private static long chunkSectionPosAsLong(ChunkPos chunkPos, int y) {

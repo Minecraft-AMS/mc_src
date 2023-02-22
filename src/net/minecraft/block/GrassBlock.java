@@ -4,7 +4,6 @@
 package net.minecraft.block;
 
 import java.util.List;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -12,6 +11,7 @@ import net.minecraft.block.Fertilizable;
 import net.minecraft.block.SpreadableBlock;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;

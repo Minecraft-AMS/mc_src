@@ -12,16 +12,15 @@ import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
 import net.minecraft.client.gui.widget.ButtonListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.Option;
-import net.minecraft.client.util.NarratorManager;
+import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
@@ -29,12 +28,12 @@ import org.jetbrains.annotations.Nullable;
 @Environment(value=EnvType.CLIENT)
 public abstract class SimpleOptionsScreen
 extends GameOptionsScreen {
-    private final Option[] options;
+    protected final SimpleOption<?>[] options;
     @Nullable
     private ClickableWidget narratorButton;
     private ButtonListWidget buttonList;
 
-    public SimpleOptionsScreen(Screen parent, GameOptions gameOptions, Text title, Option[] options) {
+    public SimpleOptionsScreen(Screen parent, GameOptions gameOptions, Text title, SimpleOption<?>[] options) {
         super(parent, gameOptions, title);
         this.options = options;
     }
@@ -45,9 +44,9 @@ extends GameOptionsScreen {
         this.buttonList.addAll(this.options);
         this.addSelectableChild(this.buttonList);
         this.initFooter();
-        this.narratorButton = this.buttonList.getButtonFor(Option.NARRATOR);
+        this.narratorButton = this.buttonList.getButtonFor(this.gameOptions.getNarrator());
         if (this.narratorButton != null) {
-            this.narratorButton.active = NarratorManager.INSTANCE.isActive();
+            this.narratorButton.active = this.client.getNarratorManager().isActive();
         }
     }
 
@@ -67,7 +66,7 @@ extends GameOptionsScreen {
 
     public void updateNarratorButtonText() {
         if (this.narratorButton instanceof CyclingButtonWidget) {
-            ((CyclingButtonWidget)this.narratorButton).setValue(this.gameOptions.narrator);
+            ((CyclingButtonWidget)this.narratorButton).setValue(this.gameOptions.getNarrator().getValue());
         }
     }
 }

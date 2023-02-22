@@ -3,6 +3,7 @@
  */
 package net.minecraft.item;
 
+import java.util.Optional;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;
@@ -42,7 +43,11 @@ extends Item {
         }
         World world = context.getWorld();
         if (this.entityType == EntityType.PAINTING) {
-            abstractDecorationEntity = new PaintingEntity(world, blockPos2, direction);
+            Optional<PaintingEntity> optional = PaintingEntity.placePainting(world, blockPos2, direction);
+            if (optional.isEmpty()) {
+                return ActionResult.CONSUME;
+            }
+            abstractDecorationEntity = optional.get();
         } else if (this.entityType == EntityType.ITEM_FRAME) {
             abstractDecorationEntity = new ItemFrameEntity(world, blockPos2, direction);
         } else if (this.entityType == EntityType.GLOW_ITEM_FRAME) {
@@ -57,7 +62,7 @@ extends Item {
         if (abstractDecorationEntity.canStayAttached()) {
             if (!world.isClient) {
                 abstractDecorationEntity.onPlace();
-                world.emitGameEvent((Entity)playerEntity, GameEvent.ENTITY_PLACE, blockPos);
+                world.emitGameEvent((Entity)playerEntity, GameEvent.ENTITY_PLACE, abstractDecorationEntity.getPos());
                 world.spawnEntity(abstractDecorationEntity);
             }
             itemStack.decrement(1);

@@ -8,25 +8,25 @@
 package net.minecraft.structure.processor;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.StairsBlock;
 import net.minecraft.block.enums.BlockHalf;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockAgeStructureProcessor
 extends StructureProcessor {
-    public static final Codec<BlockAgeStructureProcessor> CODEC = Codec.FLOAT.fieldOf("mossiness").xmap(BlockAgeStructureProcessor::new, blockAgeStructureProcessor -> Float.valueOf(blockAgeStructureProcessor.mossiness)).codec();
+    public static final Codec<BlockAgeStructureProcessor> CODEC = Codec.FLOAT.fieldOf("mossiness").xmap(BlockAgeStructureProcessor::new, processor -> Float.valueOf(processor.mossiness)).codec();
     private static final float field_31681 = 0.5f;
     private static final float field_31682 = 0.5f;
     private static final float field_31683 = 0.15f;
@@ -39,15 +39,15 @@ extends StructureProcessor {
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData data) {
-        Random random = data.getRandom(structureBlockInfo2.pos);
-        BlockState blockState = structureBlockInfo2.state;
-        BlockPos blockPos = structureBlockInfo2.pos;
+    public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
+        Random random = data.getRandom(currentBlockInfo.pos);
+        BlockState blockState = currentBlockInfo.state;
+        BlockPos blockPos = currentBlockInfo.pos;
         BlockState blockState2 = null;
         if (blockState.isOf(Blocks.STONE_BRICKS) || blockState.isOf(Blocks.STONE) || blockState.isOf(Blocks.CHISELED_STONE_BRICKS)) {
             blockState2 = this.processBlocks(random);
         } else if (blockState.isIn(BlockTags.STAIRS)) {
-            blockState2 = this.processStairs(random, structureBlockInfo2.state);
+            blockState2 = this.processStairs(random, currentBlockInfo.state);
         } else if (blockState.isIn(BlockTags.SLABS)) {
             blockState2 = this.processSlabs(random);
         } else if (blockState.isIn(BlockTags.WALLS)) {
@@ -56,9 +56,9 @@ extends StructureProcessor {
             blockState2 = this.processObsidian(random);
         }
         if (blockState2 != null) {
-            return new Structure.StructureBlockInfo(blockPos, blockState2, structureBlockInfo2.nbt);
+            return new StructureTemplate.StructureBlockInfo(blockPos, blockState2, currentBlockInfo.nbt);
         }
-        return structureBlockInfo2;
+        return currentBlockInfo;
     }
 
     @Nullable

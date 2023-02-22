@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
@@ -46,8 +45,8 @@ import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.GhastEntity;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.passive.HorseBaseEntity;
 import net.minecraft.entity.passive.LlamaEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.passive.TameableEntity;
@@ -72,6 +71,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.event.GameEvent;
@@ -223,7 +223,7 @@ implements Angerable {
         } else if ((this.furWet || this.canShakeWaterOff) && this.canShakeWaterOff) {
             if (this.shakeProgress == 0.0f) {
                 this.playSound(SoundEvents.ENTITY_WOLF_SHAKE, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
-                this.emitGameEvent(GameEvent.WOLF_SHAKING);
+                this.emitGameEvent(GameEvent.ENTITY_SHAKE);
             }
             this.lastShakeProgress = this.shakeProgress;
             this.shakeProgress += 0.05f;
@@ -253,12 +253,12 @@ implements Angerable {
     }
 
     @Override
-    public void onDeath(DamageSource source) {
+    public void onDeath(DamageSource damageSource) {
         this.furWet = false;
         this.canShakeWaterOff = false;
         this.lastShakeProgress = 0.0f;
         this.shakeProgress = 0.0f;
-        super.onDeath(source);
+        super.onDeath(damageSource);
     }
 
     public boolean isFurWet() {
@@ -350,7 +350,6 @@ implements Angerable {
                     itemStack.decrement(1);
                 }
                 this.heal(item.getFoodComponent().getHunger());
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
                 return ActionResult.SUCCESS;
             }
             if (item instanceof DyeItem) {
@@ -506,7 +505,7 @@ implements Angerable {
         if (target instanceof PlayerEntity && owner instanceof PlayerEntity && !((PlayerEntity)owner).shouldDamagePlayer((PlayerEntity)target)) {
             return false;
         }
-        if (target instanceof HorseBaseEntity && ((HorseBaseEntity)target).isTame()) {
+        if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity)target).isTame()) {
             return false;
         }
         return !(target instanceof TameableEntity) || !((TameableEntity)target).isTamed();

@@ -17,7 +17,6 @@ import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.WitherSkullEntity;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
@@ -51,6 +50,7 @@ public class DamageSource {
     private boolean bypassesArmor;
     private boolean outOfWorld;
     private boolean unblockable;
+    private boolean bypassesProtection;
     private float exhaustion = 0.1f;
     private boolean fire;
     private boolean projectile;
@@ -123,6 +123,10 @@ public class DamageSource {
         return new DamageSource("explosion").setScaledWithDifficulty().setExplosive();
     }
 
+    public static DamageSource sonicBoom(Entity attacker) {
+        return new EntityDamageSource("sonic_boom", attacker).setBypassesArmor().setBypassesProtection().setUsesMagic();
+    }
+
     public static DamageSource badRespawnPoint() {
         return new BadRespawnPointDamageSource();
     }
@@ -169,6 +173,10 @@ public class DamageSource {
         return this.unblockable;
     }
 
+    public boolean bypassesProtection() {
+        return this.bypassesProtection;
+    }
+
     protected DamageSource(String name) {
         this.name = name;
     }
@@ -205,6 +213,11 @@ public class DamageSource {
         return this;
     }
 
+    protected DamageSource setBypassesProtection() {
+        this.bypassesProtection = true;
+        return this;
+    }
+
     protected DamageSource setFire() {
         this.fire = true;
         return this;
@@ -220,9 +233,9 @@ public class DamageSource {
         String string = "death.attack." + this.name;
         String string2 = string + ".player";
         if (livingEntity != null) {
-            return new TranslatableText(string2, entity.getDisplayName(), livingEntity.getDisplayName());
+            return Text.translatable(string2, entity.getDisplayName(), livingEntity.getDisplayName());
         }
-        return new TranslatableText(string, entity.getDisplayName());
+        return Text.translatable(string, entity.getDisplayName());
     }
 
     public boolean isFire() {

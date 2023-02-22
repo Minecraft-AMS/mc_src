@@ -24,13 +24,13 @@ import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Scanner;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ChaseCommand;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.LiteralText;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.RegistryKey;
@@ -122,7 +122,7 @@ public class ChaseClient {
     }
 
     private void executeTeleportCommand(Scanner scanner) {
-        this.getTeleportPos(scanner).ifPresent(pos -> this.executeCommand(String.format(Locale.ROOT, "/execute in %s run tp @s %.3f %.3f %.3f %.3f %.3f", pos.dimension.getValue(), pos.pos.x, pos.pos.y, pos.pos.z, Float.valueOf(pos.rot.y), Float.valueOf(pos.rot.x))));
+        this.getTeleportPos(scanner).ifPresent(pos -> this.executeCommand(String.format(Locale.ROOT, "execute in %s run tp @s %.3f %.3f %.3f %.3f %.3f", pos.dimension.getValue(), pos.pos.x, pos.pos.y, pos.pos.z, Float.valueOf(pos.rot.y), Float.valueOf(pos.rot.x))));
     }
 
     private Optional<TeleportPos> getTeleportPos(Scanner scanner) {
@@ -146,9 +146,9 @@ public class ChaseClient {
             }
             ServerPlayerEntity serverPlayerEntity = list.get(0);
             ServerWorld serverWorld = this.minecraftServer.getOverworld();
-            ServerCommandSource serverCommandSource = new ServerCommandSource(serverPlayerEntity, Vec3d.of(serverWorld.getSpawnPos()), Vec2f.ZERO, serverWorld, 4, "", LiteralText.EMPTY, this.minecraftServer, serverPlayerEntity);
+            ServerCommandSource serverCommandSource = new ServerCommandSource(serverPlayerEntity, Vec3d.of(serverWorld.getSpawnPos()), Vec2f.ZERO, serverWorld, 4, "", ScreenTexts.EMPTY, this.minecraftServer, serverPlayerEntity);
             CommandManager commandManager = this.minecraftServer.getCommandManager();
-            commandManager.execute(serverCommandSource, command);
+            commandManager.executeWithPrefix(serverCommandSource, command);
         });
     }
 

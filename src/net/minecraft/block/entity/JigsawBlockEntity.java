@@ -1,16 +1,10 @@
 /*
  * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.google.common.collect.Lists
  */
 package net.minecraft.block.entity;
 
-import com.google.common.collect.Lists;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.entity.BlockEntity;
@@ -19,22 +13,15 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.structure.PoolStructurePiece;
-import net.minecraft.structure.Structure;
-import net.minecraft.structure.StructureManager;
-import net.minecraft.structure.pool.SinglePoolElement;
+import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolBasedGenerator;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
-import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.StringIdentifiable;
-import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryKey;
 
 public class JigsawBlockEntity
 extends BlockEntity {
@@ -45,7 +32,7 @@ extends BlockEntity {
     public static final String FINAL_STATE_KEY = "final_state";
     private Identifier name = new Identifier("empty");
     private Identifier target = new Identifier("empty");
-    private Identifier pool = new Identifier("empty");
+    private RegistryKey<StructurePool> pool = RegistryKey.of(Registry.STRUCTURE_POOL_KEY, new Identifier("empty"));
     private Joint joint = Joint.ROLLABLE;
     private String finalState = "minecraft:air";
 
@@ -61,7 +48,7 @@ extends BlockEntity {
         return this.target;
     }
 
-    public Identifier getPool() {
+    public RegistryKey<StructurePool> getPool() {
         return this.pool;
     }
 
@@ -81,7 +68,7 @@ extends BlockEntity {
         this.target = target;
     }
 
-    public void setPool(Identifier pool) {
+    public void setPool(RegistryKey<StructurePool> pool) {
         this.pool = pool;
     }
 
@@ -98,7 +85,7 @@ extends BlockEntity {
         super.writeNbt(nbt);
         nbt.putString(NAME_KEY, this.name.toString());
         nbt.putString(TARGET_KEY, this.target.toString());
-        nbt.putString(POOL_KEY, this.pool.toString());
+        nbt.putString(POOL_KEY, this.pool.getValue().toString());
         nbt.putString(FINAL_STATE_KEY, this.finalState);
         nbt.putString(JOINT_KEY, this.joint.asString());
     }
@@ -108,7 +95,7 @@ extends BlockEntity {
         super.readNbt(nbt);
         this.name = new Identifier(nbt.getString(NAME_KEY));
         this.target = new Identifier(nbt.getString(TARGET_KEY));
-        this.pool = new Identifier(nbt.getString(POOL_KEY));
+        this.pool = RegistryKey.of(Registry.STRUCTURE_POOL_KEY, new Identifier(nbt.getString(POOL_KEY)));
         this.finalState = nbt.getString(FINAL_STATE_KEY);
         this.joint = Joint.byName(nbt.getString(JOINT_KEY)).orElseGet(() -> JigsawBlock.getFacing(this.getCachedState()).getAxis().isHorizontal() ? Joint.ALIGNED : Joint.ROLLABLE);
     }
@@ -123,20 +110,10 @@ extends BlockEntity {
     }
 
     public void generate(ServerWorld world, int maxDepth, boolean keepJigsaws) {
-        ChunkGenerator chunkGenerator = world.getChunkManager().getChunkGenerator();
-        StructureManager structureManager = world.getStructureManager();
-        StructureAccessor structureAccessor = world.getStructureAccessor();
-        Random random = world.getRandom();
-        BlockPos blockPos = this.getPos();
-        ArrayList list = Lists.newArrayList();
-        Structure structure = new Structure();
-        structure.saveFromWorld(world, blockPos, new Vec3i(1, 1, 1), false, null);
-        SinglePoolElement structurePoolElement = new SinglePoolElement(structure);
-        PoolStructurePiece poolStructurePiece = new PoolStructurePiece(structureManager, structurePoolElement, blockPos, 1, BlockRotation.NONE, new BlockBox(blockPos));
-        StructurePoolBasedGenerator.generate(world.getRegistryManager(), poolStructurePiece, maxDepth, PoolStructurePiece::new, chunkGenerator, structureManager, list, random, world);
-        for (PoolStructurePiece poolStructurePiece2 : list) {
-            poolStructurePiece2.generate((StructureWorldAccess)world, structureAccessor, chunkGenerator, random, BlockBox.infinite(), blockPos, keepJigsaws);
-        }
+        BlockPos blockPos = this.getPos().offset(this.getCachedState().get(JigsawBlock.ORIENTATION).getFacing());
+        Registry<StructurePool> registry = world.getRegistryManager().get(Registry.STRUCTURE_POOL_KEY);
+        RegistryEntry<StructurePool> registryEntry = registry.entryOf(this.pool);
+        StructurePoolBasedGenerator.generate(world, registryEntry, this.target, maxDepth, blockPos, keepJigsaws);
     }
 
     public /* synthetic */ Packet toUpdatePacket() {
@@ -173,7 +150,7 @@ extends BlockEntity {
         }
 
         public Text asText() {
-            return new TranslatableText("jigsaw_block.joint." + this.name);
+            return Text.translatable("jigsaw_block.joint." + this.name);
         }
 
         private static /* synthetic */ Joint[] method_36716() {

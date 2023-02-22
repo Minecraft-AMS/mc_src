@@ -15,9 +15,9 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Random;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.util.math.intprovider.IntProviderType;
+import net.minecraft.util.math.random.Random;
 
 public class ConstantIntProvider
 extends IntProvider {

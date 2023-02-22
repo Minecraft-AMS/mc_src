@@ -7,7 +7,6 @@
 package net.minecraft.block;
 
 import java.util.List;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -28,6 +27,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -109,7 +109,7 @@ extends WallMountedBlock {
         }
         this.powerOn(state, world, pos);
         this.playClickSound(player, world, pos, true);
-        world.emitGameEvent((Entity)player, GameEvent.BLOCK_PRESS, pos);
+        world.emitGameEvent((Entity)player, GameEvent.BLOCK_ACTIVATE, pos);
         return ActionResult.success(world.isClient);
     }
 
@@ -165,7 +165,7 @@ extends WallMountedBlock {
             world.setBlockState(pos, (BlockState)state.with(POWERED, false), 3);
             this.updateNeighbors(state, world, pos);
             this.playClickSound(null, world, pos, false);
-            world.emitGameEvent(GameEvent.BLOCK_UNPRESS, pos);
+            world.emitGameEvent(null, GameEvent.BLOCK_DEACTIVATE, pos);
         }
     }
 
@@ -185,7 +185,7 @@ extends WallMountedBlock {
             world.setBlockState(pos, (BlockState)state.with(POWERED, bl), 3);
             this.updateNeighbors(state, world, pos);
             this.playClickSound(null, world, pos, bl);
-            world.emitGameEvent((Entity)list.stream().findFirst().orElse(null), bl ? GameEvent.BLOCK_PRESS : GameEvent.BLOCK_UNPRESS, pos);
+            world.emitGameEvent((Entity)list.stream().findFirst().orElse(null), bl ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, pos);
         }
         if (bl) {
             world.createAndScheduleBlockTick(new BlockPos(pos), this, this.getPressTicks());

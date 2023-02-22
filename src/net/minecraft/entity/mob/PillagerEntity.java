@@ -43,7 +43,6 @@ import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.raid.RaiderEntity;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.BannerItem;
@@ -55,6 +54,7 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.village.raid.Raid;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
@@ -172,21 +172,22 @@ InventoryOwner {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.initEquipment(difficulty);
-        this.updateEnchantments(difficulty);
+        Random random = world.getRandom();
+        this.initEquipment(random, difficulty);
+        this.updateEnchantments(random, difficulty);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
     }
 
     @Override
-    protected void enchantMainHandItem(float power) {
+    protected void enchantMainHandItem(Random random, float power) {
         ItemStack itemStack;
-        super.enchantMainHandItem(power);
-        if (this.random.nextInt(300) == 0 && (itemStack = this.getMainHandStack()).isOf(Items.CROSSBOW)) {
+        super.enchantMainHandItem(random, power);
+        if (random.nextInt(300) == 0 && (itemStack = this.getMainHandStack()).isOf(Items.CROSSBOW)) {
             Map<Enchantment, Integer> map = EnchantmentHelper.get(itemStack);
             map.putIfAbsent(Enchantments.PIERCING, 1);
             EnchantmentHelper.set(map, itemStack);
@@ -231,7 +232,7 @@ InventoryOwner {
     }
 
     @Override
-    public Inventory getInventory() {
+    public SimpleInventory getInventory() {
         return this.inventory;
     }
 

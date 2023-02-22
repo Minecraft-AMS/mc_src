@@ -7,10 +7,10 @@
 package net.minecraft.structure.rule;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.structure.rule.RuleTest;
 import net.minecraft.structure.rule.RuleTestType;
+import net.minecraft.util.math.random.Random;
 
 public class AlwaysTrueRuleTest
 extends RuleTest {

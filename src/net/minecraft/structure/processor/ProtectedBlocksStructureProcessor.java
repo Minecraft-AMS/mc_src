@@ -9,8 +9,8 @@ package net.minecraft.structure.processor;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.block.Block;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.tag.TagKey;
@@ -23,17 +23,17 @@ import org.jetbrains.annotations.Nullable;
 public class ProtectedBlocksStructureProcessor
 extends StructureProcessor {
     public final TagKey<Block> protectedBlocksTag;
-    public static final Codec<ProtectedBlocksStructureProcessor> CODEC = TagKey.stringCodec(Registry.BLOCK_KEY).xmap(ProtectedBlocksStructureProcessor::new, protectedBlocksStructureProcessor -> protectedBlocksStructureProcessor.protectedBlocksTag);
+    public static final Codec<ProtectedBlocksStructureProcessor> CODEC = TagKey.codec(Registry.BLOCK_KEY).xmap(ProtectedBlocksStructureProcessor::new, processor -> processor.protectedBlocksTag);
 
-    public ProtectedBlocksStructureProcessor(TagKey<Block> tagKey) {
-        this.protectedBlocksTag = tagKey;
+    public ProtectedBlocksStructureProcessor(TagKey<Block> protectedBlocksTag) {
+        this.protectedBlocksTag = protectedBlocksTag;
     }
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData data) {
-        if (Feature.notInBlockTagPredicate(this.protectedBlocksTag).test(world.getBlockState(structureBlockInfo2.pos))) {
-            return structureBlockInfo2;
+    public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
+        if (Feature.notInBlockTagPredicate(this.protectedBlocksTag).test(world.getBlockState(currentBlockInfo.pos))) {
+            return currentBlockInfo;
         }
         return null;
     }

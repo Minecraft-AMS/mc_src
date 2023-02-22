@@ -4,7 +4,6 @@
 package net.minecraft.block;
 
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,6 +20,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -130,8 +130,8 @@ extends Block {
             if (entity.getFireTicks() == 0) {
                 entity.setOnFireFor(8);
             }
-            entity.damage(DamageSource.IN_FIRE, this.damage);
         }
+        entity.damage(DamageSource.IN_FIRE, this.damage);
         super.onEntityCollision(state, world, pos, entity);
     }
 

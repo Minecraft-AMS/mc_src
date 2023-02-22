@@ -24,11 +24,11 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.client.util.NetworkUtils;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class PublishCommand {
-    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.publish.failed"));
-    private static final DynamicCommandExceptionType ALREADY_PUBLISHED_EXCEPTION = new DynamicCommandExceptionType(port -> new TranslatableText("commands.publish.alreadyPublished", port));
+    private static final SimpleCommandExceptionType FAILED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.publish.failed"));
+    private static final DynamicCommandExceptionType ALREADY_PUBLISHED_EXCEPTION = new DynamicCommandExceptionType(port -> Text.translatable("commands.publish.alreadyPublished", port));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("publish").requires(source -> source.hasPermissionLevel(4))).executes(context -> PublishCommand.execute((ServerCommandSource)context.getSource(), NetworkUtils.findLocalPort()))).then(CommandManager.argument("port", IntegerArgumentType.integer((int)0, (int)65535)).executes(context -> PublishCommand.execute((ServerCommandSource)context.getSource(), IntegerArgumentType.getInteger((CommandContext)context, (String)"port")))));
@@ -41,7 +41,7 @@ public class PublishCommand {
         if (!source.getServer().openToLan(null, false, port)) {
             throw FAILED_EXCEPTION.create();
         }
-        source.sendFeedback(new TranslatableText("commands.publish.success", port), true);
+        source.sendFeedback(Text.translatable("commands.publish.success", port), true);
         return port;
     }
 }

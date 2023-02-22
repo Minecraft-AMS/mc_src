@@ -22,7 +22,6 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
@@ -34,11 +33,13 @@ extends Item {
     private static final Map<SoundEvent, MusicDiscItem> MUSIC_DISCS = Maps.newHashMap();
     private final int comparatorOutput;
     private final SoundEvent sound;
+    private final int lengthInTicks;
 
-    protected MusicDiscItem(int comparatorOutput, SoundEvent sound, Item.Settings settings) {
+    protected MusicDiscItem(int comparatorOutput, SoundEvent sound, Item.Settings settings, int lengthInSeconds) {
         super(settings);
         this.comparatorOutput = comparatorOutput;
         this.sound = sound;
+        this.lengthInTicks = lengthInSeconds * 20;
         MUSIC_DISCS.put(this.sound, this);
     }
 
@@ -52,7 +53,7 @@ extends Item {
         }
         ItemStack itemStack = context.getStack();
         if (!world.isClient) {
-            ((JukeboxBlock)Blocks.JUKEBOX).setRecord(world, blockPos, blockState, itemStack);
+            ((JukeboxBlock)Blocks.JUKEBOX).setRecord(context.getPlayer(), world, blockPos, blockState, itemStack);
             world.syncWorldEvent(null, 1010, blockPos, Item.getRawId(this));
             itemStack.decrement(1);
             PlayerEntity playerEntity = context.getPlayer();
@@ -73,7 +74,7 @@ extends Item {
     }
 
     public MutableText getDescription() {
-        return new TranslatableText(this.getTranslationKey() + ".desc");
+        return Text.translatable(this.getTranslationKey() + ".desc");
     }
 
     @Nullable
@@ -83,6 +84,10 @@ extends Item {
 
     public SoundEvent getSound() {
         return this.sound;
+    }
+
+    public int getSongLengthInTicks() {
+        return this.lengthInTicks;
     }
 }
 

@@ -14,7 +14,10 @@
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  it.unimi.dsi.fastutil.Hash$Strategy
- *  org.apache.commons.io.IOUtils
+ *  it.unimi.dsi.fastutil.ints.IntArrayList
+ *  it.unimi.dsi.fastutil.objects.Object2IntMap
+ *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+ *  it.unimi.dsi.fastutil.objects.ObjectArrayList
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -32,9 +35,12 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.Hash;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.MalformedURLException;
@@ -50,6 +56,8 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -57,37 +65,41 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.LongSupplier;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.util.CharPredicate;
 import net.minecraft.datafixer.Schemas;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.TimeSupplier;
 import net.minecraft.util.crash.CrashException;
+import net.minecraft.util.function.CharPredicate;
 import net.minecraft.util.logging.UncaughtExceptionLogger;
 import net.minecraft.util.math.MathHelper;
-import org.apache.commons.io.IOUtils;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -99,7 +111,8 @@ public class Util {
     private static final ExecutorService BOOTSTRAP_EXECUTOR = Util.createWorker("Bootstrap");
     private static final ExecutorService MAIN_WORKER_EXECUTOR = Util.createWorker("Main");
     private static final ExecutorService IO_WORKER_EXECUTOR = Util.createIoWorker();
-    public static LongSupplier nanoTimeSupplier = System::nanoTime;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss", Locale.ROOT);
+    public static TimeSupplier.Nanoseconds nanoTimeSupplier = System::nanoTime;
     public static final Ticker TICKER = new Ticker(){
 
         public long read() {
@@ -135,6 +148,10 @@ public class Util {
 
     public static long getEpochTimeMs() {
         return Instant.now().toEpochMilli();
+    }
+
+    public static String getFormattedCurrentTime() {
+        return DATE_TIME_FORMATTER.format(ZonedDateTime.now());
     }
 
     private static ExecutorService createWorker(String name) {
@@ -234,7 +251,7 @@ public class Util {
             Bootstrap.println(((CrashException)t).getReport().asString());
             System.exit(-1);
         }
-        LOGGER.error(String.format("Caught exception in thread %s", thread), t);
+        LOGGER.error(String.format(Locale.ROOT, "Caught exception in thread %s", thread), t);
     }
 
     @Nullable
@@ -370,6 +387,21 @@ public class Util {
         return object;
     }
 
+    @Nullable
+    public static <T, R> R map(@Nullable T value, Function<T, R> mapper) {
+        if (value == null) {
+            return null;
+        }
+        return mapper.apply(value);
+    }
+
+    public static <T, R> R mapOrElse(@Nullable T value, Function<T, R> mapper, R other) {
+        if (value == null) {
+            return other;
+        }
+        return mapper.apply(value);
+    }
+
     public static <K> Hash.Strategy<K> identityHashStrategy() {
         return IdentityHashStrategy.INSTANCE;
     }
@@ -386,21 +418,35 @@ public class Util {
     }
 
     public static <V> CompletableFuture<List<V>> combine(List<? extends CompletableFuture<? extends V>> futures) {
+        CompletableFuture completableFuture = new CompletableFuture();
+        return Util.combine(futures, completableFuture::completeExceptionally).applyToEither((CompletionStage)completableFuture, Function.identity());
+    }
+
+    public static <V> CompletableFuture<List<V>> combineCancellable(List<? extends CompletableFuture<? extends V>> futures) {
+        CompletableFuture completableFuture = new CompletableFuture();
+        return Util.combine(futures, throwable -> {
+            for (CompletableFuture completableFuture2 : futures) {
+                completableFuture2.cancel(true);
+            }
+            completableFuture.completeExceptionally((Throwable)throwable);
+        }).applyToEither((CompletionStage)completableFuture, Function.identity());
+    }
+
+    private static <V> CompletableFuture<List<V>> combine(List<? extends CompletableFuture<? extends V>> futures, Consumer<Throwable> exceptionHandler) {
         ArrayList list = Lists.newArrayListWithCapacity((int)futures.size());
         CompletableFuture[] completableFutures = new CompletableFuture[futures.size()];
-        CompletableFuture completableFuture = new CompletableFuture();
         futures.forEach(future -> {
             int i = list.size();
             list.add(null);
-            completableFutures[i] = future.whenComplete((object, throwable) -> {
+            completableFutures[i] = future.whenComplete((value, throwable) -> {
                 if (throwable != null) {
-                    completableFuture.completeExceptionally((Throwable)throwable);
+                    exceptionHandler.accept((Throwable)throwable);
                 } else {
-                    list.set(i, object);
+                    list.set(i, value);
                 }
             });
         });
-        return CompletableFuture.allOf(completableFutures).applyToEither((CompletionStage)completableFuture, void_ -> list);
+        return CompletableFuture.allOf(completableFutures).thenApply(void_ -> list);
     }
 
     public static <T> Optional<T> ifPresentOrElse(Optional<T> optional, Consumer<T> presentAction, Runnable elseAction) {
@@ -410,6 +456,10 @@ public class Util {
             elseAction.run();
         }
         return optional;
+    }
+
+    public static <T> Supplier<T> debugSupplier(Supplier<T> supplier, Supplier<String> messageSupplier) {
+        return supplier;
     }
 
     public static Runnable debugRunnable(Runnable runnable, Supplier<String> messageSupplier) {
@@ -690,14 +740,87 @@ public class Util {
             private final Map<Pair<T, U>, R> cache = Maps.newHashMap();
 
             @Override
-            public R apply(T object, U object2) {
-                return this.cache.computeIfAbsent(Pair.of(object, object2), pair -> biFunction.apply(pair.getFirst(), pair.getSecond()));
+            public R apply(T a, U b) {
+                return this.cache.computeIfAbsent(Pair.of(a, b), pair -> biFunction.apply(pair.getFirst(), pair.getSecond()));
             }
 
             public String toString() {
                 return "memoize/2[function=" + biFunction + ", size=" + this.cache.size() + "]";
             }
         };
+    }
+
+    public static <T> List<T> copyShuffled(Stream<T> stream, Random random) {
+        ObjectArrayList objectArrayList = (ObjectArrayList)stream.collect(ObjectArrayList.toList());
+        Util.shuffle(objectArrayList, random);
+        return objectArrayList;
+    }
+
+    public static IntArrayList shuffle(IntStream stream, Random random) {
+        int i;
+        IntArrayList intArrayList = IntArrayList.wrap((int[])stream.toArray());
+        for (int j = i = intArrayList.size(); j > 1; --j) {
+            int k = random.nextInt(j);
+            intArrayList.set(j - 1, intArrayList.set(k, intArrayList.getInt(j - 1)));
+        }
+        return intArrayList;
+    }
+
+    public static <T> List<T> copyShuffled(T[] array, Random random) {
+        ObjectArrayList objectArrayList = new ObjectArrayList((Object[])array);
+        Util.shuffle(objectArrayList, random);
+        return objectArrayList;
+    }
+
+    public static <T> List<T> copyShuffled(ObjectArrayList<T> list, Random random) {
+        ObjectArrayList objectArrayList = new ObjectArrayList(list);
+        Util.shuffle(objectArrayList, random);
+        return objectArrayList;
+    }
+
+    public static <T> void shuffle(ObjectArrayList<T> list, Random random) {
+        int i;
+        for (int j = i = list.size(); j > 1; --j) {
+            int k = random.nextInt(j);
+            list.set(j - 1, list.set(k, list.get(j - 1)));
+        }
+    }
+
+    public static <T> CompletableFuture<T> waitAndApply(Function<Executor, CompletableFuture<T>> resultFactory) {
+        return Util.waitAndApply(resultFactory, CompletableFuture::isDone);
+    }
+
+    public static <T> T waitAndApply(Function<Executor, T> resultFactory, Predicate<T> donePredicate) {
+        int i;
+        LinkedBlockingQueue blockingQueue = new LinkedBlockingQueue();
+        T object = resultFactory.apply(blockingQueue::add);
+        while (!donePredicate.test(object)) {
+            try {
+                Runnable runnable = (Runnable)blockingQueue.poll(100L, TimeUnit.MILLISECONDS);
+                if (runnable == null) continue;
+                runnable.run();
+            }
+            catch (InterruptedException interruptedException) {
+                LOGGER.warn("Interrupted wait");
+                break;
+            }
+        }
+        if ((i = blockingQueue.size()) > 0) {
+            LOGGER.warn("Tasks left in queue: {}", (Object)i);
+        }
+        return object;
+    }
+
+    public static <T> ToIntFunction<T> lastIndexGetter(List<T> values) {
+        return Util.lastIndexGetter(values, Object2IntOpenHashMap::new);
+    }
+
+    public static <T> ToIntFunction<T> lastIndexGetter(List<T> values, IntFunction<Object2IntMap<T>> mapCreator) {
+        Object2IntMap<T> object2IntMap = mapCreator.apply(values.size());
+        for (int i = 0; i < values.size(); ++i) {
+            object2IntMap.put(values.get(i), i);
+        }
+        return object2IntMap;
     }
 
     /*
@@ -740,9 +863,6 @@ public class Util {
         public void open(URL url) {
             try {
                 Process process = AccessController.doPrivileged(() -> Runtime.getRuntime().exec(this.getURLOpenCommand(url)));
-                for (String string : IOUtils.readLines((InputStream)process.getErrorStream())) {
-                    LOGGER.error(string);
-                }
                 process.getInputStream().close();
                 process.getErrorStream().close();
                 process.getOutputStream().close();
@@ -814,12 +934,12 @@ public class Util {
             return Enum.valueOf(IdentityHashStrategy.class, string);
         }
 
-        public int hashCode(Object object) {
-            return System.identityHashCode(object);
+        public int hashCode(Object o) {
+            return System.identityHashCode(o);
         }
 
-        public boolean equals(Object object, Object object2) {
-            return object == object2;
+        public boolean equals(Object o, Object o2) {
+            return o == o2;
         }
 
         private static /* synthetic */ IdentityHashStrategy[] method_36578() {

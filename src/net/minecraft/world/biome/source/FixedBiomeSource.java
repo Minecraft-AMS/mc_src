@@ -15,11 +15,12 @@ import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeSource;
@@ -32,19 +33,14 @@ implements BiomeAccess.Storage {
     public static final Codec<FixedBiomeSource> CODEC = Biome.REGISTRY_CODEC.fieldOf("biome").xmap(FixedBiomeSource::new, fixedBiomeSource -> fixedBiomeSource.biome).stable().codec();
     private final RegistryEntry<Biome> biome;
 
-    public FixedBiomeSource(RegistryEntry<Biome> registryEntry) {
-        super((List<RegistryEntry<Biome>>)ImmutableList.of(registryEntry));
-        this.biome = registryEntry;
+    public FixedBiomeSource(RegistryEntry<Biome> biome) {
+        super((List<RegistryEntry<Biome>>)ImmutableList.of(biome));
+        this.biome = biome;
     }
 
     @Override
     protected Codec<? extends BiomeSource> getCodec() {
         return CODEC;
-    }
-
-    @Override
-    public BiomeSource withSeed(long seed) {
-        return this;
     }
 
     @Override
@@ -70,7 +66,13 @@ implements BiomeAccess.Storage {
     }
 
     @Override
-    public Set<RegistryEntry<Biome>> getBiomesInArea(int x, int y, int z, int radius, MultiNoiseUtil.MultiNoiseSampler multiNoiseSampler) {
+    @Nullable
+    public Pair<BlockPos, RegistryEntry<Biome>> locateBiome(BlockPos origin, int radius, int horizontalBlockCheckInterval, int verticalBlockCheckInterval, Predicate<RegistryEntry<Biome>> predicate, MultiNoiseUtil.MultiNoiseSampler noiseSampler, WorldView world) {
+        return predicate.test(this.biome) ? Pair.of((Object)origin, this.biome) : null;
+    }
+
+    @Override
+    public Set<RegistryEntry<Biome>> getBiomesInArea(int x, int y, int z, int radius, MultiNoiseUtil.MultiNoiseSampler sampler) {
         return Sets.newHashSet(Set.of(this.biome));
     }
 }

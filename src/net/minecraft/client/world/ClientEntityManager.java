@@ -134,6 +134,7 @@ public class ClientEntityManager<T extends EntityLike> {
                 entityTrackingSection.add(this.entity);
                 this.section = entityTrackingSection;
                 this.lastSectionPos = l;
+                this.manager.handler.updateLoadStatus(this.entity);
                 if (!this.entity.isPlayer()) {
                     boolean bl = entityTrackingStatus.shouldTick();
                     boolean bl2 = entityTrackingSection.getStatus().shouldTick();

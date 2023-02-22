@@ -23,10 +23,6 @@ import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Random;
-import java.util.stream.Collectors;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -37,11 +33,11 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.structure.SimpleStructurePiece;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructureContext;
-import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePieceType;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
+import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.structure.processor.BlackstoneReplacementStructureProcessor;
 import net.minecraft.structure.processor.BlockAgeStructureProcessor;
 import net.minecraft.structure.processor.BlockIgnoreStructureProcessor;
@@ -56,10 +52,12 @@ import net.minecraft.tag.BlockTags;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.StructureWorldAccess;
@@ -74,17 +72,16 @@ extends SimpleStructurePiece {
     private static final float field_31620 = 0.3f;
     private static final float field_31621 = 0.07f;
     private static final float field_31622 = 0.2f;
-    private static final float field_31623 = 0.2f;
     private final VerticalPlacement verticalPlacement;
     private final Properties properties;
 
-    public RuinedPortalStructurePiece(StructureManager manager, BlockPos pos, VerticalPlacement verticalPlacement, Properties properties, Identifier id, Structure structure, BlockRotation rotation, BlockMirror mirror, BlockPos blockPos) {
+    public RuinedPortalStructurePiece(StructureTemplateManager manager, BlockPos pos, VerticalPlacement verticalPlacement, Properties properties, Identifier id, StructureTemplate template, BlockRotation rotation, BlockMirror mirror, BlockPos blockPos) {
         super(StructurePieceType.RUINED_PORTAL, 0, manager, id, id.toString(), RuinedPortalStructurePiece.createPlacementData(mirror, rotation, verticalPlacement, blockPos, properties), pos);
         this.verticalPlacement = verticalPlacement;
         this.properties = properties;
     }
 
-    public RuinedPortalStructurePiece(StructureManager manager, NbtCompound nbt) {
+    public RuinedPortalStructurePiece(StructureTemplateManager manager, NbtCompound nbt) {
         super(StructurePieceType.RUINED_PORTAL, nbt, manager, id -> RuinedPortalStructurePiece.createPlacementData(manager, nbt, id));
         this.verticalPlacement = VerticalPlacement.getFromId(nbt.getString("VerticalPlacement"));
         this.properties = (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0));
@@ -99,9 +96,9 @@ extends SimpleStructurePiece {
         Properties.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.properties).resultOrPartial(arg_0 -> ((Logger)field_24992).error(arg_0)).ifPresent(nbtElement -> nbt.put("Properties", (NbtElement)nbtElement));
     }
 
-    private static StructurePlacementData createPlacementData(StructureManager manager, NbtCompound nbt, Identifier id) {
-        Structure structure = manager.getStructureOrBlank(id);
-        BlockPos blockPos = new BlockPos(structure.getSize().getX() / 2, 0, structure.getSize().getZ() / 2);
+    private static StructurePlacementData createPlacementData(StructureTemplateManager manager, NbtCompound nbt, Identifier id) {
+        StructureTemplate structureTemplate = manager.getTemplateOrBlank(id);
+        BlockPos blockPos = new BlockPos(structureTemplate.getSize().getX() / 2, 0, structureTemplate.getSize().getZ() / 2);
         return RuinedPortalStructurePiece.createPlacementData(BlockMirror.valueOf(nbt.getString("Mirror")), BlockRotation.valueOf(nbt.getString("Rotation")), VerticalPlacement.getFromId(nbt.getString("VerticalPlacement")), blockPos, (Properties)Properties.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("Properties"))).getOrThrow(true, arg_0 -> ((Logger)field_24992).error(arg_0)));
     }
 
@@ -131,13 +128,13 @@ extends SimpleStructurePiece {
     }
 
     @Override
-    public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, BlockPos pos2) {
-        BlockBox blockBox = this.structure.calculateBoundingBox(this.placementData, this.pos);
+    public void generate(StructureWorldAccess world, StructureAccessor structureAccessor, ChunkGenerator chunkGenerator, Random random, BlockBox chunkBox, ChunkPos chunkPos, BlockPos pivot) {
+        BlockBox blockBox = this.template.calculateBoundingBox(this.placementData, this.pos);
         if (!chunkBox.contains(blockBox.getCenter())) {
             return;
         }
         chunkBox.encompass(blockBox);
-        super.generate(world, structureAccessor, chunkGenerator, random, chunkBox, chunkPos, pos2);
+        super.generate(world, structureAccessor, chunkGenerator, random, chunkBox, chunkPos, pivot);
         this.placeNetherrackBase(random, world);
         this.updateNetherracksInBound(random, world);
         if (this.properties.vines || this.properties.overgrown) {
@@ -260,14 +257,15 @@ extends SimpleStructurePiece {
     }
 
     public static final class VerticalPlacement
-    extends Enum<VerticalPlacement> {
+    extends Enum<VerticalPlacement>
+    implements StringIdentifiable {
         public static final /* enum */ VerticalPlacement ON_LAND_SURFACE = new VerticalPlacement("on_land_surface");
         public static final /* enum */ VerticalPlacement PARTLY_BURIED = new VerticalPlacement("partly_buried");
         public static final /* enum */ VerticalPlacement ON_OCEAN_FLOOR = new VerticalPlacement("on_ocean_floor");
         public static final /* enum */ VerticalPlacement IN_MOUNTAIN = new VerticalPlacement("in_mountain");
         public static final /* enum */ VerticalPlacement UNDERGROUND = new VerticalPlacement("underground");
         public static final /* enum */ VerticalPlacement IN_NETHER = new VerticalPlacement("in_nether");
-        private static final Map<String, VerticalPlacement> VERTICAL_PLACEMENTS;
+        public static final StringIdentifiable.Codec<VerticalPlacement> field_37811;
         private final String id;
         private static final /* synthetic */ VerticalPlacement[] field_24037;
 
@@ -288,7 +286,12 @@ extends SimpleStructurePiece {
         }
 
         public static VerticalPlacement getFromId(String id) {
-            return VERTICAL_PLACEMENTS.get(id);
+            return field_37811.byId(id);
+        }
+
+        @Override
+        public String asString() {
+            return this.id;
         }
 
         private static /* synthetic */ VerticalPlacement[] method_36761() {
@@ -297,14 +300,14 @@ extends SimpleStructurePiece {
 
         static {
             field_24037 = VerticalPlacement.method_36761();
-            VERTICAL_PLACEMENTS = Arrays.stream(VerticalPlacement.values()).collect(Collectors.toMap(VerticalPlacement::getId, verticalPlacement -> verticalPlacement));
+            field_37811 = StringIdentifiable.createCodec(VerticalPlacement::values);
         }
     }
 
     public static class Properties {
         public static final Codec<Properties> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.BOOL.fieldOf("cold").forGetter(properties -> properties.cold), (App)Codec.FLOAT.fieldOf("mossiness").forGetter(properties -> Float.valueOf(properties.mossiness)), (App)Codec.BOOL.fieldOf("air_pocket").forGetter(properties -> properties.airPocket), (App)Codec.BOOL.fieldOf("overgrown").forGetter(properties -> properties.overgrown), (App)Codec.BOOL.fieldOf("vines").forGetter(properties -> properties.vines), (App)Codec.BOOL.fieldOf("replace_with_blackstone").forGetter(properties -> properties.replaceWithBlackstone)).apply((Applicative)instance, Properties::new));
         public boolean cold;
-        public float mossiness = 0.2f;
+        public float mossiness;
         public boolean airPocket;
         public boolean overgrown;
         public boolean vines;

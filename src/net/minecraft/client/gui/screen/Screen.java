@@ -31,13 +31,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.AbstractParentElement;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
-import net.minecraft.client.gui.screen.ConfirmChatLinkScreen;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.screen.narration.ScreenNarrator;
@@ -54,7 +55,6 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.ClickEvent;
@@ -62,7 +62,6 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
@@ -78,7 +77,7 @@ implements Drawable {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<String> ALLOWED_PROTOCOLS = Sets.newHashSet((Object[])new String[]{"http", "https"});
     private static final int field_32270 = 2;
-    private static final Text SCREEN_USAGE_TEXT = new TranslatableText("narrator.screen.usage");
+    private static final Text SCREEN_USAGE_TEXT = Text.translatable("narrator.screen.usage");
     protected final Text title;
     private final List<Element> children = Lists.newArrayList();
     private final List<Selectable> selectables = Lists.newArrayList();
@@ -256,8 +255,7 @@ implements Drawable {
         RenderSystem.disableTexture();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        bufferBuilder.end();
-        BufferRenderer.draw(bufferBuilder);
+        BufferRenderer.drawWithShader(bufferBuilder.end());
         RenderSystem.disableBlend();
         RenderSystem.enableTexture();
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
@@ -315,9 +313,9 @@ implements Drawable {
                 this.insertText(style.getInsertion(), false);
             }
         } else if (clickEvent != null) {
-            block21: {
+            block24: {
                 if (clickEvent.getAction() == ClickEvent.Action.OPEN_URL) {
-                    if (!this.client.options.chatLinks) {
+                    if (!this.client.options.getChatLinks().getValue().booleanValue()) {
                         return false;
                     }
                     try {
@@ -329,10 +327,10 @@ implements Drawable {
                         if (!ALLOWED_PROTOCOLS.contains(string.toLowerCase(Locale.ROOT))) {
                             throw new URISyntaxException(clickEvent.getValue(), "Unsupported protocol: " + string.toLowerCase(Locale.ROOT));
                         }
-                        if (this.client.options.chatLinksPrompt) {
+                        if (this.client.options.getChatLinksPrompt().getValue().booleanValue()) {
                             this.clickedLink = uRI;
-                            this.client.setScreen(new ConfirmChatLinkScreen(this::confirmLink, clickEvent.getValue(), false));
-                            break block21;
+                            this.client.setScreen(new ConfirmLinkScreen(this::confirmLink, clickEvent.getValue(), false));
+                            break block24;
                         }
                         this.openLink(uRI);
                     }
@@ -343,9 +341,16 @@ implements Drawable {
                     URI uRI = new File(clickEvent.getValue()).toURI();
                     this.openLink(uRI);
                 } else if (clickEvent.getAction() == ClickEvent.Action.SUGGEST_COMMAND) {
-                    this.insertText(clickEvent.getValue(), true);
+                    this.insertText(SharedConstants.stripInvalidChars(clickEvent.getValue()), true);
                 } else if (clickEvent.getAction() == ClickEvent.Action.RUN_COMMAND) {
-                    this.sendMessage(clickEvent.getValue(), false);
+                    String string2 = SharedConstants.stripInvalidChars(clickEvent.getValue());
+                    if (string2.startsWith("/")) {
+                        if (!this.client.player.sendCommand(string2.substring(1))) {
+                            LOGGER.error("Not allowed to run command with signed argument from click event: '{}'", (Object)string2);
+                        }
+                    } else {
+                        LOGGER.error("Failed to run command without '/' prefix from click event: '{}'", (Object)string2);
+                    }
                 } else if (clickEvent.getAction() == ClickEvent.Action.COPY_TO_CLIPBOARD) {
                     this.client.keyboard.setClipboard(clickEvent.getValue());
                 } else {
@@ -357,28 +362,21 @@ implements Drawable {
         return false;
     }
 
-    public void sendMessage(String message) {
-        this.sendMessage(message, true);
-    }
-
-    public void sendMessage(String message, boolean toHud) {
-        if (toHud) {
-            this.client.inGameHud.getChatHud().addToMessageHistory(message);
-        }
-        this.client.player.sendChatMessage(message);
-    }
-
     public final void init(MinecraftClient client, int width, int height) {
         this.client = client;
         this.itemRenderer = client.getItemRenderer();
         this.textRenderer = client.textRenderer;
         this.width = width;
         this.height = height;
+        this.clearAndInit();
+        this.narrateScreenIfNarrationEnabled(false);
+        this.setElementNarrationDelay(SCREEN_INIT_NARRATION_DELAY);
+    }
+
+    protected void clearAndInit() {
         this.clearChildren();
         this.setFocused(null);
         this.init();
-        this.narrateScreenIfNarrationEnabled(false);
-        this.setElementNarrationDelay(SCREEN_INIT_NARRATION_DELAY);
     }
 
     @Override
@@ -529,7 +527,7 @@ implements Drawable {
     }
 
     private boolean isNarratorActive() {
-        return NarratorManager.INSTANCE.isActive();
+        return this.client.getNarratorManager().isActive();
     }
 
     public void updateNarrator() {
@@ -540,7 +538,7 @@ implements Drawable {
         }
     }
 
-    protected void narrateScreenIfNarrationEnabled(boolean useTranslationsCache) {
+    public void narrateScreenIfNarrationEnabled(boolean useTranslationsCache) {
         if (this.isNarratorActive()) {
             this.narrateScreen(useTranslationsCache);
         }
@@ -550,7 +548,7 @@ implements Drawable {
         this.narrator.buildNarrations(this::addScreenNarrations);
         String string = this.narrator.buildNarratorText(!useTranslationsCache);
         if (!string.isEmpty()) {
-            NarratorManager.INSTANCE.narrate(string);
+            this.client.getNarratorManager().narrate(string);
         }
     }
 
@@ -568,9 +566,9 @@ implements Drawable {
                 this.selected = selectedElementNarrationData.selectable;
             }
             if (immutableList.size() > 1) {
-                builder.put(NarrationPart.POSITION, (Text)new TranslatableText("narrator.position.screen", selectedElementNarrationData.index + 1, immutableList.size()));
+                builder.put(NarrationPart.POSITION, (Text)Text.translatable("narrator.position.screen", selectedElementNarrationData.index + 1, immutableList.size()));
                 if (selectedElementNarrationData.selectType == Selectable.SelectionType.FOCUSED) {
-                    builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.component_list.usage"));
+                    builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.component_list.usage"));
                 }
             }
             selectedElementNarrationData.selectable.appendNarrations(builder.nextMessage());

@@ -21,14 +21,14 @@ import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 
 public class CheckerboardBiomeSource
 extends BiomeSource {
-    public static final Codec<CheckerboardBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Biome.field_26750.fieldOf("biomes").forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.biomeArray), (App)Codec.intRange((int)0, (int)62).fieldOf("scale").orElse((Object)2).forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.scale)).apply((Applicative)instance, CheckerboardBiomeSource::new));
+    public static final Codec<CheckerboardBiomeSource> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Biome.REGISTRY_ENTRY_LIST_CODEC.fieldOf("biomes").forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.biomeArray), (App)Codec.intRange((int)0, (int)62).fieldOf("scale").orElse((Object)2).forGetter(checkerboardBiomeSource -> checkerboardBiomeSource.scale)).apply((Applicative)instance, CheckerboardBiomeSource::new));
     private final RegistryEntryList<Biome> biomeArray;
     private final int gridSize;
     private final int scale;
 
-    public CheckerboardBiomeSource(RegistryEntryList<Biome> registryEntryList, int size) {
-        super(registryEntryList.stream());
-        this.biomeArray = registryEntryList;
+    public CheckerboardBiomeSource(RegistryEntryList<Biome> biomes, int size) {
+        super(biomes.stream());
+        this.biomeArray = biomes;
         this.gridSize = size + 2;
         this.scale = size;
     }
@@ -36,11 +36,6 @@ extends BiomeSource {
     @Override
     protected Codec<? extends BiomeSource> getCodec() {
         return CODEC;
-    }
-
-    @Override
-    public BiomeSource withSeed(long seed) {
-        return this;
     }
 
     @Override

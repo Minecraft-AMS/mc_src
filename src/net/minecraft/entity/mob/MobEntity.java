@@ -2,17 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.collect.ImmutableSet
  *  com.google.common.collect.Maps
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.entity.mob;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -76,6 +77,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
@@ -83,6 +86,7 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class MobEntity
@@ -91,13 +95,15 @@ extends LivingEntity {
     private static final int AI_DISABLED_FLAG = 1;
     private static final int LEFT_HANDED_FLAG = 2;
     private static final int ATTACKING_FLAG = 4;
+    protected static final int MINIMUM_DROPPED_XP_PER_EQUIPMENT = 1;
+    private static final Vec3i ITEM_PICK_UP_RANGE_EXPANDER = new Vec3i(1, 0, 1);
     public static final float BASE_SPAWN_EQUIPMENT_CHANCE = 0.15f;
     public static final float DEFAULT_CAN_PICKUP_LOOT_CHANCE = 0.55f;
     public static final float BASE_ENCHANTED_ARMOR_CHANCE = 0.5f;
     public static final float BASE_ENCHANTED_MAIN_HAND_EQUIPMENT_CHANCE = 0.25f;
     public static final String LEASH_KEY = "Leash";
-    private static final int MINIMUM_DROPPED_XP_PER_EQUIPMENT = 1;
     public static final float DEFAULT_DROP_CHANCE = 0.085f;
+    public static final int field_38932 = 2;
     public static final int field_35039 = 2;
     public int ambientSoundChance;
     protected int experiencePoints;
@@ -226,6 +232,7 @@ extends LivingEntity {
     }
 
     public void onEatingGrass() {
+        this.emitGameEvent(GameEvent.EAT);
     }
 
     @Override
@@ -267,7 +274,7 @@ extends LivingEntity {
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         if (this.experiencePoints > 0) {
             int j;
             int i = this.experiencePoints;
@@ -484,13 +491,18 @@ extends LivingEntity {
         super.tickMovement();
         this.world.getProfiler().push("looting");
         if (!this.world.isClient && this.canPickUpLoot() && this.isAlive() && !this.dead && this.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
-            List<ItemEntity> list = this.world.getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand(1.0, 0.0, 1.0));
+            Vec3i vec3i = this.getItemPickUpRangeExpander();
+            List<ItemEntity> list = this.world.getNonSpectatingEntities(ItemEntity.class, this.getBoundingBox().expand(vec3i.getX(), vec3i.getY(), vec3i.getZ()));
             for (ItemEntity itemEntity : list) {
                 if (itemEntity.isRemoved() || itemEntity.getStack().isEmpty() || itemEntity.cannotPickup() || !this.canGather(itemEntity.getStack())) continue;
                 this.loot(itemEntity);
             }
         }
         this.world.getProfiler().pop();
+    }
+
+    protected Vec3i getItemPickUpRangeExpander() {
+        return ITEM_PICK_UP_RANGE_EXPANDER;
     }
 
     protected void loot(ItemEntity item) {
@@ -512,7 +524,6 @@ extends LivingEntity {
                 this.dropStack(itemStack);
             }
             this.equipLootStack(equipmentSlot, equipment);
-            this.onEquipStack(equipment);
             return true;
         }
         return false;
@@ -595,7 +606,7 @@ extends LivingEntity {
             return true;
         }
         if (newStack.hasNbt() && oldStack.hasNbt()) {
-            return newStack.getNbt().getKeys().stream().anyMatch(string -> !string.equals("Damage")) && !oldStack.getNbt().getKeys().stream().anyMatch(string -> !string.equals("Damage"));
+            return newStack.getNbt().getKeys().stream().anyMatch(key -> !key.equals("Damage")) && !oldStack.getNbt().getKeys().stream().anyMatch(key -> !key.equals("Damage"));
         }
         return false;
     }
@@ -769,7 +780,7 @@ extends LivingEntity {
     }
 
     @Override
-    public Iterable<ItemStack> getItemsHand() {
+    public Iterable<ItemStack> getHandItems() {
         return this.handItems;
     }
 
@@ -796,11 +807,11 @@ extends LivingEntity {
         this.processEquippedStack(stack);
         switch (slot.getType()) {
             case HAND: {
-                this.handItems.set(slot.getEntitySlotId(), stack);
+                this.onEquipStack(slot, this.handItems.set(slot.getEntitySlotId(), stack), stack);
                 break;
             }
             case ARMOR: {
-                this.armorItems.set(slot.getEntitySlotId(), stack);
+                this.onEquipStack(slot, this.armorItems.set(slot.getEntitySlotId(), stack), stack);
             }
         }
     }
@@ -830,18 +841,18 @@ extends LivingEntity {
         };
     }
 
-    protected void initEquipment(LocalDifficulty difficulty) {
-        if (this.random.nextFloat() < 0.15f * difficulty.getClampedLocalDifficulty()) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
+        if (random.nextFloat() < 0.15f * localDifficulty.getClampedLocalDifficulty()) {
             float f;
-            int i = this.random.nextInt(2);
+            int i = random.nextInt(2);
             float f2 = f = this.world.getDifficulty() == Difficulty.HARD ? 0.1f : 0.25f;
-            if (this.random.nextFloat() < 0.095f) {
+            if (random.nextFloat() < 0.095f) {
                 ++i;
             }
-            if (this.random.nextFloat() < 0.095f) {
+            if (random.nextFloat() < 0.095f) {
                 ++i;
             }
-            if (this.random.nextFloat() < 0.095f) {
+            if (random.nextFloat() < 0.095f) {
                 ++i;
             }
             boolean bl = true;
@@ -849,7 +860,7 @@ extends LivingEntity {
                 Item item;
                 if (equipmentSlot.getType() != EquipmentSlot.Type.ARMOR) continue;
                 ItemStack itemStack = this.getEquippedStack(equipmentSlot);
-                if (!bl && this.random.nextFloat() < f) break;
+                if (!bl && random.nextFloat() < f) break;
                 bl = false;
                 if (!itemStack.isEmpty() || (item = MobEntity.getEquipmentForSlot(equipmentSlot, i)) == null) continue;
                 this.equipStack(equipmentSlot, new ItemStack(item));
@@ -931,41 +942,38 @@ extends LivingEntity {
         return null;
     }
 
-    protected void updateEnchantments(LocalDifficulty difficulty) {
-        float f = difficulty.getClampedLocalDifficulty();
-        this.enchantMainHandItem(f);
+    protected void updateEnchantments(Random random, LocalDifficulty localDifficulty) {
+        float f = localDifficulty.getClampedLocalDifficulty();
+        this.enchantMainHandItem(random, f);
         for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             if (equipmentSlot.getType() != EquipmentSlot.Type.ARMOR) continue;
-            this.enchantEquipment(f, equipmentSlot);
+            this.enchantEquipment(random, f, equipmentSlot);
         }
     }
 
-    protected void enchantMainHandItem(float power) {
-        if (!this.getMainHandStack().isEmpty() && this.random.nextFloat() < 0.25f * power) {
-            this.equipStack(EquipmentSlot.MAINHAND, EnchantmentHelper.enchant(this.random, this.getMainHandStack(), (int)(5.0f + power * (float)this.random.nextInt(18)), false));
+    protected void enchantMainHandItem(Random random, float power) {
+        if (!this.getMainHandStack().isEmpty() && random.nextFloat() < 0.25f * power) {
+            this.equipStack(EquipmentSlot.MAINHAND, EnchantmentHelper.enchant(random, this.getMainHandStack(), (int)(5.0f + power * (float)random.nextInt(18)), false));
         }
     }
 
-    protected void enchantEquipment(float power, EquipmentSlot slot) {
+    protected void enchantEquipment(Random random, float power, EquipmentSlot slot) {
         ItemStack itemStack = this.getEquippedStack(slot);
-        if (!itemStack.isEmpty() && this.random.nextFloat() < 0.5f * power) {
-            this.equipStack(slot, EnchantmentHelper.enchant(this.random, itemStack, (int)(5.0f + power * (float)this.random.nextInt(18)), false));
+        if (!itemStack.isEmpty() && random.nextFloat() < 0.5f * power) {
+            this.equipStack(slot, EnchantmentHelper.enchant(random, itemStack, (int)(5.0f + power * (float)random.nextInt(18)), false));
         }
     }
 
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).addPersistentModifier(new EntityAttributeModifier("Random spawn bonus", this.random.nextGaussian() * 0.05, EntityAttributeModifier.Operation.MULTIPLY_BASE));
-        if (this.random.nextFloat() < 0.05f) {
+        Random random = world.getRandom();
+        this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).addPersistentModifier(new EntityAttributeModifier("Random spawn bonus", random.nextTriangular(0.0, 0.11485000000000001), EntityAttributeModifier.Operation.MULTIPLY_BASE));
+        if (random.nextFloat() < 0.05f) {
             this.setLeftHanded(true);
         } else {
             this.setLeftHanded(false);
         }
         return entityData;
-    }
-
-    public boolean canBeControlledByRider() {
-        return false;
     }
 
     public void setPersistent() {
@@ -1017,6 +1025,7 @@ extends LivingEntity {
         }
         actionResult = this.interactMob(player, hand);
         if (actionResult.isAccepted()) {
+            this.emitGameEvent(GameEvent.ENTITY_INTERACT);
             return actionResult;
         }
         return super.interact(player, hand);
@@ -1210,7 +1219,7 @@ extends LivingEntity {
 
     @Override
     public boolean isLogicalSideForUpdatingMovement() {
-        return this.canBeControlledByRider() && super.isLogicalSideForUpdatingMovement();
+        return this.hasPrimaryPassenger() && super.isLogicalSideForUpdatingMovement();
     }
 
     @Override
@@ -1255,6 +1264,11 @@ extends LivingEntity {
 
     public double squaredAttackRange(LivingEntity target) {
         return this.getWidth() * 2.0f * (this.getWidth() * 2.0f) + target.getWidth();
+    }
+
+    public boolean isInAttackRange(LivingEntity entity) {
+        double d = this.squaredDistanceTo(entity.getX(), entity.getY(), entity.getZ());
+        return d <= this.squaredAttackRange(entity);
     }
 
     @Override
@@ -1337,6 +1351,10 @@ extends LivingEntity {
             return null;
         }
         return new ItemStack(spawnEggItem);
+    }
+
+    public Iterable<BlockPos> getPotentialEscapePositions() {
+        return ImmutableSet.of((Object)new BlockPos(this.getBoundingBox().minX, (double)this.getBlockY(), this.getBoundingBox().minZ), (Object)new BlockPos(this.getBoundingBox().minX, (double)this.getBlockY(), this.getBoundingBox().maxZ), (Object)new BlockPos(this.getBoundingBox().maxX, (double)this.getBlockY(), this.getBoundingBox().minZ), (Object)new BlockPos(this.getBoundingBox().maxX, (double)this.getBlockY(), this.getBoundingBox().maxZ));
     }
 }
 

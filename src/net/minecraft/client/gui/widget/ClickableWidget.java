@@ -25,7 +25,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -83,7 +82,7 @@ Selectable {
     }
 
     public static MutableText getNarrationMessage(Text message) {
-        return new TranslatableText("gui.narrate.button", message);
+        return Text.translatable("gui.narrate.button", message);
     }
 
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
@@ -232,9 +231,9 @@ Selectable {
         builder.put(NarrationPart.TITLE, (Text)this.getNarrationMessage());
         if (this.active) {
             if (this.isFocused()) {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.button.usage.focused"));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.button.usage.focused"));
             } else {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.button.usage.hovered"));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.button.usage.hovered"));
             }
         }
     }

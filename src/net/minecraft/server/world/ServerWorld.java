@@ -43,8 +43,10 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -89,7 +91,6 @@ import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlaySoundFromEntityS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerSpawnPositionS2CPacket;
-import net.minecraft.network.packet.s2c.play.VibrationS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.recipe.RecipeManager;
@@ -107,10 +108,10 @@ import net.minecraft.server.world.SleepManager;
 import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.structure.StructureManager;
+import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.tag.TagKey;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.CsvWriter;
 import net.minecraft.util.ProgressListener;
 import net.minecraft.util.TypeFilter;
@@ -147,7 +148,6 @@ import net.minecraft.world.PortalForcer;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.StructureLocator;
 import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.Vibration;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.BlockEntityTickInvoker;
@@ -155,20 +155,23 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.dimension.DimensionOptions;
+import net.minecraft.world.dimension.DimensionTypes;
 import net.minecraft.world.entity.EntityHandler;
 import net.minecraft.world.entity.EntityLookup;
 import net.minecraft.world.event.GameEvent;
 import net.minecraft.world.event.listener.EntityGameEventHandler;
+import net.minecraft.world.event.listener.GameEventListener;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.feature.ConfiguredStructureFeature;
+import net.minecraft.world.gen.structure.Structure;
 import net.minecraft.world.level.ServerWorldProperties;
 import net.minecraft.world.level.storage.LevelStorage;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.poi.PointOfInterestTypes;
 import net.minecraft.world.spawner.Spawner;
 import net.minecraft.world.storage.EntityChunkDataAccess;
 import net.minecraft.world.tick.QueryableTickScheduler;
@@ -209,6 +212,7 @@ implements StructureWorldAccess {
     protected final RaidManager raidManager;
     private final ObjectLinkedOpenHashSet<BlockEvent> syncedBlockEventQueue = new ObjectLinkedOpenHashSet();
     private final List<BlockEvent> blockEventQueue = new ArrayList<BlockEvent>(64);
+    private List<GameEvent.Message> queuedEvents = new ArrayList<GameEvent.Message>();
     private boolean inBlockTick;
     private final List<Spawner> spawners;
     @Nullable
@@ -218,30 +222,31 @@ implements StructureWorldAccess {
     private final StructureLocator structureLocator;
     private final boolean shouldTickTime;
 
-    public ServerWorld(MinecraftServer server, Executor workerExecutor, LevelStorage.Session session, ServerWorldProperties properties, RegistryKey<World> worldKey, RegistryEntry<DimensionType> registryEntry, WorldGenerationProgressListener worldGenerationProgressListener, ChunkGenerator chunkGenerator, boolean debugWorld, long seed, List<Spawner> spawners, boolean shouldTickTime) {
-        super(properties, worldKey, registryEntry, server::getProfiler, false, debugWorld, seed);
+    public ServerWorld(MinecraftServer server, Executor workerExecutor, LevelStorage.Session session, ServerWorldProperties properties, RegistryKey<World> worldKey, DimensionOptions dimensionOptions, WorldGenerationProgressListener worldGenerationProgressListener, boolean debugWorld, long seed, List<Spawner> spawners, boolean shouldTickTime) {
+        super(properties, worldKey, dimensionOptions.getDimensionTypeEntry(), server::getProfiler, false, debugWorld, seed, server.getMaxChainedNeighborUpdates());
         this.shouldTickTime = shouldTickTime;
         this.server = server;
         this.spawners = spawners;
         this.worldProperties = properties;
-        chunkGenerator.method_41058();
+        ChunkGenerator chunkGenerator = dimensionOptions.getChunkGenerator();
         boolean bl = server.syncChunkWrites();
         DataFixer dataFixer = server.getDataFixer();
         EntityChunkDataAccess chunkDataAccess = new EntityChunkDataAccess(this, session.getWorldDirectory(worldKey).resolve("entities"), dataFixer, bl, server);
         this.entityManager = new ServerEntityManager<Entity>(Entity.class, new ServerEntityHandler(), chunkDataAccess);
-        this.chunkManager = new ServerChunkManager(this, session, dataFixer, server.getStructureManager(), workerExecutor, chunkGenerator, server.getPlayerManager().getViewDistance(), server.getPlayerManager().getSimulationDistance(), bl, worldGenerationProgressListener, this.entityManager::updateTrackingStatus, () -> server.getOverworld().getPersistentStateManager());
+        this.chunkManager = new ServerChunkManager(this, session, dataFixer, server.getStructureTemplateManager(), workerExecutor, chunkGenerator, server.getPlayerManager().getViewDistance(), server.getPlayerManager().getSimulationDistance(), bl, worldGenerationProgressListener, this.entityManager::updateTrackingStatus, () -> server.getOverworld().getPersistentStateManager());
+        chunkGenerator.computeStructurePlacementsIfNeeded(this.chunkManager.getNoiseConfig());
         this.portalForcer = new PortalForcer(this);
         this.calculateAmbientDarkness();
         this.initWeatherGradients();
         this.getWorldBorder().setMaxRadius(server.getMaxWorldBorderRadius());
-        this.raidManager = this.getPersistentStateManager().getOrCreate(nbt -> RaidManager.fromNbt(this, nbt), () -> new RaidManager(this), RaidManager.nameFor(this.method_40134()));
+        this.raidManager = this.getPersistentStateManager().getOrCreate(nbt -> RaidManager.fromNbt(this, nbt), () -> new RaidManager(this), RaidManager.nameFor(this.getDimensionEntry()));
         if (!server.isSingleplayer()) {
             properties.setGameMode(server.getDefaultGameMode());
         }
         long l = server.getSaveProperties().getGeneratorOptions().getSeed();
-        this.structureLocator = new StructureLocator(this.chunkManager.getChunkIoWorker(), this.getRegistryManager(), server.getStructureManager(), worldKey, chunkGenerator, this, chunkGenerator.getBiomeSource(), l, dataFixer);
+        this.structureLocator = new StructureLocator(this.chunkManager.getChunkIoWorker(), this.getRegistryManager(), server.getStructureTemplateManager(), worldKey, chunkGenerator, this.chunkManager.getNoiseConfig(), this, chunkGenerator.getBiomeSource(), l, dataFixer);
         this.structureAccessor = new StructureAccessor(this, server.getSaveProperties().getGeneratorOptions(), this.structureLocator);
-        this.enderDragonFight = this.getDimension().hasEnderDragonFight() ? new EnderDragonFight(this, l, server.getSaveProperties().getDragonFight()) : null;
+        this.enderDragonFight = this.getRegistryKey() == World.END && this.getDimensionEntry().matchesKey(DimensionTypes.THE_END) ? new EnderDragonFight(this, l, server.getSaveProperties().getDragonFight()) : null;
         this.sleepManager = new SleepManager();
     }
 
@@ -255,7 +260,7 @@ implements StructureWorldAccess {
 
     @Override
     public RegistryEntry<Biome> getGeneratorStoredBiome(int biomeX, int biomeY, int biomeZ) {
-        return this.getChunkManager().getChunkGenerator().getBiomeForNoiseGen(biomeX, biomeY, biomeZ);
+        return this.getChunkManager().getChunkGenerator().getBiomeSource().getBiome(biomeX, biomeY, biomeZ, this.getChunkManager().getNoiseConfig().getMultiNoiseSampler());
     }
 
     public StructureAccessor getStructureAccessor() {
@@ -343,6 +348,8 @@ implements StructureWorldAccess {
         }
         profiler.push("entityManagement");
         this.entityManager.tick();
+        profiler.swap("gameEvents");
+        this.processEventQueue();
         profiler.pop();
     }
 
@@ -453,7 +460,7 @@ implements StructureWorldAccess {
     }
 
     private Optional<BlockPos> getLightningRodPos(BlockPos pos2) {
-        Optional<BlockPos> optional = this.getPointOfInterestStorage().getNearestPosition(poiType -> poiType == PointOfInterestType.LIGHTNING_ROD, pos -> pos.getY() == this.toServerWorld().getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1, pos2, 128, PointOfInterestStorage.OccupationStatus.ANY);
+        Optional<BlockPos> optional = this.getPointOfInterestStorage().getNearestPosition(registryEntry -> registryEntry.matchesKey(PointOfInterestTypes.LIGHTNING_ROD), pos -> pos.getY() == this.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1, pos2, 128, PointOfInterestStorage.OccupationStatus.ANY);
         return optional.map(pos -> pos.up(1));
     }
 
@@ -490,7 +497,7 @@ implements StructureWorldAccess {
             return;
         }
         int i = this.getGameRules().getInt(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
-        TranslatableText text = this.sleepManager.canSkipNight(i) ? new TranslatableText("sleep.skipping_night") : new TranslatableText("sleep.players_sleeping", this.sleepManager.getSleeping(), this.sleepManager.getNightSkippingRequirement(i));
+        MutableText text = this.sleepManager.canSkipNight(i) ? Text.translatable("sleep.skipping_night") : Text.translatable("sleep.players_sleeping", this.sleepManager.getSleeping(), this.sleepManager.getNightSkippingRequirement(i));
         for (ServerPlayerEntity serverPlayerEntity : this.players) {
             serverPlayerEntity.sendMessage(text, true);
         }
@@ -637,11 +644,11 @@ implements StructureWorldAccess {
             return;
         }
         if (progressListener != null) {
-            progressListener.setTitle(new TranslatableText("menu.savingLevel"));
+            progressListener.setTitle(Text.translatable("menu.savingLevel"));
         }
         this.saveLevel();
         if (progressListener != null) {
-            progressListener.setTask(new TranslatableText("menu.savingChunks"));
+            progressListener.setTask(Text.translatable("menu.savingChunks"));
         }
         serverChunkManager.save(flush);
         if (flush) {
@@ -766,13 +773,13 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch) {
-        this.server.getPlayerManager().sendToAround(except, x, y, z, volume > 1.0f ? (double)(16.0f * volume) : 16.0, this.getRegistryKey(), new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
+    public void playSound(@Nullable PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
+        this.server.getPlayerManager().sendToAround(except, x, y, z, sound.getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
     }
 
     @Override
-    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch) {
-        this.server.getPlayerManager().sendToAround(except, entity.getX(), entity.getY(), entity.getZ(), volume > 1.0f ? (double)(16.0f * volume) : 16.0, this.getRegistryKey(), new PlaySoundFromEntityS2CPacket(sound, category, entity, volume, pitch));
+    public void playSoundFromEntity(@Nullable PlayerEntity except, Entity entity, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed) {
+        this.server.getPlayerManager().sendToAround(except, entity.getX(), entity.getY(), entity.getZ(), sound.getDistanceToTravel(volume), this.getRegistryKey(), new PlaySoundFromEntityS2CPacket(sound, category, entity, volume, pitch, seed));
     }
 
     @Override
@@ -786,12 +793,53 @@ implements StructureWorldAccess {
     }
 
     public int getLogicalHeight() {
-        return this.getDimension().getLogicalHeight();
+        return this.getDimension().logicalHeight();
     }
 
     @Override
-    public void emitGameEvent(@Nullable Entity entity, GameEvent event, BlockPos pos) {
-        this.emitGameEvent(entity, event, pos, event.getRange());
+    public void emitGameEvent(GameEvent event, Vec3d emitterPos, GameEvent.Emitter emitter) {
+        int i = event.getRange();
+        BlockPos blockPos = new BlockPos(emitterPos);
+        int j = ChunkSectionPos.getSectionCoord(blockPos.getX() - i);
+        int k = ChunkSectionPos.getSectionCoord(blockPos.getY() - i);
+        int l = ChunkSectionPos.getSectionCoord(blockPos.getZ() - i);
+        int m = ChunkSectionPos.getSectionCoord(blockPos.getX() + i);
+        int n = ChunkSectionPos.getSectionCoord(blockPos.getY() + i);
+        int o = ChunkSectionPos.getSectionCoord(blockPos.getZ() + i);
+        ArrayList<GameEvent.Message> list = new ArrayList<GameEvent.Message>();
+        boolean bl = false;
+        for (int p = j; p <= m; ++p) {
+            for (int q = l; q <= o; ++q) {
+                WorldChunk chunk = this.getChunkManager().getWorldChunk(p, q);
+                if (chunk == null) continue;
+                for (int r = k; r <= n; ++r) {
+                    bl |= ((Chunk)chunk).getGameEventDispatcher(r).dispatch(event, emitterPos, emitter, (listener, listenerPos) -> (listener.shouldListenImmediately() ? list : this.queuedEvents).add(new GameEvent.Message(event, emitterPos, emitter, (GameEventListener)listener, (Vec3d)listenerPos)));
+                }
+            }
+        }
+        if (!list.isEmpty()) {
+            this.processEvents(list);
+        }
+        if (bl) {
+            DebugInfoSender.sendGameEvent(this, event, emitterPos);
+        }
+    }
+
+    private void processEventQueue() {
+        if (this.queuedEvents.isEmpty()) {
+            return;
+        }
+        List<GameEvent.Message> list = this.queuedEvents;
+        this.queuedEvents = new ArrayList<GameEvent.Message>();
+        this.processEvents(list);
+    }
+
+    private void processEvents(List<GameEvent.Message> events) {
+        Collections.sort(events);
+        for (GameEvent.Message message : events) {
+            GameEventListener gameEventListener = message.getListener();
+            gameEventListener.listen(this, message);
+        }
     }
 
     /*
@@ -824,6 +872,26 @@ implements StructureWorldAccess {
         finally {
             this.duringListenerUpdate = false;
         }
+    }
+
+    @Override
+    public void updateNeighborsAlways(BlockPos pos, Block sourceBlock) {
+        this.neighborUpdater.updateNeighbors(pos, sourceBlock, null);
+    }
+
+    @Override
+    public void updateNeighborsExcept(BlockPos pos, Block sourceBlock, Direction direction) {
+        this.neighborUpdater.updateNeighbors(pos, sourceBlock, direction);
+    }
+
+    @Override
+    public void updateNeighbor(BlockPos pos, Block sourceBlock, BlockPos sourcePos) {
+        this.neighborUpdater.updateNeighbor(pos, sourceBlock, sourcePos);
+    }
+
+    @Override
+    public void updateNeighbor(BlockState state, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
+        this.neighborUpdater.updateNeighbor(state, pos, sourceBlock, sourcePos, notify);
     }
 
     @Override
@@ -860,7 +928,7 @@ implements StructureWorldAccess {
         this.blockEventQueue.clear();
         while (!this.syncedBlockEventQueue.isEmpty()) {
             BlockEvent blockEvent = (BlockEvent)this.syncedBlockEventQueue.removeFirst();
-            if (this.shouldTickBlocksInChunk(ChunkPos.toLong(blockEvent.pos()))) {
+            if (this.shouldTickBlockPos(blockEvent.pos())) {
                 if (!this.processBlockEvent(blockEvent)) continue;
                 this.server.getPlayerManager().sendToAround(null, blockEvent.pos().getX(), blockEvent.pos().getY(), blockEvent.pos().getZ(), 64.0, this.getRegistryKey(), new BlockEventS2CPacket(blockEvent.pos(), blockEvent.block(), blockEvent.type(), blockEvent.data()));
                 continue;
@@ -896,14 +964,8 @@ implements StructureWorldAccess {
         return this.portalForcer;
     }
 
-    public StructureManager getStructureManager() {
-        return this.server.getStructureManager();
-    }
-
-    public void sendVibrationPacket(Vibration vibration) {
-        BlockPos blockPos = vibration.getOrigin();
-        VibrationS2CPacket vibrationS2CPacket = new VibrationS2CPacket(vibration);
-        this.players.forEach(player -> this.sendToPlayerIfNearby((ServerPlayerEntity)player, false, blockPos.getX(), blockPos.getY(), blockPos.getZ(), vibrationS2CPacket));
+    public StructureTemplateManager getStructureTemplateManager() {
+        return this.server.getStructureTemplateManager();
     }
 
     public <T extends ParticleEffect> int spawnParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed) {
@@ -956,21 +1018,21 @@ implements StructureWorldAccess {
     }
 
     @Nullable
-    public BlockPos locateStructure(TagKey<ConfiguredStructureFeature<?, ?>> structureTag, BlockPos pos, int radius, boolean skipExistingChunks) {
+    public BlockPos locateStructure(TagKey<Structure> structureTag, BlockPos pos, int radius, boolean skipReferencedStructures) {
         if (!this.server.getSaveProperties().getGeneratorOptions().shouldGenerateStructures()) {
             return null;
         }
-        Optional<RegistryEntryList.Named<ConfiguredStructureFeature<?, ?>>> optional = this.getRegistryManager().get(Registry.CONFIGURED_STRUCTURE_FEATURE_KEY).getEntryList(structureTag);
+        Optional<RegistryEntryList.Named<Structure>> optional = this.getRegistryManager().get(Registry.STRUCTURE_KEY).getEntryList(structureTag);
         if (optional.isEmpty()) {
             return null;
         }
-        Pair<BlockPos, RegistryEntry<ConfiguredStructureFeature<?, ?>>> pair = this.getChunkManager().getChunkGenerator().locateStructure(this, (RegistryEntryList)optional.get(), pos, radius, skipExistingChunks);
+        Pair<BlockPos, RegistryEntry<Structure>> pair = this.getChunkManager().getChunkGenerator().locateStructure(this, (RegistryEntryList<Structure>)optional.get(), pos, radius, skipReferencedStructures);
         return pair != null ? (BlockPos)pair.getFirst() : null;
     }
 
     @Nullable
-    public Pair<BlockPos, RegistryEntry<Biome>> locateBiome(Predicate<RegistryEntry<Biome>> biomeEntryPredicate, BlockPos pos, int radius, int blockCheckInterval) {
-        return this.getChunkManager().getChunkGenerator().getBiomeSource().locateBiome(pos.getX(), pos.getY(), pos.getZ(), radius, blockCheckInterval, biomeEntryPredicate, this.random, true, this.getChunkManager().getChunkGenerator().getMultiNoiseSampler());
+    public Pair<BlockPos, RegistryEntry<Biome>> locateBiome(Predicate<RegistryEntry<Biome>> predicate, BlockPos pos, int radius, int horizontalBlockCheckInterval, int verticalBlockCheckInterval) {
+        return this.getChunkManager().getChunkGenerator().getBiomeSource().locateBiome(pos, radius, horizontalBlockCheckInterval, verticalBlockCheckInterval, predicate, this.getChunkManager().getNoiseConfig().getMultiNoiseSampler(), this);
     }
 
     @Override
@@ -1016,18 +1078,6 @@ implements StructureWorldAccess {
         this.getServer().getPlayerManager().sendToAll(new PlayerSpawnPositionS2CPacket(pos, angle));
     }
 
-    public BlockPos getSpawnPos() {
-        BlockPos blockPos = new BlockPos(this.properties.getSpawnX(), this.properties.getSpawnY(), this.properties.getSpawnZ());
-        if (!this.getWorldBorder().contains(blockPos)) {
-            blockPos = this.getTopPosition(Heightmap.Type.MOTION_BLOCKING, new BlockPos(this.getWorldBorder().getCenterX(), 0.0, this.getWorldBorder().getCenterZ()));
-        }
-        return blockPos;
-    }
-
-    public float getSpawnAngle() {
-        return this.properties.getSpawnAngle();
-    }
-
     public LongSet getForcedChunks() {
         ForcedChunkState forcedChunkState = this.getPersistentStateManager().get(ForcedChunkState::fromNbt, "chunks");
         return forcedChunkState != null ? LongSets.unmodifiable((LongSet)forcedChunkState.getChunks()) : LongSets.EMPTY_SET;
@@ -1059,18 +1109,18 @@ implements StructureWorldAccess {
 
     @Override
     public void onBlockChanged(BlockPos pos, BlockState oldBlock, BlockState newBlock) {
-        Optional<PointOfInterestType> optional2;
-        Optional<PointOfInterestType> optional = PointOfInterestType.from(oldBlock);
-        if (Objects.equals(optional, optional2 = PointOfInterestType.from(newBlock))) {
+        Optional<RegistryEntry<PointOfInterestType>> optional2;
+        Optional<RegistryEntry<PointOfInterestType>> optional = PointOfInterestTypes.getTypeForState(oldBlock);
+        if (Objects.equals(optional, optional2 = PointOfInterestTypes.getTypeForState(newBlock))) {
             return;
         }
         BlockPos blockPos = pos.toImmutable();
-        optional.ifPresent(poiType -> this.getServer().execute(() -> {
+        optional.ifPresent(registryEntry -> this.getServer().execute(() -> {
             this.getPointOfInterestStorage().remove(blockPos);
             DebugInfoSender.sendPoiRemoval(this, blockPos);
         }));
-        optional2.ifPresent(poiType -> this.getServer().execute(() -> {
-            this.getPointOfInterestStorage().add(blockPos, (PointOfInterestType)poiType);
+        optional2.ifPresent(registryEntry -> this.getServer().execute(() -> {
+            this.getPointOfInterestStorage().add(blockPos, (RegistryEntry<PointOfInterestType>)registryEntry);
             DebugInfoSender.sendPoiAddition(this, blockPos);
         }));
     }
@@ -1118,19 +1168,19 @@ implements StructureWorldAccess {
     public void dump(Path path) throws IOException {
         ThreadedAnvilChunkStorage threadedAnvilChunkStorage = this.getChunkManager().threadedAnvilChunkStorage;
         try (BufferedWriter writer = Files.newBufferedWriter(path.resolve("stats.txt"), new OpenOption[0]);){
-            writer.write(String.format("spawning_chunks: %d\n", threadedAnvilChunkStorage.getTicketManager().getTickedChunkCount()));
+            writer.write(String.format(Locale.ROOT, "spawning_chunks: %d\n", threadedAnvilChunkStorage.getTicketManager().getTickedChunkCount()));
             SpawnHelper.Info info = this.getChunkManager().getSpawnInfo();
             if (info != null) {
                 for (Object2IntMap.Entry entry : info.getGroupToCount().object2IntEntrySet()) {
-                    writer.write(String.format("spawn_count.%s: %d\n", ((SpawnGroup)entry.getKey()).getName(), entry.getIntValue()));
+                    writer.write(String.format(Locale.ROOT, "spawn_count.%s: %d\n", ((SpawnGroup)entry.getKey()).getName(), entry.getIntValue()));
                 }
             }
-            writer.write(String.format("entities: %s\n", this.entityManager.getDebugString()));
-            writer.write(String.format("block_entity_tickers: %d\n", this.blockEntityTickers.size()));
-            writer.write(String.format("block_ticks: %d\n", ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount()));
-            writer.write(String.format("fluid_ticks: %d\n", ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount()));
+            writer.write(String.format(Locale.ROOT, "entities: %s\n", this.entityManager.getDebugString()));
+            writer.write(String.format(Locale.ROOT, "block_entity_tickers: %d\n", this.blockEntityTickers.size()));
+            writer.write(String.format(Locale.ROOT, "block_ticks: %d\n", ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount()));
+            writer.write(String.format(Locale.ROOT, "fluid_ticks: %d\n", ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount()));
             writer.write("distance_manager: " + threadedAnvilChunkStorage.getTicketManager().toDumpString() + "\n");
-            writer.write(String.format("pending_tasks: %d\n", this.getChunkManager().getPendingTasks()));
+            writer.write(String.format(Locale.ROOT, "pending_tasks: %d\n", this.getChunkManager().getPendingTasks()));
         }
         CrashReport crashReport = new CrashReport("Level dump", new Exception("dummy"));
         this.addDetailsToCrashReport(crashReport);
@@ -1218,7 +1268,7 @@ implements StructureWorldAccess {
 
     @VisibleForTesting
     public String getDebugString() {
-        return String.format("players: %s, entities: %s [%s], block_entities: %d [%s], block_ticks: %d, fluid_ticks: %d, chunk_source: %s", this.players.size(), this.entityManager.getDebugString(), ServerWorld.getTopFive(this.entityManager.getLookup().iterate(), entity -> Registry.ENTITY_TYPE.getId(entity.getType()).toString()), this.blockEntityTickers.size(), ServerWorld.getTopFive(this.blockEntityTickers, BlockEntityTickInvoker::getName), ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount(), ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount(), this.asString());
+        return String.format(Locale.ROOT, "players: %s, entities: %s [%s], block_entities: %d [%s], block_ticks: %d, fluid_ticks: %d, chunk_source: %s", this.players.size(), this.entityManager.getDebugString(), ServerWorld.getTopFive(this.entityManager.getLookup().iterate(), entity -> Registry.ENTITY_TYPE.getId(entity.getType()).toString()), this.blockEntityTickers.size(), ServerWorld.getTopFive(this.blockEntityTickers, BlockEntityTickInvoker::getName), ((WorldTickScheduler)this.getBlockTickScheduler()).getTickCount(), ((WorldTickScheduler)this.getFluidTickScheduler()).getTickCount(), this.asString());
     }
 
     private static <T> String getTopFive(Iterable<T> items, Function<T, String> classifier) {
@@ -1360,11 +1410,11 @@ implements StructureWorldAccess {
                     ServerWorld.this.dragonParts.put(enderDragonPart.getId(), (Object)enderDragonPart);
                 }
             }
+            entity.updateEventHandler(EntityGameEventHandler::onEntitySetPosCallback);
         }
 
         @Override
         public void stopTracking(Entity entity) {
-            EntityGameEventHandler entityGameEventHandler;
             ServerWorld.this.getChunkManager().unloadEntity(entity);
             if (entity instanceof ServerPlayerEntity) {
                 ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
@@ -1385,9 +1435,17 @@ implements StructureWorldAccess {
                     ServerWorld.this.dragonParts.remove(enderDragonPart.getId());
                 }
             }
-            if ((entityGameEventHandler = entity.getGameEventHandler()) != null) {
-                entityGameEventHandler.onEntityRemoval(entity.world);
-            }
+            entity.updateEventHandler(EntityGameEventHandler::onEntityRemoval);
+        }
+
+        @Override
+        public void updateLoadStatus(Entity entity) {
+            entity.updateEventHandler(EntityGameEventHandler::onEntitySetPos);
+        }
+
+        @Override
+        public /* synthetic */ void updateLoadStatus(Object entity) {
+            this.updateLoadStatus((Entity)entity);
         }
 
         @Override
@@ -1398,11 +1456,6 @@ implements StructureWorldAccess {
         @Override
         public /* synthetic */ void startTracking(Object entity) {
             this.startTracking((Entity)entity);
-        }
-
-        @Override
-        public /* synthetic */ void stopTicking(Object entity) {
-            this.stopTicking((Entity)entity);
         }
 
         @Override

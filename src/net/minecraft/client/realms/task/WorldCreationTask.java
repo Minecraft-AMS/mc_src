@@ -16,7 +16,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.realms.RealmsClient;
 import net.minecraft.client.realms.exception.RealmsServiceException;
 import net.minecraft.client.realms.task.LongRunningTask;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import org.slf4j.Logger;
 
 @Environment(value=EnvType.CLIENT)
@@ -37,8 +37,8 @@ extends LongRunningTask {
 
     @Override
     public void run() {
-        this.setTitle(new TranslatableText("mco.create.world.wait"));
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        this.setTitle(Text.translatable("mco.create.world.wait"));
+        RealmsClient realmsClient = RealmsClient.create();
         try {
             realmsClient.initializeWorld(this.worldId, this.name, this.motd);
             WorldCreationTask.setScreen(this.lastScreen);

@@ -9,7 +9,6 @@ package net.minecraft.loot.function;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
-import java.util.Random;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.condition.LootCondition;
 import net.minecraft.loot.context.LootContext;
@@ -17,6 +16,7 @@ import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
+import net.minecraft.util.math.random.Random;
 
 public class ExplosionDecayLootFunction
 extends ConditionalLootFunction {

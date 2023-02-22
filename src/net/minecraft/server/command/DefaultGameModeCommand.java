@@ -13,7 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.world.GameMode;
 
 public class DefaultGameModeCommand {
@@ -36,7 +36,7 @@ public class DefaultGameModeCommand {
                 ++i;
             }
         }
-        source.sendFeedback(new TranslatableText("commands.defaultgamemode.success", defaultGameMode.getTranslatableName()), true);
+        source.sendFeedback(Text.translatable("commands.defaultgamemode.success", defaultGameMode.getTranslatableName()), true);
         return i;
     }
 }

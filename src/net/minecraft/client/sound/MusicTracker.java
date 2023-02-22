@@ -8,7 +8,6 @@
  */
 package net.minecraft.client.sound;
 
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -17,12 +16,13 @@ import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.sound.SoundManager;
 import net.minecraft.sound.MusicSound;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
 public class MusicTracker {
     private static final int field_33019 = 100;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final MinecraftClient client;
     @Nullable
     private SoundInstance current;

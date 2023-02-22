@@ -11,7 +11,6 @@ package net.minecraft.entity.mob;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Dynamic;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -46,7 +45,6 @@ import net.minecraft.entity.mob.PiglinActivity;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -59,6 +57,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.annotation.Debug;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -116,7 +115,7 @@ InventoryOwner {
 
     @Override
     @Debug
-    public Inventory getInventory() {
+    public SimpleInventory getInventory() {
         return this.inventory;
     }
 
@@ -161,16 +160,17 @@ InventoryOwner {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
+        Random random = world.getRandom();
         if (spawnReason != SpawnReason.STRUCTURE) {
-            if (world.getRandom().nextFloat() < 0.2f) {
+            if (random.nextFloat() < 0.2f) {
                 this.setBaby(true);
             } else if (this.isAdult()) {
                 this.equipStack(EquipmentSlot.MAINHAND, this.makeInitialWeapon());
             }
         }
-        PiglinBrain.setHuntedRecently(this);
-        this.initEquipment(difficulty);
-        this.updateEnchantments(difficulty);
+        PiglinBrain.setHuntedRecently(this, world.getRandom());
+        this.initEquipment(random, difficulty);
+        this.updateEnchantments(random, difficulty);
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 
@@ -185,17 +185,17 @@ InventoryOwner {
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
         if (this.isAdult()) {
-            this.equipAtChance(EquipmentSlot.HEAD, new ItemStack(Items.GOLDEN_HELMET));
-            this.equipAtChance(EquipmentSlot.CHEST, new ItemStack(Items.GOLDEN_CHESTPLATE));
-            this.equipAtChance(EquipmentSlot.LEGS, new ItemStack(Items.GOLDEN_LEGGINGS));
-            this.equipAtChance(EquipmentSlot.FEET, new ItemStack(Items.GOLDEN_BOOTS));
+            this.equipAtChance(EquipmentSlot.HEAD, new ItemStack(Items.GOLDEN_HELMET), random);
+            this.equipAtChance(EquipmentSlot.CHEST, new ItemStack(Items.GOLDEN_CHESTPLATE), random);
+            this.equipAtChance(EquipmentSlot.LEGS, new ItemStack(Items.GOLDEN_LEGGINGS), random);
+            this.equipAtChance(EquipmentSlot.FEET, new ItemStack(Items.GOLDEN_BOOTS), random);
         }
     }
 
-    private void equipAtChance(EquipmentSlot slot, ItemStack stack) {
-        if (this.world.random.nextFloat() < 0.1f) {
+    private void equipAtChance(EquipmentSlot slot, ItemStack stack, Random random) {
+        if (random.nextFloat() < 0.1f) {
             this.equipStack(slot, stack);
         }
     }
@@ -272,7 +272,7 @@ InventoryOwner {
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         return this.experiencePoints;
     }
 

@@ -36,7 +36,6 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.invoke.MethodHandle;
 import java.lang.management.ManagementFactory;
@@ -44,29 +43,25 @@ import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.runtime.ObjectMethods;
 import java.net.Proxy;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.security.KeyPair;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -85,6 +80,9 @@ import net.minecraft.loot.condition.LootConditionManager;
 import net.minecraft.loot.function.LootFunctionManager;
 import net.minecraft.network.encryption.NetworkEncryptionException;
 import net.minecraft.network.encryption.NetworkEncryptionUtils;
+import net.minecraft.network.encryption.SignatureVerifier;
+import net.minecraft.network.message.MessageDecorator;
+import net.minecraft.network.message.MessageType;
 import net.minecraft.network.packet.s2c.play.DifficultyS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.obfuscate.DontObfuscate;
@@ -121,11 +119,10 @@ import net.minecraft.server.network.SpawnLocating;
 import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.structure.StructureManager;
+import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.test.TestManager;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.util.ApiServices;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.MetricsData;
 import net.minecraft.util.ModStatus;
@@ -143,6 +140,7 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.profiler.DebugRecorder;
 import net.minecraft.util.profiler.DummyRecorder;
 import net.minecraft.util.profiler.EmptyProfileResult;
@@ -156,7 +154,6 @@ import net.minecraft.util.profiling.jfr.Finishable;
 import net.minecraft.util.profiling.jfr.FlightProfiler;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.util.thread.ReentrantThreadExecutor;
 import net.minecraft.village.ZombieSiegeManager;
@@ -175,9 +172,7 @@ import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.border.WorldBorderListener;
 import net.minecraft.world.dimension.DimensionOptions;
-import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.GeneratorOptions;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.MiscConfiguredFeatures;
@@ -204,12 +199,8 @@ AutoCloseable {
     public static final int field_33206 = 50;
     private static final int field_33215 = 2000;
     private static final int field_33216 = 15000;
-    public static final String LEVEL_PROTOCOL_NAME = "level";
-    public static final String LEVEL_PROTOCOL = "level://";
     private static final long PLAYER_SAMPLE_UPDATE_INTERVAL = 5000000000L;
     private static final int field_33218 = 12;
-    public static final String RESOURCES_ZIP_FILE_NAME = "resources.zip";
-    public static final File USER_CACHE_FILE = new File("usercache.json");
     public static final int START_TICKET_CHUNK_RADIUS = 11;
     private static final int START_TICKET_CHUNKS = 441;
     private static final int field_33220 = 6000;
@@ -232,7 +223,7 @@ AutoCloseable {
     private final ServerNetworkIo networkIo;
     private final WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory;
     private final ServerMetadata metadata = new ServerMetadata();
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final DataFixer dataFixer;
     private String serverIp;
     private int serverPort = -1;
@@ -254,17 +245,11 @@ AutoCloseable {
     @Nullable
     private KeyPair keyPair;
     @Nullable
-    private String singlePlayerName;
+    private GameProfile hostProfile;
     private boolean demo;
-    private String resourcePackUrl = "";
-    private String resourcePackHash = "";
     private volatile boolean loading;
     private long lastTimeReference;
-    private final MinecraftSessionService sessionService;
-    @Nullable
-    private final GameProfileRepository gameProfileRepo;
-    @Nullable
-    private final UserCache userCache;
+    protected final ApiServices apiServices;
     private long lastPlayerSampleUpdate;
     private final Thread serverThread;
     private long timeReference = Util.getMeasuringTimeMs();
@@ -283,7 +268,7 @@ AutoCloseable {
     @Nullable
     private String serverId;
     private ResourceManagerHolder resourceManagerHolder;
-    private final StructureManager structureManager;
+    private final StructureTemplateManager structureTemplateManager;
     protected final SaveProperties saveProperties;
     private volatile boolean saving;
 
@@ -300,18 +285,19 @@ AutoCloseable {
         return (S)minecraftServer;
     }
 
-    public MinecraftServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, Proxy proxy, DataFixer dataFixer, @Nullable MinecraftSessionService sessionService, @Nullable GameProfileRepository gameProfileRepo, @Nullable UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+    public MinecraftServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, Proxy proxy, DataFixer dataFixer, ApiServices apiServices, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
         super("Server");
         this.registryManager = saveLoader.dynamicRegistryManager();
         this.saveProperties = saveLoader.saveProperties();
+        if (!this.saveProperties.getGeneratorOptions().getDimensions().contains(DimensionOptions.OVERWORLD)) {
+            throw new IllegalStateException("Missing Overworld dimension data");
+        }
         this.proxy = proxy;
         this.dataPackManager = dataPackManager;
         this.resourceManagerHolder = new ResourceManagerHolder(saveLoader.resourceManager(), saveLoader.dataPackContents());
-        this.sessionService = sessionService;
-        this.gameProfileRepo = gameProfileRepo;
-        this.userCache = userCache;
-        if (userCache != null) {
-            userCache.setExecutor(this);
+        this.apiServices = apiServices;
+        if (apiServices.userCache() != null) {
+            apiServices.userCache().setExecutor(this);
         }
         this.networkIo = new ServerNetworkIo(this);
         this.worldGenerationProgressListenerFactory = worldGenerationProgressListenerFactory;
@@ -319,7 +305,7 @@ AutoCloseable {
         this.saveHandler = session.createSaveHandler();
         this.dataFixer = dataFixer;
         this.commandFunctionManager = new CommandFunctionManager(this, this.resourceManagerHolder.dataPackContents.getFunctionLoader());
-        this.structureManager = new StructureManager(saveLoader.resourceManager(), session, dataFixer);
+        this.structureTemplateManager = new StructureTemplateManager(saveLoader.resourceManager(), session, dataFixer);
         this.serverThread = serverThread;
         this.workerExecutor = Util.getMainWorkerExecutor();
     }
@@ -336,7 +322,6 @@ AutoCloseable {
         }
         boolean bl = false;
         Finishable finishable = FlightProfiler.INSTANCE.startWorldLoadProfiling();
-        this.loadWorldResourcePack();
         this.saveProperties.addServerBrand(this.getServerModName(), this.getModStatus().isModded());
         WorldGenerationProgressListener worldGenerationProgressListener = this.worldGenerationProgressListenerFactory.create(11);
         this.createWorlds(worldGenerationProgressListener);
@@ -359,8 +344,6 @@ AutoCloseable {
     }
 
     protected void createWorlds(WorldGenerationProgressListener worldGenerationProgressListener) {
-        ChunkGenerator chunkGenerator;
-        RegistryEntry<DimensionType> registryEntry;
         ServerWorldProperties serverWorldProperties = this.saveProperties.getMainWorldProperties();
         GeneratorOptions generatorOptions = this.saveProperties.getGeneratorOptions();
         boolean bl = generatorOptions.isDebugWorld();
@@ -369,14 +352,7 @@ AutoCloseable {
         ImmutableList list = ImmutableList.of((Object)new PhantomSpawner(), (Object)new PatrolSpawner(), (Object)new CatSpawner(), (Object)new ZombieSiegeManager(), (Object)new WanderingTraderManager(serverWorldProperties));
         Registry<DimensionOptions> registry = generatorOptions.getDimensions();
         DimensionOptions dimensionOptions = registry.get(DimensionOptions.OVERWORLD);
-        if (dimensionOptions == null) {
-            registryEntry = this.getRegistryManager().get(Registry.DIMENSION_TYPE_KEY).getOrCreateEntry(DimensionType.OVERWORLD_REGISTRY_KEY);
-            chunkGenerator = GeneratorOptions.createOverworldGenerator(this.getRegistryManager(), new Random().nextLong());
-        } else {
-            registryEntry = dimensionOptions.getDimensionTypeSupplier();
-            chunkGenerator = dimensionOptions.getChunkGenerator();
-        }
-        ServerWorld serverWorld = new ServerWorld(this, this.workerExecutor, this.session, serverWorldProperties, World.OVERWORLD, registryEntry, worldGenerationProgressListener, chunkGenerator, bl, m, (List<Spawner>)list, true);
+        ServerWorld serverWorld = new ServerWorld(this, this.workerExecutor, this.session, serverWorldProperties, World.OVERWORLD, dimensionOptions, worldGenerationProgressListener, bl, m, (List<Spawner>)list, true);
         this.worlds.put(World.OVERWORLD, serverWorld);
         PersistentStateManager persistentStateManager = serverWorld.getPersistentStateManager();
         this.initScoreboard(persistentStateManager);
@@ -410,10 +386,8 @@ AutoCloseable {
             RegistryKey<DimensionOptions> registryKey = entry.getKey();
             if (registryKey == DimensionOptions.OVERWORLD) continue;
             RegistryKey<World> registryKey2 = RegistryKey.of(Registry.WORLD_KEY, registryKey.getValue());
-            RegistryEntry<DimensionType> registryEntry2 = entry.getValue().getDimensionTypeSupplier();
-            ChunkGenerator chunkGenerator2 = entry.getValue().getChunkGenerator();
             UnmodifiableLevelProperties unmodifiableLevelProperties = new UnmodifiableLevelProperties(this.saveProperties, serverWorldProperties);
-            ServerWorld serverWorld2 = new ServerWorld(this, this.workerExecutor, this.session, unmodifiableLevelProperties, registryKey2, registryEntry2, worldGenerationProgressListener, chunkGenerator2, bl, m, (List<Spawner>)ImmutableList.of(), false);
+            ServerWorld serverWorld2 = new ServerWorld(this, this.workerExecutor, this.session, unmodifiableLevelProperties, registryKey2, entry.getValue(), worldGenerationProgressListener, bl, m, (List<Spawner>)ImmutableList.of(), false);
             worldBorder.addListener(new WorldBorderListener.WorldBorderSyncer(serverWorld2.getWorldBorder()));
             this.worlds.put(registryKey2, serverWorld2);
         }
@@ -425,9 +399,9 @@ AutoCloseable {
             worldProperties.setSpawnPos(BlockPos.ORIGIN.up(80), 0.0f);
             return;
         }
-        ChunkGenerator chunkGenerator = world.getChunkManager().getChunkGenerator();
-        ChunkPos chunkPos = new ChunkPos(chunkGenerator.getMultiNoiseSampler().findBestSpawnPosition());
-        int i = chunkGenerator.getSpawnHeight(world);
+        ServerChunkManager serverChunkManager = world.getChunkManager();
+        ChunkPos chunkPos = new ChunkPos(serverChunkManager.getNoiseConfig().getMultiNoiseSampler().findBestSpawnPosition());
+        int i = serverChunkManager.getChunkGenerator().getSpawnHeight(world);
         if (i < world.getBottomY()) {
             BlockPos blockPos = chunkPos.getStartPos();
             i = world.getTopY(Heightmap.Type.WORLD_SURFACE, blockPos.getX() + 8, blockPos.getZ() + 8);
@@ -454,7 +428,7 @@ AutoCloseable {
         }
         if (bonusChest) {
             ConfiguredFeature<DefaultFeatureConfig, ?> configuredFeature = MiscConfiguredFeatures.BONUS_CHEST.value();
-            configuredFeature.generate(world, chunkGenerator, world.random, new BlockPos(worldProperties.getSpawnX(), worldProperties.getSpawnY(), worldProperties.getSpawnZ()));
+            configuredFeature.generate(world, serverChunkManager.getChunkGenerator(), world.random, new BlockPos(worldProperties.getSpawnX(), worldProperties.getSpawnY(), worldProperties.getSpawnZ()));
         }
     }
 
@@ -499,19 +473,6 @@ AutoCloseable {
         worldGenerationProgressListener.stop();
         serverChunkManager.getLightingProvider().setTaskBatchSize(5);
         this.updateMobSpawnOptions();
-    }
-
-    protected void loadWorldResourcePack() {
-        File file = this.session.getDirectory(WorldSavePath.RESOURCES_ZIP).toFile();
-        if (file.isFile()) {
-            String string = this.session.getDirectoryName();
-            try {
-                this.setResourcePack(LEVEL_PROTOCOL + URLEncoder.encode(string, StandardCharsets.UTF_8.toString()) + "/resources.zip", "");
-            }
-            catch (UnsupportedEncodingException unsupportedEncodingException) {
-                LOGGER.warn("Something went wrong url encoding {}", (Object)string);
-            }
-        }
     }
 
     public GameMode getDefaultGameMode() {
@@ -572,6 +533,9 @@ AutoCloseable {
     }
 
     public void shutdown() {
+        if (this.recorder.isActive()) {
+            this.forceStopRecorder();
+        }
         LOGGER.info("Stopping server");
         if (this.getNetworkIo() != null) {
             this.getNetworkIo().stop();
@@ -643,66 +607,70 @@ AutoCloseable {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     protected void runServer() {
-        try {
-            if (this.setupServer()) {
-                this.timeReference = Util.getMeasuringTimeMs();
-                this.metadata.setDescription(new LiteralText(this.motd));
-                this.metadata.setVersion(new ServerMetadata.Version(SharedConstants.getGameVersion().getName(), SharedConstants.getGameVersion().getProtocolVersion()));
-                this.setFavicon(this.metadata);
-                while (this.running) {
-                    long l = Util.getMeasuringTimeMs() - this.timeReference;
-                    if (l > 2000L && this.timeReference - this.lastTimeReference >= 15000L) {
-                        long m = l / 50L;
-                        LOGGER.warn("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", (Object)l, (Object)m);
-                        this.timeReference += m * 50L;
-                        this.lastTimeReference = this.timeReference;
-                    }
-                    if (this.needsDebugSetup) {
-                        this.needsDebugSetup = false;
-                        this.debugStart = new DebugStart(Util.getMeasuringTimeNano(), this.ticks);
-                    }
-                    this.timeReference += 50L;
-                    this.startTickMetrics();
-                    this.profiler.push("tick");
-                    this.tick(this::shouldKeepTicking);
-                    this.profiler.swap("nextTickWait");
-                    this.waitingForNextTick = true;
-                    this.nextTickTimestamp = Math.max(Util.getMeasuringTimeMs() + 50L, this.timeReference);
-                    this.runTasksTillTickEnd();
-                    this.profiler.pop();
-                    this.endTickMetrics();
-                    this.loading = true;
-                    FlightProfiler.INSTANCE.onTick(this.tickTime);
-                }
-            } else {
-                this.setCrashReport(null);
-            }
-        }
-        catch (Throwable throwable) {
-            LOGGER.error("Encountered an unexpected exception", throwable);
-            CrashReport crashReport = MinecraftServer.createCrashReport(throwable);
-            this.addSystemDetails(crashReport.getSystemDetailsSection());
-            File file = new File(new File(this.getRunDirectory(), "crash-reports"), "crash-" + new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date()) + "-server.txt");
-            if (crashReport.writeToFile(file)) {
-                LOGGER.error("This crash report has been saved to: {}", (Object)file.getAbsolutePath());
-            } else {
-                LOGGER.error("We were unable to save this crash report to disk.");
-            }
-            this.setCrashReport(crashReport);
-        }
-        finally {
+        block25: {
             try {
-                this.stopped = true;
-                this.shutdown();
+                if (this.setupServer()) {
+                    this.timeReference = Util.getMeasuringTimeMs();
+                    this.metadata.setDescription(Text.literal(this.motd));
+                    this.metadata.setVersion(new ServerMetadata.Version(SharedConstants.getGameVersion().getName(), SharedConstants.getGameVersion().getProtocolVersion()));
+                    this.metadata.setPreviewsChat(this.shouldPreviewChat());
+                    this.metadata.setSecureChatEnforced(this.shouldEnforceSecureProfile());
+                    this.setFavicon(this.metadata);
+                    while (this.running) {
+                        long l = Util.getMeasuringTimeMs() - this.timeReference;
+                        if (l > 2000L && this.timeReference - this.lastTimeReference >= 15000L) {
+                            long m = l / 50L;
+                            LOGGER.warn("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", (Object)l, (Object)m);
+                            this.timeReference += m * 50L;
+                            this.lastTimeReference = this.timeReference;
+                        }
+                        if (this.needsDebugSetup) {
+                            this.needsDebugSetup = false;
+                            this.debugStart = new DebugStart(Util.getMeasuringTimeNano(), this.ticks);
+                        }
+                        this.timeReference += 50L;
+                        this.startTickMetrics();
+                        this.profiler.push("tick");
+                        this.tick(this::shouldKeepTicking);
+                        this.profiler.swap("nextTickWait");
+                        this.waitingForNextTick = true;
+                        this.nextTickTimestamp = Math.max(Util.getMeasuringTimeMs() + 50L, this.timeReference);
+                        this.runTasksTillTickEnd();
+                        this.profiler.pop();
+                        this.endTickMetrics();
+                        this.loading = true;
+                        FlightProfiler.INSTANCE.onTick(this.tickTime);
+                    }
+                    break block25;
+                }
+                throw new IllegalStateException("Failed to initialize server");
             }
             catch (Throwable throwable) {
-                LOGGER.error("Exception stopping the server", throwable);
+                LOGGER.error("Encountered an unexpected exception", throwable);
+                CrashReport crashReport = MinecraftServer.createCrashReport(throwable);
+                this.addSystemDetails(crashReport.getSystemDetailsSection());
+                File file = new File(new File(this.getRunDirectory(), "crash-reports"), "crash-" + Util.getFormattedCurrentTime() + "-server.txt");
+                if (crashReport.writeToFile(file)) {
+                    LOGGER.error("This crash report has been saved to: {}", (Object)file.getAbsolutePath());
+                } else {
+                    LOGGER.error("We were unable to save this crash report to disk.");
+                }
+                this.setCrashReport(crashReport);
             }
             finally {
-                if (this.userCache != null) {
-                    this.userCache.clearExecutor();
+                try {
+                    this.stopped = true;
+                    this.shutdown();
                 }
-                this.exit();
+                catch (Throwable throwable) {
+                    LOGGER.error("Exception stopping the server", throwable);
+                }
+                finally {
+                    if (this.apiServices.userCache() != null) {
+                        this.apiServices.userCache().clearExecutor();
+                    }
+                    this.exit();
+                }
             }
         }
     }
@@ -800,7 +768,7 @@ AutoCloseable {
         return new File(".");
     }
 
-    protected void setCrashReport(CrashReport report) {
+    public void setCrashReport(CrashReport report) {
     }
 
     public void exit() {
@@ -967,7 +935,7 @@ AutoCloseable {
     }
 
     @Override
-    public void sendSystemMessage(Text message, UUID sender) {
+    public void sendMessage(Text message) {
         LOGGER.info(message.getString());
     }
 
@@ -983,16 +951,17 @@ AutoCloseable {
         this.serverPort = serverPort;
     }
 
-    public String getSinglePlayerName() {
-        return this.singlePlayerName;
+    @Nullable
+    public GameProfile getHostProfile() {
+        return this.hostProfile;
     }
 
-    public void setSinglePlayerName(String singlePlayerName) {
-        this.singlePlayerName = singlePlayerName;
+    public void setHostProfile(@Nullable GameProfile hostProfile) {
+        this.hostProfile = hostProfile;
     }
 
     public boolean isSingleplayer() {
-        return this.singlePlayerName != null;
+        return this.hostProfile != null;
     }
 
     protected void generateKeyPair() {
@@ -1046,17 +1015,12 @@ AutoCloseable {
         this.demo = demo;
     }
 
-    public String getResourcePackUrl() {
-        return this.resourcePackUrl;
+    public Optional<ServerResourcePackProperties> getResourcePackProperties() {
+        return Optional.empty();
     }
 
-    public String getResourcePackHash() {
-        return this.resourcePackHash;
-    }
-
-    public void setResourcePack(String url, String hash) {
-        this.resourcePackUrl = url;
-        this.resourcePackHash = hash;
+    public boolean requireResourcePack() {
+        return this.getResourcePackProperties().filter(ServerResourcePackProperties::isRequired).isPresent();
     }
 
     public abstract boolean isDedicated();
@@ -1113,6 +1077,10 @@ AutoCloseable {
 
     public void setMotd(String motd) {
         this.motd = motd;
+    }
+
+    public boolean shouldPreviewChat() {
+        return false;
     }
 
     public boolean isStopped() {
@@ -1183,15 +1151,19 @@ AutoCloseable {
     }
 
     public MinecraftSessionService getSessionService() {
-        return this.sessionService;
+        return this.apiServices.sessionService();
+    }
+
+    public SignatureVerifier getServicesSignatureVerifier() {
+        return this.apiServices.serviceSignatureVerifier();
     }
 
     public GameProfileRepository getGameProfileRepo() {
-        return this.gameProfileRepo;
+        return this.apiServices.profileRepository();
     }
 
     public UserCache getUserCache() {
-        return this.userCache;
+        return this.apiServices.userCache();
     }
 
     public ServerMetadata getServerMetadata() {
@@ -1226,6 +1198,10 @@ AutoCloseable {
 
     public int getNetworkCompressionThreshold() {
         return 256;
+    }
+
+    public boolean shouldEnforceSecureProfile() {
+        return false;
     }
 
     public long getTimeReference() {
@@ -1269,7 +1245,7 @@ AutoCloseable {
             this.getPlayerManager().saveAllPlayerData();
             this.getPlayerManager().onDataPacksReloaded();
             this.commandFunctionManager.setFunctions(this.resourceManagerHolder.dataPackContents.getFunctionLoader());
-            this.structureManager.setResourceManager(this.resourceManagerHolder.resourceManager);
+            this.structureTemplateManager.setResourceManager(this.resourceManagerHolder.resourceManager);
         }, (Executor)this);
         if (this.isOnThread()) {
             this.runTasks(((CompletableFuture)completableFuture)::isDone);
@@ -1281,7 +1257,7 @@ AutoCloseable {
         resourcePackManager.scanPacks();
         if (safeMode) {
             resourcePackManager.setEnabledProfiles(Collections.singleton(VANILLA));
-            return new DataPackSettings((List<String>)ImmutableList.of((Object)VANILLA), (List<String>)ImmutableList.of());
+            return DataPackSettings.SAFE_MODE;
         }
         LinkedHashSet set = Sets.newLinkedHashSet();
         for (String string : dataPackSettings.getEnabled()) {
@@ -1321,7 +1297,7 @@ AutoCloseable {
         ArrayList list = Lists.newArrayList(playerManager.getPlayerList());
         for (ServerPlayerEntity serverPlayerEntity : list) {
             if (whitelist.isAllowed(serverPlayerEntity.getGameProfile())) continue;
-            serverPlayerEntity.networkHandler.disconnect(new TranslatableText("multiplayer.disconnect.not_whitelisted"));
+            serverPlayerEntity.networkHandler.disconnect(Text.translatable("multiplayer.disconnect.not_whitelisted"));
         }
     }
 
@@ -1335,7 +1311,7 @@ AutoCloseable {
 
     public ServerCommandSource getCommandSource() {
         ServerWorld serverWorld = this.getOverworld();
-        return new ServerCommandSource(this, serverWorld == null ? Vec3d.ZERO : Vec3d.of(serverWorld.getSpawnPos()), Vec2f.ZERO, serverWorld, 4, "Server", new LiteralText("Server"), this, null);
+        return new ServerCommandSource(this, serverWorld == null ? Vec3d.ZERO : Vec3d.of(serverWorld.getSpawnPos()), Vec2f.ZERO, serverWorld, 4, "Server", Text.literal("Server"), this, null);
     }
 
     @Override
@@ -1451,10 +1427,10 @@ AutoCloseable {
 
     private void dumpStats(Path path) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(path, new OpenOption[0]);){
-            writer.write(String.format("pending_tasks: %d\n", this.getTaskCount()));
-            writer.write(String.format("average_tick_time: %f\n", Float.valueOf(this.getTickTime())));
-            writer.write(String.format("tick_times: %s\n", Arrays.toString(this.lastTickLengths)));
-            writer.write(String.format("queue: %s\n", Util.getMainWorkerExecutor()));
+            writer.write(String.format(Locale.ROOT, "pending_tasks: %d\n", this.getTaskCount()));
+            writer.write(String.format(Locale.ROOT, "average_tick_time: %f\n", Float.valueOf(this.getTickTime())));
+            writer.write(String.format(Locale.ROOT, "tick_times: %s\n", Arrays.toString(this.lastTickLengths)));
+            writer.write(String.format(Locale.ROOT, "queue: %s\n", Util.getMainWorkerExecutor()));
         }
     }
 
@@ -1466,7 +1442,7 @@ AutoCloseable {
 
                 @Override
                 public <T extends GameRules.Rule<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
-                    list.add(String.format("%s=%s\n", key.getName(), gameRules.get(key)));
+                    list.add(String.format(Locale.ROOT, "%s=%s\n", key.getName(), gameRules.get(key)));
                 }
             });
             for (String string : list) {
@@ -1570,6 +1546,11 @@ AutoCloseable {
         this.recorder.stop();
     }
 
+    public void forceStopRecorder() {
+        this.recorder.forceStop();
+        this.profiler = this.recorder.getProfiler();
+    }
+
     public Path getSavePath(WorldSavePath worldSavePath) {
         return this.session.getDirectory(worldSavePath);
     }
@@ -1578,8 +1559,8 @@ AutoCloseable {
         return true;
     }
 
-    public StructureManager getStructureManager() {
-        return this.structureManager;
+    public StructureTemplateManager getStructureTemplateManager() {
+        return this.structureTemplateManager;
     }
 
     public SaveProperties getSaveProperties() {
@@ -1594,10 +1575,6 @@ AutoCloseable {
         return TextStream.UNFILTERED;
     }
 
-    public boolean requireResourcePack() {
-        return false;
-    }
-
     public ServerPlayerInteractionManager getPlayerInteractionManager(ServerPlayerEntity player) {
         return this.isDemo() ? new DemoServerPlayerInteractionManager(player) : new ServerPlayerInteractionManager(player);
     }
@@ -1609,11 +1586,6 @@ AutoCloseable {
 
     public ResourceManager getResourceManager() {
         return this.resourceManagerHolder.resourceManager;
-    }
-
-    @Nullable
-    public Text getResourcePackPrompt() {
-        return null;
     }
 
     public boolean isSaving() {
@@ -1635,6 +1607,23 @@ AutoCloseable {
         ProfileResult profileResult = this.debugStart.end(Util.getMeasuringTimeNano(), this.ticks);
         this.debugStart = null;
         return profileResult;
+    }
+
+    public int getMaxChainedNeighborUpdates() {
+        return 1000000;
+    }
+
+    public void logChatMessage(Text message, MessageType.Parameters params, @Nullable String prefix) {
+        String string = params.applyChatDecoration(message).getString();
+        if (prefix != null) {
+            LOGGER.info("[{}] {}", (Object)prefix, (Object)string);
+        } else {
+            LOGGER.info("{}", (Object)string);
+        }
+    }
+
+    public MessageDecorator getMessageDecorator() {
+        return MessageDecorator.NOOP;
     }
 
     @Override
@@ -1740,6 +1729,9 @@ AutoCloseable {
                 }
             };
         }
+    }
+
+    public record ServerResourcePackProperties(String url, String hash, boolean isRequired, @Nullable Text prompt) {
     }
 }
 

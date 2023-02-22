@@ -3,17 +3,34 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ComparisonChain
+ *  com.mojang.datafixers.kinds.App
+ *  com.mojang.datafixers.kinds.Applicative
  *  com.mojang.logging.LogUtils
+ *  com.mojang.serialization.Codec
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
+ *  com.mojang.serialization.codecs.RecordCodecBuilder
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.entity.effect;
 
 import com.google.common.collect.ComparisonChain;
+import com.mojang.datafixers.kinds.App;
+import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -21,7 +38,7 @@ public class StatusEffectInstance
 implements Comparable<StatusEffectInstance> {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final StatusEffect type;
-    private int duration;
+    int duration;
     private int amplifier;
     private boolean ambient;
     private boolean permanent;
@@ -29,9 +46,10 @@ implements Comparable<StatusEffectInstance> {
     private boolean showIcon;
     @Nullable
     private StatusEffectInstance hiddenEffect;
+    private Optional<FactorCalculationData> factorCalculationData;
 
-    public StatusEffectInstance(StatusEffect statusEffect) {
-        this(statusEffect, 0, 0);
+    public StatusEffectInstance(StatusEffect type) {
+        this(type, 0, 0);
     }
 
     public StatusEffectInstance(StatusEffect type, int duration) {
@@ -47,10 +65,10 @@ implements Comparable<StatusEffectInstance> {
     }
 
     public StatusEffectInstance(StatusEffect type, int duration, int amplifier, boolean ambient, boolean showParticles, boolean showIcon) {
-        this(type, duration, amplifier, ambient, showParticles, showIcon, null);
+        this(type, duration, amplifier, ambient, showParticles, showIcon, null, type.getFactorCalculationDataSupplier());
     }
 
-    public StatusEffectInstance(StatusEffect type, int duration, int amplifier, boolean ambient, boolean showParticles, boolean showIcon, @Nullable StatusEffectInstance hiddenEffect) {
+    public StatusEffectInstance(StatusEffect type, int duration, int amplifier, boolean ambient, boolean showParticles, boolean showIcon, @Nullable StatusEffectInstance hiddenEffect, Optional<FactorCalculationData> factorCalculationData) {
         this.type = type;
         this.duration = duration;
         this.amplifier = amplifier;
@@ -58,11 +76,17 @@ implements Comparable<StatusEffectInstance> {
         this.showParticles = showParticles;
         this.showIcon = showIcon;
         this.hiddenEffect = hiddenEffect;
+        this.factorCalculationData = factorCalculationData;
     }
 
-    public StatusEffectInstance(StatusEffectInstance statusEffectInstance) {
-        this.type = statusEffectInstance.type;
-        this.copyFrom(statusEffectInstance);
+    public StatusEffectInstance(StatusEffectInstance instance) {
+        this.type = instance.type;
+        this.factorCalculationData = this.type.getFactorCalculationDataSupplier();
+        this.copyFrom(instance);
+    }
+
+    public Optional<FactorCalculationData> getFactorCalculationData() {
+        return this.factorCalculationData;
     }
 
     void copyFrom(StatusEffectInstance that) {
@@ -77,6 +101,7 @@ implements Comparable<StatusEffectInstance> {
         if (this.type != that.type) {
             LOGGER.warn("This method should only be called for matching effects!");
         }
+        int i = this.duration;
         boolean bl = false;
         if (that.amplifier > this.amplifier) {
             if (that.duration < this.duration) {
@@ -107,6 +132,10 @@ implements Comparable<StatusEffectInstance> {
         }
         if (that.showIcon != this.showIcon) {
             this.showIcon = that.showIcon;
+            bl = true;
+        }
+        if (i != this.duration) {
+            this.factorCalculationData.ifPresent(factorCalculationData -> factorCalculationData.effectChangedTimestamp += this.duration - i);
             bl = true;
         }
         return bl;
@@ -148,6 +177,7 @@ implements Comparable<StatusEffectInstance> {
                 overwriteCallback.run();
             }
         }
+        this.factorCalculationData.ifPresent(factorCalculationData -> factorCalculationData.update(this));
         return this.duration > 0;
     }
 
@@ -199,7 +229,7 @@ implements Comparable<StatusEffectInstance> {
     }
 
     public NbtCompound writeNbt(NbtCompound nbt) {
-        nbt.putByte("Id", (byte)StatusEffect.getRawId(this.getEffectType()));
+        nbt.putInt("Id", StatusEffect.getRawId(this.getEffectType()));
         this.writeTypelessNbt(nbt);
         return nbt;
     }
@@ -215,11 +245,12 @@ implements Comparable<StatusEffectInstance> {
             this.hiddenEffect.writeNbt(nbtCompound);
             nbt.put("HiddenEffect", nbtCompound);
         }
+        this.factorCalculationData.ifPresent(factorCalculationData -> FactorCalculationData.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, factorCalculationData).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)).ifPresent(factorCalculationDataNbt -> nbt.put("FactorCalculationData", (NbtElement)factorCalculationDataNbt)));
     }
 
     @Nullable
     public static StatusEffectInstance fromNbt(NbtCompound nbt) {
-        byte i = nbt.getByte("Id");
+        int i = nbt.getInt("Id");
         StatusEffect statusEffect = StatusEffect.byRawId(i);
         if (statusEffect == null) {
             return null;
@@ -243,7 +274,8 @@ implements Comparable<StatusEffectInstance> {
         if (nbt.contains("HiddenEffect", 10)) {
             statusEffectInstance = StatusEffectInstance.fromNbt(type, nbt.getCompound("HiddenEffect"));
         }
-        return new StatusEffectInstance(type, j, i < 0 ? (byte)0 : i, bl, bl2, bl3, statusEffectInstance);
+        Optional optional = nbt.contains("FactorCalculationData", 10) ? FactorCalculationData.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.getCompound("FactorCalculationData"))).resultOrPartial(arg_0 -> ((Logger)LOGGER).error(arg_0)) : Optional.empty();
+        return new StatusEffectInstance(type, j, Math.max(i, 0), bl, bl2, bl3, statusEffectInstance, optional);
     }
 
     public void setPermanent(boolean permanent) {
@@ -266,6 +298,52 @@ implements Comparable<StatusEffectInstance> {
     @Override
     public /* synthetic */ int compareTo(Object that) {
         return this.compareTo((StatusEffectInstance)that);
+    }
+
+    public static class FactorCalculationData {
+        public static final Codec<FactorCalculationData> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codecs.NONNEGATIVE_INT.fieldOf("padding_duration").forGetter(data -> data.paddingDuration), (App)Codec.FLOAT.fieldOf("factor_start").orElse((Object)Float.valueOf(0.0f)).forGetter(data -> Float.valueOf(data.factorStart)), (App)Codec.FLOAT.fieldOf("factor_target").orElse((Object)Float.valueOf(1.0f)).forGetter(data -> Float.valueOf(data.factorTarget)), (App)Codec.FLOAT.fieldOf("factor_current").orElse((Object)Float.valueOf(0.0f)).forGetter(data -> Float.valueOf(data.factorCurrent)), (App)Codecs.NONNEGATIVE_INT.fieldOf("effect_changed_timestamp").orElse((Object)0).forGetter(data -> data.effectChangedTimestamp), (App)Codec.FLOAT.fieldOf("factor_previous_frame").orElse((Object)Float.valueOf(0.0f)).forGetter(data -> Float.valueOf(data.factorPreviousFrame)), (App)Codec.BOOL.fieldOf("had_effect_last_tick").orElse((Object)false).forGetter(data -> data.hadEffectLastTick)).apply((Applicative)instance, FactorCalculationData::new));
+        private final int paddingDuration;
+        private float factorStart;
+        private float factorTarget;
+        private float factorCurrent;
+        int effectChangedTimestamp;
+        private float factorPreviousFrame;
+        private boolean hadEffectLastTick;
+
+        public FactorCalculationData(int paddingDuration, float factorStart, float factorTarget, float factorCurrent, int effectChangedTimestamp, float factorPreviousFrame, boolean hadEffectLastTick) {
+            this.paddingDuration = paddingDuration;
+            this.factorStart = factorStart;
+            this.factorTarget = factorTarget;
+            this.factorCurrent = factorCurrent;
+            this.effectChangedTimestamp = effectChangedTimestamp;
+            this.factorPreviousFrame = factorPreviousFrame;
+            this.hadEffectLastTick = hadEffectLastTick;
+        }
+
+        public FactorCalculationData(int paddingDuration) {
+            this(paddingDuration, 0.0f, 1.0f, 0.0f, 0, 0.0f, false);
+        }
+
+        public void update(StatusEffectInstance instance) {
+            boolean bl;
+            this.factorPreviousFrame = this.factorCurrent;
+            boolean bl2 = bl = instance.duration > this.paddingDuration;
+            if (this.hadEffectLastTick != bl) {
+                this.hadEffectLastTick = bl;
+                this.effectChangedTimestamp = instance.duration;
+                this.factorStart = this.factorCurrent;
+                this.factorTarget = bl ? 1.0f : 0.0f;
+            }
+            float f = MathHelper.clamp(((float)this.effectChangedTimestamp - (float)instance.duration) / (float)this.paddingDuration, 0.0f, 1.0f);
+            this.factorCurrent = MathHelper.lerp(f, this.factorStart, this.factorTarget);
+        }
+
+        public float lerp(LivingEntity entity, float tickDelta) {
+            if (entity.isRemoved()) {
+                this.factorPreviousFrame = this.factorCurrent;
+            }
+            return MathHelper.lerp(tickDelta, this.factorPreviousFrame, this.factorCurrent);
+        }
     }
 }
 

@@ -7,7 +7,6 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import java.util.Random;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityType;
@@ -46,11 +45,13 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BiomeTags;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
@@ -59,7 +60,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
 import org.jetbrains.annotations.Nullable;
 
 public class DrownedEntity
@@ -98,9 +98,9 @@ implements RangedAttackMob {
     @Override
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         entityData = super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
-        if (this.getEquippedStack(EquipmentSlot.OFFHAND).isEmpty() && this.random.nextFloat() < 0.03f) {
+        if (this.getEquippedStack(EquipmentSlot.OFFHAND).isEmpty() && world.getRandom().nextFloat() < 0.03f) {
             this.equipStack(EquipmentSlot.OFFHAND, new ItemStack(Items.NAUTILUS_SHELL));
-            this.handDropChances[EquipmentSlot.OFFHAND.getEntitySlotId()] = 2.0f;
+            this.updateDropChances(EquipmentSlot.OFFHAND);
         }
         return entityData;
     }
@@ -112,7 +112,7 @@ implements RangedAttackMob {
         }
         RegistryEntry<Biome> registryEntry = world.getBiome(pos);
         boolean bl2 = bl = world.getDifficulty() != Difficulty.PEACEFUL && DrownedEntity.isSpawnDark(world, pos, random) && (spawnReason == SpawnReason.SPAWNER || world.getFluidState(pos).isIn(FluidTags.WATER));
-        if (registryEntry.matchesKey(BiomeKeys.RIVER) || registryEntry.matchesKey(BiomeKeys.FROZEN_RIVER)) {
+        if (registryEntry.isIn(BiomeTags.MORE_FREQUENT_DROWNED_SPAWNS)) {
             return random.nextInt(15) == 0 && bl;
         }
         return random.nextInt(40) == 0 && DrownedEntity.isValidSpawnDepth(world, pos) && bl;
@@ -167,9 +167,9 @@ implements RangedAttackMob {
     }
 
     @Override
-    protected void initEquipment(LocalDifficulty difficulty) {
-        if ((double)this.random.nextFloat() > 0.9) {
-            int i = this.random.nextInt(16);
+    protected void initEquipment(Random random, LocalDifficulty localDifficulty) {
+        if ((double)random.nextFloat() > 0.9) {
+            int i = random.nextInt(16);
             if (i < 10) {
                 this.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.TRIDENT));
             } else {

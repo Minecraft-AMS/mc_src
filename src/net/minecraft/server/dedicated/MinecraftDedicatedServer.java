@@ -2,11 +2,8 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.base.Strings
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
- *  com.mojang.authlib.GameProfileRepository
- *  com.mojang.authlib.minecraft.MinecraftSessionService
  *  com.mojang.datafixers.DataFixer
  *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
@@ -14,11 +11,8 @@
  */
 package net.minecraft.server.dedicated;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.GameProfileRepository;
-import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
@@ -34,8 +28,8 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
-import java.util.regex.Pattern;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.entity.SkullBlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -63,7 +57,7 @@ import net.minecraft.server.rcon.QueryResponseHandler;
 import net.minecraft.server.rcon.RconCommandOutput;
 import net.minecraft.server.rcon.RconListener;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
+import net.minecraft.util.ApiServices;
 import net.minecraft.util.SystemDetails;
 import net.minecraft.util.UserCache;
 import net.minecraft.util.Util;
@@ -85,7 +79,6 @@ implements DedicatedServer {
     static final Logger LOGGER = LogUtils.getLogger();
     private static final int field_29662 = 5000;
     private static final int field_29663 = 2;
-    private static final Pattern SHA1_PATTERN = Pattern.compile("^[a-fA-F0-9]{40}$");
     private final List<PendingServerCommand> commandQueue = Collections.synchronizedList(Lists.newArrayList());
     @Nullable
     private QueryResponseHandler queryResponseHandler;
@@ -97,15 +90,12 @@ implements DedicatedServer {
     private DedicatedServerGui gui;
     @Nullable
     private final TextFilterer filterer;
-    @Nullable
-    private final Text resourcePackPrompt;
 
-    public MinecraftDedicatedServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, ServerPropertiesLoader propertiesLoader, DataFixer dataFixer, MinecraftSessionService sessionService, GameProfileRepository gameProfileRepo, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
-        super(serverThread, session, dataPackManager, saveLoader, Proxy.NO_PROXY, dataFixer, sessionService, gameProfileRepo, userCache, worldGenerationProgressListenerFactory);
+    public MinecraftDedicatedServer(Thread serverThread, LevelStorage.Session session, ResourcePackManager dataPackManager, SaveLoader saveLoader, ServerPropertiesLoader propertiesLoader, DataFixer dataFixer, ApiServices apiServices, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory) {
+        super(serverThread, session, dataPackManager, saveLoader, Proxy.NO_PROXY, dataFixer, apiServices, worldGenerationProgressListenerFactory);
         this.propertiesLoader = propertiesLoader;
         this.rconCommandOutput = new RconCommandOutput(this);
         this.filterer = TextFilterer.load(propertiesLoader.getPropertiesHandler().textFilteringConfig);
-        this.resourcePackPrompt = MinecraftDedicatedServer.parseResourcePackPrompt(propertiesLoader);
     }
 
     @Override
@@ -144,7 +134,6 @@ implements DedicatedServer {
         }
         this.setPvpEnabled(serverPropertiesHandler.pvp);
         this.setFlightEnabled(serverPropertiesHandler.allowFlight);
-        this.setResourcePack(serverPropertiesHandler.resourcePack, this.createResourcePackHash());
         this.setMotd(serverPropertiesHandler.motd);
         super.setPlayerIdleTimeout(serverPropertiesHandler.playerIdleTimeout.get());
         this.setEnforceWhitelist(serverPropertiesHandler.enforceWhitelist);
@@ -182,7 +171,7 @@ implements DedicatedServer {
         }
         this.setPlayerManager(new DedicatedPlayerManager(this, this.getRegistryManager(), this.saveHandler));
         long l = Util.getMeasuringTimeNano();
-        SkullBlockEntity.setServices(this.getUserCache(), this.getSessionService(), this);
+        SkullBlockEntity.setServices(this.apiServices, this);
         UserCache.setUseRemote(this.isOnlineMode());
         LOGGER.info("Preparing level \"{}\"", (Object)this.getLevelName());
         this.loadWorld();
@@ -230,29 +219,6 @@ implements DedicatedServer {
         return this.propertiesLoader.getPropertiesHandler().spawnNpcs && super.shouldSpawnNpcs();
     }
 
-    public String createResourcePackHash() {
-        String string;
-        ServerPropertiesHandler serverPropertiesHandler = this.propertiesLoader.getPropertiesHandler();
-        if (!serverPropertiesHandler.resourcePackSha1.isEmpty()) {
-            string = serverPropertiesHandler.resourcePackSha1;
-            if (!Strings.isNullOrEmpty((String)serverPropertiesHandler.resourcePackHash)) {
-                LOGGER.warn("resource-pack-hash is deprecated and found along side resource-pack-sha1. resource-pack-hash will be ignored.");
-            }
-        } else if (!Strings.isNullOrEmpty((String)serverPropertiesHandler.resourcePackHash)) {
-            LOGGER.warn("resource-pack-hash is deprecated. Please use resource-pack-sha1 instead.");
-            string = serverPropertiesHandler.resourcePackHash;
-        } else {
-            string = "";
-        }
-        if (!string.isEmpty() && !SHA1_PATTERN.matcher(string).matches()) {
-            LOGGER.warn("Invalid sha1 for ressource-pack-sha1");
-        }
-        if (!serverPropertiesHandler.resourcePack.isEmpty() && string.isEmpty()) {
-            LOGGER.warn("You specified a resource pack without providing a sha1 hash. Pack will be updated on the client only if you change the name of the pack.");
-        }
-        return string;
-    }
-
     @Override
     public ServerPropertiesHandler getProperties() {
         return this.propertiesLoader.getPropertiesHandler();
@@ -279,18 +245,18 @@ implements DedicatedServer {
     public void dumpProperties(Path file) throws IOException {
         ServerPropertiesHandler serverPropertiesHandler = this.getProperties();
         try (BufferedWriter writer = Files.newBufferedWriter(file, new OpenOption[0]);){
-            writer.write(String.format("sync-chunk-writes=%s%n", serverPropertiesHandler.syncChunkWrites));
-            writer.write(String.format("gamemode=%s%n", new Object[]{serverPropertiesHandler.gameMode}));
-            writer.write(String.format("spawn-monsters=%s%n", serverPropertiesHandler.spawnMonsters));
-            writer.write(String.format("entity-broadcast-range-percentage=%d%n", serverPropertiesHandler.entityBroadcastRangePercentage));
-            writer.write(String.format("max-world-size=%d%n", serverPropertiesHandler.maxWorldSize));
-            writer.write(String.format("spawn-npcs=%s%n", serverPropertiesHandler.spawnNpcs));
-            writer.write(String.format("view-distance=%d%n", serverPropertiesHandler.viewDistance));
-            writer.write(String.format("simulation-distance=%d%n", serverPropertiesHandler.simulationDistance));
-            writer.write(String.format("spawn-animals=%s%n", serverPropertiesHandler.spawnAnimals));
-            writer.write(String.format("generate-structures=%s%n", serverPropertiesHandler.getGeneratorOptions(this.getRegistryManager()).shouldGenerateStructures()));
-            writer.write(String.format("use-native=%s%n", serverPropertiesHandler.useNativeTransport));
-            writer.write(String.format("rate-limit=%d%n", serverPropertiesHandler.rateLimit));
+            writer.write(String.format(Locale.ROOT, "sync-chunk-writes=%s%n", serverPropertiesHandler.syncChunkWrites));
+            writer.write(String.format(Locale.ROOT, "gamemode=%s%n", new Object[]{serverPropertiesHandler.gameMode}));
+            writer.write(String.format(Locale.ROOT, "spawn-monsters=%s%n", serverPropertiesHandler.spawnMonsters));
+            writer.write(String.format(Locale.ROOT, "entity-broadcast-range-percentage=%d%n", serverPropertiesHandler.entityBroadcastRangePercentage));
+            writer.write(String.format(Locale.ROOT, "max-world-size=%d%n", serverPropertiesHandler.maxWorldSize));
+            writer.write(String.format(Locale.ROOT, "spawn-npcs=%s%n", serverPropertiesHandler.spawnNpcs));
+            writer.write(String.format(Locale.ROOT, "view-distance=%d%n", serverPropertiesHandler.viewDistance));
+            writer.write(String.format(Locale.ROOT, "simulation-distance=%d%n", serverPropertiesHandler.simulationDistance));
+            writer.write(String.format(Locale.ROOT, "spawn-animals=%s%n", serverPropertiesHandler.spawnAnimals));
+            writer.write(String.format(Locale.ROOT, "generate-structures=%s%n", serverPropertiesHandler.getGeneratorOptions(this.getRegistryManager()).shouldGenerateStructures()));
+            writer.write(String.format(Locale.ROOT, "use-native=%s%n", serverPropertiesHandler.useNativeTransport));
+            writer.write(String.format(Locale.ROOT, "rate-limit=%d%n", serverPropertiesHandler.rateLimit));
         }
     }
 
@@ -328,7 +294,7 @@ implements DedicatedServer {
     public void executeQueuedCommands() {
         while (!this.commandQueue.isEmpty()) {
             PendingServerCommand pendingServerCommand = this.commandQueue.remove(0);
-            this.getCommandManager().execute(pendingServerCommand.source, pendingServerCommand.command);
+            this.getCommandManager().executeWithPrefix(pendingServerCommand.source, pendingServerCommand.command);
         }
     }
 
@@ -345,6 +311,11 @@ implements DedicatedServer {
     @Override
     public boolean isUsingNativeTransport() {
         return this.getProperties().useNativeTransport;
+    }
+
+    @Override
+    public boolean shouldPreviewChat() {
+        return this.getProperties().previewsChat;
     }
 
     @Override
@@ -460,6 +431,11 @@ implements DedicatedServer {
         return this.getProperties().networkCompressionThreshold;
     }
 
+    @Override
+    public boolean shouldEnforceSecureProfile() {
+        return this.getProperties().enforceSecureProfile && this.getProperties().onlineMode;
+    }
+
     protected boolean convertData() {
         int i;
         boolean bl = false;
@@ -519,6 +495,11 @@ implements DedicatedServer {
     }
 
     @Override
+    public int getMaxChainedNeighborUpdates() {
+        return this.getProperties().maxChainedNeighborUpdates;
+    }
+
+    @Override
     public String getPlugins() {
         return "";
     }
@@ -526,7 +507,7 @@ implements DedicatedServer {
     @Override
     public String executeRconCommand(String command) {
         this.rconCommandOutput.clear();
-        this.submitAndJoin(() -> this.getCommandManager().execute(this.rconCommandOutput.createRconCommandSource(), command));
+        this.submitAndJoin(() -> this.getCommandManager().executeWithPrefix(this.rconCommandOutput.createRconCommandSource(), command));
         return this.rconCommandOutput.asString();
     }
 
@@ -570,34 +551,14 @@ implements DedicatedServer {
     }
 
     @Override
-    public boolean requireResourcePack() {
-        return this.propertiesLoader.getPropertiesHandler().requireResourcePack;
-    }
-
-    @Override
     @Nullable
     public GameMode getForcedGameMode() {
         return this.propertiesLoader.getPropertiesHandler().forceGameMode ? this.saveProperties.getGameMode() : null;
     }
 
-    @Nullable
-    private static Text parseResourcePackPrompt(ServerPropertiesLoader propertiesLoader) {
-        String string = propertiesLoader.getPropertiesHandler().resourcePackPrompt;
-        if (!Strings.isNullOrEmpty((String)string)) {
-            try {
-                return Text.Serializer.fromJson(string);
-            }
-            catch (Exception exception) {
-                LOGGER.warn("Failed to parse resource pack prompt '{}'", (Object)string, (Object)exception);
-            }
-        }
-        return null;
-    }
-
     @Override
-    @Nullable
-    public Text getResourcePackPrompt() {
-        return this.resourcePackPrompt;
+    public Optional<MinecraftServer.ServerResourcePackProperties> getResourcePackProperties() {
+        return this.propertiesLoader.getPropertiesHandler().serverResourcePackProperties;
     }
 
     @Override

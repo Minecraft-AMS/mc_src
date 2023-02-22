@@ -4,7 +4,6 @@
 package net.minecraft.client.render.entity;
 
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 
 public final class PlayerModelPart
 extends Enum<PlayerModelPart> {
@@ -33,7 +32,7 @@ extends Enum<PlayerModelPart> {
         this.id = id;
         this.bitFlag = 1 << id;
         this.name = name;
-        this.optionName = new TranslatableText("options.modelPart." + name);
+        this.optionName = Text.translatable("options.modelPart." + name);
     }
 
     public int getBitFlag() {

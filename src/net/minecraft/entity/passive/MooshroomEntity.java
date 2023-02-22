@@ -8,7 +8,6 @@
 package net.minecraft.entity.passive;
 
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -43,6 +42,7 @@ import net.minecraft.tag.ItemTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldView;
@@ -70,7 +70,7 @@ implements Shearable {
         if (world.getBlockState(pos.down()).isOf(Blocks.MYCELIUM)) {
             return 10.0f;
         }
-        return world.getBrightness(pos) - 0.5f;
+        return world.getPhototaxisFavor(pos);
     }
 
     public static boolean canSpawn(EntityType<MooshroomEntity> type, WorldAccess world, SpawnReason spawnReason, BlockPos pos, Random random) {
@@ -183,7 +183,7 @@ implements Shearable {
         super.writeCustomDataToNbt(nbt);
         nbt.putString("Type", this.getMooshroomType().name);
         if (this.stewEffect != null) {
-            nbt.putByte("EffectId", (byte)StatusEffect.getRawId(this.stewEffect));
+            nbt.putInt("EffectId", StatusEffect.getRawId(this.stewEffect));
             nbt.putInt("EffectDuration", this.stewEffectDuration);
         }
     }
@@ -193,7 +193,7 @@ implements Shearable {
         super.readCustomDataFromNbt(nbt);
         this.setType(Type.fromName(nbt.getString("Type")));
         if (nbt.contains("EffectId", 1)) {
-            this.stewEffect = StatusEffect.byRawId(nbt.getByte("EffectId"));
+            this.stewEffect = StatusEffect.byRawId(nbt.getInt("EffectId"));
         }
         if (nbt.contains("EffectDuration", 3)) {
             this.stewEffectDuration = nbt.getInt("EffectDuration");

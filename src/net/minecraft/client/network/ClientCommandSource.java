@@ -19,6 +19,8 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +33,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.command.CommandSource;
 import net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket;
+import net.minecraft.network.packet.s2c.play.ChatSuggestionsS2CPacket;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -50,7 +53,8 @@ implements CommandSource {
     private final MinecraftClient client;
     private int completionId = -1;
     @Nullable
-    private CompletableFuture<Suggestions> pendingCompletion;
+    private CompletableFuture<Suggestions> pendingCommandCompletion;
+    private final Set<String> chatSuggestions = new HashSet<String>();
 
     public ClientCommandSource(ClientPlayNetworkHandler networkHandler, MinecraftClient client) {
         this.networkHandler = networkHandler;
@@ -64,6 +68,16 @@ implements CommandSource {
             list.add(playerListEntry.getProfile().getName());
         }
         return list;
+    }
+
+    @Override
+    public Collection<String> getChatSuggestions() {
+        if (this.chatSuggestions.isEmpty()) {
+            return this.getPlayerNames();
+        }
+        HashSet<String> set = new HashSet<String>(this.getPlayerNames());
+        set.addAll(this.chatSuggestions);
+        return set;
     }
 
     @Override
@@ -105,13 +119,13 @@ implements CommandSource {
 
     @Override
     public CompletableFuture<Suggestions> getCompletions(CommandContext<?> context) {
-        if (this.pendingCompletion != null) {
-            this.pendingCompletion.cancel(false);
+        if (this.pendingCommandCompletion != null) {
+            this.pendingCommandCompletion.cancel(false);
         }
-        this.pendingCompletion = new CompletableFuture();
+        this.pendingCommandCompletion = new CompletableFuture();
         int i = ++this.completionId;
         this.networkHandler.sendPacket(new RequestCommandCompletionsC2SPacket(i, context.getInput()));
-        return this.pendingCompletion;
+        return this.pendingCommandCompletion;
     }
 
     private static String format(double d) {
@@ -154,9 +168,26 @@ implements CommandSource {
 
     public void onCommandSuggestions(int completionId, Suggestions suggestions) {
         if (completionId == this.completionId) {
-            this.pendingCompletion.complete(suggestions);
-            this.pendingCompletion = null;
+            this.pendingCommandCompletion.complete(suggestions);
+            this.pendingCommandCompletion = null;
             this.completionId = -1;
+        }
+    }
+
+    public void onChatSuggestions(ChatSuggestionsS2CPacket.Action action, List<String> suggestions) {
+        switch (action) {
+            case ADD: {
+                this.chatSuggestions.addAll(suggestions);
+                break;
+            }
+            case REMOVE: {
+                suggestions.forEach(this.chatSuggestions::remove);
+                break;
+            }
+            case SET: {
+                this.chatSuggestions.clear();
+                this.chatSuggestions.addAll(suggestions);
+            }
         }
     }
 }

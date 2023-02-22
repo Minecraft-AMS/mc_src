@@ -37,7 +37,7 @@ extends LongRunningTask {
 
     @Override
     public void run() {
-        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+        RealmsClient realmsClient = RealmsClient.create();
         this.setTitle(this.title);
         for (int i = 0; i < 25; ++i) {
             try {

@@ -17,9 +17,9 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.DonkeyEntity;
-import net.minecraft.entity.passive.HorseBaseEntity;
 import net.minecraft.entity.passive.HorseColor;
 import net.minecraft.entity.passive.HorseMarking;
 import net.minecraft.entity.passive.PassiveEntity;
@@ -36,25 +36,26 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class HorseEntity
-extends HorseBaseEntity {
+extends AbstractHorseEntity {
     private static final UUID HORSE_ARMOR_BONUS_ID = UUID.fromString("556E1665-8B10-40C8-8F9D-CF9B1667F295");
     private static final TrackedData<Integer> VARIANT = DataTracker.registerData(HorseEntity.class, TrackedDataHandlerRegistry.INTEGER);
 
     public HorseEntity(EntityType<? extends HorseEntity> entityType, World world) {
-        super((EntityType<? extends HorseBaseEntity>)entityType, world);
+        super((EntityType<? extends AbstractHorseEntity>)entityType, world);
     }
 
     @Override
-    protected void initAttributes() {
-        this.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(this.getChildHealthBonus());
-        this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(this.getChildMovementSpeedBonus());
-        this.getAttributeInstance(EntityAttributes.HORSE_JUMP_STRENGTH).setBaseValue(this.getChildJumpStrengthBonus());
+    protected void initAttributes(Random random) {
+        this.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(this.getChildHealthBonus(random));
+        this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(this.getChildMovementSpeedBonus(random));
+        this.getAttributeInstance(EntityAttributes.HORSE_JUMP_STRENGTH).setBaseValue(this.getChildJumpStrengthBonus(random));
     }
 
     @Override
@@ -225,27 +226,27 @@ extends HorseBaseEntity {
             return false;
         }
         if (other instanceof DonkeyEntity || other instanceof HorseEntity) {
-            return this.canBreed() && ((HorseBaseEntity)other).canBreed();
+            return this.canBreed() && ((AbstractHorseEntity)other).canBreed();
         }
         return false;
     }
 
     @Override
     public PassiveEntity createChild(ServerWorld world, PassiveEntity entity) {
-        HorseBaseEntity horseBaseEntity;
+        AbstractHorseEntity abstractHorseEntity;
         if (entity instanceof DonkeyEntity) {
-            horseBaseEntity = EntityType.MULE.create(world);
+            abstractHorseEntity = EntityType.MULE.create(world);
         } else {
             HorseEntity horseEntity = (HorseEntity)entity;
-            horseBaseEntity = EntityType.HORSE.create(world);
+            abstractHorseEntity = EntityType.HORSE.create(world);
             int i = this.random.nextInt(9);
             HorseColor horseColor = i < 4 ? this.getColor() : (i < 8 ? horseEntity.getColor() : Util.getRandom(HorseColor.values(), this.random));
             int j = this.random.nextInt(5);
             HorseMarking horseMarking = j < 2 ? this.getMarking() : (j < 4 ? horseEntity.getMarking() : Util.getRandom(HorseMarking.values(), this.random));
-            ((HorseEntity)horseBaseEntity).setVariant(horseColor, horseMarking);
+            ((HorseEntity)abstractHorseEntity).setVariant(horseColor, horseMarking);
         }
-        this.setChildAttributes(entity, horseBaseEntity);
-        return horseBaseEntity;
+        this.setChildAttributes(entity, abstractHorseEntity);
+        return abstractHorseEntity;
     }
 
     @Override
@@ -262,13 +263,14 @@ extends HorseBaseEntity {
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
         HorseColor horseColor;
+        Random random = world.getRandom();
         if (entityData instanceof HorseData) {
             horseColor = ((HorseData)entityData).color;
         } else {
-            horseColor = Util.getRandom(HorseColor.values(), this.random);
+            horseColor = Util.getRandom(HorseColor.values(), random);
             entityData = new HorseData(horseColor);
         }
-        this.setVariant(horseColor, Util.getRandom(HorseMarking.values(), this.random));
+        this.setVariant(horseColor, Util.getRandom(HorseMarking.values(), random));
         return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
     }
 

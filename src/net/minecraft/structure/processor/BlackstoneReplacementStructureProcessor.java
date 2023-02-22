@@ -15,8 +15,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SlabBlock;
 import net.minecraft.block.StairsBlock;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.Util;
@@ -57,12 +57,12 @@ extends StructureProcessor {
     }
 
     @Override
-    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData data) {
-        Block block = this.replacementMap.get(structureBlockInfo2.state.getBlock());
+    public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
+        Block block = this.replacementMap.get(currentBlockInfo.state.getBlock());
         if (block == null) {
-            return structureBlockInfo2;
+            return currentBlockInfo;
         }
-        BlockState blockState = structureBlockInfo2.state;
+        BlockState blockState = currentBlockInfo.state;
         BlockState blockState2 = block.getDefaultState();
         if (blockState.contains(StairsBlock.FACING)) {
             blockState2 = (BlockState)blockState2.with(StairsBlock.FACING, blockState.get(StairsBlock.FACING));
@@ -73,7 +73,7 @@ extends StructureProcessor {
         if (blockState.contains(SlabBlock.TYPE)) {
             blockState2 = (BlockState)blockState2.with(SlabBlock.TYPE, blockState.get(SlabBlock.TYPE));
         }
-        return new Structure.StructureBlockInfo(structureBlockInfo2.pos, blockState2, structureBlockInfo2.nbt);
+        return new StructureTemplate.StructureBlockInfo(currentBlockInfo.pos, blockState2, currentBlockInfo.nbt);
     }
 
     @Override

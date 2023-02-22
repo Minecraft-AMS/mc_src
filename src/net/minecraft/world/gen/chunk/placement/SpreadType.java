@@ -8,14 +8,13 @@ package net.minecraft.world.gen.chunk.placement;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringIdentifiable;
-import net.minecraft.world.gen.random.AbstractRandom;
+import net.minecraft.util.math.random.Random;
 
 public final class SpreadType
 extends Enum<SpreadType>
 implements StringIdentifiable {
     public static final /* enum */ SpreadType LINEAR = new SpreadType("linear");
     public static final /* enum */ SpreadType TRIANGULAR = new SpreadType("triangular");
-    private static final SpreadType[] VALUES;
     public static final Codec<SpreadType> CODEC;
     private final String name;
     private static final /* synthetic */ SpreadType[] field_36426;
@@ -32,20 +31,12 @@ implements StringIdentifiable {
         this.name = name;
     }
 
-    public static SpreadType byName(String name) {
-        for (SpreadType spreadType : VALUES) {
-            if (!spreadType.asString().equals(name)) continue;
-            return spreadType;
-        }
-        throw new IllegalArgumentException("Unknown Random Spread type: " + name);
-    }
-
     @Override
     public String asString() {
         return this.name;
     }
 
-    public int get(AbstractRandom random, int bound) {
+    public int get(Random random, int bound) {
         return switch (this) {
             default -> throw new IncompatibleClassChangeError();
             case LINEAR -> random.nextInt(bound);
@@ -59,8 +50,7 @@ implements StringIdentifiable {
 
     static {
         field_36426 = SpreadType.method_40175();
-        VALUES = SpreadType.values();
-        CODEC = StringIdentifiable.createCodec(() -> VALUES, SpreadType::byName);
+        CODEC = StringIdentifiable.createCodec(SpreadType::values);
     }
 }
 

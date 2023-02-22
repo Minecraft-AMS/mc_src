@@ -2,6 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  ca.weblite.objc.Client
  *  ca.weblite.objc.NSObject
  *  com.sun.jna.Pointer
  *  net.fabricmc.api.EnvType
@@ -10,8 +11,12 @@
  */
 package net.minecraft.client.util;
 
+import ca.weblite.objc.Client;
 import ca.weblite.objc.NSObject;
 import com.sun.jna.Pointer;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Base64;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -38,7 +43,15 @@ public class MacWindowUtil {
     }
 
     private static void toggleFullscreen(NSObject handle) {
-        handle.send("toggleFullScreen:", new Object[0]);
+        handle.send("toggleFullScreen:", new Object[]{Pointer.NULL});
+    }
+
+    public static void setApplicationIconImage(InputStream stream) throws IOException {
+        String string = Base64.getEncoder().encodeToString(stream.readAllBytes());
+        Client client = Client.getInstance();
+        Object object = client.sendProxy("NSData", "alloc", new Object[0]).send("initWithBase64Encoding:", new Object[]{string});
+        Object object2 = client.sendProxy("NSImage", "alloc", new Object[0]).send("initWithData:", new Object[]{object});
+        client.sendProxy("NSApplication", "sharedApplication", new Object[0]).send("setApplicationIconImage:", new Object[]{object2});
     }
 }
 

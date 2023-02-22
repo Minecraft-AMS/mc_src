@@ -14,10 +14,9 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
@@ -38,7 +37,7 @@ extends Screen {
     protected DialogScreen(Text title, List<Text> messages, ImmutableList<ChoiceButton> choiceButtons) {
         super(title);
         this.message = StringVisitable.concat(messages);
-        this.narrationMessage = ScreenTexts.joinSentences(title, Texts.join(messages, LiteralText.EMPTY));
+        this.narrationMessage = ScreenTexts.joinSentences(title, Texts.join(messages, ScreenTexts.EMPTY));
         this.choiceButtons = choiceButtons;
     }
 

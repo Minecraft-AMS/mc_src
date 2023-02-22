@@ -12,7 +12,6 @@ import java.util.Comparator;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.MathHelper;
 
 @Environment(value=EnvType.CLIENT)
@@ -37,7 +36,7 @@ extends Enum<NarratorMode> {
 
     private NarratorMode(int id, String name) {
         this.id = id;
-        this.name = new TranslatableText(name);
+        this.name = Text.translatable(name);
     }
 
     public int getId() {
@@ -50,6 +49,14 @@ extends Enum<NarratorMode> {
 
     public static NarratorMode byId(int id) {
         return VALUES[MathHelper.floorMod(id, VALUES.length)];
+    }
+
+    public boolean shouldNarrateChat() {
+        return this == ALL || this == CHAT;
+    }
+
+    public boolean shouldNarrateSystem() {
+        return this == ALL || this == SYSTEM;
     }
 
     private static /* synthetic */ NarratorMode[] method_36864() {

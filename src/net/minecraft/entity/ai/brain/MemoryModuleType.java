@@ -2,10 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
+ *  com.google.common.annotations.VisibleForTesting
  *  com.mojang.serialization.Codec
  */
 package net.minecraft.entity.ai.brain;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.Optional;
@@ -26,9 +28,10 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Unit;
 import net.minecraft.util.dynamic.DynamicSerializableUuid;
-import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
 
@@ -80,6 +83,10 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<Boolean> HAS_HUNTING_COOLDOWN = MemoryModuleType.register("has_hunting_cooldown", Codec.BOOL);
     public static final MemoryModuleType<Integer> RAM_COOLDOWN_TICKS = MemoryModuleType.register("ram_cooldown_ticks", Codec.INT);
     public static final MemoryModuleType<Vec3d> RAM_TARGET = MemoryModuleType.register("ram_target");
+    public static final MemoryModuleType<Unit> IS_IN_WATER = MemoryModuleType.register("is_in_water", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> IS_PREGNANT = MemoryModuleType.register("is_pregnant", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Boolean> IS_PANICKING = MemoryModuleType.register("is_panicking", Codec.BOOL);
+    public static final MemoryModuleType<List<UUID>> UNREACHABLE_TONGUE_TARGETS = MemoryModuleType.register("unreachable_tongue_targets");
     public static final MemoryModuleType<UUID> ANGRY_AT = MemoryModuleType.register("angry_at", DynamicSerializableUuid.CODEC);
     public static final MemoryModuleType<Boolean> UNIVERSAL_ANGER = MemoryModuleType.register("universal_anger", Codec.BOOL);
     public static final MemoryModuleType<Boolean> ADMIRING_ITEM = MemoryModuleType.register("admiring_item", Codec.BOOL);
@@ -103,9 +110,28 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<Boolean> ATE_RECENTLY = MemoryModuleType.register("ate_recently");
     public static final MemoryModuleType<BlockPos> NEAREST_REPELLENT = MemoryModuleType.register("nearest_repellent");
     public static final MemoryModuleType<Boolean> PACIFIED = MemoryModuleType.register("pacified");
+    public static final MemoryModuleType<LivingEntity> ROAR_TARGET = MemoryModuleType.register("roar_target");
+    public static final MemoryModuleType<BlockPos> DISTURBANCE_LOCATION = MemoryModuleType.register("disturbance_location");
+    public static final MemoryModuleType<Unit> RECENT_PROJECTILE = MemoryModuleType.register("recent_projectile", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> IS_SNIFFING = MemoryModuleType.register("is_sniffing", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> IS_EMERGING = MemoryModuleType.register("is_emerging", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> ROAR_SOUND_DELAY = MemoryModuleType.register("roar_sound_delay", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> DIG_COOLDOWN = MemoryModuleType.register("dig_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> ROAR_SOUND_COOLDOWN = MemoryModuleType.register("roar_sound_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> SNIFF_COOLDOWN = MemoryModuleType.register("sniff_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> TOUCH_COOLDOWN = MemoryModuleType.register("touch_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> VIBRATION_COOLDOWN = MemoryModuleType.register("vibration_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> SONIC_BOOM_COOLDOWN = MemoryModuleType.register("sonic_boom_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> SONIC_BOOM_SOUND_COOLDOWN = MemoryModuleType.register("sonic_boom_sound_cooldown", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<Unit> SONIC_BOOM_SOUND_DELAY = MemoryModuleType.register("sonic_boom_sound_delay", Codec.unit((Object)((Object)Unit.INSTANCE)));
+    public static final MemoryModuleType<UUID> LIKED_PLAYER = MemoryModuleType.register("liked_player", DynamicSerializableUuid.CODEC);
+    public static final MemoryModuleType<GlobalPos> LIKED_NOTEBLOCK = MemoryModuleType.register("liked_noteblock", GlobalPos.CODEC);
+    public static final MemoryModuleType<Integer> LIKED_NOTEBLOCK_COOLDOWN_TICKS = MemoryModuleType.register("liked_noteblock_cooldown_ticks", Codec.INT);
+    public static final MemoryModuleType<Integer> ITEM_PICKUP_COOLDOWN_TICKS = MemoryModuleType.register("item_pickup_cooldown_ticks", Codec.INT);
     private final Optional<Codec<Memory<U>>> codec;
 
-    private MemoryModuleType(Optional<Codec<U>> codec) {
+    @VisibleForTesting
+    public MemoryModuleType(Optional<Codec<U>> codec) {
         this.codec = codec.map(Memory::createCodec);
     }
 

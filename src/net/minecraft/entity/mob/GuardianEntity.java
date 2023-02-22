@@ -7,7 +7,6 @@
 package net.minecraft.entity.mob;
 
 import java.util.EnumSet;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
@@ -46,6 +45,7 @@ import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
@@ -199,7 +199,7 @@ extends HostileEntity {
     @Override
     public float getPathfindingFavor(BlockPos pos, WorldView world) {
         if (world.getFluidState(pos).isIn(FluidTags.WATER)) {
-            return 10.0f + world.getBrightness(pos) - 0.5f;
+            return 10.0f + world.getPhototaxisFavor(pos);
         }
         return super.getPathfindingFavor(pos, world);
     }

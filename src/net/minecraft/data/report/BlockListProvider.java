@@ -2,16 +2,12 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.gson.Gson
- *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonArray
  *  com.google.gson.JsonElement
  *  com.google.gson.JsonObject
  */
 package net.minecraft.data.report;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -19,9 +15,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.data.DataCache;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
+import net.minecraft.data.DataWriter;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
@@ -30,7 +26,6 @@ import net.minecraft.util.registry.Registry;
 
 public class BlockListProvider
 implements DataProvider {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final DataGenerator generator;
 
     public BlockListProvider(DataGenerator generator) {
@@ -38,7 +33,7 @@ implements DataProvider {
     }
 
     @Override
-    public void run(DataCache cache) throws IOException {
+    public void run(DataWriter writer) throws IOException {
         JsonObject jsonObject = new JsonObject();
         for (Block block : Registry.BLOCK) {
             Identifier identifier = Registry.BLOCK.getId(block);
@@ -74,8 +69,8 @@ implements DataProvider {
             jsonObject2.add("states", (JsonElement)jsonArray2);
             jsonObject.add(identifier.toString(), (JsonElement)jsonObject2);
         }
-        Path path = this.generator.getOutput().resolve("reports/blocks.json");
-        DataProvider.writeToPath(GSON, cache, (JsonElement)jsonObject, path);
+        Path path = this.generator.resolveRootDirectoryPath(DataGenerator.OutputType.REPORTS).resolve("blocks.json");
+        DataProvider.writeToPath(writer, (JsonElement)jsonObject, path);
     }
 
     @Override

@@ -26,8 +26,6 @@
  *  io.netty.util.HashedWheelTimer
  *  io.netty.util.Timeout
  *  io.netty.util.Timer
- *  io.netty.util.concurrent.Future
- *  io.netty.util.concurrent.GenericFutureListener
  *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
@@ -57,8 +55,6 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.SocketAddress;
@@ -70,6 +66,7 @@ import net.minecraft.network.ClientConnection;
 import net.minecraft.network.DecoderHandler;
 import net.minecraft.network.LegacyQueryHandler;
 import net.minecraft.network.NetworkSide;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.PacketEncoder;
 import net.minecraft.network.RateLimitedConnection;
 import net.minecraft.network.SizePrepender;
@@ -78,7 +75,8 @@ import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.LocalServerHandshakeNetworkHandler;
 import net.minecraft.server.network.ServerHandshakeNetworkHandler;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Lazy;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
@@ -188,8 +186,8 @@ public class ServerNetworkIo {
                             throw new CrashException(CrashReport.create(exception, "Ticking memory connection"));
                         }
                         LOGGER.warn("Failed to handle packet for {}", (Object)clientConnection.getAddress(), (Object)exception);
-                        LiteralText text = new LiteralText("Internal server error");
-                        clientConnection.send(new DisconnectS2CPacket(text), (GenericFutureListener<? extends Future<? super Void>>)((GenericFutureListener)future -> clientConnection.disconnect(text)));
+                        MutableText text = Text.literal("Internal server error");
+                        clientConnection.send(new DisconnectS2CPacket(text), PacketCallbacks.always(() -> clientConnection.disconnect(text)));
                         clientConnection.disableAutoRead();
                     }
                     continue;

@@ -7,7 +7,11 @@
  *  com.google.common.collect.Lists
  *  com.mojang.authlib.GameProfile
  *  com.mojang.datafixers.util.Either
+ *  com.mojang.logging.LogUtils
+ *  com.mojang.serialization.Dynamic
+ *  com.mojang.serialization.DynamicOps
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.entity.player;
 
@@ -16,14 +20,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
-import java.nio.charset.StandardCharsets;
+import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.DynamicOps;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.SharedConstants;
 import net.minecraft.advancement.criterion.Criteria;
@@ -33,6 +38,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.RespawnAnchorBlock;
 import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.block.entity.JigsawBlockEntity;
+import net.minecraft.block.entity.SculkShriekerWarningManager;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.StructureBlockBlockEntity;
 import net.minecraft.block.pattern.CachedBlockPosition;
@@ -59,7 +65,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffectUtil;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.HorseBaseEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.ParrotEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.passive.StriderEntity;
@@ -74,14 +80,17 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.inventory.EnderChestInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.StackReference;
-import net.minecraft.item.AxeItem;
 import net.minecraft.item.ElytraItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.item.SwordItem;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.encryption.PlayerPublicKey;
+import net.minecraft.network.message.MessageSourceProfile;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -101,10 +110,8 @@ import net.minecraft.stat.Stat;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Arm;
 import net.minecraft.util.ClickType;
@@ -112,9 +119,11 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
@@ -125,10 +134,11 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public abstract class PlayerEntity
 extends LivingEntity {
-    public static final String OFFLINE_PLAYER_UUID_PREFIX = "OfflinePlayer:";
+    private static final Logger field_38197 = LogUtils.getLogger();
     public static final int field_30643 = 16;
     public static final int field_30644 = 20;
     public static final int field_30645 = 100;
@@ -153,6 +163,7 @@ extends LivingEntity {
     public final PlayerScreenHandler playerScreenHandler;
     public ScreenHandler currentScreenHandler;
     protected HungerManager hungerManager = new HungerManager();
+    protected SculkShriekerWarningManager sculkShriekerWarningManager = new SculkShriekerWarningManager(0, 0, 0);
     protected int abilityResyncCountdown;
     public float prevStrideDistance;
     public float strideDistance;
@@ -173,16 +184,20 @@ extends LivingEntity {
     protected final float field_7509 = 0.02f;
     private int lastPlayedLevelUpSoundTime;
     private final GameProfile gameProfile;
+    @Nullable
+    private final PlayerPublicKey publicKey;
     private boolean reducedDebugInfo;
     private ItemStack selectedItem = ItemStack.EMPTY;
     private final ItemCooldownManager itemCooldownManager = this.createCooldownManager();
+    private Optional<GlobalPos> lastDeathPos = Optional.empty();
     @Nullable
     public FishingBobberEntity fishHook;
 
-    public PlayerEntity(World world, BlockPos pos, float yaw, GameProfile profile) {
+    public PlayerEntity(World world, BlockPos pos, float yaw, GameProfile gameProfile, @Nullable PlayerPublicKey publicKey) {
         super((EntityType<? extends LivingEntity>)EntityType.PLAYER, world);
-        this.setUuid(PlayerEntity.getUuidFromProfile(profile));
-        this.gameProfile = profile;
+        this.setUuid(DynamicSerializableUuid.getUuidFromProfile(gameProfile));
+        this.gameProfile = gameProfile;
+        this.publicKey = publicKey;
         this.playerScreenHandler = new PlayerScreenHandler(this.inventory, !world.isClient, this);
         this.currentScreenHandler = this.playerScreenHandler;
         this.refreshPositionAndAngles((double)pos.getX() + 0.5, pos.getY() + 1, (double)pos.getZ() + 0.5, yaw, 0.0f);
@@ -250,6 +265,7 @@ extends LivingEntity {
         this.updateCapeAngles();
         if (!this.world.isClient) {
             this.hungerManager.update(this);
+            this.sculkShriekerWarningManager.tick();
             this.incrementStat(Stats.PLAY_TIME);
             this.incrementStat(Stats.TOTAL_WORLD_TIME);
             if (this.isAlive()) {
@@ -370,7 +386,7 @@ extends LivingEntity {
     }
 
     @Override
-    public int getDefaultNetherPortalCooldown() {
+    public int getDefaultPortalCooldown() {
         return 10;
     }
 
@@ -527,13 +543,13 @@ extends LivingEntity {
     }
 
     @Override
-    public void onDeath(DamageSource source) {
-        super.onDeath(source);
+    public void onDeath(DamageSource damageSource) {
+        super.onDeath(damageSource);
         this.refreshPosition();
         if (!this.isSpectator()) {
-            this.drop(source);
+            this.drop(damageSource);
         }
-        if (source != null) {
+        if (damageSource != null) {
             this.setVelocity(-MathHelper.cos((this.knockbackVelocity + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f, 0.1f, -MathHelper.sin((this.knockbackVelocity + this.getYaw()) * ((float)Math.PI / 180)) * 0.1f);
         } else {
             this.setVelocity(0.0, 0.1, 0.0);
@@ -543,6 +559,7 @@ extends LivingEntity {
         this.resetStat(Stats.CUSTOM.getOrCreateStat(Stats.TIME_SINCE_REST));
         this.extinguish();
         this.setOnFire(false);
+        this.setLastDeathPos(Optional.of(GlobalPos.create(this.world.getRegistryKey(), this.getBlockPos())));
     }
 
     @Override
@@ -656,7 +673,7 @@ extends LivingEntity {
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        this.setUuid(PlayerEntity.getUuidFromProfile(this.gameProfile));
+        this.setUuid(DynamicSerializableUuid.getUuidFromProfile(this.gameProfile));
         NbtList nbtList = nbt.getList("Inventory", 10);
         this.inventory.readNbt(nbtList);
         this.inventory.selectedSlot = nbt.getInt("SelectedItemSlot");
@@ -670,6 +687,11 @@ extends LivingEntity {
         }
         this.setScore(nbt.getInt("Score"));
         this.hungerManager.readNbt(nbt);
+        if (nbt.contains("warden_spawn_tracker", 10)) {
+            SculkShriekerWarningManager.CODEC.parse(new Dynamic((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("warden_spawn_tracker"))).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)).ifPresent(sculkShriekerWarningManager -> {
+                this.sculkShriekerWarningManager = sculkShriekerWarningManager;
+            });
+        }
         this.abilities.readNbt(nbt);
         this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(this.abilities.getWalkSpeed());
         if (nbt.contains("EnderItems", 9)) {
@@ -680,6 +702,9 @@ extends LivingEntity {
         }
         if (nbt.contains("ShoulderEntityRight", 10)) {
             this.setShoulderEntityRight(nbt.getCompound("ShoulderEntityRight"));
+        }
+        if (nbt.contains("LastDeathLocation", 10)) {
+            this.setLastDeathPos(GlobalPos.CODEC.parse((DynamicOps)NbtOps.INSTANCE, (Object)nbt.get("LastDeathLocation")).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)));
         }
     }
 
@@ -696,6 +721,7 @@ extends LivingEntity {
         nbt.putInt("XpSeed", this.enchantmentTableSeed);
         nbt.putInt("Score", this.getScore());
         this.hungerManager.writeNbt(nbt);
+        SculkShriekerWarningManager.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, (Object)this.sculkShriekerWarningManager).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0)).ifPresent(nbtElement -> nbt.put("warden_spawn_tracker", (NbtElement)nbtElement));
         this.abilities.writeNbt(nbt);
         nbt.put("EnderItems", this.enderChestInventory.toNbtList());
         if (!this.getShoulderEntityLeft().isEmpty()) {
@@ -704,6 +730,7 @@ extends LivingEntity {
         if (!this.getShoulderEntityRight().isEmpty()) {
             nbt.put("ShoulderEntityRight", this.getShoulderEntityRight());
         }
+        this.getLastDeathPos().flatMap(globalPos -> GlobalPos.CODEC.encodeStart((DynamicOps)NbtOps.INSTANCE, globalPos).resultOrPartial(arg_0 -> ((Logger)field_38197).error(arg_0))).ifPresent(nbtElement -> nbt.put("LastDeathLocation", (NbtElement)nbtElement));
     }
 
     @Override
@@ -761,7 +788,7 @@ extends LivingEntity {
     @Override
     protected void takeShieldHit(LivingEntity attacker) {
         super.takeShieldHit(attacker);
-        if (attacker.getMainHandStack().getItem() instanceof AxeItem) {
+        if (attacker.disablesShield()) {
             this.disableShield(true);
         }
     }
@@ -823,7 +850,7 @@ extends LivingEntity {
             return;
         }
         amount = this.applyArmorToDamage(source, amount);
-        float f = amount = this.applyEnchantmentsToDamage(source, amount);
+        float f = amount = this.modifyAppliedDamage(source, amount);
         amount = Math.max(amount - this.getAbsorptionAmount(), 0.0f);
         this.setAbsorptionAmount(this.getAbsorptionAmount() - (f - amount));
         float g = f - amount;
@@ -862,7 +889,7 @@ extends LivingEntity {
     public void openJigsawScreen(JigsawBlockEntity jigsaw) {
     }
 
-    public void openHorseInventory(HorseBaseEntity horse, Inventory inventory) {
+    public void openHorseInventory(AbstractHorseEntity horse, Inventory inventory) {
     }
 
     public OptionalInt openHandledScreen(@Nullable NamedScreenHandlerFactory factory) {
@@ -929,7 +956,7 @@ extends LivingEntity {
 
     @Override
     protected Vec3d adjustMovementForSneaking(Vec3d movement, MovementType type) {
-        if (!this.abilities.flying && (type == MovementType.SELF || type == MovementType.PLAYER) && this.clipAtLedge() && this.method_30263()) {
+        if (!this.abilities.flying && movement.y <= 0.0 && (type == MovementType.SELF || type == MovementType.PLAYER) && this.clipAtLedge() && this.method_30263()) {
             double d = movement.x;
             double e = movement.z;
             double f = 0.05;
@@ -1150,6 +1177,11 @@ extends LivingEntity {
         return this.gameProfile;
     }
 
+    @Nullable
+    public PlayerPublicKey getPublicKey() {
+        return this.publicKey;
+    }
+
     public PlayerInventory getInventory() {
         return this.inventory;
     }
@@ -1159,6 +1191,10 @@ extends LivingEntity {
     }
 
     public void onPickupSlotClick(ItemStack cursorStack, ItemStack slotStack, ClickType clickType) {
+    }
+
+    public boolean shouldCloseHandledScreenOnRespawn() {
+        return this.currentScreenHandler != this.playerScreenHandler;
     }
 
     public Either<SleepFailureReason, Unit> trySleep(BlockPos pos) {
@@ -1212,7 +1248,7 @@ extends LivingEntity {
         return this.sleepTimer;
     }
 
-    public void sendMessage(Text message, boolean actionBar) {
+    public void sendMessage(Text message, boolean overlay) {
     }
 
     public void incrementStat(Identifier stat) {
@@ -1365,7 +1401,7 @@ extends LivingEntity {
                 this.increaseStat(Stats.BOAT_ONE_CM, i);
             } else if (entity instanceof PigEntity) {
                 this.increaseStat(Stats.PIG_ONE_CM, i);
-            } else if (entity instanceof HorseBaseEntity) {
+            } else if (entity instanceof AbstractHorseEntity) {
                 this.increaseStat(Stats.HORSE_ONE_CM, i);
             } else if (entity instanceof StriderEntity) {
                 this.increaseStat(Stats.STRIDER_ONE_CM, i);
@@ -1382,6 +1418,11 @@ extends LivingEntity {
             this.increaseStat(Stats.FALL_ONE_CM, (int)Math.round((double)fallDistance * 100.0));
         }
         return super.handleFallDamage(fallDistance, damageMultiplier, damageSource);
+    }
+
+    @Override
+    public MessageSourceProfile getMessageSourceProfile() {
+        return new MessageSourceProfile(this.getGameProfile().getId(), this.getPublicKey());
     }
 
     public boolean checkFallFlying() {
@@ -1415,8 +1456,9 @@ extends LivingEntity {
     }
 
     @Override
-    public void onKilledOther(ServerWorld world, LivingEntity other) {
+    public boolean onKilledOther(ServerWorld world, LivingEntity other) {
         this.incrementStat(Stats.KILLED.getOrCreateStat(other.getType()));
+        return true;
     }
 
     @Override
@@ -1494,6 +1536,10 @@ extends LivingEntity {
         }
     }
 
+    public SculkShriekerWarningManager getSculkShriekerWarningManager() {
+        return this.sculkShriekerWarningManager;
+    }
+
     public HungerManager getHungerManager() {
         return this.hungerManager;
     }
@@ -1520,7 +1566,7 @@ extends LivingEntity {
     }
 
     @Override
-    protected int getXpToDrop(PlayerEntity player) {
+    public int getXpToDrop() {
         if (this.world.getGameRules().getBoolean(GameRules.KEEP_INVENTORY) || this.isSpectator()) {
             return 0;
         }
@@ -1551,7 +1597,7 @@ extends LivingEntity {
 
     @Override
     public Text getName() {
-        return new LiteralText(this.gameProfile.getName());
+        return Text.literal(this.gameProfile.getName());
     }
 
     public EnderChestInventory getEnderChestInventory() {
@@ -1573,27 +1619,28 @@ extends LivingEntity {
     }
 
     @Override
+    protected boolean isArmorSlot(EquipmentSlot slot) {
+        return slot.getType() == EquipmentSlot.Type.ARMOR;
+    }
+
+    @Override
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
         this.processEquippedStack(stack);
         if (slot == EquipmentSlot.MAINHAND) {
-            this.onEquipStack(stack);
-            this.inventory.main.set(this.inventory.selectedSlot, stack);
+            this.onEquipStack(slot, this.inventory.main.set(this.inventory.selectedSlot, stack), stack);
         } else if (slot == EquipmentSlot.OFFHAND) {
-            this.onEquipStack(stack);
-            this.inventory.offHand.set(0, stack);
+            this.onEquipStack(slot, this.inventory.offHand.set(0, stack), stack);
         } else if (slot.getType() == EquipmentSlot.Type.ARMOR) {
-            this.onEquipStack(stack);
-            this.inventory.armor.set(slot.getEntitySlotId(), stack);
+            this.onEquipStack(slot, this.inventory.armor.set(slot.getEntitySlotId(), stack), stack);
         }
     }
 
     public boolean giveItemStack(ItemStack stack) {
-        this.onEquipStack(stack);
         return this.inventory.insertStack(stack);
     }
 
     @Override
-    public Iterable<ItemStack> getItemsHand() {
+    public Iterable<ItemStack> getHandItems() {
         return Lists.newArrayList((Object[])new ItemStack[]{this.getMainHandStack(), this.getOffHandStack()});
     }
 
@@ -1701,18 +1748,6 @@ extends LivingEntity {
     @Override
     public float getAbsorptionAmount() {
         return this.getDataTracker().get(ABSORPTION_AMOUNT).floatValue();
-    }
-
-    public static UUID getUuidFromProfile(GameProfile profile) {
-        UUID uUID = profile.getId();
-        if (uUID == null) {
-            uUID = PlayerEntity.getOfflinePlayerUuid(profile.getName());
-        }
-        return uUID;
-    }
-
-    public static UUID getOfflinePlayerUuid(String nickname) {
-        return UUID.nameUUIDFromBytes((OFFLINE_PLAYER_UUID_PREFIX + nickname).getBytes(StandardCharsets.UTF_8));
     }
 
     public boolean isPartVisible(PlayerModelPart modelPart) {
@@ -1891,14 +1926,22 @@ extends LivingEntity {
         return false;
     }
 
+    public Optional<GlobalPos> getLastDeathPos() {
+        return this.lastDeathPos;
+    }
+
+    public void setLastDeathPos(Optional<GlobalPos> lastDeathPos) {
+        this.lastDeathPos = lastDeathPos;
+    }
+
     public static final class SleepFailureReason
     extends Enum<SleepFailureReason> {
         public static final /* enum */ SleepFailureReason NOT_POSSIBLE_HERE = new SleepFailureReason();
-        public static final /* enum */ SleepFailureReason NOT_POSSIBLE_NOW = new SleepFailureReason(new TranslatableText("block.minecraft.bed.no_sleep"));
-        public static final /* enum */ SleepFailureReason TOO_FAR_AWAY = new SleepFailureReason(new TranslatableText("block.minecraft.bed.too_far_away"));
-        public static final /* enum */ SleepFailureReason OBSTRUCTED = new SleepFailureReason(new TranslatableText("block.minecraft.bed.obstructed"));
+        public static final /* enum */ SleepFailureReason NOT_POSSIBLE_NOW = new SleepFailureReason(Text.translatable("block.minecraft.bed.no_sleep"));
+        public static final /* enum */ SleepFailureReason TOO_FAR_AWAY = new SleepFailureReason(Text.translatable("block.minecraft.bed.too_far_away"));
+        public static final /* enum */ SleepFailureReason OBSTRUCTED = new SleepFailureReason(Text.translatable("block.minecraft.bed.obstructed"));
         public static final /* enum */ SleepFailureReason OTHER_PROBLEM = new SleepFailureReason();
-        public static final /* enum */ SleepFailureReason NOT_SAFE = new SleepFailureReason(new TranslatableText("block.minecraft.bed.not_safe"));
+        public static final /* enum */ SleepFailureReason NOT_SAFE = new SleepFailureReason(Text.translatable("block.minecraft.bed.not_safe"));
         @Nullable
         private final Text message;
         private static final /* synthetic */ SleepFailureReason[] field_7526;

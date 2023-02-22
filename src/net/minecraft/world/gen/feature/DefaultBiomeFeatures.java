@@ -48,6 +48,11 @@ public class DefaultBiomeFeatures {
         builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, UndergroundPlacedFeatures.POINTED_DRIPSTONE);
     }
 
+    public static void addSculk(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, UndergroundPlacedFeatures.SCULK_VEIN);
+        builder.feature(GenerationStep.Feature.UNDERGROUND_DECORATION, UndergroundPlacedFeatures.SCULK_PATCH_DEEP_DARK);
+    }
+
     public static void addDefaultOres(GenerationSettings.Builder builder) {
         DefaultBiomeFeatures.addDefaultOres(builder, false);
     }
@@ -90,6 +95,11 @@ public class DefaultBiomeFeatures {
     }
 
     public static void addClayDisk(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, MiscPlacedFeatures.DISK_CLAY);
+    }
+
+    public static void addGrassAndClayDisks(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, MiscPlacedFeatures.DISK_GRASS);
         builder.feature(GenerationStep.Feature.UNDERGROUND_ORES, MiscPlacedFeatures.DISK_CLAY);
     }
 
@@ -225,6 +235,13 @@ public class DefaultBiomeFeatures {
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.PATCH_WATERLILY);
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.BROWN_MUSHROOM_SWAMP);
         builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.RED_MUSHROOM_SWAMP);
+    }
+
+    public static void addMangroveSwampFeatures(GenerationSettings.Builder builder) {
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.TREES_MANGROVE);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.PATCH_GRASS_NORMAL);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.PATCH_DEAD_BUSH);
+        builder.feature(GenerationStep.Feature.VEGETAL_DECORATION, VegetationPlacedFeatures.PATCH_WATERLILY);
     }
 
     public static void addMushroomFieldsFeatures(GenerationSettings.Builder builder) {

@@ -20,6 +20,7 @@ import net.minecraft.entity.ai.brain.BlockPosLookTarget;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.LivingTargetCache;
+import net.minecraft.entity.ai.brain.LookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.entity.ai.pathing.NavigationType;
@@ -73,23 +74,30 @@ public class LookTargetUtil {
     }
 
     public static void walkTowards(LivingEntity entity, Entity target, float speed, int completionRange) {
-        WalkTarget walkTarget = new WalkTarget(new EntityLookTarget(target, false), speed, completionRange);
-        entity.getBrain().remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget(target, true));
-        entity.getBrain().remember(MemoryModuleType.WALK_TARGET, walkTarget);
+        LookTargetUtil.walkTowards(entity, new EntityLookTarget(target, true), speed, completionRange);
     }
 
     public static void walkTowards(LivingEntity entity, BlockPos target, float speed, int completionRange) {
-        WalkTarget walkTarget = new WalkTarget(new BlockPosLookTarget(target), speed, completionRange);
-        entity.getBrain().remember(MemoryModuleType.LOOK_TARGET, new BlockPosLookTarget(target));
+        LookTargetUtil.walkTowards(entity, new BlockPosLookTarget(target), speed, completionRange);
+    }
+
+    public static void walkTowards(LivingEntity entity, LookTarget target, float speed, int completionRange) {
+        WalkTarget walkTarget = new WalkTarget(target, speed, completionRange);
+        entity.getBrain().remember(MemoryModuleType.LOOK_TARGET, target);
         entity.getBrain().remember(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
     public static void give(LivingEntity entity, ItemStack stack, Vec3d targetLocation) {
-        double d = entity.getEyeY() - (double)0.3f;
+        Vec3d vec3d = new Vec3d(0.3f, 0.3f, 0.3f);
+        LookTargetUtil.give(entity, stack, targetLocation, vec3d, 0.3f);
+    }
+
+    public static void give(LivingEntity entity, ItemStack stack, Vec3d targetLocation, Vec3d velocityFactor, float yOffset) {
+        double d = entity.getEyeY() - (double)yOffset;
         ItemEntity itemEntity = new ItemEntity(entity.world, entity.getX(), d, entity.getZ(), stack);
-        float f = 0.3f;
+        itemEntity.setThrower(entity.getUuid());
         Vec3d vec3d = targetLocation.subtract(entity.getPos());
-        vec3d = vec3d.normalize().multiply(0.3f);
+        vec3d = vec3d.normalize().multiply(velocityFactor.x, velocityFactor.y, velocityFactor.z);
         itemEntity.setVelocity(vec3d);
         itemEntity.setToDefaultPickupDelay();
         entity.world.spawnEntity(itemEntity);
@@ -109,12 +117,7 @@ public class LookTargetUtil {
                 return mob.isInRange(target, i);
             }
         }
-        return LookTargetUtil.isTargetWithinMeleeRange(mob, target);
-    }
-
-    public static boolean isTargetWithinMeleeRange(MobEntity source, LivingEntity target) {
-        double d = source.squaredDistanceTo(target.getX(), target.getY(), target.getZ());
-        return d <= source.squaredAttackRange(target);
+        return mob.isInAttackRange(target);
     }
 
     public static boolean isNewTargetTooFar(LivingEntity source, LivingEntity target, double extraDistance) {
@@ -168,6 +171,10 @@ public class LookTargetUtil {
             vec3d = NoPenaltyTargeting.find(entity, horizontalRange, verticalRange);
         }
         return vec3d;
+    }
+
+    public static boolean hasBreedTarget(LivingEntity entity) {
+        return entity.getBrain().hasMemoryModule(MemoryModuleType.BREED_TARGET);
     }
 }
 

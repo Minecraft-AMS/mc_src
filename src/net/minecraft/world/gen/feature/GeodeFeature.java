@@ -14,7 +14,6 @@ import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -28,6 +27,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.noise.DoublePerlinNoiseSampler;
+import net.minecraft.util.math.random.CheckedRandom;
+import net.minecraft.util.math.random.ChunkRandom;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.GeodeCrackConfig;
@@ -35,8 +37,6 @@ import net.minecraft.world.gen.feature.GeodeFeatureConfig;
 import net.minecraft.world.gen.feature.GeodeLayerConfig;
 import net.minecraft.world.gen.feature.GeodeLayerThicknessConfig;
 import net.minecraft.world.gen.feature.util.FeatureContext;
-import net.minecraft.world.gen.random.AtomicSimpleRandom;
-import net.minecraft.world.gen.random.ChunkRandom;
 
 public class GeodeFeature
 extends Feature<GeodeFeatureConfig> {
@@ -59,7 +59,7 @@ extends Feature<GeodeFeatureConfig> {
         int j = geodeFeatureConfig.maxGenOffset;
         LinkedList list = Lists.newLinkedList();
         int k = geodeFeatureConfig.distributionPoints.get(random);
-        ChunkRandom chunkRandom = new ChunkRandom(new AtomicSimpleRandom(structureWorldAccess.getSeed()));
+        ChunkRandom chunkRandom = new ChunkRandom(new CheckedRandom(structureWorldAccess.getSeed()));
         DoublePerlinNoiseSampler doublePerlinNoiseSampler = DoublePerlinNoiseSampler.create(chunkRandom, -4, 1.0);
         LinkedList list2 = Lists.newLinkedList();
         double d = (double)k / (double)geodeFeatureConfig.outerWallDistance.getMax();

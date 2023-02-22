@@ -11,7 +11,6 @@ package net.minecraft.client.gui.screen.ingame;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
-import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ingame.EnchantingPhrases;
@@ -29,22 +28,23 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public class EnchantmentScreen
 extends HandledScreen<EnchantmentScreenHandler> {
     private static final Identifier TEXTURE = new Identifier("textures/gui/container/enchanting_table.png");
     private static final Identifier BOOK_TEXTURE = new Identifier("textures/entity/enchanting_table_book.png");
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private BookModel BOOK_MODEL;
     public int ticks;
     public float nextPageAngle;
@@ -195,15 +195,15 @@ extends HandledScreen<EnchantmentScreenHandler> {
             int m = j + 1;
             if (!this.isPointWithinBounds(60, 14 + 19 * j, 108, 17, mouseX, mouseY) || k <= 0 || l < 0 || enchantment == null) continue;
             ArrayList list = Lists.newArrayList();
-            list.add(new TranslatableText("container.enchant.clue", enchantment.getName(l)).formatted(Formatting.WHITE));
+            list.add(Text.translatable("container.enchant.clue", enchantment.getName(l)).formatted(Formatting.WHITE));
             if (!bl) {
-                list.add(LiteralText.EMPTY);
+                list.add(ScreenTexts.EMPTY);
                 if (this.client.player.experienceLevel < k) {
-                    list.add(new TranslatableText("container.enchant.level.requirement", ((EnchantmentScreenHandler)this.handler).enchantmentPower[j]).formatted(Formatting.RED));
+                    list.add(Text.translatable("container.enchant.level.requirement", ((EnchantmentScreenHandler)this.handler).enchantmentPower[j]).formatted(Formatting.RED));
                 } else {
-                    TranslatableText mutableText = m == 1 ? new TranslatableText("container.enchant.lapis.one") : new TranslatableText("container.enchant.lapis.many", m);
+                    MutableText mutableText = m == 1 ? Text.translatable("container.enchant.lapis.one") : Text.translatable("container.enchant.lapis.many", m);
                     list.add(mutableText.formatted(i >= m ? Formatting.GRAY : Formatting.RED));
-                    TranslatableText mutableText2 = m == 1 ? new TranslatableText("container.enchant.level.one") : new TranslatableText("container.enchant.level.many", m);
+                    MutableText mutableText2 = m == 1 ? Text.translatable("container.enchant.level.one") : Text.translatable("container.enchant.level.many", m);
                     list.add(mutableText2.formatted(Formatting.GRAY));
                 }
             }

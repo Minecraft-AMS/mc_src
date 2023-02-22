@@ -23,12 +23,9 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import io.netty.buffer.Unpooled;
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -38,7 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -52,6 +48,7 @@ import net.minecraft.block.entity.CommandBlockBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.CreditsScreen;
 import net.minecraft.client.gui.screen.DeathScreen;
@@ -59,7 +56,6 @@ import net.minecraft.client.gui.screen.DemoScreen;
 import net.minecraft.client.gui.screen.DisconnectedScreen;
 import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.StatsListener;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
@@ -67,10 +63,10 @@ import net.minecraft.client.gui.screen.ingame.CommandBlockScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 import net.minecraft.client.gui.screen.ingame.HorseScreen;
+import net.minecraft.client.gui.screen.multiplayer.ChatPreviewWarningScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
-import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.input.KeyboardInput;
 import net.minecraft.client.network.ClientAdvancementManager;
 import net.minecraft.client.network.ClientCommandSource;
@@ -93,7 +89,6 @@ import net.minecraft.client.render.debug.NeighborUpdateDebugRenderer;
 import net.minecraft.client.render.debug.VillageDebugRenderer;
 import net.minecraft.client.render.debug.WorldGenAttemptDebugRenderer;
 import net.minecraft.client.search.SearchManager;
-import net.minecraft.client.search.SearchableContainer;
 import net.minecraft.client.sound.AbstractBeeSoundInstance;
 import net.minecraft.client.sound.AggressiveBeeSoundInstance;
 import net.minecraft.client.sound.GuardianAttackSoundInstance;
@@ -102,9 +97,11 @@ import net.minecraft.client.sound.PassiveBeeSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.toast.RecipeToast;
+import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.telemetry.TelemetrySender;
 import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.CommandSource;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -112,23 +109,24 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.TrackedPosition;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.attribute.AttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.decoration.painting.PaintingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.mob.GuardianEntity;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.BeeEntity;
-import net.minecraft.entity.passive.HorseBaseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.FilledMapItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -139,9 +137,16 @@ import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.message.LastSeenMessageList;
+import net.minecraft.network.message.LastSeenMessagesCollector;
+import net.minecraft.network.message.MessageChain;
+import net.minecraft.network.message.MessageSignatureData;
+import net.minecraft.network.message.MessageType;
+import net.minecraft.network.message.SignedMessage;
 import net.minecraft.network.packet.c2s.play.ClientStatusC2SPacket;
 import net.minecraft.network.packet.c2s.play.CustomPayloadC2SPacket;
 import net.minecraft.network.packet.c2s.play.KeepAliveC2SPacket;
+import net.minecraft.network.packet.c2s.play.MessageAcknowledgmentC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayPongC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.ResourcePackStatusC2SPacket;
@@ -153,6 +158,10 @@ import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockEventS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.BossBarS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatMessageS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatPreviewS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatPreviewStateChangeS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChatSuggestionsS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkData;
 import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
@@ -191,6 +200,7 @@ import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
 import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.HideMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.ItemPickupAnimationS2CPacket;
 import net.minecraft.network.packet.s2c.play.KeepAliveS2CPacket;
@@ -198,13 +208,12 @@ import net.minecraft.network.packet.s2c.play.LightData;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.LookAtS2CPacket;
 import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
+import net.minecraft.network.packet.s2c.play.MessageHeaderS2CPacket;
 import net.minecraft.network.packet.s2c.play.NbtQueryResponseS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenHorseScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenWrittenBookS2CPacket;
 import net.minecraft.network.packet.s2c.play.OverlayMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.PaintingSpawnS2CPacket;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayPingS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlaySoundFromEntityS2CPacket;
@@ -226,6 +235,7 @@ import net.minecraft.network.packet.s2c.play.ScoreboardPlayerUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerPropertyUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.SelectAdvancementTabS2CPacket;
+import net.minecraft.network.packet.s2c.play.ServerMetadataS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetCameraEntityS2CPacket;
 import net.minecraft.network.packet.s2c.play.SetTradeOffersS2CPacket;
 import net.minecraft.network.packet.s2c.play.SignEditorOpenS2CPacket;
@@ -242,7 +252,6 @@ import net.minecraft.network.packet.s2c.play.UnloadChunkS2CPacket;
 import net.minecraft.network.packet.s2c.play.UnlockRecipesS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
-import net.minecraft.network.packet.s2c.play.VibrationS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderCenterChangedS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderInitializeS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldBorderInterpolateSizeS2CPacket;
@@ -252,10 +261,8 @@ import net.minecraft.network.packet.s2c.play.WorldBorderWarningTimeChangedS2CPac
 import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.particle.VibrationParticleEffect;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeManager;
-import net.minecraft.resource.ResourcePackSource;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardCriterion;
@@ -266,17 +273,20 @@ import net.minecraft.screen.HorseScreenHandler;
 import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatHandler;
 import net.minecraft.tag.TagPacketSerializer;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockBox;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -284,6 +294,7 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.PositionImpl;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
@@ -292,7 +303,6 @@ import net.minecraft.village.TradeOfferList;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.LightType;
-import net.minecraft.world.Vibration;
 import net.minecraft.world.World;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.ChunkNibbleArray;
@@ -310,7 +320,10 @@ import org.slf4j.Logger;
 public class ClientPlayNetworkHandler
 implements ClientPlayPacketListener {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Text DISCONNECT_LOST_TEXT = new TranslatableText("disconnect.lost");
+    private static final Text DISCONNECT_LOST_TEXT = Text.translatable("disconnect.lost");
+    private static final Text UNSECURE_SERVER_TOAST_TITLE = Text.translatable("multiplayer.unsecureserver.toast.title");
+    private static final Text UNSECURE_SERVER_TOAST_TEXT = Text.translatable("multiplayer.unsecureserver.toast");
+    private static final int MAX_PENDING_ACKNOWLEDGMENTS = 64;
     private final ClientConnection connection;
     private final GameProfile profile;
     private final Screen loginScreen;
@@ -323,13 +336,17 @@ implements ClientPlayPacketListener {
     private final DataQueryHandler dataQueryHandler = new DataQueryHandler(this);
     private int chunkLoadDistance = 3;
     private int simulationDistance = 3;
-    private final Random random = new Random();
+    private final Random random = Random.createThreadSafe();
     private CommandDispatcher<CommandSource> commandDispatcher = new CommandDispatcher();
     private final RecipeManager recipeManager = new RecipeManager();
     private final UUID sessionId = UUID.randomUUID();
     private Set<RegistryKey<World>> worldKeys;
     private DynamicRegistryManager.Immutable registryManager = DynamicRegistryManager.BUILTIN.get();
     private final TelemetrySender telemetrySender;
+    private final MessageChain.Packer messagePacker = new MessageChain().getPacker();
+    private final LastSeenMessagesCollector lastSeenMessagesCollector = new LastSeenMessagesCollector(5);
+    private Optional<LastSeenMessageList.Entry> lastReceivedMessage = Optional.empty();
+    private int pendingAcknowledgments;
 
     public ClientPlayNetworkHandler(MinecraftClient client, Screen screen, ClientConnection connection, GameProfile profile, TelemetrySender telemetrySender) {
         this.client = client;
@@ -366,7 +383,7 @@ implements ClientPlayPacketListener {
         Collections.shuffle(list);
         this.worldKeys = Sets.newLinkedHashSet((Iterable)list);
         RegistryKey<World> registryKey = packet.dimensionId();
-        RegistryEntry<DimensionType> registryEntry = packet.dimensionType();
+        RegistryEntry<DimensionType> registryEntry = this.registryManager.get(Registry.DIMENSION_TYPE_KEY).entryOf(packet.dimensionType());
         this.chunkLoadDistance = packet.viewDistance();
         this.simulationDistance = packet.simulationDistance();
         boolean bl = packet.debugWorld();
@@ -392,6 +409,7 @@ implements ClientPlayPacketListener {
         this.client.setScreen(new DownloadingTerrainScreen());
         this.client.player.setReducedDebugInfo(packet.reducedDebugInfo());
         this.client.player.setShowsDeathScreen(packet.showDeathScreen());
+        this.client.player.setLastDeathPos(packet.lastDeathLocation());
         this.client.interactionManager.setGameModes(packet.gameMode(), packet.previousGameMode());
         this.client.options.setServerViewDistance(packet.viewDistance());
         this.client.options.sendClientSettings();
@@ -409,9 +427,19 @@ implements ClientPlayPacketListener {
             ((Entity)entity).onSpawnPacket(packet);
             int i = packet.getId();
             this.world.addEntity(i, (Entity)entity);
-            if (entity instanceof AbstractMinecartEntity) {
-                this.client.getSoundManager().play(new MovingMinecartSoundInstance((AbstractMinecartEntity)entity));
-            }
+            this.playSpawnSound((Entity)entity);
+        } else {
+            LOGGER.warn("Skipping Entity with id {}", entityType);
+        }
+    }
+
+    private void playSpawnSound(Entity entity) {
+        if (entity instanceof AbstractMinecartEntity) {
+            this.client.getSoundManager().play(new MovingMinecartSoundInstance((AbstractMinecartEntity)entity));
+        } else if (entity instanceof BeeEntity) {
+            boolean bl = ((BeeEntity)entity).hasAngerTime();
+            AbstractBeeSoundInstance abstractBeeSoundInstance = bl ? new AggressiveBeeSoundInstance((BeeEntity)entity) : new PassiveBeeSoundInstance((BeeEntity)entity);
+            this.client.getSoundManager().playNextTick(abstractBeeSoundInstance);
         }
     }
 
@@ -427,23 +455,6 @@ implements ClientPlayPacketListener {
         entity.setPitch(0.0f);
         entity.setId(packet.getId());
         this.world.addEntity(packet.getId(), entity);
-    }
-
-    @Override
-    public void onVibration(VibrationS2CPacket packet) {
-        NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        Vibration vibration = packet.getVibration();
-        BlockPos blockPos = vibration.getOrigin();
-        this.world.addImportantParticle(new VibrationParticleEffect(vibration), true, (double)blockPos.getX() + 0.5, (double)blockPos.getY() + 0.5, (double)blockPos.getZ() + 0.5, 0.0, 0.0, 0.0);
-    }
-
-    @Override
-    public void onPaintingSpawn(PaintingSpawnS2CPacket packet) {
-        NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        PaintingEntity paintingEntity = new PaintingEntity(this.world, packet.getPos(), packet.getFacing(), packet.getMotive());
-        paintingEntity.setId(packet.getId());
-        paintingEntity.setUuid(packet.getPaintingUuid());
-        this.world.addEntity(packet.getId(), paintingEntity);
     }
 
     @Override
@@ -468,13 +479,18 @@ implements ClientPlayPacketListener {
     @Override
     public void onPlayerSpawn(PlayerSpawnS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        PlayerListEntry playerListEntry = this.getPlayerListEntry(packet.getPlayerUuid());
+        if (playerListEntry == null) {
+            LOGGER.warn("Server attempted to add player prior to sending player info (Player id {})", (Object)packet.getPlayerUuid());
+            return;
+        }
         double d = packet.getX();
         double e = packet.getY();
         double f = packet.getZ();
         float g = (float)(packet.getYaw() * 360) / 256.0f;
         float h = (float)(packet.getPitch() * 360) / 256.0f;
         int i = packet.getId();
-        OtherClientPlayerEntity otherClientPlayerEntity = new OtherClientPlayerEntity(this.client.world, this.getPlayerListEntry(packet.getPlayerUuid()).getProfile());
+        OtherClientPlayerEntity otherClientPlayerEntity = new OtherClientPlayerEntity(this.client.world, playerListEntry.getProfile(), playerListEntry.getPublicKeyData());
         otherClientPlayerEntity.setId(i);
         otherClientPlayerEntity.updateTrackedPosition(d, e, f);
         otherClientPlayerEntity.updatePositionAndAngles(d, e, f, g, h);
@@ -518,15 +534,16 @@ implements ClientPlayPacketListener {
         }
         if (!entity.isLogicalSideForUpdatingMovement()) {
             if (packet.isPositionChanged()) {
-                Vec3d vec3d = packet.calculateDeltaPosition(entity.getTrackedPosition());
-                entity.updateTrackedPosition(vec3d);
+                TrackedPosition trackedPosition = entity.getTrackedPosition();
+                Vec3d vec3d = trackedPosition.withDelta(packet.getDeltaX(), packet.getDeltaY(), packet.getDeltaZ());
+                trackedPosition.setPos(vec3d);
                 float f = packet.hasRotation() ? (float)(packet.getYaw() * 360) / 256.0f : entity.getYaw();
                 float g = packet.hasRotation() ? (float)(packet.getPitch() * 360) / 256.0f : entity.getPitch();
                 entity.updateTrackedPositionAndAngles(vec3d.getX(), vec3d.getY(), vec3d.getZ(), f, g, 3, false);
             } else if (packet.hasRotation()) {
                 float h = (float)(packet.getYaw() * 360) / 256.0f;
-                float f = (float)(packet.getPitch() * 360) / 256.0f;
-                entity.updateTrackedPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), h, f, 3, false);
+                float i = (float)(packet.getPitch() * 360) / 256.0f;
+                entity.updateTrackedPositionAndAngles(entity.getX(), entity.getY(), entity.getZ(), h, i, 3, false);
             }
             entity.setOnGround(packet.isOnGround());
         }
@@ -609,10 +626,29 @@ implements ClientPlayPacketListener {
     }
 
     @Override
+    public void onChatPreview(ChatPreviewS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        ChatScreen chatScreen = this.client.inGameHud.getChatHud().getChatScreen();
+        if (chatScreen != null) {
+            chatScreen.getChatPreviewer().onResponse(packet.queryId(), packet.preview());
+        }
+    }
+
+    @Override
+    public void onChatPreviewStateChange(ChatPreviewStateChangeS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        ServerInfo serverInfo = this.client.getCurrentServerEntry();
+        if (serverInfo == null) {
+            return;
+        }
+        serverInfo.setTemporaryChatPreviewState(packet.enabled());
+    }
+
+    @Override
     public void onChunkDeltaUpdate(ChunkDeltaUpdateS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
         int i = 0x13 | (packet.shouldSkipLightingUpdates() ? 128 : 0);
-        packet.visitUpdates((pos, state) -> this.world.setBlockState((BlockPos)pos, (BlockState)state, i));
+        packet.visitUpdates((pos, state) -> this.world.handleBlockUpdate((BlockPos)pos, (BlockState)state, i));
     }
 
     @Override
@@ -674,7 +710,7 @@ implements ClientPlayPacketListener {
     @Override
     public void onBlockUpdate(BlockUpdateS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.world.setBlockStateWithoutNeighborUpdates(packet.getPos(), packet.getState());
+        this.world.handleBlockUpdate(packet.getPos(), packet.getState(), 19);
     }
 
     @Override
@@ -732,7 +768,33 @@ implements ClientPlayPacketListener {
     @Override
     public void onGameMessage(GameMessageS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.client.inGameHud.addChatMessage(packet.getType(), packet.getMessage(), packet.getSender());
+        this.client.getMessageHandler().onGameMessage(packet.content(), packet.overlay());
+    }
+
+    @Override
+    public void onChatMessage(ChatMessageS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        Optional<MessageType.Parameters> optional = packet.getParameters(this.registryManager);
+        if (!optional.isPresent()) {
+            this.connection.disconnect(Text.translatable("multiplayer.disconnect.invalid_packet"));
+            return;
+        }
+        this.client.getMessageHandler().onChatMessage(packet.message(), optional.get());
+    }
+
+    @Override
+    public void onMessageHeader(MessageHeaderS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        this.client.getMessageHandler().onMessageHeader(packet.header(), packet.headerSignature(), packet.bodyDigest());
+    }
+
+    @Override
+    public void onHideMessage(HideMessageS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        MessageSignatureData messageSignatureData = packet.messageSignature();
+        if (!this.client.getMessageHandler().removeDelayedMessage(messageSignatureData)) {
+            this.client.inGameHud.getChatHud().hideMessage(messageSignatureData);
+        }
     }
 
     @Override
@@ -757,23 +819,6 @@ implements ClientPlayPacketListener {
             this.client.particleManager.addEmitter(entity, ParticleTypes.CRIT);
         } else if (packet.getAnimationId() == 5) {
             this.client.particleManager.addEmitter(entity, ParticleTypes.ENCHANTED_HIT);
-        }
-    }
-
-    @Override
-    public void onMobSpawn(MobSpawnS2CPacket packet) {
-        NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        LivingEntity livingEntity = (LivingEntity)EntityType.createInstanceFromId(packet.getEntityTypeId(), this.world);
-        if (livingEntity != null) {
-            livingEntity.readFromPacket(packet);
-            this.world.addEntity(packet.getId(), livingEntity);
-            if (livingEntity instanceof BeeEntity) {
-                boolean bl = ((BeeEntity)livingEntity).hasAngerTime();
-                AbstractBeeSoundInstance abstractBeeSoundInstance = bl ? new AggressiveBeeSoundInstance((BeeEntity)livingEntity) : new PassiveBeeSoundInstance((BeeEntity)livingEntity);
-                this.client.getSoundManager().playNextTick(abstractBeeSoundInstance);
-            }
-        } else {
-            LOGGER.warn("Skipping Entity with id {}", (Object)packet.getEntityTypeId());
         }
     }
 
@@ -815,7 +860,9 @@ implements ClientPlayPacketListener {
                 this.client.player.setYaw(entity.getYaw());
                 this.client.player.setHeadYaw(entity.getYaw());
             }
-            this.client.inGameHud.setOverlayMessage(new TranslatableText("mount.onboard", this.client.options.sneakKey.getBoundKeyLocalizedText()), false);
+            MutableText text = Text.translatable("mount.onboard", this.client.options.sneakKey.getBoundKeyLocalizedText());
+            this.client.inGameHud.setOverlayMessage(text, false);
+            this.client.getNarratorManager().narrate(text);
         }
     }
 
@@ -875,7 +922,7 @@ implements ClientPlayPacketListener {
     public void onPlayerRespawn(PlayerRespawnS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
         RegistryKey<World> registryKey = packet.getDimension();
-        RegistryEntry<DimensionType> registryEntry = packet.getDimensionType();
+        RegistryEntry<DimensionType> registryEntry = this.registryManager.get(Registry.DIMENSION_TYPE_KEY).entryOf(packet.getDimensionType());
         ClientPlayerEntity clientPlayerEntity = this.client.player;
         int i = clientPlayerEntity.getId();
         if (registryKey != clientPlayerEntity.world.getRegistryKey()) {
@@ -893,6 +940,9 @@ implements ClientPlayPacketListener {
         }
         String string = clientPlayerEntity.getServerBrand();
         this.client.cameraEntity = null;
+        if (clientPlayerEntity.shouldCloseHandledScreenOnRespawn()) {
+            clientPlayerEntity.closeHandledScreen();
+        }
         ClientPlayerEntity clientPlayerEntity2 = this.client.interactionManager.createPlayer(this.world, clientPlayerEntity.getStatHandler(), clientPlayerEntity.getRecipeBook(), clientPlayerEntity.isSneaking(), clientPlayerEntity.isSprinting());
         clientPlayerEntity2.setId(i);
         this.client.player = clientPlayerEntity2;
@@ -912,6 +962,7 @@ implements ClientPlayPacketListener {
         this.client.interactionManager.copyAbilities(clientPlayerEntity2);
         clientPlayerEntity2.setReducedDebugInfo(clientPlayerEntity.hasReducedDebugInfo());
         clientPlayerEntity2.setShowsDeathScreen(clientPlayerEntity.showsDeathScreen());
+        clientPlayerEntity2.setLastDeathPos(packet.getLastDeathPos());
         if (this.client.currentScreen instanceof DeathScreen) {
             this.client.setScreen(null);
         }
@@ -930,13 +981,13 @@ implements ClientPlayPacketListener {
     public void onOpenHorseScreen(OpenHorseScreenS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
         Entity entity = this.world.getEntityById(packet.getHorseId());
-        if (entity instanceof HorseBaseEntity) {
+        if (entity instanceof AbstractHorseEntity) {
             ClientPlayerEntity clientPlayerEntity = this.client.player;
-            HorseBaseEntity horseBaseEntity = (HorseBaseEntity)entity;
+            AbstractHorseEntity abstractHorseEntity = (AbstractHorseEntity)entity;
             SimpleInventory simpleInventory = new SimpleInventory(packet.getSlotCount());
-            HorseScreenHandler horseScreenHandler = new HorseScreenHandler(packet.getSyncId(), clientPlayerEntity.getInventory(), simpleInventory, horseBaseEntity);
+            HorseScreenHandler horseScreenHandler = new HorseScreenHandler(packet.getSyncId(), clientPlayerEntity.getInventory(), simpleInventory, abstractHorseEntity);
             clientPlayerEntity.currentScreenHandler = horseScreenHandler;
-            this.client.setScreen(new HorseScreen(horseScreenHandler, clientPlayerEntity.getInventory(), horseBaseEntity));
+            this.client.setScreen(new HorseScreen(horseScreenHandler, clientPlayerEntity.getInventory(), abstractHorseEntity));
         }
     }
 
@@ -1060,7 +1111,7 @@ implements ClientPlayPacketListener {
         float f = packet.getValue();
         int i = MathHelper.floor(f + 0.5f);
         if (reason == GameStateChangeS2CPacket.NO_RESPAWN_BLOCK) {
-            ((PlayerEntity)playerEntity).sendMessage(new TranslatableText("block.minecraft.spawn.not_valid"), false);
+            ((PlayerEntity)playerEntity).sendMessage(Text.translatable("block.minecraft.spawn.not_valid"), false);
         } else if (reason == GameStateChangeS2CPacket.RAIN_STARTED) {
             this.world.getLevelProperties().setRaining(true);
             this.world.setRainGradient(0.0f);
@@ -1081,13 +1132,13 @@ implements ClientPlayPacketListener {
             if (f == 0.0f) {
                 this.client.setScreen(new DemoScreen());
             } else if (f == 101.0f) {
-                this.client.inGameHud.getChatHud().addMessage(new TranslatableText("demo.help.movement", gameOptions.forwardKey.getBoundKeyLocalizedText(), gameOptions.leftKey.getBoundKeyLocalizedText(), gameOptions.backKey.getBoundKeyLocalizedText(), gameOptions.rightKey.getBoundKeyLocalizedText()));
+                this.client.inGameHud.getChatHud().addMessage(Text.translatable("demo.help.movement", gameOptions.forwardKey.getBoundKeyLocalizedText(), gameOptions.leftKey.getBoundKeyLocalizedText(), gameOptions.backKey.getBoundKeyLocalizedText(), gameOptions.rightKey.getBoundKeyLocalizedText()));
             } else if (f == 102.0f) {
-                this.client.inGameHud.getChatHud().addMessage(new TranslatableText("demo.help.jump", gameOptions.jumpKey.getBoundKeyLocalizedText()));
+                this.client.inGameHud.getChatHud().addMessage(Text.translatable("demo.help.jump", gameOptions.jumpKey.getBoundKeyLocalizedText()));
             } else if (f == 103.0f) {
-                this.client.inGameHud.getChatHud().addMessage(new TranslatableText("demo.help.inventory", gameOptions.inventoryKey.getBoundKeyLocalizedText()));
+                this.client.inGameHud.getChatHud().addMessage(Text.translatable("demo.help.inventory", gameOptions.inventoryKey.getBoundKeyLocalizedText()));
             } else if (f == 104.0f) {
-                this.client.inGameHud.getChatHud().addMessage(new TranslatableText("demo.day.6", gameOptions.screenshotKey.getBoundKeyLocalizedText()));
+                this.client.inGameHud.getChatHud().addMessage(Text.translatable("demo.day.6", gameOptions.screenshotKey.getBoundKeyLocalizedText()));
             }
         } else if (reason == GameStateChangeS2CPacket.PROJECTILE_HIT_PLAYER) {
             this.world.playSound(playerEntity, playerEntity.getX(), playerEntity.getEyeY(), playerEntity.getZ(), SoundEvents.ENTITY_ARROW_HIT_PLAYER, SoundCategory.PLAYERS, 0.18f, 0.45f);
@@ -1153,7 +1204,7 @@ implements ClientPlayPacketListener {
     @Override
     public void onCommandTree(CommandTreeS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.commandDispatcher = new CommandDispatcher(packet.getCommandTree());
+        this.commandDispatcher = new CommandDispatcher(packet.getCommandTree(new CommandRegistryAccess(this.registryManager)));
     }
 
     @Override
@@ -1172,12 +1223,9 @@ implements ClientPlayPacketListener {
     public void onSynchronizeRecipes(SynchronizeRecipesS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
         this.recipeManager.setRecipes(packet.getRecipes());
-        SearchableContainer<RecipeResultCollection> searchableContainer = this.client.getSearchableContainer(SearchManager.RECIPE_OUTPUT);
-        searchableContainer.clear();
         ClientRecipeBook clientRecipeBook = this.client.player.getRecipeBook();
         clientRecipeBook.reload(this.recipeManager.values());
-        clientRecipeBook.getOrderedResults().forEach(searchableContainer::add);
-        searchableContainer.reload();
+        this.client.reloadSearchProvider(SearchManager.RECIPE_OUTPUT, clientRecipeBook.getOrderedResults());
     }
 
     @Override
@@ -1256,11 +1304,11 @@ implements ClientPlayPacketListener {
         if (!(entity instanceof LivingEntity)) {
             return;
         }
-        StatusEffect statusEffect = StatusEffect.byRawId(packet.getEffectId());
+        StatusEffect statusEffect = packet.getEffectId();
         if (statusEffect == null) {
             return;
         }
-        StatusEffectInstance statusEffectInstance = new StatusEffectInstance(statusEffect, packet.getDuration(), packet.getAmplifier(), packet.isAmbient(), packet.shouldShowParticles(), packet.shouldShowIcon());
+        StatusEffectInstance statusEffectInstance = new StatusEffectInstance(statusEffect, packet.getDuration(), packet.getAmplifier(), packet.isAmbient(), packet.shouldShowParticles(), packet.shouldShowIcon(), null, Optional.ofNullable(packet.getFactorCalculationData()));
         statusEffectInstance.setPermanent(packet.isPermanent());
         ((LivingEntity)entity).setStatusEffect(statusEffectInstance, null);
     }
@@ -1272,7 +1320,12 @@ implements ClientPlayPacketListener {
         if (!this.connection.isLocal()) {
             Blocks.refreshShapeCache();
         }
-        this.client.getSearchableContainer(SearchManager.ITEM_TAG).reload();
+        DefaultedList<ItemStack> defaultedList = DefaultedList.of();
+        for (Item item : Registry.ITEM) {
+            item.appendStacks(ItemGroup.SEARCH, defaultedList);
+        }
+        this.client.reloadSearchProvider(SearchManager.ITEM_TOOLTIP, defaultedList);
+        this.client.reloadSearchProvider(SearchManager.ITEM_TAG, defaultedList);
     }
 
     private <T> void loadTags(RegistryKey<? extends Registry<? extends T>> registryKey, TagPacketSerializer.Serialized serialized) {
@@ -1379,6 +1432,43 @@ implements ClientPlayPacketListener {
     }
 
     @Override
+    public void onServerMetadata(ServerMetadataS2CPacket packet) {
+        ServerInfo.ChatPreview chatPreview;
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        ServerInfo serverInfo = this.client.getCurrentServerEntry();
+        if (serverInfo == null) {
+            return;
+        }
+        packet.getDescription().ifPresent(description -> {
+            serverInfo.label = description;
+        });
+        packet.getFavicon().ifPresent(favicon -> {
+            try {
+                serverInfo.setIcon(ServerInfo.parseFavicon(favicon));
+            }
+            catch (ParseException parseException) {
+                LOGGER.error("Invalid server icon", (Throwable)parseException);
+            }
+        });
+        serverInfo.setPreviewsChat(packet.shouldPreviewChat());
+        serverInfo.setSecureChatEnforced(packet.isSecureChatEnforced());
+        ServerList.updateServerListEntry(serverInfo);
+        if (!packet.isSecureChatEnforced()) {
+            SystemToast systemToast = SystemToast.create(this.client, SystemToast.Type.UNSECURE_SERVER_WARNING, UNSECURE_SERVER_TOAST_TITLE, UNSECURE_SERVER_TOAST_TEXT);
+            this.client.getToastManager().add(systemToast);
+        }
+        if ((chatPreview = serverInfo.getChatPreview()) != null && !chatPreview.isAcknowledged()) {
+            this.client.execute(() -> this.client.setScreen(new ChatPreviewWarningScreen(this.client.currentScreen, serverInfo)));
+        }
+    }
+
+    @Override
+    public void onChatSuggestions(ChatSuggestionsS2CPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, this, this.client);
+        this.commandSource.onChatSuggestions(packet.action(), packet.entries());
+    }
+
+    @Override
     public void onOverlayMessage(OverlayMessageS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
         this.client.inGameHud.setOverlayMessage(packet.getMessage(), false);
@@ -1399,7 +1489,7 @@ implements ClientPlayPacketListener {
     @Override
     public void onTitleFade(TitleFadeS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.client.inGameHud.setTitleTicks(packet.getFadeInTicks(), packet.getRemainTicks(), packet.getFadeOutTicks());
+        this.client.inGameHud.setTitleTicks(packet.getFadeInTicks(), packet.getStayTicks(), packet.getFadeOutTicks());
     }
 
     @Override
@@ -1428,8 +1518,9 @@ implements ClientPlayPacketListener {
                 continue;
             }
             PlayerListEntry playerListEntry = this.playerListEntries.get(entry.getProfile().getId());
-            if (packet.getAction() == PlayerListS2CPacket.Action.ADD_PLAYER) {
-                playerListEntry = new PlayerListEntry(entry);
+            if (packet.getAction() == PlayerListS2CPacket.Action.ADD_PLAYER && playerListEntry == null) {
+                boolean bl = Util.mapOrElse(this.client.getCurrentServerEntry(), ServerInfo::isSecureChatEnforced, false);
+                playerListEntry = new PlayerListEntry(entry, this.client.getServicesSignatureVerifier(), bl);
                 this.playerListEntries.put(playerListEntry.getProfile().getId(), playerListEntry);
                 this.client.getSocialInteractionsManager().setPlayerOnline(playerListEntry);
             }
@@ -1476,7 +1567,7 @@ implements ClientPlayPacketListener {
     @Override
     public void onPlaySound(PlaySoundS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.client.world.playSound(this.client.player, packet.getX(), packet.getY(), packet.getZ(), packet.getSound(), packet.getCategory(), packet.getVolume(), packet.getPitch());
+        this.client.world.playSound(this.client.player, packet.getX(), packet.getY(), packet.getZ(), packet.getSound(), packet.getCategory(), packet.getVolume(), packet.getPitch(), packet.getSeed());
     }
 
     @Override
@@ -1486,45 +1577,28 @@ implements ClientPlayPacketListener {
         if (entity == null) {
             return;
         }
-        this.client.world.playSoundFromEntity(this.client.player, entity, packet.getSound(), packet.getCategory(), packet.getVolume(), packet.getPitch());
+        this.client.world.playSoundFromEntity(this.client.player, entity, packet.getSound(), packet.getCategory(), packet.getVolume(), packet.getPitch(), packet.getSeed());
     }
 
     @Override
     public void onPlaySoundId(PlaySoundIdS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.client.getSoundManager().play(new PositionedSoundInstance(packet.getSoundId(), packet.getCategory(), packet.getVolume(), packet.getPitch(), false, 0, SoundInstance.AttenuationType.LINEAR, packet.getX(), packet.getY(), packet.getZ(), false));
+        this.client.getSoundManager().play(new PositionedSoundInstance(packet.getSoundId(), packet.getCategory(), packet.getVolume(), packet.getPitch(), Random.create(packet.getSeed()), false, 0, SoundInstance.AttenuationType.LINEAR, packet.getX(), packet.getY(), packet.getZ(), false));
     }
 
     @Override
     public void onResourcePackSend(ResourcePackSendS2CPacket packet) {
-        String string = packet.getURL();
-        String string2 = packet.getSHA1();
-        boolean bl = packet.isRequired();
-        if (!this.validateResourcePackUrl(string)) {
-            return;
-        }
-        if (string.startsWith("level://")) {
-            try {
-                String string3 = URLDecoder.decode(string.substring("level://".length()), StandardCharsets.UTF_8.toString());
-                File file = new File(this.client.runDirectory, "saves");
-                File file2 = new File(file, string3);
-                if (file2.isFile()) {
-                    this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.ACCEPTED);
-                    CompletableFuture<Void> completableFuture = this.client.getResourcePackProvider().loadServerPack(file2, ResourcePackSource.PACK_SOURCE_WORLD);
-                    this.feedbackAfterDownload(completableFuture);
-                    return;
-                }
-            }
-            catch (UnsupportedEncodingException string3) {
-                // empty catch block
-            }
+        URL uRL = ClientPlayNetworkHandler.resolveUrl(packet.getURL());
+        if (uRL == null) {
             this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.FAILED_DOWNLOAD);
             return;
         }
+        String string = packet.getSHA1();
+        boolean bl = packet.isRequired();
         ServerInfo serverInfo = this.client.getCurrentServerEntry();
         if (serverInfo != null && serverInfo.getResourcePackPolicy() == ServerInfo.ResourcePackPolicy.ENABLED) {
             this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.ACCEPTED);
-            this.feedbackAfterDownload(this.client.getResourcePackProvider().download(string, string2, true));
+            this.feedbackAfterDownload(this.client.getResourcePackProvider().download(uRL, string, true));
         } else if (serverInfo == null || serverInfo.getResourcePackPolicy() == ServerInfo.ResourcePackPolicy.PROMPT || bl && serverInfo.getResourcePackPolicy() == ServerInfo.ResourcePackPolicy.DISABLED) {
             this.client.execute(() -> this.client.setScreen(new ConfirmScreen(enabled -> {
                 this.client.setScreen(null);
@@ -1534,11 +1608,11 @@ implements ClientPlayPacketListener {
                         serverInfo.setResourcePackPolicy(ServerInfo.ResourcePackPolicy.ENABLED);
                     }
                     this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.ACCEPTED);
-                    this.feedbackAfterDownload(this.client.getResourcePackProvider().download(string, string2, true));
+                    this.feedbackAfterDownload(this.client.getResourcePackProvider().download(uRL, string, true));
                 } else {
                     this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.DECLINED);
                     if (bl) {
-                        this.connection.disconnect(new TranslatableText("multiplayer.requiredTexturePrompt.disconnect"));
+                        this.connection.disconnect(Text.translatable("multiplayer.requiredTexturePrompt.disconnect"));
                     } else if (serverInfo != null) {
                         serverInfo.setResourcePackPolicy(ServerInfo.ResourcePackPolicy.DISABLED);
                     }
@@ -1546,11 +1620,11 @@ implements ClientPlayPacketListener {
                 if (serverInfo != null) {
                     ServerList.updateServerListEntry(serverInfo);
                 }
-            }, bl ? new TranslatableText("multiplayer.requiredTexturePrompt.line1") : new TranslatableText("multiplayer.texturePrompt.line1"), ClientPlayNetworkHandler.getServerResourcePackPrompt(bl ? new TranslatableText("multiplayer.requiredTexturePrompt.line2").formatted(Formatting.YELLOW, Formatting.BOLD) : new TranslatableText("multiplayer.texturePrompt.line2"), packet.getPrompt()), bl ? ScreenTexts.PROCEED : ScreenTexts.YES, bl ? new TranslatableText("menu.disconnect") : ScreenTexts.NO)));
+            }, bl ? Text.translatable("multiplayer.requiredTexturePrompt.line1") : Text.translatable("multiplayer.texturePrompt.line1"), ClientPlayNetworkHandler.getServerResourcePackPrompt(bl ? Text.translatable("multiplayer.requiredTexturePrompt.line2").formatted(Formatting.YELLOW, Formatting.BOLD) : Text.translatable("multiplayer.texturePrompt.line2"), packet.getPrompt()), bl ? ScreenTexts.PROCEED : ScreenTexts.YES, bl ? Text.translatable("menu.disconnect") : ScreenTexts.NO)));
         } else {
             this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.DECLINED);
             if (bl) {
-                this.connection.disconnect(new TranslatableText("multiplayer.requiredTexturePrompt.disconnect"));
+                this.connection.disconnect(Text.translatable("multiplayer.requiredTexturePrompt.disconnect"));
             }
         }
     }
@@ -1559,26 +1633,22 @@ implements ClientPlayPacketListener {
         if (customPrompt == null) {
             return defaultPrompt;
         }
-        return new TranslatableText("multiplayer.texturePrompt.serverPrompt", defaultPrompt, customPrompt);
+        return Text.translatable("multiplayer.texturePrompt.serverPrompt", defaultPrompt, customPrompt);
     }
 
-    private boolean validateResourcePackUrl(String url) {
+    @Nullable
+    private static URL resolveUrl(String url) {
         try {
-            URI uRI = new URI(url);
-            String string = uRI.getScheme();
-            boolean bl = "level".equals(string);
-            if (!("http".equals(string) || "https".equals(string) || bl)) {
-                throw new URISyntaxException(url, "Wrong protocol");
-            }
-            if (bl && (url.contains("..") || !url.endsWith("/resources.zip"))) {
-                throw new URISyntaxException(url, "Invalid levelstorage resourcepack path");
+            URL uRL = new URL(url);
+            String string = uRL.getProtocol();
+            if ("http".equals(string) || "https".equals(string)) {
+                return uRL;
             }
         }
-        catch (URISyntaxException uRISyntaxException) {
-            this.sendResourcePackStatus(ResourcePackStatusC2SPacket.Status.FAILED_DOWNLOAD);
-            return false;
+        catch (MalformedURLException malformedURLException) {
+            return null;
         }
-        return true;
+        return null;
     }
 
     private void feedbackAfterDownload(CompletableFuture<?> downloadFuture) {
@@ -1706,11 +1776,11 @@ implements ClientPlayPacketListener {
                 }
                 this.client.debugRenderer.raidCenterDebugRenderer.setRaidCenters(collection);
             } else if (CustomPayloadS2CPacket.DEBUG_BRAIN.equals(identifier)) {
+                int x;
                 int w;
                 int v;
                 int u;
                 int t;
-                int s;
                 double d = packetByteBuf.readDouble();
                 double e = packetByteBuf.readDouble();
                 double g = packetByteBuf.readDouble();
@@ -1723,37 +1793,37 @@ implements ClientPlayPacketListener {
                 float h = packetByteBuf.readFloat();
                 float q = packetByteBuf.readFloat();
                 String string6 = packetByteBuf.readString();
+                Path path2 = (Path)packetByteBuf.readNullable(Path::fromBuffer);
                 boolean bl2 = packetByteBuf.readBoolean();
-                Path path2 = bl2 ? Path.fromBuffer(packetByteBuf) : null;
-                boolean bl3 = packetByteBuf.readBoolean();
-                VillageDebugRenderer.Brain brain = new VillageDebugRenderer.Brain(uUID, o, string4, string5, p, h, q, position, string6, path2, bl3);
-                int r = packetByteBuf.readVarInt();
-                for (s = 0; s < r; ++s) {
+                int r = packetByteBuf.readInt();
+                VillageDebugRenderer.Brain brain = new VillageDebugRenderer.Brain(uUID, o, string4, string5, p, h, q, position, string6, path2, bl2, r);
+                int s = packetByteBuf.readVarInt();
+                for (t = 0; t < s; ++t) {
                     String string7 = packetByteBuf.readString();
                     brain.possibleActivities.add(string7);
                 }
-                s = packetByteBuf.readVarInt();
-                for (t = 0; t < s; ++t) {
+                t = packetByteBuf.readVarInt();
+                for (u = 0; u < t; ++u) {
                     String string8 = packetByteBuf.readString();
                     brain.runningTasks.add(string8);
                 }
-                t = packetByteBuf.readVarInt();
-                for (u = 0; u < t; ++u) {
+                u = packetByteBuf.readVarInt();
+                for (v = 0; v < u; ++v) {
                     String string9 = packetByteBuf.readString();
                     brain.memories.add(string9);
                 }
-                u = packetByteBuf.readVarInt();
-                for (v = 0; v < u; ++v) {
+                v = packetByteBuf.readVarInt();
+                for (w = 0; w < v; ++w) {
                     BlockPos blockPos3 = packetByteBuf.readBlockPos();
                     brain.pointsOfInterest.add(blockPos3);
                 }
-                v = packetByteBuf.readVarInt();
-                for (w = 0; w < v; ++w) {
+                w = packetByteBuf.readVarInt();
+                for (x = 0; x < w; ++x) {
                     BlockPos blockPos4 = packetByteBuf.readBlockPos();
                     brain.potentialJobSites.add(blockPos4);
                 }
-                w = packetByteBuf.readVarInt();
-                for (int x = 0; x < w; ++x) {
+                x = packetByteBuf.readVarInt();
+                for (int y = 0; y < x; ++y) {
                     String string10 = packetByteBuf.readString();
                     brain.gossips.add(string10);
                 }
@@ -1766,30 +1836,18 @@ implements ClientPlayPacketListener {
                 PositionImpl position = new PositionImpl(d, e, g);
                 UUID uUID = packetByteBuf.readUuid();
                 int o = packetByteBuf.readInt();
-                boolean bl4 = packetByteBuf.readBoolean();
-                BlockPos blockPos5 = null;
-                if (bl4) {
-                    blockPos5 = packetByteBuf.readBlockPos();
-                }
-                boolean bl5 = packetByteBuf.readBoolean();
-                BlockPos blockPos6 = null;
-                if (bl5) {
-                    blockPos6 = packetByteBuf.readBlockPos();
-                }
-                int y = packetByteBuf.readInt();
-                boolean bl6 = packetByteBuf.readBoolean();
-                Path path3 = null;
-                if (bl6) {
-                    path3 = Path.fromBuffer(packetByteBuf);
-                }
-                BeeDebugRenderer.Bee bee = new BeeDebugRenderer.Bee(uUID, o, position, path3, blockPos5, blockPos6, y);
+                BlockPos blockPos5 = (BlockPos)packetByteBuf.readNullable(PacketByteBuf::readBlockPos);
+                BlockPos blockPos6 = (BlockPos)packetByteBuf.readNullable(PacketByteBuf::readBlockPos);
+                int p = packetByteBuf.readInt();
+                Path path3 = (Path)packetByteBuf.readNullable(Path::fromBuffer);
+                BeeDebugRenderer.Bee bee = new BeeDebugRenderer.Bee(uUID, o, position, path3, blockPos5, blockPos6, p);
                 int z = packetByteBuf.readVarInt();
                 for (aa = 0; aa < z; ++aa) {
                     String string11 = packetByteBuf.readString();
                     bee.labels.add(string11);
                 }
                 aa = packetByteBuf.readVarInt();
-                for (int r = 0; r < aa; ++r) {
+                for (int ab = 0; ab < aa; ++ab) {
                     BlockPos blockPos7 = packetByteBuf.readBlockPos();
                     bee.blacklist.add(blockPos7);
                 }
@@ -1798,9 +1856,9 @@ implements ClientPlayPacketListener {
                 BlockPos blockPos2 = packetByteBuf.readBlockPos();
                 String string2 = packetByteBuf.readString();
                 int j = packetByteBuf.readInt();
-                int ab = packetByteBuf.readInt();
-                boolean bl7 = packetByteBuf.readBoolean();
-                BeeDebugRenderer.Hive hive = new BeeDebugRenderer.Hive(blockPos2, string2, j, ab, bl7, this.world.getTime());
+                int ac = packetByteBuf.readInt();
+                boolean bl3 = packetByteBuf.readBoolean();
+                BeeDebugRenderer.Hive hive = new BeeDebugRenderer.Hive(blockPos2, string2, j, ac, bl3, this.world.getTime());
                 this.client.debugRenderer.beeDebugRenderer.addHive(hive);
             } else if (CustomPayloadS2CPacket.DEBUG_GAME_TEST_CLEAR.equals(identifier)) {
                 this.client.debugRenderer.gameTestDebugRenderer.clear();
@@ -1808,12 +1866,12 @@ implements ClientPlayPacketListener {
                 BlockPos blockPos2 = packetByteBuf.readBlockPos();
                 int m = packetByteBuf.readInt();
                 String string12 = packetByteBuf.readString();
-                int ab = packetByteBuf.readInt();
-                this.client.debugRenderer.gameTestDebugRenderer.addMarker(blockPos2, m, string12, ab);
+                int ac = packetByteBuf.readInt();
+                this.client.debugRenderer.gameTestDebugRenderer.addMarker(blockPos2, m, string12, ac);
             } else if (CustomPayloadS2CPacket.DEBUG_GAME_EVENT.equals(identifier)) {
                 GameEvent gameEvent = Registry.GAME_EVENT.get(new Identifier(packetByteBuf.readString()));
-                BlockPos blockPos8 = packetByteBuf.readBlockPos();
-                this.client.debugRenderer.gameEventDebugRenderer.addEvent(gameEvent, blockPos8);
+                Vec3d vec3d = new Vec3d(packetByteBuf.readDouble(), packetByteBuf.readDouble(), packetByteBuf.readDouble());
+                this.client.debugRenderer.gameEventDebugRenderer.addEvent(gameEvent, vec3d);
             } else if (CustomPayloadS2CPacket.DEBUG_GAME_EVENT_LISTENERS.equals(identifier)) {
                 Identifier identifier2 = packetByteBuf.readIdentifier();
                 Object positionSource = Registry.POSITION_SOURCE_TYPE.getOrEmpty(identifier2).orElseThrow(() -> new IllegalArgumentException("Unknown position source type " + identifier2)).readFromBuf(packetByteBuf);
@@ -2060,7 +2118,7 @@ implements ClientPlayPacketListener {
     @Override
     public void onPlayerActionResponse(PlayerActionResponseS2CPacket packet) {
         NetworkThreadUtils.forceMainThread(packet, this, this.client);
-        this.client.interactionManager.processPlayerActionResponse(this.world, packet.pos(), packet.state(), packet.action(), packet.approved());
+        this.world.handlePlayerActionResponse(packet.sequence());
     }
 
     private void updateLighting(int chunkX, int chunkZ, LightingProvider provider, LightType type, BitSet inited, BitSet uninited, Iterator<byte[]> nibbles, boolean nonEdge) {
@@ -2131,6 +2189,31 @@ implements ClientPlayPacketListener {
 
     public DynamicRegistryManager getRegistryManager() {
         return this.registryManager;
+    }
+
+    public MessageChain.Packer getMessagePacker() {
+        return this.messagePacker;
+    }
+
+    public LastSeenMessageList.Acknowledgment consumeAcknowledgment() {
+        this.pendingAcknowledgments = 0;
+        return new LastSeenMessageList.Acknowledgment(this.lastSeenMessagesCollector.getLastSeenMessages(), this.lastReceivedMessage);
+    }
+
+    public void acknowledge(SignedMessage message, boolean displayed) {
+        LastSeenMessageList.Entry entry = message.toLastSeenMessageEntry();
+        if (entry == null) {
+            return;
+        }
+        if (displayed) {
+            this.lastSeenMessagesCollector.add(entry);
+            this.lastReceivedMessage = Optional.empty();
+        } else {
+            this.lastReceivedMessage = Optional.of(entry);
+        }
+        if (this.pendingAcknowledgments++ > 64) {
+            this.sendPacket(new MessageAcknowledgmentC2SPacket(this.consumeAcknowledgment()));
+        }
     }
 }
 

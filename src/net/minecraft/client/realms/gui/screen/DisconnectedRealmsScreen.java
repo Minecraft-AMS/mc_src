@@ -12,11 +12,10 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 
@@ -46,7 +45,7 @@ extends RealmsScreen {
 
     @Override
     public Text getNarratedTitle() {
-        return new LiteralText("").append(this.title).append(": ").append(this.reason);
+        return Text.empty().append(this.title).append(": ").append(this.reason);
     }
 
     @Override

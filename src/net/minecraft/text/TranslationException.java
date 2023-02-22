@@ -3,20 +3,21 @@
  */
 package net.minecraft.text;
 
-import net.minecraft.text.TranslatableText;
+import java.util.Locale;
+import net.minecraft.text.TranslatableTextContent;
 
 public class TranslationException
 extends IllegalArgumentException {
-    public TranslationException(TranslatableText text, String message) {
-        super(String.format("Error parsing: %s: %s", text, message));
+    public TranslationException(TranslatableTextContent text, String message) {
+        super(String.format(Locale.ROOT, "Error parsing: %s: %s", text, message));
     }
 
-    public TranslationException(TranslatableText text, int index) {
-        super(String.format("Invalid index %d requested for %s", index, text));
+    public TranslationException(TranslatableTextContent text, int index) {
+        super(String.format(Locale.ROOT, "Invalid index %d requested for %s", index, text));
     }
 
-    public TranslationException(TranslatableText text, Throwable cause) {
-        super(String.format("Error while parsing: %s", text), cause);
+    public TranslationException(TranslatableTextContent text, Throwable cause) {
+        super(String.format(Locale.ROOT, "Error while parsing: %s", text), cause);
     }
 }
 

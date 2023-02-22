@@ -55,7 +55,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public abstract class ScreenHandler {
-    private static Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int EMPTY_SPACE_SLOT_INDEX = -999;
     public static final int field_30731 = 0;
     public static final int field_30732 = 1;
@@ -296,9 +296,7 @@ public abstract class ScreenHandler {
         return this.slots.get(index);
     }
 
-    public ItemStack transferSlot(PlayerEntity player, int index) {
-        return this.slots.get(index).getStack();
-    }
+    public abstract ItemStack transferSlot(PlayerEntity var1, int var2);
 
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
         try {
@@ -453,8 +451,8 @@ public abstract class ScreenHandler {
                                                         int n = clickType == ClickType.LEFT ? itemStack52.getCount() : 1;
                                                         this.setCursorStack(slot.insertStack(itemStack52, n));
                                                     } else if (itemStack52.getCount() <= slot.getMaxItemCount(itemStack52)) {
-                                                        slot.setStack(itemStack52);
                                                         this.setCursorStack(itemStack5);
+                                                        slot.setStack(itemStack52);
                                                     }
                                                 } else if (ItemStack.canCombine(itemStack5, itemStack52)) {
                                                     Optional<ItemStack> optional2 = slot.tryTakeStackRange(itemStack5.getCount(), itemStack52.getMaxCount() - itemStack52.getCount(), player);
@@ -598,7 +596,7 @@ public abstract class ScreenHandler {
 
     public void updateSlotStacks(int revision, List<ItemStack> stacks, ItemStack cursorStack) {
         for (int i = 0; i < stacks.size(); ++i) {
-            this.getSlot(i).setStack(stacks.get(i));
+            this.getSlot(i).setStackNoCallbacks(stacks.get(i));
         }
         this.cursorStack = cursorStack;
         this.revision = revision;

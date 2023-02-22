@@ -8,7 +8,7 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.scoreboard.ScoreboardCriterion;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 
 public class ScoreboardObjectiveUpdateS2CPacket
@@ -35,7 +35,7 @@ implements Packet<ClientPlayPacketListener> {
             this.displayName = buf.readText();
             this.type = buf.readEnumConstant(ScoreboardCriterion.RenderType.class);
         } else {
-            this.displayName = LiteralText.EMPTY;
+            this.displayName = ScreenTexts.EMPTY;
             this.type = ScoreboardCriterion.RenderType.INTEGER;
         }
     }

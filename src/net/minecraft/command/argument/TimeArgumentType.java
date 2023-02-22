@@ -31,13 +31,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.command.CommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class TimeArgumentType
 implements ArgumentType<Integer> {
     private static final Collection<String> EXAMPLES = Arrays.asList("0d", "0s", "0t", "0");
-    private static final SimpleCommandExceptionType INVALID_UNIT_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.time.invalid_unit"));
-    private static final DynamicCommandExceptionType INVALID_COUNT_EXCEPTION = new DynamicCommandExceptionType(time -> new TranslatableText("argument.time.invalid_tick_count", time));
+    private static final SimpleCommandExceptionType INVALID_UNIT_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.time.invalid_unit"));
+    private static final DynamicCommandExceptionType INVALID_COUNT_EXCEPTION = new DynamicCommandExceptionType(time -> Text.translatable("argument.time.invalid_tick_count", time));
     private static final Object2IntMap<String> UNITS = new Object2IntOpenHashMap();
 
     public static TimeArgumentType time() {

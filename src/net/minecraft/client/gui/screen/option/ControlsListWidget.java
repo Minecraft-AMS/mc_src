@@ -25,10 +25,8 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ElementListWidget;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -45,14 +43,14 @@ extends ElementListWidget<Entry> {
         Arrays.sort(keyBindings);
         String string = null;
         for (Object keyBinding : keyBindings) {
-            TranslatableText text;
+            MutableText text;
             int i;
             String string2 = ((KeyBinding)keyBinding).getCategory();
             if (!string2.equals(string)) {
                 string = string2;
-                this.addEntry(new CategoryEntry(new TranslatableText(string2)));
+                this.addEntry(new CategoryEntry(Text.translatable(string2)));
             }
-            if ((i = client.textRenderer.getWidth(text = new TranslatableText(((KeyBinding)keyBinding).getTranslationKey()))) > this.maxKeyNameLength) {
+            if ((i = client.textRenderer.getWidth(text = Text.translatable(((KeyBinding)keyBinding).getTranslationKey()))) > this.maxKeyNameLength) {
                 this.maxKeyNameLength = i;
             }
             this.addEntry(new KeyBindingEntry((KeyBinding)keyBinding, text));
@@ -130,19 +128,19 @@ extends ElementListWidget<Entry> {
                 @Override
                 protected MutableText getNarrationMessage() {
                     if (binding.isUnbound()) {
-                        return new TranslatableText("narrator.controls.unbound", bindingName);
+                        return Text.translatable("narrator.controls.unbound", bindingName);
                     }
-                    return new TranslatableText("narrator.controls.bound", bindingName, super.getNarrationMessage());
+                    return Text.translatable("narrator.controls.bound", bindingName, super.getNarrationMessage());
                 }
             };
-            this.resetButton = new ButtonWidget(0, 0, 50, 20, new TranslatableText("controls.reset"), button -> {
+            this.resetButton = new ButtonWidget(0, 0, 50, 20, Text.translatable("controls.reset"), button -> {
                 ((ControlsListWidget)ControlsListWidget.this).client.options.setKeyCode(binding, binding.getDefaultKey());
                 KeyBinding.updateKeysByCode();
             }){
 
                 @Override
                 protected MutableText getNarrationMessage() {
-                    return new TranslatableText("narrator.controls.reset", bindingName);
+                    return Text.translatable("narrator.controls.reset", bindingName);
                 }
             };
         }
@@ -167,9 +165,9 @@ extends ElementListWidget<Entry> {
                 }
             }
             if (bl) {
-                this.editButton.setMessage(new LiteralText("> ").append(this.editButton.getMessage().shallowCopy().formatted(Formatting.YELLOW)).append(" <").formatted(Formatting.YELLOW));
+                this.editButton.setMessage(Text.literal("> ").append(this.editButton.getMessage().copy().formatted(Formatting.YELLOW)).append(" <").formatted(Formatting.YELLOW));
             } else if (bl2) {
-                this.editButton.setMessage(this.editButton.getMessage().shallowCopy().formatted(Formatting.RED));
+                this.editButton.setMessage(this.editButton.getMessage().copy().formatted(Formatting.RED));
             }
             this.editButton.render(matrices, mouseX, mouseY, tickDelta);
         }

@@ -10,7 +10,6 @@ package net.minecraft.entity.passive;
 import com.google.common.collect.Maps;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Random;
 import java.util.stream.Collectors;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -61,6 +60,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -356,6 +356,7 @@ implements Shearable {
 
     @Override
     public void onEatingGrass() {
+        super.onEatingGrass();
         this.setSheared(false);
         if (this.isBaby()) {
             this.growUp(60);
@@ -378,6 +379,11 @@ implements Shearable {
 
     private static CraftingInventory createDyeMixingCraftingInventory(DyeColor firstColor, DyeColor secondColor) {
         CraftingInventory craftingInventory = new CraftingInventory(new ScreenHandler(null, -1){
+
+            @Override
+            public ItemStack transferSlot(PlayerEntity player, int index) {
+                return ItemStack.EMPTY;
+            }
 
             @Override
             public boolean canUse(PlayerEntity player) {

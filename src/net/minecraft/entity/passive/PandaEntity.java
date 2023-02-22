@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -60,6 +59,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
@@ -386,7 +386,7 @@ extends AnimalEntity {
                 if (this.getEatingTicks() > 100 && this.canEat(this.getEquippedStack(EquipmentSlot.MAINHAND))) {
                     if (!this.world.isClient) {
                         this.equipStack(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-                        this.emitGameEvent(GameEvent.EAT, this.getCameraBlockPos());
+                        this.emitGameEvent(GameEvent.EAT);
                     }
                     this.setSitting(false);
                 }
@@ -481,7 +481,7 @@ extends AnimalEntity {
             this.triggerItemPickedUpByEntityCriteria(item);
             ItemStack itemStack = item.getStack();
             this.equipStack(EquipmentSlot.MAINHAND, itemStack);
-            this.handDropChances[EquipmentSlot.MAINHAND.getEntitySlotId()] = 2.0f;
+            this.updateDropChances(EquipmentSlot.MAINHAND);
             this.sendPickup(item, itemStack.getCount());
             item.discard();
         }
@@ -498,8 +498,9 @@ extends AnimalEntity {
     @Override
     @Nullable
     public EntityData initialize(ServerWorldAccess world, LocalDifficulty difficulty, SpawnReason spawnReason, @Nullable EntityData entityData, @Nullable NbtCompound entityNbt) {
-        this.setMainGene(Gene.createRandom(this.random));
-        this.setHiddenGene(Gene.createRandom(this.random));
+        Random random = world.getRandom();
+        this.setMainGene(Gene.createRandom(random));
+        this.setHiddenGene(Gene.createRandom(random));
         this.resetAttributes();
         if (entityData == null) {
             entityData = new PassiveEntity.PassiveData(0.2f);
@@ -572,11 +573,9 @@ extends AnimalEntity {
             if (this.isBaby()) {
                 this.eat(player, hand, itemStack);
                 this.growUp((int)((float)(-this.getBreedingAge() / 20) * 0.1f), true);
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
             } else if (!this.world.isClient && this.getBreedingAge() == 0 && this.canEat()) {
                 this.eat(player, hand, itemStack);
                 this.lovePlayer(player);
-                this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
             } else if (!(this.world.isClient || this.isSitting() || this.isTouchingWater())) {
                 this.stop();
                 this.setEating(true);

@@ -6,12 +6,14 @@ package net.minecraft.nbt;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.UTFDataFormatException;
 import java.util.Objects;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtTagSizeTracker;
 import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
+import net.minecraft.util.Util;
 
 public class NbtString
 implements NbtElement {
@@ -81,7 +83,13 @@ implements NbtElement {
 
     @Override
     public void write(DataOutput output) throws IOException {
-        output.writeUTF(this.value);
+        try {
+            output.writeUTF(this.value);
+        }
+        catch (UTFDataFormatException uTFDataFormatException) {
+            Util.error("Failed to write NBT String", uTFDataFormatException);
+            output.writeUTF("");
+        }
     }
 
     @Override

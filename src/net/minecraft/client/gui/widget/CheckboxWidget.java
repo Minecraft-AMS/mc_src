@@ -18,7 +18,6 @@ import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.PressableWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
@@ -54,9 +53,9 @@ extends PressableWidget {
         builder.put(NarrationPart.TITLE, (Text)this.getNarrationMessage());
         if (this.active) {
             if (this.isFocused()) {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.checkbox.usage.focused"));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.checkbox.usage.focused"));
             } else {
-                builder.put(NarrationPart.USAGE, (Text)new TranslatableText("narration.checkbox.usage.hovered"));
+                builder.put(NarrationPart.USAGE, (Text)Text.translatable("narration.checkbox.usage.hovered"));
             }
         }
     }

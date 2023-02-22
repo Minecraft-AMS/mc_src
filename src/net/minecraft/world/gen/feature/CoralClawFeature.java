@@ -2,21 +2,18 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
  *  com.mojang.serialization.Codec
  */
 package net.minecraft.world.gen.feature;
 
-import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.stream.Stream;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.world.gen.feature.CoralFeature;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
@@ -34,9 +31,8 @@ extends CoralFeature {
         }
         Direction direction = Direction.Type.HORIZONTAL.random(random);
         int i = random.nextInt(2) + 2;
-        ArrayList list = Lists.newArrayList((Object[])new Direction[]{direction, direction.rotateYClockwise(), direction.rotateYCounterclockwise()});
-        Collections.shuffle(list, random);
-        List list2 = list.subList(0, i);
+        List<Direction> list = Util.copyShuffled(Stream.of(direction, direction.rotateYClockwise(), direction.rotateYCounterclockwise()), random);
+        List<Direction> list2 = list.subList(0, i);
         block0: for (Direction direction2 : list2) {
             int l;
             int k;

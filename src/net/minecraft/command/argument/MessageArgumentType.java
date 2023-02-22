@@ -4,38 +4,66 @@
  * Could not load the following classes:
  *  com.google.common.collect.Lists
  *  com.mojang.brigadier.StringReader
- *  com.mojang.brigadier.arguments.ArgumentType
  *  com.mojang.brigadier.context.CommandContext
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
+ *  com.mojang.logging.LogUtils
  *  org.jetbrains.annotations.Nullable
+ *  org.slf4j.Logger
  */
 package net.minecraft.command.argument;
 
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.EntitySelectorReader;
+import net.minecraft.command.argument.SignedArgumentType;
+import net.minecraft.network.message.DecoratedContents;
+import net.minecraft.network.message.MessageDecorator;
+import net.minecraft.network.message.SignedCommandArguments;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.LiteralText;
+import net.minecraft.server.filter.FilteredMessage;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class MessageArgumentType
-implements ArgumentType<MessageFormat> {
+implements SignedArgumentType<MessageFormat> {
     private static final Collection<String> EXAMPLES = Arrays.asList("Hello world!", "foo", "@e", "Hello @p :)");
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static MessageArgumentType message() {
         return new MessageArgumentType();
     }
 
-    public static Text getMessage(CommandContext<ServerCommandSource> command, String name) throws CommandSyntaxException {
-        return ((MessageFormat)command.getArgument(name, MessageFormat.class)).format((ServerCommandSource)command.getSource(), ((ServerCommandSource)command.getSource()).hasPermissionLevel(2));
+    public static Text getMessage(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        MessageFormat messageFormat = (MessageFormat)context.getArgument(name, MessageFormat.class);
+        return messageFormat.format((ServerCommandSource)context.getSource());
+    }
+
+    public static SignedMessage getSignedMessage(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+        MessageFormat messageFormat = (MessageFormat)context.getArgument(name, MessageFormat.class);
+        Text text = messageFormat.format((ServerCommandSource)context.getSource());
+        SignedCommandArguments signedCommandArguments = ((ServerCommandSource)context.getSource()).getSignedArguments();
+        net.minecraft.network.message.SignedMessage signedMessage = signedCommandArguments.getMessage(name);
+        if (signedMessage == null) {
+            DecoratedContents decoratedContents = new DecoratedContents(messageFormat.contents, text);
+            return new SignedMessage(net.minecraft.network.message.SignedMessage.ofUnsigned(decoratedContents));
+        }
+        return new SignedMessage(MessageDecorator.attachIfNotDecorated(signedMessage, text));
     }
 
     public MessageFormat parse(StringReader stringReader) throws CommandSyntaxException {
@@ -46,12 +74,34 @@ implements ArgumentType<MessageFormat> {
         return EXAMPLES;
     }
 
+    @Override
+    public String toSignedString(MessageFormat messageFormat) {
+        return messageFormat.getContents();
+    }
+
+    @Override
+    public CompletableFuture<Text> decorate(ServerCommandSource serverCommandSource, MessageFormat messageFormat) throws CommandSyntaxException {
+        return messageFormat.decorate(serverCommandSource);
+    }
+
+    @Override
+    public Class<MessageFormat> getFormatClass() {
+        return MessageFormat.class;
+    }
+
+    static void handleResolvingFailure(ServerCommandSource source, CompletableFuture<?> future) {
+        future.exceptionally(throwable -> {
+            LOGGER.error("Encountered unexpected exception while resolving chat message argument from '{}'", (Object)source.getDisplayName().getString(), throwable);
+            return null;
+        });
+    }
+
     public /* synthetic */ Object parse(StringReader reader) throws CommandSyntaxException {
         return this.parse(reader);
     }
 
     public static class MessageFormat {
-        private final String contents;
+        final String contents;
         private final MessageSelector[] selectors;
 
         public MessageFormat(String contents, MessageSelector[] selectors) {
@@ -67,11 +117,22 @@ implements ArgumentType<MessageFormat> {
             return this.selectors;
         }
 
+        CompletableFuture<Text> decorate(ServerCommandSource source) throws CommandSyntaxException {
+            Text text = this.format(source);
+            CompletableFuture<Text> completableFuture = source.getServer().getMessageDecorator().decorate(source.getPlayer(), text);
+            MessageArgumentType.handleResolvingFailure(source, completableFuture);
+            return completableFuture;
+        }
+
+        Text format(ServerCommandSource source) throws CommandSyntaxException {
+            return this.format(source, source.hasPermissionLevel(2));
+        }
+
         public Text format(ServerCommandSource source, boolean canUseSelectors) throws CommandSyntaxException {
             if (this.selectors.length == 0 || !canUseSelectors) {
-                return new LiteralText(this.contents);
+                return Text.literal(this.contents);
             }
-            LiteralText mutableText = new LiteralText(this.contents.substring(0, this.selectors[0].getStart()));
+            MutableText mutableText = Text.literal(this.contents.substring(0, this.selectors[0].getStart()));
             int i = this.selectors[0].getStart();
             for (MessageSelector messageSelector : this.selectors) {
                 Text text = messageSelector.format(source);
@@ -118,6 +179,37 @@ implements ArgumentType<MessageFormat> {
                 reader.skip();
             }
             return new MessageFormat(string, list.toArray(new MessageSelector[0]));
+        }
+    }
+
+    public record SignedMessage(net.minecraft.network.message.SignedMessage signedArgument) {
+        public void decorate(ServerCommandSource source, Consumer<net.minecraft.network.message.SignedMessage> callback) {
+            MinecraftServer minecraftServer = source.getServer();
+            source.getMessageChainTaskQueue().append(() -> {
+                CompletableFuture<FilteredMessage> completableFuture = this.filterText(source, this.signedArgument.getSignedContent().plain());
+                CompletableFuture<net.minecraft.network.message.SignedMessage> completableFuture2 = minecraftServer.getMessageDecorator().decorate(source.getPlayer(), this.signedArgument);
+                return CompletableFuture.allOf(completableFuture, completableFuture2).thenAcceptAsync(void_ -> {
+                    net.minecraft.network.message.SignedMessage signedMessage = ((net.minecraft.network.message.SignedMessage)completableFuture2.join()).withFilterMask(((FilteredMessage)completableFuture.join()).mask());
+                    callback.accept(signedMessage);
+                }, (Executor)minecraftServer);
+            });
+        }
+
+        private CompletableFuture<FilteredMessage> filterText(ServerCommandSource source, String text) {
+            ServerPlayerEntity serverPlayerEntity = source.getPlayer();
+            if (serverPlayerEntity != null && this.signedArgument.canVerifyFrom(serverPlayerEntity.getUuid())) {
+                return serverPlayerEntity.getTextStream().filterText(text);
+            }
+            return CompletableFuture.completedFuture(FilteredMessage.permitted(text));
+        }
+
+        public void sendHeader(ServerCommandSource source) {
+            if (!this.signedArgument.createMetadata().lacksSender()) {
+                this.decorate(source, message -> {
+                    PlayerManager playerManager = source.getServer().getPlayerManager();
+                    playerManager.sendMessageHeader((net.minecraft.network.message.SignedMessage)message, Set.of());
+                });
+            }
         }
     }
 

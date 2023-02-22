@@ -41,7 +41,7 @@ import net.minecraft.entity.ai.brain.task.WanderAroundTask;
 import net.minecraft.entity.mob.AbstractPiglinEntity;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.entity.mob.PiglinBruteEntity;
-import net.minecraft.util.dynamic.GlobalPos;
+import net.minecraft.util.math.GlobalPos;
 
 public class PiglinBruteBrain {
     private static final int field_30589 = 600;
@@ -110,15 +110,15 @@ public class PiglinBruteBrain {
         if (optional.isPresent() && Sensor.testAttackableTargetPredicateIgnoreVisibility(piglin, optional.get())) {
             return optional;
         }
-        Optional<? extends LivingEntity> optional2 = PiglinBruteBrain.method_30249(piglin, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER);
+        Optional<? extends LivingEntity> optional2 = PiglinBruteBrain.getTargetIfInRange(piglin, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER);
         if (optional2.isPresent()) {
             return optional2;
         }
         return piglin.getBrain().getOptionalMemory(MemoryModuleType.NEAREST_VISIBLE_NEMESIS);
     }
 
-    private static Optional<? extends LivingEntity> method_30249(AbstractPiglinEntity piglin, MemoryModuleType<? extends LivingEntity> memoryModuleType) {
-        return piglin.getBrain().getOptionalMemory(memoryModuleType).filter(livingEntity -> livingEntity.isInRange(piglin, 12.0));
+    private static Optional<? extends LivingEntity> getTargetIfInRange(AbstractPiglinEntity piglin, MemoryModuleType<? extends LivingEntity> targetMemoryModule) {
+        return piglin.getBrain().getOptionalMemory(targetMemoryModule).filter(target -> target.isInRange(piglin, 12.0));
     }
 
     protected static void tryRevenge(PiglinBruteEntity piglinBrute, LivingEntity target) {

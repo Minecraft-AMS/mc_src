@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  com.google.common.collect.ImmutableList
+ *  com.google.common.collect.ImmutableList$Builder
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  */
@@ -32,19 +33,29 @@ extends CompositeEntityModel<BoatEntity> {
     private static final String FRONT = "front";
     private static final String RIGHT = "right";
     private static final String LEFT = "left";
+    private static final String CHEST_BOTTOM = "chest_bottom";
+    private static final String CHEST_LID = "chest_lid";
+    private static final String CHEST_LOCK = "chest_lock";
     private final ModelPart leftPaddle;
     private final ModelPart rightPaddle;
     private final ModelPart waterPatch;
     private final ImmutableList<ModelPart> parts;
 
-    public BoatEntityModel(ModelPart root) {
+    public BoatEntityModel(ModelPart root, boolean chest) {
         this.leftPaddle = root.getChild(LEFT_PADDLE);
         this.rightPaddle = root.getChild(RIGHT_PADDLE);
         this.waterPatch = root.getChild(WATER_PATCH);
-        this.parts = ImmutableList.of((Object)root.getChild(BOTTOM), (Object)root.getChild(BACK), (Object)root.getChild(FRONT), (Object)root.getChild(RIGHT), (Object)root.getChild(LEFT), (Object)this.leftPaddle, (Object)this.rightPaddle);
+        ImmutableList.Builder builder = new ImmutableList.Builder();
+        builder.add((Object[])new ModelPart[]{root.getChild(BOTTOM), root.getChild(BACK), root.getChild(FRONT), root.getChild(RIGHT), root.getChild(LEFT), this.leftPaddle, this.rightPaddle});
+        if (chest) {
+            builder.add((Object)root.getChild(CHEST_BOTTOM));
+            builder.add((Object)root.getChild(CHEST_LID));
+            builder.add((Object)root.getChild(CHEST_LOCK));
+        }
+        this.parts = builder.build();
     }
 
-    public static TexturedModelData getTexturedModelData() {
+    public static TexturedModelData getTexturedModelData(boolean chest) {
         ModelData modelData = new ModelData();
         ModelPartData modelPartData = modelData.getRoot();
         int i = 32;
@@ -57,6 +68,11 @@ extends CompositeEntityModel<BoatEntity> {
         modelPartData.addChild(FRONT, ModelPartBuilder.create().uv(0, 27).cuboid(-8.0f, -7.0f, -1.0f, 16.0f, 6.0f, 2.0f), ModelTransform.of(15.0f, 4.0f, 0.0f, 0.0f, 1.5707964f, 0.0f));
         modelPartData.addChild(RIGHT, ModelPartBuilder.create().uv(0, 35).cuboid(-14.0f, -7.0f, -1.0f, 28.0f, 6.0f, 2.0f), ModelTransform.of(0.0f, 4.0f, -9.0f, 0.0f, (float)Math.PI, 0.0f));
         modelPartData.addChild(LEFT, ModelPartBuilder.create().uv(0, 43).cuboid(-14.0f, -7.0f, -1.0f, 28.0f, 6.0f, 2.0f), ModelTransform.pivot(0.0f, 4.0f, 9.0f));
+        if (chest) {
+            modelPartData.addChild(CHEST_BOTTOM, ModelPartBuilder.create().uv(0, 76).cuboid(0.0f, 0.0f, 0.0f, 12.0f, 8.0f, 12.0f), ModelTransform.of(-2.0f, -5.0f, -6.0f, 0.0f, -1.5707964f, 0.0f));
+            modelPartData.addChild(CHEST_LID, ModelPartBuilder.create().uv(0, 59).cuboid(0.0f, 0.0f, 0.0f, 12.0f, 4.0f, 12.0f), ModelTransform.of(-2.0f, -9.0f, -6.0f, 0.0f, -1.5707964f, 0.0f));
+            modelPartData.addChild(CHEST_LOCK, ModelPartBuilder.create().uv(0, 59).cuboid(0.0f, 0.0f, 0.0f, 2.0f, 4.0f, 1.0f), ModelTransform.of(-1.0f, -6.0f, -1.0f, 0.0f, -1.5707964f, 0.0f));
+        }
         int n = 20;
         int o = 7;
         int p = 6;
@@ -64,7 +80,7 @@ extends CompositeEntityModel<BoatEntity> {
         modelPartData.addChild(LEFT_PADDLE, ModelPartBuilder.create().uv(62, 0).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(-1.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -5.0f, 9.0f, 0.0f, 0.0f, 0.19634955f));
         modelPartData.addChild(RIGHT_PADDLE, ModelPartBuilder.create().uv(62, 20).cuboid(-1.0f, 0.0f, -5.0f, 2.0f, 2.0f, 18.0f).cuboid(0.001f, -3.0f, 8.0f, 1.0f, 6.0f, 7.0f), ModelTransform.of(3.0f, -5.0f, -9.0f, 0.0f, (float)Math.PI, 0.19634955f));
         modelPartData.addChild(WATER_PATCH, ModelPartBuilder.create().uv(0, 0).cuboid(-14.0f, -9.0f, -3.0f, 28.0f, 16.0f, 3.0f), ModelTransform.of(0.0f, -3.0f, 1.0f, 1.5707964f, 0.0f, 0.0f));
-        return TexturedModelData.of(modelData, 128, 64);
+        return TexturedModelData.of(modelData, 128, chest ? 128 : 64);
     }
 
     @Override

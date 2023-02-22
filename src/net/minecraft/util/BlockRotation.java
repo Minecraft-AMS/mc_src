@@ -2,25 +2,27 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.Lists
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.util;
 
-import com.google.common.collect.Lists;
-import java.util.ArrayList;
-import java.util.Collections;
+import com.mojang.serialization.Codec;
 import java.util.List;
-import java.util.Random;
+import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.DirectionTransformation;
+import net.minecraft.util.math.random.Random;
 
 public final class BlockRotation
-extends Enum<BlockRotation> {
-    public static final /* enum */ BlockRotation NONE = new BlockRotation(DirectionTransformation.IDENTITY);
-    public static final /* enum */ BlockRotation CLOCKWISE_90 = new BlockRotation(DirectionTransformation.ROT_90_Y_NEG);
-    public static final /* enum */ BlockRotation CLOCKWISE_180 = new BlockRotation(DirectionTransformation.ROT_180_FACE_XZ);
-    public static final /* enum */ BlockRotation COUNTERCLOCKWISE_90 = new BlockRotation(DirectionTransformation.ROT_90_Y_POS);
+extends Enum<BlockRotation>
+implements StringIdentifiable {
+    public static final /* enum */ BlockRotation NONE = new BlockRotation("none", DirectionTransformation.IDENTITY);
+    public static final /* enum */ BlockRotation CLOCKWISE_90 = new BlockRotation("clockwise_90", DirectionTransformation.ROT_90_Y_NEG);
+    public static final /* enum */ BlockRotation CLOCKWISE_180 = new BlockRotation("180", DirectionTransformation.ROT_180_FACE_XZ);
+    public static final /* enum */ BlockRotation COUNTERCLOCKWISE_90 = new BlockRotation("counterclockwise_90", DirectionTransformation.ROT_90_Y_POS);
+    public static final Codec<BlockRotation> CODEC;
+    private final String id;
     private final DirectionTransformation directionTransformation;
     private static final /* synthetic */ BlockRotation[] field_11466;
 
@@ -32,7 +34,8 @@ extends Enum<BlockRotation> {
         return Enum.valueOf(BlockRotation.class, string);
     }
 
-    private BlockRotation(DirectionTransformation directionTransformation) {
+    private BlockRotation(String id, DirectionTransformation directionTransformation) {
+        this.id = id;
         this.directionTransformation = directionTransformation;
     }
 
@@ -132,9 +135,12 @@ extends Enum<BlockRotation> {
     }
 
     public static List<BlockRotation> randomRotationOrder(Random random) {
-        ArrayList list = Lists.newArrayList((Object[])BlockRotation.values());
-        Collections.shuffle(list, random);
-        return list;
+        return Util.copyShuffled(BlockRotation.values(), random);
+    }
+
+    @Override
+    public String asString() {
+        return this.id;
     }
 
     private static /* synthetic */ BlockRotation[] method_36709() {
@@ -143,6 +149,7 @@ extends Enum<BlockRotation> {
 
     static {
         field_11466 = BlockRotation.method_36709();
+        CODEC = StringIdentifiable.createCodec(BlockRotation::values);
     }
 }
 

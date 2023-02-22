@@ -9,7 +9,6 @@ package net.minecraft.entity.mob;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 import net.minecraft.block.Block;
@@ -68,6 +67,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
@@ -287,10 +287,14 @@ implements Angerable {
         if (!bl || bl2) {
             return false;
         }
+        Vec3d vec3d = this.getPos();
         boolean bl3 = this.teleport(x, y, z, true);
-        if (bl3 && !this.isSilent()) {
-            this.world.playSound(null, this.prevX, this.prevY, this.prevZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT, this.getSoundCategory(), 1.0f, 1.0f);
-            this.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        if (bl3) {
+            this.world.emitGameEvent(GameEvent.TELEPORT, vec3d, GameEvent.Emitter.of(this));
+            if (!this.isSilent()) {
+                this.world.playSound(null, this.prevX, this.prevY, this.prevZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT, this.getSoundCategory(), 1.0f, 1.0f);
+                this.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+            }
         }
         return bl3;
     }
@@ -449,7 +453,7 @@ implements Angerable {
             }
             if (this.canPlaceOn(world, blockPos, blockState3 = Block.postProcessState(blockState3, this.enderman.world, blockPos), blockState, blockState2, blockPos2)) {
                 world.setBlockState(blockPos, blockState3, 3);
-                world.emitGameEvent((Entity)this.enderman, GameEvent.BLOCK_PLACE, blockPos);
+                world.emitGameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Emitter.of(this.enderman, blockState3));
                 this.enderman.setCarriedBlock(null);
             }
         }
@@ -493,7 +497,7 @@ implements Angerable {
             boolean bl = blockHitResult.getBlockPos().equals(blockPos);
             if (blockState.isIn(BlockTags.ENDERMAN_HOLDABLE) && bl) {
                 world.removeBlock(blockPos, false);
-                world.emitGameEvent((Entity)this.enderman, GameEvent.BLOCK_DESTROY, blockPos);
+                world.emitGameEvent(GameEvent.BLOCK_DESTROY, blockPos, GameEvent.Emitter.of(this.enderman, blockState));
                 this.enderman.setCarriedBlock(blockState.getBlock().getDefaultState());
             }
         }

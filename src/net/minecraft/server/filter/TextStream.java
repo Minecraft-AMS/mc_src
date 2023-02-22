@@ -9,6 +9,7 @@ package net.minecraft.server.filter;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.server.filter.FilteredMessage;
 
 public interface TextStream {
     public static final TextStream UNFILTERED = new TextStream(){
@@ -22,13 +23,13 @@ public interface TextStream {
         }
 
         @Override
-        public CompletableFuture<Message> filterText(String text) {
-            return CompletableFuture.completedFuture(Message.permitted(text));
+        public CompletableFuture<FilteredMessage> filterText(String text) {
+            return CompletableFuture.completedFuture(FilteredMessage.permitted(text));
         }
 
         @Override
-        public CompletableFuture<List<Message>> filterTexts(List<String> texts) {
-            return CompletableFuture.completedFuture((List)texts.stream().map(Message::permitted).collect(ImmutableList.toImmutableList()));
+        public CompletableFuture<List<FilteredMessage>> filterTexts(List<String> texts) {
+            return CompletableFuture.completedFuture((List)texts.stream().map(FilteredMessage::permitted).collect(ImmutableList.toImmutableList()));
         }
     };
 
@@ -36,35 +37,8 @@ public interface TextStream {
 
     public void onDisconnect();
 
-    public CompletableFuture<Message> filterText(String var1);
+    public CompletableFuture<FilteredMessage> filterText(String var1);
 
-    public CompletableFuture<List<Message>> filterTexts(List<String> var1);
-
-    public static class Message {
-        public static final Message EMPTY = new Message("", "");
-        private final String raw;
-        private final String filtered;
-
-        public Message(String raw, String filtered) {
-            this.raw = raw;
-            this.filtered = filtered;
-        }
-
-        public String getRaw() {
-            return this.raw;
-        }
-
-        public String getFiltered() {
-            return this.filtered;
-        }
-
-        public static Message permitted(String text) {
-            return new Message(text, text);
-        }
-
-        public static Message censored(String raw) {
-            return new Message(raw, "");
-        }
-    }
+    public CompletableFuture<List<FilteredMessage>> filterTexts(List<String> var1);
 }
 

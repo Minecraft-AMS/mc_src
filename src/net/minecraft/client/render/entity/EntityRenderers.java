@@ -19,6 +19,7 @@ import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.entity.AllayEntityRenderer;
 import net.minecraft.client.render.entity.ArmorStandEntityRenderer;
 import net.minecraft.client.render.entity.ArrowEntityRenderer;
 import net.minecraft.client.render.entity.AxolotlEntityRenderer;
@@ -52,6 +53,7 @@ import net.minecraft.client.render.entity.FireworkRocketEntityRenderer;
 import net.minecraft.client.render.entity.FishingBobberEntityRenderer;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.render.entity.FoxEntityRenderer;
+import net.minecraft.client.render.entity.FrogEntityRenderer;
 import net.minecraft.client.render.entity.GhastEntityRenderer;
 import net.minecraft.client.render.entity.GiantEntityRenderer;
 import net.minecraft.client.render.entity.GlowSquidEntityRenderer;
@@ -97,6 +99,7 @@ import net.minecraft.client.render.entity.SpiderEntityRenderer;
 import net.minecraft.client.render.entity.SquidEntityRenderer;
 import net.minecraft.client.render.entity.StrayEntityRenderer;
 import net.minecraft.client.render.entity.StriderEntityRenderer;
+import net.minecraft.client.render.entity.TadpoleEntityRenderer;
 import net.minecraft.client.render.entity.TntEntityRenderer;
 import net.minecraft.client.render.entity.TntMinecartEntityRenderer;
 import net.minecraft.client.render.entity.TridentEntityRenderer;
@@ -106,6 +109,7 @@ import net.minecraft.client.render.entity.VexEntityRenderer;
 import net.minecraft.client.render.entity.VillagerEntityRenderer;
 import net.minecraft.client.render.entity.VindicatorEntityRenderer;
 import net.minecraft.client.render.entity.WanderingTraderEntityRenderer;
+import net.minecraft.client.render.entity.WardenEntityRenderer;
 import net.minecraft.client.render.entity.WitchEntityRenderer;
 import net.minecraft.client.render.entity.WitherEntityRenderer;
 import net.minecraft.client.render.entity.WitherSkeletonEntityRenderer;
@@ -172,6 +176,7 @@ public class EntityRenderers {
     }
 
     static {
+        EntityRenderers.register(EntityType.ALLAY, AllayEntityRenderer::new);
         EntityRenderers.register(EntityType.AREA_EFFECT_CLOUD, EmptyEntityRenderer::new);
         EntityRenderers.register(EntityType.ARMOR_STAND, ArmorStandEntityRenderer::new);
         EntityRenderers.register(EntityType.ARROW, ArrowEntityRenderer::new);
@@ -179,9 +184,10 @@ public class EntityRenderers {
         EntityRenderers.register(EntityType.BAT, BatEntityRenderer::new);
         EntityRenderers.register(EntityType.BEE, BeeEntityRenderer::new);
         EntityRenderers.register(EntityType.BLAZE, BlazeEntityRenderer::new);
-        EntityRenderers.register(EntityType.BOAT, BoatEntityRenderer::new);
+        EntityRenderers.register(EntityType.BOAT, context -> new BoatEntityRenderer(context, false));
         EntityRenderers.register(EntityType.CAT, CatEntityRenderer::new);
         EntityRenderers.register(EntityType.CAVE_SPIDER, CaveSpiderEntityRenderer::new);
+        EntityRenderers.register(EntityType.CHEST_BOAT, context -> new BoatEntityRenderer(context, true));
         EntityRenderers.register(EntityType.CHEST_MINECART, context -> new MinecartEntityRenderer(context, EntityModelLayers.CHEST_MINECART));
         EntityRenderers.register(EntityType.CHICKEN, ChickenEntityRenderer::new);
         EntityRenderers.register(EntityType.COD, CodEntityRenderer::new);
@@ -209,6 +215,7 @@ public class EntityRenderers {
         EntityRenderers.register(EntityType.FIREWORK_ROCKET, FireworkRocketEntityRenderer::new);
         EntityRenderers.register(EntityType.FISHING_BOBBER, FishingBobberEntityRenderer::new);
         EntityRenderers.register(EntityType.FOX, FoxEntityRenderer::new);
+        EntityRenderers.register(EntityType.FROG, FrogEntityRenderer::new);
         EntityRenderers.register(EntityType.FURNACE_MINECART, context -> new MinecartEntityRenderer(context, EntityModelLayers.FURNACE_MINECART));
         EntityRenderers.register(EntityType.GHAST, GhastEntityRenderer::new);
         EntityRenderers.register(EntityType.GIANT, context -> new GiantEntityRenderer(context, 6.0f));
@@ -264,6 +271,7 @@ public class EntityRenderers {
         EntityRenderers.register(EntityType.SQUID, context -> new SquidEntityRenderer(context, new SquidEntityModel(context.getPart(EntityModelLayers.SQUID))));
         EntityRenderers.register(EntityType.STRAY, StrayEntityRenderer::new);
         EntityRenderers.register(EntityType.STRIDER, StriderEntityRenderer::new);
+        EntityRenderers.register(EntityType.TADPOLE, TadpoleEntityRenderer::new);
         EntityRenderers.register(EntityType.TNT, TntEntityRenderer::new);
         EntityRenderers.register(EntityType.TNT_MINECART, TntMinecartEntityRenderer::new);
         EntityRenderers.register(EntityType.TRADER_LLAMA, context -> new LlamaEntityRenderer(context, EntityModelLayers.TRADER_LLAMA));
@@ -273,6 +281,7 @@ public class EntityRenderers {
         EntityRenderers.register(EntityType.VEX, VexEntityRenderer::new);
         EntityRenderers.register(EntityType.VILLAGER, VillagerEntityRenderer::new);
         EntityRenderers.register(EntityType.VINDICATOR, VindicatorEntityRenderer::new);
+        EntityRenderers.register(EntityType.WARDEN, WardenEntityRenderer::new);
         EntityRenderers.register(EntityType.WANDERING_TRADER, WanderingTraderEntityRenderer::new);
         EntityRenderers.register(EntityType.WITCH, WitchEntityRenderer::new);
         EntityRenderers.register(EntityType.WITHER, WitherEntityRenderer::new);

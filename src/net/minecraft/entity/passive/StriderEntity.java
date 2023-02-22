@@ -9,7 +9,6 @@ package net.minecraft.entity.passive;
 
 import com.google.common.collect.Sets;
 import java.util.LinkedHashSet;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidBlock;
@@ -68,6 +67,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -184,8 +184,8 @@ Saddleable {
     }
 
     @Override
-    public boolean canWalkOnFluid(FluidState fluidState) {
-        return fluidState.isIn(FluidTags.LAVA);
+    public boolean canWalkOnFluid(FluidState state) {
+        return state.isIn(FluidTags.LAVA);
     }
 
     @Override
@@ -196,16 +196,6 @@ Saddleable {
     }
 
     @Override
-    public boolean canBeControlledByRider() {
-        Entity entity = this.getPrimaryPassenger();
-        if (!(entity instanceof PlayerEntity)) {
-            return false;
-        }
-        PlayerEntity playerEntity = (PlayerEntity)entity;
-        return playerEntity.getMainHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK) || playerEntity.getOffHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK);
-    }
-
-    @Override
     public boolean canSpawn(WorldView world) {
         return world.doesNotIntersectEntities(this);
     }
@@ -213,7 +203,16 @@ Saddleable {
     @Override
     @Nullable
     public Entity getPrimaryPassenger() {
-        return this.getFirstPassenger();
+        Entity entity = this.getFirstPassenger();
+        return entity != null && this.canEntityControl(entity) ? entity : null;
+    }
+
+    private boolean canEntityControl(Entity entity) {
+        if (entity instanceof PlayerEntity) {
+            PlayerEntity playerEntity = (PlayerEntity)entity;
+            return playerEntity.getMainHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK) || playerEntity.getOffHandStack().isOf(Items.WARPED_FUNGUS_ON_A_STICK);
+        }
+        return false;
     }
 
     @Override
@@ -280,13 +279,13 @@ Saddleable {
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void fall(double heightDifference, boolean onGround, BlockState state, BlockPos landedPosition) {
         this.checkBlockCollision();
         if (this.isInLava()) {
             this.onLanding();
             return;
         }
-        super.fall(heightDifference, onGround, landedState, landedPosition);
+        super.fall(heightDifference, onGround, state, landedPosition);
     }
 
     @Override
@@ -296,10 +295,12 @@ Saddleable {
         } else if (this.isEscapingDanger() && this.random.nextInt(60) == 0) {
             this.playSound(SoundEvents.ENTITY_STRIDER_RETREAT, 1.0f, this.getSoundPitch());
         }
-        BlockState blockState = this.world.getBlockState(this.getBlockPos());
-        BlockState blockState2 = this.getLandingBlockState();
-        boolean bl = blockState.isIn(BlockTags.STRIDER_WARM_BLOCKS) || blockState2.isIn(BlockTags.STRIDER_WARM_BLOCKS) || this.getFluidHeight(FluidTags.LAVA) > 0.0;
-        this.setCold(!bl);
+        if (!this.isAiDisabled()) {
+            BlockState blockState = this.world.getBlockState(this.getBlockPos());
+            BlockState blockState2 = this.getLandingBlockState();
+            boolean bl = blockState.isIn(BlockTags.STRIDER_WARM_BLOCKS) || blockState2.isIn(BlockTags.STRIDER_WARM_BLOCKS) || this.getFluidHeight(FluidTags.LAVA) > 0.0;
+            this.setCold(!bl);
+        }
         super.tick();
         this.updateFloating();
         this.checkBlockCollision();
@@ -431,12 +432,13 @@ Saddleable {
         if (this.isBaby()) {
             return super.initialize(world, difficulty, spawnReason, entityData, entityNbt);
         }
-        if (this.random.nextInt(30) == 0) {
+        Random random = world.getRandom();
+        if (random.nextInt(30) == 0) {
             MobEntity mobEntity = EntityType.ZOMBIFIED_PIGLIN.create(world.toServerWorld());
-            entityData = this.initializeRider(world, difficulty, mobEntity, new ZombieEntity.ZombieData(ZombieEntity.shouldBeBaby(this.random), false));
+            entityData = this.initializeRider(world, difficulty, mobEntity, new ZombieEntity.ZombieData(ZombieEntity.shouldBeBaby(random), false));
             mobEntity.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.WARPED_FUNGUS_ON_A_STICK));
             this.saddle(null);
-        } else if (this.random.nextInt(10) == 0) {
+        } else if (random.nextInt(10) == 0) {
             PassiveEntity passiveEntity = EntityType.STRIDER.create(world.toServerWorld());
             passiveEntity.setBreedingAge(-24000);
             entityData = this.initializeRider(world, difficulty, passiveEntity, null);
@@ -502,6 +504,7 @@ Saddleable {
         @Override
         protected PathNodeNavigator createPathNodeNavigator(int range) {
             this.nodeMaker = new LandPathNodeMaker();
+            this.nodeMaker.setCanEnterOpenDoors(true);
             return new PathNodeNavigator(this.nodeMaker, range);
         }
 

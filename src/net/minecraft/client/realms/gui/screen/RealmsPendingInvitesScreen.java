@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.realms.RealmsClient;
@@ -32,9 +32,8 @@ import net.minecraft.client.realms.gui.screen.RealmsScreen;
 import net.minecraft.client.realms.util.RealmsTextureManager;
 import net.minecraft.client.realms.util.RealmsUtil;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,9 +44,9 @@ extends RealmsScreen {
     static final Logger LOGGER = LogUtils.getLogger();
     static final Identifier ACCEPT_ICON = new Identifier("realms", "textures/gui/realms/accept_icon.png");
     static final Identifier REJECT_ICON = new Identifier("realms", "textures/gui/realms/reject_icon.png");
-    private static final Text NO_PENDING_TEXT = new TranslatableText("mco.invites.nopending");
-    static final Text ACCEPT_TEXT = new TranslatableText("mco.invites.button.accept");
-    static final Text REJECT_TEXT = new TranslatableText("mco.invites.button.reject");
+    private static final Text NO_PENDING_TEXT = Text.translatable("mco.invites.nopending");
+    static final Text ACCEPT_TEXT = Text.translatable("mco.invites.button.accept");
+    static final Text REJECT_TEXT = Text.translatable("mco.invites.button.reject");
     private final Screen parent;
     @Nullable
     Text tooltip;
@@ -58,7 +57,7 @@ extends RealmsScreen {
     private ButtonWidget rejectButton;
 
     public RealmsPendingInvitesScreen(Screen parent) {
-        super(new TranslatableText("mco.invites.title"));
+        super(Text.translatable("mco.invites.title"));
         this.parent = parent;
     }
 
@@ -73,7 +72,7 @@ extends RealmsScreen {
              */
             @Override
             public void run() {
-                RealmsClient realmsClient = RealmsClient.createRealmsClient();
+                RealmsClient realmsClient = RealmsClient.create();
                 try {
                     List<PendingInvite> list = realmsClient.pendingInvites().pendingInvites;
                     List list2 = list.stream().map(invite -> new PendingInvitationSelectionListEntry((PendingInvite)invite)).collect(Collectors.toList());
@@ -88,13 +87,13 @@ extends RealmsScreen {
             }
         }.start();
         this.addSelectableChild(this.pendingInvitationSelectionList);
-        this.acceptButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 174, this.height - 32, 100, 20, new TranslatableText("mco.invites.button.accept"), button -> {
+        this.acceptButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 174, this.height - 32, 100, 20, Text.translatable("mco.invites.button.accept"), button -> {
             this.accept(this.selectedInvite);
             this.selectedInvite = -1;
             this.updateButtonStates();
         }));
         this.addDrawableChild(new ButtonWidget(this.width / 2 - 50, this.height - 32, 100, 20, ScreenTexts.DONE, button -> this.client.setScreen(new RealmsMainScreen(this.parent))));
-        this.rejectButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 74, this.height - 32, 100, 20, new TranslatableText("mco.invites.button.reject"), button -> {
+        this.rejectButton = this.addDrawableChild(new ButtonWidget(this.width / 2 + 74, this.height - 32, 100, 20, Text.translatable("mco.invites.button.reject"), button -> {
             this.reject(this.selectedInvite);
             this.selectedInvite = -1;
             this.updateButtonStates();
@@ -122,7 +121,7 @@ extends RealmsScreen {
                 @Override
                 public void run() {
                     try {
-                        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+                        RealmsClient realmsClient = RealmsClient.create();
                         realmsClient.rejectInvitation(((PendingInvitationSelectionListEntry)RealmsPendingInvitesScreen.this.pendingInvitationSelectionList.children().get((int)slot)).mPendingInvite.invitationId);
                         RealmsPendingInvitesScreen.this.client.execute(() -> RealmsPendingInvitesScreen.this.updateList(slot));
                     }
@@ -141,7 +140,7 @@ extends RealmsScreen {
                 @Override
                 public void run() {
                     try {
-                        RealmsClient realmsClient = RealmsClient.createRealmsClient();
+                        RealmsClient realmsClient = RealmsClient.create();
                         realmsClient.acceptInvitation(((PendingInvitationSelectionListEntry)RealmsPendingInvitesScreen.this.pendingInvitationSelectionList.children().get((int)slot)).mPendingInvite.invitationId);
                         RealmsPendingInvitesScreen.this.client.execute(() -> RealmsPendingInvitesScreen.this.updateList(slot));
                     }
@@ -268,15 +267,14 @@ extends RealmsScreen {
             RealmsAcceptRejectButton.render(matrices, this.buttons, RealmsPendingInvitesScreen.this.pendingInvitationSelectionList, x, y, mouseX, mouseY);
             RealmsTextureManager.withBoundFace(invite.worldOwnerUuid, () -> {
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-                DrawableHelper.drawTexture(matrices, x, y, 32, 32, 8.0f, 8.0f, 8, 8, 64, 64);
-                DrawableHelper.drawTexture(matrices, x, y, 32, 32, 40.0f, 8.0f, 8, 8, 64, 64);
+                PlayerSkinDrawer.draw(matrices, x, y, 32);
             });
         }
 
         @Override
         public Text getNarration() {
-            Text text = ScreenTexts.joinLines(new LiteralText(this.mPendingInvite.worldName), new LiteralText(this.mPendingInvite.worldOwnerName), new LiteralText(RealmsUtil.convertToAgePresentation(this.mPendingInvite.date)));
-            return new TranslatableText("narrator.select", text);
+            Text text = ScreenTexts.joinLines(Text.literal(this.mPendingInvite.worldName), Text.literal(this.mPendingInvite.worldOwnerName), Text.literal(RealmsUtil.convertToAgePresentation(this.mPendingInvite.date)));
+            return Text.translatable("narrator.select", text);
         }
 
         @Environment(value=EnvType.CLIENT)

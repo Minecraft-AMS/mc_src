@@ -24,15 +24,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.server.function.FunctionLoader;
-import net.minecraft.tag.Tag;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.GameRules;
 import org.jetbrains.annotations.Nullable;
 
 public class CommandFunctionManager {
-    private static final Text NO_TRACE_IN_FUNCTION_TEXT = new TranslatableText("commands.debug.function.noRecursion");
+    private static final Text NO_TRACE_IN_FUNCTION_TEXT = Text.translatable("commands.debug.function.noRecursion");
     private static final Identifier TICK_TAG_ID = new Identifier("tick");
     private static final Identifier LOAD_TAG_ID = new Identifier("load");
     final MinecraftServer server;
@@ -60,7 +58,7 @@ public class CommandFunctionManager {
         this.executeAll(this.tickFunctions, TICK_TAG_ID);
         if (this.justLoaded) {
             this.justLoaded = false;
-            List<CommandFunction> collection = this.loader.getTagOrEmpty(LOAD_TAG_ID).values();
+            Collection<CommandFunction> collection = this.loader.getTagOrEmpty(LOAD_TAG_ID);
             this.executeAll(collection, LOAD_TAG_ID);
         }
     }
@@ -105,7 +103,7 @@ public class CommandFunctionManager {
     }
 
     private void load(FunctionLoader loader) {
-        this.tickFunctions = ImmutableList.copyOf(loader.getTagOrEmpty(TICK_TAG_ID).values());
+        this.tickFunctions = ImmutableList.copyOf(loader.getTagOrEmpty(TICK_TAG_ID));
         this.justLoaded = true;
     }
 
@@ -117,7 +115,7 @@ public class CommandFunctionManager {
         return this.loader.get(id);
     }
 
-    public Tag<CommandFunction> getTag(Identifier id) {
+    public Collection<CommandFunction> getTag(Identifier id) {
         return this.loader.getTagOrEmpty(id);
     }
 

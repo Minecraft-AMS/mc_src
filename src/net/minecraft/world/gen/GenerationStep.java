@@ -3,16 +3,11 @@
  * 
  * Could not load the following classes:
  *  com.mojang.serialization.Codec
- *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.world.gen;
 
 import com.mojang.serialization.Codec;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collectors;
 import net.minecraft.util.StringIdentifiable;
-import org.jetbrains.annotations.Nullable;
 
 public class GenerationStep {
 
@@ -22,7 +17,6 @@ public class GenerationStep {
         public static final /* enum */ Carver AIR = new Carver("air");
         public static final /* enum */ Carver LIQUID = new Carver("liquid");
         public static final Codec<Carver> CODEC;
-        private static final Map<String, Carver> BY_NAME;
         private final String name;
         private static final /* synthetic */ Carver[] field_13170;
 
@@ -42,11 +36,6 @@ public class GenerationStep {
             return this.name;
         }
 
-        @Nullable
-        public static Carver byName(String name) {
-            return BY_NAME.get(name);
-        }
-
         @Override
         public String asString() {
             return this.name;
@@ -58,24 +47,26 @@ public class GenerationStep {
 
         static {
             field_13170 = Carver.method_36750();
-            CODEC = StringIdentifiable.createCodec(Carver::values, Carver::byName);
-            BY_NAME = Arrays.stream(Carver.values()).collect(Collectors.toMap(Carver::getName, carver -> carver));
+            CODEC = StringIdentifiable.createCodec(Carver::values);
         }
     }
 
     public static final class Feature
-    extends Enum<Feature> {
-        public static final /* enum */ Feature RAW_GENERATION = new Feature();
-        public static final /* enum */ Feature LAKES = new Feature();
-        public static final /* enum */ Feature LOCAL_MODIFICATIONS = new Feature();
-        public static final /* enum */ Feature UNDERGROUND_STRUCTURES = new Feature();
-        public static final /* enum */ Feature SURFACE_STRUCTURES = new Feature();
-        public static final /* enum */ Feature STRONGHOLDS = new Feature();
-        public static final /* enum */ Feature UNDERGROUND_ORES = new Feature();
-        public static final /* enum */ Feature UNDERGROUND_DECORATION = new Feature();
-        public static final /* enum */ Feature FLUID_SPRINGS = new Feature();
-        public static final /* enum */ Feature VEGETAL_DECORATION = new Feature();
-        public static final /* enum */ Feature TOP_LAYER_MODIFICATION = new Feature();
+    extends Enum<Feature>
+    implements StringIdentifiable {
+        public static final /* enum */ Feature RAW_GENERATION = new Feature("raw_generation");
+        public static final /* enum */ Feature LAKES = new Feature("lakes");
+        public static final /* enum */ Feature LOCAL_MODIFICATIONS = new Feature("local_modifications");
+        public static final /* enum */ Feature UNDERGROUND_STRUCTURES = new Feature("underground_structures");
+        public static final /* enum */ Feature SURFACE_STRUCTURES = new Feature("surface_structures");
+        public static final /* enum */ Feature STRONGHOLDS = new Feature("strongholds");
+        public static final /* enum */ Feature UNDERGROUND_ORES = new Feature("underground_ores");
+        public static final /* enum */ Feature UNDERGROUND_DECORATION = new Feature("underground_decoration");
+        public static final /* enum */ Feature FLUID_SPRINGS = new Feature("fluid_springs");
+        public static final /* enum */ Feature VEGETAL_DECORATION = new Feature("vegetal_decoration");
+        public static final /* enum */ Feature TOP_LAYER_MODIFICATION = new Feature("top_layer_modification");
+        public static final Codec<Feature> CODEC;
+        private final String name;
         private static final /* synthetic */ Feature[] field_13181;
 
         public static Feature[] values() {
@@ -86,12 +77,26 @@ public class GenerationStep {
             return Enum.valueOf(Feature.class, string);
         }
 
+        private Feature(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        @Override
+        public String asString() {
+            return this.name;
+        }
+
         private static /* synthetic */ Feature[] method_36751() {
             return new Feature[]{RAW_GENERATION, LAKES, LOCAL_MODIFICATIONS, UNDERGROUND_STRUCTURES, SURFACE_STRUCTURES, STRONGHOLDS, UNDERGROUND_ORES, UNDERGROUND_DECORATION, FLUID_SPRINGS, VEGETAL_DECORATION, TOP_LAYER_MODIFICATION};
         }
 
         static {
             field_13181 = Feature.method_36751();
+            CODEC = StringIdentifiable.createCodec(Feature::values);
         }
     }
 }

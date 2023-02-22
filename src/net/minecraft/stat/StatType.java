@@ -12,7 +12,6 @@ import java.util.Map;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatFormatter;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.registry.Registry;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,7 +53,7 @@ implements Iterable<Stat<T>> {
 
     public Text getName() {
         if (this.name == null) {
-            this.name = new TranslatableText(this.getTranslationKey());
+            this.name = Text.translatable(this.getTranslationKey());
         }
         return this.name;
     }

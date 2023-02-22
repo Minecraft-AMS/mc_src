@@ -13,45 +13,45 @@ import net.fabricmc.api.Environment;
 
 @Environment(value=EnvType.CLIENT)
 public class VertexFormatElement {
-    private final DataType dataType;
+    private final ComponentType componentType;
     private final Type type;
-    private final int textureIndex;
-    private final int length;
+    private final int uvIndex;
+    private final int componentCount;
     private final int byteLength;
 
-    public VertexFormatElement(int textureIndex, DataType dataType, Type type, int length) {
-        if (!this.isValidType(textureIndex, type)) {
+    public VertexFormatElement(int uvIndex, ComponentType componentType, Type type, int componentCount) {
+        if (!this.isValidType(uvIndex, type)) {
             throw new IllegalStateException("Multiple vertex elements of the same type other than UVs are not supported");
         }
         this.type = type;
-        this.dataType = dataType;
-        this.textureIndex = textureIndex;
-        this.length = length;
-        this.byteLength = dataType.getByteLength() * this.length;
+        this.componentType = componentType;
+        this.uvIndex = uvIndex;
+        this.componentCount = componentCount;
+        this.byteLength = componentType.getByteLength() * this.componentCount;
     }
 
-    private boolean isValidType(int index, Type type) {
-        return index == 0 || type == Type.UV;
+    private boolean isValidType(int uvIndex, Type type) {
+        return uvIndex == 0 || type == Type.UV;
     }
 
-    public final DataType getDataType() {
-        return this.dataType;
+    public final ComponentType getComponentType() {
+        return this.componentType;
     }
 
     public final Type getType() {
         return this.type;
     }
 
-    public final int getLength() {
-        return this.length;
+    public final int getComponentCount() {
+        return this.componentCount;
     }
 
-    public final int getTextureIndex() {
-        return this.textureIndex;
+    public final int getUvIndex() {
+        return this.uvIndex;
     }
 
     public String toString() {
-        return this.length + "," + this.type.getName() + "," + this.dataType.getName();
+        return this.componentCount + "," + this.type.getName() + "," + this.componentType.getName();
     }
 
     public final int getByteLength() {
@@ -70,65 +70,65 @@ public class VertexFormatElement {
             return false;
         }
         VertexFormatElement vertexFormatElement = (VertexFormatElement)o;
-        if (this.length != vertexFormatElement.length) {
+        if (this.componentCount != vertexFormatElement.componentCount) {
             return false;
         }
-        if (this.textureIndex != vertexFormatElement.textureIndex) {
+        if (this.uvIndex != vertexFormatElement.uvIndex) {
             return false;
         }
-        if (this.dataType != vertexFormatElement.dataType) {
+        if (this.componentType != vertexFormatElement.componentType) {
             return false;
         }
         return this.type == vertexFormatElement.type;
     }
 
     public int hashCode() {
-        int i = this.dataType.hashCode();
+        int i = this.componentType.hashCode();
         i = 31 * i + this.type.hashCode();
-        i = 31 * i + this.textureIndex;
-        i = 31 * i + this.length;
+        i = 31 * i + this.uvIndex;
+        i = 31 * i + this.componentCount;
         return i;
     }
 
-    public void startDrawing(int elementIndex, long pointer, int stride) {
-        this.type.startDrawing(this.length, this.dataType.getId(), stride, pointer, this.textureIndex, elementIndex);
+    public void setupState(int elementIndex, long offset, int stride) {
+        this.type.setupState(this.componentCount, this.componentType.getGlType(), stride, offset, this.uvIndex, elementIndex);
     }
 
-    public void endDrawing(int elementIndex) {
-        this.type.endDrawing(this.textureIndex, elementIndex);
+    public void clearState(int elementIndex) {
+        this.type.clearState(this.uvIndex, elementIndex);
     }
 
     @Environment(value=EnvType.CLIENT)
     public static final class Type
     extends Enum<Type> {
-        public static final /* enum */ Type POSITION = new Type("Position", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+        public static final /* enum */ Type POSITION = new Type("Position", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {
             GlStateManager._enableVertexAttribArray(elementIndex);
-            GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
-        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
-        public static final /* enum */ Type NORMAL = new Type("Normal", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._vertexAttribPointer(elementIndex, componentCount, componentType, false, stride, offset);
+        }, (uvIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type NORMAL = new Type("Normal", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {
             GlStateManager._enableVertexAttribArray(elementIndex);
-            GlStateManager._vertexAttribPointer(elementIndex, size, type, true, stride, pointer);
-        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
-        public static final /* enum */ Type COLOR = new Type("Vertex Color", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._vertexAttribPointer(elementIndex, componentCount, componentType, true, stride, offset);
+        }, (uvIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type COLOR = new Type("Vertex Color", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {
             GlStateManager._enableVertexAttribArray(elementIndex);
-            GlStateManager._vertexAttribPointer(elementIndex, size, type, true, stride, pointer);
-        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
-        public static final /* enum */ Type UV = new Type("UV", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+            GlStateManager._vertexAttribPointer(elementIndex, componentCount, componentType, true, stride, offset);
+        }, (uvIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type UV = new Type("UV", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {
             GlStateManager._enableVertexAttribArray(elementIndex);
-            if (type == 5126) {
-                GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
+            if (componentType == 5126) {
+                GlStateManager._vertexAttribPointer(elementIndex, componentCount, componentType, false, stride, offset);
             } else {
-                GlStateManager._vertexAttribIPointer(elementIndex, size, type, stride, pointer);
+                GlStateManager._vertexAttribIPointer(elementIndex, componentCount, componentType, stride, offset);
             }
-        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
-        public static final /* enum */ Type PADDING = new Type("Padding", (size, type, stride, pointer, textureIndex, elementIndex) -> {}, (textureIndex, elementIndex) -> {});
-        public static final /* enum */ Type GENERIC = new Type("Generic", (size, type, stride, pointer, textureIndex, elementIndex) -> {
+        }, (uvIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+        public static final /* enum */ Type PADDING = new Type("Padding", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {}, (uvIndex, elementIndex) -> {});
+        public static final /* enum */ Type GENERIC = new Type("Generic", (componentCount, componentType, stride, offset, uvIndex, elementIndex) -> {
             GlStateManager._enableVertexAttribArray(elementIndex);
-            GlStateManager._vertexAttribPointer(elementIndex, size, type, false, stride, pointer);
-        }, (textureIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
+            GlStateManager._vertexAttribPointer(elementIndex, componentCount, componentType, false, stride, offset);
+        }, (uvIndex, elementIndex) -> GlStateManager._disableVertexAttribArray(elementIndex));
         private final String name;
-        private final Starter starter;
-        private final Finisher finisher;
+        private final SetupTask setupTask;
+        private final ClearTask clearTask;
         private static final /* synthetic */ Type[] field_1631;
 
         public static Type[] values() {
@@ -139,18 +139,18 @@ public class VertexFormatElement {
             return Enum.valueOf(Type.class, string);
         }
 
-        private Type(String name, Starter starter, Finisher finisher) {
+        private Type(String name, SetupTask setupTask, ClearTask clearTask) {
             this.name = name;
-            this.starter = starter;
-            this.finisher = finisher;
+            this.setupTask = setupTask;
+            this.clearTask = clearTask;
         }
 
-        void startDrawing(int size, int type, int stride, long pointer, int textureIndex, int elementIndex) {
-            this.starter.setupBufferState(size, type, stride, pointer, textureIndex, elementIndex);
+        void setupState(int componentCount, int componentType, int stride, long offset, int uvIndex, int elementIndex) {
+            this.setupTask.setupBufferState(componentCount, componentType, stride, offset, uvIndex, elementIndex);
         }
 
-        public void endDrawing(int textureIndex, int elementIndex) {
-            this.finisher.clearBufferState(textureIndex, elementIndex);
+        public void clearState(int uvIndex, int elementIndex) {
+            this.clearTask.clearBufferState(uvIndex, elementIndex);
         }
 
         public String getName() {
@@ -167,44 +167,44 @@ public class VertexFormatElement {
 
         @FunctionalInterface
         @Environment(value=EnvType.CLIENT)
-        static interface Starter {
+        static interface SetupTask {
             public void setupBufferState(int var1, int var2, int var3, long var4, int var6, int var7);
         }
 
         @FunctionalInterface
         @Environment(value=EnvType.CLIENT)
-        static interface Finisher {
+        static interface ClearTask {
             public void clearBufferState(int var1, int var2);
         }
     }
 
     @Environment(value=EnvType.CLIENT)
-    public static final class DataType
-    extends Enum<DataType> {
-        public static final /* enum */ DataType FLOAT = new DataType(4, "Float", 5126);
-        public static final /* enum */ DataType UBYTE = new DataType(1, "Unsigned Byte", 5121);
-        public static final /* enum */ DataType BYTE = new DataType(1, "Byte", 5120);
-        public static final /* enum */ DataType USHORT = new DataType(2, "Unsigned Short", 5123);
-        public static final /* enum */ DataType SHORT = new DataType(2, "Short", 5122);
-        public static final /* enum */ DataType UINT = new DataType(4, "Unsigned Int", 5125);
-        public static final /* enum */ DataType INT = new DataType(4, "Int", 5124);
+    public static final class ComponentType
+    extends Enum<ComponentType> {
+        public static final /* enum */ ComponentType FLOAT = new ComponentType(4, "Float", 5126);
+        public static final /* enum */ ComponentType UBYTE = new ComponentType(1, "Unsigned Byte", 5121);
+        public static final /* enum */ ComponentType BYTE = new ComponentType(1, "Byte", 5120);
+        public static final /* enum */ ComponentType USHORT = new ComponentType(2, "Unsigned Short", 5123);
+        public static final /* enum */ ComponentType SHORT = new ComponentType(2, "Short", 5122);
+        public static final /* enum */ ComponentType UINT = new ComponentType(4, "Unsigned Int", 5125);
+        public static final /* enum */ ComponentType INT = new ComponentType(4, "Int", 5124);
         private final int byteLength;
         private final String name;
-        private final int id;
-        private static final /* synthetic */ DataType[] field_1620;
+        private final int glType;
+        private static final /* synthetic */ ComponentType[] field_1620;
 
-        public static DataType[] values() {
-            return (DataType[])field_1620.clone();
+        public static ComponentType[] values() {
+            return (ComponentType[])field_1620.clone();
         }
 
-        public static DataType valueOf(String string) {
-            return Enum.valueOf(DataType.class, string);
+        public static ComponentType valueOf(String string) {
+            return Enum.valueOf(ComponentType.class, string);
         }
 
-        private DataType(int byteCount, String name, int id) {
-            this.byteLength = byteCount;
+        private ComponentType(int byteLength, String name, int glType) {
+            this.byteLength = byteLength;
             this.name = name;
-            this.id = id;
+            this.glType = glType;
         }
 
         public int getByteLength() {
@@ -215,16 +215,16 @@ public class VertexFormatElement {
             return this.name;
         }
 
-        public int getId() {
-            return this.id;
+        public int getGlType() {
+            return this.glType;
         }
 
-        private static /* synthetic */ DataType[] method_36818() {
-            return new DataType[]{FLOAT, UBYTE, BYTE, USHORT, SHORT, UINT, INT};
+        private static /* synthetic */ ComponentType[] method_36818() {
+            return new ComponentType[]{FLOAT, UBYTE, BYTE, USHORT, SHORT, UINT, INT};
         }
 
         static {
-            field_1620 = DataType.method_36818();
+            field_1620 = ComponentType.method_36818();
         }
     }
 }

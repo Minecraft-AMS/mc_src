@@ -11,20 +11,20 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import java.util.List;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
-import net.minecraft.world.gen.random.AbstractRandom;
-import net.minecraft.world.gen.random.AtomicSimpleRandom;
-import net.minecraft.world.gen.random.ChunkRandom;
+import net.minecraft.util.math.random.CheckedRandom;
+import net.minecraft.util.math.random.ChunkRandom;
+import net.minecraft.util.math.random.Random;
 
 public class OctaveSimplexNoiseSampler {
     private final SimplexNoiseSampler[] octaveSamplers;
     private final double persistence;
     private final double lacunarity;
 
-    public OctaveSimplexNoiseSampler(AbstractRandom random, List<Integer> octaves) {
+    public OctaveSimplexNoiseSampler(Random random, List<Integer> octaves) {
         this(random, (IntSortedSet)new IntRBTreeSet(octaves));
     }
 
-    private OctaveSimplexNoiseSampler(AbstractRandom random, IntSortedSet octaves) {
+    private OctaveSimplexNoiseSampler(Random random, IntSortedSet octaves) {
         int j;
         if (octaves.isEmpty()) {
             throw new IllegalArgumentException("Need some octaves!");
@@ -49,13 +49,13 @@ public class OctaveSimplexNoiseSampler {
         }
         if (j > 0) {
             long n = (long)(simplexNoiseSampler.sample(simplexNoiseSampler.originX, simplexNoiseSampler.originY, simplexNoiseSampler.originZ) * 9.223372036854776E18);
-            ChunkRandom abstractRandom = new ChunkRandom(new AtomicSimpleRandom(n));
+            ChunkRandom random2 = new ChunkRandom(new CheckedRandom(n));
             for (int o = l - 1; o >= 0; --o) {
                 if (o < k && octaves.contains(l - o)) {
-                    this.octaveSamplers[o] = new SimplexNoiseSampler(abstractRandom);
+                    this.octaveSamplers[o] = new SimplexNoiseSampler(random2);
                     continue;
                 }
-                abstractRandom.skip(262);
+                random2.skip(262);
             }
         }
         this.lacunarity = Math.pow(2.0, j);

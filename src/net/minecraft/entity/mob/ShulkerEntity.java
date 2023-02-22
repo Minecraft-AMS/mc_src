@@ -41,7 +41,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -374,6 +374,7 @@ implements Monster {
             this.setAttachedFace(direction);
             this.playSound(SoundEvents.ENTITY_SHULKER_TELEPORT, 1.0f, 1.0f);
             this.setPosition((double)blockPos2.getX() + 0.5, blockPos2.getY(), (double)blockPos2.getZ() + 0.5);
+            this.world.emitGameEvent(GameEvent.TELEPORT, blockPos, GameEvent.Emitter.of(this));
             this.dataTracker.set(PEEK_AMOUNT, (byte)0);
             this.setTarget(null);
             return true;
@@ -460,10 +461,10 @@ implements Monster {
             if (peekAmount == 0) {
                 this.getAttributeInstance(EntityAttributes.GENERIC_ARMOR).addPersistentModifier(COVERED_ARMOR_BONUS);
                 this.playSound(SoundEvents.ENTITY_SHULKER_CLOSE, 1.0f, 1.0f);
-                this.emitGameEvent(GameEvent.SHULKER_CLOSE);
+                this.emitGameEvent(GameEvent.CONTAINER_CLOSE);
             } else {
                 this.playSound(SoundEvents.ENTITY_SHULKER_OPEN, 1.0f, 1.0f);
-                this.emitGameEvent(GameEvent.SHULKER_OPEN);
+                this.emitGameEvent(GameEvent.CONTAINER_OPEN);
             }
         }
         this.dataTracker.set(PEEK_AMOUNT, (byte)peekAmount);
@@ -479,8 +480,8 @@ implements Monster {
     }
 
     @Override
-    public void readFromPacket(MobSpawnS2CPacket packet) {
-        super.readFromPacket(packet);
+    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
+        super.onSpawnPacket(packet);
         this.bodyYaw = 0.0f;
         this.prevBodyYaw = 0.0f;
     }

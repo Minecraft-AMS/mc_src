@@ -33,7 +33,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 
 public class TitleCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -46,9 +45,9 @@ public class TitleCommand {
             serverPlayerEntity.networkHandler.sendPacket(clearTitleS2CPacket);
         }
         if (targets.size() == 1) {
-            source.sendFeedback(new TranslatableText("commands.title.cleared.single", targets.iterator().next().getDisplayName()), true);
+            source.sendFeedback(Text.translatable("commands.title.cleared.single", targets.iterator().next().getDisplayName()), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.title.cleared.multiple", targets.size()), true);
+            source.sendFeedback(Text.translatable("commands.title.cleared.multiple", targets.size()), true);
         }
         return targets.size();
     }
@@ -59,9 +58,9 @@ public class TitleCommand {
             serverPlayerEntity.networkHandler.sendPacket(clearTitleS2CPacket);
         }
         if (targets.size() == 1) {
-            source.sendFeedback(new TranslatableText("commands.title.reset.single", targets.iterator().next().getDisplayName()), true);
+            source.sendFeedback(Text.translatable("commands.title.reset.single", targets.iterator().next().getDisplayName()), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.title.reset.multiple", targets.size()), true);
+            source.sendFeedback(Text.translatable("commands.title.reset.multiple", targets.size()), true);
         }
         return targets.size();
     }
@@ -71,9 +70,9 @@ public class TitleCommand {
             serverPlayerEntity.networkHandler.sendPacket(constructor.apply(Texts.parse(source, title, (Entity)serverPlayerEntity, 0)));
         }
         if (targets.size() == 1) {
-            source.sendFeedback(new TranslatableText("commands.title.show." + titleType + ".single", targets.iterator().next().getDisplayName()), true);
+            source.sendFeedback(Text.translatable("commands.title.show." + titleType + ".single", targets.iterator().next().getDisplayName()), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.title.show." + titleType + ".multiple", targets.size()), true);
+            source.sendFeedback(Text.translatable("commands.title.show." + titleType + ".multiple", targets.size()), true);
         }
         return targets.size();
     }
@@ -84,9 +83,9 @@ public class TitleCommand {
             serverPlayerEntity.networkHandler.sendPacket(titleFadeS2CPacket);
         }
         if (targets.size() == 1) {
-            source.sendFeedback(new TranslatableText("commands.title.times.single", targets.iterator().next().getDisplayName()), true);
+            source.sendFeedback(Text.translatable("commands.title.times.single", targets.iterator().next().getDisplayName()), true);
         } else {
-            source.sendFeedback(new TranslatableText("commands.title.times.multiple", targets.size()), true);
+            source.sendFeedback(Text.translatable("commands.title.times.multiple", targets.size()), true);
         }
         return targets.size();
     }

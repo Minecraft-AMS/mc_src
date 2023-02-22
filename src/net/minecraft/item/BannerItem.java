@@ -19,9 +19,9 @@ import net.minecraft.item.WallStandingBlockItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
 import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
@@ -45,9 +45,9 @@ extends WallStandingBlockItem {
         for (int i = 0; i < nbtList.size() && i < 6; ++i) {
             NbtCompound nbtCompound2 = nbtList.getCompound(i);
             DyeColor dyeColor = DyeColor.byId(nbtCompound2.getInt("Color"));
-            BannerPattern bannerPattern = BannerPattern.byId(nbtCompound2.getString("Pattern"));
-            if (bannerPattern == null) continue;
-            tooltip.add(new TranslatableText(TRANSLATION_KEY_PREFIX + bannerPattern.getName() + "." + dyeColor.getName()).formatted(Formatting.GRAY));
+            RegistryEntry<BannerPattern> registryEntry = BannerPattern.byId(nbtCompound2.getString("Pattern"));
+            if (registryEntry == null) continue;
+            registryEntry.getKey().map(key -> key.getValue().toShortTranslationKey()).ifPresent(translationKey -> tooltip.add(Text.translatable(TRANSLATION_KEY_PREFIX + translationKey + "." + dyeColor.getName()).formatted(Formatting.GRAY)));
         }
     }
 

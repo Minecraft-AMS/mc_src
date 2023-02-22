@@ -7,14 +7,14 @@
 package net.minecraft.structure.rule;
 
 import com.mojang.serialization.Codec;
-import java.util.Random;
 import net.minecraft.block.BlockState;
 import net.minecraft.structure.rule.RuleTest;
 import net.minecraft.structure.rule.RuleTestType;
+import net.minecraft.util.math.random.Random;
 
 public class BlockStateMatchRuleTest
 extends RuleTest {
-    public static final Codec<BlockStateMatchRuleTest> CODEC = BlockState.CODEC.fieldOf("block_state").xmap(BlockStateMatchRuleTest::new, blockStateMatchRuleTest -> blockStateMatchRuleTest.blockState).codec();
+    public static final Codec<BlockStateMatchRuleTest> CODEC = BlockState.CODEC.fieldOf("block_state").xmap(BlockStateMatchRuleTest::new, ruleTest -> ruleTest.blockState).codec();
     private final BlockState blockState;
 
     public BlockStateMatchRuleTest(BlockState blockState) {

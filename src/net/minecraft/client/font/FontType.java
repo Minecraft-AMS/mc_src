@@ -17,6 +17,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.BitmapFont;
 import net.minecraft.client.font.FontLoader;
+import net.minecraft.client.font.SpaceFont;
 import net.minecraft.client.font.TrueTypeFontLoader;
 import net.minecraft.client.font.UnicodeTextureFont;
 import net.minecraft.util.Util;
@@ -26,6 +27,7 @@ public final class FontType
 extends Enum<FontType> {
     public static final /* enum */ FontType BITMAP = new FontType("bitmap", BitmapFont.Loader::fromJson);
     public static final /* enum */ FontType TTF = new FontType("ttf", TrueTypeFontLoader::fromJson);
+    public static final /* enum */ FontType SPACE = new FontType("space", SpaceFont::fromJson);
     public static final /* enum */ FontType LEGACY_UNICODE = new FontType("legacy_unicode", UnicodeTextureFont.Loader::fromJson);
     private static final Map<String, FontType> REGISTRY;
     private final String id;
@@ -58,7 +60,7 @@ extends Enum<FontType> {
     }
 
     private static /* synthetic */ FontType[] method_36876() {
-        return new FontType[]{BITMAP, TTF, LEGACY_UNICODE};
+        return new FontType[]{BITMAP, TTF, SPACE, LEGACY_UNICODE};
     }
 
     static {

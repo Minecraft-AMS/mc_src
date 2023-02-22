@@ -17,7 +17,6 @@ import net.minecraft.item.WallStandingBlockItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import org.apache.commons.lang3.StringUtils;
 
 public class SkullItem
@@ -40,7 +39,7 @@ extends WallStandingBlockItem {
                 string = nbtCompound2.getString("Name");
             }
             if (string != null) {
-                return new TranslatableText(this.getTranslationKey() + ".named", string);
+                return Text.translatable(this.getTranslationKey() + ".named", string);
             }
         }
         return super.getName(stack);

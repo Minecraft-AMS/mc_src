@@ -7,7 +7,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.metadata.PackResourceMetadata;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 
 public final class ResourcePackCompatibility
@@ -28,8 +27,8 @@ extends Enum<ResourcePackCompatibility> {
     }
 
     private ResourcePackCompatibility(String translationSuffix) {
-        this.notification = new TranslatableText("pack.incompatible." + translationSuffix).formatted(Formatting.GRAY);
-        this.confirmMessage = new TranslatableText("pack.incompatible.confirm." + translationSuffix);
+        this.notification = Text.translatable("pack.incompatible." + translationSuffix).formatted(Formatting.GRAY);
+        this.confirmMessage = Text.translatable("pack.incompatible.confirm." + translationSuffix);
     }
 
     public boolean isCompatible() {

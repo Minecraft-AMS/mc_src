@@ -13,7 +13,7 @@ import com.mojang.serialization.MapCodec;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -66,7 +66,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
@@ -137,7 +139,7 @@ public abstract class AbstractBlock {
     }
 
     @Deprecated
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         DebugInfoSender.sendNeighborUpdate(world, pos);
     }
 
@@ -190,10 +192,6 @@ public abstract class AbstractBlock {
     @Deprecated
     public boolean hasComparatorOutput(BlockState state) {
         return false;
-    }
-
-    public OffsetType getOffsetType() {
-        return OffsetType.NONE;
     }
 
     public float getMaxHorizontalModelOffset() {
@@ -301,6 +299,11 @@ public abstract class AbstractBlock {
     }
 
     @Deprecated
+    public boolean isCullingShapeFullCube(BlockState state, BlockView world, BlockPos pos) {
+        return Block.isShapeFullCube(state.getCullingShape(world, pos));
+    }
+
+    @Deprecated
     public VoxelShape getCameraCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         return this.getCollisionShape(state, world, pos, context);
     }
@@ -325,7 +328,7 @@ public abstract class AbstractBlock {
     }
 
     @Deprecated
-    public void onStacksDropped(BlockState state, ServerWorld world, BlockPos pos, ItemStack stack) {
+    public void onStacksDropped(BlockState state, ServerWorld world, BlockPos pos, ItemStack stack, boolean dropExperience) {
     }
 
     @Deprecated
@@ -393,6 +396,7 @@ public abstract class AbstractBlock {
         ContextPredicate postProcessPredicate = (state, world, pos) -> false;
         ContextPredicate emissiveLightingPredicate = (state, world, pos) -> false;
         boolean dynamicBounds;
+        Function<BlockState, OffsetType> offsetType = state -> OffsetType.NONE;
 
         private Settings(Material material, MapColor mapColorProvider) {
             this(material, (BlockState state) -> mapColorProvider);
@@ -435,6 +439,7 @@ public abstract class AbstractBlock {
             settings.opaque = block.settings.opaque;
             settings.isAir = block.settings.isAir;
             settings.toolRequired = block.settings.toolRequired;
+            settings.offsetType = block.settings.offsetType;
             return settings;
         }
 
@@ -561,29 +566,14 @@ public abstract class AbstractBlock {
             this.resistance = Math.max(0.0f, resistance);
             return this;
         }
-    }
 
-    public static final class OffsetType
-    extends Enum<OffsetType> {
-        public static final /* enum */ OffsetType NONE = new OffsetType();
-        public static final /* enum */ OffsetType XZ = new OffsetType();
-        public static final /* enum */ OffsetType XYZ = new OffsetType();
-        private static final /* synthetic */ OffsetType[] field_10658;
-
-        public static OffsetType[] values() {
-            return (OffsetType[])field_10658.clone();
+        public Settings offsetType(OffsetType offsetType) {
+            return this.offsetType((BlockState state) -> offsetType);
         }
 
-        public static OffsetType valueOf(String string) {
-            return Enum.valueOf(OffsetType.class, string);
-        }
-
-        private static /* synthetic */ OffsetType[] method_36719() {
-            return new OffsetType[]{NONE, XZ, XYZ};
-        }
-
-        static {
-            field_10658 = OffsetType.method_36719();
+        public Settings offsetType(Function<BlockState, OffsetType> offsetType) {
+            this.offsetType = offsetType;
+            return this;
         }
     }
 
@@ -610,6 +600,7 @@ public abstract class AbstractBlock {
         private final ContextPredicate blockVisionPredicate;
         private final ContextPredicate postProcessPredicate;
         private final ContextPredicate emissiveLightingPredicate;
+        private final OffsetType offsetType;
         @Nullable
         protected ShapeCache shapeCache;
 
@@ -629,6 +620,7 @@ public abstract class AbstractBlock {
             this.blockVisionPredicate = settings.blockVisionPredicate;
             this.postProcessPredicate = settings.postProcessPredicate;
             this.emissiveLightingPredicate = settings.emissiveLightingPredicate;
+            this.offsetType = settings.offsetType.apply(this.asBlockState());
         }
 
         public void initShapeCache() {
@@ -639,6 +631,10 @@ public abstract class AbstractBlock {
 
         public Block getBlock() {
             return (Block)this.owner;
+        }
+
+        public RegistryEntry<Block> getRegistryEntry() {
+            return ((Block)this.owner).getRegistryEntry();
         }
 
         public Material getMaterial() {
@@ -809,15 +805,14 @@ public abstract class AbstractBlock {
         }
 
         public Vec3d getModelOffset(BlockView world, BlockPos pos) {
-            Block block = this.getBlock();
-            OffsetType offsetType = block.getOffsetType();
-            if (offsetType == OffsetType.NONE) {
+            if (this.offsetType == OffsetType.NONE) {
                 return Vec3d.ZERO;
             }
+            Block block = this.getBlock();
             long l = MathHelper.hashCode(pos.getX(), 0, pos.getZ());
             float f = block.getMaxHorizontalModelOffset();
             double d = MathHelper.clamp(((double)((float)(l & 0xFL) / 15.0f) - 0.5) * 0.5, (double)(-f), (double)f);
-            double e = offsetType == OffsetType.XYZ ? ((double)((float)(l >> 4 & 0xFL) / 15.0f) - 1.0) * (double)block.getVerticalModelOffsetMultiplier() : 0.0;
+            double e = this.offsetType == OffsetType.XYZ ? ((double)((float)(l >> 4 & 0xFL) / 15.0f) - 1.0) * (double)block.getVerticalModelOffsetMultiplier() : 0.0;
             double g = MathHelper.clamp(((double)((float)(l >> 8 & 0xFL) / 15.0f) - 0.5) * 0.5, (double)(-f), (double)f);
             return new Vec3d(d, e, g);
         }
@@ -826,8 +821,9 @@ public abstract class AbstractBlock {
             return this.getBlock().onSyncedBlockEvent(this.asBlockState(), world, pos, type, data);
         }
 
-        public void neighborUpdate(World world, BlockPos pos, Block block, BlockPos posFrom, boolean notify) {
-            this.getBlock().neighborUpdate(this.asBlockState(), world, pos, block, posFrom, notify);
+        @Deprecated
+        public void neighborUpdate(World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
+            this.getBlock().neighborUpdate(this.asBlockState(), world, pos, sourceBlock, sourcePos, notify);
         }
 
         public final void updateNeighbors(WorldAccess world, BlockPos pos, int flags) {
@@ -839,9 +835,7 @@ public abstract class AbstractBlock {
             BlockPos.Mutable mutable = new BlockPos.Mutable();
             for (Direction direction : DIRECTIONS) {
                 mutable.set((Vec3i)pos, direction);
-                BlockState blockState = world.getBlockState(mutable);
-                BlockState blockState2 = blockState.getStateForNeighborUpdate(direction.getOpposite(), this.asBlockState(), world, mutable, pos);
-                Block.replace(blockState, blockState2, world, mutable, flags, maxUpdateDepth);
+                world.replaceWithStateForNeighborUpdate(direction.getOpposite(), this.asBlockState(), mutable, pos, flags, maxUpdateDepth);
             }
         }
 
@@ -873,8 +867,8 @@ public abstract class AbstractBlock {
             this.getBlock().onEntityCollision(this.asBlockState(), world, pos, entity);
         }
 
-        public void onStacksDropped(ServerWorld world, BlockPos pos, ItemStack stack) {
-            this.getBlock().onStacksDropped(this.asBlockState(), world, pos, stack);
+        public void onStacksDropped(ServerWorld world, BlockPos pos, ItemStack stack, boolean dropExperience) {
+            this.getBlock().onStacksDropped(this.asBlockState(), world, pos, stack, dropExperience);
         }
 
         public List<ItemStack> getDroppedStacks(LootContext.Builder builder) {
@@ -1002,6 +996,10 @@ public abstract class AbstractBlock {
             return this.toolRequired;
         }
 
+        public OffsetType getOffsetType() {
+            return this.offsetType;
+        }
+
         static final class ShapeCache {
             private static final Direction[] DIRECTIONS = Direction.values();
             private static final int SHAPE_TYPE_LENGTH = SideShapeType.values().length;
@@ -1033,8 +1031,8 @@ public abstract class AbstractBlock {
                     }
                 }
                 this.collisionShape = block.getCollisionShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
-                if (!this.collisionShape.isEmpty() && block.getOffsetType() != OffsetType.NONE) {
-                    throw new IllegalStateException(String.format("%s has a collision shape and an offset type, but is not marked as dynamicShape in its properties.", Registry.BLOCK.getId(block)));
+                if (!this.collisionShape.isEmpty() && state.getOffsetType() != OffsetType.NONE) {
+                    throw new IllegalStateException(String.format(Locale.ROOT, "%s has a collision shape and an offset type, but is not marked as dynamicShape in its properties.", Registry.BLOCK.getId(block)));
                 }
                 this.exceedsCube = Arrays.stream(Direction.Axis.values()).anyMatch(axis -> this.collisionShape.getMin((Direction.Axis)axis) < 0.0 || this.collisionShape.getMax((Direction.Axis)axis) > 1.0);
                 this.solidSides = new boolean[DIRECTIONS.length * SHAPE_TYPE_LENGTH];
@@ -1053,6 +1051,30 @@ public abstract class AbstractBlock {
             private static int indexSolidSide(Direction direction, SideShapeType shapeType) {
                 return direction.ordinal() * SHAPE_TYPE_LENGTH + shapeType.ordinal();
             }
+        }
+    }
+
+    public static final class OffsetType
+    extends Enum<OffsetType> {
+        public static final /* enum */ OffsetType NONE = new OffsetType();
+        public static final /* enum */ OffsetType XZ = new OffsetType();
+        public static final /* enum */ OffsetType XYZ = new OffsetType();
+        private static final /* synthetic */ OffsetType[] field_10658;
+
+        public static OffsetType[] values() {
+            return (OffsetType[])field_10658.clone();
+        }
+
+        public static OffsetType valueOf(String string) {
+            return Enum.valueOf(OffsetType.class, string);
+        }
+
+        private static /* synthetic */ OffsetType[] method_36719() {
+            return new OffsetType[]{NONE, XZ, XYZ};
+        }
+
+        static {
+            field_10658 = OffsetType.method_36719();
         }
     }
 }

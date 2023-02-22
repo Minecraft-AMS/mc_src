@@ -13,8 +13,8 @@ import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.pool.SinglePoolElement;
 import net.minecraft.structure.pool.StructurePool;
 import net.minecraft.structure.pool.StructurePoolElementType;
@@ -27,9 +27,9 @@ import net.minecraft.util.registry.RegistryEntry;
 
 public class LegacySinglePoolElement
 extends SinglePoolElement {
-    public static final Codec<LegacySinglePoolElement> CODEC = RecordCodecBuilder.create(instance -> instance.group(LegacySinglePoolElement.method_28882(), LegacySinglePoolElement.method_28880(), LegacySinglePoolElement.method_28883()).apply((Applicative)instance, LegacySinglePoolElement::new));
+    public static final Codec<LegacySinglePoolElement> CODEC = RecordCodecBuilder.create(instance -> instance.group(LegacySinglePoolElement.locationGetter(), LegacySinglePoolElement.processorsGetter(), LegacySinglePoolElement.projectionGetter()).apply((Applicative)instance, LegacySinglePoolElement::new));
 
-    protected LegacySinglePoolElement(Either<Identifier, Structure> either, RegistryEntry<StructureProcessorList> registryEntry, StructurePool.Projection projection) {
+    protected LegacySinglePoolElement(Either<Identifier, StructureTemplate> either, RegistryEntry<StructureProcessorList> registryEntry, StructurePool.Projection projection) {
         super(either, registryEntry, projection);
     }
 

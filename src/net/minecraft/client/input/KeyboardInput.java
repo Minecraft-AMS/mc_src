@@ -16,7 +16,6 @@ import net.minecraft.client.option.GameOptions;
 public class KeyboardInput
 extends Input {
     private final GameOptions settings;
-    private static final float field_32670 = 0.3f;
 
     public KeyboardInput(GameOptions settings) {
         this.settings = settings;
@@ -30,7 +29,7 @@ extends Input {
     }
 
     @Override
-    public void tick(boolean slowDown) {
+    public void tick(boolean slowDown, float f) {
         this.pressingForward = this.settings.forwardKey.isPressed();
         this.pressingBack = this.settings.backKey.isPressed();
         this.pressingLeft = this.settings.leftKey.isPressed();
@@ -40,8 +39,8 @@ extends Input {
         this.jumping = this.settings.jumpKey.isPressed();
         this.sneaking = this.settings.sneakKey.isPressed();
         if (slowDown) {
-            this.movementSideways *= 0.3f;
-            this.movementForward *= 0.3f;
+            this.movementSideways *= f;
+            this.movementForward *= f;
         }
     }
 }

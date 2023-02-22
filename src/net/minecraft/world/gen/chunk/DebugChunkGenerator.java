@@ -36,17 +36,17 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.FixedBiomeSource;
-import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.chunk.Blender;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.VerticalBlockSample;
+import net.minecraft.world.gen.noise.NoiseConfig;
 
 public class DebugChunkGenerator
 extends ChunkGenerator {
-    public static final Codec<DebugChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> DebugChunkGenerator.method_41042(instance).and((App)RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(debugChunkGenerator -> debugChunkGenerator.biomeRegistry)).apply((Applicative)instance, instance.stable(DebugChunkGenerator::new)));
+    public static final Codec<DebugChunkGenerator> CODEC = RecordCodecBuilder.create(instance -> DebugChunkGenerator.createStructureSetRegistryGetter(instance).and((App)RegistryOps.createRegistryCodec(Registry.BIOME_KEY).forGetter(debugChunkGenerator -> debugChunkGenerator.biomeRegistry)).apply((Applicative)instance, instance.stable(DebugChunkGenerator::new)));
     private static final int field_31467 = 2;
     private static final List<BlockState> BLOCK_STATES = StreamSupport.stream(Registry.BLOCK.spliterator(), false).flatMap(block -> block.getStateManager().getStates().stream()).collect(Collectors.toList());
     private static final int X_SIDE_LENGTH = MathHelper.ceil(MathHelper.sqrt(BLOCK_STATES.size()));
@@ -57,9 +57,9 @@ extends ChunkGenerator {
     public static final int field_31466 = 60;
     private final Registry<Biome> biomeRegistry;
 
-    public DebugChunkGenerator(Registry<StructureSet> registry, Registry<Biome> registry2) {
-        super(registry, Optional.empty(), new FixedBiomeSource(registry2.getOrCreateEntry(BiomeKeys.PLAINS)));
-        this.biomeRegistry = registry2;
+    public DebugChunkGenerator(Registry<StructureSet> structureSetRegistry, Registry<Biome> biomeRegistry) {
+        super(structureSetRegistry, Optional.empty(), new FixedBiomeSource(biomeRegistry.getOrCreateEntry(BiomeKeys.PLAINS)));
+        this.biomeRegistry = biomeRegistry;
     }
 
     public Registry<Biome> getBiomeRegistry() {
@@ -72,12 +72,7 @@ extends ChunkGenerator {
     }
 
     @Override
-    public ChunkGenerator withSeed(long seed) {
-        return this;
-    }
-
-    @Override
-    public void buildSurface(ChunkRegion region, StructureAccessor structures, Chunk chunk) {
+    public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
     }
 
     @Override
@@ -98,22 +93,22 @@ extends ChunkGenerator {
     }
 
     @Override
-    public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, StructureAccessor structureAccessor, Chunk chunk) {
+    public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         return CompletableFuture.completedFuture(chunk);
     }
 
     @Override
-    public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world) {
+    public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
         return 0;
     }
 
     @Override
-    public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world) {
+    public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
         return new VerticalBlockSample(0, new BlockState[0]);
     }
 
     @Override
-    public void getDebugHudText(List<String> text, BlockPos pos) {
+    public void getDebugHudText(List<String> text, NoiseConfig noiseConfig, BlockPos pos) {
     }
 
     public static BlockState getBlockState(int x, int z) {
@@ -126,12 +121,7 @@ extends ChunkGenerator {
     }
 
     @Override
-    public MultiNoiseUtil.MultiNoiseSampler getMultiNoiseSampler() {
-        return MultiNoiseUtil.method_40443();
-    }
-
-    @Override
-    public void carve(ChunkRegion chunkRegion, long seed, BiomeAccess biomeAccess, StructureAccessor structureAccessor, Chunk chunk, GenerationStep.Carver generationStep) {
+    public void carve(ChunkRegion chunkRegion, long seed, NoiseConfig noiseConfig, BiomeAccess biomeAccess, StructureAccessor structureAccessor, Chunk chunk, GenerationStep.Carver carverStep) {
     }
 
     @Override

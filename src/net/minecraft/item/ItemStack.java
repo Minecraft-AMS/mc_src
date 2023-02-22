@@ -5,8 +5,6 @@
  *  com.google.common.collect.HashMultimap
  *  com.google.common.collect.Lists
  *  com.google.common.collect.Multimap
- *  com.google.common.collect.Streams
- *  com.mojang.brigadier.StringReader
  *  com.mojang.brigadier.exceptions.CommandSyntaxException
  *  com.mojang.datafixers.kinds.App
  *  com.mojang.datafixers.kinds.Applicative
@@ -21,8 +19,6 @@ package net.minecraft.item;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Streams;
-import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.datafixers.kinds.Applicative;
@@ -37,8 +33,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.advancement.criterion.Criteria;
@@ -72,18 +68,17 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stats;
 import net.minecraft.tag.TagKey;
 import net.minecraft.text.HoverEvent;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.Formatting;
@@ -94,6 +89,7 @@ import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.UseAction;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.World;
@@ -147,6 +143,10 @@ public final class ItemStack {
     private ItemStack(ItemConvertible item, int count, Optional<NbtCompound> nbt) {
         this(item, count);
         nbt.ifPresent(this::setNbt);
+    }
+
+    public ItemStack(RegistryEntry<Item> itemEntry, int count) {
+        this(itemEntry.value(), count);
     }
 
     public ItemStack(ItemConvertible item, int count) {
@@ -208,12 +208,24 @@ public final class ItemStack {
         return this.empty ? Items.AIR : this.item;
     }
 
+    public RegistryEntry<Item> getRegistryEntry() {
+        return this.getItem().getRegistryEntry();
+    }
+
     public boolean isIn(TagKey<Item> tag) {
         return this.getItem().getRegistryEntry().isIn(tag);
     }
 
     public boolean isOf(Item item) {
         return this.getItem() == item;
+    }
+
+    public boolean itemMatches(Predicate<RegistryEntry<Item>> predicate) {
+        return predicate.test(this.getItem().getRegistryEntry());
+    }
+
+    public boolean itemMatches(RegistryEntry<Item> itemEntry) {
+        return this.getItem().getRegistryEntry() == itemEntry;
     }
 
     public Stream<TagKey<Item>> streamTags() {
@@ -602,13 +614,13 @@ public final class ItemStack {
         int i;
         Integer integer;
         ArrayList list = Lists.newArrayList();
-        MutableText mutableText = new LiteralText("").append(this.getName()).formatted(this.getRarity().formatting);
+        MutableText mutableText = Text.empty().append(this.getName()).formatted(this.getRarity().formatting);
         if (this.hasCustomName()) {
             mutableText.formatted(Formatting.ITALIC);
         }
         list.add(mutableText);
         if (!context.isAdvanced() && !this.hasCustomName() && this.isOf(Items.FILLED_MAP) && (integer = FilledMapItem.getMapId(this)) != null) {
-            list.add(new LiteralText("#" + integer).formatted(Formatting.GRAY));
+            list.add(Text.literal("#" + integer).formatted(Formatting.GRAY));
         }
         if (ItemStack.isSectionVisible(i = this.getHideFlags(), TooltipSection.ADDITIONAL)) {
             this.getItem().appendTooltip(this, player == null ? null : player.world, list, context);
@@ -621,9 +633,9 @@ public final class ItemStack {
                 NbtCompound nbtCompound = this.nbt.getCompound(DISPLAY_KEY);
                 if (ItemStack.isSectionVisible(i, TooltipSection.DYE) && nbtCompound.contains(COLOR_KEY, 99)) {
                     if (context.isAdvanced()) {
-                        list.add(new TranslatableText("item.color", String.format("#%06X", nbtCompound.getInt(COLOR_KEY))).formatted(Formatting.GRAY));
+                        list.add(Text.translatable("item.color", String.format(Locale.ROOT, "#%06X", nbtCompound.getInt(COLOR_KEY))).formatted(Formatting.GRAY));
                     } else {
-                        list.add(new TranslatableText("item.dyed").formatted(Formatting.GRAY, Formatting.ITALIC));
+                        list.add(Text.translatable("item.dyed").formatted(Formatting.GRAY, Formatting.ITALIC));
                     }
                 }
                 if (nbtCompound.getType(LORE_KEY) == 9) {
@@ -647,8 +659,8 @@ public final class ItemStack {
             for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
                 Multimap<EntityAttribute, EntityAttributeModifier> multimap = this.getAttributeModifiers(equipmentSlot);
                 if (multimap.isEmpty()) continue;
-                list.add(LiteralText.EMPTY);
-                list.add(new TranslatableText("item.modifiers." + equipmentSlot.getName()).formatted(Formatting.GRAY));
+                list.add(ScreenTexts.EMPTY);
+                list.add(Text.translatable("item.modifiers." + equipmentSlot.getName()).formatted(Formatting.GRAY));
                 for (Map.Entry entry : multimap.entries()) {
                     EntityAttributeModifier entityAttributeModifier = (EntityAttributeModifier)entry.getValue();
                     double d = entityAttributeModifier.getValue();
@@ -665,33 +677,33 @@ public final class ItemStack {
                     }
                     double e = entityAttributeModifier.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_BASE || entityAttributeModifier.getOperation() == EntityAttributeModifier.Operation.MULTIPLY_TOTAL ? d * 100.0 : (((EntityAttribute)entry.getKey()).equals(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE) ? d * 10.0 : d);
                     if (bl) {
-                        list.add(new LiteralText(" ").append(new TranslatableText("attribute.modifier.equals." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), new TranslatableText(((EntityAttribute)entry.getKey()).getTranslationKey()))).formatted(Formatting.DARK_GREEN));
+                        list.add(Text.literal(" ").append(Text.translatable("attribute.modifier.equals." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), Text.translatable(((EntityAttribute)entry.getKey()).getTranslationKey()))).formatted(Formatting.DARK_GREEN));
                         continue;
                     }
                     if (d > 0.0) {
-                        list.add(new TranslatableText("attribute.modifier.plus." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), new TranslatableText(((EntityAttribute)entry.getKey()).getTranslationKey())).formatted(Formatting.BLUE));
+                        list.add(Text.translatable("attribute.modifier.plus." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e), Text.translatable(((EntityAttribute)entry.getKey()).getTranslationKey())).formatted(Formatting.BLUE));
                         continue;
                     }
                     if (!(d < 0.0)) continue;
-                    list.add(new TranslatableText("attribute.modifier.take." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e *= -1.0), new TranslatableText(((EntityAttribute)entry.getKey()).getTranslationKey())).formatted(Formatting.RED));
+                    list.add(Text.translatable("attribute.modifier.take." + entityAttributeModifier.getOperation().getId(), MODIFIER_FORMAT.format(e *= -1.0), Text.translatable(((EntityAttribute)entry.getKey()).getTranslationKey())).formatted(Formatting.RED));
                 }
             }
         }
         if (this.hasNbt()) {
             NbtList nbtList2;
             if (ItemStack.isSectionVisible(i, TooltipSection.UNBREAKABLE) && this.nbt.getBoolean(UNBREAKABLE_KEY)) {
-                list.add(new TranslatableText("item.unbreakable").formatted(Formatting.BLUE));
+                list.add(Text.translatable("item.unbreakable").formatted(Formatting.BLUE));
             }
             if (ItemStack.isSectionVisible(i, TooltipSection.CAN_DESTROY) && this.nbt.contains(CAN_DESTROY_KEY, 9) && !(nbtList2 = this.nbt.getList(CAN_DESTROY_KEY, 8)).isEmpty()) {
-                list.add(LiteralText.EMPTY);
-                list.add(new TranslatableText("item.canBreak").formatted(Formatting.GRAY));
+                list.add(ScreenTexts.EMPTY);
+                list.add(Text.translatable("item.canBreak").formatted(Formatting.GRAY));
                 for (int k = 0; k < nbtList2.size(); ++k) {
                     list.addAll(ItemStack.parseBlockTag(nbtList2.getString(k)));
                 }
             }
             if (ItemStack.isSectionVisible(i, TooltipSection.CAN_PLACE) && this.nbt.contains(CAN_PLACE_ON_KEY, 9) && !(nbtList2 = this.nbt.getList(CAN_PLACE_ON_KEY, 8)).isEmpty()) {
-                list.add(LiteralText.EMPTY);
-                list.add(new TranslatableText("item.canPlace").formatted(Formatting.GRAY));
+                list.add(ScreenTexts.EMPTY);
+                list.add(Text.translatable("item.canPlace").formatted(Formatting.GRAY));
                 for (int k = 0; k < nbtList2.size(); ++k) {
                     list.addAll(ItemStack.parseBlockTag(nbtList2.getString(k)));
                 }
@@ -699,11 +711,11 @@ public final class ItemStack {
         }
         if (context.isAdvanced()) {
             if (this.isDamaged()) {
-                list.add(new TranslatableText("item.durability", this.getMaxDamage() - this.getDamage(), this.getMaxDamage()));
+                list.add(Text.translatable("item.durability", this.getMaxDamage() - this.getDamage(), this.getMaxDamage()));
             }
-            list.add(new LiteralText(Registry.ITEM.getId(this.getItem()).toString()).formatted(Formatting.DARK_GRAY));
+            list.add(Text.literal(Registry.ITEM.getId(this.getItem()).toString()).formatted(Formatting.DARK_GRAY));
             if (this.hasNbt()) {
-                list.add(new TranslatableText("item.nbt_tags", this.nbt.getKeys().size()).formatted(Formatting.DARK_GRAY));
+                list.add(Text.translatable("item.nbt_tags", this.nbt.getKeys().size()).formatted(Formatting.DARK_GRAY));
             }
         }
         return list;
@@ -734,24 +746,11 @@ public final class ItemStack {
 
     private static Collection<Text> parseBlockTag(String tag) {
         try {
-            List<Text> list;
-            boolean bl2;
-            BlockArgumentParser blockArgumentParser = new BlockArgumentParser(new StringReader(tag), true).parse(true);
-            BlockState blockState = blockArgumentParser.getBlockState();
-            TagKey<Block> tagKey = blockArgumentParser.getTagId();
-            boolean bl = blockState != null;
-            boolean bl3 = bl2 = tagKey != null;
-            if (bl) {
-                return Lists.newArrayList((Object[])new Text[]{blockState.getBlock().getName().formatted(Formatting.DARK_GRAY)});
-            }
-            if (bl2 && !(list = Streams.stream(Registry.BLOCK.iterateEntries(tagKey)).map(entry -> ((Block)entry.value()).getName()).map(text -> text.formatted(Formatting.DARK_GRAY)).collect(Collectors.toList())).isEmpty()) {
-                return list;
-            }
+            return (Collection)BlockArgumentParser.blockOrTag(Registry.BLOCK, tag, true).map(blockResult -> Lists.newArrayList((Object[])new Text[]{blockResult.blockState().getBlock().getName().formatted(Formatting.DARK_GRAY)}), tagResult -> tagResult.tag().stream().map(registryEntry -> ((Block)registryEntry.value()).getName().formatted(Formatting.DARK_GRAY)).collect(Collectors.toList()));
         }
         catch (CommandSyntaxException commandSyntaxException) {
-            // empty catch block
+            return Lists.newArrayList((Object[])new Text[]{Text.literal("missingno").formatted(Formatting.DARK_GRAY)});
         }
-        return Lists.newArrayList((Object[])new Text[]{new LiteralText("missingno").formatted(Formatting.DARK_GRAY)});
     }
 
     public boolean hasGlint() {
@@ -851,7 +850,7 @@ public final class ItemStack {
     }
 
     public Text toHoverableText() {
-        MutableText mutableText = new LiteralText("").append(this.getName());
+        MutableText mutableText = Text.empty().append(this.getName());
         if (this.hasCustomName()) {
             mutableText.formatted(Formatting.ITALIC);
         }

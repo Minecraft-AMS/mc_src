@@ -33,14 +33,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityInteraction;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.InteractionObserver;
+import net.minecraft.entity.InventoryOwner;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LargeEntitySpawnHelper;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
@@ -66,7 +67,6 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.WitchEntity;
-import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -86,14 +86,14 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.dynamic.GlobalPos;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.village.TradeOffer;
 import net.minecraft.village.TradeOfferList;
 import net.minecraft.village.TradeOffers;
@@ -110,6 +110,7 @@ import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
 import net.minecraft.world.poi.PointOfInterestStorage;
 import net.minecraft.world.poi.PointOfInterestType;
+import net.minecraft.world.poi.PointOfInterestTypes;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -148,7 +149,7 @@ VillagerDataContainer {
     private boolean natural;
     private static final ImmutableList<MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.HOME, MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE, MemoryModuleType.MEETING_POINT, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryModuleType.NEAREST_PLAYERS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM, MemoryModuleType.WALK_TARGET, (Object[])new MemoryModuleType[]{MemoryModuleType.LOOK_TARGET, MemoryModuleType.INTERACTION_TARGET, MemoryModuleType.BREED_TARGET, MemoryModuleType.PATH, MemoryModuleType.DOORS_TO_CLOSE, MemoryModuleType.NEAREST_BED, MemoryModuleType.HURT_BY, MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.NEAREST_HOSTILE, MemoryModuleType.SECONDARY_JOB_SITE, MemoryModuleType.HIDING_PLACE, MemoryModuleType.HEARD_BELL_TIME, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.LAST_SLEPT, MemoryModuleType.LAST_WOKEN, MemoryModuleType.LAST_WORKED_AT_POI, MemoryModuleType.GOLEM_DETECTED_RECENTLY});
     private static final ImmutableList<SensorType<? extends Sensor<? super VillagerEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.NEAREST_BED, SensorType.HURT_BY, SensorType.VILLAGER_HOSTILES, SensorType.VILLAGER_BABIES, SensorType.SECONDARY_POIS, SensorType.GOLEM_DETECTED);
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, PointOfInterestType>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villager, poiType) -> poiType == PointOfInterestType.HOME, MemoryModuleType.JOB_SITE, (villager, poiType) -> villager.getVillagerData().getProfession().getWorkStation() == poiType, MemoryModuleType.POTENTIAL_JOB_SITE, (villager, poiType) -> PointOfInterestType.IS_USED_BY_PROFESSION.test((PointOfInterestType)poiType), MemoryModuleType.MEETING_POINT, (villager, poiType) -> poiType == PointOfInterestType.MEETING);
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VillagerEntity, RegistryEntry<PointOfInterestType>>> POINTS_OF_INTEREST = ImmutableMap.of(MemoryModuleType.HOME, (villager, registryEntry) -> registryEntry.matchesKey(PointOfInterestTypes.HOME), MemoryModuleType.JOB_SITE, (villager, registryEntry) -> villager.getVillagerData().getProfession().heldWorkstation().test((RegistryEntry<PointOfInterestType>)registryEntry), MemoryModuleType.POTENTIAL_JOB_SITE, (villager, registryEntry) -> VillagerProfession.IS_ACQUIRABLE_JOB_SITE.test((RegistryEntry<PointOfInterestType>)registryEntry), MemoryModuleType.MEETING_POINT, (villager, registryEntry) -> registryEntry.matchesKey(PointOfInterestTypes.MEETING));
 
     public VillagerEntity(EntityType<? extends VillagerEntity> entityType, World world) {
         this(entityType, world, VillagerType.PLAINS);
@@ -489,7 +490,7 @@ VillagerDataContainer {
     }
 
     public void playWorkSound() {
-        SoundEvent soundEvent = this.getVillagerData().getProfession().getWorkSound();
+        SoundEvent soundEvent = this.getVillagerData().getProfession().workSound();
         if (soundEvent != null) {
             this.playSound(soundEvent, this.getSoundVolume(), this.getSoundPitch());
         }
@@ -544,14 +545,14 @@ VillagerDataContainer {
     }
 
     @Override
-    public void onDeath(DamageSource source) {
-        field_36335.info("Villager {} died, message: '{}'", (Object)this, (Object)source.getDeathMessage(this).getString());
-        Entity entity = source.getAttacker();
+    public void onDeath(DamageSource damageSource) {
+        field_36335.info("Villager {} died, message: '{}'", (Object)this, (Object)damageSource.getDeathMessage(this).getString());
+        Entity entity = damageSource.getAttacker();
         if (entity != null) {
             this.notifyDeath(entity);
         }
         this.releaseAllTickets();
-        super.onDeath(source);
+        super.onDeath(damageSource);
     }
 
     private void releaseAllTickets() {
@@ -585,8 +586,8 @@ VillagerDataContainer {
                 return;
             }
             PointOfInterestStorage pointOfInterestStorage = serverWorld.getPointOfInterestStorage();
-            Optional<PointOfInterestType> optional = pointOfInterestStorage.getType(pos.getPos());
-            BiPredicate<VillagerEntity, PointOfInterestType> biPredicate = POINTS_OF_INTEREST.get(memoryModuleType);
+            Optional<RegistryEntry<PointOfInterestType>> optional = pointOfInterestStorage.getType(pos.getPos());
+            BiPredicate<VillagerEntity, RegistryEntry<PointOfInterestType>> biPredicate = POINTS_OF_INTEREST.get(memoryModuleType);
             if (optional.isPresent() && biPredicate.test(this, optional.get())) {
                 pointOfInterestStorage.releaseTicket(pos.getPos());
                 DebugInfoSender.sendPointOfInterest(serverWorld, pos.getPos());
@@ -650,7 +651,7 @@ VillagerDataContainer {
 
     @Override
     protected Text getDefaultName() {
-        return new TranslatableText(this.getType().getTranslationKey() + "." + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
+        return Text.translatable(this.getType().getTranslationKey() + "." + Registry.VILLAGER_PROFESSION.getId(this.getVillagerData().getProfession()).getPath());
     }
 
     @Override
@@ -715,28 +716,13 @@ VillagerDataContainer {
 
     @Override
     protected void loot(ItemEntity item) {
-        ItemStack itemStack = item.getStack();
-        if (this.canGather(itemStack)) {
-            SimpleInventory simpleInventory = this.getInventory();
-            boolean bl = simpleInventory.canInsert(itemStack);
-            if (!bl) {
-                return;
-            }
-            this.triggerItemPickedUpByEntityCriteria(item);
-            this.sendPickup(item, itemStack.getCount());
-            ItemStack itemStack2 = simpleInventory.addStack(itemStack);
-            if (itemStack2.isEmpty()) {
-                item.discard();
-            } else {
-                itemStack.setCount(itemStack2.getCount());
-            }
-        }
+        InventoryOwner.pickUpItem(this, this, item);
     }
 
     @Override
     public boolean canGather(ItemStack stack) {
         Item item = stack.getItem();
-        return (GATHERABLE_ITEMS.contains(item) || this.getVillagerData().getProfession().getGatherableItems().contains((Object)item)) && this.getInventory().canInsert(stack);
+        return (GATHERABLE_ITEMS.contains(item) || this.getVillagerData().getProfession().gatherableItems().contains((Object)item)) && this.getInventory().canInsert(stack);
     }
 
     public boolean wantsToStartBreeding() {
@@ -749,7 +735,7 @@ VillagerDataContainer {
 
     private int getAvailableFood() {
         SimpleInventory simpleInventory = this.getInventory();
-        return ITEM_FOOD_VALUES.entrySet().stream().mapToInt(entry -> simpleInventory.count((Item)entry.getKey()) * (Integer)entry.getValue()).sum();
+        return ITEM_FOOD_VALUES.entrySet().stream().mapToInt(item -> simpleInventory.count((Item)item.getKey()) * (Integer)item.getValue()).sum();
     }
 
     public boolean hasSeedToPlant() {
@@ -804,8 +790,7 @@ VillagerDataContainer {
         if (list2.size() < requiredCount) {
             return;
         }
-        IronGolemEntity ironGolemEntity = this.spawnIronGolem(world);
-        if (ironGolemEntity == null) {
+        if (!LargeEntitySpawnHelper.trySpawnAt(EntityType.IRON_GOLEM, SpawnReason.MOB_SUMMONED, world, this.getBlockPos(), 10, 8, 6, LargeEntitySpawnHelper.Requirements.IRON_GOLEM).isPresent()) {
             return;
         }
         list.forEach(GolemLastSeenSensor::rememberIronGolem);
@@ -816,40 +801,6 @@ VillagerDataContainer {
             return false;
         }
         return !this.brain.hasMemoryModule(MemoryModuleType.GOLEM_DETECTED_RECENTLY);
-    }
-
-    @Nullable
-    private IronGolemEntity spawnIronGolem(ServerWorld world) {
-        BlockPos blockPos = this.getBlockPos();
-        for (int i = 0; i < 10; ++i) {
-            IronGolemEntity ironGolemEntity;
-            double e;
-            double d = world.random.nextInt(16) - 8;
-            BlockPos blockPos2 = this.getHighestOpenPositionOnOffset(blockPos, d, e = (double)(world.random.nextInt(16) - 8));
-            if (blockPos2 == null || (ironGolemEntity = EntityType.IRON_GOLEM.create(world, null, null, null, blockPos2, SpawnReason.MOB_SUMMONED, false, false)) == null) continue;
-            if (ironGolemEntity.canSpawn(world, SpawnReason.MOB_SUMMONED) && ironGolemEntity.canSpawn(world)) {
-                world.spawnEntityAndPassengers(ironGolemEntity);
-                return ironGolemEntity;
-            }
-            ironGolemEntity.discard();
-        }
-        return null;
-    }
-
-    @Nullable
-    private BlockPos getHighestOpenPositionOnOffset(BlockPos pos, double x, double z) {
-        int i = 6;
-        BlockPos blockPos = pos.add(x, 6.0, z);
-        BlockState blockState = this.world.getBlockState(blockPos);
-        for (int j = 6; j >= -6; --j) {
-            BlockPos blockPos2 = blockPos;
-            BlockState blockState2 = blockState;
-            blockPos = blockPos2.down();
-            blockState = this.world.getBlockState(blockPos);
-            if (!blockState2.isAir() && !blockState2.getMaterial().isLiquid() || !blockState.getMaterial().blocksLight()) continue;
-            return blockPos2;
-        }
-        return null;
     }
 
     @Override

@@ -33,7 +33,7 @@ implements Codec<RegistryEntry<E>> {
         return RegistryElementCodec.of(registryRef, elementCodec, true);
     }
 
-    private static <E> RegistryElementCodec<E> of(RegistryKey<? extends Registry<E>> registryRef, Codec<E> elementCodec, boolean allowInlineDefinitions) {
+    public static <E> RegistryElementCodec<E> of(RegistryKey<? extends Registry<E>> registryRef, Codec<E> elementCodec, boolean allowInlineDefinitions) {
         return new RegistryElementCodec<E>(registryRef, elementCodec, allowInlineDefinitions);
     }
 
@@ -76,8 +76,8 @@ implements Codec<RegistryEntry<E>> {
             if (optional2.isPresent()) {
                 return optional2.get().load(this.registryRef, this.elementCodec, registryKey, registryOps.getEntryOps()).map(entry -> Pair.of((Object)entry, (Object)pair2.getSecond()));
             }
-            RegistryEntry registryEntry = registry.getOrCreateEntry(registryKey);
-            return DataResult.success((Object)Pair.of(registryEntry, (Object)pair2.getSecond()), (Lifecycle)Lifecycle.stable());
+            DataResult dataResult2 = registry.getOrCreateEntryDataResult(registryKey);
+            return dataResult2.map(entry -> Pair.of((Object)entry, (Object)pair2.getSecond())).setLifecycle(Lifecycle.stable());
         }
         return this.elementCodec.decode(ops, input).map(pair -> pair.mapFirst(RegistryEntry::of));
     }

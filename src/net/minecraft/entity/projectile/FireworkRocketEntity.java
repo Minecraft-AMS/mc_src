@@ -40,7 +40,7 @@ public class FireworkRocketEntity
 extends ProjectileEntity
 implements FlyingItemEntity {
     private static final TrackedData<ItemStack> ITEM = DataTracker.registerData(FireworkRocketEntity.class, TrackedDataHandlerRegistry.ITEM_STACK);
-    private static final TrackedData<OptionalInt> SHOOTER_ENTITY_ID = DataTracker.registerData(FireworkRocketEntity.class, TrackedDataHandlerRegistry.FIREWORK_DATA);
+    private static final TrackedData<OptionalInt> SHOOTER_ENTITY_ID = DataTracker.registerData(FireworkRocketEntity.class, TrackedDataHandlerRegistry.OPTIONAL_INT);
     private static final TrackedData<Boolean> SHOT_AT_ANGLE = DataTracker.registerData(FireworkRocketEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private int life;
     private int lifeTime;
@@ -60,7 +60,7 @@ implements FlyingItemEntity {
             this.dataTracker.set(ITEM, stack.copy());
             i += stack.getOrCreateSubNbt("Fireworks").getByte("Flight");
         }
-        this.setVelocity(this.random.nextGaussian() * 0.001, 0.05, this.random.nextGaussian() * 0.001);
+        this.setVelocity(this.random.nextTriangular(0.0, 0.002297), 0.05, this.random.nextTriangular(0.0, 0.002297));
         this.lifeTime = 10 * i + this.random.nextInt(6) + this.random.nextInt(7);
     }
 

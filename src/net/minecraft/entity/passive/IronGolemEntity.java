@@ -59,7 +59,6 @@ import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.world.SpawnHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class IronGolemEntity
@@ -202,7 +201,16 @@ implements Angerable {
         float g = (int)f > 0 ? f / 2.0f + (float)this.random.nextInt((int)f) : f;
         boolean bl = target.damage(DamageSource.mob(this), g);
         if (bl) {
-            target.setVelocity(target.getVelocity().add(0.0, 0.4f, 0.0));
+            double d;
+            if (target instanceof LivingEntity) {
+                LivingEntity livingEntity = (LivingEntity)target;
+                d = livingEntity.getAttributeValue(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE);
+            } else {
+                d = 0.0;
+            }
+            double d2 = d;
+            double e = Math.max(0.0, 1.0 - d2);
+            target.setVelocity(target.getVelocity().add(0.0, (double)0.4f * e, 0.0));
             this.applyDamageEffects(this, target);
         }
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_ATTACK, 1.0f, 1.0f);
@@ -274,7 +282,6 @@ implements Angerable {
         }
         float g = 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f;
         this.playSound(SoundEvents.ENTITY_IRON_GOLEM_REPAIR, 1.0f, g);
-        this.emitGameEvent(GameEvent.MOB_INTERACT, this.getCameraBlockPos());
         if (!player.getAbilities().creativeMode) {
             itemStack.decrement(1);
         }
@@ -304,8 +311,8 @@ implements Angerable {
     }
 
     @Override
-    public void onDeath(DamageSource source) {
-        super.onDeath(source);
+    public void onDeath(DamageSource damageSource) {
+        super.onDeath(damageSource);
     }
 
     @Override

@@ -15,11 +15,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.TestableWorld;
 import net.minecraft.world.gen.feature.TreeFeatureConfig;
 import net.minecraft.world.gen.foliage.FoliagePlacer;
@@ -51,7 +51,7 @@ extends GiantTrunkPlacer {
                 j = (int)(1.5f + MathHelper.cos(f) * (float)l);
                 k = (int)(1.5f + MathHelper.sin(f) * (float)l);
                 BlockPos blockPos = startPos.add(j, i - 3 + l / 2, k);
-                MegaJungleTrunkPlacer.getAndSetState(world, replacer, random, blockPos, config);
+                this.getAndSetState(world, replacer, random, blockPos, config);
             }
             list.add(new FoliagePlacer.TreeNode(startPos.add(j, i, k), -2, false));
         }

@@ -41,7 +41,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.predicate.NumberRange;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -60,12 +60,12 @@ public class EntitySelectorReader {
     private static final char RANDOM_PLAYER = 'r';
     private static final char SELF = 's';
     private static final char ALL_ENTITIES = 'e';
-    public static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.invalid"));
-    public static final DynamicCommandExceptionType UNKNOWN_SELECTOR_EXCEPTION = new DynamicCommandExceptionType(selectorType -> new TranslatableText("argument.entity.selector.unknown", selectorType));
-    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.not_allowed"));
-    public static final SimpleCommandExceptionType MISSING_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.selector.missing"));
-    public static final SimpleCommandExceptionType UNTERMINATED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("argument.entity.options.unterminated"));
-    public static final DynamicCommandExceptionType VALUELESS_EXCEPTION = new DynamicCommandExceptionType(option -> new TranslatableText("argument.entity.options.valueless", option));
+    public static final SimpleCommandExceptionType INVALID_ENTITY_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.invalid"));
+    public static final DynamicCommandExceptionType UNKNOWN_SELECTOR_EXCEPTION = new DynamicCommandExceptionType(selectorType -> Text.translatable("argument.entity.selector.unknown", selectorType));
+    public static final SimpleCommandExceptionType NOT_ALLOWED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.selector.not_allowed"));
+    public static final SimpleCommandExceptionType MISSING_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.selector.missing"));
+    public static final SimpleCommandExceptionType UNTERMINATED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("argument.entity.options.unterminated"));
+    public static final DynamicCommandExceptionType VALUELESS_EXCEPTION = new DynamicCommandExceptionType(option -> Text.translatable("argument.entity.options.valueless", option));
     public static final BiConsumer<Vec3d, List<? extends Entity>> ARBITRARY = (pos, entities) -> {};
     public static final BiConsumer<Vec3d, List<? extends Entity>> NEAREST = (pos, entities) -> entities.sort((entity1, entity2) -> Doubles.compare((double)entity1.squaredDistanceTo((Vec3d)pos), (double)entity2.squaredDistanceTo((Vec3d)pos)));
     public static final BiConsumer<Vec3d, List<? extends Entity>> FURTHEST = (pos, entities) -> entities.sort((entity1, entity2) -> Doubles.compare((double)entity2.squaredDistanceTo((Vec3d)pos), (double)entity1.squaredDistanceTo((Vec3d)pos)));
@@ -432,11 +432,11 @@ public class EntitySelectorReader {
     }
 
     private static void suggestSelector(SuggestionsBuilder builder) {
-        builder.suggest("@p", (Message)new TranslatableText("argument.entity.selector.nearestPlayer"));
-        builder.suggest("@a", (Message)new TranslatableText("argument.entity.selector.allPlayers"));
-        builder.suggest("@r", (Message)new TranslatableText("argument.entity.selector.randomPlayer"));
-        builder.suggest("@s", (Message)new TranslatableText("argument.entity.selector.self"));
-        builder.suggest("@e", (Message)new TranslatableText("argument.entity.selector.allEntities"));
+        builder.suggest("@p", (Message)Text.translatable("argument.entity.selector.nearestPlayer"));
+        builder.suggest("@a", (Message)Text.translatable("argument.entity.selector.allPlayers"));
+        builder.suggest("@r", (Message)Text.translatable("argument.entity.selector.randomPlayer"));
+        builder.suggest("@s", (Message)Text.translatable("argument.entity.selector.self"));
+        builder.suggest("@e", (Message)Text.translatable("argument.entity.selector.allEntities"));
     }
 
     private CompletableFuture<Suggestions> suggestSelector(SuggestionsBuilder builder, Consumer<SuggestionsBuilder> consumer) {

@@ -4,8 +4,6 @@
  * Could not load the following classes:
  *  com.google.common.collect.Maps
  *  com.google.common.collect.Sets
- *  com.google.gson.Gson
- *  com.google.gson.GsonBuilder
  *  com.google.gson.JsonElement
  *  com.mojang.logging.LogUtils
  *  org.slf4j.Logger
@@ -14,8 +12,6 @@ package net.minecraft.data.client;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import java.nio.file.Path;
@@ -24,14 +20,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import net.minecraft.block.Block;
-import net.minecraft.data.DataCache;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
+import net.minecraft.data.DataWriter;
 import net.minecraft.data.client.BlockStateModelGenerator;
 import net.minecraft.data.client.BlockStateSupplier;
 import net.minecraft.data.client.ItemModelGenerator;
@@ -45,16 +40,16 @@ import org.slf4j.Logger;
 public class ModelProvider
 implements DataProvider {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    private final DataGenerator generator;
+    private final DataGenerator.PathResolver blockstatesPathResolver;
+    private final DataGenerator.PathResolver modelsPathResolver;
 
     public ModelProvider(DataGenerator generator) {
-        this.generator = generator;
+        this.blockstatesPathResolver = generator.createPathResolver(DataGenerator.OutputType.RESOURCE_PACK, "blockstates");
+        this.modelsPathResolver = generator.createPathResolver(DataGenerator.OutputType.RESOURCE_PACK, "models");
     }
 
     @Override
-    public void run(DataCache cache) {
-        Path path = this.generator.getOutput();
+    public void run(DataWriter writer) {
         HashMap map = Maps.newHashMap();
         Consumer<BlockStateSupplier> consumer = blockStateSupplier -> {
             Block block = blockStateSupplier.getBlock();
@@ -74,7 +69,7 @@ implements DataProvider {
         Consumer<Item> consumer2 = set::add;
         new BlockStateModelGenerator(consumer, biConsumer, consumer2).register();
         new ItemModelGenerator(biConsumer).register();
-        List list = Registry.BLOCK.stream().filter(block -> !map.containsKey(block)).collect(Collectors.toList());
+        List<Block> list = Registry.BLOCK.stream().filter(block -> !map.containsKey(block)).toList();
         if (!list.isEmpty()) {
             throw new IllegalStateException("Missing blockstate definitions for: " + list);
         }
@@ -90,29 +85,20 @@ implements DataProvider {
                 }
             }
         });
-        this.writeJsons(cache, path, map, ModelProvider::getBlockStateJsonPath);
-        this.writeJsons(cache, path, map2, ModelProvider::getModelJsonPath);
+        this.writeJsons(writer, map, block -> this.blockstatesPathResolver.resolveJson(block.getRegistryEntry().registryKey().getValue()));
+        this.writeJsons(writer, map2, this.modelsPathResolver::resolveJson);
     }
 
-    private <T> void writeJsons(DataCache cache, Path root, Map<T, ? extends Supplier<JsonElement>> jsons, BiFunction<Path, T, Path> locator) {
-        jsons.forEach((object, supplier) -> {
-            Path path2 = (Path)locator.apply(root, object);
+    private <T> void writeJsons(DataWriter cache, Map<T, ? extends Supplier<JsonElement>> map, Function<T, Path> function) {
+        map.forEach((object, supplier) -> {
+            Path path = (Path)function.apply(object);
             try {
-                DataProvider.writeToPath(GSON, cache, (JsonElement)supplier.get(), path2);
+                DataProvider.writeToPath(cache, (JsonElement)supplier.get(), path);
             }
             catch (Exception exception) {
-                LOGGER.error("Couldn't save {}", (Object)path2, (Object)exception);
+                LOGGER.error("Couldn't save {}", (Object)path, (Object)exception);
             }
         });
-    }
-
-    private static Path getBlockStateJsonPath(Path root, Block block) {
-        Identifier identifier = Registry.BLOCK.getId(block);
-        return root.resolve("assets/" + identifier.getNamespace() + "/blockstates/" + identifier.getPath() + ".json");
-    }
-
-    private static Path getModelJsonPath(Path root, Identifier id) {
-        return root.resolve("assets/" + id.getNamespace() + "/models/" + id.getPath() + ".json");
     }
 
     @Override

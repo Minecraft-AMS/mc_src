@@ -22,10 +22,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -143,7 +146,7 @@ implements TextureTickListener {
         catch (TextureStitcherCannotFitException textureStitcherCannotFitException) {
             CrashReport crashReport = CrashReport.create(textureStitcherCannotFitException, "Stitching");
             CrashReportSection crashReportSection = crashReport.addElement("Stitcher");
-            crashReportSection.add("Sprites", textureStitcherCannotFitException.getSprites().stream().map(sprite -> String.format("%s[%dx%d]", sprite.getId(), sprite.getWidth(), sprite.getHeight())).collect(Collectors.joining(",")));
+            crashReportSection.add("Sprites", textureStitcherCannotFitException.getSprites().stream().map(sprite -> String.format(Locale.ROOT, "%s[%dx%d]", sprite.getId(), sprite.getWidth(), sprite.getHeight())).collect(Collectors.joining(",")));
             crashReportSection.add("Max Texture Size", i);
             throw new CrashException(crashReport);
         }
@@ -159,25 +162,31 @@ implements TextureTickListener {
         for (Identifier identifier : ids) {
             if (MissingSprite.getMissingSpriteId().equals(identifier)) continue;
             list.add(CompletableFuture.runAsync(() -> {
-                Sprite.Info info;
+                AnimationResourceMetadata animationResourceMetadata;
+                PngFile pngFile;
                 Identifier identifier2 = this.getTexturePath(identifier);
-                try (Resource resource = resourceManager.getResource(identifier2);){
-                    PngFile pngFile = new PngFile(resource.toString(), resource.getInputStream());
-                    AnimationResourceMetadata animationResourceMetadata = resource.getMetadata(AnimationResourceMetadata.READER);
-                    if (animationResourceMetadata == null) {
-                        animationResourceMetadata = AnimationResourceMetadata.EMPTY;
-                    }
-                    Pair<Integer, Integer> pair = animationResourceMetadata.ensureImageSize(pngFile.width, pngFile.height);
-                    info = new Sprite.Info(identifier, (Integer)pair.getFirst(), (Integer)pair.getSecond(), animationResourceMetadata);
-                }
-                catch (RuntimeException runtimeException) {
-                    LOGGER.error("Unable to parse metadata from {} : {}", (Object)identifier2, (Object)runtimeException);
+                Optional<Resource> optional = resourceManager.getResource(identifier2);
+                if (optional.isEmpty()) {
+                    LOGGER.error("Using missing texture, file {} not found", (Object)identifier2);
                     return;
+                }
+                Resource resource = optional.get();
+                try (InputStream inputStream = resource.getInputStream();){
+                    pngFile = new PngFile(identifier2::toString, inputStream);
                 }
                 catch (IOException iOException) {
                     LOGGER.error("Using missing texture, unable to load {} : {}", (Object)identifier2, (Object)iOException);
                     return;
                 }
+                try {
+                    animationResourceMetadata = resource.getMetadata().decode(AnimationResourceMetadata.READER).orElse(AnimationResourceMetadata.EMPTY);
+                }
+                catch (Exception exception) {
+                    LOGGER.error("Unable to parse metadata from {} : {}", (Object)identifier2, (Object)exception);
+                    return;
+                }
+                Pair<Integer, Integer> pair = animationResourceMetadata.ensureImageSize(pngFile.width, pngFile.height);
+                Sprite.Info info = new Sprite.Info(identifier, (Integer)pair.getFirst(), (Integer)pair.getSecond(), animationResourceMetadata);
                 queue.add(info);
             }, Util.getMainWorkerExecutor()));
         }
@@ -210,17 +219,17 @@ implements TextureTickListener {
         Sprite sprite;
         block9: {
             Identifier identifier = this.getTexturePath(info.getId());
-            Resource resource = container.getResource(identifier);
+            InputStream inputStream = container.open(identifier);
             try {
-                NativeImage nativeImage = NativeImage.read(resource.getInputStream());
+                NativeImage nativeImage = NativeImage.read(inputStream);
                 sprite = new Sprite(this, info, maxLevel, atlasWidth, atlasHeight, x, y, nativeImage);
-                if (resource == null) break block9;
+                if (inputStream == null) break block9;
             }
             catch (Throwable throwable) {
                 try {
-                    if (resource != null) {
+                    if (inputStream != null) {
                         try {
-                            resource.close();
+                            inputStream.close();
                         }
                         catch (Throwable throwable2) {
                             throwable.addSuppressed(throwable2);
@@ -237,13 +246,13 @@ implements TextureTickListener {
                     return null;
                 }
             }
-            resource.close();
+            inputStream.close();
         }
         return sprite;
     }
 
     private Identifier getTexturePath(Identifier id) {
-        return new Identifier(id.getNamespace(), String.format("textures/%s%s", id.getPath(), PNG_EXTENSION));
+        return new Identifier(id.getNamespace(), String.format(Locale.ROOT, "textures/%s%s", id.getPath(), PNG_EXTENSION));
     }
 
     public void tickAnimatedSprites() {

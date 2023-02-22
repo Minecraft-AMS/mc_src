@@ -12,6 +12,7 @@ package net.minecraft.client.network;
 
 import com.google.common.hash.Hashing;
 import com.mojang.authlib.GameProfile;
+import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -26,8 +27,10 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.StringHelper;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
@@ -36,16 +39,6 @@ import org.jetbrains.annotations.Nullable;
 public abstract class AbstractClientPlayerEntity
 extends PlayerEntity {
     private static final String SKIN_URL = "http://skins.minecraft.net/MinecraftSkins/%s.png";
-    public static final int field_32659 = 8;
-    public static final int field_32660 = 8;
-    public static final int field_32661 = 8;
-    public static final int field_32667 = 8;
-    public static final int field_32668 = 40;
-    public static final int field_32669 = 8;
-    public static final int field_32662 = 8;
-    public static final int field_32663 = 8;
-    public static final int field_32664 = 64;
-    public static final int field_32665 = 64;
     @Nullable
     private PlayerListEntry cachedScoreboardEntry;
     public float elytraPitch;
@@ -53,8 +46,8 @@ extends PlayerEntity {
     public float elytraRoll;
     public final ClientWorld clientWorld;
 
-    public AbstractClientPlayerEntity(ClientWorld world, GameProfile profile) {
-        super(world, world.getSpawnPos(), world.getSpawnAngle(), profile);
+    public AbstractClientPlayerEntity(ClientWorld world, GameProfile profile, @Nullable PlayerPublicKey publicKey) {
+        super(world, world.getSpawnPos(), world.getSpawnAngle(), profile, publicKey);
         this.clientWorld = world;
     }
 
@@ -112,7 +105,7 @@ extends PlayerEntity {
         TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
         AbstractTexture abstractTexture = textureManager.getOrDefault(id, MissingSprite.getMissingSpriteTexture());
         if (abstractTexture == MissingSprite.getMissingSpriteTexture()) {
-            abstractTexture = new PlayerSkinTexture(null, String.format(SKIN_URL, StringHelper.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(AbstractClientPlayerEntity.getOfflinePlayerUuid(playerName)), true, null);
+            abstractTexture = new PlayerSkinTexture(null, String.format(Locale.ROOT, SKIN_URL, StringHelper.stripTextFormat(playerName)), DefaultSkinHelper.getTexture(DynamicSerializableUuid.getOfflinePlayerUuid(playerName)), true, null);
             textureManager.registerTexture(id, abstractTexture);
         }
     }
@@ -145,7 +138,7 @@ extends PlayerEntity {
                 return 0.1f;
             }
         }
-        return MathHelper.lerp(MinecraftClient.getInstance().options.fovEffectScale, 1.0f, f);
+        return MathHelper.lerp(MinecraftClient.getInstance().options.getFovEffectScale().getValue().floatValue(), 1.0f, f);
     }
 }
 

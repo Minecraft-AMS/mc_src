@@ -3,7 +3,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -20,6 +19,7 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -64,7 +64,7 @@ extends Block {
             world.setBlockState(blockPos, this.getDefaultState());
             BlockState blockState = (BlockState)state.with(AGE, 0);
             world.setBlockState(pos, blockState, 4);
-            blockState.neighborUpdate(world, blockPos, this, pos, false);
+            world.updateNeighbor(blockState, blockPos, this, pos, false);
         } else {
             world.setBlockState(pos, (BlockState)state.with(AGE, j + 1), 4);
         }

@@ -16,6 +16,7 @@ import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 
 @Environment(value=EnvType.CLIENT)
 public abstract class AbstractSoundInstance
@@ -32,14 +33,16 @@ implements SoundInstance {
     protected int repeatDelay;
     protected SoundInstance.AttenuationType attenuationType = SoundInstance.AttenuationType.LINEAR;
     protected boolean relative;
+    protected Random field_38800;
 
-    protected AbstractSoundInstance(SoundEvent sound, SoundCategory category) {
-        this(sound.getId(), category);
+    protected AbstractSoundInstance(SoundEvent sound, SoundCategory category, Random random) {
+        this(sound.getId(), category, random);
     }
 
-    protected AbstractSoundInstance(Identifier soundId, SoundCategory category) {
+    protected AbstractSoundInstance(Identifier soundId, SoundCategory category, Random random) {
         this.id = soundId;
         this.category = category;
+        this.field_38800 = random;
     }
 
     @Override
@@ -50,7 +53,7 @@ implements SoundInstance {
     @Override
     public WeightedSoundSet getSoundSet(SoundManager soundManager) {
         WeightedSoundSet weightedSoundSet = soundManager.get(this.id);
-        this.sound = weightedSoundSet == null ? SoundManager.MISSING_SOUND : weightedSoundSet.getSound();
+        this.sound = weightedSoundSet == null ? SoundManager.MISSING_SOUND : weightedSoundSet.getSound(this.field_38800);
         return weightedSoundSet;
     }
 
@@ -76,12 +79,12 @@ implements SoundInstance {
 
     @Override
     public float getVolume() {
-        return this.volume * this.sound.getVolume();
+        return this.volume * this.sound.getVolume().get(this.field_38800);
     }
 
     @Override
     public float getPitch() {
-        return this.pitch * this.sound.getPitch();
+        return this.pitch * this.sound.getPitch().get(this.field_38800);
     }
 
     @Override

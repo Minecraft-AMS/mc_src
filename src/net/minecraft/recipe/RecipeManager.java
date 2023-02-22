@@ -11,7 +11,9 @@
  *  com.google.gson.JsonObject
  *  com.google.gson.JsonParseException
  *  com.google.gson.JsonSyntaxException
+ *  com.mojang.datafixers.util.Pair
  *  com.mojang.logging.LogUtils
+ *  org.jetbrains.annotations.Nullable
  *  org.slf4j.Logger
  */
 package net.minecraft.recipe;
@@ -24,6 +26,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,6 +49,7 @@ import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class RecipeManager
@@ -86,18 +90,27 @@ extends JsonDataLoader {
     }
 
     public <C extends Inventory, T extends Recipe<C>> Optional<T> getFirstMatch(RecipeType<T> type, C inventory, World world) {
-        return this.getAllOfType(type).values().stream().flatMap(recipe -> type.match(recipe, world, inventory).stream()).findFirst();
+        return this.getAllOfType(type).values().stream().filter(recipe -> recipe.matches(inventory, world)).findFirst();
+    }
+
+    public <C extends Inventory, T extends Recipe<C>> Optional<Pair<Identifier, T>> getFirstMatch(RecipeType<T> type, C inventory, World world, @Nullable Identifier id) {
+        Recipe recipe;
+        Map<Identifier, T> map = this.getAllOfType(type);
+        if (id != null && (recipe = (Recipe)map.get(id)) != null && recipe.matches(inventory, world)) {
+            return Optional.of(Pair.of((Object)id, (Object)recipe));
+        }
+        return map.entrySet().stream().filter(entry -> ((Recipe)entry.getValue()).matches(inventory, world)).findFirst().map(entry -> Pair.of((Object)((Identifier)entry.getKey()), (Object)((Recipe)entry.getValue())));
     }
 
     public <C extends Inventory, T extends Recipe<C>> List<T> listAllOfType(RecipeType<T> type) {
-        return this.getAllOfType(type).values().stream().map(recipe -> recipe).collect(Collectors.toList());
+        return List.copyOf(this.getAllOfType(type).values());
     }
 
     public <C extends Inventory, T extends Recipe<C>> List<T> getAllMatches(RecipeType<T> type, C inventory, World world) {
-        return this.getAllOfType(type).values().stream().flatMap(recipe -> type.match(recipe, world, inventory).stream()).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
+        return this.getAllOfType(type).values().stream().filter(recipe -> recipe.matches(inventory, world)).sorted(Comparator.comparing(recipe -> recipe.getOutput().getTranslationKey())).collect(Collectors.toList());
     }
 
-    private <C extends Inventory, T extends Recipe<C>> Map<Identifier, Recipe<C>> getAllOfType(RecipeType<T> type) {
+    private <C extends Inventory, T extends Recipe<C>> Map<Identifier, T> getAllOfType(RecipeType<T> type) {
         return this.recipes.getOrDefault(type, Collections.emptyMap());
     }
 
@@ -145,6 +158,29 @@ extends JsonDataLoader {
         });
         this.recipes = ImmutableMap.copyOf((Map)map);
         this.recipesById = builder.build();
+    }
+
+    public static <C extends Inventory, T extends Recipe<C>> MatchGetter<C, T> createCachedMatchGetter(final RecipeType<T> type) {
+        return new MatchGetter<C, T>(){
+            @Nullable
+            private Identifier id;
+
+            @Override
+            public Optional<T> getFirstMatch(C inventory, World world) {
+                RecipeManager recipeManager = world.getRecipeManager();
+                Optional optional = recipeManager.getFirstMatch(type, inventory, world, this.id);
+                if (optional.isPresent()) {
+                    Pair pair = optional.get();
+                    this.id = (Identifier)pair.getFirst();
+                    return Optional.of((Recipe)pair.getSecond());
+                }
+                return Optional.empty();
+            }
+        };
+    }
+
+    public static interface MatchGetter<C extends Inventory, T extends Recipe<C>> {
+        public Optional<T> getFirstMatch(C var1, World var2);
     }
 }
 

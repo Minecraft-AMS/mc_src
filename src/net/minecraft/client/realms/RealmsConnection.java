@@ -12,21 +12,24 @@ package net.minecraft.client.realms;
 
 import com.mojang.logging.LogUtils;
 import java.net.InetSocketAddress;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.network.ClientLoginNetworkHandler;
 import net.minecraft.client.network.ServerAddress;
 import net.minecraft.client.realms.dto.RealmsServer;
 import net.minecraft.client.realms.gui.screen.DisconnectedRealmsScreen;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkState;
+import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.network.packet.c2s.handshake.HandshakeC2SPacket;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -46,7 +49,8 @@ public class RealmsConnection {
         final MinecraftClient minecraftClient = MinecraftClient.getInstance();
         minecraftClient.setConnectedToRealms(true);
         minecraftClient.loadBlockList();
-        NarratorManager.INSTANCE.narrate(new TranslatableText("mco.connect.success"));
+        minecraftClient.getNarratorManager().narrate(Text.translatable("mco.connect.success"));
+        final CompletableFuture<Optional<PlayerPublicKey.PublicKeyData>> completableFuture = minecraftClient.getProfileKeys().method_45104();
         final String string = address.getAddress();
         final int i = address.getPort();
         new Thread("Realms-connect-task"){
@@ -71,8 +75,10 @@ public class RealmsConnection {
                     if (RealmsConnection.this.aborted) {
                         return;
                     }
-                    RealmsConnection.this.connection.send(new LoginHelloC2SPacket(minecraftClient.getSession().getProfile()));
-                    minecraftClient.setCurrentServerEntry(server.createServerInfo(string));
+                    String string4 = minecraftClient.getSession().getUsername();
+                    UUID uUID = minecraftClient.getSession().getUuidOrNull();
+                    RealmsConnection.this.connection.send(new LoginHelloC2SPacket(string4, (Optional)completableFuture.join(), Optional.ofNullable(uUID)));
+                    minecraftClient.setCurrentServerEntry(server, string);
                 }
                 catch (Exception exception) {
                     minecraftClient.getResourcePackProvider().clear();
@@ -80,12 +86,12 @@ public class RealmsConnection {
                         return;
                     }
                     LOGGER.error("Couldn't connect to world", (Throwable)exception);
-                    String string3 = exception.toString();
+                    String string2 = exception.toString();
                     if (inetSocketAddress != null) {
-                        String string2 = inetSocketAddress + ":" + i;
-                        string3 = string3.replaceAll(string2, "");
+                        String string3 = inetSocketAddress + ":" + i;
+                        string2 = string2.replaceAll(string3, "");
                     }
-                    DisconnectedRealmsScreen disconnectedRealmsScreen = new DisconnectedRealmsScreen(RealmsConnection.this.onlineScreen, ScreenTexts.CONNECT_FAILED, new TranslatableText("disconnect.genericReason", string3));
+                    DisconnectedRealmsScreen disconnectedRealmsScreen = new DisconnectedRealmsScreen(RealmsConnection.this.onlineScreen, ScreenTexts.CONNECT_FAILED, Text.translatable("disconnect.genericReason", string2));
                     minecraftClient.execute(() -> minecraftClient.setScreen(disconnectedRealmsScreen));
                 }
             }
@@ -95,7 +101,7 @@ public class RealmsConnection {
     public void abort() {
         this.aborted = true;
         if (this.connection != null && this.connection.isOpen()) {
-            this.connection.disconnect(new TranslatableText("disconnect.genericReason"));
+            this.connection.disconnect(Text.translatable("disconnect.genericReason"));
             this.connection.handleDisconnection();
         }
     }

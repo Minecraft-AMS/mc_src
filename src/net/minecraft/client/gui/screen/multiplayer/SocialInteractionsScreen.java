@@ -2,25 +2,23 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.screen.multiplayer;
 
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Collection;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ConfirmChatLinkScreen;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.multiplayer.SocialInteractionsPlayerListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -29,9 +27,9 @@ import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.network.SocialInteractionsManager;
 import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -41,17 +39,17 @@ import org.jetbrains.annotations.Nullable;
 public class SocialInteractionsScreen
 extends Screen {
     protected static final Identifier SOCIAL_INTERACTIONS_TEXTURE = new Identifier("textures/gui/social_interactions.png");
-    private static final Text ALL_TAB_TITLE = new TranslatableText("gui.socialInteractions.tab_all");
-    private static final Text HIDDEN_TAB_TITLE = new TranslatableText("gui.socialInteractions.tab_hidden");
-    private static final Text BLOCKED_TAB_TITLE = new TranslatableText("gui.socialInteractions.tab_blocked");
-    private static final Text SELECTED_ALL_TAB_TITLE = ALL_TAB_TITLE.copy().formatted(Formatting.UNDERLINE);
-    private static final Text SELECTED_HIDDEN_TAB_TITLE = HIDDEN_TAB_TITLE.copy().formatted(Formatting.UNDERLINE);
-    private static final Text SELECTED_BLOCKED_TAB_TITLE = BLOCKED_TAB_TITLE.copy().formatted(Formatting.UNDERLINE);
-    private static final Text SEARCH_TEXT = new TranslatableText("gui.socialInteractions.search_hint").formatted(Formatting.ITALIC).formatted(Formatting.GRAY);
-    static final Text EMPTY_SEARCH_TEXT = new TranslatableText("gui.socialInteractions.search_empty").formatted(Formatting.GRAY);
-    private static final Text EMPTY_HIDDEN_TEXT = new TranslatableText("gui.socialInteractions.empty_hidden").formatted(Formatting.GRAY);
-    private static final Text EMPTY_BLOCKED_TEXT = new TranslatableText("gui.socialInteractions.empty_blocked").formatted(Formatting.GRAY);
-    private static final Text BLOCKING_TEXT = new TranslatableText("gui.socialInteractions.blocking_hint");
+    private static final Text ALL_TAB_TITLE = Text.translatable("gui.socialInteractions.tab_all");
+    private static final Text HIDDEN_TAB_TITLE = Text.translatable("gui.socialInteractions.tab_hidden");
+    private static final Text BLOCKED_TAB_TITLE = Text.translatable("gui.socialInteractions.tab_blocked");
+    private static final Text SELECTED_ALL_TAB_TITLE = ALL_TAB_TITLE.copyContentOnly().formatted(Formatting.UNDERLINE);
+    private static final Text SELECTED_HIDDEN_TAB_TITLE = HIDDEN_TAB_TITLE.copyContentOnly().formatted(Formatting.UNDERLINE);
+    private static final Text SELECTED_BLOCKED_TAB_TITLE = BLOCKED_TAB_TITLE.copyContentOnly().formatted(Formatting.UNDERLINE);
+    private static final Text SEARCH_TEXT = Text.translatable("gui.socialInteractions.search_hint").formatted(Formatting.ITALIC).formatted(Formatting.GRAY);
+    static final Text EMPTY_SEARCH_TEXT = Text.translatable("gui.socialInteractions.search_empty").formatted(Formatting.GRAY);
+    private static final Text EMPTY_HIDDEN_TEXT = Text.translatable("gui.socialInteractions.empty_hidden").formatted(Formatting.GRAY);
+    private static final Text EMPTY_BLOCKED_TEXT = Text.translatable("gui.socialInteractions.empty_blocked").formatted(Formatting.GRAY);
+    private static final Text BLOCKING_TEXT = Text.translatable("gui.socialInteractions.blocking_hint");
     private static final String BLOCKING_URL = "https://aka.ms/javablocking";
     private static final int field_32424 = 8;
     private static final int field_32425 = 16;
@@ -79,23 +77,23 @@ extends Screen {
     private Runnable onRendered;
 
     public SocialInteractionsScreen() {
-        super(new TranslatableText("gui.socialInteractions.title"));
+        super(Text.translatable("gui.socialInteractions.title"));
         this.updateServerLabel(MinecraftClient.getInstance());
     }
 
-    private int method_31359() {
+    private int getScreenHeight() {
         return Math.max(52, this.height - 128 - 16);
     }
 
-    private int method_31360() {
-        return this.method_31359() / 16;
+    private int getRowCount() {
+        return this.getScreenHeight() / 16;
     }
 
-    private int method_31361() {
-        return 80 + this.method_31360() * 16 - 8;
+    private int getPlayerListBottom() {
+        return 80 + this.getRowCount() * 16 - 8;
     }
 
-    private int method_31362() {
+    private int getSearchBoxX() {
         return (this.width - 238) / 2;
     }
 
@@ -117,27 +115,21 @@ extends Screen {
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
         if (this.initialized) {
-            this.playerList.updateSize(this.width, this.height, 88, this.method_31361());
+            this.playerList.updateSize(this.width, this.height, 88, this.getPlayerListBottom());
         } else {
-            this.playerList = new SocialInteractionsPlayerListWidget(this, this.client, this.width, this.height, 88, this.method_31361(), 36);
+            this.playerList = new SocialInteractionsPlayerListWidget(this, this.client, this.width, this.height, 88, this.getPlayerListBottom(), 36);
         }
         int i = this.playerList.getRowWidth() / 3;
         int j = this.playerList.getRowLeft();
         int k = this.playerList.getRowRight();
         int l = this.textRenderer.getWidth(BLOCKING_TEXT) + 40;
-        int m = 64 + 16 * this.method_31360();
-        int n = (this.width - l) / 2;
+        int m = 64 + 16 * this.getRowCount();
+        int n = (this.width - l) / 2 + 3;
         this.allTabButton = this.addDrawableChild(new ButtonWidget(j, 45, i, 20, ALL_TAB_TITLE, button -> this.setCurrentTab(Tab.ALL)));
         this.hiddenTabButton = this.addDrawableChild(new ButtonWidget((j + k - i) / 2 + 1, 45, i, 20, HIDDEN_TAB_TITLE, button -> this.setCurrentTab(Tab.HIDDEN)));
         this.blockedTabButton = this.addDrawableChild(new ButtonWidget(k - i + 1, 45, i, 20, BLOCKED_TAB_TITLE, button -> this.setCurrentTab(Tab.BLOCKED)));
-        this.blockingButton = this.addDrawableChild(new ButtonWidget(n, m, l, 20, BLOCKING_TEXT, button -> this.client.setScreen(new ConfirmChatLinkScreen(bl -> {
-            if (bl) {
-                Util.getOperatingSystem().open(BLOCKING_URL);
-            }
-            this.client.setScreen(this);
-        }, BLOCKING_URL, true))));
         String string = this.searchBox != null ? this.searchBox.getText() : "";
-        this.searchBox = new TextFieldWidget(this.textRenderer, this.method_31362() + 28, 78, 196, 16, SEARCH_TEXT){
+        this.searchBox = new TextFieldWidget(this.textRenderer, this.getSearchBoxX() + 28, 78, 196, 16, SEARCH_TEXT){
 
             @Override
             protected MutableText getNarrationMessage() {
@@ -155,6 +147,12 @@ extends Screen {
         this.searchBox.setChangedListener(this::onSearchChange);
         this.addSelectableChild(this.searchBox);
         this.addSelectableChild(this.playerList);
+        this.blockingButton = this.addDrawableChild(new ButtonWidget(n, m, l, 20, BLOCKING_TEXT, button -> this.client.setScreen(new ConfirmLinkScreen(confirmed -> {
+            if (confirmed) {
+                Util.getOperatingSystem().open(BLOCKING_URL);
+            }
+            this.client.setScreen(this);
+        }, BLOCKING_URL, true))));
         this.initialized = true;
         this.setCurrentTab(this.currentTab);
     }
@@ -164,30 +162,37 @@ extends Screen {
         this.allTabButton.setMessage(ALL_TAB_TITLE);
         this.hiddenTabButton.setMessage(HIDDEN_TAB_TITLE);
         this.blockedTabButton.setMessage(BLOCKED_TAB_TITLE);
-        Object collection = switch (currentTab) {
-            case Tab.ALL -> {
+        boolean bl = false;
+        switch (currentTab) {
+            case ALL: {
                 this.allTabButton.setMessage(SELECTED_ALL_TAB_TITLE);
-                yield this.client.player.networkHandler.getPlayerUuids();
+                Collection<UUID> collection = this.client.player.networkHandler.getPlayerUuids();
+                this.playerList.update(collection, this.playerList.getScrollAmount(), true);
+                break;
             }
-            case Tab.HIDDEN -> {
+            case HIDDEN: {
                 this.hiddenTabButton.setMessage(SELECTED_HIDDEN_TAB_TITLE);
-                yield this.client.getSocialInteractionsManager().getHiddenPlayers();
+                Set<UUID> set = this.client.getSocialInteractionsManager().getHiddenPlayers();
+                bl = set.isEmpty();
+                this.playerList.update(set, this.playerList.getScrollAmount(), false);
+                break;
             }
-            case Tab.BLOCKED -> {
+            case BLOCKED: {
                 this.blockedTabButton.setMessage(SELECTED_BLOCKED_TAB_TITLE);
                 SocialInteractionsManager socialInteractionsManager = this.client.getSocialInteractionsManager();
-                yield this.client.player.networkHandler.getPlayerUuids().stream().filter(socialInteractionsManager::isPlayerBlocked).collect(Collectors.toSet());
+                Set<UUID> set2 = this.client.player.networkHandler.getPlayerUuids().stream().filter(socialInteractionsManager::isPlayerBlocked).collect(Collectors.toSet());
+                bl = set2.isEmpty();
+                this.playerList.update(set2, this.playerList.getScrollAmount(), false);
             }
-            default -> ImmutableList.of();
-        };
-        this.playerList.update((Collection<UUID>)collection, this.playerList.getScrollAmount());
+        }
+        NarratorManager narratorManager = this.client.getNarratorManager();
         if (!this.searchBox.getText().isEmpty() && this.playerList.isEmpty() && !this.searchBox.isFocused()) {
-            NarratorManager.INSTANCE.narrate(EMPTY_SEARCH_TEXT);
-        } else if (collection.isEmpty()) {
+            narratorManager.narrate(EMPTY_SEARCH_TEXT);
+        } else if (bl) {
             if (currentTab == Tab.HIDDEN) {
-                NarratorManager.INSTANCE.narrate(EMPTY_HIDDEN_TEXT);
+                narratorManager.narrate(EMPTY_HIDDEN_TEXT);
             } else if (currentTab == Tab.BLOCKED) {
-                NarratorManager.INSTANCE.narrate(EMPTY_BLOCKED_TEXT);
+                narratorManager.narrate(EMPTY_BLOCKED_TEXT);
             }
         }
     }
@@ -199,11 +204,11 @@ extends Screen {
 
     @Override
     public void renderBackground(MatrixStack matrices) {
-        int i = this.method_31362() + 3;
+        int i = this.getSearchBoxX() + 3;
         super.renderBackground(matrices);
         RenderSystem.setShaderTexture(0, SOCIAL_INTERACTIONS_TEXTURE);
         this.drawTexture(matrices, i, 64, 1, 1, 236, 8);
-        int j = this.method_31360();
+        int j = this.getRowCount();
         for (int k = 0; k < j; ++k) {
             this.drawTexture(matrices, i, 72 + 16 * k, 1, 10, 236, 16);
         }
@@ -216,16 +221,16 @@ extends Screen {
         this.updateServerLabel(this.client);
         this.renderBackground(matrices);
         if (this.serverLabel != null) {
-            SocialInteractionsScreen.drawTextWithShadow(matrices, this.client.textRenderer, this.serverLabel, this.method_31362() + 8, 35, -1);
+            SocialInteractionsScreen.drawTextWithShadow(matrices, this.client.textRenderer, this.serverLabel, this.getSearchBoxX() + 8, 35, -1);
         }
         if (!this.playerList.isEmpty()) {
             this.playerList.render(matrices, mouseX, mouseY, delta);
         } else if (!this.searchBox.getText().isEmpty()) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (78 + this.method_31361()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_SEARCH_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.HIDDEN) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (78 + this.method_31361()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_HIDDEN_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
         } else if (this.currentTab == Tab.BLOCKED) {
-            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (78 + this.method_31361()) / 2, -1);
+            SocialInteractionsScreen.drawCenteredText(matrices, this.client.textRenderer, EMPTY_BLOCKED_TEXT, this.width / 2, (78 + this.getPlayerListBottom()) / 2, -1);
         }
         if (!this.searchBox.isFocused() && this.searchBox.getText().isEmpty()) {
             SocialInteractionsScreen.drawTextWithShadow(matrices, this.client.textRenderer, SEARCH_TEXT, this.searchBox.x, this.searchBox.y, -1);
@@ -279,7 +284,7 @@ extends Screen {
             } else if (serverInfo != null) {
                 string = serverInfo.name;
             }
-            this.serverLabel = i > 1 ? new TranslatableText("gui.socialInteractions.server_label.multiple", string, i) : new TranslatableText("gui.socialInteractions.server_label.single", string, i);
+            this.serverLabel = i > 1 ? Text.translatable("gui.socialInteractions.server_label.multiple", string, i) : Text.translatable("gui.socialInteractions.server_label.single", string, i);
             this.playerCount = i;
         }
     }

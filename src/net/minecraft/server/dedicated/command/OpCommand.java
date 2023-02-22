@@ -25,10 +25,10 @@ import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class OpCommand {
-    private static final SimpleCommandExceptionType ALREADY_OPPED_EXCEPTION = new SimpleCommandExceptionType((Message)new TranslatableText("commands.op.failed"));
+    private static final SimpleCommandExceptionType ALREADY_OPPED_EXCEPTION = new SimpleCommandExceptionType((Message)Text.translatable("commands.op.failed"));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)CommandManager.literal("op").requires(source -> source.hasPermissionLevel(3))).then(CommandManager.argument("targets", GameProfileArgumentType.gameProfile()).suggests((context, builder) -> {
@@ -44,7 +44,7 @@ public class OpCommand {
             if (playerManager.isOperator(gameProfile)) continue;
             playerManager.addToOperators(gameProfile);
             ++i;
-            source.sendFeedback(new TranslatableText("commands.op.success", targets.iterator().next().getName()), true);
+            source.sendFeedback(Text.translatable("commands.op.success", targets.iterator().next().getName()), true);
         }
         if (i == 0) {
             throw ALREADY_OPPED_EXCEPTION.create();

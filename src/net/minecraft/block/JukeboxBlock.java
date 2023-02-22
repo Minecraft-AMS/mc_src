@@ -12,7 +12,10 @@ import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.JukeboxBlockEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -30,6 +33,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class JukeboxBlock
@@ -55,19 +59,23 @@ extends BlockWithEntity {
         if (state.get(HAS_RECORD).booleanValue()) {
             this.removeRecord(world, pos);
             state = (BlockState)state.with(HAS_RECORD, false);
+            world.emitGameEvent(GameEvent.JUKEBOX_STOP_PLAY, pos, GameEvent.Emitter.of(state));
             world.setBlockState(pos, state, 2);
+            world.emitGameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Emitter.of(player, state));
             return ActionResult.success(world.isClient);
         }
         return ActionResult.PASS;
     }
 
-    public void setRecord(WorldAccess world, BlockPos pos, BlockState state, ItemStack stack) {
+    public void setRecord(@Nullable Entity user, WorldAccess world, BlockPos pos, BlockState state, ItemStack stack) {
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        if (!(blockEntity instanceof JukeboxBlockEntity)) {
-            return;
+        if (blockEntity instanceof JukeboxBlockEntity) {
+            JukeboxBlockEntity jukeboxBlockEntity = (JukeboxBlockEntity)blockEntity;
+            jukeboxBlockEntity.setRecord(stack.copy());
+            jukeboxBlockEntity.startPlaying();
+            world.setBlockState(pos, (BlockState)state.with(HAS_RECORD, true), 2);
+            world.emitGameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Emitter.of(user, state));
         }
-        ((JukeboxBlockEntity)blockEntity).setRecord(stack.copy());
-        world.setBlockState(pos, (BlockState)state.with(HAS_RECORD, true), 2);
     }
 
     private void removeRecord(World world, BlockPos pos) {
@@ -132,6 +140,15 @@ extends BlockWithEntity {
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(HAS_RECORD);
+    }
+
+    @Override
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        if (state.get(HAS_RECORD).booleanValue()) {
+            return JukeboxBlock.checkType(type, BlockEntityType.JUKEBOX, JukeboxBlockEntity::tick);
+        }
+        return null;
     }
 }
 

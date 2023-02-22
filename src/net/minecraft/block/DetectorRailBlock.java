@@ -4,7 +4,6 @@
 package net.minecraft.block;
 
 import java.util.List;
-import java.util.Random;
 import java.util.function.Predicate;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.AbstractRailBlock;
@@ -29,6 +28,7 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
@@ -118,7 +118,7 @@ extends AbstractRailBlock {
         List<BlockPos> list = railPlacementHelper.getNeighbors();
         for (BlockPos blockPos : list) {
             BlockState blockState = world.getBlockState(blockPos);
-            blockState.neighborUpdate(world, blockPos, blockState.getBlock(), pos, false);
+            world.updateNeighbor(blockState, blockPos, blockState.getBlock(), pos, false);
         }
     }
 

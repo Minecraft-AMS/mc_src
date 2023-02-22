@@ -6,7 +6,6 @@
  */
 package net.minecraft.block;
 
-import java.util.Random;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -18,6 +17,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
@@ -96,10 +96,10 @@ extends Block {
         }
         if (!bl2 && bl) {
             this.playDepressSound(world, pos);
-            world.emitGameEvent(entity, GameEvent.BLOCK_UNPRESS, pos);
+            world.emitGameEvent(entity, GameEvent.BLOCK_DEACTIVATE, pos);
         } else if (bl2 && !bl) {
             this.playPressSound(world, pos);
-            world.emitGameEvent(entity, GameEvent.BLOCK_PRESS, pos);
+            world.emitGameEvent(entity, GameEvent.BLOCK_ACTIVATE, pos);
         }
         if (bl2) {
             world.createAndScheduleBlockTick(new BlockPos(pos), this, this.getTickRate());

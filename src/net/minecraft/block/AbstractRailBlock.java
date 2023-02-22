@@ -77,13 +77,13 @@ implements Waterloggable {
     protected BlockState updateCurves(BlockState state, World world, BlockPos pos, boolean notify) {
         state = this.updateBlockState(world, pos, state, true);
         if (this.forbidCurves) {
-            state.neighborUpdate(world, pos, this, pos, notify);
+            world.updateNeighbor(state, pos, this, pos, notify);
         }
         return state;
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         if (world.isClient || !world.getBlockState(pos).isOf(this)) {
             return;
         }
@@ -92,7 +92,7 @@ implements Waterloggable {
             AbstractRailBlock.dropStacks(state, world, pos);
             world.removeBlock(pos, notify);
         } else {
-            this.updateBlockState(state, world, pos, block);
+            this.updateBlockState(state, world, pos, sourceBlock);
         }
     }
 

@@ -9,7 +9,6 @@ package net.minecraft.block;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.minecraft.block.AbstractBlock;
@@ -17,6 +16,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ConnectingBlock;
+import net.minecraft.block.MultifaceGrowthBlock;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.server.world.ServerWorld;
@@ -27,6 +27,7 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -121,8 +122,7 @@ extends Block {
     }
 
     public static boolean shouldConnectTo(BlockView world, BlockPos pos, Direction direction) {
-        BlockState blockState = world.getBlockState(pos);
-        return Block.isFaceFullSquare(blockState.getCollisionShape(world, pos), direction.getOpposite());
+        return MultifaceGrowthBlock.canGrowOn(world, direction, pos, world.getBlockState(pos));
     }
 
     private BlockState getPlacementShape(BlockState state, BlockView world, BlockPos pos) {

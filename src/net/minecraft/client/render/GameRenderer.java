@@ -28,7 +28,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -89,6 +88,7 @@ import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameMode;
 import org.jetbrains.annotations.Nullable;
@@ -104,7 +104,7 @@ AutoCloseable {
     public static final float CAMERA_DEPTH = 0.05f;
     private final MinecraftClient client;
     private final ResourceManager resourceManager;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private float viewDistance;
     public final HeldItemRenderer firstPersonRenderer;
     private final MapRenderer mapRenderer;
@@ -193,6 +193,8 @@ AutoCloseable {
     @Nullable
     private static Shader renderTypeEntityTranslucentShader;
     @Nullable
+    private static Shader renderTypeEntityTranslucentEmissiveShader;
+    @Nullable
     private static Shader renderTypeEntitySmoothCutoutShader;
     @Nullable
     private static Shader renderTypeBeaconBeamShader;
@@ -249,10 +251,10 @@ AutoCloseable {
     @Nullable
     private static Shader renderTypeCrumblingShader;
 
-    public GameRenderer(MinecraftClient client, ResourceManager resourceManager, BufferBuilderStorage buffers) {
+    public GameRenderer(MinecraftClient client, HeldItemRenderer heldItemRenderer, ResourceManager resourceManager, BufferBuilderStorage buffers) {
         this.client = client;
         this.resourceManager = resourceManager;
-        this.firstPersonRenderer = client.getHeldItemRenderer();
+        this.firstPersonRenderer = heldItemRenderer;
         this.mapRenderer = new MapRenderer(client.getTextureManager());
         this.lightmapTextureManager = new LightmapTextureManager(this, client);
         this.buffers = buffers;
@@ -478,6 +480,9 @@ AutoCloseable {
             list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_translucent", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
                 renderTypeEntityTranslucentShader = shader;
             }));
+            list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_translucent_emissive", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
+                renderTypeEntityTranslucentEmissiveShader = shader;
+            }));
             list2.add(Pair.of((Object)new Shader(manager, "rendertype_entity_smooth_cutout", VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL), shader -> {
                 renderTypeEntitySmoothCutoutShader = shader;
             }));
@@ -660,7 +665,7 @@ AutoCloseable {
         Vec3d vec3d3 = vec3d.add(vec3d2.x * d, vec3d2.y * d, vec3d2.z * d);
         float f = 1.0f;
         Box box = entity2.getBoundingBox().stretch(vec3d2.multiply(d)).expand(1.0, 1.0, 1.0);
-        EntityHitResult entityHitResult = ProjectileUtil.raycast(entity2, vec3d, vec3d3, box, entity -> !entity.isSpectator() && entity.collides(), e);
+        EntityHitResult entityHitResult = ProjectileUtil.raycast(entity2, vec3d, vec3d3, box, entity -> !entity.isSpectator() && entity.canHit(), e);
         if (entityHitResult != null) {
             Entity entity22 = entityHitResult.getEntity();
             Vec3d vec3d4 = entityHitResult.getPos();
@@ -700,7 +705,7 @@ AutoCloseable {
         }
         double d = 70.0;
         if (changingFov) {
-            d = this.client.options.fov;
+            d = this.client.options.getFov().getValue().intValue();
             d *= (double)MathHelper.lerp(tickDelta, this.lastFovMultiplier, this.fovMultiplier);
         }
         if (camera.getFocusedEntity() instanceof LivingEntity && ((LivingEntity)camera.getFocusedEntity()).isDead()) {
@@ -708,7 +713,7 @@ AutoCloseable {
             d /= (double)((1.0f - 500.0f / (f + 500.0f)) * 2.0f + 1.0f);
         }
         if ((cameraSubmersionType = camera.getSubmersionType()) == CameraSubmersionType.LAVA || cameraSubmersionType == CameraSubmersionType.WATER) {
-            d *= (double)MathHelper.lerp(this.client.options.fovEffectScale, 1.0f, 0.85714287f);
+            d *= MathHelper.lerp(this.client.options.getFovEffectScale().getValue(), 1.0, 0.8571428656578064);
         }
         return d;
     }
@@ -768,7 +773,7 @@ AutoCloseable {
         entry.getNormalMatrix().loadIdentity();
         matrices.push();
         this.bobViewWhenHurt(matrices, tickDelta);
-        if (this.client.options.bobView) {
+        if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrices, tickDelta);
         }
         boolean bl2 = bl = this.client.getCameraEntity() instanceof LivingEntity && ((LivingEntity)this.client.getCameraEntity()).isSleeping();
@@ -782,7 +787,7 @@ AutoCloseable {
             InGameOverlayRenderer.renderOverlays(this.client, matrices);
             this.bobViewWhenHurt(matrices, tickDelta);
         }
-        if (this.client.options.bobView) {
+        if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrices, tickDelta);
         }
     }
@@ -815,7 +820,7 @@ AutoCloseable {
     }
 
     public void render(float tickDelta, long startTime, boolean tick) {
-        if (this.client.isWindowFocused() || !this.client.options.pauseOnLostFocus || this.client.options.touchscreen && this.client.mouse.wasRightButtonClicked()) {
+        if (this.client.isWindowFocused() || !this.client.options.pauseOnLostFocus || this.client.options.getTouchscreen().getValue().booleanValue() && this.client.mouse.wasRightButtonClicked()) {
             this.lastWindowFocusedTime = Util.getMeasuringTimeMs();
         } else if (Util.getMeasuringTimeMs() - this.lastWindowFocusedTime > 500L) {
             this.client.openPauseMenu(false);
@@ -851,10 +856,13 @@ AutoCloseable {
         DiffuseLighting.enableGuiDepthLighting();
         MatrixStack matrixStack2 = new MatrixStack();
         if (tick && this.client.world != null) {
-            float f;
             this.client.getProfiler().swap("gui");
-            if (this.client.player != null && (f = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength)) > 0.0f && this.client.player.hasStatusEffect(StatusEffects.NAUSEA) && this.client.options.distortionEffectScale < 1.0f) {
-                this.renderNausea(f * (1.0f - this.client.options.distortionEffectScale));
+            if (this.client.player != null) {
+                float f = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength);
+                float g = this.client.options.getDistortionEffectScale().getValue().floatValue();
+                if (f > 0.0f && this.client.player.hasStatusEffect(StatusEffects.NAUSEA) && g < 1.0f) {
+                    this.renderNausea(f * (1.0f - g));
+                }
             }
             if (!this.client.options.hudHidden || this.client.currentScreen != null) {
                 this.renderFloatingItem(this.client.getWindow().getScaledWidth(), this.client.getWindow().getScaledHeight(), tickDelta);
@@ -977,7 +985,6 @@ AutoCloseable {
     }
 
     public void renderWorld(float tickDelta, long limitTime, MatrixStack matrices) {
-        float f;
         this.lightmapTextureManager.update(tickDelta);
         if (this.client.getCameraEntity() == null) {
             this.client.setCameraEntity(this.client.player);
@@ -987,23 +994,25 @@ AutoCloseable {
         boolean bl = this.shouldRenderBlockOutline();
         this.client.getProfiler().swap("camera");
         Camera camera = this.camera;
-        this.viewDistance = this.client.options.getViewDistance() * 16;
+        this.viewDistance = this.client.options.getClampedViewDistance() * 16;
         MatrixStack matrixStack = new MatrixStack();
         double d = this.getFov(camera, tickDelta, true);
         matrixStack.peek().getPositionMatrix().multiply(this.getBasicProjectionMatrix(d));
         this.bobViewWhenHurt(matrixStack, tickDelta);
-        if (this.client.options.bobView) {
+        if (this.client.options.getBobView().getValue().booleanValue()) {
             this.bobView(matrixStack, tickDelta);
         }
-        if ((f = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength) * (this.client.options.distortionEffectScale * this.client.options.distortionEffectScale)) > 0.0f) {
+        float f = this.client.options.getDistortionEffectScale().getValue().floatValue();
+        float g = MathHelper.lerp(tickDelta, this.client.player.lastNauseaStrength, this.client.player.nextNauseaStrength) * (f * f);
+        if (g > 0.0f) {
             int i = this.client.player.hasStatusEffect(StatusEffects.NAUSEA) ? 7 : 20;
-            float g = 5.0f / (f * f + 5.0f) - f * 0.04f;
-            g *= g;
+            float h = 5.0f / (g * g + 5.0f) - g * 0.04f;
+            h *= h;
             Vec3f vec3f = new Vec3f(0.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f, MathHelper.SQUARE_ROOT_OF_TWO / 2.0f);
             matrixStack.multiply(vec3f.getDegreesQuaternion(((float)this.ticks + tickDelta) * (float)i));
-            matrixStack.scale(1.0f / g, 1.0f, 1.0f);
-            float h = -((float)this.ticks + tickDelta) * (float)i;
-            matrixStack.multiply(vec3f.getDegreesQuaternion(h));
+            matrixStack.scale(1.0f / h, 1.0f, 1.0f);
+            float j = -((float)this.ticks + tickDelta) * (float)i;
+            matrixStack.multiply(vec3f.getDegreesQuaternion(j));
         }
         Matrix4f matrix4f = matrixStack.peek().getPositionMatrix();
         this.loadProjectionMatrix(matrix4f);
@@ -1014,7 +1023,7 @@ AutoCloseable {
         if (matrix3f.invert()) {
             RenderSystem.setInverseViewRotationMatrix(matrix3f);
         }
-        this.client.worldRenderer.setupFrustum(matrices, camera.getPos(), this.getBasicProjectionMatrix(Math.max(d, this.client.options.fov)));
+        this.client.worldRenderer.setupFrustum(matrices, camera.getPos(), this.getBasicProjectionMatrix(Math.max(d, (double)this.client.options.getFov().getValue().intValue())));
         this.client.worldRenderer.render(matrices, tickDelta, limitTime, bl, camera, this, this.lightmapTextureManager, matrix4f);
         this.client.getProfiler().swap("hand");
         if (this.renderHand) {
@@ -1257,6 +1266,11 @@ AutoCloseable {
     @Nullable
     public static Shader getRenderTypeEntityTranslucentShader() {
         return renderTypeEntityTranslucentShader;
+    }
+
+    @Nullable
+    public static Shader getRenderTypeEntityTranslucentEmissiveShader() {
+        return renderTypeEntityTranslucentEmissiveShader;
     }
 
     @Nullable

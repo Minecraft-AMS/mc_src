@@ -96,6 +96,7 @@ public abstract class RenderPhase {
     protected static final Shader ITEM_ENTITY_TRANSLUCENT_CULL_SHADER = new Shader(GameRenderer::getRenderTypeItemEntityTranslucentCullShader);
     protected static final Shader ENTITY_TRANSLUCENT_CULL_SHADER = new Shader(GameRenderer::getRenderTypeEntityTranslucentCullShader);
     protected static final Shader ENTITY_TRANSLUCENT_SHADER = new Shader(GameRenderer::getRenderTypeEntityTranslucentShader);
+    protected static final Shader ENTITY_TRANSLUCENT_EMISSIVE_SHADER = new Shader(GameRenderer::getRenderTypeEntityTranslucentEmissiveShader);
     protected static final Shader ENTITY_SMOOTH_CUTOUT_SHADER = new Shader(GameRenderer::getRenderTypeEntitySmoothCutoutShader);
     protected static final Shader BEACON_BEAM_SHADER = new Shader(GameRenderer::getRenderTypeBeaconBeamShader);
     protected static final Shader ENTITY_DECAL_SHADER = new Shader(GameRenderer::getRenderTypeEntityDecalShader);
@@ -499,16 +500,16 @@ public abstract class RenderPhase {
     extends TextureBase {
         private final Optional<Identifier> id;
 
-        Textures(ImmutableList<Triple<Identifier, Boolean, Boolean>> immutableList) {
+        Textures(ImmutableList<Triple<Identifier, Boolean, Boolean>> textures) {
             super(() -> {
                 int i = 0;
-                for (Triple triple : immutableList) {
+                for (Triple triple : textures) {
                     TextureManager textureManager = MinecraftClient.getInstance().getTextureManager();
                     textureManager.getTexture((Identifier)triple.getLeft()).setFilter((Boolean)triple.getMiddle(), (Boolean)triple.getRight());
                     RenderSystem.setShaderTexture(i++, (Identifier)triple.getLeft());
                 }
             }, () -> {});
-            this.id = immutableList.stream().findFirst().map(Triple::getLeft);
+            this.id = textures.stream().findFirst().map(Triple::getLeft);
         }
 
         @Override

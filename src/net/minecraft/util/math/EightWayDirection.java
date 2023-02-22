@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 import java.util.Arrays;
 import java.util.Set;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3i;
 
 public final class EightWayDirection
 extends Enum<EightWayDirection> {
@@ -22,6 +23,7 @@ extends Enum<EightWayDirection> {
     public static final /* enum */ EightWayDirection WEST = new EightWayDirection(Direction.WEST);
     public static final /* enum */ EightWayDirection NORTH_WEST = new EightWayDirection(Direction.NORTH, Direction.WEST);
     private final Set<Direction> directions;
+    private final Vec3i offset;
     private static final /* synthetic */ EightWayDirection[] field_11071;
 
     public static EightWayDirection[] values() {
@@ -34,10 +36,22 @@ extends Enum<EightWayDirection> {
 
     private EightWayDirection(Direction ... directions) {
         this.directions = Sets.immutableEnumSet(Arrays.asList(directions));
+        this.offset = new Vec3i(0, 0, 0);
+        for (Direction direction : directions) {
+            this.offset.setX(this.offset.getX() + direction.getOffsetX()).setY(this.offset.getY() + direction.getOffsetY()).setZ(this.offset.getZ() + direction.getOffsetZ());
+        }
     }
 
     public Set<Direction> getDirections() {
         return this.directions;
+    }
+
+    public int getOffsetX() {
+        return this.offset.getX();
+    }
+
+    public int getOffsetZ() {
+        return this.offset.getZ();
     }
 
     private static /* synthetic */ EightWayDirection[] method_36935() {

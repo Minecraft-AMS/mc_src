@@ -21,8 +21,8 @@ import net.minecraft.datafixer.TypeReferences;
 
 public class StructureReferenceFix
 extends DataFix {
-    public StructureReferenceFix(Schema outputSchema, boolean changesType) {
-        super(outputSchema, changesType);
+    public StructureReferenceFix(Schema schema, boolean bl) {
+        super(schema, bl);
     }
 
     protected TypeRewriteRule makeRule() {

@@ -10,8 +10,8 @@ package net.minecraft.structure.processor;
 import com.mojang.serialization.Codec;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
-import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
+import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.math.BlockPos;
@@ -25,13 +25,13 @@ extends StructureProcessor {
 
     @Override
     @Nullable
-    public Structure.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, Structure.StructureBlockInfo structureBlockInfo, Structure.StructureBlockInfo structureBlockInfo2, StructurePlacementData data) {
-        BlockPos blockPos = structureBlockInfo2.pos;
+    public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot, StructureTemplate.StructureBlockInfo originalBlockInfo, StructureTemplate.StructureBlockInfo currentBlockInfo, StructurePlacementData data) {
+        BlockPos blockPos = currentBlockInfo.pos;
         boolean bl = world.getBlockState(blockPos).isOf(Blocks.LAVA);
-        if (bl && !Block.isShapeFullCube(structureBlockInfo2.state.getOutlineShape(world, blockPos))) {
-            return new Structure.StructureBlockInfo(blockPos, Blocks.LAVA.getDefaultState(), structureBlockInfo2.nbt);
+        if (bl && !Block.isShapeFullCube(currentBlockInfo.state.getOutlineShape(world, blockPos))) {
+            return new StructureTemplate.StructureBlockInfo(blockPos, Blocks.LAVA.getDefaultState(), currentBlockInfo.nbt);
         }
-        return structureBlockInfo2;
+        return currentBlockInfo;
     }
 
     @Override

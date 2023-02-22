@@ -6,13 +6,15 @@
  */
 package net.minecraft.util.math;
 
-import java.util.Random;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.random.Random;
 import org.apache.commons.lang3.math.NumberUtils;
 
 public class MathHelper {
@@ -35,7 +37,7 @@ public class MathHelper {
             sineTable[i] = (float)Math.sin((double)i * Math.PI * 2.0 / 65536.0);
         }
     });
-    private static final Random RANDOM = new Random();
+    private static final Random RANDOM = Random.createThreadSafe();
     private static final int[] MULTIPLY_DE_BRUIJN_BIT_POSITION = new int[]{0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9};
     private static final double field_29857 = 0.16666666666666666;
     private static final int field_29858 = 8;
@@ -669,6 +671,10 @@ public class MathHelper {
         return MathHelper.lerp(deltaZ, MathHelper.lerp2(deltaX, deltaY, x0y0z0, x1y0z0, x0y1z0, x1y1z0), MathHelper.lerp2(deltaX, deltaY, x0y0z1, x1y0z1, x0y1z1, x1y1z1));
     }
 
+    public static float method_41303(float f, float g, float h, float i, float j) {
+        return 0.5f * (2.0f * h + (i - g) * f + (2.0f * g - 5.0f * h + 4.0f * i - j) * f * f + (3.0f * h - g - 3.0f * i + j) * f * f * f);
+    }
+
     public static double perlinFade(double value) {
         return value * value * value * (value * (value * 6.0 - 15.0) + 10.0);
     }
@@ -734,6 +740,10 @@ public class MathHelper {
         return n * n;
     }
 
+    public static float magnitude(float n) {
+        return n * n * n;
+    }
+
     public static double clampedLerpFromProgress(double lerpValue, double lerpStart, double lerpEnd, double start, double end) {
         return MathHelper.clampedLerp(start, end, MathHelper.getLerpProgress(lerpValue, lerpStart, lerpEnd));
     }
@@ -751,7 +761,7 @@ public class MathHelper {
     }
 
     public static double method_34957(double d) {
-        return d + (2.0 * new Random(MathHelper.floor(d * 3000.0)).nextDouble() - 1.0) * 1.0E-7 / 2.0;
+        return d + (2.0 * Random.create(MathHelper.floor(d * 3000.0)).nextDouble() - 1.0) * 1.0E-7 / 2.0;
     }
 
     public static int roundUpToMultiple(int value, int divisor) {
@@ -792,6 +802,36 @@ public class MathHelper {
 
     public static int roundDownToMultiple(double a, int b) {
         return MathHelper.floor(a / (double)b) * b;
+    }
+
+    public static IntStream stream(int seed, int lowerBound, int upperBound) {
+        return MathHelper.stream(seed, lowerBound, upperBound, 1);
+    }
+
+    public static IntStream stream(int seed, int lowerBound, int upperBound, int steps) {
+        if (lowerBound > upperBound) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "upperbound %d expected to be > lowerBound %d", upperBound, lowerBound));
+        }
+        if (steps < 1) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "steps expected to be >= 1, was %d", steps));
+        }
+        if (seed < lowerBound || seed > upperBound) {
+            return IntStream.empty();
+        }
+        return IntStream.iterate(seed, i -> {
+            int m = Math.abs(seed - i);
+            return seed - m >= lowerBound || seed + m <= upperBound;
+        }, i -> {
+            int o;
+            boolean bl2;
+            boolean bl = i <= seed;
+            int n = Math.abs(seed - i);
+            boolean bl3 = bl2 = seed + n + steps <= upperBound;
+            if (!(bl && bl2 || (o = seed - n - (bl ? steps : 0)) < lowerBound)) {
+                return o;
+            }
+            return seed + n + steps;
+        });
     }
 
     static {

@@ -7,7 +7,6 @@
 package net.minecraft.fluid;
 
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -27,6 +26,7 @@ import net.minecraft.state.StateManager;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -131,7 +131,7 @@ extends FlowableFluid {
 
     @Override
     public int getFlowSpeed(WorldView world) {
-        return world.getDimension().isUltrawarm() ? 4 : 2;
+        return world.getDimension().ultrawarm() ? 4 : 2;
     }
 
     @Override
@@ -146,7 +146,7 @@ extends FlowableFluid {
 
     @Override
     public int getLevelDecreasePerBlock(WorldView world) {
-        return world.getDimension().isUltrawarm() ? 1 : 2;
+        return world.getDimension().ultrawarm() ? 1 : 2;
     }
 
     @Override
@@ -156,7 +156,7 @@ extends FlowableFluid {
 
     @Override
     public int getTickRate(WorldView world) {
-        return world.getDimension().isUltrawarm() ? 10 : 30;
+        return world.getDimension().ultrawarm() ? 10 : 30;
     }
 
     @Override

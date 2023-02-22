@@ -7,6 +7,7 @@
  *  com.mojang.logging.LogUtils
  *  com.mojang.serialization.DataResult
  *  com.mojang.serialization.JsonOps
+ *  com.mojang.serialization.Lifecycle
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
  *  org.apache.commons.lang3.mutable.MutableObject
@@ -20,8 +21,10 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.Lifecycle;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,9 +43,8 @@ import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.SaveLevelScreen;
+import net.minecraft.client.gui.screen.MessageScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.screen.pack.PackScreen;
 import net.minecraft.client.gui.screen.world.EditGameRulesScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
@@ -53,29 +55,32 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.GeneratorType;
+import net.minecraft.client.world.GeneratorOptionsHolder;
 import net.minecraft.resource.DataPackSettings;
 import net.minecraft.resource.FileResourcePackProvider;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackSource;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.resource.VanillaDataPackProvider;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.server.SaveLoader;
+import net.minecraft.server.SaveLoading;
 import net.minecraft.server.command.CommandManager;
-import net.minecraft.text.LiteralText;
+import net.minecraft.server.integrated.IntegratedServerLoader;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.FileNameUtil;
 import net.minecraft.util.Util;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.dynamic.RegistryOps;
 import net.minecraft.util.registry.DynamicRegistryManager;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.SaveProperties;
 import net.minecraft.world.gen.GeneratorOptions;
+import net.minecraft.world.gen.WorldPresets;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import net.minecraft.world.level.storage.LevelStorage;
@@ -88,12 +93,13 @@ public class CreateWorldScreen
 extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String TEMP_DIR_PREFIX = "mcworld-";
-    private static final Text GAME_MODE_TEXT = new TranslatableText("selectWorld.gameMode");
-    private static final Text ENTER_SEED_TEXT = new TranslatableText("selectWorld.enterSeed");
-    private static final Text SEED_INFO_TEXT = new TranslatableText("selectWorld.seedInfo");
-    private static final Text ENTER_NAME_TEXT = new TranslatableText("selectWorld.enterName");
-    private static final Text RESULT_FOLDER_TEXT = new TranslatableText("selectWorld.resultFolder");
-    private static final Text ALLOW_COMMANDS_INFO_TEXT = new TranslatableText("selectWorld.allowCommands.info");
+    private static final Text GAME_MODE_TEXT = Text.translatable("selectWorld.gameMode");
+    private static final Text ENTER_SEED_TEXT = Text.translatable("selectWorld.enterSeed");
+    private static final Text SEED_INFO_TEXT = Text.translatable("selectWorld.seedInfo");
+    private static final Text ENTER_NAME_TEXT = Text.translatable("selectWorld.enterName");
+    private static final Text RESULT_FOLDER_TEXT = Text.translatable("selectWorld.resultFolder");
+    private static final Text ALLOW_COMMANDS_INFO_TEXT = Text.translatable("selectWorld.allowCommands.info");
+    private static final Text PREPARING_TEXT = Text.translatable("createWorld.preparing");
     @Nullable
     private final Screen parent;
     private TextFieldWidget levelNameField;
@@ -124,9 +130,20 @@ extends Screen {
     private GameRules gameRules = new GameRules();
     public final MoreOptionsDialog moreOptionsDialog;
 
-    public static CreateWorldScreen create(@Nullable Screen parent) {
-        DynamicRegistryManager.Immutable immutable = DynamicRegistryManager.BUILTIN.get();
-        return new CreateWorldScreen(parent, DataPackSettings.SAFE_MODE, new MoreOptionsDialog(immutable, GeneratorOptions.getDefaultOptions(immutable), Optional.of(GeneratorType.DEFAULT), OptionalLong.empty()));
+    public static void create(MinecraftClient client, @Nullable Screen parent) {
+        CreateWorldScreen.showMessage(client, PREPARING_TEXT);
+        ResourcePackManager resourcePackManager = new ResourcePackManager(ResourceType.SERVER_DATA, new VanillaDataPackProvider());
+        SaveLoading.ServerConfig serverConfig = CreateWorldScreen.createServerConfig(resourcePackManager, DataPackSettings.SAFE_MODE);
+        CompletableFuture<GeneratorOptionsHolder> completableFuture = SaveLoading.load(serverConfig, (resourceManager, dataPackSettings) -> {
+            DynamicRegistryManager.Immutable immutable = DynamicRegistryManager.createAndLoad().toImmutable();
+            GeneratorOptions generatorOptions = WorldPresets.createDefaultOptions(immutable);
+            return Pair.of((Object)generatorOptions, (Object)immutable);
+        }, (resourceManager, dataPackContents, dynamicRegistryManager, generatorOptions) -> {
+            resourceManager.close();
+            return new GeneratorOptionsHolder((GeneratorOptions)generatorOptions, Lifecycle.stable(), dynamicRegistryManager, dataPackContents);
+        }, Util.getMainWorkerExecutor(), client);
+        client.runTasks(completableFuture::isDone);
+        client.setScreen(new CreateWorldScreen(parent, DataPackSettings.SAFE_MODE, new MoreOptionsDialog(completableFuture.join(), Optional.of(WorldPresets.DEFAULT), OptionalLong.empty())));
     }
 
     public static CreateWorldScreen create(@Nullable Screen parent, SaveLoader source, @Nullable Path path) {
@@ -134,8 +151,9 @@ extends Screen {
         LevelInfo levelInfo = saveProperties.getLevelInfo();
         GeneratorOptions generatorOptions = saveProperties.getGeneratorOptions();
         DynamicRegistryManager.Immutable immutable = source.dynamicRegistryManager();
+        GeneratorOptionsHolder generatorOptionsHolder = new GeneratorOptionsHolder(generatorOptions, saveProperties.getLifecycle(), immutable, source.dataPackContents());
         DataPackSettings dataPackSettings = levelInfo.getDataPackSettings();
-        CreateWorldScreen createWorldScreen = new CreateWorldScreen(parent, dataPackSettings, new MoreOptionsDialog(immutable, generatorOptions, GeneratorType.fromGeneratorOptions(generatorOptions), OptionalLong.of(generatorOptions.getSeed())));
+        CreateWorldScreen createWorldScreen = new CreateWorldScreen(parent, dataPackSettings, new MoreOptionsDialog(generatorOptionsHolder, WorldPresets.getWorldPreset(generatorOptions), OptionalLong.of(generatorOptions.getSeed())));
         createWorldScreen.levelName = levelInfo.getLevelName();
         createWorldScreen.cheatsEnabled = levelInfo.areCommandsAllowed();
         createWorldScreen.tweakedCheats = true;
@@ -153,7 +171,7 @@ extends Screen {
     }
 
     private CreateWorldScreen(@Nullable Screen parent, DataPackSettings dataPackSettings, MoreOptionsDialog moreOptionsDialog) {
-        super(new TranslatableText("selectWorld.create"));
+        super(Text.translatable("selectWorld.create"));
         this.parent = parent;
         this.levelName = I18n.translate("selectWorld.newWorld", new Object[0]);
         this.dataPackSettings = dataPackSettings;
@@ -169,11 +187,11 @@ extends Screen {
     @Override
     protected void init() {
         this.client.keyboard.setRepeatEvents(true);
-        this.levelNameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 60, 200, 20, (Text)new TranslatableText("selectWorld.enterName")){
+        this.levelNameField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, 60, 200, 20, (Text)Text.translatable("selectWorld.enterName")){
 
             @Override
             protected MutableText getNarrationMessage() {
-                return ScreenTexts.joinSentences(super.getNarrationMessage(), new TranslatableText("selectWorld.resultFolder")).append(" ").append(CreateWorldScreen.this.saveDirectoryName);
+                return ScreenTexts.joinSentences(super.getNarrationMessage(), Text.translatable("selectWorld.resultFolder")).append(" ").append(CreateWorldScreen.this.saveDirectoryName);
             }
         };
         this.levelNameField.setText(this.levelName);
@@ -186,23 +204,23 @@ extends Screen {
         int i = this.width / 2 - 155;
         int j = this.width / 2 + 5;
         this.gameModeSwitchButton = this.addDrawableChild((Element & Drawable)CyclingButtonWidget.builder(Mode::asText).values((Mode[])new Mode[]{Mode.SURVIVAL, Mode.HARDCORE, Mode.CREATIVE}).initially(this.currentMode).narration(button -> ClickableWidget.getNarrationMessage(button.getMessage()).append(ScreenTexts.SENTENCE_SEPARATOR).append(this.firstGameModeDescriptionLine).append(" ").append(this.secondGameModeDescriptionLine)).build(i, 100, 150, 20, GAME_MODE_TEXT, (button, mode) -> this.tweakDefaultsTo((Mode)((Object)mode))));
-        this.difficultyButton = this.addDrawableChild((Element & Drawable)CyclingButtonWidget.builder(Difficulty::getTranslatableName).values((Difficulty[])Difficulty.values()).initially(this.getDifficulty()).build(j, 100, 150, 20, new TranslatableText("options.difficulty"), (button, difficulty) -> {
+        this.difficultyButton = this.addDrawableChild((Element & Drawable)CyclingButtonWidget.builder(Difficulty::getTranslatableName).values((Difficulty[])Difficulty.values()).initially(this.getDifficulty()).build(j, 100, 150, 20, Text.translatable("options.difficulty"), (button, difficulty) -> {
             this.currentDifficulty = difficulty;
         }));
-        this.enableCheatsButton = this.addDrawableChild((Element & Drawable)CyclingButtonWidget.onOffBuilder(this.cheatsEnabled && !this.hardcore).narration(button -> ScreenTexts.joinSentences(button.getGenericNarrationMessage(), new TranslatableText("selectWorld.allowCommands.info"))).build(i, 151, 150, 20, new TranslatableText("selectWorld.allowCommands"), (button, cheatsEnabled) -> {
+        this.enableCheatsButton = this.addDrawableChild((Element & Drawable)CyclingButtonWidget.onOffBuilder(this.cheatsEnabled && !this.hardcore).narration(button -> ScreenTexts.joinSentences(button.getGenericNarrationMessage(), Text.translatable("selectWorld.allowCommands.info"))).build(i, 151, 150, 20, Text.translatable("selectWorld.allowCommands"), (button, cheatsEnabled) -> {
             this.tweakedCheats = true;
             this.cheatsEnabled = cheatsEnabled;
         }));
-        this.dataPacksButton = this.addDrawableChild(new ButtonWidget(j, 151, 150, 20, new TranslatableText("selectWorld.dataPacks"), button -> this.openPackScreen()));
-        this.gameRulesButton = this.addDrawableChild(new ButtonWidget(i, 185, 150, 20, new TranslatableText("selectWorld.gameRules"), button -> this.client.setScreen(new EditGameRulesScreen(this.gameRules.copy(), optionalGameRules -> {
+        this.dataPacksButton = this.addDrawableChild(new ButtonWidget(j, 151, 150, 20, Text.translatable("selectWorld.dataPacks"), button -> this.openPackScreen()));
+        this.gameRulesButton = this.addDrawableChild(new ButtonWidget(i, 185, 150, 20, Text.translatable("selectWorld.gameRules"), button -> this.client.setScreen(new EditGameRulesScreen(this.gameRules.copy(), optionalGameRules -> {
             this.client.setScreen(this);
             optionalGameRules.ifPresent(gameRules -> {
                 this.gameRules = gameRules;
             });
         }))));
         this.moreOptionsDialog.init(this, this.client, this.textRenderer);
-        this.moreOptionsButton = this.addDrawableChild(new ButtonWidget(j, 185, 150, 20, new TranslatableText("selectWorld.moreWorldOptions"), button -> this.toggleMoreOptions()));
-        this.createLevelButton = this.addDrawableChild(new ButtonWidget(i, this.height - 28, 150, 20, new TranslatableText("selectWorld.create"), button -> this.createLevel()));
+        this.moreOptionsButton = this.addDrawableChild(new ButtonWidget(j, 185, 150, 20, Text.translatable("selectWorld.moreWorldOptions"), button -> this.toggleMoreOptions()));
+        this.createLevelButton = this.addDrawableChild(new ButtonWidget(i, this.height - 28, 150, 20, Text.translatable("selectWorld.create"), button -> this.createLevel()));
         this.createLevelButton.active = !this.levelName.isEmpty();
         this.addDrawableChild(new ButtonWidget(j, this.height - 28, 150, 20, ScreenTexts.CANCEL, button -> this.onCloseScreen()));
         this.setMoreOptionsOpen();
@@ -216,8 +234,8 @@ extends Screen {
     }
 
     private void updateSettingsLabels() {
-        this.firstGameModeDescriptionLine = new TranslatableText("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line1");
-        this.secondGameModeDescriptionLine = new TranslatableText("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line2");
+        this.firstGameModeDescriptionLine = Text.translatable("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line1");
+        this.secondGameModeDescriptionLine = Text.translatable("selectWorld.gameMode." + this.currentMode.translationSuffix + ".line2");
     }
 
     private void updateSaveFolderName() {
@@ -244,15 +262,25 @@ extends Screen {
         this.client.keyboard.setRepeatEvents(false);
     }
 
+    private static void showMessage(MinecraftClient client, Text text) {
+        client.setScreenAndRender(new MessageScreen(text));
+    }
+
     private void createLevel() {
-        this.client.setScreenAndRender(new SaveLevelScreen(new TranslatableText("createWorld.preparing")));
-        if (!this.copyTempDirDataPacks()) {
+        IntegratedServerLoader.tryLoad(this.client, this, this.moreOptionsDialog.getGeneratorOptionsHolder().worldSettingsStability(), this::startServer);
+    }
+
+    private void startServer() {
+        CreateWorldScreen.showMessage(this.client, PREPARING_TEXT);
+        Optional<LevelStorage.Session> optional = this.createSession();
+        if (optional.isEmpty()) {
             return;
         }
-        this.clearTempResources();
-        GeneratorOptions generatorOptions = this.moreOptionsDialog.getGeneratorOptions(this.hardcore);
-        LevelInfo levelInfo = this.createLevelInfo(generatorOptions.isDebugWorld());
-        this.client.createWorld(this.saveDirectoryName, levelInfo, this.moreOptionsDialog.getRegistryManager(), generatorOptions);
+        this.clearDataPackTempDir();
+        GeneratorOptionsHolder generatorOptionsHolder = this.moreOptionsDialog.getGeneratorOptionsHolder(this.hardcore);
+        LevelInfo levelInfo = this.createLevelInfo(generatorOptionsHolder.generatorOptions().isDebugWorld());
+        LevelProperties saveProperties = new LevelProperties(levelInfo, generatorOptionsHolder.generatorOptions(), generatorOptionsHolder.worldSettingsStability());
+        this.client.createIntegratedServerLoader().start(optional.get(), generatorOptionsHolder.dataPackContents(), generatorOptionsHolder.dynamicRegistryManager(), saveProperties);
     }
 
     private LevelInfo createLevelInfo(boolean debugWorld) {
@@ -322,7 +350,7 @@ extends Screen {
         if (moreOptionsOpen) {
             this.moreOptionsButton.setMessage(ScreenTexts.DONE);
         } else {
-            this.moreOptionsButton.setMessage(new TranslatableText("selectWorld.moreWorldOptions"));
+            this.moreOptionsButton.setMessage(Text.translatable("selectWorld.moreWorldOptions"));
         }
         this.gameRulesButton.visible = !moreOptionsOpen;
     }
@@ -350,13 +378,6 @@ extends Screen {
 
     public void onCloseScreen() {
         this.client.setScreen(this.parent);
-        this.clearTempResources();
-    }
-
-    private void clearTempResources() {
-        if (this.packManager != null) {
-            this.packManager.close();
-        }
         this.clearDataPackTempDir();
     }
 
@@ -370,7 +391,7 @@ extends Screen {
             this.moreOptionsDialog.render(matrices, mouseX, mouseY, delta);
         } else {
             CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, ENTER_NAME_TEXT, this.width / 2 - 100, 47, -6250336);
-            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, new LiteralText("").append(RESULT_FOLDER_TEXT).append(" ").append(this.saveDirectoryName), this.width / 2 - 100, 85, -6250336);
+            CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, Text.empty().append(RESULT_FOLDER_TEXT).append(" ").append(this.saveDirectoryName), this.width / 2 - 100, 85, -6250336);
             this.levelNameField.render(matrices, mouseX, mouseY, delta);
             CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, this.firstGameModeDescriptionLine, this.width / 2 - 150, 122, -6250336);
             CreateWorldScreen.drawTextWithShadow(matrices, this.textRenderer, this.secondGameModeDescriptionLine, this.width / 2 - 150, 134, -6250336);
@@ -392,7 +413,7 @@ extends Screen {
     }
 
     @Nullable
-    protected Path getDataPackTempDir() {
+    private Path getDataPackTempDir() {
         if (this.dataPackTempDir == null) {
             try {
                 this.dataPackTempDir = Files.createTempDirectory(TEMP_DIR_PREFIX, new FileAttribute[0]);
@@ -409,7 +430,7 @@ extends Screen {
     private void openPackScreen() {
         Pair<File, ResourcePackManager> pair = this.getScannedPack();
         if (pair != null) {
-            this.client.setScreen(new PackScreen(this, (ResourcePackManager)pair.getSecond(), this::applyDataPacks, (File)pair.getFirst(), new TranslatableText("dataPack.title")));
+            this.client.setScreen(new PackScreen(this, (ResourcePackManager)pair.getSecond(), this::applyDataPacks, (File)pair.getFirst(), Text.translatable("dataPack.title")));
         }
     }
 
@@ -421,20 +442,33 @@ extends Screen {
             this.dataPackSettings = dataPackSettings2;
             return;
         }
-        this.client.send(() -> this.client.setScreen(new SaveLevelScreen(new TranslatableText("dataPack.validation.working"))));
-        ((CompletableFuture)SaveLoader.ofLoaded(new SaveLoader.FunctionLoaderConfig(dataPackManager, CommandManager.RegistrationEnvironment.INTEGRATED, 2, false), () -> dataPackSettings2, (resourceManager, dataPackSettings) -> {
-            DynamicRegistryManager dynamicRegistryManager = this.moreOptionsDialog.getRegistryManager();
+        this.client.send(() -> this.client.setScreen(new MessageScreen(Text.translatable("dataPack.validation.working"))));
+        SaveLoading.ServerConfig serverConfig = CreateWorldScreen.createServerConfig(dataPackManager, dataPackSettings2);
+        ((CompletableFuture)SaveLoading.load(serverConfig, (resourceManager, dataPackSettings) -> {
+            GeneratorOptionsHolder generatorOptionsHolder = this.moreOptionsDialog.getGeneratorOptionsHolder();
+            DynamicRegistryManager.Immutable dynamicRegistryManager = generatorOptionsHolder.dynamicRegistryManager();
             DynamicRegistryManager.Mutable mutable = DynamicRegistryManager.createAndLoad();
             RegistryOps dynamicOps = RegistryOps.of(JsonOps.INSTANCE, dynamicRegistryManager);
             RegistryOps dynamicOps2 = RegistryOps.ofLoaded(JsonOps.INSTANCE, mutable, resourceManager);
-            DataResult dataResult = GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)this.moreOptionsDialog.getGeneratorOptions(this.hardcore)).flatMap(json -> GeneratorOptions.CODEC.parse(dynamicOps2, json));
-            GeneratorOptions generatorOptions = (GeneratorOptions)dataResult.getOrThrow(false, Util.addPrefix("Error parsing worldgen settings after loading data packs: ", arg_0 -> ((Logger)LOGGER).error(arg_0)));
-            LevelInfo levelInfo = this.createLevelInfo(generatorOptions.isDebugWorld());
-            return Pair.of((Object)new LevelProperties(levelInfo, generatorOptions, dataResult.lifecycle()), (Object)mutable.toImmutable());
-        }, Util.getMainWorkerExecutor(), this.client).thenAcceptAsync(saveLoader -> {
+            DataResult dataResult = GeneratorOptions.CODEC.encodeStart(dynamicOps, (Object)generatorOptionsHolder.generatorOptions()).setLifecycle(Lifecycle.stable());
+            DataResult dataResult2 = dataResult.flatMap(json -> GeneratorOptions.CODEC.parse(dynamicOps2, json));
+            DynamicRegistryManager.Immutable immutable = mutable.toImmutable();
+            Lifecycle lifecycle = dataResult2.lifecycle().add(immutable.getRegistryLifecycle());
+            GeneratorOptions generatorOptions = (GeneratorOptions)dataResult2.getOrThrow(false, Util.addPrefix("Error parsing worldgen settings after loading data packs: ", arg_0 -> ((Logger)LOGGER).error(arg_0)));
+            if (immutable.get(Registry.WORLD_PRESET_KEY).size() == 0) {
+                throw new IllegalStateException("Needs at least one world preset to continue");
+            }
+            if (immutable.get(Registry.BIOME_KEY).size() == 0) {
+                throw new IllegalStateException("Needs at least one biome continue");
+            }
+            return Pair.of((Object)Pair.of((Object)generatorOptions, (Object)lifecycle), (Object)immutable);
+        }, (resourceManager, dataPackContents, dynamicRegistryManager, pair) -> {
+            resourceManager.close();
+            return new GeneratorOptionsHolder((GeneratorOptions)pair.getFirst(), (Lifecycle)pair.getSecond(), dynamicRegistryManager, dataPackContents);
+        }, Util.getMainWorkerExecutor(), this.client).thenAcceptAsync(generatorOptionsHolder -> {
             this.dataPackSettings = dataPackSettings2;
-            this.moreOptionsDialog.loadDatapacks((SaveLoader)saveLoader);
-            saveLoader.close();
+            this.moreOptionsDialog.setGeneratorOptionsHolder((GeneratorOptionsHolder)generatorOptionsHolder);
+            this.clearAndInit();
         }, (Executor)this.client)).handle((v, throwable) -> {
             if (throwable != null) {
                 LOGGER.warn("Failed to validate datapack", throwable);
@@ -445,12 +479,17 @@ extends Screen {
                         this.dataPackSettings = DataPackSettings.SAFE_MODE;
                         this.client.setScreen(this);
                     }
-                }, new TranslatableText("dataPack.validation.failed"), LiteralText.EMPTY, new TranslatableText("dataPack.validation.back"), new TranslatableText("dataPack.validation.reset"))));
+                }, Text.translatable("dataPack.validation.failed"), ScreenTexts.EMPTY, Text.translatable("dataPack.validation.back"), Text.translatable("dataPack.validation.reset"))));
             } else {
                 this.client.send(() -> this.client.setScreen(this));
             }
             return null;
         });
+    }
+
+    private static SaveLoading.ServerConfig createServerConfig(ResourcePackManager resourcePackManager, DataPackSettings dataPackSettings) {
+        SaveLoading.DataPacks dataPacks = new SaveLoading.DataPacks(resourcePackManager, dataPackSettings, false);
+        return new SaveLoading.ServerConfig(dataPacks, CommandManager.RegistrationEnvironment.INTEGRATED, 2);
     }
 
     private void clearDataPackTempDir() {
@@ -478,26 +517,55 @@ extends Screen {
         }
         catch (IOException iOException) {
             LOGGER.warn("Failed to copy datapack file from {} to {}", (Object)dataPackFile, (Object)destFolder);
-            throw new WorldCreationException(iOException);
+            throw new UncheckedIOException(iOException);
         }
     }
 
-    private boolean copyTempDirDataPacks() {
-        if (this.dataPackTempDir != null) {
-            try (LevelStorage.Session session = this.client.getLevelStorage().createSession(this.saveDirectoryName);
-                 Stream<Path> stream = Files.walk(this.dataPackTempDir, new FileVisitOption[0]);){
+    private Optional<LevelStorage.Session> createSession() {
+        Optional<LevelStorage.Session> optional;
+        block12: {
+            LevelStorage.Session session;
+            block11: {
+                session = this.client.getLevelStorage().createSession(this.saveDirectoryName);
+                if (this.dataPackTempDir != null) break block11;
+                return Optional.of(session);
+            }
+            Stream<Path> stream = Files.walk(this.dataPackTempDir, new FileVisitOption[0]);
+            try {
                 Path path2 = session.getDirectory(WorldSavePath.DATAPACKS);
                 Files.createDirectories(path2, new FileAttribute[0]);
                 stream.filter(path -> !path.equals(this.dataPackTempDir)).forEach(path -> CreateWorldScreen.copyDataPack(this.dataPackTempDir, path2, path));
+                optional = Optional.of(session);
+                if (stream == null) break block12;
             }
-            catch (IOException | WorldCreationException exception) {
-                LOGGER.warn("Failed to copy datapacks to world {}", (Object)this.saveDirectoryName, (Object)exception);
-                SystemToast.addPackCopyFailure(this.client, this.saveDirectoryName);
-                this.onCloseScreen();
-                return false;
+            catch (Throwable throwable) {
+                try {
+                    try {
+                        if (stream != null) {
+                            try {
+                                stream.close();
+                            }
+                            catch (Throwable throwable2) {
+                                throwable.addSuppressed(throwable2);
+                            }
+                        }
+                        throw throwable;
+                    }
+                    catch (IOException | UncheckedIOException exception) {
+                        LOGGER.warn("Failed to copy datapacks to world {}", (Object)this.saveDirectoryName, (Object)exception);
+                        session.close();
+                    }
+                }
+                catch (IOException | UncheckedIOException exception2) {
+                    LOGGER.warn("Failed to create access for {}", (Object)this.saveDirectoryName, (Object)exception2);
+                }
             }
+            stream.close();
         }
-        return true;
+        return optional;
+        SystemToast.addPackCopyFailure(this.client, this.saveDirectoryName);
+        this.onCloseScreen();
+        return Optional.empty();
     }
 
     @Nullable
@@ -512,14 +580,14 @@ extends Screen {
                     }
                     catch (IOException iOException) {
                         LOGGER.warn("Failed to create temporary dir");
-                        throw new WorldCreationException(iOException);
+                        throw new UncheckedIOException(iOException);
                     }
                     mutableObject.setValue((Object)path2);
                 }
                 CreateWorldScreen.copyDataPack(srcFolder, path2, dataPackFile);
             });
         }
-        catch (IOException | WorldCreationException exception) {
+        catch (IOException | UncheckedIOException exception) {
             LOGGER.warn("Failed to copy datapacks from world {}", (Object)srcFolder, (Object)exception);
             SystemToast.addPackCopyFailure(client, srcFolder.toString());
             return null;
@@ -569,7 +637,7 @@ extends Screen {
         private Mode(String translationSuffix, GameMode defaultGameMode) {
             this.translationSuffix = translationSuffix;
             this.defaultGameMode = defaultGameMode;
-            this.text = new TranslatableText("selectWorld.gameMode." + translationSuffix);
+            this.text = Text.translatable("selectWorld.gameMode." + translationSuffix);
         }
 
         public Text asText() {
@@ -582,14 +650,6 @@ extends Screen {
 
         static {
             field_20630 = Mode.method_36891();
-        }
-    }
-
-    @Environment(value=EnvType.CLIENT)
-    static class WorldCreationException
-    extends RuntimeException {
-        public WorldCreationException(Throwable throwable) {
-            super(throwable);
         }
     }
 }

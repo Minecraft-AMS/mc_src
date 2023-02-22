@@ -4,19 +4,16 @@
  * Could not load the following classes:
  *  com.google.common.collect.Iterables
  *  com.google.common.collect.Lists
- *  com.google.common.collect.Maps
  *  com.google.common.collect.Ordering
  *  com.mojang.datafixers.util.Pair
  *  net.fabricmc.api.EnvType
  *  net.fabricmc.api.Environment
- *  org.apache.commons.lang3.StringUtils
  *  org.jetbrains.annotations.Nullable
  */
 package net.minecraft.client.gui.hud;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -24,22 +21,15 @@ import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.font.TextVisitFactory;
-import net.minecraft.client.gui.ClientChatListener;
 import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.GameInfoChatListener;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.ChatHudListener;
 import net.minecraft.client.gui.hud.DebugHud;
 import net.minecraft.client.gui.hud.PlayerListHud;
 import net.minecraft.client.gui.hud.SpectatorHud;
@@ -52,6 +42,7 @@ import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
@@ -59,7 +50,6 @@ import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.texture.StatusEffectSpriteManager;
-import net.minecraft.client.util.NarratorManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -71,7 +61,6 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.MessageType;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.ScoreboardPlayerScore;
@@ -79,10 +68,8 @@ import net.minecraft.scoreboard.Team;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.tag.FluidTags;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -95,9 +82,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.border.WorldBorder;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 @Environment(value=EnvType.CLIENT)
@@ -108,18 +95,18 @@ extends DrawableHelper {
     private static final Identifier PUMPKIN_BLUR = new Identifier("textures/misc/pumpkinblur.png");
     private static final Identifier SPYGLASS_SCOPE = new Identifier("textures/misc/spyglass_scope.png");
     private static final Identifier POWDER_SNOW_OUTLINE = new Identifier("textures/misc/powder_snow_outline.png");
-    private static final Text DEMO_EXPIRED_MESSAGE = new TranslatableText("demo.demoExpired");
-    private static final Text SAVING_LEVEL_TEXT = new TranslatableText("menu.savingLevel");
+    private static final Text DEMO_EXPIRED_MESSAGE = Text.translatable("demo.demoExpired");
+    private static final Text SAVING_LEVEL_TEXT = Text.translatable("menu.savingLevel");
     private static final int WHITE = 0xFFFFFF;
     private static final float field_32168 = 5.0f;
     private static final int field_32169 = 10;
     private static final int field_32170 = 10;
-    private static final String field_32171 = ": ";
+    private static final String SCOREBOARD_JOINER = ": ";
     private static final float field_32172 = 0.2f;
     private static final int field_33942 = 9;
     private static final int field_33943 = 8;
     private static final float field_35431 = 0.2f;
-    private final Random random = new Random();
+    private final Random random = Random.create();
     private final MinecraftClient client;
     private final ItemRenderer itemRenderer;
     private final ChatHud chatHud;
@@ -128,6 +115,7 @@ extends DrawableHelper {
     private Text overlayMessage;
     private int overlayRemaining;
     private boolean overlayTinted;
+    private boolean canShowChatDisabledScreen;
     public float vignetteDarkness = 1.0f;
     private int heldItemTooltipFade;
     private ItemStack currentStack = ItemStack.EMPTY;
@@ -136,13 +124,13 @@ extends DrawableHelper {
     private final SpectatorHud spectatorHud;
     private final PlayerListHud playerListHud;
     private final BossBarHud bossBarHud;
-    private int titleTotalTicks;
+    private int titleRemainTicks;
     @Nullable
     private Text title;
     @Nullable
     private Text subtitle;
     private int titleFadeInTicks;
-    private int titleRemainTicks;
+    private int titleStayTicks;
     private int titleFadeOutTicks;
     private int lastHealthValue;
     private int renderHealthValue;
@@ -152,33 +140,23 @@ extends DrawableHelper {
     private int scaledHeight;
     private float autosaveIndicatorAlpha;
     private float lastAutosaveIndicatorAlpha;
-    private final Map<MessageType, List<ClientChatListener>> listeners = Maps.newHashMap();
     private float spyglassScale;
 
-    public InGameHud(MinecraftClient client) {
+    public InGameHud(MinecraftClient client, ItemRenderer itemRenderer) {
         this.client = client;
-        this.itemRenderer = client.getItemRenderer();
+        this.itemRenderer = itemRenderer;
         this.debugHud = new DebugHud(client);
         this.spectatorHud = new SpectatorHud(client);
         this.chatHud = new ChatHud(client);
         this.playerListHud = new PlayerListHud(client, this);
         this.bossBarHud = new BossBarHud(client);
         this.subtitlesHud = new SubtitlesHud(client);
-        for (MessageType messageType : MessageType.values()) {
-            this.listeners.put(messageType, Lists.newArrayList());
-        }
-        NarratorManager clientChatListener = NarratorManager.INSTANCE;
-        this.listeners.get((Object)MessageType.CHAT).add(new ChatHudListener(client));
-        this.listeners.get((Object)MessageType.CHAT).add(clientChatListener);
-        this.listeners.get((Object)MessageType.SYSTEM).add(new ChatHudListener(client));
-        this.listeners.get((Object)MessageType.SYSTEM).add(clientChatListener);
-        this.listeners.get((Object)MessageType.GAME_INFO).add(new GameInfoChatListener(client));
         this.setDefaultTitleFade();
     }
 
     public void setDefaultTitleFade() {
         this.titleFadeInTicks = 10;
-        this.titleRemainTicks = 70;
+        this.titleStayTicks = 70;
         this.titleFadeOutTicks = 20;
     }
 
@@ -294,21 +272,21 @@ extends DrawableHelper {
                     m = l << 24 & 0xFF000000;
                     n = textRenderer.getWidth(this.overlayMessage);
                     this.drawTextBackground(matrices, textRenderer, -4, n, 0xFFFFFF | m);
-                    textRenderer.draw(matrices, this.overlayMessage, (float)(-n / 2), -4.0f, k | m);
+                    textRenderer.drawWithShadow(matrices, this.overlayMessage, (float)(-n / 2), -4.0f, k | m);
                     RenderSystem.disableBlend();
                     matrices.pop();
                 }
                 this.client.getProfiler().pop();
             }
-            if (this.title != null && this.titleTotalTicks > 0) {
+            if (this.title != null && this.titleRemainTicks > 0) {
                 this.client.getProfiler().push("titleAndSubtitle");
-                float h = (float)this.titleTotalTicks - tickDelta;
+                float h = (float)this.titleRemainTicks - tickDelta;
                 int l = 255;
-                if (this.titleTotalTicks > this.titleFadeOutTicks + this.titleRemainTicks) {
-                    float o = (float)(this.titleFadeInTicks + this.titleRemainTicks + this.titleFadeOutTicks) - h;
+                if (this.titleRemainTicks > this.titleFadeOutTicks + this.titleStayTicks) {
+                    float o = (float)(this.titleFadeInTicks + this.titleStayTicks + this.titleFadeOutTicks) - h;
                     l = (int)(o * 255.0f / (float)this.titleFadeInTicks);
                 }
-                if (this.titleTotalTicks <= this.titleFadeOutTicks) {
+                if (this.titleRemainTicks <= this.titleFadeOutTicks) {
                     l = (int)(h * 255.0f / (float)this.titleFadeOutTicks);
                 }
                 if ((l = MathHelper.clamp(l, 0, 255)) > 8) {
@@ -383,7 +361,7 @@ extends DrawableHelper {
         if (this.client.interactionManager.getCurrentGameMode() == GameMode.SPECTATOR && !this.shouldRenderSpectatorCrosshair(this.client.crosshairTarget)) {
             return;
         }
-        if (gameOptions.debugEnabled && !gameOptions.hudHidden && !this.client.player.hasReducedDebugInfo() && !gameOptions.reducedDebugInfo) {
+        if (gameOptions.debugEnabled && !gameOptions.hudHidden && !this.client.player.hasReducedDebugInfo() && !gameOptions.getReducedDebugInfo().getValue().booleanValue()) {
             Camera camera = this.client.gameRenderer.getCamera();
             MatrixStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.push();
@@ -399,7 +377,7 @@ extends DrawableHelper {
             RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.ONE_MINUS_DST_COLOR, GlStateManager.DstFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
             int i = 15;
             this.drawTexture(matrices, (this.scaledWidth - 15) / 2, (this.scaledHeight - 15) / 2, 0, 0, 15, 15);
-            if (this.client.options.attackIndicator == AttackIndicator.CROSSHAIR) {
+            if (this.client.options.getAttackIndicator().getValue() == AttackIndicator.CROSSHAIR) {
                 float f = this.client.player.getAttackCooldownProgress(0.0f);
                 boolean bl = false;
                 if (this.client.targetedEntity != null && this.client.targetedEntity instanceof LivingEntity && f >= 1.0f) {
@@ -531,7 +509,7 @@ extends DrawableHelper {
                 this.renderHotbarItem(i + 91 + 10, n, tickDelta, playerEntity, itemStack, m++);
             }
         }
-        if (this.client.options.attackIndicator == AttackIndicator.HOTBAR && (f = this.client.player.getAttackCooldownProgress(0.0f)) < 1.0f) {
+        if (this.client.options.getAttackIndicator().getValue() == AttackIndicator.HOTBAR && (f = this.client.player.getAttackCooldownProgress(0.0f)) < 1.0f) {
             o = this.scaledHeight - 20;
             p = i + 91 + 6;
             if (arm == Arm.RIGHT) {
@@ -594,7 +572,7 @@ extends DrawableHelper {
         this.client.getProfiler().push("selectedItemName");
         if (this.heldItemTooltipFade > 0 && !this.currentStack.isEmpty()) {
             int l;
-            MutableText mutableText = new LiteralText("").append(this.currentStack.getName()).formatted(this.currentStack.getRarity().formatting);
+            MutableText mutableText = Text.empty().append(this.currentStack.getName()).formatted(this.currentStack.getRarity().formatting);
             if (this.currentStack.hasCustomName()) {
                 mutableText.formatted(Formatting.ITALIC);
             }
@@ -620,7 +598,7 @@ extends DrawableHelper {
 
     public void renderDemoTimer(MatrixStack matrices) {
         this.client.getProfiler().push("demo");
-        Text text = this.client.world.getTime() >= 120500L ? DEMO_EXPIRED_MESSAGE : new TranslatableText("demo.remainingTime", StringHelper.formatTicks((int)(120500L - this.client.world.getTime())));
+        Text text = this.client.world.getTime() >= 120500L ? DEMO_EXPIRED_MESSAGE : Text.translatable("demo.remainingTime", StringHelper.formatTicks((int)(120500L - this.client.world.getTime())));
         int i = this.getTextRenderer().getWidth(text);
         this.getTextRenderer().drawWithShadow(matrices, text, (float)(this.scaledWidth - i - 10), 5.0f, 0xFFFFFF);
         this.client.getProfiler().pop();
@@ -635,10 +613,10 @@ extends DrawableHelper {
         ArrayList list2 = Lists.newArrayListWithCapacity((int)collection.size());
         Text text = objective.getDisplayName();
         int j = i = this.getTextRenderer().getWidth(text);
-        int k = this.getTextRenderer().getWidth(field_32171);
+        int k = this.getTextRenderer().getWidth(SCOREBOARD_JOINER);
         for (ScoreboardPlayerScore scoreboardPlayerScore : collection) {
             Team team = scoreboard.getPlayerTeam(scoreboardPlayerScore.getPlayerName());
-            MutableText text2 = Team.decorateName(team, new LiteralText(scoreboardPlayerScore.getPlayerName()));
+            MutableText text2 = Team.decorateName(team, Text.literal(scoreboardPlayerScore.getPlayerName()));
             list2.add(Pair.of((Object)scoreboardPlayerScore, (Object)text2));
             j = Math.max(j, this.getTextRenderer().getWidth(text2) + k + this.getTextRenderer().getWidth(Integer.toString(scoreboardPlayerScore.getScore())));
         }
@@ -956,8 +934,10 @@ extends DrawableHelper {
         if (entity == null) {
             return;
         }
-        float f = MathHelper.clamp(1.0f - entity.getBrightnessAtEyes(), 0.0f, 1.0f);
-        this.vignetteDarkness += (f - this.vignetteDarkness) * 0.01f;
+        BlockPos blockPos = new BlockPos(entity.getX(), entity.getEyeY(), entity.getZ());
+        float f = LightmapTextureManager.getBrightness(entity.world.getDimension(), entity.world.getLightLevel(blockPos));
+        float g = MathHelper.clamp(1.0f - f, 0.0f, 1.0f);
+        this.vignetteDarkness += (g - this.vignetteDarkness) * 0.01f;
     }
 
     private void renderVignetteOverlay(Entity entity) {
@@ -1057,9 +1037,9 @@ extends DrawableHelper {
         if (this.overlayRemaining > 0) {
             --this.overlayRemaining;
         }
-        if (this.titleTotalTicks > 0) {
-            --this.titleTotalTicks;
-            if (this.titleTotalTicks <= 0) {
+        if (this.titleRemainTicks > 0) {
+            --this.titleRemainTicks;
+            if (this.titleRemainTicks <= 0) {
                 this.title = null;
                 this.subtitle = null;
             }
@@ -1090,27 +1070,38 @@ extends DrawableHelper {
     }
 
     public void setRecordPlayingOverlay(Text description) {
-        this.setOverlayMessage(new TranslatableText("record.nowPlaying", description), true);
+        MutableText text = Text.translatable("record.nowPlaying", description);
+        this.setOverlayMessage(text, true);
+        this.client.getNarratorManager().narrate(text);
     }
 
     public void setOverlayMessage(Text message, boolean tinted) {
+        this.setCanShowChatDisabledScreen(false);
         this.overlayMessage = message;
         this.overlayRemaining = 60;
         this.overlayTinted = tinted;
     }
 
-    public void setTitleTicks(int fadeInTicks, int remainTicks, int fadeOutTicks) {
+    public void setCanShowChatDisabledScreen(boolean canShowChatDisabledScreen) {
+        this.canShowChatDisabledScreen = canShowChatDisabledScreen;
+    }
+
+    public boolean shouldShowChatDisabledScreen() {
+        return this.canShowChatDisabledScreen && this.overlayRemaining > 0;
+    }
+
+    public void setTitleTicks(int fadeInTicks, int stayTicks, int fadeOutTicks) {
         if (fadeInTicks >= 0) {
             this.titleFadeInTicks = fadeInTicks;
         }
-        if (remainTicks >= 0) {
-            this.titleRemainTicks = remainTicks;
+        if (stayTicks >= 0) {
+            this.titleStayTicks = stayTicks;
         }
         if (fadeOutTicks >= 0) {
             this.titleFadeOutTicks = fadeOutTicks;
         }
-        if (this.titleTotalTicks > 0) {
-            this.titleTotalTicks = this.titleFadeInTicks + this.titleRemainTicks + this.titleFadeOutTicks;
+        if (this.titleRemainTicks > 0) {
+            this.titleRemainTicks = this.titleFadeInTicks + this.titleStayTicks + this.titleFadeOutTicks;
         }
     }
 
@@ -1120,34 +1111,13 @@ extends DrawableHelper {
 
     public void setTitle(Text title) {
         this.title = title;
-        this.titleTotalTicks = this.titleFadeInTicks + this.titleRemainTicks + this.titleFadeOutTicks;
+        this.titleRemainTicks = this.titleFadeInTicks + this.titleStayTicks + this.titleFadeOutTicks;
     }
 
     public void clearTitle() {
         this.title = null;
         this.subtitle = null;
-        this.titleTotalTicks = 0;
-    }
-
-    public UUID extractSender(Text message) {
-        String string = TextVisitFactory.removeFormattingCodes(message);
-        String string2 = StringUtils.substringBetween((String)string, (String)"<", (String)">");
-        if (string2 == null) {
-            return Util.NIL_UUID;
-        }
-        return this.client.getSocialInteractionsManager().getUuid(string2);
-    }
-
-    public void addChatMessage(MessageType type, Text message, UUID sender) {
-        if (this.client.shouldBlockMessages(sender)) {
-            return;
-        }
-        if (this.client.options.hideMatchedNames && this.client.shouldBlockMessages(this.extractSender(message))) {
-            return;
-        }
-        for (ClientChatListener clientChatListener : this.listeners.get((Object)type)) {
-            clientChatListener.onChatMessage(type, message, sender);
-        }
+        this.titleRemainTicks = 0;
     }
 
     public ChatHud getChatHud() {
@@ -1188,7 +1158,7 @@ extends DrawableHelper {
 
     private void renderAutosaveIndicator(MatrixStack matrices) {
         int i;
-        if (this.client.options.showAutosaveIndicator && (this.autosaveIndicatorAlpha > 0.0f || this.lastAutosaveIndicatorAlpha > 0.0f) && (i = MathHelper.floor(255.0f * MathHelper.clamp(MathHelper.lerp(this.client.getTickDelta(), this.lastAutosaveIndicatorAlpha, this.autosaveIndicatorAlpha), 0.0f, 1.0f))) > 8) {
+        if (this.client.options.getShowAutosaveIndicator().getValue().booleanValue() && (this.autosaveIndicatorAlpha > 0.0f || this.lastAutosaveIndicatorAlpha > 0.0f) && (i = MathHelper.floor(255.0f * MathHelper.clamp(MathHelper.lerp(this.client.getTickDelta(), this.lastAutosaveIndicatorAlpha, this.autosaveIndicatorAlpha), 0.0f, 1.0f))) > 8) {
             TextRenderer textRenderer = this.getTextRenderer();
             int j = textRenderer.getWidth(SAVING_LEVEL_TEXT);
             int k = 0xFFFFFF | i << 24 & 0xFF000000;

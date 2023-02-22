@@ -21,6 +21,7 @@ import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.TaggedChoice;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.DynamicOps;
+import java.util.Locale;
 import net.minecraft.datafixer.TypeReferences;
 
 public abstract class EntityTransformFix
@@ -41,7 +42,7 @@ extends DataFix {
             Pair<String, Typed<?>> pair2 = this.transform(string, this.makeTyped(pair.getSecond(), (DynamicOps<?>)dynamicOps, (Type)type));
             Type type2 = (Type)taggedChoiceType2.types().get(pair2.getFirst());
             if (!type2.equals((Object)((Typed)pair2.getSecond()).getType(), true, true)) {
-                throw new IllegalStateException(String.format("Dynamic type check failed: %s not equal to %s", type2, ((Typed)pair2.getSecond()).getType()));
+                throw new IllegalStateException(String.format(Locale.ROOT, "Dynamic type check failed: %s not equal to %s", type2, ((Typed)pair2.getSecond()).getType()));
             }
             return Pair.of((Object)((String)pair2.getFirst()), (Object)((Typed)pair2.getSecond()).getValue());
         });

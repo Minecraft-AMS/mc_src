@@ -37,7 +37,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.BanEntry;
 import net.minecraft.server.BannedIpEntry;
 import net.minecraft.server.BannedIpList;
@@ -52,6 +51,7 @@ import net.minecraft.server.WhitelistEntry;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.util.StringHelper;
 import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.dynamic.DynamicSerializableUuid;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -73,13 +73,13 @@ public class ServerConfigHandler {
     }
 
     private static void lookupProfile(MinecraftServer server, Collection<String> bannedPlayers, ProfileLookupCallback callback) {
-        String[] strings = (String[])bannedPlayers.stream().filter(string -> !StringHelper.isEmpty(string)).toArray(String[]::new);
+        String[] strings = (String[])bannedPlayers.stream().filter(playerName -> !StringHelper.isEmpty(playerName)).toArray(String[]::new);
         if (server.isOnlineMode()) {
             server.getGameProfileRepo().findProfilesByNames(strings, Agent.MINECRAFT, callback);
         } else {
-            for (String string2 : strings) {
-                UUID uUID = PlayerEntity.getUuidFromProfile(new GameProfile(null, string2));
-                GameProfile gameProfile = new GameProfile(uUID, string2);
+            for (String string : strings) {
+                UUID uUID = DynamicSerializableUuid.getUuidFromProfile(new GameProfile(null, string));
+                GameProfile gameProfile = new GameProfile(uUID, string);
                 callback.onProfileLookupSucceeded(gameProfile);
             }
         }
@@ -276,7 +276,7 @@ public class ServerConfigHandler {
             return optional.get();
         }
         if (server.isSingleplayer() || !server.isOnlineMode()) {
-            return PlayerEntity.getUuidFromProfile(new GameProfile(null, name));
+            return DynamicSerializableUuid.getUuidFromProfile(new GameProfile(null, name));
         }
         final ArrayList list = Lists.newArrayList();
         ProfileLookupCallback profileLookupCallback = new ProfileLookupCallback(){
@@ -457,12 +457,12 @@ public class ServerConfigHandler {
 
     static class ServerConfigException
     extends RuntimeException {
-        ServerConfigException(String title, Throwable other) {
-            super(title, other);
+        ServerConfigException(String message, Throwable cause) {
+            super(message, cause);
         }
 
-        ServerConfigException(String title) {
-            super(title);
+        ServerConfigException(String message) {
+            super(message);
         }
     }
 }

@@ -12,12 +12,15 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 @Environment(value=EnvType.CLIENT)
 public class SleepingChatScreen
 extends ChatScreen {
+    private ButtonWidget stopSleepingButton;
+
     public SleepingChatScreen() {
         super("");
     }
@@ -25,7 +28,13 @@ extends ChatScreen {
     @Override
     protected void init() {
         super.init();
-        this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 40, 200, 20, new TranslatableText("multiplayer.stopSleeping"), button -> this.stopSleeping()));
+        this.stopSleepingButton = this.addDrawableChild(new ButtonWidget(this.width / 2 - 100, this.height - 40, 200, 20, Text.translatable("multiplayer.stopSleeping"), button -> this.stopSleeping()));
+    }
+
+    @Override
+    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+        this.stopSleepingButton.visible = this.getPreviewScreenText() == null;
+        super.render(matrices, mouseX, mouseY, delta);
     }
 
     @Override
@@ -38,12 +47,11 @@ extends ChatScreen {
         if (keyCode == 256) {
             this.stopSleeping();
         } else if (keyCode == 257 || keyCode == 335) {
-            String string = this.chatField.getText().trim();
-            if (!string.isEmpty()) {
-                this.sendMessage(string);
+            if (this.sendMessage(this.chatField.getText(), true)) {
+                this.client.setScreen(null);
+                this.chatField.setText("");
+                this.client.inGameHud.getChatHud().resetScroll();
             }
-            this.chatField.setText("");
-            this.client.inGameHud.getChatHud().resetScroll();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);

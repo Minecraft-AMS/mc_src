@@ -67,13 +67,13 @@ public class Mouse {
         }
         int i = button;
         if (bl) {
-            if (this.client.options.touchscreen && this.field_1796++ > 0) {
+            if (this.client.options.getTouchscreen().getValue().booleanValue() && this.field_1796++ > 0) {
                 return;
             }
             this.activeButton = i;
             this.glfwTime = GlfwUtil.getTime();
         } else if (this.activeButton != -1) {
-            if (this.client.options.touchscreen && --this.field_1796 > 0) {
+            if (this.client.options.getTouchscreen().getValue().booleanValue() && --this.field_1796 > 0) {
                 return;
             }
             this.activeButton = -1;
@@ -121,7 +121,7 @@ public class Mouse {
 
     private void onMouseScroll(long window, double horizontal, double vertical) {
         if (window == MinecraftClient.getInstance().getWindow().getHandle()) {
-            double d = (this.client.options.discreteMouseScroll ? Math.signum(vertical) : vertical) * this.client.options.mouseWheelSensitivity;
+            double d = (this.client.options.getDiscreteMouseScroll().getValue() != false ? Math.signum(vertical) : vertical) * this.client.options.getMouseWheelSensitivity().getValue();
             if (this.client.getOverlay() == null) {
                 if (this.client.currentScreen != null) {
                     double e = this.x * (double)this.client.getWindow().getScaledWidth() / (double)this.client.getWindow().getWidth();
@@ -212,7 +212,7 @@ public class Mouse {
             this.cursorDeltaY = 0.0;
             return;
         }
-        double f = this.client.options.mouseSensitivity * (double)0.6f + (double)0.2f;
+        double f = this.client.options.getMouseSensitivity().getValue() * (double)0.6f + (double)0.2f;
         double g = f * f * f;
         double h = g * 8.0;
         if (this.client.options.smoothCameraEnabled) {
@@ -234,7 +234,7 @@ public class Mouse {
         this.cursorDeltaX = 0.0;
         this.cursorDeltaY = 0.0;
         int m = 1;
-        if (this.client.options.invertYMouse) {
+        if (this.client.options.getInvertYMouse().getValue().booleanValue()) {
             m = -1;
         }
         this.client.getTutorialManager().onUpdateMouse(k, l);

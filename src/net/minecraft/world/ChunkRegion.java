@@ -11,7 +11,7 @@ package net.minecraft.world;
 import com.mojang.logging.LogUtils;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -31,6 +31,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.TypeFilter;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -39,6 +40,8 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.HeightLimitView;
@@ -83,6 +86,7 @@ implements StructureWorldAccess {
     @Nullable
     private Supplier<String> currentlyGeneratingStructureName;
     private final AtomicLong tickOrder = new AtomicLong();
+    private static final Identifier field_38683 = new Identifier("worldgen_region_random");
 
     public ChunkRegion(ServerWorld world, List<Chunk> chunks, ChunkStatus status, int placementRadius) {
         this.status = status;
@@ -97,12 +101,16 @@ implements StructureWorldAccess {
         this.world = world;
         this.seed = world.getSeed();
         this.levelProperties = world.getLevelProperties();
-        this.random = world.getRandom();
+        this.random = world.getChunkManager().getNoiseConfig().getOrCreateRandomDeriver(field_38683).split(this.centerPos.getPos().getStartPos());
         this.dimension = world.getDimension();
         this.biomeAccess = new BiomeAccess(this, BiomeAccess.hashSeed(this.seed));
         this.lowerCorner = chunks.get(0).getPos();
         this.upperCorner = chunks.get(chunks.size() - 1).getPos();
         this.structureAccessor = world.getStructureAccessor().forRegion(this);
+    }
+
+    public boolean needsBlending(ChunkPos chunkPos, int checkRadius) {
+        return this.world.getChunkManager().threadedAnvilChunkStorage.needsBlending(chunkPos, checkRadius);
     }
 
     public ChunkPos getCenterPos() {
@@ -139,9 +147,9 @@ implements StructureWorldAccess {
         LOGGER.error("Requested chunk : {} {}", (Object)chunkX, (Object)chunkZ);
         LOGGER.error("Region bounds : {} {} | {} {}", new Object[]{this.lowerCorner.x, this.lowerCorner.z, this.upperCorner.x, this.upperCorner.z});
         if (chunk != null) {
-            throw Util.throwOrPause(new RuntimeException(String.format("Chunk is not of correct status. Expecting %s, got %s | %s %s", leastStatus, chunk.getStatus(), chunkX, chunkZ)));
+            throw Util.throwOrPause(new RuntimeException(String.format(Locale.ROOT, "Chunk is not of correct status. Expecting %s, got %s | %s %s", leastStatus, chunk.getStatus(), chunkX, chunkZ)));
         }
-        throw Util.throwOrPause(new RuntimeException(String.format("We are asking a region for a chunk out of bound | %s %s", chunkX, chunkZ)));
+        throw Util.throwOrPause(new RuntimeException(String.format(Locale.ROOT, "We are asking a region for a chunk out of bound | %s %s", chunkX, chunkZ)));
     }
 
     @Override
@@ -393,7 +401,7 @@ implements StructureWorldAccess {
     }
 
     @Override
-    public void emitGameEvent(@Nullable Entity entity, GameEvent event, BlockPos pos) {
+    public void emitGameEvent(GameEvent event, Vec3d emitterPos, GameEvent.Emitter emitter) {
     }
 
     @Override

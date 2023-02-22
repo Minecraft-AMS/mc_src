@@ -19,7 +19,7 @@ import java.util.List;
 
 public class DataPackSettings {
     public static final DataPackSettings SAFE_MODE = new DataPackSettings((List<String>)ImmutableList.of((Object)"vanilla"), (List<String>)ImmutableList.of());
-    public static final Codec<DataPackSettings> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.STRING.listOf().fieldOf("Enabled").forGetter(dataPackSettings -> dataPackSettings.enabled), (App)Codec.STRING.listOf().fieldOf("Disabled").forGetter(dataPackSettings -> dataPackSettings.disabled)).apply((Applicative)instance, DataPackSettings::new));
+    public static final Codec<DataPackSettings> CODEC = RecordCodecBuilder.create(instance -> instance.group((App)Codec.STRING.listOf().fieldOf("Enabled").forGetter(settings -> settings.enabled), (App)Codec.STRING.listOf().fieldOf("Disabled").forGetter(settings -> settings.disabled)).apply((Applicative)instance, DataPackSettings::new));
     private final List<String> enabled;
     private final List<String> disabled;
 

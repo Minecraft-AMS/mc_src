@@ -102,7 +102,7 @@ extends FacingBlock {
     }
 
     @Override
-    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block block, BlockPos fromPos, boolean notify) {
+    public void neighborUpdate(BlockState state, World world, BlockPos pos, Block sourceBlock, BlockPos sourcePos, boolean notify) {
         if (!world.isClient) {
             this.tryMove(world, pos, state);
         }
@@ -180,7 +180,7 @@ extends FacingBlock {
             if (!this.move(world, pos, direction, true)) return false;
             world.setBlockState(pos, (BlockState)state.with(EXTENDED, true), 67);
             world.playSound(null, pos, SoundEvents.BLOCK_PISTON_EXTEND, SoundCategory.BLOCKS, 0.5f, world.random.nextFloat() * 0.25f + 0.6f);
-            world.emitGameEvent(GameEvent.PISTON_EXTEND, pos);
+            world.emitGameEvent(null, GameEvent.PISTON_EXTEND, pos);
             return true;
         } else {
             if (type != 1 && type != 2) return true;
@@ -214,7 +214,7 @@ extends FacingBlock {
                 world.removeBlock(pos.offset(direction), false);
             }
             world.playSound(null, pos, SoundEvents.BLOCK_PISTON_CONTRACT, SoundCategory.BLOCKS, 0.5f, world.random.nextFloat() * 0.15f + 0.6f);
-            world.emitGameEvent(GameEvent.PISTON_CONTRACT, pos);
+            world.emitGameEvent(null, GameEvent.PISTON_CONTRACT, pos);
         }
         return true;
     }
@@ -226,7 +226,7 @@ extends FacingBlock {
         if (state.isAir()) {
             return true;
         }
-        if (state.isOf(Blocks.OBSIDIAN) || state.isOf(Blocks.CRYING_OBSIDIAN) || state.isOf(Blocks.RESPAWN_ANCHOR)) {
+        if (state.isOf(Blocks.OBSIDIAN) || state.isOf(Blocks.CRYING_OBSIDIAN) || state.isOf(Blocks.RESPAWN_ANCHOR) || state.isOf(Blocks.REINFORCED_DEEPSLATE)) {
             return false;
         }
         if (direction == Direction.DOWN && pos.getY() == world.getBottomY()) {
@@ -290,6 +290,7 @@ extends FacingBlock {
             BlockEntity blockEntity = blockState.hasBlockEntity() ? world.getBlockEntity(blockPos3) : null;
             PistonBlock.dropStacks(blockState, world, blockPos3, blockEntity);
             world.setBlockState(blockPos3, Blocks.AIR.getDefaultState(), 18);
+            world.emitGameEvent(GameEvent.BLOCK_DESTROY, blockPos3, GameEvent.Emitter.of(blockState));
             if (!blockState.isIn(BlockTags.FIRE)) {
                 world.addBlockBreakParticles(blockPos3, blockState);
             }

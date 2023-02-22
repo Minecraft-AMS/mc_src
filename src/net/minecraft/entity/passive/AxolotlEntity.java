@@ -20,7 +20,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import net.minecraft.entity.AngledModelEntity;
 import net.minecraft.entity.Bucketable;
 import net.minecraft.entity.Entity;
@@ -38,11 +37,8 @@ import net.minecraft.entity.ai.brain.sensor.Sensor;
 import net.minecraft.entity.ai.brain.sensor.SensorType;
 import net.minecraft.entity.ai.control.AquaticMoveControl;
 import net.minecraft.entity.ai.control.YawAdjustingLookControl;
-import net.minecraft.entity.ai.pathing.AmphibiousPathNodeMaker;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
-import net.minecraft.entity.ai.pathing.PathNodeNavigator;
 import net.minecraft.entity.ai.pathing.PathNodeType;
-import net.minecraft.entity.ai.pathing.SwimNavigation;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
@@ -54,6 +50,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.AxolotlBrain;
+import net.minecraft.entity.passive.AxolotlSwimNavigation;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -71,6 +68,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3f;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
@@ -85,7 +83,7 @@ Bucketable {
     private static final Logger field_37260 = LogUtils.getLogger();
     public static final int PLAY_DEAD_TICKS = 200;
     protected static final ImmutableList<? extends SensorType<? extends Sensor<? super AxolotlEntity>>> SENSORS = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.HURT_BY, SensorType.AXOLOTL_ATTACKABLES, SensorType.AXOLOTL_TEMPTATIONS);
-    protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.BREED_TARGET, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.LOOK_TARGET, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.NEAREST_VISIBLE_ADULT, (Object[])new MemoryModuleType[]{MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.PLAY_DEAD_TICKS, MemoryModuleType.NEAREST_ATTACKABLE, MemoryModuleType.TEMPTING_PLAYER, MemoryModuleType.TEMPTATION_COOLDOWN_TICKS, MemoryModuleType.IS_TEMPTED, MemoryModuleType.HAS_HUNTING_COOLDOWN});
+    protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_MODULES = ImmutableList.of(MemoryModuleType.BREED_TARGET, MemoryModuleType.MOBS, MemoryModuleType.VISIBLE_MOBS, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_TARGETABLE_PLAYER, MemoryModuleType.LOOK_TARGET, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN, MemoryModuleType.NEAREST_VISIBLE_ADULT, (Object[])new MemoryModuleType[]{MemoryModuleType.HURT_BY_ENTITY, MemoryModuleType.PLAY_DEAD_TICKS, MemoryModuleType.NEAREST_ATTACKABLE, MemoryModuleType.TEMPTING_PLAYER, MemoryModuleType.TEMPTATION_COOLDOWN_TICKS, MemoryModuleType.IS_TEMPTED, MemoryModuleType.HAS_HUNTING_COOLDOWN, MemoryModuleType.IS_PANICKING});
     private static final TrackedData<Integer> VARIANT = DataTracker.registerData(AxolotlEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> PLAYING_DEAD = DataTracker.registerData(AxolotlEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Boolean> FROM_BUCKET = DataTracker.registerData(AxolotlEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -152,14 +150,15 @@ Bucketable {
         if (spawnReason == SpawnReason.BUCKET) {
             return entityData;
         }
+        Random random = world.getRandom();
         if (entityData instanceof AxolotlData) {
             if (((AxolotlData)entityData).getSpawnedCount() >= 2) {
                 bl = true;
             }
         } else {
-            entityData = new AxolotlData(Variant.getRandomNatural(this.world.random), Variant.getRandomNatural(this.world.random));
+            entityData = new AxolotlData(Variant.getRandomNatural(random), Variant.getRandomNatural(random));
         }
-        this.setVariant(((AxolotlData)entityData).getRandomVariant(this.world.random));
+        this.setVariant(((AxolotlData)entityData).getRandomVariant(random));
         if (bl) {
             this.setBreedingAge(-24000);
         }
@@ -371,7 +370,7 @@ Bucketable {
     }
 
     @Override
-    public SoundEvent getBucketedSound() {
+    public SoundEvent getBucketFillSound() {
         return SoundEvents.ITEM_BUCKET_FILL_AXOLOTL;
     }
 
@@ -380,15 +379,10 @@ Bucketable {
         return !this.isPlayingDead() && super.canTakeDamage();
     }
 
-    public static void appreciatePlayer(AxolotlEntity axolotl) {
+    public static void appreciatePlayer(AxolotlEntity axolotl, LivingEntity livingEntity) {
         Entity entity;
         DamageSource damageSource;
-        Optional<LivingEntity> optional = axolotl.getBrain().getOptionalMemory(MemoryModuleType.ATTACK_TARGET);
-        if (!optional.isPresent()) {
-            return;
-        }
         World world = axolotl.world;
-        LivingEntity livingEntity = optional.get();
         if (livingEntity.isDead() && (damageSource = livingEntity.getRecentDamageSource()) != null && (entity = damageSource.getAttacker()) != null && entity.getType() == EntityType.PLAYER) {
             PlayerEntity playerEntity = (PlayerEntity)entity;
             List<PlayerEntity> list = world.getNonSpectatingEntities(PlayerEntity.class, axolotl.getBoundingBox().expand(20.0));
@@ -589,29 +583,6 @@ Bucketable {
 
         public Variant getRandomVariant(Random random) {
             return this.variants[random.nextInt(this.variants.length)];
-        }
-    }
-
-    static class AxolotlSwimNavigation
-    extends SwimNavigation {
-        AxolotlSwimNavigation(AxolotlEntity axolotl, World world) {
-            super(axolotl, world);
-        }
-
-        @Override
-        protected boolean isAtValidPosition() {
-            return true;
-        }
-
-        @Override
-        protected PathNodeNavigator createPathNodeNavigator(int range) {
-            this.nodeMaker = new AmphibiousPathNodeMaker(false);
-            return new PathNodeNavigator(this.nodeMaker, range);
-        }
-
-        @Override
-        public boolean isValidPosition(BlockPos pos) {
-            return !this.world.getBlockState(pos.down()).isAir();
         }
     }
 }

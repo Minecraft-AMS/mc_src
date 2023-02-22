@@ -23,11 +23,11 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 
 public class UuidArgumentType
 implements ArgumentType<UUID> {
-    public static final SimpleCommandExceptionType INVALID_UUID = new SimpleCommandExceptionType((Message)new TranslatableText("argument.uuid.invalid"));
+    public static final SimpleCommandExceptionType INVALID_UUID = new SimpleCommandExceptionType((Message)Text.translatable("argument.uuid.invalid"));
     private static final Collection<String> EXAMPLES = Arrays.asList("dd12be42-52a9-4a91-a8a1-11c01849e498");
     private static final Pattern VALID_CHARACTERS = Pattern.compile("^([-A-Fa-f0-9]+)");
 

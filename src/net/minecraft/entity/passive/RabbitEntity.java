@@ -6,7 +6,6 @@
  */
 package net.minecraft.entity.passive;
 
-import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -50,13 +49,15 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.tag.BiomeTags;
 import net.minecraft.tag.BlockTags;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.LocalDifficulty;
@@ -339,7 +340,7 @@ extends AnimalEntity {
             this.targetSelector.add(2, new ActiveTargetGoal<PlayerEntity>((MobEntity)this, PlayerEntity.class, true));
             this.targetSelector.add(2, new ActiveTargetGoal<WolfEntity>((MobEntity)this, WolfEntity.class, true));
             if (!this.hasCustomName()) {
-                this.setCustomName(new TranslatableText(Util.createTranslationKey("entity", KILLER_BUNNY)));
+                this.setCustomName(Text.translatable(Util.createTranslationKey("entity", KILLER_BUNNY)));
             }
         }
         this.dataTracker.set(RABBIT_TYPE, rabbitType);
@@ -360,11 +361,11 @@ extends AnimalEntity {
 
     private int chooseType(WorldAccess world) {
         RegistryEntry<Biome> registryEntry = world.getBiome(this.getBlockPos());
-        int i = this.random.nextInt(100);
+        int i = world.getRandom().nextInt(100);
         if (registryEntry.value().getPrecipitation() == Biome.Precipitation.SNOW) {
             return i < 80 ? 1 : 3;
         }
-        if (Biome.getCategory(registryEntry) == Biome.Category.DESERT) {
+        if (registryEntry.isIn(BiomeTags.ONLY_ALLOWS_SNOW_AND_GOLD_RABBITS)) {
             return 4;
         }
         return i < 50 ? 0 : (i < 90 ? 5 : 2);

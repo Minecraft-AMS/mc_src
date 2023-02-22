@@ -1,9 +1,15 @@
 /*
  * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.serialization.Codec
  */
 package net.minecraft.util.math;
 
+import com.mojang.serialization.Codec;
 import java.util.EnumSet;
+import java.util.List;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Position;
@@ -13,6 +19,7 @@ import net.minecraft.util.math.Vec3i;
 
 public class Vec3d
 implements Position {
+    public static final Codec<Vec3d> CODEC = Codec.DOUBLE.listOf().comapFlatMap(list2 -> Util.toArray(list2, 3).map(list -> new Vec3d((Double)list.get(0), (Double)list.get(1), (Double)list.get(2))), vec3d -> List.of(Double.valueOf(vec3d.getX()), Double.valueOf(vec3d.getY()), Double.valueOf(vec3d.getZ())));
     public static final Vec3d ZERO = new Vec3d(0.0, 0.0, 0.0);
     public final double x;
     public final double y;
@@ -234,6 +241,11 @@ implements Position {
         double e = axis == Direction.Axis.Y ? value : this.y;
         double f = axis == Direction.Axis.Z ? value : this.z;
         return new Vec3d(d, e, f);
+    }
+
+    public Vec3d withBias(Direction direction, double value) {
+        Vec3i vec3i = direction.getVector();
+        return new Vec3d(this.x + value * (double)vec3i.getX(), this.y + value * (double)vec3i.getY(), this.z + value * (double)vec3i.getZ());
     }
 
     @Override
